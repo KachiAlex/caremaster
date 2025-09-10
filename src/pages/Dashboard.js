@@ -37,59 +37,59 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-white mb-2">Dashboard</h1>
-        <p className="text-white/80 text-lg">Welcome back! Here's your health overview.</p>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600">Welcome back! Here's your health overview.</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card group">
+        <div className="card medication-card">
           <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 bg-blue-100 rounded-xl group-hover:bg-blue-200 transition-colors">
-              <Pill className="h-8 w-8 text-blue-600" />
+            <div className="flex-shrink-0 p-3 bg-green-100 rounded-xl">
+              <Pill className="h-8 w-8 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Active Medications</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.medications}</p>
+              <p className="text-sm font-medium text-gray-600">Active Medications</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.medications}</p>
             </div>
           </div>
         </div>
 
-        <div className="card group">
+        <div className="card appointment-card">
           <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 bg-green-100 rounded-xl group-hover:bg-green-200 transition-colors">
-              <Calendar className="h-8 w-8 text-green-600" />
+            <div className="flex-shrink-0 p-3 bg-yellow-100 rounded-xl">
+              <Calendar className="h-8 w-8 text-yellow-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Upcoming Appointments</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.upcomingAppointments}</p>
+              <p className="text-sm font-medium text-gray-600">Upcoming Appointments</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.upcomingAppointments}</p>
             </div>
           </div>
         </div>
 
-        <div className="card group">
+        <div className="card vital-card">
           <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 bg-red-100 rounded-xl group-hover:bg-red-200 transition-colors">
+            <div className="flex-shrink-0 p-3 bg-red-100 rounded-xl">
               <Heart className="h-8 w-8 text-red-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Vital Signs Today</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.vitalSignsToday}</p>
+              <p className="text-sm font-medium text-gray-600">Vital Signs Today</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.vitalSignsToday}</p>
             </div>
           </div>
         </div>
 
-        <div className="card group">
+        <div className="card health-card">
           <div className="flex items-center">
-            <div className="flex-shrink-0 p-3 bg-orange-100 rounded-xl group-hover:bg-orange-200 transition-colors">
-              <AlertCircle className="h-8 w-8 text-orange-600" />
+            <div className="flex-shrink-0 p-3 bg-blue-100 rounded-xl">
+              <AlertCircle className="h-8 w-8 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Missed Doses</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.missedDoses}</p>
+              <p className="text-sm font-medium text-gray-600">Missed Doses</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.missedDoses}</p>
             </div>
           </div>
         </div>

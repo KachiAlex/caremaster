@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
 import Layout from './components/Layout';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
@@ -23,6 +24,10 @@ function App() {
     <Routes>
       {/* Public routes */}
       <Route 
+        path="/" 
+        element={user ? <Navigate to="/dashboard" replace /> : <Landing />} 
+      />
+      <Route 
         path="/login" 
         element={user ? <Navigate to="/dashboard" replace /> : <Login />} 
       />
@@ -33,15 +38,34 @@ function App() {
       
       {/* Protected routes */}
       <Route 
-        path="/" 
+        path="/dashboard" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="medications" element={<Medications />} />
-        <Route path="vital-signs" element={<VitalSigns />} />
-        <Route path="appointments" element={<Appointments />} />
-        <Route path="profile" element={<Profile />} />
+        <Route index element={<Dashboard />} />
+      </Route>
+      <Route 
+        path="/medications" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<Medications />} />
+      </Route>
+      <Route 
+        path="/vital-signs" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<VitalSigns />} />
+      </Route>
+      <Route 
+        path="/appointments" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<Appointments />} />
+      </Route>
+      <Route 
+        path="/profile" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<Profile />} />
       </Route>
       
       {/* Catch all route */}

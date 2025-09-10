@@ -27,35 +27,27 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 opacity-20"></div>
-      <div className="absolute top-0 left-0 w-full h-full">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-40 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-4000"></div>
-      </div>
-      
-      <div className="max-w-md w-full space-y-8 relative z-10">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <div className="p-4 bg-white/20 backdrop-blur-xl rounded-2xl shadow-2xl">
-              <Heart className="h-12 w-12 text-white" />
+            <div className="p-4 bg-blue-100 rounded-2xl">
+              <Heart className="h-12 w-12 text-blue-600" />
             </div>
           </div>
-          <h2 className="text-4xl font-bold text-white mb-2">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome to ElderX
           </h2>
-          <p className="text-white/80 text-lg">
-            Your health companion
+          <p className="text-gray-600 text-lg">
+            Your trusted health companion
           </p>
         </div>
         
         <div className="card">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="form-label text-white">
+                <label htmlFor="email" className="form-label">
                   <Mail className="inline h-4 w-4 mr-2" />
                   Email Address
                 </label>
@@ -73,7 +65,7 @@ const Login = () => {
               </div>
               
               <div>
-                <label htmlFor="password" className="form-label text-white">
+                <label htmlFor="password" className="form-label">
                   <Lock className="inline h-4 w-4 mr-2" />
                   Password
                 </label>
@@ -95,16 +87,16 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn btn-primary w-full text-lg py-3"
+                className="btn btn-primary w-full"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </div>
 
             <div className="text-center">
-              <p className="text-white/80">
+              <p className="text-gray-600">
                 Don't have an account?{' '}
-                <Link to="/signup" className="font-semibold text-white hover:text-white/80 transition-colors">
+                <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
                   Sign up here
                 </Link>
               </p>
