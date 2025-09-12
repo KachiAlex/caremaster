@@ -1,303 +1,322 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, Clock, MapPin, User, Edit, Trash2, Phone, Video } from 'lucide-react';
+import { 
+  Stethoscope, 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  User, 
+  Star,
+  ChevronDown,
+  Maximize2
+} from 'lucide-react';
 
 const Appointments = () => {
-  const [showAddForm, setShowAddForm] = useState(false);
-  
-  // Mock data - will be replaced with real data from Data Connect
-  const [appointments, setAppointments] = useState([
+  const [careType, setCareType] = useState('immediate'); // 'immediate' or 'scheduled'
+  const [formData, setFormData] = useState({
+    careType: 'Blood Pressure Check',
+    preferredDate: '',
+    preferredTime: '',
+    additionalNotes: ''
+  });
+
+  // Mock data for available caregivers
+  const availableCaregivers = [
     {
       id: 1,
-      doctorName: 'Dr. Smith',
-      type: 'Checkup',
-      date: '2024-01-16',
-      time: '10:00 AM',
-      location: 'Main Street Clinic',
-      notes: 'Annual physical examination',
-      status: 'upcoming',
-      appointmentType: 'in-person'
+      name: 'Nurse Fatima Abdullahi',
+      specialty: 'Geriatric Care',
+      rating: 4.8,
+      location: 'Victoria Island, Lagos',
+      status: 'Available',
+      visits: 156,
+      avatar: null
     },
     {
       id: 2,
-      doctorName: 'Dr. Johnson',
-      type: 'Physical Therapy',
-      date: '2024-01-19',
-      time: '2:00 PM',
-      location: 'Oak Avenue Hospital',
-      notes: 'Follow-up session',
-      status: 'upcoming',
-      appointmentType: 'in-person'
-    },
-    {
-      id: 3,
-      doctorName: 'Dr. Williams',
-      type: 'Cardiology',
-      date: '2024-01-22',
-      time: '11:30 AM',
-      location: 'Heart Center',
-      notes: 'EKG and consultation',
-      status: 'upcoming',
-      appointmentType: 'telehealth'
+      name: 'Dr. Chinedu Okoro',
+      specialty: 'General Medicine',
+      rating: 4.9,
+      location: 'Ikeja, Lagos',
+      status: 'Busy',
+      visits: 89,
+      avatar: null
     }
-  ]);
-
-  const [newAppointment, setNewAppointment] = useState({
-    doctorName: '',
-    type: 'Checkup',
-    date: '',
-    time: '',
-    location: '',
-    notes: '',
-    appointmentType: 'in-person'
-  });
-
-  const appointmentTypes = [
-    'Checkup',
-    'Follow-up',
-    'Physical Therapy',
-    'Cardiology',
-    'Dermatology',
-    'Neurology',
-    'Orthopedics',
-    'Mental Health',
-    'Emergency'
   ];
 
-  const handleAddAppointment = (e) => {
-    e.preventDefault();
-    const appointment = {
-      id: Date.now(),
-      ...newAppointment,
-      status: 'upcoming'
-    };
-    setAppointments([...appointments, appointment]);
-    setNewAppointment({
-      doctorName: '',
-      type: 'Checkup',
-      date: '',
-      time: '',
-      location: '',
-      notes: '',
-      appointmentType: 'in-person'
-    });
-    setShowAddForm(false);
-  };
-
-  const handleDeleteAppointment = (id) => {
-    setAppointments(appointments.filter(apt => apt.id !== id));
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (date.toDateString() === tomorrow.toDateString()) {
-      return 'Tomorrow';
-    } else {
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        month: 'short', 
-        day: 'numeric' 
-      });
+  // Mock data for recent care requests
+  const recentRequests = [
+    {
+      id: 1,
+      title: 'Blood Pressure Check',
+      assignedCaregiver: 'Nurse Fatima Abdullahi',
+      createdDate: '9/1/2025',
+      scheduledDate: '9/3/2025, 2:00:00 PM',
+      description: 'Regular weekly checkup',
+      status: 'In Progress',
+      priority: 'Medium'
+    },
+    {
+      id: 2,
+      title: 'Medication Administration',
+      assignedCaregiver: 'Caregiver not assigned yet',
+      createdDate: '9/3/2025',
+      scheduledDate: null,
+      description: 'Daily medication reminder and administration',
+      status: 'Pending',
+      priority: 'High'
     }
+  ];
+
+  const careTypes = [
+    'Blood Pressure Check',
+    'Medication Administration',
+    'Wound Care',
+    'Physical Therapy',
+    'Vital Signs Monitoring',
+    'Meal Preparation',
+    'Companionship',
+    'Transportation',
+    'Housekeeping',
+    'Emergency Response'
+  ];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Handle form submission
+    console.log('Care request submitted:', formData);
+    // Reset form
+    setFormData({
+      careType: 'Blood Pressure Check',
+      preferredDate: '',
+      preferredTime: '',
+      additionalNotes: ''
+    });
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'upcoming': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Available':
+        return 'bg-green-100 text-green-800';
+      case 'Busy':
+        return 'bg-gray-100 text-gray-800';
+      case 'In Progress':
+        return 'bg-blue-100 text-blue-800';
+      case 'Pending':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'High':
+        return 'bg-red-100 text-red-800';
+      case 'Medium':
+        return 'bg-orange-100 text-orange-800';
+      case 'Low':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-          <p className="text-gray-600">Manage your medical appointments</p>
+    <div className="space-y-8">
+      {/* Request Care Service Section */}
+      <div className="card">
+        <div className="flex items-center mb-6">
+          <Stethoscope className="h-6 w-6 text-gray-700 mr-3" />
+          <h1 className="text-2xl font-bold text-gray-900">Request Care Service</h1>
         </div>
-        <button 
-          onClick={() => setShowAddForm(true)}
-          className="btn btn-primary"
-        >
-          <Plus className="h-4 w-4" />
-          Schedule Appointment
-        </button>
+
+        {/* Care Type Selection */}
+        <div className="flex space-x-4 mb-6">
+          <button
+            onClick={() => setCareType('immediate')}
+            className={`flex items-center px-6 py-3 rounded-lg border-2 transition-colors ${
+              careType === 'immediate'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+            }`}
+          >
+            <div className="w-6 h-6 rounded-full border-2 border-current flex items-center justify-center mr-3">
+              <span className="text-xs font-bold">!</span>
+            </div>
+            Need Care Now
+          </button>
+          <button
+            onClick={() => setCareType('scheduled')}
+            className={`flex items-center px-6 py-3 rounded-lg border-2 transition-colors ${
+              careType === 'scheduled'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+            }`}
+          >
+            <Calendar className="h-5 w-5 mr-3" />
+            Schedule Visit
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Type of Care Needed
+            </label>
+            <div className="relative">
+              <select
+                value={formData.careType}
+                onChange={(e) => setFormData({...formData, careType: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+              >
+                {careTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {careType === 'scheduled' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Preferred Date
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={formData.preferredDate}
+                    onChange={(e) => setFormData({...formData, preferredDate: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="mm/dd/yyyy"
+                  />
+                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Preferred Time
+                </label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    value={formData.preferredTime}
+                    onChange={(e) => setFormData({...formData, preferredTime: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="--:--"
+                  />
+                  <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+            </>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Additional Notes
+            </label>
+            <div className="relative">
+              <textarea
+                value={formData.additionalNotes}
+                onChange={(e) => setFormData({...formData, additionalNotes: e.target.value})}
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                placeholder="Please describe your symptoms or specific care needs..."
+              />
+              <Maximize2 className="absolute bottom-3 right-3 h-4 w-4 text-gray-400" />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors"
+          >
+            {careType === 'immediate' ? 'Request Immediate Care' : 'Schedule Care Visit'}
+          </button>
+        </form>
       </div>
 
-      {/* Add Appointment Form */}
-      {showAddForm && (
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Schedule New Appointment</h2>
-          <form onSubmit={handleAddAppointment} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">Doctor Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={newAppointment.doctorName}
-                  onChange={(e) => setNewAppointment({...newAppointment, doctorName: e.target.value})}
-                  placeholder="Dr. Smith"
-                  required
-                />
-              </div>
-              <div>
-                <label className="form-label">Appointment Type</label>
-                <select
-                  className="form-input"
-                  value={newAppointment.type}
-                  onChange={(e) => setNewAppointment({...newAppointment, type: e.target.value})}
-                >
-                  {appointmentTypes.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Date</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={newAppointment.date}
-                  onChange={(e) => setNewAppointment({...newAppointment, date: e.target.value})}
-                  required
-                />
-              </div>
-              <div>
-                <label className="form-label">Time</label>
-                <input
-                  type="time"
-                  className="form-input"
-                  value={newAppointment.time}
-                  onChange={(e) => setNewAppointment({...newAppointment, time: e.target.value})}
-                  required
-                />
-              </div>
-              <div>
-                <label className="form-label">Location</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={newAppointment.location}
-                  onChange={(e) => setNewAppointment({...newAppointment, location: e.target.value})}
-                  placeholder="Clinic or Hospital Name"
-                  required
-                />
-              </div>
-              <div>
-                <label className="form-label">Appointment Format</label>
-                <select
-                  className="form-input"
-                  value={newAppointment.appointmentType}
-                  onChange={(e) => setNewAppointment({...newAppointment, appointmentType: e.target.value})}
-                >
-                  <option value="in-person">In-Person</option>
-                  <option value="telehealth">Telehealth</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="form-label">Notes</label>
-              <textarea
-                className="form-input form-textarea"
-                value={newAppointment.notes}
-                onChange={(e) => setNewAppointment({...newAppointment, notes: e.target.value})}
-                placeholder="Any special instructions or notes for this appointment"
-              />
-            </div>
-            <div className="flex space-x-4">
-              <button type="submit" className="btn btn-primary">
-                Schedule Appointment
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setShowAddForm(false)}
-                className="btn btn-outline"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+      {/* Available Caregivers Section */}
+      <div className="card">
+        <div className="flex items-center mb-6">
+          <User className="h-6 w-6 text-gray-700 mr-3" />
+          <h2 className="text-xl font-bold text-gray-900">Available Caregivers Nearby</h2>
         </div>
-      )}
 
-      {/* Appointments List */}
-      <div className="grid grid-cols-1 gap-4">
-        {appointments.map((appointment) => (
-          <div key={appointment.id} className="card">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start">
-                <Calendar className="h-8 w-8 text-blue-600 mr-4 mt-1" />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{appointment.doctorName}</h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                      {appointment.status}
-                    </span>
+        <div className="space-y-4">
+          {availableCaregivers.map((caregiver) => (
+            <div key={caregiver.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">{caregiver.name}</h3>
+                  <p className="text-sm text-gray-600">{caregiver.specialty}</p>
+                  <div className="flex items-center space-x-4 mt-1">
+                    <div className="flex items-center">
+                      <Star className="h-4 w-4 text-yellow-400 mr-1" />
+                      <span className="text-sm text-gray-600">{caregiver.rating}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 text-gray-400 mr-1" />
+                      <span className="text-sm text-gray-600">{caregiver.location}</span>
+                    </div>
                   </div>
-                  <p className="text-gray-600 mb-2">{appointment.type}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(caregiver.status)}`}>
+                  {caregiver.status}
+                </span>
+                <p className="text-sm text-gray-500 mt-1">{caregiver.visits} visits</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Care Requests Section */}
+      <div className="card">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Care Requests</h2>
+        
+        <div className="space-y-4">
+          {recentRequests.map((request) => (
+            <div key={request.id} className="p-4 border border-gray-200 rounded-lg">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-2">{request.title}</h3>
+                  <p className="text-sm text-gray-600 mb-2">{request.assignedCaregiver}</p>
                   <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2">
                     <div className="flex items-center">
                       <Clock className="h-4 w-4 mr-1" />
-                      {formatDate(appointment.date)} at {appointment.time}
+                      <span>{request.createdDate}</span>
                     </div>
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {appointment.location}
-                    </div>
-                    <div className="flex items-center">
-                      {appointment.appointmentType === 'telehealth' ? (
-                        <Video className="h-4 w-4 mr-1" />
-                      ) : (
-                        <User className="h-4 w-4 mr-1" />
-                      )}
-                      {appointment.appointmentType === 'telehealth' ? 'Video Call' : 'In-Person'}
-                    </div>
+                    {request.scheduledDate && (
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        <span>{request.scheduledDate}</span>
+                      </div>
+                    )}
                   </div>
-                  {appointment.notes && (
-                    <p className="text-sm text-gray-500">{appointment.notes}</p>
-                  )}
+                  <p className="text-sm text-gray-600">{request.description}</p>
+                </div>
+                <div className="flex flex-col items-end space-y-2">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+                    {request.status}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(request.priority)}`}>
+                    {request.priority}
+                  </span>
                 </div>
               </div>
-              <div className="flex space-x-2">
-                <button className="btn btn-outline">
-                  <Edit className="h-4 w-4" />
-                </button>
-                <button 
-                  onClick={() => handleDeleteAppointment(appointment.id)}
-                  className="btn btn-danger"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {appointments.length === 0 && (
-        <div className="text-center py-12">
-          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments scheduled</h3>
-          <p className="text-gray-500 mb-4">Schedule your first appointment to get started</p>
-          <button 
-            onClick={() => setShowAddForm(true)}
-            className="btn btn-primary"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Schedule Your First Appointment
-          </button>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 };
