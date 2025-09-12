@@ -8,30 +8,50 @@ class TelemedicineService {
     this.remoteUsers = new Map();
     this.isJoined = false;
     this.isPublished = false;
+    this.isInitialized = false;
+    this.eventListeners = new Map();
     
-    // Agora configuration
+    // Agora configuration with better defaults
     this.config = {
       appId: process.env.REACT_APP_AGORA_APP_ID || '43c43dc3e6a44a99b2b75a4997e3b1a4',
       channel: process.env.REACT_APP_AGORA_CHANNEL || 'elderx_dev',
       token: process.env.REACT_APP_AGORA_TOKEN || '007eJxTYAj736zimGlilN56YtmltxEzVy/6tjyKYx73BPWFcnNFEswVGEyMk02MU5KNU80STUwSLS2TjJLMTRNNLC3NU42TDBNNeP4ezmgIZGRIe8LJwAiFID4XQ2pOSmpRRXxKahkDAwDgxiEn',
-      uid: null // Will be set when joining
+      uid: null, // Will be set when joining
+      mode: 'rtc',
+      codec: 'vp8'
     };
   }
 
   // Initialize Agora client
   async initialize() {
     try {
+      if (this.isInitialized) {
+        return true;
+      }
+
+      // Validate configuration
+      if (!this.config.appId) {
+        throw new Error('Agora App ID is required');
+      }
+
       this.client = AgoraRTC.createClient({ 
-        mode: "rtc", 
-        codec: "vp8" 
+        mode: this.config.mode, 
+        codec: this.config.codec 
       });
 
       // Set up event listeners
       this.setupEventListeners();
       
+      this.isInitialized = true;
+      this.triggerEvent('initialized', {});
+      
       return true;
     } catch (error) {
       console.error('Failed to initialize Agora client:', error);
+      this.triggerEvent('error', { 
+        type: 'initialization', 
+        error: error.message 
+      });
       throw error;
     }
   }
@@ -106,35 +126,52 @@ class TelemedicineService {
   }
 
   // Join channel
-  async joinChannel(uid = null) {
+  async joinChannel(uid = null, channelName = null) {
     try {
-      if (!this.client) {
+      if (!this.isInitialized) {
         await this.initialize();
       }
 
+      if (this.isJoined) {
+        console.warn('Already joined a channel');
+        return this.config.uid;
+      }
+
+      // Use provided channel name or default
+      const channel = channelName || this.config.channel;
+      
       // Generate UID if not provided
       const finalUid = uid || Math.floor(Math.random() * 100000);
       this.config.uid = finalUid;
 
+      // Validate channel name
+      if (!channel || channel.trim() === '') {
+        throw new Error('Channel name is required');
+      }
+
       // Join the channel
       await this.client.join(
         this.config.appId,
-        this.config.channel,
+        channel,
         this.config.token,
         finalUid
       );
 
       this.isJoined = true;
-      console.log("Successfully joined channel:", this.config.channel);
+      console.log("Successfully joined channel:", channel);
 
       // Create and publish local tracks
       await this.createLocalTracks();
       await this.publishLocalTracks();
 
-      this.triggerEvent('joined', { uid: finalUid });
+      this.triggerEvent('joined', { uid: finalUid, channel });
       return finalUid;
     } catch (error) {
       console.error("Failed to join channel:", error);
+      this.triggerEvent('error', { 
+        type: 'join', 
+        error: error.message 
+      });
       throw error;
     }
   }
@@ -142,41 +179,106 @@ class TelemedicineService {
   // Create local video and audio tracks
   async createLocalTracks() {
     try {
-      // Create video track
-      this.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
-        encoderConfig: "720p_1"
-      });
+      // Check for media permissions first
+      const hasCamera = await this.checkCameraPermission();
+      const hasMicrophone = await this.checkMicrophonePermission();
 
-      // Create audio track
-      this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      if (!hasCamera && !hasMicrophone) {
+        throw new Error('Camera and microphone access are required for video calls');
+      }
 
-      // Play local video
-      const localVideoContainer = document.getElementById('local-video');
-      if (localVideoContainer) {
-        this.localVideoTrack.play(localVideoContainer);
+      // Create video track if camera is available
+      if (hasCamera) {
+        this.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
+          encoderConfig: "720p_1"
+        });
+      }
+
+      // Create audio track if microphone is available
+      if (hasMicrophone) {
+        this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      }
+
+      // Play local video if available
+      if (this.localVideoTrack) {
+        const localVideoContainer = document.getElementById('local-video');
+        if (localVideoContainer) {
+          this.localVideoTrack.play(localVideoContainer);
+        }
       }
 
       console.log("Local tracks created successfully");
+      this.triggerEvent('tracks-created', {
+        hasVideo: !!this.localVideoTrack,
+        hasAudio: !!this.localAudioTrack
+      });
     } catch (error) {
       console.error("Failed to create local tracks:", error);
+      this.triggerEvent('error', { 
+        type: 'track-creation', 
+        error: error.message 
+      });
       throw error;
+    }
+  }
+
+  // Check camera permission
+  async checkCameraPermission() {
+    try {
+      const devices = await AgoraRTC.getCameras();
+      return devices.length > 0;
+    } catch (error) {
+      console.warn('Camera permission check failed:', error);
+      return false;
+    }
+  }
+
+  // Check microphone permission
+  async checkMicrophonePermission() {
+    try {
+      const devices = await AgoraRTC.getMicrophones();
+      return devices.length > 0;
+    } catch (error) {
+      console.warn('Microphone permission check failed:', error);
+      return false;
     }
   }
 
   // Publish local tracks
   async publishLocalTracks() {
     try {
-      if (!this.client || !this.localVideoTrack || !this.localAudioTrack) {
-        throw new Error("Client or tracks not initialized");
+      if (!this.client) {
+        throw new Error("Client not initialized");
       }
 
-      await this.client.publish([this.localVideoTrack, this.localAudioTrack]);
+      const tracksToPublish = [];
+      
+      if (this.localVideoTrack) {
+        tracksToPublish.push(this.localVideoTrack);
+      }
+      
+      if (this.localAudioTrack) {
+        tracksToPublish.push(this.localAudioTrack);
+      }
+
+      if (tracksToPublish.length === 0) {
+        throw new Error("No tracks available to publish");
+      }
+
+      await this.client.publish(tracksToPublish);
       this.isPublished = true;
       console.log("Local tracks published successfully");
       
-      this.triggerEvent('published', {});
+      this.triggerEvent('published', {
+        videoPublished: !!this.localVideoTrack,
+        audioPublished: !!this.localAudioTrack
+      });
     } catch (error) {
       console.error("Failed to publish local tracks:", error);
+      this.triggerEvent('error', { 
+        type: 'publish', 
+        error: error.message 
+      });
       throw error;
     }
   }
@@ -266,6 +368,120 @@ class TelemedicineService {
   // Check if audio is enabled
   isAudioEnabled() {
     return this.localAudioTrack ? this.localAudioTrack.enabled : false;
+  }
+
+  // Get available devices
+  async getAvailableDevices() {
+    try {
+      const [cameras, microphones] = await Promise.all([
+        AgoraRTC.getCameras(),
+        AgoraRTC.getMicrophones()
+      ]);
+
+      return {
+        cameras: cameras.map(camera => ({
+          deviceId: camera.deviceId,
+          label: camera.label || 'Camera'
+        })),
+        microphones: microphones.map(mic => ({
+          deviceId: mic.deviceId,
+          label: mic.label || 'Microphone'
+        }))
+      };
+    } catch (error) {
+      console.error('Failed to get devices:', error);
+      return { cameras: [], microphones: [] };
+    }
+  }
+
+  // Switch camera device
+  async switchCamera(deviceId) {
+    try {
+      if (!this.localVideoTrack) {
+        throw new Error('No video track available');
+      }
+
+      await this.localVideoTrack.setDevice(deviceId);
+      this.triggerEvent('camera-switched', { deviceId });
+    } catch (error) {
+      console.error('Failed to switch camera:', error);
+      this.triggerEvent('error', { 
+        type: 'camera-switch', 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  // Switch microphone device
+  async switchMicrophone(deviceId) {
+    try {
+      if (!this.localAudioTrack) {
+        throw new Error('No audio track available');
+      }
+
+      await this.localAudioTrack.setDevice(deviceId);
+      this.triggerEvent('microphone-switched', { deviceId });
+    } catch (error) {
+      console.error('Failed to switch microphone:', error);
+      this.triggerEvent('error', { 
+        type: 'microphone-switch', 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  // Start recording
+  async startRecording() {
+    try {
+      if (!this.client || !this.isJoined) {
+        throw new Error('Must be in a call to start recording');
+      }
+
+      // Note: Recording functionality requires Agora Cloud Recording
+      // This is a placeholder for the recording implementation
+      // In a real implementation, you would:
+      // 1. Call your backend to start cloud recording
+      // 2. Pass the channel name and UID
+      // 3. Handle recording status updates
+      
+      this.triggerEvent('recording-started', {});
+      return true;
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      this.triggerEvent('error', { 
+        type: 'recording-start', 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  // Stop recording
+  async stopRecording() {
+    try {
+      // Note: This would call your backend to stop cloud recording
+      this.triggerEvent('recording-stopped', {});
+      return true;
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+      this.triggerEvent('error', { 
+        type: 'recording-stop', 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+
+  // Get recording status
+  getRecordingStatus() {
+    // This would typically come from your backend
+    return {
+      isRecording: false,
+      recordingId: null,
+      startTime: null
+    };
   }
 
   // Custom event system
