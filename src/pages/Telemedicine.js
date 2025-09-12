@@ -33,6 +33,8 @@ import {
   Filter,
   MoreVertical
 } from 'lucide-react';
+import telemedicineService from '../services/telemedicineService';
+import { toast } from 'react-toastify';
 
 const Telemedicine = () => {
   const [appointments, setAppointments] = useState([]);
@@ -41,10 +43,44 @@ const Telemedicine = () => {
   const [isAudioOn, setIsAudioOn] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isInCall, setIsInCall] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [remoteUsers, setRemoteUsers] = useState([]);
 
   useEffect(() => {
     loadTelemedicineData();
+    setupAgoraEventListeners();
+    
+    return () => {
+      // Cleanup on unmount
+      if (isInCall) {
+        telemedicineService.leaveChannel();
+      }
+    };
   }, []);
+
+  // Set up Agora event listeners
+  const setupAgoraEventListeners = () => {
+    // User joined
+    window.addEventListener('agora-user-published', (event) => {
+      const { user } = event.detail;
+      setRemoteUsers(prev => [...prev, user]);
+      toast.success(`${user.uid} joined the call`);
+    });
+
+    // User left
+    window.addEventListener('agora-user-left', (event) => {
+      const { user } = event.detail;
+      setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+      toast.info(`${user.uid} left the call`);
+    });
+
+    // Connection state changed
+    window.addEventListener('agora-connection-state-change', (event) => {
+      const { curState } = event.detail;
+      console.log('Connection state:', curState);
+    });
+  };
 
   const loadTelemedicineData = async () => {
     try {
@@ -131,27 +167,90 @@ const Telemedicine = () => {
     }
   };
 
-  const startCall = (appointment) => {
-    setActiveCall(appointment);
+  const startCall = async (appointment) => {
+    try {
+      setActiveCall(appointment);
+      setIsInCall(true);
+      setCallDuration(0);
+      
+      // Join Agora channel
+      const uid = await telemedicineService.joinChannel();
+      console.log('Joined call with UID:', uid);
+      
+      toast.success('Call started successfully!');
+      
+      // Start call duration timer
+      const timer = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+      
+      // Store timer for cleanup
+      setActiveCall(prev => ({ ...prev, timer }));
+      
+    } catch (error) {
+      console.error('Failed to start call:', error);
+      toast.error('Failed to start call. Please try again.');
+      setActiveCall(null);
+      setIsInCall(false);
+    }
   };
 
-  const endCall = () => {
-    setActiveCall(null);
-    setIsVideoOn(true);
-    setIsAudioOn(true);
-    setIsRecording(false);
+  const endCall = async () => {
+    try {
+      // Clear timer
+      if (activeCall?.timer) {
+        clearInterval(activeCall.timer);
+      }
+      
+      // Leave Agora channel
+      await telemedicineService.leaveChannel();
+      
+      setActiveCall(null);
+      setIsInCall(false);
+      setCallDuration(0);
+      setRemoteUsers([]);
+      setIsVideoOn(true);
+      setIsAudioOn(true);
+      setIsRecording(false);
+      
+      toast.success('Call ended successfully!');
+    } catch (error) {
+      console.error('Failed to end call:', error);
+      toast.error('Failed to end call properly.');
+    }
   };
 
-  const toggleVideo = () => {
-    setIsVideoOn(!isVideoOn);
+  const toggleVideo = async () => {
+    try {
+      const enabled = await telemedicineService.toggleVideo();
+      setIsVideoOn(enabled);
+      toast.info(enabled ? 'Video enabled' : 'Video disabled');
+    } catch (error) {
+      console.error('Failed to toggle video:', error);
+      toast.error('Failed to toggle video');
+    }
   };
 
-  const toggleAudio = () => {
-    setIsAudioOn(!isAudioOn);
+  const toggleAudio = async () => {
+    try {
+      const enabled = await telemedicineService.toggleAudio();
+      setIsAudioOn(enabled);
+      toast.info(enabled ? 'Audio enabled' : 'Audio disabled');
+    } catch (error) {
+      console.error('Failed to toggle audio:', error);
+      toast.error('Failed to toggle audio');
+    }
   };
 
   const toggleRecording = () => {
     setIsRecording(!isRecording);
+    toast.info(isRecording ? 'Recording stopped' : 'Recording started');
+  };
+
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const getStatusColor = (status) => {
@@ -221,7 +320,7 @@ const Telemedicine = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-300">Call Duration: 15:32</span>
+              <span className="text-sm text-gray-300">Call Duration: {formatDuration(callDuration)}</span>
               <button
                 onClick={endCall}
                 className="p-2 bg-red-600 rounded-full hover:bg-red-700"
@@ -233,23 +332,30 @@ const Telemedicine = () => {
 
           {/* Video/Audio Interface */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Doctor's Video */}
+            {/* Remote Users Video */}
             <div className="bg-gray-800 rounded-lg p-4">
-              <div className="aspect-video bg-gray-700 rounded-lg flex items-center justify-center mb-4">
-                {isVideoOn ? (
-                  <div className="text-center">
-                    <Camera className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-400">Doctor's Video</p>
-                  </div>
+              <div className="aspect-video bg-gray-700 rounded-lg mb-4 relative overflow-hidden">
+                {remoteUsers.length > 0 ? (
+                  remoteUsers.map((user, index) => (
+                    <div
+                      key={user.uid}
+                      id={`remote-video-${user.uid}`}
+                      className="w-full h-full"
+                    />
+                  ))
                 ) : (
-                  <div className="text-center">
-                    <VideoOff className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-400">Video Off</p>
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Camera className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-400">Waiting for doctor to join...</p>
+                    </div>
                   </div>
                 )}
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">{activeCall.doctorName}</span>
+                <span className="text-sm text-gray-300">
+                  {remoteUsers.length > 0 ? `${remoteUsers.length} participant(s)` : 'No participants'}
+                </span>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={toggleVideo}
@@ -267,22 +373,36 @@ const Telemedicine = () => {
               </div>
             </div>
 
-            {/* Patient's Video */}
+            {/* Local Video */}
             <div className="bg-gray-800 rounded-lg p-4">
-              <div className="aspect-video bg-gray-700 rounded-lg flex items-center justify-center mb-4">
-                <div className="text-center">
-                  <Camera className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-400">Your Video</p>
-                </div>
+              <div className="aspect-video bg-gray-700 rounded-lg mb-4 relative overflow-hidden">
+                <div
+                  id="local-video"
+                  className="w-full h-full"
+                />
+                {!isVideoOn && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-600">
+                    <div className="text-center">
+                      <VideoOff className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-400">Your video is off</p>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-300">You</span>
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 bg-gray-700 rounded-full">
-                    <Video className="h-4 w-4" />
+                  <button
+                    onClick={toggleVideo}
+                    className={`p-2 rounded-full ${isVideoOn ? 'bg-gray-700' : 'bg-red-600'}`}
+                  >
+                    {isVideoOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
                   </button>
-                  <button className="p-2 bg-gray-700 rounded-full">
-                    <Mic className="h-4 w-4" />
+                  <button
+                    onClick={toggleAudio}
+                    className={`p-2 rounded-full ${isAudioOn ? 'bg-gray-700' : 'bg-red-600'}`}
+                  >
+                    {isAudioOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
                   </button>
                 </div>
               </div>

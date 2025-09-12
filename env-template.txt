@@ -1,0 +1,12 @@
+# Agora Configuration
+# Rename this file to .env.local and place it in the root directory
+
+REACT_APP_AGORA_APP_ID=43c43dc3e6a44a99b2b75a4997e3b1a4
+REACT_APP_AGORA_CHANNEL=elderx_dev
+REACT_APP_AGORA_TOKEN=007eJxTYAj736zimGlilN56YtmltxEzVy/6tjyKYx73BPWFcnNFEswVGEyMk02MU5KNU80STUwSLS2TjJLMTRNNLC3NU42TDBNNeP4ezmgIZGRIe8LJwAiFID4XQ2pOSmpRRXxKahkDAwDgxiEn
+
+# Instructions:
+# 1. Rename this file to .env.local
+# 2. Place it in the root directory (same level as package.json)
+# 3. The app will automatically load these environment variables
+# 4. For production, use secure token generation via Firebase Functions
