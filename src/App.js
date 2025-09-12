@@ -13,6 +13,9 @@ import VitalSigns from './pages/VitalSigns';
 import Appointments from './pages/Appointments';
 import Profile from './pages/Profile';
 import CaregiverDashboard from './pages/CaregiverDashboard';
+import CaregiverSchedule from './pages/CaregiverSchedule';
+import Telemedicine from './pages/Telemedicine';
+import CaregiverLayout from './components/CaregiverLayout';
 import Services from './pages/Services';
 import Pricing from './pages/Pricing';
 import AdminDashboard from './pages/AdminDashboard';
@@ -79,6 +82,12 @@ function App() {
         <Route index element={<Appointments />} />
       </Route>
       <Route 
+        path="/telemedicine" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<Telemedicine />} />
+      </Route>
+      <Route 
         path="/profile" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
@@ -86,9 +95,10 @@ function App() {
       </Route>
       <Route 
         path="/caregiver" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <CaregiverLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<CaregiverDashboard />} />
+        <Route path="schedule" element={<CaregiverSchedule />} />
       </Route>
       <Route 
         path="/services" 

@@ -8,6 +8,7 @@ import {
   Heart, 
   MessageCircle, 
   CreditCard,
+  Video,
   Menu, 
   X,
   LogOut,
@@ -36,6 +37,7 @@ const Layout = () => {
     { name: 'Overview', href: '/dashboard', icon: Home },
     { name: 'Request Care', href: '/appointments', icon: Calendar },
     { name: 'Health Vitals', href: '/vital-signs', icon: Heart },
+    { name: 'Telemedicine', href: '/telemedicine', icon: Video },
     { name: 'Messages', href: '/messages', icon: MessageCircle },
     { name: 'Subscription', href: '/subscription', icon: CreditCard },
   ];
