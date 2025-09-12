@@ -52,7 +52,29 @@ const Signup = () => {
       toast.success('Account created successfully!');
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.message);
+      console.error('Signup error:', error);
+      
+      // More specific error messages
+      let errorMessage = 'An error occurred during signup';
+      
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'This email is already registered';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'Email/password signup is not enabled. Please contact support.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Password should be at least 6 characters';
+          break;
+        default:
+          errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -75,117 +97,119 @@ const Signup = () => {
           </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="displayName" className="form-label">
-                <User className="inline h-4 w-4 mr-2" />
-                Full Name
-              </label>
-              <input
-                id="displayName"
-                name="displayName"
-                type="text"
-                autoComplete="name"
-                required
-                className="form-input"
-                placeholder="Enter your full name"
-                value={formData.displayName}
-                onChange={handleChange}
-              />
+        <div className="card">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="displayName" className="form-label">
+                  <User className="inline h-4 w-4 mr-2" />
+                  Full Name
+                </label>
+                <input
+                  id="displayName"
+                  name="displayName"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  className="form-input"
+                  placeholder="Enter your full name"
+                  value={formData.displayName}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="userType" className="form-label">
+                  <UserCheck className="inline h-4 w-4 mr-2" />
+                  Account Type
+                </label>
+                <select
+                  id="userType"
+                  name="userType"
+                  className="form-input"
+                  value={formData.userType}
+                  onChange={handleChange}
+                >
+                  <option value="elderly">Elderly Person</option>
+                  <option value="caregiver">Caregiver</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="email" className="form-label">
+                  <Mail className="inline h-4 w-4 mr-2" />
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className="form-input"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="password" className="form-label">
+                  <Lock className="inline h-4 w-4 mr-2" />
+                  Password
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  className="form-input"
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="form-label">
+                  <Lock className="inline h-4 w-4 mr-2" />
+                  Confirm Password
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  className="form-input"
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                />
+              </div>
             </div>
 
             <div>
-              <label htmlFor="userType" className="form-label">
-                <UserCheck className="inline h-4 w-4 mr-2" />
-                Account Type
-              </label>
-              <select
-                id="userType"
-                name="userType"
-                className="form-input"
-                value={formData.userType}
-                onChange={handleChange}
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn btn-primary w-full"
               >
-                <option value="elderly">Elderly Person</option>
-                <option value="caregiver">Caregiver</option>
-              </select>
-            </div>
-            
-            <div>
-              <label htmlFor="email" className="form-label">
-                <Mail className="inline h-4 w-4 mr-2" />
-                Email Address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="form-input"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="form-label">
-                <Lock className="inline h-4 w-4 mr-2" />
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                className="form-input"
-                placeholder="Create a password"
-                value={formData.password}
-                onChange={handleChange}
-              />
+                {loading ? 'Creating Account...' : 'Create Account'}
+              </button>
             </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="form-label">
-                <Lock className="inline h-4 w-4 mr-2" />
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                required
-                className="form-input"
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
+            <div className="text-center">
+              <p className="text-gray-600">
+                Already have an account?{' '}
+                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                  Sign in here
+                </Link>
+              </p>
             </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary w-full"
-            >
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                Sign in here
-              </Link>
-            </p>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

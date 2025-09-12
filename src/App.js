@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
 import Layout from './components/Layout';
+import AdminLayout from './components/AdminLayout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -11,6 +12,22 @@ import Medications from './pages/Medications';
 import VitalSigns from './pages/VitalSigns';
 import Appointments from './pages/Appointments';
 import Profile from './pages/Profile';
+import CaregiverDashboard from './pages/CaregiverDashboard';
+import Services from './pages/Services';
+import Pricing from './pages/Pricing';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
+import AdminReports from './pages/AdminReports';
+import AdminAppointments from './pages/AdminAppointments';
+import AdminSettings from './pages/AdminSettings';
+import AdminEmergency from './pages/AdminEmergency';
+import AdminEmergencyProtocols from './pages/AdminEmergencyProtocols';
+import AdminMedications from './pages/AdminMedications';
+import AdminMedicationAnalytics from './pages/AdminMedicationAnalytics';
+import AdminCaregivers from './pages/AdminCaregivers';
+import AdminAnalytics from './pages/AdminAnalytics';
+import AdminCommunication from './pages/AdminCommunication';
+import AdminAuditLogs from './pages/AdminAuditLogs';
 import LoadingSpinner from './components/LoadingSpinner';
 
 function App() {
@@ -25,7 +42,7 @@ function App() {
       {/* Public routes */}
       <Route 
         path="/" 
-        element={user ? <Navigate to="/dashboard" replace /> : <Landing />} 
+        element={<Landing />} 
       />
       <Route 
         path="/login" 
@@ -66,6 +83,40 @@ function App() {
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Profile />} />
+      </Route>
+      <Route 
+        path="/caregiver" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<CaregiverDashboard />} />
+      </Route>
+      <Route 
+        path="/services" 
+        element={<Services />} 
+      />
+      <Route 
+        path="/pricing" 
+        element={<Pricing />} 
+      />
+      
+      {/* Admin routes */}
+      <Route 
+        path="/admin" 
+        element={user ? <AdminLayout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="appointments" element={<AdminAppointments />} />
+        <Route path="emergency" element={<AdminEmergency />} />
+        <Route path="emergency/protocols" element={<AdminEmergencyProtocols />} />
+        <Route path="medications" element={<AdminMedications />} />
+        <Route path="medications/analytics" element={<AdminMedicationAnalytics />} />
+        <Route path="caregivers" element={<AdminCaregivers />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="communication" element={<AdminCommunication />} />
+        <Route path="audit-logs" element={<AdminAuditLogs />} />
+        <Route path="reports" element={<AdminReports />} />
+        <Route path="settings" element={<AdminSettings />} />
       </Route>
       
       {/* Catch all route */}

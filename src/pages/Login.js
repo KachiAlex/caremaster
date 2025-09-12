@@ -20,7 +20,32 @@ const Login = () => {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.message);
+      console.error('Login error:', error);
+      
+      // More specific error messages
+      let errorMessage = 'An error occurred during login';
+      
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'No account found with this email';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'Email/password login is not enabled. Please contact support.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        default:
+          errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
