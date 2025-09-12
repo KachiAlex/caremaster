@@ -16,6 +16,8 @@ import CaregiverDashboard from './pages/CaregiverDashboard';
 import CaregiverSchedule from './pages/CaregiverSchedule';
 import Telemedicine from './pages/Telemedicine';
 import CaregiverLayout from './components/CaregiverLayout';
+import Messages from './pages/Messages';
+import Subscription from './pages/Subscription';
 import Services from './pages/Services';
 import Pricing from './pages/Pricing';
 import AdminDashboard from './pages/AdminDashboard';
@@ -92,6 +94,18 @@ function App() {
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Profile />} />
+      </Route>
+      <Route 
+        path="/messages" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<Messages />} />
+      </Route>
+      <Route 
+        path="/subscription" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<Subscription />} />
       </Route>
       <Route 
         path="/caregiver" 
