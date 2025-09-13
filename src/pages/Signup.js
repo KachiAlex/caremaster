@@ -11,7 +11,7 @@ const Signup = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    userType: 'elderly'
+    userType: 'patient'
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -50,7 +50,13 @@ const Signup = () => {
       });
 
       toast.success('Account created successfully!');
-      navigate('/dashboard');
+      
+      // Navigate based on user type
+      if (formData.userType === 'caregiver') {
+        navigate('/caregiver');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Signup error:', error);
       
@@ -118,21 +124,35 @@ const Signup = () => {
                 />
               </div>
 
-              <div>
-                <label htmlFor="userType" className="form-label">
-                  <UserCheck className="inline h-4 w-4 mr-2" />
-                  Account Type
-                </label>
-                <select
-                  id="userType"
-                  name="userType"
-                  className="form-input"
-                  value={formData.userType}
-                  onChange={handleChange}
-                >
-                  <option value="elderly">Elderly Person</option>
-                  <option value="caregiver">Caregiver</option>
-                </select>
+              {/* Role Selection */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700">I am a:</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, userType: 'patient'})}
+                    className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${
+                      formData.userType === 'patient'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <User className="h-5 w-5 mr-2" />
+                    Patient
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, userType: 'caregiver'})}
+                    className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${
+                      formData.userType === 'caregiver'
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <UserCheck className="h-5 w-5 mr-2" />
+                    Caregiver
+                  </button>
+                </div>
               </div>
               
               <div>

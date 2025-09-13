@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { toast } from 'react-toastify';
-import { Heart, Mail, Lock } from 'lucide-react';
+import { Heart, Mail, Lock, User, UserCheck } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [userRole, setUserRole] = useState('patient'); // 'patient' or 'caregiver'
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -18,7 +19,13 @@ const Login = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast.success('Welcome back!');
-      navigate('/dashboard');
+      
+      // Navigate based on user role
+      if (userRole === 'caregiver') {
+        navigate('/caregiver');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Login error:', error);
       
@@ -73,6 +80,37 @@ const Login = () => {
         
         <div className="card">
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Role Selection */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-700">I am a:</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setUserRole('patient')}
+                  className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${
+                    userRole === 'patient'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <User className="h-5 w-5 mr-2" />
+                  Patient
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('caregiver')}
+                  className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${
+                    userRole === 'caregiver'
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <UserCheck className="h-5 w-5 mr-2" />
+                  Caregiver
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div>
                 <label htmlFor="email" className="form-label">
