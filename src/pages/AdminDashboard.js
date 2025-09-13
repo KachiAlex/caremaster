@@ -11,7 +11,15 @@ import {
   Shield,
   BarChart3,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Eye,
+  Download,
+  RefreshCw,
+  Zap,
+  DollarSign,
+  MapPin,
+  Phone,
+  Mail
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -22,11 +30,18 @@ const AdminDashboard = () => {
     activeAppointments: 0,
     emergencyAlerts: 0,
     medicationReminders: 0,
-    systemHealth: 'Good'
+    systemHealth: 'Good',
+    revenue: 0,
+    satisfaction: 0,
+    responseTime: 0,
+    uptime: 0
   });
 
   const [recentActivity, setRecentActivity] = useState([]);
+  const [topCaregivers, setTopCaregivers] = useState([]);
+  const [systemAlerts, setSystemAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
   useEffect(() => {
     // Simulate loading dashboard data
@@ -41,7 +56,11 @@ const AdminDashboard = () => {
             activeAppointments: 23,
             emergencyAlerts: 2,
             medicationReminders: 156,
-            systemHealth: 'Good'
+            systemHealth: 'Good',
+            revenue: 45680,
+            satisfaction: 94.5,
+            responseTime: 2.3,
+            uptime: 99.8
           });
 
           setRecentActivity([
@@ -75,6 +94,61 @@ const AdminDashboard = () => {
             }
           ]);
 
+          setTopCaregivers([
+            {
+              id: 1,
+              name: 'Sarah Johnson',
+              rating: 4.9,
+              patientsServed: 12,
+              tasksCompleted: 145,
+              responseTime: 2.1,
+              avatar: null
+            },
+            {
+              id: 2,
+              name: 'Michael Adebayo',
+              rating: 4.8,
+              patientsServed: 10,
+              tasksCompleted: 132,
+              responseTime: 2.3,
+              avatar: null
+            },
+            {
+              id: 3,
+              name: 'Grace Okafor',
+              rating: 4.7,
+              patientsServed: 8,
+              tasksCompleted: 118,
+              responseTime: 2.5,
+              avatar: null
+            }
+          ]);
+
+          setSystemAlerts([
+            {
+              id: 1,
+              type: 'warning',
+              message: 'High server load detected',
+              time: '5 minutes ago',
+              severity: 'medium'
+            },
+            {
+              id: 2,
+              type: 'info',
+              message: 'Database backup completed',
+              time: '1 hour ago',
+              severity: 'low'
+            },
+            {
+              id: 3,
+              type: 'success',
+              message: 'New caregiver verification completed',
+              time: '2 hours ago',
+              severity: 'low'
+            }
+          ]);
+
+          setLastUpdated(new Date());
           setLoading(false);
         }, 1000);
       } catch (error) {
@@ -85,6 +159,11 @@ const AdminDashboard = () => {
 
     loadDashboardData();
   }, []);
+
+  const refreshData = () => {
+    setLoading(true);
+    loadDashboardData();
+  };
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -123,14 +202,29 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-gray-600">Monitor and manage the ElderX platform</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={refreshData}
+            disabled={loading}
+            className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          <button className="flex items-center px-3 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </button>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-green-500 rounded-full"></div>
             <span className="text-sm text-gray-600">System Healthy</span>
@@ -138,8 +232,9 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="w-full p-6 dashboard-full-width">
+        {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
@@ -203,6 +298,70 @@ const AdminDashboard = () => {
             <span className="text-sm text-blue-600">Today's schedule</span>
           </div>
         </div>
+
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
+              <p className="text-2xl font-bold text-gray-900">₦{stats.revenue.toLocaleString()}</p>
+            </div>
+            <div className="p-3 bg-green-100 rounded-full">
+              <DollarSign className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center">
+            <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+            <span className="text-sm text-green-600">+18% from last month</span>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Satisfaction Rate</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.satisfaction}%</p>
+            </div>
+            <div className="p-3 bg-yellow-100 rounded-full">
+              <Heart className="h-6 w-6 text-yellow-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center">
+            <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+            <span className="text-sm text-green-600">+2.1% from last month</span>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Avg Response Time</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.responseTime}s</p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-full">
+              <Zap className="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center">
+            <TrendingUp className="h-4 w-4 text-red-500 mr-1" />
+            <span className="text-sm text-red-600">+0.2s from last week</span>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">System Uptime</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.uptime}%</p>
+            </div>
+            <div className="p-3 bg-indigo-100 rounded-full">
+              <Shield className="h-6 w-6 text-indigo-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center">
+            <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+            <span className="text-sm text-green-600">+0.1% from last month</span>
+          </div>
+        </div>
       </div>
 
       {/* Emergency Alerts */}
@@ -229,8 +388,8 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* System Status and Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* System Status, Recent Activity, and Top Caregivers */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* System Health */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
@@ -287,6 +446,62 @@ const AdminDashboard = () => {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Top Caregivers */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Top Caregivers</h2>
+            <UserCheck className="h-5 w-5 text-purple-600" />
+          </div>
+          
+          <div className="space-y-4">
+            {topCaregivers.map((caregiver, index) => (
+              <div key={caregiver.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                      <UserCheck className="h-5 w-5 text-purple-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900">{caregiver.name}</h4>
+                    <p className="text-xs text-gray-600">{caregiver.patientsServed} patients</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-900">{caregiver.rating}</span>
+                    <span className="text-xs text-gray-500 ml-1">★</span>
+                  </div>
+                  <p className="text-xs text-gray-600">{caregiver.tasksCompleted} tasks</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* System Alerts */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">System Alerts</h2>
+          <AlertTriangle className="h-5 w-5 text-orange-600" />
+        </div>
+        
+        <div className="space-y-3">
+          {systemAlerts.map((alert) => (
+            <div key={alert.id} className={`p-3 rounded-lg border-l-4 ${
+              alert.severity === 'high' ? 'bg-red-50 border-red-500' :
+              alert.severity === 'medium' ? 'bg-yellow-50 border-yellow-500' :
+              'bg-green-50 border-green-500'
+            }`}>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-900">{alert.message}</p>
+                <span className="text-xs text-gray-500">{alert.time}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -351,6 +566,7 @@ const AdminDashboard = () => {
             <span className="text-sm font-medium">System Settings</span>
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
