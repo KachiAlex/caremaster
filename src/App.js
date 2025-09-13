@@ -14,6 +14,14 @@ import Appointments from './pages/Appointments';
 import Profile from './pages/Profile';
 import CaregiverDashboard from './pages/CaregiverDashboard';
 import CaregiverSchedule from './pages/CaregiverSchedule';
+import CaregiverPatients from './pages/CaregiverPatients';
+import CaregiverTasks from './pages/CaregiverTasks';
+import CaregiverMessages from './pages/CaregiverMessages';
+import CaregiverNavigation from './pages/CaregiverNavigation';
+import CaregiverPhotos from './pages/CaregiverPhotos';
+import CaregiverPerformance from './pages/CaregiverPerformance';
+import CaregiverEmergency from './pages/CaregiverEmergency';
+import CaregiverSettings from './pages/CaregiverSettings';
 import Telemedicine from './pages/Telemedicine';
 import CaregiverLayout from './components/CaregiverLayout';
 import Messages from './pages/Messages';
@@ -113,6 +121,14 @@ function App() {
       >
         <Route index element={<CaregiverDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
+        <Route path="patients" element={<CaregiverPatients />} />
+        <Route path="tasks" element={<CaregiverTasks />} />
+        <Route path="messages" element={<CaregiverMessages />} />
+        <Route path="navigation" element={<CaregiverNavigation />} />
+        <Route path="photos" element={<CaregiverPhotos />} />
+        <Route path="performance" element={<CaregiverPerformance />} />
+        <Route path="emergency" element={<CaregiverEmergency />} />
+        <Route path="settings" element={<CaregiverSettings />} />
       </Route>
       <Route 
         path="/services" 
