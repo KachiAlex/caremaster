@@ -32,6 +32,9 @@ const Login = () => {
         case 'auth/wrong-password':
           errorMessage = 'Incorrect password';
           break;
+        case 'auth/invalid-credential':
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+          break;
         case 'auth/invalid-email':
           errorMessage = 'Please enter a valid email address';
           break;
@@ -118,13 +121,17 @@ const Login = () => {
               </button>
             </div>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <p className="text-gray-600">
                 Don't have an account?{' '}
                 <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
                   Sign up here
                 </Link>
               </p>
+              <div className="text-sm text-gray-500">
+                <p>Demo Account:</p>
+                <p>Email: demo@elderx.com | Password: demo123</p>
+              </div>
             </div>
           </form>
         </div>

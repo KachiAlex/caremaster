@@ -46,6 +46,23 @@
   //     ]
   //   },
   // ]
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "telemedicine_appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientId", "mode": "ASCENDING" },
+        { "fieldPath": "appointmentDate", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "telemedicine_appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "doctorId", "mode": "ASCENDING" },
+        { "fieldPath": "appointmentDate", "mode": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
