@@ -212,11 +212,9 @@ const CaregiverLayout = () => {
         </div>
 
         {/* Page content */}
-        <main className="flex-1">
-          <div className="py-6">
-            <div className="w-full px-4 sm:px-6 md:px-8">
-              <Outlet />
-            </div>
+        <main className="flex-1 overflow-auto">
+          <div className="h-full">
+            <Outlet />
           </div>
         </main>
       </div>

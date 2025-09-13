@@ -189,9 +189,9 @@ const CaregiverDashboard = () => {
   }
 
   return (
-    <div>
+    <div className="h-full bg-gray-50">
       {/* Header */}
-      <div className="mb-6">
+      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
@@ -218,7 +218,8 @@ const CaregiverDashboard = () => {
         </div>
       </div>
 
-      <div>
+      {/* Main Content */}
+      <div className="flex-1 p-6">
         <div className="space-y-6">
           {/* Quick Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -372,7 +373,7 @@ const CaregiverDashboard = () => {
           </div>
 
           {/* Performance Overview */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-900">Performance Overview</h2>
@@ -429,7 +430,7 @@ const CaregiverDashboard = () => {
                 <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
               </div>
               <div className="p-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <button className="flex items-center justify-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                     <MessageSquare className="h-5 w-5 text-blue-600 mr-2" />
                     <span className="text-sm font-medium">Messages</span>
