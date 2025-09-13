@@ -191,27 +191,27 @@ const CaregiverDashboard = () => {
   return (
     <div className="w-full h-full bg-gray-50 dashboard-full-width">
       {/* Header */}
-      <div className="w-full bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+      <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
-              <span className="text-white font-medium">
+          <div className="flex items-center space-x-4">
+            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
+              <span className="text-white font-semibold text-lg">
                 {caregiver?.name.split(' ').map(n => n[0]).join('')}
               </span>
             </div>
-            <div className="ml-3">
-              <h1 className="text-xl font-semibold text-gray-900">Welcome, {caregiver?.name}</h1>
-              <p className="text-sm text-gray-500">Caregiver Dashboard</p>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Welcome, {caregiver?.name}</h1>
+              <p className="text-gray-600">Caregiver Dashboard</p>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <button className="p-2 text-gray-400 hover:text-gray-600">
+          <div className="flex items-center space-x-6">
+            <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
               <Bell className="h-6 w-6" />
             </button>
-            <button className="p-2 text-gray-400 hover:text-gray-600">
+            <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
               <Settings className="h-6 w-6" />
             </button>
-            <button className="p-2 text-gray-400 hover:text-gray-600">
+            <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
               <LogOut className="h-6 w-6" />
             </button>
           </div>
@@ -219,116 +219,119 @@ const CaregiverDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="w-full p-6 dashboard-full-width">
+      <div className="w-full p-8 dashboard-full-width">
         <div className="space-y-6">
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <Calendar className="h-6 w-6 text-blue-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Today's Visits</p>
+                  <p className="text-3xl font-bold text-gray-900">{todaySchedule.length}</p>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Today's Visits</p>
-                  <p className="text-2xl font-bold text-gray-900">{todaySchedule.length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-full">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Completed Tasks</p>
-                  <p className="text-2xl font-bold text-gray-900">{recentTasks.filter(t => t.status === 'completed').length}</p>
+                <div className="p-3 bg-blue-50 rounded-xl">
+                  <Calendar className="h-8 w-8 text-blue-600" />
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-yellow-100 rounded-full">
-                  <Star className="h-6 w-6 text-yellow-600" />
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Completed Tasks</p>
+                  <p className="text-3xl font-bold text-gray-900">{recentTasks.filter(t => t.status === 'completed').length}</p>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Rating</p>
-                  <p className="text-2xl font-bold text-gray-900">{caregiver?.rating}</p>
+                <div className="p-3 bg-green-50 rounded-xl">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-full">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Rating</p>
+                  <p className="text-3xl font-bold text-gray-900">{caregiver?.rating}</p>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">This Month</p>
-                  <p className="text-2xl font-bold text-gray-900">₦{caregiver?.thisMonthEarnings.toLocaleString()}</p>
+                <div className="p-3 bg-yellow-50 rounded-xl">
+                  <Star className="h-8 w-8 text-yellow-600" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
+                  <p className="text-3xl font-bold text-gray-900">₦{caregiver?.thisMonthEarnings.toLocaleString()}</p>
+                </div>
+                <div className="p-3 bg-purple-50 rounded-xl">
+                  <TrendingUp className="h-8 w-8 text-purple-600" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Today's Schedule */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Today's Schedule</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="px-8 py-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Today's Schedule</h2>
             </div>
-            <div className="p-6">
-              <div className="space-y-4">
+            <div className="p-8">
+              <div className="space-y-6">
                 {todaySchedule.map((schedule) => (
-                  <div key={schedule.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={schedule.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-medium text-gray-900">{schedule.patientName}</h3>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(schedule.status)}`}>
+                        <div className="flex items-center space-x-4 mb-4">
+                          <h3 className="text-xl font-semibold text-gray-900">{schedule.patientName}</h3>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(schedule.status)}`}>
                             {schedule.status}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
                           <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {formatTime(schedule.time)} ({schedule.duration})
+                            <Clock className="h-5 w-5 mr-2 text-gray-500" />
+                            <span className="font-medium">{formatTime(schedule.time)} ({schedule.duration})</span>
                           </div>
                           <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            {schedule.address}
+                            <MapPin className="h-5 w-5 mr-2 text-gray-500" />
+                            <span className="font-medium">{schedule.address}</span>
                           </div>
                         </div>
-                        <div className="mb-3">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Tasks:</h4>
-                          <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        <div className="mb-4">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Tasks:</h4>
+                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {schedule.tasks.map((task, index) => (
-                              <li key={index}>{task}</li>
+                              <li key={index} className="flex items-center text-sm text-gray-600">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                                {task}
+                              </li>
                             ))}
                           </ul>
                         </div>
                         {schedule.notes && (
-                          <div className="mb-3">
-                            <h4 className="text-sm font-medium text-gray-700 mb-1">Notes:</h4>
-                            <p className="text-sm text-gray-600">{schedule.notes}</p>
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes:</h4>
+                            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{schedule.notes}</p>
                           </div>
                         )}
                       </div>
-                      <div className="flex flex-col space-y-2 ml-4">
+                      <div className="flex flex-col space-y-3 ml-8">
                         <button
                           onClick={() => handleClockIn(schedule.id)}
-                          className="btn btn-primary text-sm"
+                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                         >
                           Clock In
                         </button>
                         <button
                           onClick={() => handleClockOut(schedule.id)}
-                          className="btn btn-secondary text-sm"
+                          className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
                         >
                           Clock Out
                         </button>
                         <button
                           onClick={() => handleEmergency(schedule.patientId)}
-                          className="btn btn-red text-sm"
+                          className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center"
                         >
-                          <AlertTriangle className="h-4 w-4 mr-1" />
+                          <AlertTriangle className="h-4 w-4 mr-2" />
                           Emergency
                         </button>
                       </div>
@@ -340,30 +343,32 @@ const CaregiverDashboard = () => {
           </div>
 
           {/* Recent Tasks */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Tasks</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="px-8 py-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Recent Tasks</h2>
             </div>
-            <div className="p-6">
-              <div className="space-y-3">
+            <div className="p-8">
+              <div className="space-y-4">
                 {recentTasks.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div key={task.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-2 bg-green-50 rounded-lg">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      </div>
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900">{task.task}</h4>
+                        <h4 className="text-base font-semibold text-gray-900">{task.task}</h4>
                         <p className="text-sm text-gray-600">{task.patientName}</p>
                         <p className="text-xs text-gray-500">
                           {new Date(task.completedAt).toLocaleString()}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                    <div className="flex items-center space-x-3">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
                         {task.status}
                       </span>
-                      <button className="text-blue-600 hover:text-blue-800">
-                        <Eye className="h-4 w-4" />
+                      <button className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors">
+                        <Eye className="h-5 w-5" />
                       </button>
                     </div>
                   </div>
@@ -373,79 +378,79 @@ const CaregiverDashboard = () => {
           </div>
 
           {/* Performance Overview */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Performance Overview</h2>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="px-8 py-6 border-b border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900">Performance Overview</h2>
               </div>
-              <div className="p-6">
-                <div className="space-y-4">
+              <div className="p-8">
+                <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">Punctuality</span>
+                    <span className="text-base font-medium text-gray-700">Punctuality</span>
                     <div className="flex items-center">
-                      <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: `${performance.punctuality}%` }}></div>
+                      <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
+                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.punctuality}%` }}></div>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{performance.punctuality}%</span>
+                      <span className="text-lg font-bold text-gray-900">{performance.punctuality}%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">Task Completion</span>
+                    <span className="text-base font-medium text-gray-700">Task Completion</span>
                     <div className="flex items-center">
-                      <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${performance.taskCompletion}%` }}></div>
+                      <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
+                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${performance.taskCompletion}%` }}></div>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{performance.taskCompletion}%</span>
+                      <span className="text-lg font-bold text-gray-900">{performance.taskCompletion}%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">Patient Satisfaction</span>
+                    <span className="text-base font-medium text-gray-700">Patient Satisfaction</span>
                     <div className="flex items-center">
-                      <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                      <span className="text-sm font-medium text-gray-900">{performance.patientSatisfaction}</span>
+                      <Star className="h-5 w-5 text-yellow-400 mr-2" />
+                      <span className="text-lg font-bold text-gray-900">{performance.patientSatisfaction}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">Communication</span>
+                    <span className="text-base font-medium text-gray-700">Communication</span>
                     <div className="flex items-center">
-                      <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                      <span className="text-sm font-medium text-gray-900">{performance.communication}</span>
+                      <Star className="h-5 w-5 text-yellow-400 mr-2" />
+                      <span className="text-lg font-bold text-gray-900">{performance.communication}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">Safety Record</span>
+                    <span className="text-base font-medium text-gray-700">Safety Record</span>
                     <div className="flex items-center">
-                      <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: `${performance.safety}%` }}></div>
+                      <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
+                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.safety}%` }}></div>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{performance.safety}%</span>
+                      <span className="text-lg font-bold text-gray-900">{performance.safety}%</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="px-8 py-6 border-b border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <button className="flex items-center justify-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                    <MessageSquare className="h-5 w-5 text-blue-600 mr-2" />
-                    <span className="text-sm font-medium">Messages</span>
+              <div className="p-8">
+                <div className="grid grid-cols-2 gap-4">
+                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
+                    <MessageSquare className="h-8 w-8 text-blue-600 mb-3" />
+                    <span className="text-sm font-semibold text-gray-900">Messages</span>
                   </button>
-                  <button className="flex items-center justify-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                    <Camera className="h-5 w-5 text-green-600 mr-2" />
-                    <span className="text-sm font-medium">Photo Update</span>
+                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
+                    <Camera className="h-8 w-8 text-green-600 mb-3" />
+                    <span className="text-sm font-semibold text-gray-900">Photo Update</span>
                   </button>
-                  <button className="flex items-center justify-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                    <FileText className="h-5 w-5 text-purple-600 mr-2" />
-                    <span className="text-sm font-medium">Add Note</span>
+                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
+                    <FileText className="h-8 w-8 text-purple-600 mb-3" />
+                    <span className="text-sm font-semibold text-gray-900">Add Note</span>
                   </button>
-                  <button className="flex items-center justify-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                    <Navigation className="h-5 w-5 text-orange-600 mr-2" />
-                    <span className="text-sm font-medium">Navigation</span>
+                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
+                    <Navigation className="h-8 w-8 text-orange-600 mb-3" />
+                    <span className="text-sm font-semibold text-gray-900">Navigation</span>
                   </button>
                 </div>
               </div>
