@@ -2,6 +2,14 @@ rules_version='2'
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Users collection - Admin access only for now
+    match /users/{userId} {
+      // Allow read/write for authenticated users (for development)
+      // In production, you'd want more restrictive rules based on user roles
+      allow read, write: if request.auth != null;
+    }
+    
+    // Default rule for other collections
     match /{document=**} {
       // This rule allows anyone with your database reference to view, edit,
       // and delete all data in your database. It is useful for getting

@@ -11,8 +11,26 @@ import {
   ShieldCheck,
   UserX,
   Mail,
-  Phone
+  Phone,
+  Download,
+  RefreshCw,
+  Star,
+  Calendar,
+  MapPin,
+  Clock,
+  TrendingUp,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { 
+  getAllUsers, 
+  getUserStats, 
+  updateUserStatus, 
+  deleteUser,
+  subscribeToUsers 
+} from '../api/usersAPI';
+import { seedUsers } from '../api/seedData';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -22,75 +40,67 @@ const AdminUsers = () => {
   const [filterType, setFilterType] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [stats, setStats] = useState({
+    total: 0,
+    elderly: 0,
+    caregivers: 0,
+    active: 0,
+    inactive: 0
+  });
 
   useEffect(() => {
-    // Simulate loading users data
     const loadUsers = async () => {
       try {
-        setTimeout(() => {
-          const mockUsers = [
-            {
-              id: 1,
-              name: 'Adunni Okafor',
-              email: 'adunni@example.com',
-              phone: '+234 801 987 6543',
-              type: 'elderly',
-              status: 'active',
-              joinDate: '2024-01-15',
-              lastActive: '2024-01-20',
-              emergencyContact: 'Dr. Kemi Okafor',
-              medicalConditions: ['Hypertension', 'Diabetes Type 2']
-            },
-            {
-              id: 2,
-              name: 'Tunde Adebayo',
-              email: 'tunde@example.com',
-              phone: '+234 802 123 4567',
-              type: 'caregiver',
-              status: 'active',
-              joinDate: '2024-01-10',
-              lastActive: '2024-01-20',
-              certifications: ['CPR Certified', 'First Aid'],
-              experience: '5 years'
-            },
-            {
-              id: 3,
-              name: 'Grace Johnson',
-              email: 'grace@example.com',
-              phone: '+234 803 456 7890',
-              type: 'elderly',
-              status: 'inactive',
-              joinDate: '2023-12-20',
-              lastActive: '2024-01-15',
-              emergencyContact: 'Dr. Michael Johnson',
-              medicalConditions: ['Arthritis']
-            },
-            {
-              id: 4,
-              name: 'Dr. Kemi Okafor',
-              email: 'kemi@example.com',
-              phone: '+234 804 789 0123',
-              type: 'doctor',
-              status: 'active',
-              joinDate: '2023-11-01',
-              lastActive: '2024-01-20',
-              specialization: 'Geriatrics',
-              licenseNumber: 'MD12345'
-            }
-          ];
-          
-          setUsers(mockUsers);
-          setFilteredUsers(mockUsers);
-          setLoading(false);
-        }, 1000);
+        setLoading(true);
+        
+        // Load initial users data
+        const usersData = await getAllUsers();
+        setUsers(usersData);
+        setFilteredUsers(usersData);
+        
+        // Load user statistics
+        const statsData = await getUserStats();
+        setStats(statsData);
+        
+        setLoading(false);
+        toast.success('Users loaded successfully');
       } catch (error) {
         console.error('Error loading users:', error);
+        toast.error('Failed to load users');
         setLoading(false);
       }
     };
 
     loadUsers();
   }, []);
+
+  // Set up real-time listener for users
+  useEffect(() => {
+    const unsubscribe = subscribeToUsers((usersData) => {
+      setUsers(usersData);
+      // Update filtered users based on current search and filter
+      let filtered = usersData;
+      
+      if (searchTerm) {
+        filtered = filtered.filter(user =>
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.phone?.includes(searchTerm)
+        );
+      }
+
+      if (filterType !== 'all') {
+        filtered = filtered.filter(user => user.type === filterType);
+      }
+      
+      setFilteredUsers(filtered);
+    });
+
+    return () => unsubscribe();
+  }, [searchTerm, filterType]);
 
   useEffect(() => {
     let filtered = users;
@@ -138,30 +148,79 @@ const AdminUsers = () => {
     }
   };
 
-  const handleUserAction = (action, user) => {
+  const handleUserAction = async (action, user) => {
     setSelectedUser(user);
-    switch (action) {
-      case 'view':
-        setShowUserModal(true);
-        break;
-      case 'edit':
-        // Handle edit
-        break;
-      case 'delete':
-        // Handle delete
-        break;
-      case 'suspend':
-        // Handle suspend
-        break;
-      default:
-        break;
+    
+    try {
+      switch (action) {
+        case 'view':
+          setShowUserModal(true);
+          break;
+        case 'edit':
+          // TODO: Implement edit functionality
+          toast.info('Edit functionality coming soon');
+          break;
+        case 'delete':
+          if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
+            await deleteUser(user.id);
+            toast.success('User deleted successfully');
+          }
+          break;
+        case 'suspend':
+          const newStatus = user.status === 'active' ? 'suspended' : 'active';
+          await updateUserStatus(user.id, newStatus);
+          toast.success(`User ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully`);
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      console.error(`Error performing ${action} action:`, error);
+      toast.error(`Failed to ${action} user`);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      const usersData = await getAllUsers();
+      setUsers(usersData);
+      setFilteredUsers(usersData);
+      
+      const statsData = await getUserStats();
+      setStats(statsData);
+      
+      toast.success('Users refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing users:', error);
+      toast.error('Failed to refresh users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSeedData = async () => {
+    try {
+      setLoading(true);
+      await seedUsers();
+      toast.success('Sample users added successfully');
+      
+      // Refresh the users list
+      await handleRefresh();
+    } catch (error) {
+      console.error('Error seeding data:', error);
+      toast.error('Failed to seed data');
+      setLoading(false);
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+          <p className="text-gray-600">Loading users...</p>
+        </div>
       </div>
     );
   }
@@ -174,10 +233,29 @@ const AdminUsers = () => {
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600">Manage elderly users, caregivers, and doctors</p>
         </div>
-        <button className="btn btn-primary">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add User
-        </button>
+        <div className="flex space-x-3">
+          <button 
+            onClick={handleSeedData}
+            className="btn btn-outline"
+            disabled={loading}
+            title="Add sample users for testing"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Seed Data
+          </button>
+          <button 
+            onClick={handleRefresh}
+            className="btn btn-secondary"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          <button className="btn btn-primary">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add User
+          </button>
+        </div>
       </div>
 
       {/* Filters and Search */}
@@ -269,35 +347,45 @@ const AdminUsers = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(user.joinDate).toLocaleDateString()}
+                    {user.joinDate ? new Date(user.joinDate).toLocaleDateString() : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(user.lastActive).toLocaleDateString()}
+                    {user.lastActive ? new Date(user.lastActive).toLocaleDateString() : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
                       <button
                         onClick={() => handleUserAction('view', user)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
                         title="View Details"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleUserAction('edit', user)}
-                        className="text-green-600 hover:text-green-900"
+                        className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
                         title="Edit User"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
-                      <div className="relative">
-                        <button
-                          className="text-gray-600 hover:text-gray-900"
-                          title="More Actions"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleUserAction('suspend', user)}
+                        className={`p-1 rounded ${
+                          user.status === 'active' 
+                            ? 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50' 
+                            : 'text-green-600 hover:text-green-900 hover:bg-green-50'
+                        }`}
+                        title={user.status === 'active' ? 'Suspend User' : 'Activate User'}
+                      >
+                        {user.status === 'active' ? <UserX className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                      </button>
+                      <button
+                        onClick={() => handleUserAction('delete', user)}
+                        className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                        title="Delete User"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -425,11 +513,15 @@ const AdminUsers = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Join Date</label>
-                    <p className="mt-1 text-sm text-gray-900">{new Date(selectedUser.joinDate).toLocaleDateString()}</p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {selectedUser.joinDate ? new Date(selectedUser.joinDate).toLocaleDateString() : 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Last Active</label>
-                    <p className="mt-1 text-sm text-gray-900">{new Date(selectedUser.lastActive).toLocaleDateString()}</p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {selectedUser.lastActive ? new Date(selectedUser.lastActive).toLocaleDateString() : 'N/A'}
+                    </p>
                   </div>
                 </div>
               </div>
