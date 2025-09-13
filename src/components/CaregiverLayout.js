@@ -170,7 +170,7 @@ const CaregiverLayout = () => {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
+      <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
         {/* Top navigation */}
         <div className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-white border-b border-gray-200">
           <button
@@ -212,10 +212,8 @@ const CaregiverLayout = () => {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
-          <div className="h-full">
-            <Outlet />
-          </div>
+        <main className="flex-1 overflow-auto w-full">
+          <Outlet />
         </main>
       </div>
     </div>

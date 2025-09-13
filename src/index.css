@@ -45,6 +45,14 @@ body {
   padding: 0 1rem;
 }
 
+/* Dashboard full width fix */
+.dashboard-full-width {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 .card {
   background: #ffffff;
   border-radius: 12px;
