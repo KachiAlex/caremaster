@@ -189,7 +189,7 @@ const CaregiverDashboard = () => {
   }
 
   return (
-    <div className="w-full h-full bg-gray-50 dashboard-full-width">
+    <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container">
       {/* Header */}
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">

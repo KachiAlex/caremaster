@@ -53,6 +53,63 @@ body {
   padding: 0 !important;
 }
 
+/* Force full width layout */
+.dashboard-container {
+  width: 100vw !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.dashboard-main {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* Override any container constraints */
+.dashboard-container .container {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Force full width for all dashboard elements */
+.dashboard-container * {
+  max-width: none !important;
+}
+
+.dashboard-container .max-w-7xl,
+.dashboard-container .max-w-6xl,
+.dashboard-container .max-w-5xl,
+.dashboard-container .max-w-4xl,
+.dashboard-container .max-w-3xl,
+.dashboard-container .max-w-2xl,
+.dashboard-container .max-w-xl,
+.dashboard-container .max-w-lg,
+.dashboard-container .max-w-md,
+.dashboard-container .max-w-sm {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Ensure proper flex behavior */
+.dashboard-container {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.dashboard-main {
+  flex: 1 1 0% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
 .card {
   background: #ffffff;
   border-radius: 12px;

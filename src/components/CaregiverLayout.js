@@ -59,7 +59,7 @@ const CaregiverLayout = () => {
   const isCurrentPath = (path) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-40 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)}></div>
@@ -170,7 +170,7 @@ const CaregiverLayout = () => {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 dashboard-container">
         {/* Top navigation */}
         <div className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-white border-b border-gray-200">
           <button
@@ -212,7 +212,7 @@ const CaregiverLayout = () => {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto w-full">
+        <main className="flex-1 overflow-auto w-full dashboard-main">
           <Outlet />
         </main>
       </div>
