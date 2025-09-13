@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { toast } from 'react-toastify';
-import { Heart, Mail, Lock, User, UserCheck } from 'lucide-react';
+import { Heart, Mail, Lock, User, UserCheck, Shield } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -23,6 +23,8 @@ const Login = () => {
       // Navigate based on user role
       if (userRole === 'caregiver') {
         navigate('/caregiver');
+      } else if (userRole === 'admin') {
+        navigate('/admin');
       } else {
         navigate('/dashboard');
       }
@@ -83,7 +85,7 @@ const Login = () => {
             {/* Role Selection */}
             <div className="space-y-3">
               <label className="text-sm font-medium text-gray-700">I am a:</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setUserRole('patient')}
@@ -107,6 +109,18 @@ const Login = () => {
                 >
                   <UserCheck className="h-5 w-5 mr-2" />
                   Caregiver
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('admin')}
+                  className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${
+                    userRole === 'admin'
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Shield className="h-5 w-5 mr-2" />
+                  Admin
                 </button>
               </div>
             </div>

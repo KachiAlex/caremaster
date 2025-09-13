@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { 
@@ -86,9 +86,9 @@ const AdminLayout = () => {
               {navigation.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <a
+                  <Link
                     key={item.name}
-                    href={item.href}
+                    to={item.href}
                     className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
                       isCurrentPath(item.href)
                         ? 'bg-blue-100 text-blue-900'
@@ -99,7 +99,7 @@ const AdminLayout = () => {
                       isCurrentPath(item.href) ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
                     }`} />
                     {item.name}
-                  </a>
+                  </Link>
                 );
               })}
             </nav>
@@ -126,9 +126,9 @@ const AdminLayout = () => {
                 {navigation.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <a
+                    <Link
                       key={item.name}
-                      href={item.href}
+                      to={item.href}
                       className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                         isCurrentPath(item.href)
                           ? 'bg-blue-100 text-blue-900'
@@ -139,7 +139,7 @@ const AdminLayout = () => {
                         isCurrentPath(item.href) ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
                       }`} />
                       {item.name}
-                    </a>
+                    </Link>
                   );
                 })}
               </nav>
