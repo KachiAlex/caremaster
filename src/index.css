@@ -137,6 +137,17 @@ body {
   box-shadow: 0 6px 20px 0 rgba(239, 68, 68, 0.6);
 }
 
+.btn-red {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 15px 0 rgba(239, 68, 68, 0.4);
+}
+
+.btn-red:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px 0 rgba(239, 68, 68, 0.6);
+}
+
 .btn-outline {
   background: transparent;
   border: 2px solid #d1d5db;
