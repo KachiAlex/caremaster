@@ -131,19 +131,13 @@ const Landing = () => {
               <p className="ml-4 text-sm text-gray-600 hidden sm:block">Professional Home Healthcare</p>
             </div>
 
-            {/* Right side - Buttons */}
-            <div className="flex items-center space-x-4">
+            {/* Right side - Sign In Button */}
+            <div className="flex items-center">
               <Link
                 to="/login"
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
               >
                 Sign In
-              </Link>
-              <Link
-                to="/signup"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-              >
-                Get Started
               </Link>
             </div>
           </div>
@@ -186,7 +180,7 @@ const Landing = () => {
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link
-                to="/signup"
+                to="/login"
                 className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 transition-colors"
               >
                 Start Your Care Journey
@@ -500,7 +494,7 @@ const Landing = () => {
               
               <div className="pt-4">
                 <Link
-                  to="/signup"
+                  to="/login"
                   className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Video className="mr-2 h-5 w-5" />
@@ -521,7 +515,7 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/signup"
+              to="/login"
               className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50"
             >
               <Zap className="mr-2 h-5 w-5" />
