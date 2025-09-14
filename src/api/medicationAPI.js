@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db, functions } from '../firebase/config';
 import { 
   collection, 
   query, 
@@ -14,11 +14,36 @@ import {
   serverTimestamp,
   getDoc
 } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import dataConnectService from '../services/dataConnectService';
+import errorHandler from '../utils/errorHandler';
+import logger from '../utils/logger';
+
+// Firebase Functions
+const createMedicationReminder = httpsCallable(functions, 'createMedicationReminder');
+const logMedicationDose = httpsCallable(functions, 'logMedicationDose');
+const getMedicationAnalytics = httpsCallable(functions, 'getMedicationAnalytics');
 
 export const medicationAPI = {
-  // Get all medications with filtering
+  // Get all medications with filtering (using Data Connect)
   getMedications: async (filters = {}) => {
     try {
+      logger.debug('Fetching medications', { filters });
+      
+      // Try Data Connect first
+      try {
+        if (filters.patientId) {
+          const result = await dataConnectService.getMedications(filters.patientId);
+          return result.data || [];
+        } else {
+          const result = await dataConnectService.getCurrentUserMedications();
+          return result.data || [];
+        }
+      } catch (dataConnectError) {
+        logger.warn('Data Connect failed, falling back to Firestore', { error: dataConnectError });
+      }
+      
+      // Fallback to Firestore
       let medicationsQuery = query(
         collection(db, 'medications'),
         orderBy('startDate', 'desc')
@@ -457,6 +482,72 @@ export const medicationAPI = {
       });
       callback(medications);
     });
+  },
+
+  // Create medication reminder (using Firebase Functions)
+  createReminder: async (medicationId, reminderData) => {
+    try {
+      logger.debug('Creating medication reminder', { medicationId, reminderData });
+      
+      const result = await createMedicationReminder({
+        medicationId,
+        ...reminderData
+      });
+      
+      logger.info('Medication reminder created successfully', { reminderId: result.data.id });
+      return result.data;
+    } catch (error) {
+      errorHandler.handleError(error, { 
+        context: 'create_medication_reminder', 
+        medicationId, 
+        reminderData 
+      });
+      throw error;
+    }
+  },
+
+  // Log medication dose (using Firebase Functions)
+  logDose: async (medicationId, doseData) => {
+    try {
+      logger.debug('Logging medication dose', { medicationId, doseData });
+      
+      const result = await logMedicationDose({
+        medicationId,
+        ...doseData
+      });
+      
+      logger.info('Medication dose logged successfully', { logId: result.data.id });
+      return result.data;
+    } catch (error) {
+      errorHandler.handleError(error, { 
+        context: 'log_medication_dose', 
+        medicationId, 
+        doseData 
+      });
+      throw error;
+    }
+  },
+
+  // Get medication analytics (using Firebase Functions)
+  getAnalytics: async (patientId, dateRange = {}) => {
+    try {
+      logger.debug('Getting medication analytics', { patientId, dateRange });
+      
+      const result = await getMedicationAnalytics({
+        patientId,
+        dateRange
+      });
+      
+      logger.info('Medication analytics retrieved successfully');
+      return result.data;
+    } catch (error) {
+      errorHandler.handleError(error, { 
+        context: 'medication_analytics', 
+        patientId, 
+        dateRange 
+      });
+      throw error;
+    }
   }
 };
 

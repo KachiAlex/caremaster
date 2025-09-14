@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db, functions } from '../firebase/config';
 import { 
   collection, 
   query, 
@@ -13,6 +13,14 @@ import {
   onSnapshot,
   serverTimestamp
 } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import errorHandler from '../utils/errorHandler';
+import logger from '../utils/logger';
+
+// Firebase Functions
+const processEmergencyAlert = httpsCallable(functions, 'processEmergencyAlert');
+const coordinateEmergencyResponse = httpsCallable(functions, 'coordinateEmergencyResponse');
+const updateEmergencyStatus = httpsCallable(functions, 'updateEmergencyStatus');
 
 export const emergencyAPI = {
   // Real-time Emergency Monitoring
@@ -320,7 +328,80 @@ export const emergencyAPI = {
 
       return analytics;
     } catch (error) {
-      console.error('Error fetching emergency analytics:', error);
+      errorHandler.handleError(error, { context: 'emergency_analytics' });
+      throw error;
+    }
+  },
+
+  // Process emergency alert (using Firebase Functions)
+  processAlert: async (emergencyData) => {
+    try {
+      logger.warn('Processing emergency alert', { emergencyData });
+      
+      const result = await processEmergencyAlert(emergencyData);
+      
+      logger.info('Emergency alert processed successfully', { 
+        emergencyId: result.data.id,
+        status: result.data.status 
+      });
+      return result.data;
+    } catch (error) {
+      errorHandler.handleError(error, { 
+        context: 'process_emergency_alert', 
+        emergencyData 
+      });
+      throw error;
+    }
+  },
+
+  // Coordinate emergency response (using Firebase Functions)
+  coordinateResponse: async (emergencyId, responseData) => {
+    try {
+      logger.info('Coordinating emergency response', { emergencyId, responseData });
+      
+      const result = await coordinateEmergencyResponse({
+        emergencyId,
+        ...responseData
+      });
+      
+      logger.info('Emergency response coordinated successfully', { 
+        emergencyId,
+        responseId: result.data.id 
+      });
+      return result.data;
+    } catch (error) {
+      errorHandler.handleError(error, { 
+        context: 'coordinate_emergency_response', 
+        emergencyId, 
+        responseData 
+      });
+      throw error;
+    }
+  },
+
+  // Update emergency status (using Firebase Functions)
+  updateStatus: async (emergencyId, status, notes) => {
+    try {
+      logger.info('Updating emergency status', { emergencyId, status, notes });
+      
+      const result = await updateEmergencyStatus({
+        emergencyId,
+        status,
+        notes
+      });
+      
+      logger.info('Emergency status updated successfully', { 
+        emergencyId,
+        newStatus: status 
+      });
+      return result.data;
+    } catch (error) {
+      errorHandler.handleError(error, { 
+        context: 'update_emergency_status', 
+        emergencyId, 
+        status, 
+        notes 
+      });
       throw error;
     }
   }
