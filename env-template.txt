@@ -1,12 +1,42 @@
-# Agora Configuration
-# Rename this file to .env.local and place it in the root directory
+# Firebase Configuration
+REACT_APP_FIREBASE_API_KEY=your_firebase_api_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+REACT_APP_FIREBASE_PROJECT_ID=your_project_id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+REACT_APP_FIREBASE_APP_ID=your_app_id
 
-REACT_APP_AGORA_APP_ID=43c43dc3e6a44a99b2b75a4997e3b1a4
-REACT_APP_AGORA_CHANNEL=elderx_dev
-REACT_APP_AGORA_TOKEN=007eJxTYAj736zimGlilN56YtmltxEzVy/6tjyKYx73BPWFcnNFEswVGEyMk02MU5KNU80STUwSLS2TjJLMTRNNLC3NU42TDBNNeP4ezmgIZGRIe8LJwAiFID4XQ2pOSmpRRXxKahkDAwDgxiEn
+# AI Service Configuration
+REACT_APP_OPENAI_API_KEY=your_openai_api_key
+REACT_APP_GOOGLE_AI_API_KEY=your_google_ai_api_key
+REACT_APP_ANTHROPIC_API_KEY=your_anthropic_api_key
 
-# Instructions:
-# 1. Rename this file to .env.local
-# 2. Place it in the root directory (same level as package.json)
-# 3. The app will automatically load these environment variables
-# 4. For production, use secure token generation via Firebase Functions
+# Agora Video Calling
+REACT_APP_AGORA_APP_ID=your_agora_app_id
+REACT_APP_AGORA_APP_CERTIFICATE=your_agora_app_certificate
+
+# Environment
+REACT_APP_ENVIRONMENT=development
+REACT_APP_API_BASE_URL=http://localhost:5001/your_project/us-central1
+
+# Feature Flags
+REACT_APP_ENABLE_AI_FEATURES=true
+REACT_APP_ENABLE_VOICE_COMMANDS=true
+REACT_APP_ENABLE_EMERGENCY_ALERTS=true
+REACT_APP_ENABLE_MEDICATION_REMINDERS=true
+
+# Analytics
+REACT_APP_GOOGLE_ANALYTICS_ID=your_ga_id
+
+# SMS Service (for emergency notifications)
+REACT_APP_TWILIO_ACCOUNT_SID=your_twilio_sid
+REACT_APP_TWILIO_AUTH_TOKEN=your_twilio_token
+REACT_APP_TWILIO_PHONE_NUMBER=your_twilio_phone
+
+# Email Service
+REACT_APP_SENDGRID_API_KEY=your_sendgrid_key
+REACT_APP_FROM_EMAIL=noreply@elderx.com
+
+# Security
+REACT_APP_ENCRYPTION_KEY=your_encryption_key
+REACT_APP_JWT_SECRET=your_jwt_secret

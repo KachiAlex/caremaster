@@ -2,25 +2,223 @@ rules_version='2'
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection - Admin access only for now
-    match /users/{userId} {
-      // Allow read/write for authenticated users (for development)
-      // In production, you'd want more restrictive rules based on user roles
-      allow read, write: if request.auth != null;
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
     }
     
-    // Default rule for other collections
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
+    }
+    
+    function isCaregiver() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'caregiver';
+    }
+    
+    function isDoctor() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'doctor';
+    }
+    
+    function isElderly() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'elderly';
+    }
+    
+    function isServiceProvider() {
+      return isCaregiver() || isDoctor();
+    }
+    
+    function hasAccessToElderlyProfile(elderlyUserId) {
+      return isOwner(elderlyUserId) || 
+             isAdmin() || 
+             (isServiceProvider() && 
+              exists(/databases/$(database)/documents/caregiverRelationships/$(request.auth.uid + '_' + elderlyUserId)));
+    }
+    
+    function isValidUserType() {
+      return request.resource.data.userType in ['elderly', 'caregiver', 'doctor', 'admin'];
+    }
+    
+    function isValidMedicationStatus() {
+      return request.resource.data.status in ['taken', 'missed', 'skipped'];
+    }
+    
+    function isValidEmergencySeverity() {
+      return request.resource.data.severity in ['low', 'medium', 'high', 'critical'];
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || isServiceProvider());
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUserType();
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUserType();
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Elderly profiles collection
+    match /elderlyProfiles/{elderlyUserId} {
+      allow read: if isAuthenticated() && hasAccessToElderlyProfile(elderlyUserId);
+      allow create: if isAuthenticated() && isOwner(elderlyUserId);
+      allow update: if isAuthenticated() && hasAccessToElderlyProfile(elderlyUserId);
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Medications collection
+    match /medications/{medicationId} {
+      allow read: if isAuthenticated() && 
+                     hasAccessToElderlyProfile(resource.data.userId);
+      allow create: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(request.resource.data.userId);
+      allow update: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(resource.data.userId);
+      allow delete: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(resource.data.userId);
+    }
+    
+    // Medication logs collection
+    match /medicationLogs/{logId} {
+      allow read: if isAuthenticated() && 
+                     hasAccessToElderlyProfile(resource.data.userId);
+      allow create: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(request.resource.data.userId) &&
+                       isValidMedicationStatus();
+      allow update: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(resource.data.userId);
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Vital signs collection
+    match /vitalSigns/{vitalSignId} {
+      allow read: if isAuthenticated() && 
+                     hasAccessToElderlyProfile(resource.data.userId);
+      allow create: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(request.resource.data.userId);
+      allow update: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(resource.data.userId);
+      allow delete: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(resource.data.userId);
+    }
+    
+    // Appointments collection
+    match /appointments/{appointmentId} {
+      allow read: if isAuthenticated() && 
+                     hasAccessToElderlyProfile(resource.data.userId);
+      allow create: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(request.resource.data.userId);
+      allow update: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(resource.data.userId);
+      allow delete: if isAuthenticated() && 
+                       hasAccessToElderlyProfile(resource.data.userId);
+    }
+    
+    // Emergency alerts collection
+    match /emergencyAlerts/{alertId} {
+      allow read: if isAuthenticated() && 
+                     (hasAccessToElderlyProfile(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && 
+                       isOwner(request.resource.data.userId) &&
+                       isValidEmergencySeverity();
+      allow update: if isAuthenticated() && 
+                       (hasAccessToElderlyProfile(resource.data.userId) || isAdmin());
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Emergency responses collection
+    match /emergencyResponses/{responseId} {
+      allow read: if isAuthenticated() && 
+                     (hasAccessToElderlyProfile(resource.data.alertId) || isAdmin());
+      allow create: if isAuthenticated() && isServiceProvider();
+      allow update: if isAuthenticated() && 
+                       (isOwner(resource.data.responderId) || isAdmin());
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Caregiver relationships collection
+    match /caregiverRelationships/{relationshipId} {
+      allow read: if isAuthenticated() && 
+                     (hasAccessToElderlyProfile(resource.data.elderlyProfileId) || isAdmin());
+      allow create: if isAuthenticated() && isAdmin();
+      allow update: if isAuthenticated() && isAdmin();
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && 
+                       (isOwner(request.resource.data.userId) || isServiceProvider() || isAdmin());
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && 
+                       (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Scheduled notifications collection
+    match /scheduledNotifications/{notificationId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && 
+                       (isOwner(request.resource.data.userId) || isServiceProvider() || isAdmin());
+      allow update: if isAuthenticated() && 
+                       (isOwner(resource.data.userId) || isAdmin());
+      allow delete: if isAuthenticated() && 
+                       (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Voice commands collection
+    match /voiceCommands/{commandId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && 
+                       (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Health recommendations collection
+    match /healthRecommendations/{recommendationId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && 
+                       (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Audit logs collection (admin only)
+    match /auditLogs/{logId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow create: if isAuthenticated(); // Functions can create audit logs
+      allow update: if false; // Audit logs should not be updated
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Medication reminders collection
+    match /medicationReminders/{reminderId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && 
+                       (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Healthcare providers collection
+    match /healthcareProviders/{providerId} {
+      allow read: if isAuthenticated() && 
+                     (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isAdmin();
+      allow update: if isAuthenticated() && 
+                       (isOwner(resource.data.userId) || isAdmin());
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Default deny rule
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 10, 9);
+      allow read, write: if false;
     }
   }
 }
