@@ -37,6 +37,24 @@ REACT_APP_TWILIO_PHONE_NUMBER=your_twilio_phone
 REACT_APP_SENDGRID_API_KEY=your_sendgrid_key
 REACT_APP_FROM_EMAIL=noreply@elderx.com
 
-# Security
-REACT_APP_ENCRYPTION_KEY=your_encryption_key
-REACT_APP_JWT_SECRET=your_jwt_secret
+# Security Configuration
+REACT_APP_ENCRYPTION_KEY=your_256_bit_encryption_key_here
+REACT_APP_JWT_SECRET=your_jwt_secret_key_here
+REACT_APP_SESSION_TIMEOUT=3600
+REACT_APP_MAX_LOGIN_ATTEMPTS=5
+REACT_APP_LOCKOUT_DURATION=900
+
+# Enhanced Security Features
+REACT_APP_ENABLE_2FA=false
+REACT_APP_ENABLE_BIOMETRIC=false
+REACT_APP_ENABLE_ENCRYPTION=true
+REACT_APP_ENABLE_AUDIT_LOG=true
+REACT_APP_ENABLE_RATE_LIMITING=true
+
+# Security Notes:
+# 1. Generate a strong 256-bit encryption key: openssl rand -base64 32
+# 2. Generate a JWT secret: openssl rand -base64 64
+# 3. Never commit these values to version control
+# 4. Use different keys for development and production
+# 5. Rotate keys regularly in production
+# 6. Enable 2FA and biometric auth in production

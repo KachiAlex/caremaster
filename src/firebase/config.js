@@ -2,15 +2,17 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+import secureConfigService from '../services/secureConfigService';
+import logger from '../utils/logger';
 
-const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "***REMOVED***",
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "elderx-f5c2b.firebaseapp.com",
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "elderx-f5c2b",
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "elderx-f5c2b.firebasestorage.app",
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "987610993096",
-  appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:987610993096:web:97c82732772d1223d3f0fd"
-};
+// Use secure configuration service
+const firebaseConfig = secureConfigService.getFirebaseConfig();
+
+// Validate Firebase configuration
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  logger.error('Invalid Firebase configuration - missing required keys');
+  throw new Error('Firebase configuration is invalid or incomplete');
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

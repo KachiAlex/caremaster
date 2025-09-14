@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import dataConnectService from '../services/dataConnectService';
+import secureStorageService from '../services/secureStorageService';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
 
@@ -92,23 +93,28 @@ export const getUserById = async (userId) => {
   }
 };
 
-// Create new user
+// Create new user (using secure storage)
 export const createUser = async (userData) => {
   try {
-    const usersRef = collection(db, USERS_COLLECTION);
-    const newUser = {
-      ...userData,
-      status: 'active',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      joinDate: serverTimestamp(),
-      lastActive: serverTimestamp(),
-    };
+    logger.info('Creating new user with secure storage', { userType: userData.userType });
     
-    const docRef = await addDoc(usersRef, newUser);
-    return docRef.id;
+    // Use secure storage service
+    const userId = await secureStorageService.storeSecureData(
+      USERS_COLLECTION, 
+      userData.id || 'auto', 
+      {
+        ...userData,
+        status: 'active',
+        joinDate: new Date(),
+        lastActive: new Date()
+      },
+      { encrypt: true, audit: true }
+    );
+    
+    logger.info('User created successfully', { userId });
+    return userId;
   } catch (error) {
-    console.error('Error creating user:', error);
+    errorHandler.handleError(error, { context: 'create_user', userData });
     throw error;
   }
 };
