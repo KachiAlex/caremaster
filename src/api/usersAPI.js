@@ -49,6 +49,10 @@ export const getAllUsers = async () => {
 // Get user by ID
 export const getUserById = async (userId) => {
   try {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+    
     const userRef = doc(db, USERS_COLLECTION, userId);
     const userSnap = await getDoc(userRef);
     
@@ -63,7 +67,8 @@ export const getUserById = async (userId) => {
         updatedAt: userData.updatedAt?.toDate?.() || userData.updatedAt,
       };
     } else {
-      throw new Error('User not found');
+      // Return null instead of throwing error for better UX
+      return null;
     }
   } catch (error) {
     console.error('Error fetching user:', error);

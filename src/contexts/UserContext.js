@@ -27,12 +27,19 @@ export const UserProvider = ({ children }) => {
           
           // Get user profile from Firestore
           const profile = await getUserById(firebaseUser.uid);
-          setUserProfile(profile);
-          setUserRole(profile?.type || 'elderly');
+          if (profile) {
+            setUserProfile(profile);
+            setUserRole(profile.type || 'elderly');
+          } else {
+            // User profile doesn't exist in Firestore yet
+            console.log('User profile not found in Firestore, user may be new');
+            setUserProfile(null);
+            setUserRole('elderly'); // Default role
+          }
         } catch (error) {
           console.error('Error fetching user profile:', error);
           setUserProfile(null);
-          setUserRole(null);
+          setUserRole('elderly'); // Default role for better UX
         }
       } else {
         setUser(null);

@@ -131,14 +131,9 @@ const Landing = () => {
               <p className="ml-4 text-sm text-gray-600 hidden sm:block">Professional Home Healthcare</p>
             </div>
 
-            {/* Right side - Sign In Button */}
+            {/* Right side - Empty for clean header */}
             <div className="flex items-center">
-              <Link
-                to="/login"
-                className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                Sign In
-              </Link>
+              {/* Header actions can be added here if needed */}
             </div>
           </div>
         </div>
@@ -183,7 +178,7 @@ const Landing = () => {
                 to="/login"
                 className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 transition-colors"
               >
-                Start Your Care Journey
+                Get Started
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
               <a
@@ -498,7 +493,7 @@ const Landing = () => {
                   className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Video className="mr-2 h-5 w-5" />
-                  Watch More Stories
+                  Get Started
                 </Link>
               </div>
             </div>
@@ -519,7 +514,7 @@ const Landing = () => {
               className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50"
             >
               <Zap className="mr-2 h-5 w-5" />
-              Start Your Care Journey
+              Get Started
             </Link>
             <Link
               to="/pricing"
