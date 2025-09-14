@@ -45,6 +45,7 @@ import AdminCommunication from './pages/AdminCommunication';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import ServiceProviderDashboard from './pages/ServiceProviderDashboard';
 import UserManagement from './pages/UserManagement';
+import CallsPage from './pages/CallsPage';
 import MessagingInterface from './components/MessagingInterface';
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -146,6 +147,7 @@ function App() {
         <Route path="schedule" element={<CaregiverSchedule />} />
         <Route path="patients" element={<CaregiverPatients />} />
         <Route path="messages" element={<MessagingInterface />} />
+        <Route path="calls" element={<CallsPage />} />
         <Route path="tasks" element={<CaregiverTasks />} />
         <Route path="care-logs" element={<CaregiverPhotos />} />
         <Route path="photos" element={<CaregiverPhotos />} />

@@ -19,7 +19,8 @@ import {
   Users,
   Heart,
   Stethoscope,
-  Shield
+  Shield,
+  PhoneCall
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
@@ -31,6 +32,8 @@ import {
   getOrCreateConversation
 } from '../api/messagesAPI';
 import { subscribeToConversationMessages, subscribeToUserConversations } from '../api/messagesAPI';
+import CallService from '../services/callService';
+import CallInterface from './CallInterface';
 
 const MessagingInterface = () => {
   const { userProfile, userRole } = useUser();
@@ -42,6 +45,9 @@ const MessagingInterface = () => {
   const [filterType, setFilterType] = useState('all');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [callService] = useState(new CallService());
+  const [activeCall, setActiveCall] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -103,6 +109,17 @@ const MessagingInterface = () => {
     return unsubscribe;
   }, [selectedConversation]);
 
+  // Listen for incoming calls
+  useEffect(() => {
+    if (!userProfile) return;
+
+    const unsubscribe = callService.listenForIncomingCalls(userProfile.id, (callData) => {
+      setIncomingCall(callData);
+    });
+
+    return unsubscribe;
+  }, [userProfile, callService]);
+
   // Load messages when conversation changes
   useEffect(() => {
     const loadMessages = async () => {
@@ -147,6 +164,111 @@ const MessagingInterface = () => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  // Handle voice call
+  const handleVoiceCall = async () => {
+    if (!selectedConversation || !userProfile) return;
+
+    const participant = selectedConversation.participants.find(p => p.id !== userProfile.id);
+    if (!participant) return;
+
+    try {
+      const result = await callService.initiateCall(
+        userProfile.id,
+        participant.id,
+        'audio'
+      );
+
+      if (result.success) {
+        setActiveCall({
+          callId: result.callId,
+          participantId: participant.id,
+          participantName: participant.name || participant.displayName,
+          callType: 'audio'
+        });
+      } else {
+        toast.error('Failed to start voice call');
+      }
+    } catch (error) {
+      console.error('Error starting voice call:', error);
+      toast.error('Failed to start voice call');
+    }
+  };
+
+  // Handle video call
+  const handleVideoCall = async () => {
+    if (!selectedConversation || !userProfile) return;
+
+    const participant = selectedConversation.participants.find(p => p.id !== userProfile.id);
+    if (!participant) return;
+
+    try {
+      const result = await callService.initiateCall(
+        userProfile.id,
+        participant.id,
+        'video'
+      );
+
+      if (result.success) {
+        setActiveCall({
+          callId: result.callId,
+          participantId: participant.id,
+          participantName: participant.name || participant.displayName,
+          callType: 'video'
+        });
+      } else {
+        toast.error('Failed to start video call');
+      }
+    } catch (error) {
+      console.error('Error starting video call:', error);
+      toast.error('Failed to start video call');
+    }
+  };
+
+  // Handle incoming call acceptance
+  const handleAcceptIncomingCall = async () => {
+    if (!incomingCall) return;
+
+    try {
+      await callService.answerCall(incomingCall.callId, userProfile.id);
+      setActiveCall({
+        callId: incomingCall.callId,
+        participantId: incomingCall.callerId,
+        participantName: 'Incoming Call',
+        callType: incomingCall.callType
+      });
+      setIncomingCall(null);
+    } catch (error) {
+      console.error('Error accepting call:', error);
+      toast.error('Failed to accept call');
+    }
+  };
+
+  // Handle incoming call rejection
+  const handleRejectIncomingCall = async () => {
+    if (!incomingCall) return;
+
+    try {
+      await callService.rejectCall(incomingCall.callId, userProfile.id);
+      setIncomingCall(null);
+    } catch (error) {
+      console.error('Error rejecting call:', error);
+      toast.error('Failed to reject call');
+    }
+  };
+
+  // Handle call end
+  const handleCallEnd = async () => {
+    if (activeCall) {
+      try {
+        await callService.endCall(activeCall.callId);
+      } catch (error) {
+        console.error('Error ending call:', error);
+      }
+    }
+    setActiveCall(null);
+    setIncomingCall(null);
   };
 
   const getConversationTypeIcon = (type) => {
@@ -337,10 +459,18 @@ const MessagingInterface = () => {
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                  <button 
+                    onClick={handleVoiceCall}
+                    className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+                    title="Voice Call"
+                  >
                     <Phone size={20} />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                  <button 
+                    onClick={handleVideoCall}
+                    className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                    title="Video Call"
+                  >
                     <Video size={20} />
                   </button>
                   <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
@@ -459,6 +589,38 @@ const MessagingInterface = () => {
           </div>
         )}
       </div>
+
+      {/* Active Call Interface */}
+      {activeCall && (
+        <CallInterface
+          isOpen={!!activeCall}
+          onClose={handleCallEnd}
+          callType={activeCall.callType}
+          participantInfo={{
+            id: activeCall.participantId,
+            name: activeCall.participantName,
+            role: 'User'
+          }}
+          isIncoming={false}
+        />
+      )}
+
+      {/* Incoming Call Interface */}
+      {incomingCall && (
+        <CallInterface
+          isOpen={!!incomingCall}
+          onClose={handleRejectIncomingCall}
+          callType={incomingCall.callType}
+          participantInfo={{
+            id: incomingCall.callerId,
+            name: 'Incoming Call',
+            role: 'User'
+          }}
+          isIncoming={true}
+          onCallAccepted={handleAcceptIncomingCall}
+          onCallRejected={handleRejectIncomingCall}
+        />
+      )}
     </div>
   );
 };
