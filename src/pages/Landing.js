@@ -94,19 +94,25 @@ const Landing = () => {
       name: "Mrs. Adunni Okafor",
       location: "Lagos, Nigeria",
       rating: 5,
-      text: "ElderCare Nigeria has been a blessing for my family. The caregivers are professional and caring, and the 24/7 support gives us peace of mind."
+      text: "ElderCare Nigeria has been a blessing for my family. The caregivers are professional and caring, and the 24/7 support gives us peace of mind.",
+      photo: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+      age: "72 years old"
     },
     {
       name: "Dr. Kemi Adebayo",
       location: "Abuja, Nigeria",
       rating: 5,
-      text: "As a healthcare professional, I can confidently recommend ElderCare Nigeria. Their services are top-notch and their technology is cutting-edge."
+      text: "As a healthcare professional, I can confidently recommend ElderCare Nigeria. Their services are top-notch and their technology is cutting-edge.",
+      photo: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+      age: "68 years old"
     },
     {
       name: "Mr. Chinedu Okoro",
       location: "Port Harcourt, Nigeria",
       rating: 5,
-      text: "The medication management system has been incredibly helpful. I never miss a dose anymore, and my family is always informed about my health status."
+      text: "The medication management system has been incredibly helpful. I never miss a dose anymore, and my family is always informed about my health status.",
+      photo: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+      age: "75 years old"
     }
   ];
 
@@ -144,81 +150,128 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative py-16 sm:py-24 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      {/* Hero Section with Video Background */}
+      <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
+        {/* Video Background */}
+        <div className="absolute inset-0 z-0">
+          <video
+            className="w-full h-full object-cover opacity-20"
+            autoPlay
+            muted
+            loop
+            playsInline
+          >
+            <source src="https://videos.pexels.com/video-files/3209828/3209828-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+            {/* Fallback image */}
+            <img
+              src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+              alt="African elderly receiving healthcare"
+              className="w-full h-full object-cover"
+            />
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/50 to-green-900/50"></div>
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
-          <div className="text-center lg:text-left">
-            <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              NG Proudly Nigerian • NDPR Compliant
+          <div className="text-center lg:text-left text-white">
+            <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-white/20 text-white backdrop-blur-sm">
+              🇳🇬 Proudly Nigerian • NDPR Compliant
             </span>
-            <h1 className="mt-4 text-4xl font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-              Quality <span className="text-teal-600">Healthcare</span> At Your <span className="text-green-600">Doorstep</span>
+            <h1 className="mt-4 text-4xl font-extrabold sm:text-5xl md:text-6xl">
+              Quality <span className="text-teal-300">Healthcare</span> At Your <span className="text-green-300">Doorstep</span>
             </h1>
-            <p className="mt-6 text-lg text-gray-600 max-w-xl mx-auto lg:mx-0">
+            <p className="mt-6 text-lg text-blue-100 max-w-xl mx-auto lg:mx-0">
               ElderCare Nigeria provides compassionate and professional home healthcare services, ensuring comfort and well-being for your loved ones.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link
                 to="/signup"
-                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 transition-colors"
               >
                 Start Your Care Journey
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
               <a
                 href="tel:0800-ELDERCARE"
-                className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center justify-center px-6 py-3 border border-white/30 text-base font-medium rounded-md text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors"
               >
-                <Phone className="mr-2 h-5 w-5 text-blue-600" />
+                <Phone className="mr-2 h-5 w-5" />
                 Call: 0800-ELDERCARE
               </a>
             </div>
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 text-gray-600">
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 text-blue-100">
               <div className="flex items-center justify-center lg:justify-start">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <CheckCircle className="h-5 w-5 text-green-300 mr-2" />
                 Licensed Professionals
               </div>
               <div className="flex items-center justify-center lg:justify-start">
-                <Shield className="h-5 w-5 text-blue-500 mr-2" />
+                <Shield className="h-5 w-5 text-blue-300 mr-2" />
                 Secure & Private
               </div>
               <div className="flex items-center justify-center lg:justify-start">
-                <Clock className="h-5 w-5 text-purple-500 mr-2" />
+                <Clock className="h-5 w-5 text-purple-300 mr-2" />
                 24/7 Emergency Support
               </div>
             </div>
           </div>
 
-          {/* Right Content - Chat Widget Mockup */}
-          <div className="relative mt-12 lg:mt-0 flex justify-center">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-              <div className="flex items-center mb-4">
+          {/* Right Content - Real African Elderly Images */}
+          <div className="relative mt-12 lg:mt-0">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Main Image */}
+              <div className="col-span-2">
                 <img
-                  className="h-12 w-12 rounded-full object-cover"
-                  src="https://images.unsplash.com/photo-1559839734-2b716b1772a1?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                  alt="African elderly woman receiving healthcare at home"
+                  className="w-full h-64 object-cover rounded-lg shadow-xl"
+                />
+              </div>
+              {/* Side Images */}
+              <div>
+                <img
+                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                  alt="African elderly man with caregiver"
+                  className="w-full h-32 object-cover rounded-lg shadow-lg"
+                />
+              </div>
+              <div>
+                <img
+                  src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                  alt="Healthcare professional checking vital signs"
+                  className="w-full h-32 object-cover rounded-lg shadow-lg"
+                />
+              </div>
+            </div>
+            
+            {/* Floating Chat Widget */}
+            <div className="absolute -bottom-6 -left-6 bg-white rounded-lg shadow-xl p-4 w-72">
+              <div className="flex items-center mb-3">
+                <img
+                  className="h-10 w-10 rounded-full object-cover"
+                  src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
                   alt="Nurse Fatima Abdullahi"
                 />
                 <div className="ml-3">
-                  <p className="text-lg font-medium text-gray-900">Nurse Fatima Abdullahi</p>
-                  <p className="text-sm text-gray-500 flex items-center">
-                    <Heart className="h-4 w-4 text-red-500 mr-1" />
+                  <p className="text-sm font-medium text-gray-900">Nurse Fatima Abdullahi</p>
+                  <p className="text-xs text-gray-500 flex items-center">
+                    <Heart className="h-3 w-3 text-red-500 mr-1" />
                     <span className="text-yellow-500">★</span> 4.9 (156 visits)
                   </p>
                 </div>
               </div>
-              <div className="bg-green-50 p-3 rounded-lg mb-4">
-                <p className="text-sm text-green-800">
+              <div className="bg-green-50 p-2 rounded-lg mb-3">
+                <p className="text-xs text-green-800">
                   "Hello! I'll be arriving at your location in 15 minutes. Please ensure the gate is open."
                 </p>
               </div>
-              <div className="flex justify-between items-center border-t border-gray-200 pt-4">
-                <button className="flex items-center text-blue-600 hover:text-blue-800">
-                  <MessageCircle className="h-5 w-5 mr-1" />
+              <div className="flex justify-between items-center">
+                <button className="flex items-center text-blue-600 hover:text-blue-800 text-xs">
+                  <MessageCircle className="h-3 w-3 mr-1" />
                   Reply
                 </button>
-                <button className="flex items-center text-blue-600 hover:text-blue-800">
-                  <Video className="h-5 w-5 mr-1" />
+                <button className="flex items-center text-blue-600 hover:text-blue-800 text-xs">
+                  <Video className="h-3 w-3 mr-1" />
                   Video Call
                 </button>
               </div>
@@ -279,16 +332,77 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Real Stories Section */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">What Our Clients Say</h2>
-            <p className="text-lg text-gray-600">Real stories from families who trust ElderCare Nigeria</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Real Stories from Our Community</h2>
+            <p className="text-lg text-gray-600">See how ElderCare Nigeria is making a difference in the lives of African families</p>
           </div>
+          
+          {/* Image Gallery */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="relative group">
+              <img
+                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                alt="African elderly woman receiving home healthcare"
+                className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-center">
+                  <Heart className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Compassionate Care</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="relative group">
+              <img
+                src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                alt="African elderly man with healthcare professional"
+                className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-center">
+                  <Users className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Family Connection</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="relative group">
+              <img
+                src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                alt="Healthcare professional checking vital signs"
+                className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-center">
+                  <Activity className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Health Monitoring</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="relative group">
+              <img
+                src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                alt="African healthcare professional with patient"
+                className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-center">
+                  <Shield className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Professional Care</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Testimonials */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-lg p-6">
+              <div key={index} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
                 <div className="flex items-center mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
                     <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
@@ -296,19 +410,104 @@ const Landing = () => {
                 </div>
                 <p className="text-gray-600 mb-4 italic">"{testimonial.text}"</p>
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <User className="h-5 w-5 text-blue-600" />
-                  </div>
+                  <img
+                    src={testimonial.photo}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-blue-100"
+                  />
                   <div>
                     <p className="font-semibold text-gray-900">{testimonial.name}</p>
                     <p className="text-sm text-gray-500 flex items-center">
                       <MapPin className="h-4 w-4 mr-1" />
                       {testimonial.location}
                     </p>
+                    <p className="text-xs text-blue-600 font-medium">{testimonial.age}</p>
                   </div>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Video Testimonial Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">See ElderCare Nigeria in Action</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Watch real stories from African families who have experienced the difference our care makes
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Video */}
+            <div className="relative">
+              <div className="relative rounded-lg overflow-hidden shadow-2xl">
+                <video
+                  className="w-full h-96 object-cover"
+                  controls
+                  poster="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                >
+                  <source src="https://videos.pexels.com/video-files/3209828/3209828-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 text-white">
+                  <h3 className="text-lg font-semibold">Mrs. Adunni's Story</h3>
+                  <p className="text-sm opacity-90">Lagos, Nigeria</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Video Content */}
+            <div className="space-y-6">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Heart className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Compassionate Care</h3>
+                  <p className="text-gray-600">
+                    Our caregivers provide not just medical care, but emotional support and companionship that makes a real difference in the lives of our patients.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Professional Excellence</h3>
+                  <p className="text-gray-600">
+                    All our healthcare professionals are licensed, experienced, and trained to provide the highest quality care in the comfort of your home.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Users className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Family-Centered Approach</h3>
+                  <p className="text-gray-600">
+                    We work closely with families to ensure everyone is informed and involved in the care process, creating a supportive network around each patient.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="pt-4">
+                <Link
+                  to="/signup"
+                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Video className="mr-2 h-5 w-5" />
+                  Watch More Stories
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
