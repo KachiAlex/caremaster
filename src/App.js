@@ -44,6 +44,8 @@ import AdminAnalytics from './pages/AdminAnalytics';
 import AdminCommunication from './pages/AdminCommunication';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import ServiceProviderDashboard from './pages/ServiceProviderDashboard';
+import UserManagement from './pages/UserManagement';
+import MessagingInterface from './components/MessagingInterface';
 import LoadingSpinner from './components/LoadingSpinner';
 
 function App() {
@@ -143,7 +145,7 @@ function App() {
         <Route index element={<ServiceProviderDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
         <Route path="patients" element={<CaregiverPatients />} />
-        <Route path="messages" element={<CaregiverMessages />} />
+        <Route path="messages" element={<MessagingInterface />} />
         <Route path="tasks" element={<CaregiverTasks />} />
         <Route path="care-logs" element={<CaregiverPhotos />} />
         <Route path="photos" element={<CaregiverPhotos />} />
@@ -170,6 +172,7 @@ function App() {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<AdminUsers />} />
+        <Route path="user-management" element={<UserManagement />} />
         <Route path="appointments" element={<AdminAppointments />} />
         <Route path="emergency" element={<AdminEmergency />} />
         <Route path="emergency/protocols" element={<AdminEmergencyProtocols />} />
