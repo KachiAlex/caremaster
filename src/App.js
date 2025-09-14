@@ -2,8 +2,10 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
+import { UserProvider } from './contexts/UserContext';
 import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
+import ServiceProviderLayout from './components/ServiceProviderLayout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -41,6 +43,7 @@ import AdminCaregivers from './pages/AdminCaregivers';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminCommunication from './pages/AdminCommunication';
 import AdminAuditLogs from './pages/AdminAuditLogs';
+import ServiceProviderDashboard from './pages/ServiceProviderDashboard';
 import LoadingSpinner from './components/LoadingSpinner';
 
 function App() {
@@ -51,7 +54,8 @@ function App() {
   }
 
   return (
-    <Routes>
+    <UserProvider>
+      <Routes>
       {/* Public routes */}
       <Route 
         path="/" 
@@ -130,6 +134,26 @@ function App() {
         <Route path="emergency" element={<CaregiverEmergency />} />
         <Route path="settings" element={<CaregiverSettings />} />
       </Route>
+
+      {/* Service Provider routes (unified for doctors and caregivers) */}
+      <Route 
+        path="/service-provider" 
+        element={user ? <ServiceProviderLayout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<ServiceProviderDashboard />} />
+        <Route path="schedule" element={<CaregiverSchedule />} />
+        <Route path="patients" element={<CaregiverPatients />} />
+        <Route path="messages" element={<CaregiverMessages />} />
+        <Route path="tasks" element={<CaregiverTasks />} />
+        <Route path="care-logs" element={<CaregiverPhotos />} />
+        <Route path="photos" element={<CaregiverPhotos />} />
+        <Route path="activities" element={<CaregiverPerformance />} />
+        <Route path="medical-records" element={<CaregiverPatients />} />
+        <Route path="prescriptions" element={<Medications />} />
+        <Route path="consultations" element={<Appointments />} />
+        <Route path="diagnostics" element={<VitalSigns />} />
+        <Route path="settings" element={<CaregiverSettings />} />
+      </Route>
       <Route 
         path="/services" 
         element={<Services />} 
@@ -161,7 +185,8 @@ function App() {
       
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </UserProvider>
   );
 }
 
