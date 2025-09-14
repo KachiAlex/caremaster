@@ -25,6 +25,29 @@ import {
   LogOut
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { 
+  getPatientsByCaregiver, 
+  getPatientsByDoctor, 
+  getPatientStats 
+} from '../api/patientsAPI';
+import { 
+  getTodaysAppointments, 
+  getUpcomingAppointments, 
+  getAppointmentStats 
+} from '../api/appointmentsAPI';
+import { 
+  getTodaysCareTasks, 
+  getPendingCareTasks, 
+  getCareTaskStats 
+} from '../api/careTasksAPI';
+import { 
+  getUnreadMessageCount, 
+  getConversationsByUser 
+} from '../api/messagesAPI';
+import { 
+  getUnreadNotificationCount, 
+  getNotificationsByUser 
+} from '../api/notificationsAPI';
 
 // Shared Components
 const DashboardHeader = ({ userProfile, userRole }) => {
@@ -74,21 +97,21 @@ const DashboardHeader = ({ userProfile, userRole }) => {
   );
 };
 
-const QuickStats = ({ userRole, stats }) => {
+const QuickStats = ({ userRole, stats, loading }) => {
   const getStatsForRole = () => {
     if (userRole === 'doctor') {
       return [
         { label: 'Patients', value: stats.patients || 0, icon: Users, color: 'blue' },
-        { label: 'Consultations', value: stats.consultations || 0, icon: Stethoscope, color: 'green' },
-        { label: 'Prescriptions', value: stats.prescriptions || 0, icon: Pill, color: 'purple' },
-        { label: 'Appointments', value: stats.appointments || 0, icon: Calendar, color: 'orange' },
+        { label: 'Today\'s Appointments', value: stats.todaysAppointments || 0, icon: Calendar, color: 'green' },
+        { label: 'Upcoming', value: stats.upcomingAppointments || 0, icon: Clock, color: 'purple' },
+        { label: 'Unread Messages', value: stats.unreadMessages || 0, icon: MessageSquare, color: 'orange' },
       ];
     } else if (userRole === 'caregiver') {
       return [
         { label: 'Assigned Patients', value: stats.patients || 0, icon: Users, color: 'blue' },
-        { label: 'Tasks Completed', value: stats.tasksCompleted || 0, icon: ClipboardList, color: 'green' },
-        { label: 'Photo Updates', value: stats.photoUpdates || 0, icon: Camera, color: 'purple' },
-        { label: 'Hours Worked', value: stats.hoursWorked || 0, icon: Clock, color: 'orange' },
+        { label: 'Today\'s Tasks', value: stats.todaysTasks || 0, icon: ClipboardList, color: 'green' },
+        { label: 'Pending Tasks', value: stats.pendingTasks || 0, icon: Clock, color: 'purple' },
+        { label: 'Unread Messages', value: stats.unreadMessages || 0, icon: MessageSquare, color: 'orange' },
       ];
     }
     return [];
@@ -281,40 +304,87 @@ const CaregiverSpecificSections = ({ userProfile }) => {
 
 // Main Dashboard Component
 const ServiceProviderDashboard = () => {
-  const { userProfile, userRole, loading } = useUser();
+  const { userProfile, userRole, loading: userLoading } = useUser();
   const [stats, setStats] = useState({
     patients: 0,
-    consultations: 0,
-    prescriptions: 0,
-    appointments: 0,
-    tasksCompleted: 0,
-    photoUpdates: 0,
-    hoursWorked: 0,
+    todaysAppointments: 0,
+    upcomingAppointments: 0,
+    todaysTasks: 0,
+    pendingTasks: 0,
+    unreadMessages: 0,
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock stats - replace with real API calls
-    if (userRole === 'doctor') {
-      setStats({
-        patients: 12,
-        consultations: 8,
-        prescriptions: 15,
-        appointments: 6,
-      });
-    } else if (userRole === 'caregiver') {
-      setStats({
-        patients: 5,
-        tasksCompleted: 12,
-        photoUpdates: 8,
-        hoursWorked: 32,
-      });
-    }
-  }, [userRole]);
+    const loadDashboardData = async () => {
+      if (!userProfile || !userRole) return;
+      
+      try {
+        setLoading(true);
+        
+        const promises = [];
+        
+        // Load patients
+        if (userRole === 'doctor') {
+          promises.push(getPatientsByDoctor(userProfile.id));
+        } else if (userRole === 'caregiver') {
+          promises.push(getPatientsByCaregiver(userProfile.id));
+        } else {
+          promises.push(Promise.resolve([]));
+        }
+        
+        // Load appointments
+        promises.push(getTodaysAppointments(userProfile.id, userRole));
+        promises.push(getUpcomingAppointments(userProfile.id, userRole));
+        
+        // Load tasks (for caregivers)
+        if (userRole === 'caregiver') {
+          promises.push(getTodaysCareTasks(userProfile.id));
+          promises.push(getPendingCareTasks(userProfile.id));
+        } else {
+          promises.push(Promise.resolve([]));
+          promises.push(Promise.resolve([]));
+        }
+        
+        // Load messages
+        promises.push(getUnreadMessageCount(userProfile.id));
+        
+        const [
+          patients,
+          todaysAppointments,
+          upcomingAppointments,
+          todaysTasks,
+          pendingTasks,
+          unreadMessages
+        ] = await Promise.all(promises);
+        
+        setStats({
+          patients: patients.length,
+          todaysAppointments: todaysAppointments.length,
+          upcomingAppointments: upcomingAppointments.length,
+          todaysTasks: todaysTasks.length,
+          pendingTasks: pendingTasks.length,
+          unreadMessages,
+        });
+        
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (loading) {
+    loadDashboardData();
+  }, [userProfile, userRole]);
+
+  if (userLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -330,7 +400,7 @@ const ServiceProviderDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardHeader userProfile={userProfile} userRole={userRole} />
-      <QuickStats userRole={userRole} stats={stats} />
+      <QuickStats userRole={userRole} stats={stats} loading={loading} />
       
       {userRole === 'doctor' && (
         <DoctorSpecificSections userProfile={userProfile} />
