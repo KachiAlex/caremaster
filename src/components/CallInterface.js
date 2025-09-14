@@ -280,7 +280,7 @@ const CallInterface = ({
 
               {/* Local video (picture-in-picture) */}
               {callType === 'video' && localStream && (
-                <div className="absolute bottom-24 right-4 w-32 h-24 bg-gray-900 rounded-lg overflow-hidden border-2 border-white">
+                <div className="absolute bottom-20 md:bottom-24 right-2 md:right-4 w-24 h-18 md:w-32 md:h-24 bg-gray-900 rounded-lg overflow-hidden border-2 border-white">
                   <video
                     ref={localVideoRef}
                     autoPlay
@@ -290,7 +290,7 @@ const CallInterface = ({
                   />
                   {!isVideoEnabled && (
                     <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
-                      <VideoOff className="text-white" size={24} />
+                      <VideoOff className="text-white" size={16} />
                     </div>
                   )}
                 </div>
@@ -311,23 +311,23 @@ const CallInterface = ({
                   
                   {callState === 'ringing' && (
                     <>
-                      <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                      <div className="w-24 h-24 md:w-24 md:h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                         <Phone className="text-white" size={32} />
                       </div>
-                      <h2 className="text-2xl font-semibold mb-2">Incoming Call</h2>
-                      <p className="text-xl mb-6">{participantInfo?.name}</p>
-                      <div className="flex space-x-4 justify-center">
+                      <h2 className="text-xl md:text-2xl font-semibold mb-2">Incoming Call</h2>
+                      <p className="text-lg md:text-xl mb-6">{participantInfo?.name}</p>
+                      <div className="flex space-x-6 md:space-x-4 justify-center">
                         <button
                           onClick={handleRejectCall}
-                          className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          className="w-20 h-20 md:w-16 md:h-16 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 active:bg-red-700 transition-colors touch-manipulation"
                         >
-                          <X className="text-white" size={24} />
+                          <X className="text-white" size={28} />
                         </button>
                         <button
                           onClick={handleAcceptCall}
-                          className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors"
+                          className="w-20 h-20 md:w-16 md:h-16 bg-green-500 rounded-full flex items-center justify-center hover:bg-green-600 active:bg-green-700 transition-colors touch-manipulation"
                         >
-                          <Check className="text-white" size={24} />
+                          <Check className="text-white" size={28} />
                         </button>
                       </div>
                     </>
@@ -348,27 +348,27 @@ const CallInterface = ({
 
             {/* Call controls */}
             {callState === 'connected' && (
-              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
-                <div className="flex items-center space-x-4 bg-black bg-opacity-50 rounded-full px-6 py-3">
+              <div className="absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-md px-4">
+                <div className="flex items-center justify-center space-x-2 md:space-x-4 bg-black bg-opacity-50 rounded-full px-4 md:px-6 py-3">
                   {/* Mute toggle */}
                   <button
                     onClick={handleMuteToggle}
-                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                      isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-600 hover:bg-gray-700'
+                    className={`w-14 h-14 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
+                      isMuted ? 'bg-red-500 hover:bg-red-600 active:bg-red-700' : 'bg-gray-600 hover:bg-gray-700 active:bg-gray-800'
                     }`}
                   >
-                    {isMuted ? <MicOff className="text-white" size={20} /> : <Mic className="text-white" size={20} />}
+                    {isMuted ? <MicOff className="text-white" size={24} /> : <Mic className="text-white" size={24} />}
                   </button>
 
                   {/* Video toggle */}
                   {callType === 'video' && (
                     <button
                       onClick={handleVideoToggle}
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                        !isVideoEnabled ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-600 hover:bg-gray-700'
+                      className={`w-14 h-14 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
+                        !isVideoEnabled ? 'bg-red-500 hover:bg-red-600 active:bg-red-700' : 'bg-gray-600 hover:bg-gray-700 active:bg-gray-800'
                       }`}
                     >
-                      {!isVideoEnabled ? <VideoOff className="text-white" size={20} /> : <Video className="text-white" size={20} />}
+                      {!isVideoEnabled ? <VideoOff className="text-white" size={24} /> : <Video className="text-white" size={24} />}
                     </button>
                   )}
 
@@ -376,26 +376,26 @@ const CallInterface = ({
                   {callType === 'video' && isVideoEnabled && (
                     <button
                       onClick={handleCameraSwitch}
-                      className="w-12 h-12 rounded-full bg-gray-600 hover:bg-gray-700 flex items-center justify-center transition-colors"
+                      className="w-14 h-14 md:w-12 md:h-12 rounded-full bg-gray-600 hover:bg-gray-700 active:bg-gray-800 flex items-center justify-center transition-colors touch-manipulation"
                     >
-                      <Camera className="text-white" size={20} />
+                      <Camera className="text-white" size={24} />
                     </button>
                   )}
 
                   {/* Speaker toggle */}
                   <button
                     onClick={handleSpeakerToggle}
-                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                      isSpeakerEnabled ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-600 hover:bg-gray-700'
+                    className={`w-14 h-14 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
+                      isSpeakerEnabled ? 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700 active:bg-gray-800'
                     }`}
                   >
-                    {isSpeakerEnabled ? <Volume2 className="text-white" size={20} /> : <VolumeX className="text-white" size={20} />}
+                    {isSpeakerEnabled ? <Volume2 className="text-white" size={24} /> : <VolumeX className="text-white" size={24} />}
                   </button>
 
-                  {/* Minimize */}
+                  {/* Minimize - hidden on mobile */}
                   <button
                     onClick={() => setIsMinimized(!isMinimized)}
-                    className="w-12 h-12 rounded-full bg-gray-600 hover:bg-gray-700 flex items-center justify-center transition-colors"
+                    className="hidden md:flex w-12 h-12 rounded-full bg-gray-600 hover:bg-gray-700 active:bg-gray-800 items-center justify-center transition-colors touch-manipulation"
                   >
                     {isMinimized ? <Maximize className="text-white" size={20} /> : <Minimize className="text-white" size={20} />}
                   </button>
@@ -403,9 +403,9 @@ const CallInterface = ({
                   {/* End call */}
                   <button
                     onClick={handleEndCall}
-                    className="w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+                    className="w-16 h-16 md:w-12 md:h-12 rounded-full bg-red-500 hover:bg-red-600 active:bg-red-700 flex items-center justify-center transition-colors touch-manipulation"
                   >
-                    <PhoneOff className="text-white" size={20} />
+                    <PhoneOff className="text-white" size={28} />
                   </button>
                 </div>
               </div>

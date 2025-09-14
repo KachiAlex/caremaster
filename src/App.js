@@ -47,6 +47,7 @@ import ServiceProviderDashboard from './pages/ServiceProviderDashboard';
 import UserManagement from './pages/UserManagement';
 import CallsPage from './pages/CallsPage';
 import MessagingInterface from './components/MessagingInterface';
+import MobileOptimization from './components/MobileOptimization';
 import LoadingSpinner from './components/LoadingSpinner';
 
 function App() {
@@ -58,6 +59,7 @@ function App() {
 
   return (
     <UserProvider>
+      <MobileOptimization />
       <Routes>
       {/* Public routes */}
       <Route 

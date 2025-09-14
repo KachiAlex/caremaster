@@ -20,7 +20,8 @@ import {
   Heart,
   Stethoscope,
   Shield,
-  PhoneCall
+  PhoneCall,
+  Menu
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
@@ -48,6 +49,7 @@ const MessagingInterface = () => {
   const [callService] = useState(new CallService());
   const [activeCall, setActiveCall] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
+  const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -344,11 +346,19 @@ const MessagingInterface = () => {
   return (
     <div className="flex h-full bg-white rounded-lg shadow-lg overflow-hidden">
       {/* Conversations Sidebar */}
-      <div className="w-1/3 border-r border-gray-200 flex flex-col">
+      <div className={`${showSidebar ? 'flex' : 'hidden'} md:flex w-full md:w-1/3 border-r border-gray-200 flex-col absolute md:relative z-10 md:z-auto bg-white h-full`}>
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Messages</h2>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="md:hidden p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <Menu size={20} />
+              </button>
+              <h2 className="text-xl font-semibold text-gray-800">Messages</h2>
+            </div>
             <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
               <Plus size={20} />
             </button>
@@ -438,11 +448,49 @@ const MessagingInterface = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col md:flex">
+        {/* Mobile header for chat */}
+        {selectedConversation && (
+          <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => setShowSidebar(true)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <Menu size={20} />
+              </button>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {getParticipantName(selectedConversation)}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {getParticipantRole(selectedConversation)}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={handleVoiceCall}
+                className="p-2 text-green-600 hover:text-green-800 rounded-lg hover:bg-green-50 transition-colors"
+                title="Voice Call"
+              >
+                <Phone size={20} />
+              </button>
+              <button 
+                onClick={handleVideoCall}
+                className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                title="Video Call"
+              >
+                <Video size={20} />
+              </button>
+            </div>
+          </div>
+        )}
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <div className="hidden md:block p-4 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getConversationTypeColor(selectedConversation.conversationType)}`}>
@@ -535,11 +583,11 @@ const MessagingInterface = () => {
             </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="p-3 md:p-4 border-t border-gray-200 bg-gray-50">
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 touch-manipulation"
                 >
                   <Paperclip size={20} />
                 </button>
@@ -568,7 +616,7 @@ const MessagingInterface = () => {
                 <button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || sending}
-                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 md:p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                 >
                   {sending ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

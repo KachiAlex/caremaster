@@ -99,11 +99,11 @@ const CallsPage = () => {
               <p className="text-gray-600 mt-2">Make voice and video calls with your care team</p>
             </div>
             
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
               <button
                 onClick={() => handleStartCall('audio')}
                 disabled={loading}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
+                className="px-4 sm:px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 disabled:opacity-50 flex items-center justify-center space-x-2 touch-manipulation"
               >
                 <Phone size={20} />
                 <span>Voice Call</span>
@@ -112,7 +112,7 @@ const CallsPage = () => {
               <button
                 onClick={() => handleStartCall('video')}
                 disabled={loading}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
+                className="px-4 sm:px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 flex items-center justify-center space-x-2 touch-manipulation"
               >
                 <Video size={20} />
                 <span>Video Call</span>
@@ -122,7 +122,7 @@ const CallsPage = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center">
               <div className="p-3 bg-green-100 rounded-full">
@@ -136,7 +136,7 @@ const CallsPage = () => {
             <button
               onClick={() => handleStartCall('audio')}
               disabled={loading}
-              className="mt-4 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              className="mt-4 w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 disabled:opacity-50 touch-manipulation"
             >
               Start Voice Call
             </button>
@@ -155,7 +155,7 @@ const CallsPage = () => {
             <button
               onClick={() => handleStartCall('video')}
               disabled={loading}
-              className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="mt-4 w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 touch-manipulation"
             >
               Start Video Call
             </button>
