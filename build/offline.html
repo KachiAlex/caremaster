@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElderX - Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .offline-container {
+            text-align: center;
+            max-width: 400px;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .offline-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        p {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .retry-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .retry-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .features-list {
+            margin-top: 2rem;
+            text-align: left;
+        }
+        
+        .features-list h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 0.8rem;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .feature-icon {
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+        
+        @media (max-width: 480px) {
+            .offline-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .offline-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📱</div>
+        <h1>You're Offline</h1>
+        <p>Don't worry! ElderX is designed to work offline. Your data is safely stored and will sync when you're back online.</p>
+        
+        <button class="retry-button" onclick="retryConnection()">
+            Try Again
+        </button>
+        
+        <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>Checking connection...</span>
+        </div>
+        
+        <div class="features-list">
+            <h3>Available Offline:</h3>
+            <div class="feature-item">
+                <div class="feature-icon">📋</div>
+                <span>View patient information</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">💬</div>
+                <span>Read messages</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">📅</div>
+                <span>Check appointments</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">📝</div>
+                <span>Review care tasks</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function retryConnection() {
+            const button = document.querySelector('.retry-button');
+            const statusIndicator = document.querySelector('.status-indicator');
+            
+            button.textContent = 'Retrying...';
+            button.disabled = true;
+            statusIndicator.innerHTML = '<div class="status-dot"></div><span>Checking connection...</span>';
+            
+            // Try to fetch a simple resource
+            fetch('/')
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        throw new Error('Still offline');
+                    }
+                })
+                .catch(error => {
+                    button.textContent = 'Try Again';
+                    button.disabled = false;
+                    statusIndicator.innerHTML = '<div class="status-dot"></div><span>Still offline</span>';
+                });
+        }
+        
+        // Auto-retry connection every 30 seconds
+        setInterval(() => {
+            fetch('/')
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    // Still offline, do nothing
+                });
+        }, 30000);
+        
+        // Listen for online event
+        window.addEventListener('online', () => {
+            window.location.reload();
+        });
+    </script>
+</body>
+</html>

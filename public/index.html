@@ -2,10 +2,78 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ElderX</title>
+    <meta name="theme-color" content="#3b82f6" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="ElderX - Comprehensive platform for elderly care management with real-time communication, voice/video calls, and advanced mobile features" />
+    <meta name="keywords" content="elderly care, healthcare, telemedicine, caregivers, doctors, mobile app" />
+    <meta name="author" content="ElderX Team" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- PWA Icons -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/icons/icon-16x16.png" />
+    
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="ElderX" />
+    
+    <!-- Android PWA Support -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="ElderX" />
+    
+    <!-- Windows PWA Support -->
+    <meta name="msapplication-TileColor" content="#3b82f6" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    
+    <!-- PWA Splash Screens -->
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/ios-splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/ios-splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/ios-splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash/ios-splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss:; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    
+    <!-- Performance Optimizations -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="format-detection" content="date=no" />
+    <meta name="format-detection" content="address=no" />
+    <meta name="format-detection" content="email=no" />
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="%PUBLIC_URL%/icons/icon-192x192.png" as="image" />
+    <link rel="preload" href="%PUBLIC_URL%/manifest.json" as="manifest" />
+    
+    <title>ElderX - Elderly Care Platform</title>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('SW registered: ', registration);
+            })
+            .catch(function(registrationError) {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
   </head>
   <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>
 </html>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
@@ -50,8 +50,171 @@ import MessagingInterface from './components/MessagingInterface';
 import MobileOptimization from './components/MobileOptimization';
 import LoadingSpinner from './components/LoadingSpinner';
 
+// PWA and Mobile Components
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import OfflineIndicator from './components/OfflineIndicator';
+import VoiceCommandInterface from './components/VoiceCommandInterface';
+import GestureControls from './components/GestureControls';
+import MobileActionBar from './components/MobileActionBar';
+
+// PWA Services
+import pwaService from './services/pwaService';
+import hapticService from './services/hapticService';
+import voiceCommandService from './services/voiceCommandService';
+import gestureService from './services/gestureService';
+
 function App() {
   const [user, loading] = useAuthState(auth);
+  const [showVoiceInterface, setShowVoiceInterface] = useState(false);
+  const [showGestureControls, setShowGestureControls] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // PWA and Mobile Setup
+  useEffect(() => {
+    // Initialize PWA services
+    pwaService.init();
+    
+    // Check if mobile device
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    // Online/offline listeners
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      pwaService.requestNotificationPermission();
+    }
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Voice command handlers
+  const handleVoiceCommand = (command, params) => {
+    console.log('Voice command received:', command, params);
+    
+    switch (command) {
+      case 'call':
+        // Navigate to calls page
+        window.location.href = '/service-provider/calls';
+        break;
+      case 'endCall':
+        // End current call (implement call service integration)
+        break;
+      case 'answerCall':
+        // Answer incoming call
+        break;
+      case 'rejectCall':
+        // Reject incoming call
+        break;
+      case 'sendMessage':
+        // Navigate to messages
+        window.location.href = '/service-provider/messages';
+        break;
+      case 'readMessages':
+        // Navigate to messages
+        window.location.href = '/service-provider/messages';
+        break;
+      case 'navigate':
+        // Handle navigation commands
+        if (params.text) {
+          const navText = params.text.toLowerCase();
+          if (navText.includes('patient')) {
+            window.location.href = '/service-provider/patients';
+          } else if (navText.includes('schedule')) {
+            window.location.href = '/service-provider/schedule';
+          } else if (navText.includes('task')) {
+            window.location.href = '/service-provider/tasks';
+          }
+        }
+        break;
+      case 'back':
+        // Go back
+        window.history.back();
+        break;
+      case 'home':
+        // Go to dashboard
+        window.location.href = '/service-provider';
+        break;
+      case 'completeTask':
+        // Handle task completion
+        break;
+      case 'assignTask':
+        // Handle task assignment
+        break;
+      case 'emergency':
+        // Trigger emergency alert
+        window.location.href = '/service-provider/emergency';
+        break;
+      case 'medication':
+        // Navigate to medications
+        window.location.href = '/service-provider/prescriptions';
+        break;
+      case 'vitalSigns':
+        // Navigate to vital signs
+        window.location.href = '/service-provider/diagnostics';
+        break;
+      case 'help':
+        // Show help
+        break;
+      default:
+        console.log('Unknown voice command:', command);
+    }
+  };
+
+  // Gesture handlers
+  const handleGesture = (gesture, data) => {
+    console.log('Gesture received:', gesture, data);
+    
+    switch (gesture) {
+      case 'swipe-left':
+        // Go back
+        window.history.back();
+        break;
+      case 'swipe-right':
+        // Go forward
+        window.history.forward();
+        break;
+      case 'swipe-up':
+        // Scroll up
+        window.scrollBy(0, -100);
+        break;
+      case 'swipe-down':
+        // Scroll down
+        window.scrollBy(0, 100);
+        break;
+      case 'pinch-in':
+        // Zoom out
+        document.body.style.zoom = Math.max(0.5, parseFloat(document.body.style.zoom || 1) - 0.1);
+        break;
+      case 'pinch-out':
+        // Zoom in
+        document.body.style.zoom = Math.min(2, parseFloat(document.body.style.zoom || 1) + 0.1);
+        break;
+      case 'long-press':
+        // Show context menu or long press action
+        break;
+      case 'double-tap':
+        // Refresh page
+        window.location.reload();
+        break;
+      default:
+        console.log('Unknown gesture:', gesture);
+    }
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -60,6 +223,40 @@ function App() {
   return (
     <UserProvider>
       <MobileOptimization />
+      
+      {/* PWA Components */}
+      <PWAInstallPrompt />
+      <OfflineIndicator />
+      
+      {/* Mobile Action Bar */}
+      {isMobile && user && (
+        <MobileActionBar
+          onVoiceCommand={(enabled) => setShowVoiceInterface(enabled)}
+          onGestureControl={(enabled) => setShowGestureControls(enabled)}
+          onSettings={() => {
+            // Open mobile settings
+          }}
+          isOnline={isOnline}
+          isVoiceEnabled={voiceCommandService.isSupported}
+          isGestureEnabled={gestureService.isSupported}
+          isHapticEnabled={hapticService.isSupported}
+        />
+      )}
+      
+      {/* Voice Command Interface */}
+      <VoiceCommandInterface
+        isOpen={showVoiceInterface}
+        onClose={() => setShowVoiceInterface(false)}
+        onCommand={handleVoiceCommand}
+      />
+      
+      {/* Gesture Controls */}
+      <GestureControls
+        isOpen={showGestureControls}
+        onClose={() => setShowGestureControls(false)}
+        onGesture={handleGesture}
+      />
+      
       <Routes>
       {/* Public routes */}
       <Route 
