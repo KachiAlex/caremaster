@@ -3,6 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
 import { UserProvider } from './contexts/UserContext';
+import ErrorBoundary from './components/ErrorBoundary';
+import errorHandler from './utils/errorHandler';
+import logger from './utils/logger';
 import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
 import ServiceProviderLayout from './components/ServiceProviderLayout';
@@ -72,27 +75,47 @@ function App() {
 
   // PWA and Mobile Setup
   useEffect(() => {
-    // Initialize PWA services
-    pwaService.init();
+    try {
+      // Initialize PWA services
+      pwaService.init();
+      logger.info('PWA services initialized successfully');
+    } catch (error) {
+      errorHandler.handleError(error, { context: 'pwa_initialization' });
+    }
     
     // Check if mobile device
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+      try {
+        setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+      } catch (error) {
+        errorHandler.handleError(error, { context: 'mobile_detection' });
+      }
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
     // Online/offline listeners
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      setIsOnline(true);
+      logger.info('App is back online');
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      logger.warn('App is offline');
+    };
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
-      pwaService.requestNotificationPermission();
+      try {
+        pwaService.requestNotificationPermission();
+      } catch (error) {
+        errorHandler.handleError(error, { context: 'notification_permission' });
+      }
     }
     
     return () => {
@@ -221,8 +244,9 @@ function App() {
   }
 
   return (
-    <UserProvider>
-      <MobileOptimization />
+    <ErrorBoundary name="App">
+      <UserProvider>
+        <MobileOptimization />
       
       {/* PWA Components */}
       <PWAInstallPrompt />
@@ -390,7 +414,8 @@ function App() {
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </UserProvider>
+      </UserProvider>
+    </ErrorBoundary>
   );
 }
 

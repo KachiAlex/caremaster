@@ -1,0 +1,106 @@
+# Appointment Management Queries
+
+query GetAppointments($elderlyProfileId: UUID!) @auth(level: USER) {
+  appointments(where: {elderlyProfileId: {eq: $elderlyProfileId}}, orderBy: {dateTime: DESC}) {
+    id
+    elderlyProfileId
+    dateTime
+    type
+    location
+    doctorName
+    notes
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+query GetCurrentUserAppointments @auth(level: USER) {
+  appointments(where: {elderlyProfileId: {eq_expr: "auth.uid"}}, orderBy: {dateTime: DESC}) {
+    id
+    elderlyProfileId
+    dateTime
+    type
+    location
+    doctorName
+    notes
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+query GetUpcomingAppointments($elderlyProfileId: UUID!, $limit: Int) @auth(level: USER) {
+  appointments(where: {elderlyProfileId: {eq: $elderlyProfileId}, dateTime: {gte_expr: "request.time"}}, orderBy: {dateTime: ASC}, limit: $limit) {
+    id
+    elderlyProfileId
+    dateTime
+    type
+    location
+    doctorName
+    notes
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+query GetAppointmentsByDateRange($elderlyProfileId: UUID!, $startDate: Timestamp!, $endDate: Timestamp!) @auth(level: USER) {
+  appointments(where: {elderlyProfileId: {eq: $elderlyProfileId}, dateTime: {gte: $startDate, lte: $endDate}}, orderBy: {dateTime: ASC}) {
+    id
+    elderlyProfileId
+    dateTime
+    type
+    location
+    doctorName
+    notes
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+query GetAppointmentById($appointmentId: UUID!) @auth(level: USER) {
+  appointment(id: $appointmentId) {
+    id
+    elderlyProfileId
+    dateTime
+    type
+    location
+    doctorName
+    notes
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateAppointment($elderlyProfileId: UUID!, $dateTime: Timestamp!, $type: String!, $location: String!, $doctorName: String, $notes: String) @auth(level: USER) {
+  appointment_insert(data: {
+    elderlyProfileId: $elderlyProfileId
+    dateTime: $dateTime
+    type: $type
+    location: $location
+    doctorName: $doctorName
+    notes: $notes
+    status: "scheduled"
+    createdAt_expr: "request.time"
+    updatedAt_expr: "request.time"
+  })
+}
+
+mutation UpdateAppointment($appointmentId: UUID!, $dateTime: Timestamp, $type: String, $location: String, $doctorName: String, $notes: String, $status: String) @auth(level: USER) {
+  appointment_update(key: {id: $appointmentId}, data: {
+    dateTime: $dateTime
+    type: $type
+    location: $location
+    doctorName: $doctorName
+    notes: $notes
+    status: $status
+    updatedAt_expr: "request.time"
+  })
+}
+
+mutation DeleteAppointment($appointmentId: UUID!) @auth(level: USER) {
+  appointment_delete(key: {id: $appointmentId})
+}

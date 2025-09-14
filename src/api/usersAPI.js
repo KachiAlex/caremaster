@@ -15,6 +15,9 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import dataConnectService from '../services/dataConnectService';
+import errorHandler from '../utils/errorHandler';
+import logger from '../utils/logger';
 
 const USERS_COLLECTION = 'users';
 
@@ -46,13 +49,26 @@ export const getAllUsers = async () => {
   }
 };
 
-// Get user by ID
+// Get user by ID (using Data Connect)
 export const getUserById = async (userId) => {
   try {
     if (!userId) {
       throw new Error('User ID is required');
     }
     
+    logger.debug('Fetching user by ID', { userId });
+    
+    // Try Data Connect first
+    try {
+      const result = await dataConnectService.getUserProfile(userId);
+      if (result.data && result.data.length > 0) {
+        return result.data[0];
+      }
+    } catch (dataConnectError) {
+      logger.warn('Data Connect failed, falling back to Firestore', { error: dataConnectError });
+    }
+    
+    // Fallback to Firestore
     const userRef = doc(db, USERS_COLLECTION, userId);
     const userSnap = await getDoc(userRef);
     
@@ -71,7 +87,7 @@ export const getUserById = async (userId) => {
       return null;
     }
   } catch (error) {
-    console.error('Error fetching user:', error);
+    errorHandler.handleError(error, { context: 'get_user_by_id', userId });
     throw error;
   }
 };

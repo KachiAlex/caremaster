@@ -1,0 +1,53 @@
+# Elderly Profile Management Queries
+
+query GetElderlyProfile($userId: UUID!) @auth(level: USER) {
+  elderlyProfile(where: {userId: {eq: $userId}}) {
+    id
+    userId
+    emergencyContactName
+    emergencyContactPhone
+    primaryCareDoctor
+    allergies
+    medicalConditions
+    createdAt
+    updatedAt
+  }
+}
+
+query GetCurrentElderlyProfile @auth(level: USER) {
+  elderlyProfile(where: {userId: {eq_expr: "auth.uid"}}) {
+    id
+    userId
+    emergencyContactName
+    emergencyContactPhone
+    primaryCareDoctor
+    allergies
+    medicalConditions
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateElderlyProfile($userId: UUID!, $emergencyContactName: String!, $emergencyContactPhone: String!, $primaryCareDoctor: String, $allergies: String, $medicalConditions: String) @auth(level: USER) {
+  elderlyProfile_insert(data: {
+    userId: $userId
+    emergencyContactName: $emergencyContactName
+    emergencyContactPhone: $emergencyContactPhone
+    primaryCareDoctor: $primaryCareDoctor
+    allergies: $allergies
+    medicalConditions: $medicalConditions
+    createdAt_expr: "request.time"
+    updatedAt_expr: "request.time"
+  })
+}
+
+mutation UpdateElderlyProfile($profileId: UUID!, $emergencyContactName: String, $emergencyContactPhone: String, $primaryCareDoctor: String, $allergies: String, $medicalConditions: String) @auth(level: USER) {
+  elderlyProfile_update(key: {id: $profileId}, data: {
+    emergencyContactName: $emergencyContactName
+    emergencyContactPhone: $emergencyContactPhone
+    primaryCareDoctor: $primaryCareDoctor
+    allergies: $allergies
+    medicalConditions: $medicalConditions
+    updatedAt_expr: "request.time"
+  })
+}

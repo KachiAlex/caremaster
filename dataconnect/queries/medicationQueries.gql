@@ -1,0 +1,136 @@
+# Medication Management Queries
+
+query GetMedications($elderlyProfileId: UUID!) @auth(level: USER) {
+  medications(where: {elderlyProfileId: {eq: $elderlyProfileId}}) {
+    id
+    name
+    dosage
+    frequency
+    startTime
+    instructions
+    notes
+    endDate
+    isActive
+    createdAt
+    updatedAt
+  }
+}
+
+query GetCurrentUserMedications @auth(level: USER) {
+  medications(where: {elderlyProfileId: {eq_expr: "auth.uid"}}) {
+    id
+    name
+    dosage
+    frequency
+    startTime
+    instructions
+    notes
+    endDate
+    isActive
+    createdAt
+    updatedAt
+  }
+}
+
+query GetActiveMedications($elderlyProfileId: UUID!) @auth(level: USER) {
+  medications(where: {elderlyProfileId: {eq: $elderlyProfileId}, isActive: {eq: true}}) {
+    id
+    name
+    dosage
+    frequency
+    startTime
+    instructions
+    notes
+    endDate
+    createdAt
+    updatedAt
+  }
+}
+
+query GetMedicationById($medicationId: UUID!) @auth(level: USER) {
+  medication(id: $medicationId) {
+    id
+    name
+    dosage
+    frequency
+    startTime
+    instructions
+    notes
+    endDate
+    isActive
+    elderlyProfileId
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateMedication($elderlyProfileId: UUID!, $name: String!, $dosage: String!, $frequency: String!, $startTime: Timestamp!, $instructions: String, $notes: String, $endDate: Date) @auth(level: USER) {
+  medication_insert(data: {
+    elderlyProfileId: $elderlyProfileId
+    name: $name
+    dosage: $dosage
+    frequency: $frequency
+    startTime: $startTime
+    instructions: $instructions
+    notes: $notes
+    endDate: $endDate
+    isActive: true
+    createdAt_expr: "request.time"
+    updatedAt_expr: "request.time"
+  })
+}
+
+mutation UpdateMedication($medicationId: UUID!, $name: String, $dosage: String, $frequency: String, $instructions: String, $notes: String, $endDate: Date, $isActive: Boolean) @auth(level: USER) {
+  medication_update(key: {id: $medicationId}, data: {
+    name: $name
+    dosage: $dosage
+    frequency: $frequency
+    instructions: $instructions
+    notes: $notes
+    endDate: $endDate
+    isActive: $isActive
+    updatedAt_expr: "request.time"
+  })
+}
+
+mutation DeleteMedication($medicationId: UUID!) @auth(level: USER) {
+  medication_delete(key: {id: $medicationId})
+}
+
+# Medication Log Queries
+
+query GetMedicationLogs($medicationId: UUID!) @auth(level: USER) {
+  doseLogs(where: {medicationId: {eq: $medicationId}}) {
+    id
+    medicationId
+    takenAt
+    status
+    notes
+    createdAt
+  }
+}
+
+query GetRecentMedicationLogs($elderlyProfileId: UUID!, $limit: Int) @auth(level: USER) {
+  doseLogs(where: {medicationId: {in: medications(where: {elderlyProfileId: {eq: $elderlyProfileId}}) { id }}}, orderBy: {takenAt: DESC}, limit: $limit) {
+    id
+    medicationId
+    takenAt
+    status
+    notes
+    medication {
+      name
+      dosage
+    }
+    createdAt
+  }
+}
+
+mutation LogMedicationDose($medicationId: UUID!, $takenAt: Timestamp!, $status: String!, $notes: String) @auth(level: USER) {
+  doseLog_insert(data: {
+    medicationId: $medicationId
+    takenAt: $takenAt
+    status: $status
+    notes: $notes
+    createdAt_expr: "request.time"
+  })
+}

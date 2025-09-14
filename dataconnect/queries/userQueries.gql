@@ -1,0 +1,56 @@
+# User Management Queries
+
+query GetUserProfile($userId: UUID!) @auth(level: USER) {
+  user(id: $userId) {
+    id
+    displayName
+    email
+    userType
+    photoUrl
+    dateOfBirth
+    createdAt
+  }
+}
+
+query GetCurrentUser @auth(level: USER) {
+  user(id_expr: "auth.uid") {
+    id
+    displayName
+    email
+    userType
+    photoUrl
+    dateOfBirth
+    createdAt
+  }
+}
+
+query GetAllUsers @auth(level: USER) {
+  users {
+    id
+    displayName
+    email
+    userType
+    createdAt
+  }
+}
+
+mutation CreateUserProfile($displayName: String!, $email: String!, $userType: String!, $dateOfBirth: Date, $photoUrl: String) @auth(level: USER) {
+  user_insert(data: {
+    displayName: $displayName
+    email: $email
+    userType: $userType
+    dateOfBirth: $dateOfBirth
+    photoUrl: $photoUrl
+    createdAt_expr: "request.time"
+  })
+}
+
+mutation UpdateUserProfile($userId: UUID!, $displayName: String, $email: String, $photoUrl: String, $dateOfBirth: Date) @auth(level: USER) {
+  user_update(key: {id: $userId}, data: {
+    displayName: $displayName
+    email: $email
+    photoUrl: $photoUrl
+    dateOfBirth: $dateOfBirth
+    updatedAt_expr: "request.time"
+  })
+}

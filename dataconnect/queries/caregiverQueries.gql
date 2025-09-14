@@ -1,0 +1,121 @@
+# Caregiver Relationship Management Queries
+
+query GetCaregiverRelationships($elderlyProfileId: UUID!) @auth(level: USER) {
+  caregiverRelationships(where: {elderlyProfileId: {eq: $elderlyProfileId}}) {
+    id
+    caregiverId
+    elderlyProfileId
+    accessLevel
+    establishedAt
+    status
+    createdAt
+    updatedAt
+    caregiver {
+      id
+      displayName
+      email
+      userType
+      photoUrl
+    }
+  }
+}
+
+query GetCurrentUserCaregivers @auth(level: USER) {
+  caregiverRelationships(where: {elderlyProfileId: {eq_expr: "auth.uid"}}) {
+    id
+    caregiverId
+    elderlyProfileId
+    accessLevel
+    establishedAt
+    status
+    createdAt
+    updatedAt
+    caregiver {
+      id
+      displayName
+      email
+      userType
+      photoUrl
+    }
+  }
+}
+
+query GetCaregiverPatients($caregiverId: UUID!) @auth(level: USER) {
+  caregiverRelationships(where: {caregiverId: {eq: $caregiverId}}) {
+    id
+    caregiverId
+    elderlyProfileId
+    accessLevel
+    establishedAt
+    status
+    createdAt
+    updatedAt
+    elderlyProfile {
+      id
+      userId
+      emergencyContactName
+      emergencyContactPhone
+      primaryCareDoctor
+      allergies
+      medicalConditions
+      user {
+        id
+        displayName
+        email
+        photoUrl
+      }
+    }
+  }
+}
+
+query GetCurrentCaregiverPatients @auth(level: USER) {
+  caregiverRelationships(where: {caregiverId: {eq_expr: "auth.uid"}}) {
+    id
+    caregiverId
+    elderlyProfileId
+    accessLevel
+    establishedAt
+    status
+    createdAt
+    updatedAt
+    elderlyProfile {
+      id
+      userId
+      emergencyContactName
+      emergencyContactPhone
+      primaryCareDoctor
+      allergies
+      medicalConditions
+      user {
+        id
+        displayName
+        email
+        photoUrl
+      }
+    }
+  }
+}
+
+mutation CreateCaregiverRelationship($caregiverId: UUID!, $elderlyProfileId: UUID!, $accessLevel: String!) @auth(level: USER) {
+  caregiverRelationship_insert(data: {
+    caregiverId: $caregiverId
+    elderlyProfileId: $elderlyProfileId
+    accessLevel: $accessLevel
+    establishedAt_expr: "request.time"
+    status: "active"
+    createdAt_expr: "request.time"
+    updatedAt_expr: "request.time"
+  })
+}
+
+mutation UpdateCaregiverRelationship($relationshipId: UUID!, $accessLevel: String, $status: String) @auth(level: USER) {
+  caregiverRelationship_update(key: {id: $relationshipId}, data: {
+    accessLevel: $accessLevel
+    status: $status
+    updatedAt_expr: "request.time"
+  })
+}
+
+mutation DeleteCaregiverRelationship($relationshipId: UUID!) @auth(level: USER) {
+  caregiverRelationship_delete(key: {id: $relationshipId})
+}
