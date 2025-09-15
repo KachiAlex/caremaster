@@ -42,14 +42,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     
-    <!-- Enhanced Security Headers -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https: wss: https://api.ipify.org; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;" />
+    <!-- Enhanced Security Headers (note: some headers like X-Frame-Options must be set via server) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' http: https: ws: wss: https://api.ipify.org; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="X-Frame-Options" content="DENY" />
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(self), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()" />
-    <meta name="robots" content="noindex, nofollow, nosnippet, noarchive" />
     
     <!-- Performance Optimizations -->
     <meta name="format-detection" content="telephone=no" />
@@ -58,25 +55,11 @@
     <meta name="format-detection" content="email=no" />
     
     <!-- Preload Critical Resources -->
-    <link rel="preload" href="%PUBLIC_URL%/icons/icon-192x192.png" as="image" type="image/png" />
-    <link rel="preload" href="%PUBLIC_URL%/manifest.json" as="manifest" type="application/json" />
+    <!-- Removed manifest and icon preloads to avoid unsupported/unused preload warnings -->
     
     <title>ElderX - Elderly Care Platform</title>
     
-    <!-- PWA Service Worker Registration -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-              console.log('SW registered: ', registration);
-            })
-            .catch(function(registrationError) {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
-      }
-    </script>
+    <!-- PWA Service Worker Registration is disabled in development to avoid caching issues -->
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

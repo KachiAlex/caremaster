@@ -111,7 +111,7 @@ const Landing = () => {
       location: "Port Harcourt, Nigeria",
       rating: 5,
       text: "The medication management system has been incredibly helpful. I never miss a dose anymore, and my family is always informed about my health status.",
-      photo: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2",
+      photo: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=3",
       age: "75 years old"
     }
   ];
@@ -153,7 +153,7 @@ const Landing = () => {
             <source src="https://videos.pexels.com/video-files/3195394/3195394-uhd_2560_1440_25fps.mp4?v=2" type="video/mp4" />
             {/* Fallback image */}
             <img
-              src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
+              src="https://images.pexels.com/photos/7551675/pexels-photo-7551675.jpeg?auto=compress&cs=tinysrgb&w=2070"
               alt="African elderly receiving healthcare"
               className="w-full h-full object-cover"
             />
@@ -205,36 +205,10 @@ const Landing = () => {
             </div>
           </div>
 
-          {/* Right Content - Real African Elderly Images */}
-          <div className="relative mt-12 lg:mt-0">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Main Image */}
-              <div className="col-span-2">
-                <img
-                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
-                  alt="African elderly woman receiving healthcare at home"
-                  className="w-full h-64 object-cover rounded-lg shadow-xl"
-                />
-              </div>
-              {/* Side Images */}
-              <div>
-                <img
-                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
-                  alt="African elderly man with caregiver"
-                  className="w-full h-32 object-cover rounded-lg shadow-lg"
-                />
-              </div>
-              <div>
-                <img
-                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
-                  alt="African elderly woman receiving healthcare"
-                  className="w-full h-32 object-cover rounded-lg shadow-lg"
-                />
-              </div>
-            </div>
-            
+          {/* Right Content - Keep only Nurse Fatima widget */}
+          <div className="mt-12 lg:mt-0 flex lg:items-start lg:justify-start">
             {/* Floating Chat Widget */}
-            <div className="absolute -bottom-6 -left-6 bg-white rounded-lg shadow-xl p-4 w-72">
+            <div className="inline-block transform origin-top-left scale-[1.6] md:scale-[1.8] lg:scale-[2] lg:-translate-y-6 transition-transform duration-300 ease-out hover:-rotate-2 hover:shadow-2xl bg-white rounded-lg shadow-xl p-4 w-72 mx-auto lg:mx-0">
               <div className="flex items-center mb-3">
                 <img
                   className="h-10 w-10 rounded-full object-cover"
@@ -333,7 +307,7 @@ const Landing = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
+                src="https://images.pexels.com/photos/7551649/pexels-photo-7551649.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 alt="African elderly woman receiving home healthcare"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
@@ -347,7 +321,7 @@ const Landing = () => {
             
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
+                src={process.env.PUBLIC_URL + '/images/story-care-checkup-1.png'}
                 alt="African elderly man with healthcare professional"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
@@ -361,7 +335,7 @@ const Landing = () => {
             
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
+                src="https://images.pexels.com/photos/7551617/pexels-photo-7551617.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 alt="African elderly woman with technology"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
@@ -375,7 +349,7 @@ const Landing = () => {
             
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
+                src={process.env.PUBLIC_URL + '/images/story-care-checkup-2.png'}
                 alt="African elderly man with family"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
@@ -386,6 +360,8 @@ const Landing = () => {
                 </div>
               </div>
             </div>
+
+            {/* Note: two extra placeholders removed per request */}
           </div>
 
           {/* Testimonials */}
@@ -436,9 +412,9 @@ const Landing = () => {
                 <video
                   className="w-full h-96 object-cover"
                   controls
-                  poster="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
+                  poster="https://images.pexels.com/photos/7551675/pexels-photo-7551675.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 >
-                  <source src="https://videos.pexels.com/video-files/3195394/3195394-uhd_2560_1440_25fps.mp4?v=2" type="video/mp4" />
+                  <source src="https://videos.pexels.com/video-files/8611971/8611971-hd_1920_1080_25fps.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
