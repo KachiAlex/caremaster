@@ -6,6 +6,9 @@ import { UserProvider } from './contexts/UserContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import errorHandler from './utils/errorHandler';
 import logger from './utils/logger';
+import securityMonitoringService from './services/securityMonitoringService';
+import biometricAuthService from './services/biometricAuthService';
+import secureConfigService from './services/secureConfigService';
 import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
 import ServiceProviderLayout from './components/ServiceProviderLayout';
@@ -61,6 +64,8 @@ import GestureControls from './components/GestureControls';
 import MobileActionBar from './components/MobileActionBar';
 
 // PWA Services
+import SecuritySettings from './components/SecuritySettings';
+import SecurityDashboard from './components/SecurityDashboard';
 import pwaService from './services/pwaService';
 import hapticService from './services/hapticService';
 import voiceCommandService from './services/voiceCommandService';
@@ -73,12 +78,25 @@ function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isMobile, setIsMobile] = useState(false);
 
-  // PWA and Mobile Setup
+  // PWA and Security Services Setup
   useEffect(() => {
     try {
       // Initialize PWA services
       pwaService.init();
       logger.info('PWA services initialized successfully');
+
+      // Initialize security services
+      securityMonitoringService.initialize();
+      biometricAuthService.initialize();
+      
+      // Log security initialization
+      securityMonitoringService.logSecurityEvent('APP_INITIALIZATION', {
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        features: secureConfigService.getFeatureFlags()
+      });
+      
+      logger.info('Security services initialized successfully');
     } catch (error) {
       errorHandler.handleError(error, { context: 'pwa_initialization' });
     }
@@ -344,6 +362,18 @@ function App() {
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Subscription />} />
+      </Route>
+      <Route 
+        path="/security" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<SecuritySettings />} />
+      </Route>
+      <Route 
+        path="/security-dashboard" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<SecurityDashboard />} />
       </Route>
       <Route 
         path="/caregiver" 
