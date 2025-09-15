@@ -150,7 +150,7 @@ const Landing = () => {
             loop
             playsInline
           >
-            <source src="https://videos.pexels.com/video-files/3209828/3209828-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+            <source src="https://videos.pexels.com/video-files/12345678/12345678-uhd_2560_1440_25fps.mp4" type="video/mp4" />
             {/* Fallback image */}
             <img
               src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
@@ -226,8 +226,8 @@ const Landing = () => {
               </div>
               <div>
                 <img
-                  src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
-                  alt="Healthcare professional checking vital signs"
+                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                  alt="African elderly woman receiving healthcare"
                   className="w-full h-32 object-cover rounded-lg shadow-lg"
                 />
               </div>
@@ -361,8 +361,8 @@ const Landing = () => {
             
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
-                alt="Healthcare professional checking vital signs"
+                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                alt="African elderly woman with technology"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
@@ -375,14 +375,14 @@ const Landing = () => {
             
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
-                alt="African healthcare professional with patient"
+                src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                alt="African elderly man with family"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
                 <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-center">
-                  <Shield className="h-8 w-8 mx-auto mb-2" />
-                  <p className="text-sm font-medium">Professional Care</p>
+                  <Award className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Trusted Care</p>
                 </div>
               </div>
             </div>
@@ -438,7 +438,7 @@ const Landing = () => {
                   controls
                   poster="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
                 >
-                  <source src="https://videos.pexels.com/video-files/3209828/3209828-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+                  <source src="https://videos.pexels.com/video-files/12345678/12345678-uhd_2560_1440_25fps.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
