@@ -95,7 +95,7 @@ const Landing = () => {
       location: "Lagos, Nigeria",
       rating: 5,
       text: "ElderCare Nigeria has been a blessing for my family. The caregivers are professional and caring, and the 24/7 support gives us peace of mind.",
-      photo: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+      photo: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2",
       age: "72 years old"
     },
     {
@@ -103,7 +103,7 @@ const Landing = () => {
       location: "Abuja, Nigeria",
       rating: 5,
       text: "As a healthcare professional, I can confidently recommend ElderCare Nigeria. Their services are top-notch and their technology is cutting-edge.",
-      photo: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+      photo: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2",
       age: "68 years old"
     },
     {
@@ -111,7 +111,7 @@ const Landing = () => {
       location: "Port Harcourt, Nigeria",
       rating: 5,
       text: "The medication management system has been incredibly helpful. I never miss a dose anymore, and my family is always informed about my health status.",
-      photo: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+      photo: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2",
       age: "75 years old"
     }
   ];
@@ -150,10 +150,10 @@ const Landing = () => {
             loop
             playsInline
           >
-            <source src="https://videos.pexels.com/video-files/12345678/12345678-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+            <source src="https://videos.pexels.com/video-files/3195394/3195394-uhd_2560_1440_25fps.mp4?v=2" type="video/mp4" />
             {/* Fallback image */}
             <img
-              src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+              src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
               alt="African elderly receiving healthcare"
               className="w-full h-full object-cover"
             />
@@ -211,7 +211,7 @@ const Landing = () => {
               {/* Main Image */}
               <div className="col-span-2">
                 <img
-                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
                   alt="African elderly woman receiving healthcare at home"
                   className="w-full h-64 object-cover rounded-lg shadow-xl"
                 />
@@ -219,14 +219,14 @@ const Landing = () => {
               {/* Side Images */}
               <div>
                 <img
-                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
                   alt="African elderly man with caregiver"
                   className="w-full h-32 object-cover rounded-lg shadow-lg"
                 />
               </div>
               <div>
                 <img
-                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
                   alt="African elderly woman receiving healthcare"
                   className="w-full h-32 object-cover rounded-lg shadow-lg"
                 />
@@ -238,7 +238,7 @@ const Landing = () => {
               <div className="flex items-center mb-3">
                 <img
                   className="h-10 w-10 rounded-full object-cover"
-                  src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                  src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
                   alt="Nurse Fatima Abdullahi"
                 />
                 <div className="ml-3">
@@ -333,7 +333,7 @@ const Landing = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
                 alt="African elderly woman receiving home healthcare"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
@@ -347,7 +347,7 @@ const Landing = () => {
             
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
                 alt="African elderly man with healthcare professional"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
@@ -361,7 +361,7 @@ const Landing = () => {
             
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
                 alt="African elderly woman with technology"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
@@ -375,7 +375,7 @@ const Landing = () => {
             
             <div className="relative group">
               <img
-                src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
                 alt="African elderly man with family"
                 className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
               />
@@ -436,9 +436,9 @@ const Landing = () => {
                 <video
                   className="w-full h-96 object-cover"
                   controls
-                  poster="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                  poster="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
                 >
-                  <source src="https://videos.pexels.com/video-files/12345678/12345678-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+                  <source src="https://videos.pexels.com/video-files/3195394/3195394-uhd_2560_1440_25fps.mp4?v=2" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>

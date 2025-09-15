@@ -1,10 +1,11 @@
-import { getDataConnect } from 'firebase/data-connect';
-import { connectorConfig } from '@dataconnect/generated';
+// import { getDataConnect } from 'firebase/data-connect';
+// import { connectorConfig } from '@dataconnect/generated';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
 
-// Initialize Data Connect
-const dataConnect = getDataConnect(connectorConfig);
+// Initialize Data Connect (temporarily disabled)
+// const dataConnect = getDataConnect(connectorConfig);
+const dataConnect = null;
 
 class DataConnectService {
   constructor() {
