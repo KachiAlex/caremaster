@@ -10,6 +10,7 @@ import securityMonitoringService from './services/securityMonitoringService';
 import biometricAuthService from './services/biometricAuthService';
 import secureConfigService from './services/secureConfigService';
 import Layout from './components/Layout';
+import { useUser } from './contexts/UserContext';
 import AdminLayout from './components/AdminLayout';
 import ServiceProviderLayout from './components/ServiceProviderLayout';
 import Landing from './pages/Landing';
@@ -36,6 +37,8 @@ import Messages from './pages/Messages';
 import Subscription from './pages/Subscription';
 import Services from './pages/Services';
 import Pricing from './pages/Pricing';
+import OnboardingProfile from './pages/OnboardingProfile';
+import OnboardingMedical from './pages/OnboardingMedical';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminReports from './pages/AdminReports';
@@ -73,6 +76,7 @@ import gestureService from './services/gestureService';
 
 function App() {
   const [user, loading] = useAuthState(auth);
+  const { isOnboardingIncomplete } = useUser?.() || {};
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
   const [showGestureControls, setShowGestureControls] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -300,6 +304,9 @@ function App() {
       />
       
       <Routes>
+      {/* Onboarding routes */}
+      <Route path="/onboarding/profile" element={<OnboardingProfile />} />
+      <Route path="/onboarding/medical" element={<OnboardingMedical />} />
       {/* Public routes */}
       <Route 
         path="/" 
@@ -317,7 +324,7 @@ function App() {
       {/* Protected routes */}
       <Route 
         path="/dashboard" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? (isOnboardingIncomplete?.() ? <Navigate to="/onboarding/profile" replace /> : <Layout />) : <Navigate to="/login" replace />} 
       >
         <Route index element={<Dashboard />} />
       </Route>

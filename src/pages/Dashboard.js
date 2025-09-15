@@ -1,14 +1,18 @@
 import React from 'react';
 import { Heart, Calendar, Phone, MessageCircle, AlertTriangle, User } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
 
 const Dashboard = () => {
+  const { user, userProfile } = useUser();
+  const displayName = userProfile?.name || userProfile?.displayName || user?.displayName || user?.email || 'there';
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left - User Info */}
         <div className="card">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Welcome back, Adunni</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Welcome back, {displayName}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Age</p>

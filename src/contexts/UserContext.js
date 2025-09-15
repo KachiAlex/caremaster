@@ -72,11 +72,17 @@ export const UserProvider = ({ children }) => {
     return userRole === 'admin';
   };
 
+  const isOnboardingIncomplete = () => {
+    // Consider onboarding complete if both flags true
+    return !(userProfile?.onboardingProfileComplete && userProfile?.onboardingMedicalComplete);
+  };
+
   const value = {
     user,
     userProfile,
     userRole,
     loading,
+    isOnboardingIncomplete,
     isServiceProvider,
     isDoctor,
     isCaregiver,

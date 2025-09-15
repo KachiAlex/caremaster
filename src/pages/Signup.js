@@ -51,14 +51,8 @@ const Signup = () => {
 
       toast.success('Account created successfully!');
       
-      // Navigate based on user type
-      if (formData.userType === 'caregiver') {
-        navigate('/caregiver');
-      } else if (formData.userType === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      // Start onboarding after signup
+      navigate('/onboarding/profile');
     } catch (error) {
       console.error('Signup error:', error);
       
