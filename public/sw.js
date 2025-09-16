@@ -4,15 +4,13 @@ const STATIC_CACHE = 'elderx-static-v1';
 const DYNAMIC_CACHE = 'elderx-dynamic-v1';
 const API_CACHE = 'elderx-api-v1';
 
-// Assets to cache on install
+// Assets to cache on install (avoid hashed filenames that change per build)
 const STATIC_ASSETS = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
+  '/offline.html',
   '/manifest.json',
   '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  // Add more static assets as needed
+  '/icons/icon-512x512.png'
 ];
 
 // API endpoints to cache

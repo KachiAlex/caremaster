@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { toast } from 'react-toastify';
-import { Heart, Mail, Lock, User, UserCheck, Shield } from 'lucide-react';
+import { Heart, Mail, Lock, User, UserCheck } from 'lucide-react';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -51,8 +51,12 @@ const Signup = () => {
 
       toast.success('Account created successfully!');
       
-      // Start onboarding after signup
-      navigate('/onboarding/profile');
+      // Start onboarding after signup based on user type
+      if (formData.userType === 'caregiver') {
+        navigate('/caregiver/onboarding/career');
+      } else {
+        navigate('/onboarding/profile');
+      }
     } catch (error) {
       console.error('Signup error:', error);
       
@@ -123,7 +127,7 @@ const Signup = () => {
               {/* Role Selection */}
               <div className="space-y-3">
                 <label className="text-sm font-medium text-gray-700">I am a:</label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setFormData({...formData, userType: 'patient'})}
@@ -147,18 +151,6 @@ const Signup = () => {
                   >
                     <UserCheck className="h-5 w-5 mr-2" />
                     Caregiver
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({...formData, userType: 'admin'})}
-                    className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${
-                      formData.userType === 'admin'
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Shield className="h-5 w-5 mr-2" />
-                    Admin
                   </button>
                 </div>
               </div>

@@ -59,7 +59,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || isServiceProvider());
       allow create: if isAuthenticated() && isOwner(userId) && isValidUserType();
-      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUserType();
+      allow update: if isAuthenticated() && isOwner(userId);
       allow delete: if isAuthenticated() && isAdmin();
     }
     

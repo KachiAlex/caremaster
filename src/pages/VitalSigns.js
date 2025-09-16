@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Heart, 
   Droplets, 
@@ -7,49 +7,102 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useUser } from '../contexts/UserContext';
+import { getVitalSignsByPatient, createVitalSign, getVitalSignsTrends } from '../api/vitalSignsAPI';
 
 const VitalSigns = () => {
+  const { user, userProfile } = useUser();
   const [formData, setFormData] = useState({
     vitalType: 'Blood Pressure',
     reading: '',
     notes: ''
   });
+  const [currentVitals, setCurrentVitals] = useState([]);
+  const [healthTrends, setHealthTrends] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for current vitals
-  const currentVitals = [
-    {
-      id: 1,
-      type: 'Blood Pressure',
-      value: '140/90',
-      unit: 'mmHg',
-      timestamp: '9/3/2025, 9:00:00 AM',
-      status: 'Warning',
-      statusColor: 'bg-yellow-100 text-yellow-800',
-      icon: Heart
-    },
-    {
-      id: 2,
-      type: 'Blood Sugar',
-      value: '120',
-      unit: 'mg/dL',
-      timestamp: '9/3/2025, 9:15:00 AM',
-      status: 'Normal',
-      statusColor: 'bg-green-100 text-green-800',
-      icon: Droplets
-    }
-  ];
+  // Fetch vital signs data
+  useEffect(() => {
+    const fetchVitalSigns = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        setLoading(true);
+        
+        // Fetch recent vital signs
+        const vitalSigns = await getVitalSignsByPatient(user.uid);
+        
+        // Get the latest reading for each type
+        const latestByType = {};
+        vitalSigns.forEach(vital => {
+          if (!latestByType[vital.type] || new Date(vital.recordedAt) > new Date(latestByType[vital.type].recordedAt)) {
+            latestByType[vital.type] = vital;
+          }
+        });
+        
+        // Convert to display format
+        const currentVitalsData = Object.values(latestByType).map(vital => ({
+          id: vital.id,
+          type: vital.type,
+          value: vital.value,
+          unit: vital.unit,
+          timestamp: new Date(vital.recordedAt).toLocaleString(),
+          status: vital.status || 'Normal',
+          statusColor: getStatusColor(vital.status || 'Normal'),
+          icon: getVitalIcon(vital.type)
+        }));
+        
+        setCurrentVitals(currentVitalsData);
+        
+        // Fetch trends
+        const trends = await getVitalSignsTrends(user.uid);
+        const trendsData = Object.keys(trends).map(type => ({
+          id: type,
+          type: type,
+          trend: trends[type].trend || 'Stable',
+          trendColor: getTrendColor(trends[type].trend || 'Stable'),
+          average: trends[type].average || 'N/A',
+          icon: getVitalIcon(type)
+        }));
+        
+        setHealthTrends(trendsData);
+        
+      } catch (error) {
+        console.error('Error fetching vital signs:', error);
+        toast.error('Failed to load vital signs data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Mock data for health trends
-  const healthTrends = [
-    {
-      id: 1,
-      type: 'Blood Pressure',
-      trend: 'Improving',
-      trendColor: 'text-green-600',
-      average: 'Average',
-      icon: Heart
+    fetchVitalSigns();
+  }, [user?.uid]);
+
+  // Helper function to get icon for vital type
+  const getVitalIcon = (type) => {
+    switch (type.toLowerCase()) {
+      case 'blood pressure':
+        return Heart;
+      case 'blood sugar':
+        return Droplets;
+      default:
+        return Heart;
     }
-  ];
+  };
+
+  // Helper function to get trend color
+  const getTrendColor = (trend) => {
+    switch (trend.toLowerCase()) {
+      case 'increasing':
+        return 'text-red-600';
+      case 'decreasing':
+        return 'text-green-600';
+      case 'improving':
+        return 'text-green-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
 
   const vitalTypes = [
     'Blood Pressure',
@@ -62,17 +115,119 @@ const VitalSigns = () => {
     'Pain Level'
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Vital reading submitted:', formData);
-    toast.success('Vital reading saved successfully');
-    // Reset form
-    setFormData({
-      vitalType: 'Blood Pressure',
-      reading: '',
-      notes: ''
-    });
+    
+    if (!user?.uid) {
+      toast.error('Please log in to record vital signs');
+      return;
+    }
+
+    if (!formData.reading.trim()) {
+      toast.error('Please enter a reading value');
+      return;
+    }
+
+    try {
+      const vitalSignData = {
+        patientId: user.uid,
+        patientName: userProfile?.name || userProfile?.displayName || user?.displayName || 'Patient',
+        type: formData.vitalType,
+        value: formData.reading,
+        unit: getVitalUnit(formData.vitalType),
+        notes: formData.notes,
+        status: getVitalStatus(formData.vitalType, formData.reading)
+      };
+
+      await createVitalSign(vitalSignData);
+      
+      toast.success('Vital reading saved successfully!');
+      
+      // Reset form
+      setFormData({
+        vitalType: 'Blood Pressure',
+        reading: '',
+        notes: ''
+      });
+
+      // Refresh the data
+      const vitalSigns = await getVitalSignsByPatient(user.uid);
+      
+      // Get the latest reading for each type
+      const latestByType = {};
+      vitalSigns.forEach(vital => {
+        if (!latestByType[vital.type] || new Date(vital.recordedAt) > new Date(latestByType[vital.type].recordedAt)) {
+          latestByType[vital.type] = vital;
+        }
+      });
+      
+      // Convert to display format
+      const currentVitalsData = Object.values(latestByType).map(vital => ({
+        id: vital.id,
+        type: vital.type,
+        value: vital.value,
+        unit: vital.unit,
+        timestamp: new Date(vital.recordedAt).toLocaleString(),
+        status: vital.status || 'Normal',
+        statusColor: getStatusColor(vital.status || 'Normal'),
+        icon: getVitalIcon(vital.type)
+      }));
+      
+      setCurrentVitals(currentVitalsData);
+      
+    } catch (error) {
+      console.error('Error saving vital sign:', error);
+      toast.error('Failed to save vital reading. Please try again.');
+    }
+  };
+
+  // Helper function to get unit for vital type
+  const getVitalUnit = (type) => {
+    switch (type) {
+      case 'Blood Pressure':
+        return 'mmHg';
+      case 'Blood Sugar':
+        return 'mg/dL';
+      case 'Heart Rate':
+        return 'bpm';
+      case 'Temperature':
+        return '°F';
+      case 'Weight':
+        return 'lbs';
+      case 'Oxygen Saturation':
+        return '%';
+      case 'Respiratory Rate':
+        return 'breaths/min';
+      case 'Pain Level':
+        return '/10';
+      default:
+        return '';
+    }
+  };
+
+  // Helper function to determine status based on reading
+  const getVitalStatus = (type, reading) => {
+    const value = parseFloat(reading);
+    
+    switch (type) {
+      case 'Blood Pressure':
+        if (value >= 140 || value <= 90) return 'Warning';
+        return 'Normal';
+      case 'Blood Sugar':
+        if (value >= 140 || value <= 70) return 'Warning';
+        return 'Normal';
+      case 'Heart Rate':
+        if (value >= 100 || value <= 60) return 'Warning';
+        return 'Normal';
+      case 'Temperature':
+        if (value >= 100.4 || value <= 97) return 'Warning';
+        return 'Normal';
+      case 'Oxygen Saturation':
+        if (value < 95) return 'Warning';
+        return 'Normal';
+      default:
+        return 'Normal';
+    }
   };
 
   const getStatusColor = (status) => {
@@ -88,6 +243,19 @@ const VitalSigns = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="card">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">Loading vital signs...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Current Vitals Section */}
@@ -98,27 +266,35 @@ const VitalSigns = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {currentVitals.map((vital) => {
-            const Icon = vital.icon;
-            return (
-              <div key={vital.id} className="p-6 border border-gray-200 rounded-lg">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <Icon className="h-6 w-6 text-gray-600 mr-3" />
-                    <h3 className="text-lg font-semibold text-gray-900">{vital.type}</h3>
+          {currentVitals.length > 0 ? (
+            currentVitals.map((vital) => {
+              const Icon = vital.icon;
+              return (
+                <div key={vital.id} className="p-6 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <Icon className="h-6 w-6 text-gray-600 mr-3" />
+                      <h3 className="text-lg font-semibold text-gray-900">{vital.type}</h3>
+                    </div>
+                    <span className={`px-3 py-1 rounded text-sm font-medium ${getStatusColor(vital.status)}`}>
+                      {vital.status}
+                    </span>
                   </div>
-                  <span className={`px-3 py-1 rounded text-sm font-medium ${getStatusColor(vital.status)}`}>
-                    {vital.status}
-                  </span>
+                  <div className="mb-2">
+                    <span className="text-3xl font-bold text-gray-900">{vital.value}</span>
+                    <span className="text-lg text-gray-600 ml-2">{vital.unit}</span>
+                  </div>
+                  <p className="text-sm text-gray-500">{vital.timestamp}</p>
                 </div>
-                <div className="mb-2">
-                  <span className="text-3xl font-bold text-gray-900">{vital.value}</span>
-                  <span className="text-lg text-gray-600 ml-2">{vital.unit}</span>
-                </div>
-                <p className="text-sm text-gray-500">{vital.timestamp}</p>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="col-span-2 p-6 border border-gray-200 rounded-lg text-center">
+              <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Vital Signs Recorded</h3>
+              <p className="text-gray-600">Start recording your vital signs below to track your health.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -195,28 +371,36 @@ const VitalSigns = () => {
         </div>
 
         <div className="space-y-4">
-          {healthTrends.map((trend) => {
-            const Icon = trend.icon;
-            return (
-              <div key={trend.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center">
-                  <Icon className="h-6 w-6 text-gray-600 mr-3" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{trend.type}</h3>
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-sm font-medium ${trend.trendColor}`}>
-                        {trend.trend}
-                      </span>
-                      <span className="text-sm text-gray-500">{trend.average}</span>
+          {healthTrends.length > 0 ? (
+            healthTrends.map((trend) => {
+              const Icon = trend.icon;
+              return (
+                <div key={trend.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center">
+                    <Icon className="h-6 w-6 text-gray-600 mr-3" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{trend.type}</h3>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-sm font-medium ${trend.trendColor}`}>
+                          {trend.trend}
+                        </span>
+                        <span className="text-sm text-gray-500">Avg: {trend.average}</span>
+                      </div>
                     </div>
                   </div>
+                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    View Details
+                  </button>
                 </div>
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                  View Details
-                </button>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="p-6 border border-gray-200 rounded-lg text-center">
+              <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Trends Available</h3>
+              <p className="text-gray-600">Record more vital signs to see health trends over time.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

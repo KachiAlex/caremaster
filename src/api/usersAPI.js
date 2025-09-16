@@ -5,6 +5,7 @@ import {
   getDoc, 
   addDoc, 
   updateDoc, 
+  setDoc,
   deleteDoc, 
   query, 
   where, 
@@ -119,7 +120,7 @@ export const createUser = async (userData) => {
   }
 };
 
-// Update user
+// Update user (with upsert capability)
 export const updateUser = async (userId, updateData) => {
   try {
     const userRef = doc(db, USERS_COLLECTION, userId);
@@ -128,7 +129,25 @@ export const updateUser = async (userId, updateData) => {
       updatedAt: serverTimestamp(),
     };
     
-    await updateDoc(userRef, updatedData);
+    // Check if document exists first
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      // Document exists, update it
+      await updateDoc(userRef, updatedData);
+    } else {
+      // Document doesn't exist, create it
+      await setDoc(userRef, {
+        ...updatedData,
+        id: userId,
+        userType: 'elderly', // Default user type
+        status: 'active',
+        joinDate: serverTimestamp(),
+        lastActive: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      });
+    }
+    
     return true;
   } catch (error) {
     console.error('Error updating user:', error);

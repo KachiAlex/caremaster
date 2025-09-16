@@ -73,8 +73,24 @@ export const UserProvider = ({ children }) => {
   };
 
   const isOnboardingIncomplete = () => {
-    // Consider onboarding complete if both flags true
-    return !(userProfile?.onboardingProfileComplete && userProfile?.onboardingMedicalComplete);
+    if (!userProfile) return true;
+    
+    // For elderly users, check profile and medical completion
+    if (userRole === 'elderly') {
+      return !(userProfile?.onboardingProfileComplete && userProfile?.onboardingMedicalComplete);
+    }
+    
+    // For caregivers, check all onboarding steps
+    if (userRole === 'caregiver') {
+      return !(userProfile?.onboardingCareerComplete && 
+               userProfile?.onboardingQualificationsComplete && 
+               userProfile?.onboardingReferencesComplete && 
+               userProfile?.onboardingDocumentsComplete && 
+               userProfile?.onboardingStatementComplete);
+    }
+    
+    // For other user types, consider onboarding complete
+    return false;
   };
 
   const value = {

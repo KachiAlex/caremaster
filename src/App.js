@@ -10,7 +10,6 @@ import securityMonitoringService from './services/securityMonitoringService';
 import biometricAuthService from './services/biometricAuthService';
 import secureConfigService from './services/secureConfigService';
 import Layout from './components/Layout';
-import { useUser } from './contexts/UserContext';
 import AdminLayout from './components/AdminLayout';
 import ServiceProviderLayout from './components/ServiceProviderLayout';
 import Landing from './pages/Landing';
@@ -39,6 +38,11 @@ import Services from './pages/Services';
 import Pricing from './pages/Pricing';
 import OnboardingProfile from './pages/OnboardingProfile';
 import OnboardingMedical from './pages/OnboardingMedical';
+import CaregiverOnboardingCareer from './pages/CaregiverOnboardingCareer';
+import CaregiverOnboardingQualifications from './pages/CaregiverOnboardingQualifications';
+import CaregiverOnboardingReferences from './pages/CaregiverOnboardingReferences';
+import CaregiverOnboardingDocuments from './pages/CaregiverOnboardingDocuments';
+import CaregiverOnboardingStatement from './pages/CaregiverOnboardingStatement';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminReports from './pages/AdminReports';
@@ -76,7 +80,6 @@ import gestureService from './services/gestureService';
 
 function App() {
   const [user, loading] = useAuthState(auth);
-  const { isOnboardingIncomplete } = useUser?.() || {};
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
   const [showGestureControls, setShowGestureControls] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -307,6 +310,13 @@ function App() {
       {/* Onboarding routes */}
       <Route path="/onboarding/profile" element={<OnboardingProfile />} />
       <Route path="/onboarding/medical" element={<OnboardingMedical />} />
+      
+      {/* Caregiver onboarding routes */}
+      <Route path="/caregiver/onboarding/career" element={<CaregiverOnboardingCareer />} />
+      <Route path="/caregiver/onboarding/qualifications" element={<CaregiverOnboardingQualifications />} />
+      <Route path="/caregiver/onboarding/references" element={<CaregiverOnboardingReferences />} />
+      <Route path="/caregiver/onboarding/documents" element={<CaregiverOnboardingDocuments />} />
+      <Route path="/caregiver/onboarding/statement" element={<CaregiverOnboardingStatement />} />
       {/* Public routes */}
       <Route 
         path="/" 
@@ -324,7 +334,7 @@ function App() {
       {/* Protected routes */}
       <Route 
         path="/dashboard" 
-        element={user ? (isOnboardingIncomplete?.() ? <Navigate to="/onboarding/profile" replace /> : <Layout />) : <Navigate to="/login" replace />} 
+        element={user ? (<OnboardingGuardedLayout />) : <Navigate to="/login" replace />} 
       >
         <Route index element={<Dashboard />} />
       </Route>
@@ -457,3 +467,15 @@ function App() {
 }
 
 export default App;
+
+// Small component that runs inside UserProvider to read context safely
+function OnboardingGuardedLayout() {
+  // Import hook normally; component is rendered under <UserProvider>
+  const { useUser } = require('./contexts/UserContext');
+  const { isOnboardingIncomplete } = useUser();
+  return isOnboardingIncomplete() ? (
+    <Navigate to="/onboarding/profile" replace />
+  ) : (
+    <Layout />
+  );
+}

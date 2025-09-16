@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Stethoscope, 
   Calendar, 
@@ -9,8 +9,13 @@ import {
   ChevronDown,
   Maximize2
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { getAppointmentsByPatient, createAppointment } from '../api/appointmentsAPI';
+import { caregiverAPI } from '../api/caregiverAPI';
+import { toast } from 'react-toastify';
 
 const Appointments = () => {
+  const { user, userProfile } = useUser();
   const [careType, setCareType] = useState('immediate'); // 'immediate' or 'scheduled'
   const [formData, setFormData] = useState({
     careType: 'Blood Pressure Check',
@@ -18,54 +23,59 @@ const Appointments = () => {
     preferredTime: '',
     additionalNotes: ''
   });
+  const [availableCaregivers, setAvailableCaregivers] = useState([]);
+  const [recentRequests, setRecentRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for available caregivers
-  const availableCaregivers = [
-    {
-      id: 1,
-      name: 'Nurse Fatima Abdullahi',
-      specialty: 'Geriatric Care',
-      rating: 4.8,
-      location: 'Victoria Island, Lagos',
-      status: 'Available',
-      visits: 156,
-      avatar: null
-    },
-    {
-      id: 2,
-      name: 'Dr. Chinedu Okoro',
-      specialty: 'General Medicine',
-      rating: 4.9,
-      location: 'Ikeja, Lagos',
-      status: 'Busy',
-      visits: 89,
-      avatar: null
-    }
-  ];
+  // Fetch available caregivers and recent appointments
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        setLoading(true);
+        
+        // Fetch available caregivers
+        const caregivers = await caregiverAPI.getCaregivers({ 
+          status: 'active',
+          limit: 10 
+        });
+        setAvailableCaregivers(caregivers.map(caregiver => ({
+          id: caregiver.id,
+          name: caregiver.name || caregiver.displayName || 'Caregiver',
+          specialty: caregiver.specializations?.[0] || 'General Care',
+          rating: caregiver.rating || 4.5,
+          location: caregiver.location || 'Lagos, Nigeria',
+          status: caregiver.status === 'active' ? 'Available' : 'Busy',
+          visits: caregiver.totalPatients || 0,
+          avatar: caregiver.avatar || null
+        })));
 
-  // Mock data for recent care requests
-  const recentRequests = [
-    {
-      id: 1,
-      title: 'Blood Pressure Check',
-      assignedCaregiver: 'Nurse Fatima Abdullahi',
-      createdDate: '9/1/2025',
-      scheduledDate: '9/3/2025, 2:00:00 PM',
-      description: 'Regular weekly checkup',
-      status: 'In Progress',
-      priority: 'Medium'
-    },
-    {
-      id: 2,
-      title: 'Medication Administration',
-      assignedCaregiver: 'Caregiver not assigned yet',
-      createdDate: '9/3/2025',
-      scheduledDate: null,
-      description: 'Daily medication reminder and administration',
-      status: 'Pending',
-      priority: 'High'
-    }
-  ];
+        // Fetch recent appointments for this patient
+        const appointments = await getAppointmentsByPatient(user.uid);
+        setRecentRequests(appointments.slice(0, 5).map(appointment => ({
+          id: appointment.id,
+          title: appointment.careType || appointment.title || 'Care Request',
+          assignedCaregiver: appointment.caregiverName || 'Caregiver not assigned yet',
+          createdDate: appointment.createdAt ? new Date(appointment.createdAt).toLocaleDateString() : 'Unknown',
+          scheduledDate: appointment.scheduledTime ? new Date(appointment.scheduledTime).toLocaleString() : null,
+          description: appointment.notes || appointment.description || 'No description provided',
+          status: appointment.status === 'scheduled' ? 'Scheduled' : 
+                  appointment.status === 'completed' ? 'Completed' :
+                  appointment.status === 'cancelled' ? 'Cancelled' : 'Pending',
+          priority: appointment.priority || 'Medium'
+        })));
+        
+      } catch (error) {
+        console.error('Error fetching appointments data:', error);
+        toast.error('Failed to load appointments data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user?.uid]);
 
   const careTypes = [
     'Blood Pressure Check',
@@ -80,17 +90,62 @@ const Appointments = () => {
     'Emergency Response'
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Care request submitted:', formData);
-    // Reset form
-    setFormData({
-      careType: 'Blood Pressure Check',
-      preferredDate: '',
-      preferredTime: '',
-      additionalNotes: ''
-    });
+    
+    if (!user?.uid) {
+      toast.error('Please log in to request care');
+      return;
+    }
+
+    try {
+      const appointmentData = {
+        patientId: user.uid,
+        patientName: userProfile?.name || userProfile?.displayName || user?.displayName || 'Patient',
+        careType: formData.careType,
+        notes: formData.additionalNotes,
+        priority: careType === 'immediate' ? 'high' : 'medium',
+        status: 'pending'
+      };
+
+      // Add scheduled time if it's a scheduled appointment
+      if (careType === 'scheduled' && formData.preferredDate && formData.preferredTime) {
+        const scheduledDateTime = new Date(`${formData.preferredDate}T${formData.preferredTime}`);
+        appointmentData.scheduledTime = scheduledDateTime;
+        appointmentData.status = 'scheduled';
+      }
+
+      await createAppointment(appointmentData);
+      
+      toast.success(careType === 'immediate' ? 'Immediate care request submitted!' : 'Care visit scheduled successfully!');
+      
+      // Reset form
+      setFormData({
+        careType: 'Blood Pressure Check',
+        preferredDate: '',
+        preferredTime: '',
+        additionalNotes: ''
+      });
+
+      // Refresh the recent requests
+      const appointments = await getAppointmentsByPatient(user.uid);
+      setRecentRequests(appointments.slice(0, 5).map(appointment => ({
+        id: appointment.id,
+        title: appointment.careType || appointment.title || 'Care Request',
+        assignedCaregiver: appointment.caregiverName || 'Caregiver not assigned yet',
+        createdDate: appointment.createdAt ? new Date(appointment.createdAt).toLocaleDateString() : 'Unknown',
+        scheduledDate: appointment.scheduledTime ? new Date(appointment.scheduledTime).toLocaleString() : null,
+        description: appointment.notes || appointment.description || 'No description provided',
+        status: appointment.status === 'scheduled' ? 'Scheduled' : 
+                appointment.status === 'completed' ? 'Completed' :
+                appointment.status === 'cancelled' ? 'Cancelled' : 'Pending',
+        priority: appointment.priority || 'Medium'
+      })));
+      
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      toast.error('Failed to submit care request. Please try again.');
+    }
   };
 
   const getStatusColor = (status) => {
@@ -100,9 +155,14 @@ const Appointments = () => {
       case 'Busy':
         return 'bg-gray-100 text-gray-800';
       case 'In Progress':
+      case 'Scheduled':
         return 'bg-blue-100 text-blue-800';
       case 'Pending':
         return 'bg-yellow-100 text-yellow-800';
+      case 'Completed':
+        return 'bg-green-100 text-green-800';
+      case 'Cancelled':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -120,6 +180,19 @@ const Appointments = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="card">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">Loading appointments...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
