@@ -75,23 +75,51 @@ export const UserProvider = ({ children }) => {
   };
 
   const isOnboardingIncomplete = () => {
-    if (!userProfile) return true;
+    if (!userProfile) {
+      console.log('No user profile found, onboarding required');
+      return true;
+    }
+    
+    console.log('Checking onboarding completion:', {
+      userRole,
+      userProfile,
+      onboardingProfileComplete: userProfile?.onboardingProfileComplete,
+      onboardingMedicalComplete: userProfile?.onboardingMedicalComplete
+    });
     
     // For patient/elderly users, check profile and medical completion
     if (userRole === 'elderly' || userRole === 'patient') {
-      return !(userProfile?.onboardingProfileComplete && userProfile?.onboardingMedicalComplete);
+      const hasCompletionFlags = userProfile?.onboardingProfileComplete && userProfile?.onboardingMedicalComplete;
+      
+      // If user has basic profile data but no completion flags, consider them complete
+      const hasBasicProfile = userProfile?.name || userProfile?.displayName || userProfile?.dateOfBirth;
+      
+      const isIncomplete = !hasCompletionFlags && !hasBasicProfile;
+      console.log('Patient onboarding incomplete:', isIncomplete, {
+        hasCompletionFlags,
+        hasBasicProfile,
+        profileData: {
+          name: userProfile?.name,
+          displayName: userProfile?.displayName,
+          dateOfBirth: userProfile?.dateOfBirth
+        }
+      });
+      return isIncomplete;
     }
     
     // For caregivers, check all onboarding steps
     if (userRole === 'caregiver') {
-      return !(userProfile?.onboardingCareerComplete && 
+      const isIncomplete = !(userProfile?.onboardingCareerComplete && 
                userProfile?.onboardingQualificationsComplete && 
                userProfile?.onboardingReferencesComplete && 
                userProfile?.onboardingDocumentsComplete && 
                userProfile?.onboardingStatementComplete);
+      console.log('Caregiver onboarding incomplete:', isIncomplete);
+      return isIncomplete;
     }
     
     // For other user types, consider onboarding complete
+    console.log('Other user type, onboarding complete');
     return false;
   };
 
