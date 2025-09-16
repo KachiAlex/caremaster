@@ -15,6 +15,7 @@ import ServiceProviderLayout from './components/ServiceProviderLayout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AdminLogin from './pages/AdminLogin';
 import Dashboard from './pages/Dashboard';
 import Medications from './pages/Medications';
 import VitalSigns from './pages/VitalSigns';
@@ -437,10 +438,16 @@ function App() {
         element={<Pricing />} 
       />
       
+      {/* Secret Admin Login Route */}
+      <Route 
+        path="/admin/login" 
+        element={user ? <Navigate to="/admin" replace /> : <AdminLogin />} 
+      />
+      
       {/* Admin routes */}
       <Route 
         path="/admin" 
-        element={user ? <AdminLayout /> : <Navigate to="/login" replace />} 
+        element={user ? <AdminLayout /> : <Navigate to="/admin/login" replace />} 
       >
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<AdminUsers />} />

@@ -11,7 +11,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [userRole, setUserRole] = useState('patient'); // 'patient', 'caregiver', or 'admin'
+  const [userRole, setUserRole] = useState('patient'); // 'patient' or 'caregiver'
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -26,8 +26,6 @@ const Login = () => {
       // Navigate based on user role
       if (userRole === 'caregiver') {
         navigate('/caregiver');
-      } else if (userRole === 'admin') {
-        navigate('/admin');
       } else {
         navigate('/dashboard');
       }
@@ -97,8 +95,6 @@ const Login = () => {
       // Navigate based on user type
       if (userRole === 'caregiver') {
         navigate('/caregiver');
-      } else if (userRole === 'admin') {
-        navigate('/admin');
       } else {
         navigate('/dashboard');
       }
@@ -181,7 +177,7 @@ const Login = () => {
             {/* Role Selection */}
             <div className="space-y-3">
               <label className="text-sm font-medium text-gray-700">I am a:</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setUserRole('patient')}
@@ -205,18 +201,6 @@ const Login = () => {
                 >
                   <UserCheck className="h-5 w-5 mr-2" />
                   Caregiver
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserRole('admin')}
-                  className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${
-                    userRole === 'admin'
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Shield className="h-5 w-5 mr-2" />
-                  Admin
                 </button>
               </div>
             </div>
@@ -302,7 +286,7 @@ const Login = () => {
               {/* Role Selection */}
               <div className="space-y-3">
                 <label className="text-sm font-medium text-gray-700">I am a:</label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setUserRole('patient')}
@@ -326,18 +310,6 @@ const Login = () => {
                   >
                     <UserCheck className="h-5 w-5 mr-2" />
                     Caregiver
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUserRole('admin')}
-                    className={`flex items-center justify-center p-3 rounded-lg border-2 transition-colors ${
-                      userRole === 'admin'
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Shield className="h-5 w-5 mr-2" />
-                    Admin
                   </button>
                 </div>
               </div>
