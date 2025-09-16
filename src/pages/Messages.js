@@ -17,13 +17,17 @@ import {
   Calendar,
   MapPin
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { getConversationsByUser, getMessagesByConversation, sendMessage } from '../api/messagesAPI';
 
 const Messages = () => {
+  const { user } = useUser();
   const [selectedChat, setSelectedChat] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for conversations
+  // Real conversations data
   const [conversations, setConversations] = useState([
     {
       id: 1,
