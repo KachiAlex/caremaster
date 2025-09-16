@@ -26,6 +26,7 @@ const Appointments = () => {
   const [availableCaregivers, setAvailableCaregivers] = useState([]);
   const [recentRequests, setRecentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   // Fetch available caregivers and recent appointments
   useEffect(() => {
@@ -98,7 +99,36 @@ const Appointments = () => {
       return;
     }
 
+    // Prevent multiple submissions
+    if (submitting) {
+      return;
+    }
+
+    // Validation for scheduled appointments
+    if (careType === 'scheduled') {
+      if (!formData.preferredDate) {
+        toast.error('Please select a preferred date');
+        return;
+      }
+      if (!formData.preferredTime) {
+        toast.error('Please select a preferred time');
+        return;
+      }
+      
+      // Check if the selected date/time is in the future
+      const selectedDateTime = new Date(`${formData.preferredDate}T${formData.preferredTime}`);
+      const now = new Date();
+      if (selectedDateTime <= now) {
+        toast.error('Please select a future date and time');
+        return;
+      }
+    }
+
+    setSubmitting(true);
+
     try {
+      console.log('Starting appointment creation...', { careType, formData, user: user?.uid });
+      
       const appointmentData = {
         patientId: user.uid,
         patientName: userProfile?.name || userProfile?.displayName || user?.displayName || 'Patient',
@@ -113,9 +143,12 @@ const Appointments = () => {
         const scheduledDateTime = new Date(`${formData.preferredDate}T${formData.preferredTime}`);
         appointmentData.scheduledTime = scheduledDateTime;
         appointmentData.status = 'scheduled';
+        console.log('Scheduled appointment data:', { scheduledDateTime, appointmentData });
       }
 
-      await createAppointment(appointmentData);
+      console.log('Creating appointment with data:', appointmentData);
+      const appointmentId = await createAppointment(appointmentData);
+      console.log('Appointment created successfully:', appointmentId);
       
       toast.success(careType === 'immediate' ? 'Immediate care request submitted!' : 'Care visit scheduled successfully!');
       
@@ -145,6 +178,8 @@ const Appointments = () => {
     } catch (error) {
       console.error('Error creating appointment:', error);
       toast.error('Failed to submit care request. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -262,6 +297,7 @@ const Appointments = () => {
                     type="date"
                     value={formData.preferredDate}
                     onChange={(e) => setFormData({...formData, preferredDate: e.target.value})}
+                    min={new Date().toISOString().split('T')[0]}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="mm/dd/yyyy"
                   />
@@ -305,9 +341,21 @@ const Appointments = () => {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors"
+            disabled={submitting}
+            className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-colors ${
+              submitting 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            } text-white`}
           >
-            {careType === 'immediate' ? 'Request Immediate Care' : 'Schedule Care Visit'}
+            {submitting ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Submitting...
+              </div>
+            ) : (
+              careType === 'immediate' ? 'Request Immediate Care' : 'Schedule Care Visit'
+            )}
           </button>
         </form>
       </div>
