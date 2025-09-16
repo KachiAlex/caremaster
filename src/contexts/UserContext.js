@@ -29,17 +29,19 @@ export const UserProvider = ({ children }) => {
           const profile = await getUserById(firebaseUser.uid);
           if (profile) {
             setUserProfile(profile);
-            setUserRole(profile.type || 'elderly');
+            // Handle both 'patient' and 'elderly' as the same role, also check userType field
+            const roleFromProfile = profile.userType || profile.type || 'patient';
+            setUserRole(roleFromProfile);
           } else {
             // User profile doesn't exist in Firestore yet
             console.log('User profile not found in Firestore, user may be new');
             setUserProfile(null);
-            setUserRole('elderly'); // Default role
+            setUserRole('patient'); // Default role
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
           setUserProfile(null);
-          setUserRole('elderly'); // Default role for better UX
+          setUserRole('patient'); // Default role for better UX
         }
       } else {
         setUser(null);
@@ -75,8 +77,8 @@ export const UserProvider = ({ children }) => {
   const isOnboardingIncomplete = () => {
     if (!userProfile) return true;
     
-    // For elderly users, check profile and medical completion
-    if (userRole === 'elderly') {
+    // For patient/elderly users, check profile and medical completion
+    if (userRole === 'elderly' || userRole === 'patient') {
       return !(userProfile?.onboardingProfileComplete && userProfile?.onboardingMedicalComplete);
     }
     
