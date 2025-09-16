@@ -1,76 +1,126 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Pill, Clock, CheckCircle, XCircle, Edit, Trash2, Calendar } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useUser } from '../contexts/UserContext';
+import { medicationAPI } from '../api/medicationAPI';
 
 const Medications = () => {
+  const { user } = useUser();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingMed, setEditingMed] = useState(null);
-  
-  // Mock data - will be replaced with real data from Data Connect when available
-  const [medications, setMedications] = useState([
-    {
-      id: 1,
-      name: 'Aspirin',
-      dosage: '100mg',
-      frequency: 'Daily',
-      instructions: 'Take with food',
-      nextDose: '8:00 AM',
-      taken: true,
-      startDate: '2024-01-15',
-      endDate: null
-    },
-    {
-      id: 2,
-      name: 'Vitamin D',
-      dosage: '2000IU',
-      frequency: 'Weekly',
-      instructions: 'Take in the morning',
-      nextDose: '9:00 AM',
-      taken: false,
-      startDate: '2024-01-10',
-      endDate: null
-    },
-    {
-      id: 3,
-      name: 'Blood Pressure Medication',
-      dosage: '10mg',
-      frequency: 'Twice Daily',
-      instructions: 'Take with water',
-      nextDose: '2:00 PM',
-      taken: false,
-      startDate: '2024-01-20',
-      endDate: null
-    }
-  ]);
+  const [medications, setMedications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [newMedication, setNewMedication] = useState({
     name: '',
     dosage: '',
     frequency: 'Daily',
     instructions: '',
-    startDate: '',
+    startDate: new Date().toISOString().split('T')[0],
     endDate: ''
   });
 
-  const handleAddMedication = (e) => {
-    e.preventDefault();
-    const medication = {
-      id: Date.now(),
-      ...newMedication,
-      nextDose: '8:00 AM',
-      taken: false
+  // Fetch medications on component mount
+  useEffect(() => {
+    const fetchMedications = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        setLoading(true);
+        const userMedications = await medicationAPI.getMedications({ 
+          patientId: user.uid 
+        });
+        
+        // Transform API data to match component structure
+        const transformedMedications = userMedications.map(med => ({
+          id: med.id,
+          name: med.name || 'Unknown Medication',
+          dosage: med.dosage || 'N/A',
+          frequency: med.frequency || 'As needed',
+          instructions: med.instructions || 'No instructions',
+          nextDose: med.nextDose ? new Date(med.nextDose).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A',
+          taken: false, // This would need to be calculated based on dose logs
+          startDate: med.startDate ? new Date(med.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          endDate: med.endDate ? new Date(med.endDate).toISOString().split('T')[0] : null,
+          status: med.status || 'active'
+        }));
+        
+        setMedications(transformedMedications);
+      } catch (error) {
+        console.error('Error fetching medications:', error);
+        toast.error('Failed to load medications');
+        
+        // Fallback to sample data if API fails
+        setMedications([
+          {
+            id: 'sample-1',
+            name: 'Sample Medication',
+            dosage: '100mg',
+            frequency: 'Daily',
+            instructions: 'Take with food',
+            nextDose: '8:00 AM',
+            taken: false,
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: null,
+            status: 'active'
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
     };
-    setMedications([...medications, medication]);
-    setNewMedication({
-      name: '',
-      dosage: '',
-      frequency: 'Daily',
-      instructions: '',
-      startDate: '',
-      endDate: ''
-    });
-    setShowAddForm(false);
-    toast.success('Medication added successfully');
+
+    fetchMedications();
+  }, [user?.uid]);
+
+  const handleAddMedication = async (e) => {
+    e.preventDefault();
+    
+    if (!user?.uid) {
+      toast.error('Please log in to add medications');
+      return;
+    }
+
+    try {
+      const medicationData = {
+        patientId: user.uid,
+        name: newMedication.name,
+        dosage: newMedication.dosage,
+        frequency: newMedication.frequency,
+        instructions: newMedication.instructions,
+        startDate: new Date(newMedication.startDate),
+        endDate: newMedication.endDate ? new Date(newMedication.endDate) : null,
+        status: 'active'
+      };
+
+      const result = await medicationAPI.createMedication(medicationData);
+      
+      if (result.success) {
+        // Add to local state immediately for better UX
+        const localMedication = {
+          id: result.id,
+          ...newMedication,
+          nextDose: '8:00 AM',
+          taken: false,
+          status: 'active'
+        };
+        setMedications([...medications, localMedication]);
+        
+        setNewMedication({
+          name: '',
+          dosage: '',
+          frequency: 'Daily',
+          instructions: '',
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: ''
+        });
+        setShowAddForm(false);
+        toast.success('Medication added successfully!');
+      }
+    } catch (error) {
+      console.error('Error adding medication:', error);
+      toast.error('Failed to add medication. Please try again.');
+    }
   };
 
   const handleToggleTaken = (id) => {
@@ -180,7 +230,19 @@ const Medications = () => {
 
       {/* Medications List */}
       <div className="grid grid-cols-1 gap-4">
-        {medications.map((medication) => (
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-2">Loading medications...</p>
+          </div>
+        ) : medications.length === 0 ? (
+          <div className="text-center py-8">
+            <Pill className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">No medications added yet</p>
+            <p className="text-gray-500 text-sm">Click "Add Medication" to get started</p>
+          </div>
+        ) : (
+          medications.map((medication) => (
           <div key={medication.id} className="card">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -233,11 +295,12 @@ const Medications = () => {
               </div>
             </div>
           </div>
-        ))}
+          ))
+        )}
       </div>
 
-      {/* Empty State */}
-      {medications.length === 0 && (
+      {/* Empty State - This is now handled above */}
+      {false && (
         <div className="text-center py-12">
           <Pill className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No medications added yet</h3>
