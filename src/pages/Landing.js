@@ -141,24 +141,14 @@ const Landing = () => {
 
       {/* Hero Section with Video Background */}
       <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
-        {/* Video Background */}
+        {/* Background (local image, no external video) */}
         <div className="absolute inset-0 z-0">
-          <video
+          <img
+            src={process.env.PUBLIC_URL + '/images/story-care-checkup-1.png'}
+            alt="African elderly receiving healthcare"
             className="w-full h-full object-cover opacity-20"
-            autoPlay
-            muted
-            loop
-            playsInline
-          >
-            <source src="https://videos.pexels.com/video-files/3195394/3195394-uhd_2560_1440_25fps.mp4?v=2" type="video/mp4" />
-            {/* Fallback image */}
-            <img
-              src="https://images.pexels.com/photos/7551675/pexels-photo-7551675.jpeg?auto=compress&cs=tinysrgb&w=2070"
-              alt="African elderly receiving healthcare"
-              className="w-full h-full object-cover"
-            />
-          </video>
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/50 to-green-900/50"></div>
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/50 to-green-900/50" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -409,15 +399,12 @@ const Landing = () => {
             {/* Video */}
             <div className="relative">
               <div className="relative rounded-lg overflow-hidden shadow-2xl">
-                <video
+                <img
                   className="w-full h-96 object-cover"
-                  controls
-                  poster="https://images.pexels.com/photos/7551675/pexels-photo-7551675.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                >
-                  <source src="https://videos.pexels.com/video-files/8611971/8611971-hd_1920_1080_25fps.mp4" type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                  src={process.env.PUBLIC_URL + '/images/story-care-checkup-2.png'}
+                  alt="Mrs. Adunni's Story"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                 <div className="absolute bottom-4 left-4 text-white">
                   <h3 className="text-lg font-semibold">Mrs. Adunni's Story</h3>
                   <p className="text-sm opacity-90">Lagos, Nigeria</p>
