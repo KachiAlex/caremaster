@@ -75,6 +75,11 @@ export const UserProvider = ({ children }) => {
   };
 
   const isOnboardingIncomplete = () => {
+    // TEMPORARY BYPASS FOR TESTING - REMOVE IN PRODUCTION
+    console.log('BYPASS: Skipping onboarding checks for testing');
+    return false;
+    
+    /* Original logic - commented out for testing
     if (!userProfile) {
       console.log('No user profile found, onboarding required');
       return true;
@@ -121,6 +126,7 @@ export const UserProvider = ({ children }) => {
     // For other user types, consider onboarding complete
     console.log('Other user type, onboarding complete');
     return false;
+    */
   };
 
   const value = {
