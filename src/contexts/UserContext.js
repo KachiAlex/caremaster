@@ -118,8 +118,13 @@ export const UserProvider = ({ children }) => {
 
     // For caregivers, STRICTLY enforce onboarding completion
     if (userProfile.userType === 'caregiver') {
-      if (!userProfile.onboardingComplete) {
-        console.log('🚫 CAREGIVER ONBOARDING INCOMPLETE - blocking access');
+      // Check if onboarding is explicitly complete
+      const isComplete = userProfile.onboardingComplete === true;
+      if (!isComplete) {
+        console.log('🚫 CAREGIVER ONBOARDING INCOMPLETE - blocking access', {
+          onboardingComplete: userProfile.onboardingComplete,
+          userType: userProfile.userType
+        });
         return true;
       }
       console.log('✅ Caregiver onboarding complete');

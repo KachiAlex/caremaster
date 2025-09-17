@@ -315,7 +315,7 @@ function App() {
       <Route path="/onboarding/profile" element={<OnboardingProfile />} />
       <Route path="/onboarding/medical" element={<OnboardingMedical />} />
       
-      {/* Caregiver onboarding routes */}
+      {/* Caregiver onboarding routes - PUBLIC (no guards) */}
       <Route path="/caregiver/onboarding" element={<CaregiverOnboarding />} />
       <Route path="/caregiver/onboarding/career" element={<CaregiverOnboardingCareer />} />
       <Route path="/caregiver/onboarding/qualifications" element={<TestQualifications />} />
@@ -339,7 +339,7 @@ function App() {
       {/* Protected routes */}
       <Route 
         path="/dashboard" 
-        element={user ? (<OnboardingGuardedLayout />) : <Navigate to="/login" replace />} 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Dashboard />} />
       </Route>
@@ -373,6 +373,9 @@ function App() {
       >
         <Route index element={<WebRTCTest />} />
       </Route>
+      
+      {/* Direct test route for caregiver onboarding */}
+      <Route path="/test-caregiver-onboarding" element={<CaregiverOnboarding />} />
       <Route 
         path="/profile" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
@@ -405,7 +408,7 @@ function App() {
       </Route>
       <Route 
         path="/caregiver" 
-        element={user ? <CaregiverOnboardingGuard /> : <Navigate to="/login" replace />} 
+        element={user ? <StrictCaregiverGuard /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<CaregiverDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
@@ -489,18 +492,25 @@ export default App;
 function OnboardingGuardedLayout() {
   // Import hook normally; component is rendered under <UserProvider>
   const { useUser } = require('./contexts/UserContext');
-  const { isOnboardingIncomplete, userProfile, getCaregiverOnboardingRoute, user } = useUser();
+  const { isOnboardingIncomplete, userProfile, getCaregiverOnboardingRoute, user, loading } = useUser();
   
   console.log('🔍 OnboardingGuardedLayout Debug:', {
     user: user?.uid,
     userProfile: userProfile,
     userType: userProfile?.userType,
-    isIncomplete: isOnboardingIncomplete()
+    isIncomplete: isOnboardingIncomplete(),
+    loading: loading
   });
   
+  // Show loading while user profile is being fetched
+  if (loading || (user && !userProfile)) {
+    console.log('⏳ Loading user profile...');
+    return <LoadingSpinner />;
+  }
+  
   if (isOnboardingIncomplete()) {
-    // Redirect caregivers to appropriate onboarding step
-    if (userProfile?.userType === 'caregiver') {
+    // IMPORTANT: Check userProfile exists before checking userType
+    if (userProfile && userProfile.userType === 'caregiver') {
       const caregiverRoute = getCaregiverOnboardingRoute();
       console.log('🔄 Redirecting CAREGIVER to:', caregiverRoute);
       return <Navigate to={caregiverRoute} replace />;
@@ -527,5 +537,31 @@ function CaregiverOnboardingGuard() {
   }
   
   console.log('✅ Caregiver onboarding complete, showing caregiver layout');
+  return <CaregiverLayout />;
+}
+
+// Strict caregiver guard with immediate redirect
+function StrictCaregiverGuard() {
+  const { useUser } = require('./contexts/UserContext');
+  const { userProfile, user, loading } = useUser();
+  
+  // Show loading while profile loads
+  if (loading || (user && !userProfile)) {
+    return <LoadingSpinner />;
+  }
+  
+  console.log('🔍 StrictCaregiverGuard Check:', {
+    userType: userProfile?.userType,
+    onboardingComplete: userProfile?.onboardingComplete
+  });
+  
+  // Force onboarding for incomplete caregivers
+  if (userProfile?.userType === 'caregiver' && !userProfile?.onboardingComplete) {
+    console.log('🚫 STRICT: Caregiver onboarding required - forcing redirect');
+    window.location.replace('/caregiver/onboarding');
+    return <LoadingSpinner />;
+  }
+  
+  // Allow access to caregiver dashboard
   return <CaregiverLayout />;
 }

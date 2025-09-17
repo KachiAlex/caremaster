@@ -20,11 +20,41 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const loggedInUser = userCredential.user;
+      
       toast.success('Welcome back!');
       
-      // Always navigate to dashboard - the OnboardingGuardedLayout will handle redirects
-      navigate('/dashboard');
+      // Check if user is a caregiver and needs onboarding
+      const { getUserById } = await import('../api/usersAPI');
+      try {
+        const userProfile = await getUserById(loggedInUser.uid);
+        
+        console.log('🔍 Login Check - User Profile:', {
+          userId: loggedInUser.uid,
+          userType: userProfile?.userType,
+          onboardingComplete: userProfile?.onboardingComplete
+        });
+        
+        // If caregiver hasn't completed onboarding, force them to onboarding
+        if (userProfile?.userType === 'caregiver' && !userProfile?.onboardingComplete) {
+          console.log('🚫 Caregiver login blocked - onboarding required');
+          toast.info('Please complete your caregiver onboarding first');
+          window.location.replace('/caregiver/onboarding');
+          return;
+        }
+        
+        // Navigate to appropriate dashboard
+        if (userProfile?.userType === 'caregiver') {
+          navigate('/caregiver');
+        } else {
+          navigate('/dashboard');
+        }
+      } catch (profileError) {
+        console.error('Error fetching user profile during login:', profileError);
+        // If we can't get profile, assume patient for safety
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Login error:', error);
       

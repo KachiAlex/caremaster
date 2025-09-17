@@ -61,20 +61,28 @@ const Signup = () => {
         createdAt: new Date(),
         joinDate: new Date(),
         isActive: true,
+        // EXPLICITLY set onboarding as incomplete for caregivers
         onboardingComplete: false,
         onboardingProfileComplete: false,
-        onboardingMedicalComplete: false
+        onboardingMedicalComplete: false,
+        // Add caregiver-specific incomplete flags
+        onboardingCareerComplete: false,
+        onboardingQualificationsComplete: false,
+        onboardingReferencesComplete: false,
+        onboardingDocumentsComplete: false,
+        onboardingStatementComplete: false
       });
 
       toast.success('Account created successfully!');
       
-      // Wait a moment for the user profile to be created and context to update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Start onboarding after signup based on user type
+      // IMMEDIATE direct navigation for caregivers - no delays, no guards
       if (formData.userType === 'caregiver') {
-        navigate('/caregiver/onboarding');
+        // Force immediate redirect to caregiver onboarding
+        window.location.replace('/caregiver/onboarding');
+        return; // Stop execution here
       } else {
+        // Wait for patients only
+        await new Promise(resolve => setTimeout(resolve, 1000));
         navigate('/onboarding/profile');
       }
     } catch (error) {
