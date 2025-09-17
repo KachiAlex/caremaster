@@ -70,12 +70,45 @@ const CaregiverOnboardingStatement = () => {
     
     setSaving(true);
     try {
+      // Update user profile
       await updateUser(user.uid, { 
         ...form, 
         onboardingStatementComplete: true,
         onboardingComplete: true,
         status: 'pending_approval'
       });
+      
+      // Create caregiver profile in caregivers collection
+      const { caregiverAPI } = await import('../api/caregiverAPI');
+      const caregiverResult = await caregiverAPI.createCaregiver({
+        id: user.uid,
+        name: userProfile?.name || userProfile?.displayName || user?.displayName || 'Caregiver',
+        displayName: userProfile?.displayName || user?.displayName,
+        email: user?.email,
+        phone: userProfile?.phone || '',
+        location: userProfile?.address || 'Lagos, Nigeria',
+        specializations: userProfile?.specializations || ['General Care'],
+        rating: 4.5, // Default rating for new caregivers
+        totalPatients: 0,
+        experience: parseInt(userProfile?.yearsOfExperience) || 1,
+        bio: form.personalStatement || 'Professional caregiver dedicated to providing quality care.',
+        avatar: null,
+        joinDate: new Date(),
+        lastActive: new Date(),
+        createdAt: new Date(),
+        isVerified: true,
+        userType: 'caregiver',
+        hourlyRate: userProfile?.hourlyRate || 50,
+        availability: userProfile?.availability || {},
+        languages: userProfile?.languages || ['English'],
+        ...form
+      });
+      
+      // Update the caregiver to be active immediately
+      if (caregiverResult.success) {
+        await caregiverAPI.updateCaregiver(caregiverResult.id, { status: 'active' });
+      }
+      
       updateUserProfile({ 
         ...(userProfile || {}), 
         ...form, 

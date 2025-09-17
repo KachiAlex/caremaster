@@ -49,7 +49,27 @@ const Signup = () => {
         displayName: formData.displayName
       });
 
+      // Create user profile in Firestore with proper userType
+      const { createUser } = await import('../api/usersAPI');
+      await createUser({
+        id: user.uid,
+        name: formData.displayName,
+        displayName: formData.displayName,
+        email: formData.email,
+        userType: formData.userType === 'caregiver' ? 'caregiver' : 'elderly',
+        type: formData.userType === 'caregiver' ? 'caregiver' : 'elderly', // Legacy field
+        createdAt: new Date(),
+        joinDate: new Date(),
+        isActive: true,
+        onboardingComplete: false,
+        onboardingProfileComplete: false,
+        onboardingMedicalComplete: false
+      });
+
       toast.success('Account created successfully!');
+      
+      // Wait a moment for the user profile to be created and context to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Start onboarding after signup based on user type
       if (formData.userType === 'caregiver') {

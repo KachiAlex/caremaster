@@ -1,0 +1,3 @@
+[33me6ba4a5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m debug: add logging to onboarding check and fallback logic for users with basic profile data
+[33mccba0e4[m fix: add missing favicon and icon files to resolve 404s
+[33mb687081[m chore: remove external Pexels media; use local images to avoid 403s

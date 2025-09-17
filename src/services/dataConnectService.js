@@ -14,6 +14,13 @@ class DataConnectService {
 
   // Generic query execution with error handling
   async executeQuery(queryName, variables = {}) {
+    // Check if Data Connect is available
+    if (!this.dataConnect) {
+      const error = new Error('Data Connect service is not available');
+      logger.error(`Data Connect query failed: ${queryName}`, { error, variables });
+      throw error;
+    }
+
     try {
       logger.debug(`Executing Data Connect query: ${queryName}`, { variables });
       
@@ -37,6 +44,13 @@ class DataConnectService {
 
   // Generic mutation execution with error handling
   async executeMutation(mutationName, variables = {}) {
+    // Check if Data Connect is available
+    if (!this.dataConnect) {
+      const error = new Error('Data Connect service is not available');
+      logger.error(`Data Connect mutation failed: ${mutationName}`, { error, variables });
+      throw error;
+    }
+
     try {
       logger.debug(`Executing Data Connect mutation: ${mutationName}`, { variables });
       

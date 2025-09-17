@@ -19,20 +19,28 @@ export const caregiverAPI = {
   // Get all caregivers with filtering
   getCaregivers: async (filters = {}) => {
     try {
-      let caregiversQuery = query(
-        collection(db, 'caregivers'),
-        orderBy('joinDate', 'desc')
-      );
+      let caregiversQuery;
       
       if (filters.status) {
-        caregiversQuery = query(caregiversQuery, where('status', '==', filters.status));
+        // Use the indexed query when status filter is provided
+        caregiversQuery = query(
+          collection(db, 'caregivers'),
+          where('status', '==', filters.status),
+          orderBy('joinDate', 'asc')
+        );
+      } else {
+        // Simple query without complex ordering when no status filter
+        caregiversQuery = query(
+          collection(db, 'caregivers'),
+          orderBy('joinDate', 'desc')
+        );
       }
       
-      if (filters.location) {
+      if (filters.location && !filters.status) {
         caregiversQuery = query(caregiversQuery, where('location', '==', filters.location));
       }
       
-      if (filters.specialization) {
+      if (filters.specialization && !filters.status) {
         caregiversQuery = query(caregiversQuery, where('specializations', 'array-contains', filters.specialization));
       }
       

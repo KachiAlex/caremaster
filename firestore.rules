@@ -74,13 +74,13 @@ service cloud.firestore {
     // Medications collection
     match /medications/{medicationId} {
       allow read: if isAuthenticated() && 
-                     hasAccessToElderlyProfile(resource.data.userId);
+                     (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
       allow create: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(request.resource.data.userId);
+                       (hasAccessToElderlyProfile(request.resource.data.userId) || isOwner(request.resource.data.userId));
       allow update: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(resource.data.userId);
+                       (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
       allow delete: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(resource.data.userId);
+                       (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
     }
     
     // Medication logs collection
@@ -98,25 +98,25 @@ service cloud.firestore {
     // Vital signs collection
     match /vitalSigns/{vitalSignId} {
       allow read: if isAuthenticated() && 
-                     hasAccessToElderlyProfile(resource.data.userId);
+                     (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
       allow create: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(request.resource.data.userId);
+                       (hasAccessToElderlyProfile(request.resource.data.userId) || isOwner(request.resource.data.userId));
       allow update: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(resource.data.userId);
+                       (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
       allow delete: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(resource.data.userId);
+                       (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
     }
     
     // Appointments collection
     match /appointments/{appointmentId} {
       allow read: if isAuthenticated() && 
-                     hasAccessToElderlyProfile(resource.data.userId);
+                     (hasAccessToElderlyProfile(resource.data.patientId) || isOwner(resource.data.patientId));
       allow create: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(request.resource.data.userId);
+                       (hasAccessToElderlyProfile(request.resource.data.patientId) || isOwner(request.resource.data.patientId));
       allow update: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(resource.data.userId);
+                       (hasAccessToElderlyProfile(resource.data.patientId) || isOwner(resource.data.patientId));
       allow delete: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(resource.data.userId);
+                       (hasAccessToElderlyProfile(resource.data.patientId) || isOwner(resource.data.patientId));
     }
     
     // Emergency alerts collection
@@ -216,6 +216,34 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && isAdmin();
     }
     
+    // Messages collection
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && 
+                     (isOwner(resource.data.senderId) || isOwner(resource.data.recipientId) || isAdmin());
+      allow create: if isAuthenticated() && 
+                       (isOwner(request.resource.data.senderId) || isServiceProvider() || isAdmin());
+      allow update: if isAuthenticated() && 
+                       (isOwner(resource.data.senderId) || isOwner(resource.data.recipientId));
+      allow delete: if isAuthenticated() && 
+                       (isOwner(resource.data.senderId) || isAdmin());
+    }
+    
+    // Caregivers collection
+    match /caregivers/{caregiverId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(caregiverId);
+      allow update: if isAuthenticated() && (isOwner(caregiverId) || isAdmin());
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // User profiles collection (for broader access)
+    match /userProfiles/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || isServiceProvider());
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && isOwner(userId);
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+
     // Default deny rule
     match /{document=**} {
       allow read, write: if false;

@@ -33,10 +33,26 @@ export const UserProvider = ({ children }) => {
             const roleFromProfile = profile.userType || profile.type || 'patient';
             setUserRole(roleFromProfile);
           } else {
-            // User profile doesn't exist in Firestore yet
-            console.log('User profile not found in Firestore, user may be new');
-            setUserProfile(null);
-            setUserRole('patient'); // Default role
+            // User profile doesn't exist in Firestore yet - wait a bit for it to be created
+            console.log('User profile not found in Firestore, waiting for profile creation...');
+            setTimeout(async () => {
+              try {
+                const retryProfile = await getUserById(firebaseUser.uid);
+                if (retryProfile) {
+                  setUserProfile(retryProfile);
+                  const roleFromProfile = retryProfile.userType || retryProfile.type || 'patient';
+                  setUserRole(roleFromProfile);
+                  console.log('Profile found on retry:', roleFromProfile);
+                } else {
+                  setUserProfile(null);
+                  setUserRole('patient'); // Default role
+                }
+              } catch (retryError) {
+                console.error('Error on profile retry:', retryError);
+                setUserProfile(null);
+                setUserRole('patient');
+              }
+            }, 2000); // Wait 2 seconds for profile creation
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
@@ -75,8 +91,29 @@ export const UserProvider = ({ children }) => {
   };
 
   const isOnboardingIncomplete = () => {
-    // TEMPORARY BYPASS FOR TESTING - REMOVE IN PRODUCTION
-    console.log('BYPASS: Skipping onboarding checks for testing');
+    if (!userProfile) {
+      console.log('No user profile found, onboarding required');
+      return true;
+    }
+    
+    console.log('Checking onboarding completion:', {
+      userRole,
+      userType: userProfile.userType,
+      onboardingComplete: userProfile.onboardingComplete
+    });
+
+    // For caregivers, check if they've completed caregiver onboarding
+    if (userProfile.userType === 'caregiver' && !userProfile.onboardingComplete) {
+      console.log('Caregiver onboarding incomplete, redirecting to career onboarding');
+      return true;
+    }
+
+    // For elderly/patients, check if they've completed patient onboarding  
+    if ((userProfile.userType === 'elderly' || userRole === 'patient') && !userProfile.onboardingProfileComplete) {
+      console.log('Patient onboarding incomplete');
+      return true;
+    }
+
     return false;
     
     /* Original logic - commented out for testing

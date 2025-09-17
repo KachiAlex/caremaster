@@ -20,7 +20,12 @@ import {
   Check,
   X,
   AlertCircle,
-  Loader2
+  Loader2,
+  Monitor,
+  MonitorOff,
+  Wifi,
+  WifiOff,
+  Signal
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import WebRTCService from '../services/webrtcService';
@@ -41,6 +46,8 @@ const CallInterface = ({
   const [callDuration, setCallDuration] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [connectionQuality, setConnectionQuality] = useState('good');
+  const [networkStats, setNetworkStats] = useState({});
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [webrtcService, setWebrtcService] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -90,6 +97,24 @@ const CallInterface = ({
         },
         onCallStateChange: (state) => {
           setConnectionQuality(state === 'connected' ? 'good' : 'poor');
+        },
+        onStatsUpdate: (stats) => {
+          setNetworkStats(stats);
+          setConnectionQuality(stats.quality);
+        },
+        onScreenShare: (isSharing, stream) => {
+          setIsScreenSharing(isSharing);
+          if (isSharing) {
+            // Update local video to show screen share
+            if (localVideoRef.current) {
+              localVideoRef.current.srcObject = stream;
+            }
+          } else {
+            // Return to camera view
+            if (localVideoRef.current && localStream) {
+              localVideoRef.current.srcObject = localStream;
+            }
+          }
         }
       });
 
@@ -157,6 +182,23 @@ const CallInterface = ({
       if (!success) {
         toast.error('Failed to switch camera');
       }
+    }
+  };
+
+  const handleScreenShare = async () => {
+    if (!webrtcService) return;
+
+    try {
+      if (isScreenSharing) {
+        await webrtcService.stopScreenShare();
+        toast.success('Screen sharing stopped');
+      } else {
+        await webrtcService.startScreenShare();
+        toast.success('Screen sharing started');
+      }
+    } catch (error) {
+      console.error('Screen share error:', error);
+      toast.error(isScreenSharing ? 'Failed to stop screen sharing' : 'Failed to start screen sharing');
     }
   };
 
@@ -260,13 +302,27 @@ const CallInterface = ({
               )}
               
               {/* Connection quality indicator */}
-              <div className="absolute top-4 left-4 flex items-center space-x-2">
+              <div className="absolute top-4 left-4 bg-black bg-opacity-50 rounded-lg px-3 py-2">
+                <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${
-                  connectionQuality === 'good' ? 'bg-green-500' : 'bg-red-500'
+                    connectionQuality === 'good' ? 'bg-green-500' : 
+                    connectionQuality === 'fair' ? 'bg-yellow-500' : 'bg-red-500'
                 }`} />
-                <span className="text-white text-sm">
-                  {connectionQuality === 'good' ? 'Good connection' : 'Poor connection'}
+                  <span className="text-white text-sm font-medium">
+                    {connectionQuality === 'good' ? 'Good' : 
+                     connectionQuality === 'fair' ? 'Fair' : 'Poor'}
+                  </span>
+                  {networkStats.rtt && (
+                    <span className="text-white text-xs">
+                      {Math.round(networkStats.rtt)}ms
                 </span>
+                  )}
+                </div>
+                {networkStats.packetLoss > 0 && (
+                  <div className="text-white text-xs mt-1">
+                    Loss: {networkStats.packetLoss.toFixed(1)}%
+                  </div>
+                )}
               </div>
 
               {/* Call duration */}
@@ -379,6 +435,18 @@ const CallInterface = ({
                       className="w-14 h-14 md:w-12 md:h-12 rounded-full bg-gray-600 hover:bg-gray-700 active:bg-gray-800 flex items-center justify-center transition-colors touch-manipulation"
                     >
                       <Camera className="text-white" size={24} />
+                    </button>
+                  )}
+
+                  {/* Screen sharing toggle */}
+                  {callType === 'video' && (
+                    <button
+                      onClick={handleScreenShare}
+                      className={`w-14 h-14 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
+                        isScreenSharing ? 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700 active:bg-gray-800'
+                      }`}
+                    >
+                      {isScreenSharing ? <MonitorOff className="text-white" size={24} /> : <Monitor className="text-white" size={24} />}
                     </button>
                   )}
 

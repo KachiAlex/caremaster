@@ -60,6 +60,7 @@ import AdminAuditLogs from './pages/AdminAuditLogs';
 import ServiceProviderDashboard from './pages/ServiceProviderDashboard';
 import UserManagement from './pages/UserManagement';
 import CallsPage from './pages/CallsPage';
+import WebRTCTest from './pages/WebRTCTest';
 import MessagingInterface from './components/MessagingInterface';
 import MobileOptimization from './components/MobileOptimization';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -364,6 +365,12 @@ function App() {
         <Route index element={<Telemedicine />} />
       </Route>
       <Route 
+        path="/webrtc-test" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<WebRTCTest />} />
+      </Route>
+      <Route 
         path="/profile" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
@@ -479,10 +486,16 @@ export default App;
 function OnboardingGuardedLayout() {
   // Import hook normally; component is rendered under <UserProvider>
   const { useUser } = require('./contexts/UserContext');
-  const { isOnboardingIncomplete } = useUser();
-  return isOnboardingIncomplete() ? (
-    <Navigate to="/onboarding/profile" replace />
-  ) : (
-    <Layout />
-  );
+  const { isOnboardingIncomplete, userProfile } = useUser();
+  
+  if (isOnboardingIncomplete()) {
+    // Redirect caregivers to caregiver onboarding
+    if (userProfile?.userType === 'caregiver') {
+      return <Navigate to="/caregiver/onboarding/career" replace />;
+    }
+    // Redirect patients/elderly to patient onboarding
+    return <Navigate to="/onboarding/profile" replace />;
+  }
+  
+  return <Layout />;
 }
