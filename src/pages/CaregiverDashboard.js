@@ -22,15 +22,118 @@ import {
   Shield,
   Plus,
   Eye,
-  Edit
+  Edit,
+  Stethoscope,
+  Pill,
+  Brain,
+  FlaskConical,
+  Dumbbell,
+  UserCheck
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
 
 const CaregiverDashboard = () => {
+  const { userProfile } = useUser();
   const [caregiver, setCaregiver] = useState(null);
   const [todaySchedule, setTodaySchedule] = useState([]);
   const [recentTasks, setRecentTasks] = useState([]);
   const [performance, setPerformance] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // Get qualification-specific dashboard configuration
+  const getDashboardConfig = () => {
+    const qualification = userProfile?.medicalQualification || 'Caregiver (Non-Medical)';
+    
+    const configs = {
+      'Doctor (MD)': {
+        title: 'Doctor Dashboard',
+        icon: Stethoscope,
+        color: 'blue',
+        features: ['consultations', 'prescriptions', 'diagnostics', 'referrals', 'telemedicine'],
+        quickActions: [
+          { name: 'New Consultation', icon: Stethoscope, href: '/service-provider/consultations' },
+          { name: 'Write Prescription', icon: Pill, href: '/service-provider/prescriptions' },
+          { name: 'Review Lab Results', icon: FlaskConical, href: '/service-provider/diagnostics' },
+          { name: 'Video Consultation', icon: Camera, href: '/service-provider/calls' }
+        ]
+      },
+      'Nurse (RN)': {
+        title: 'Nurse Dashboard',
+        icon: Heart,
+        color: 'red',
+        features: ['patient-care', 'medications', 'vital-signs', 'care-plans'],
+        quickActions: [
+          { name: 'Patient Rounds', icon: User, href: '/service-provider/patients' },
+          { name: 'Medication Admin', icon: Pill, href: '/service-provider/prescriptions' },
+          { name: 'Vital Signs', icon: Activity, href: '/service-provider/diagnostics' },
+          { name: 'Care Plans', icon: FileText, href: '/service-provider/care-logs' }
+        ]
+      },
+      'Physiotherapist': {
+        title: 'Physiotherapy Dashboard',
+        icon: Dumbbell,
+        color: 'green',
+        features: ['therapy-sessions', 'exercise-plans', 'progress-tracking'],
+        quickActions: [
+          { name: 'Therapy Sessions', icon: Dumbbell, href: '/service-provider/activities' },
+          { name: 'Exercise Plans', icon: FileText, href: '/service-provider/care-logs' },
+          { name: 'Progress Notes', icon: TrendingUp, href: '/service-provider/patients' },
+          { name: 'Schedule Session', icon: Calendar, href: '/service-provider/schedule' }
+        ]
+      },
+      'Psychologist': {
+        title: 'Psychology Dashboard',
+        icon: Brain,
+        color: 'purple',
+        features: ['therapy-sessions', 'assessments', 'treatment-plans'],
+        quickActions: [
+          { name: 'Therapy Sessions', icon: Brain, href: '/service-provider/consultations' },
+          { name: 'Assessments', icon: FileText, href: '/service-provider/diagnostics' },
+          { name: 'Treatment Plans', icon: Heart, href: '/service-provider/care-logs' },
+          { name: 'Video Therapy', icon: Camera, href: '/service-provider/calls' }
+        ]
+      },
+      'Pharmacist': {
+        title: 'Pharmacist Dashboard',
+        icon: Pill,
+        color: 'indigo',
+        features: ['prescriptions', 'drug-interactions', 'medication-reviews'],
+        quickActions: [
+          { name: 'Prescription Review', icon: Pill, href: '/service-provider/prescriptions' },
+          { name: 'Drug Interactions', icon: AlertTriangle, href: '/service-provider/diagnostics' },
+          { name: 'Medication Consult', icon: MessageSquare, href: '/service-provider/consultations' },
+          { name: 'Patient Education', icon: FileText, href: '/service-provider/patients' }
+        ]
+      },
+      'Lab Technician': {
+        title: 'Lab Technician Dashboard',
+        icon: FlaskConical,
+        color: 'teal',
+        features: ['lab-results', 'specimen-collection', 'quality-control'],
+        quickActions: [
+          { name: 'Lab Results', icon: FlaskConical, href: '/service-provider/diagnostics' },
+          { name: 'Collection Schedule', icon: Calendar, href: '/service-provider/schedule' },
+          { name: 'Quality Control', icon: Shield, href: '/service-provider/activities' },
+          { name: 'Patient Reports', icon: FileText, href: '/service-provider/patients' }
+        ]
+      }
+    };
+
+    return configs[qualification] || {
+      title: 'Caregiver Dashboard',
+      icon: UserCheck,
+      color: 'gray',
+      features: ['patient-care', 'basic-assistance', 'companionship'],
+      quickActions: [
+        { name: 'Patient Care', icon: User, href: '/service-provider/patients' },
+        { name: 'Daily Tasks', icon: CheckCircle, href: '/service-provider/tasks' },
+        { name: 'Messages', icon: MessageSquare, href: '/service-provider/messages' },
+        { name: 'Schedule', icon: Calendar, href: '/service-provider/schedule' }
+      ]
+    };
+  };
+
+  const dashboardConfig = getDashboardConfig();
 
   useEffect(() => {
     // Simulate loading caregiver data
@@ -194,14 +297,18 @@ const CaregiverDashboard = () => {
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
+            <div className={`p-3 bg-${dashboardConfig.color}-100 rounded-full`}>
+              <dashboardConfig.icon className={`h-8 w-8 text-${dashboardConfig.color}-600`} />
+            </div>
             <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
               <span className="text-white font-semibold text-lg">
                 {caregiver?.name.split(' ').map(n => n[0]).join('')}
               </span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Welcome, {caregiver?.name}</h1>
-              <p className="text-gray-600">Caregiver Dashboard</p>
+              <h1 className="text-2xl font-bold text-gray-900">{dashboardConfig.title}</h1>
+              <p className="text-gray-600">Welcome, {userProfile?.name || caregiver?.name}</p>
+              <p className="text-sm text-gray-500">{userProfile?.medicalQualification || 'Healthcare Professional'}</p>
             </div>
           </div>
           <div className="flex items-center space-x-6">
@@ -221,6 +328,23 @@ const CaregiverDashboard = () => {
       {/* Main Content */}
       <div className="w-full p-8 dashboard-full-width">
         <div className="space-y-6">
+          {/* Qualification-Specific Quick Actions */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {dashboardConfig.quickActions.map((action, index) => (
+                <a
+                  key={index}
+                  href={action.href}
+                  className={`flex flex-col items-center p-4 rounded-lg border-2 border-gray-200 hover:border-${dashboardConfig.color}-300 hover:bg-${dashboardConfig.color}-50 transition-colors group`}
+                >
+                  <action.icon className={`h-8 w-8 text-${dashboardConfig.color}-600 mb-2 group-hover:text-${dashboardConfig.color}-700`} />
+                  <span className="text-sm font-medium text-gray-700 text-center">{action.name}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
           {/* Quick Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">

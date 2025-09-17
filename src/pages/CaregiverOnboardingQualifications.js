@@ -2,171 +2,94 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { updateUser } from '../api/usersAPI';
+import { 
+  Shield, 
+  AlertTriangle, 
+  Heart, 
+  Brain, 
+  FileText, 
+  Award,
+  CheckCircle,
+  XCircle,
+  Plus,
+  Trash2
+} from 'lucide-react';
 
 const CaregiverOnboardingQualifications = () => {
   const navigate = useNavigate();
   const { user, userProfile, updateUserProfile } = useUser();
   const [form, setForm] = useState({
+    // Medical Qualifications
+    medicalQualification: userProfile?.medicalQualification || '',
+    licenseNumber: userProfile?.licenseNumber || '',
+    licensingBoard: userProfile?.licensingBoard || '',
+    licenseExpiry: userProfile?.licenseExpiry || '',
+    
+    // Health Screening
+    hasDisabilities: userProfile?.hasDisabilities || false,
+    disabilityDetails: userProfile?.disabilityDetails || '',
+    hasHealthConditions: userProfile?.hasHealthConditions || false,
+    healthConditionDetails: userProfile?.healthConditionDetails || '',
+    hasMentalHealthHistory: userProfile?.hasMentalHealthHistory || false,
+    mentalHealthDetails: userProfile?.mentalHealthDetails || '',
+    takingMedications: userProfile?.takingMedications || false,
+    medicationDetails: userProfile?.medicationDetails || '',
+    hasAllergies: userProfile?.hasAllergies || false,
+    allergyDetails: userProfile?.allergyDetails || '',
+    
+    // Professional Details
     certifications: userProfile?.certifications || [],
     education: userProfile?.education || [],
-    skills: userProfile?.skills || [],
-    training: userProfile?.training || [],
-    licenses: userProfile?.licenses || []
+    
+    // Background Checks
+    hasConvictions: userProfile?.hasConvictions || false,
+    convictionDetails: userProfile?.convictionDetails || '',
+    backgroundCheckConsent: userProfile?.backgroundCheckConsent || false,
+    drugTestConsent: userProfile?.drugTestConsent || false,
+    medicalExamConsent: userProfile?.medicalExamConsent || false
   });
   const [saving, setSaving] = useState(false);
-  const [newCertification, setNewCertification] = useState({
-    name: '',
-    issuingOrganization: '',
-    issueDate: '',
-    expiryDate: '',
-    credentialId: '',
-    current: true
-  });
-  const [newEducation, setNewEducation] = useState({
-    institution: '',
-    degree: '',
-    field: '',
-    graduationDate: '',
-    gpa: '',
-    honors: ''
-  });
-  const [newSkill, setNewSkill] = useState('');
-  const [newTraining, setNewTraining] = useState({
-    name: '',
-    provider: '',
-    completionDate: '',
-    hours: '',
-    certificate: ''
-  });
-  const [newLicense, setNewLicense] = useState({
-    type: '',
-    number: '',
-    issuingState: '',
-    issueDate: '',
-    expiryDate: '',
-    current: true
-  });
+
+  const medicalQualifications = [
+    'Doctor (MD)',
+    'Nurse (RN)',
+    'Licensed Practical Nurse (LPN)',
+    'Physiotherapist',
+    'Pharmacist',
+    'Lab Technician',
+    'Psychologist',
+    'Psychiatrist',
+    'Certified Nursing Assistant (CNA)',
+    'Home Health Aide (HHA)',
+    'Personal Care Assistant',
+    'Caregiver (Non-Medical)',
+    'Other'
+  ];
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  const addCertification = () => {
-    if (newCertification.name && newCertification.issuingOrganization && newCertification.issueDate) {
-      setForm(prev => ({
-        ...prev,
-        certifications: [...prev.certifications, { ...newCertification }]
-      }));
-      setNewCertification({
-        name: '',
-        issuingOrganization: '',
-        issueDate: '',
-        expiryDate: '',
-        credentialId: '',
-        current: true
-      });
+    if (type === 'checkbox') {
+      setForm(prev => ({ ...prev, [name]: checked }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
     }
-  };
-
-  const removeCertification = (index) => {
-    setForm(prev => ({
-      ...prev,
-      certifications: prev.certifications.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addEducation = () => {
-    if (newEducation.institution && newEducation.degree && newEducation.field) {
-      setForm(prev => ({
-        ...prev,
-        education: [...prev.education, { ...newEducation }]
-      }));
-      setNewEducation({
-        institution: '',
-        degree: '',
-        field: '',
-        graduationDate: '',
-        gpa: '',
-        honors: ''
-      });
-    }
-  };
-
-  const removeEducation = (index) => {
-    setForm(prev => ({
-      ...prev,
-      education: prev.education.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addSkill = () => {
-    if (newSkill.trim() && !form.skills.includes(newSkill.trim())) {
-      setForm(prev => ({
-        ...prev,
-        skills: [...prev.skills, newSkill.trim()]
-      }));
-      setNewSkill('');
-    }
-  };
-
-  const removeSkill = (skill) => {
-    setForm(prev => ({
-      ...prev,
-      skills: prev.skills.filter(s => s !== skill)
-    }));
-  };
-
-  const addTraining = () => {
-    if (newTraining.name && newTraining.provider && newTraining.completionDate) {
-      setForm(prev => ({
-        ...prev,
-        training: [...prev.training, { ...newTraining }]
-      }));
-      setNewTraining({
-        name: '',
-        provider: '',
-        completionDate: '',
-        hours: '',
-        certificate: ''
-      });
-    }
-  };
-
-  const removeTraining = (index) => {
-    setForm(prev => ({
-      ...prev,
-      training: prev.training.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addLicense = () => {
-    if (newLicense.type && newLicense.number && newLicense.issuingState && newLicense.issueDate) {
-      setForm(prev => ({
-        ...prev,
-        licenses: [...prev.licenses, { ...newLicense }]
-      }));
-      setNewLicense({
-        type: '',
-        number: '',
-        issuingState: '',
-        issueDate: '',
-        expiryDate: '',
-        current: true
-      });
-    }
-  };
-
-  const removeLicense = (index) => {
-    setForm(prev => ({
-      ...prev,
-      licenses: prev.licenses.filter((_, i) => i !== index)
-    }));
   };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!user?.uid) return;
+
+    // Validation
+    if (!form.medicalQualification) {
+      alert('Please select your medical qualification');
+      return;
+    }
+
+    if (!form.backgroundCheckConsent || !form.drugTestConsent || !form.medicalExamConsent) {
+      alert('Please consent to all required screenings');
+      return;
+    }
+
     setSaving(true);
     try {
       await updateUser(user.uid, { 
@@ -181,489 +104,327 @@ const CaregiverOnboardingQualifications = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Your Qualifications</h2>
-          <p className="text-gray-600 mt-2">Share your certifications, education, and professional credentials</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl w-full space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-900">Medical Qualifications & Health Screening</h2>
+          <p className="text-gray-600">Please provide your medical qualifications and complete health screening</p>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-8">
-          {/* Certifications */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Certifications</h3>
-            
-            <div className="space-y-4 mb-6">
-              {form.certifications.map((cert, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{cert.name}</h4>
-                      <p className="text-sm text-gray-600">{cert.issuingOrganization}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeCertification(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <p>Issued: {cert.issueDate}</p>
-                    {!cert.current && cert.expiryDate && <p>Expires: {cert.expiryDate}</p>}
-                    {cert.credentialId && <p>ID: {cert.credentialId}</p>}
-                  </div>
-                </div>
-              ))}
+        <form className="space-y-8" onSubmit={onSubmit}>
+          {/* Medical Qualifications Section */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center mb-4">
+              <Award className="h-6 w-6 text-blue-600 mr-3" />
+              <h3 className="text-xl font-semibold text-gray-900">Medical Qualifications</h3>
             </div>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-4">Add Certification</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label">Certification Name</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="form-label">Primary Medical Qualification *</label>
+                <select
+                  name="medicalQualification"
+                  value={form.medicalQualification}
+                  onChange={onChange}
+                  className="form-input"
+                  required
+                >
+                  <option value="">Select your qualification</option>
+                  {medicalQualifications.map((qual) => (
+                    <option key={qual} value={qual}>{qual}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label">License Number</label>
+                <input
+                  name="licenseNumber"
+                  value={form.licenseNumber}
+                  onChange={onChange}
+                  className="form-input"
+                  placeholder="Professional license number"
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Licensing Board/Authority</label>
+                <input
+                  name="licensingBoard"
+                  value={form.licensingBoard}
+                  onChange={onChange}
+                  className="form-input"
+                  placeholder="e.g., State Board of Nursing"
+                />
+              </div>
+
+              <div>
+                <label className="form-label">License Expiry Date</label>
+                <input
+                  type="date"
+                  name="licenseExpiry"
+                  value={form.licenseExpiry}
+                  onChange={onChange}
+                  className="form-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Health Screening Section */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center mb-4">
+              <Heart className="h-6 w-6 text-red-600 mr-3" />
+              <h3 className="text-xl font-semibold text-gray-900">Health Screening</h3>
+            </div>
+
+            <div className="space-y-6">
+              {/* Disabilities */}
+              <div>
+                <div className="flex items-center space-x-3 mb-2">
                   <input
-                    type="text"
-                    value={newCertification.name}
-                    onChange={(e) => setNewCertification(prev => ({ ...prev, name: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., Certified Nursing Assistant"
+                    type="checkbox"
+                    name="hasDisabilities"
+                    checked={form.hasDisabilities}
+                    onChange={onChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                   />
+                  <label className="text-sm font-medium text-gray-700">
+                    Do you have any disabilities that may affect your ability to provide care?
+                  </label>
                 </div>
-                <div>
-                  <label className="form-label">Issuing Organization</label>
+                {form.hasDisabilities && (
+                  <textarea
+                    name="disabilityDetails"
+                    value={form.disabilityDetails}
+                    onChange={onChange}
+                    rows={3}
+                    className="form-input mt-2"
+                    placeholder="Please describe your disabilities and any accommodations needed"
+                  />
+                )}
+              </div>
+
+              {/* Health Conditions */}
+              <div>
+                <div className="flex items-center space-x-3 mb-2">
                   <input
-                    type="text"
-                    value={newCertification.issuingOrganization}
-                    onChange={(e) => setNewCertification(prev => ({ ...prev, issuingOrganization: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., American Red Cross"
+                    type="checkbox"
+                    name="hasHealthConditions"
+                    checked={form.hasHealthConditions}
+                    onChange={onChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                   />
+                  <label className="text-sm font-medium text-gray-700">
+                    Do you have any chronic health conditions?
+                  </label>
                 </div>
-                <div>
-                  <label className="form-label">Issue Date</label>
+                {form.hasHealthConditions && (
+                  <textarea
+                    name="healthConditionDetails"
+                    value={form.healthConditionDetails}
+                    onChange={onChange}
+                    rows={3}
+                    className="form-input mt-2"
+                    placeholder="Please list any chronic health conditions"
+                  />
+                )}
+              </div>
+
+              {/* Mental Health History */}
+              <div>
+                <div className="flex items-center space-x-3 mb-2">
                   <input
-                    type="date"
-                    value={newCertification.issueDate}
-                    onChange={(e) => setNewCertification(prev => ({ ...prev, issueDate: e.target.value }))}
-                    className="form-input"
+                    type="checkbox"
+                    name="hasMentalHealthHistory"
+                    checked={form.hasMentalHealthHistory}
+                    onChange={onChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                   />
+                  <label className="text-sm font-medium text-gray-700">
+                    Do you have any history of mental health conditions?
+                  </label>
                 </div>
-                <div>
-                  <label className="form-label">Expiry Date</label>
+                {form.hasMentalHealthHistory && (
+                  <textarea
+                    name="mentalHealthDetails"
+                    value={form.mentalHealthDetails}
+                    onChange={onChange}
+                    rows={3}
+                    className="form-input mt-2"
+                    placeholder="Please provide details (this information is confidential)"
+                  />
+                )}
+              </div>
+
+              {/* Medications */}
+              <div>
+                <div className="flex items-center space-x-3 mb-2">
                   <input
-                    type="date"
-                    value={newCertification.expiryDate}
-                    onChange={(e) => setNewCertification(prev => ({ ...prev, expiryDate: e.target.value }))}
-                    className="form-input"
-                    disabled={newCertification.current}
+                    type="checkbox"
+                    name="takingMedications"
+                    checked={form.takingMedications}
+                    onChange={onChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                   />
+                  <label className="text-sm font-medium text-gray-700">
+                    Are you currently taking any medications?
+                  </label>
                 </div>
-                <div>
-                  <label className="form-label">Credential ID (optional)</label>
+                {form.takingMedications && (
+                  <textarea
+                    name="medicationDetails"
+                    value={form.medicationDetails}
+                    onChange={onChange}
+                    rows={3}
+                    className="form-input mt-2"
+                    placeholder="Please list current medications and dosages"
+                  />
+                )}
+              </div>
+
+              {/* Allergies */}
+              <div>
+                <div className="flex items-center space-x-3 mb-2">
                   <input
-                    type="text"
-                    value={newCertification.credentialId}
-                    onChange={(e) => setNewCertification(prev => ({ ...prev, credentialId: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., CNA-12345"
+                    type="checkbox"
+                    name="hasAllergies"
+                    checked={form.hasAllergies}
+                    onChange={onChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                   />
+                  <label className="text-sm font-medium text-gray-700">
+                    Do you have any allergies?
+                  </label>
                 </div>
-                <div className="flex items-center">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={newCertification.current}
-                      onChange={(e) => setNewCertification(prev => ({ 
-                        ...prev, 
-                        current: e.target.checked,
-                        expiryDate: e.target.checked ? '' : prev.expiryDate
-                      }))}
-                      className="form-checkbox"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Currently valid</span>
+                {form.hasAllergies && (
+                  <textarea
+                    name="allergyDetails"
+                    value={form.allergyDetails}
+                    onChange={onChange}
+                    rows={2}
+                    className="form-input mt-2"
+                    placeholder="Please list any allergies (medications, foods, environmental)"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Background Check Section */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center mb-4">
+              <Shield className="h-6 w-6 text-green-600 mr-3" />
+              <h3 className="text-xl font-semibold text-gray-900">Background Screening</h3>
+            </div>
+
+            <div className="space-y-6">
+              {/* Criminal History */}
+              <div>
+                <div className="flex items-center space-x-3 mb-2">
+                  <input
+                    type="checkbox"
+                    name="hasConvictions"
+                    checked={form.hasConvictions}
+                    onChange={onChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                  />
+                  <label className="text-sm font-medium text-gray-700">
+                    Have you ever been convicted of a crime?
+                  </label>
+                </div>
+                {form.hasConvictions && (
+                  <textarea
+                    name="convictionDetails"
+                    value={form.convictionDetails}
+                    onChange={onChange}
+                    rows={3}
+                    className="form-input mt-2"
+                    placeholder="Please provide details of any convictions"
+                  />
+                )}
+              </div>
+
+              {/* Consent Checkboxes */}
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    name="backgroundCheckConsent"
+                    checked={form.backgroundCheckConsent}
+                    onChange={onChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded mt-1"
+                    required
+                  />
+                  <label className="text-sm text-gray-700">
+                    <span className="font-medium">Background Check Consent *</span><br />
+                    I consent to a comprehensive background check including criminal history, employment verification, and reference checks.
+                  </label>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    name="drugTestConsent"
+                    checked={form.drugTestConsent}
+                    onChange={onChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded mt-1"
+                    required
+                  />
+                  <label className="text-sm text-gray-700">
+                    <span className="font-medium">Drug Test Consent *</span><br />
+                    I consent to drug and alcohol testing as required for healthcare positions.
+                  </label>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    name="medicalExamConsent"
+                    checked={form.medicalExamConsent}
+                    onChange={onChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded mt-1"
+                    required
+                  />
+                  <label className="text-sm text-gray-700">
+                    <span className="font-medium">Medical Examination Consent *</span><br />
+                    I consent to a medical examination to verify my fitness for providing healthcare services.
                   </label>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={addCertification}
-                className="btn btn-secondary mt-4"
-              >
-                Add Certification
-              </button>
             </div>
           </div>
 
-          {/* Education */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Education</h3>
-            
-            <div className="space-y-4 mb-6">
-              {form.education.map((edu, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{edu.degree} in {edu.field}</h4>
-                      <p className="text-sm text-gray-600">{edu.institution}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeEducation(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <p>Graduated: {edu.graduationDate}</p>
-                    {edu.gpa && <p>GPA: {edu.gpa}</p>}
-                    {edu.honors && <p>Honors: {edu.honors}</p>}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-4">Add Education</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label">Institution</label>
-                  <input
-                    type="text"
-                    value={newEducation.institution}
-                    onChange={(e) => setNewEducation(prev => ({ ...prev, institution: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., University of California"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Degree</label>
-                  <select
-                    value={newEducation.degree}
-                    onChange={(e) => setNewEducation(prev => ({ ...prev, degree: e.target.value }))}
-                    className="form-input"
-                  >
-                    <option value="">Select degree</option>
-                    <option value="High School Diploma">High School Diploma</option>
-                    <option value="Associate Degree">Associate Degree</option>
-                    <option value="Bachelor's Degree">Bachelor's Degree</option>
-                    <option value="Master's Degree">Master's Degree</option>
-                    <option value="Doctorate">Doctorate</option>
-                    <option value="Certificate">Certificate</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">Field of Study</label>
-                  <input
-                    type="text"
-                    value={newEducation.field}
-                    onChange={(e) => setNewEducation(prev => ({ ...prev, field: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., Nursing, Healthcare Administration"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Graduation Date</label>
-                  <input
-                    type="date"
-                    value={newEducation.graduationDate}
-                    onChange={(e) => setNewEducation(prev => ({ ...prev, graduationDate: e.target.value }))}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">GPA (optional)</label>
-                  <input
-                    type="text"
-                    value={newEducation.gpa}
-                    onChange={(e) => setNewEducation(prev => ({ ...prev, gpa: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., 3.8"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Honors (optional)</label>
-                  <input
-                    type="text"
-                    value={newEducation.honors}
-                    onChange={(e) => setNewEducation(prev => ({ ...prev, honors: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., Magna Cum Laude"
-                  />
-                </div>
+          {/* Important Notice */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <div className="flex items-start">
+              <AlertTriangle className="h-6 w-6 text-yellow-600 mr-3 mt-1" />
+              <div>
+                <h4 className="font-semibold text-yellow-800 mb-2">Important Notice</h4>
+                <ul className="text-sm text-yellow-700 space-y-1">
+                  <li>• All information provided will be kept confidential and used only for screening purposes</li>
+                  <li>• Providing false information may result in immediate disqualification</li>
+                  <li>• Medical and background checks are required for all healthcare positions</li>
+                  <li>• You will be notified of the results within 3-5 business days</li>
+                </ul>
               </div>
-              <button
-                type="button"
-                onClick={addEducation}
-                className="btn btn-secondary mt-4"
-              >
-                Add Education
-              </button>
             </div>
           </div>
 
-          {/* Skills */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Professional Skills</h3>
-            
-            <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={newSkill}
-                onChange={(e) => setNewSkill(e.target.value)}
-                className="form-input flex-1"
-                placeholder="e.g., Medication Management, Physical Therapy"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-              />
-              <button type="button" onClick={addSkill} className="btn btn-secondary">
-                Add
-              </button>
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              {form.skills.map((skill, index) => (
-                <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
-                  {skill}
-                  <button
-                    type="button"
-                    onClick={() => removeSkill(skill)}
-                    className="ml-2 text-purple-600 hover:text-purple-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Training */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Training</h3>
-            
-            <div className="space-y-4 mb-6">
-              {form.training.map((train, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{train.name}</h4>
-                      <p className="text-sm text-gray-600">{train.provider}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeTraining(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <p>Completed: {train.completionDate}</p>
-                    {train.hours && <p>Hours: {train.hours}</p>}
-                    {train.certificate && <p>Certificate: {train.certificate}</p>}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-4">Add Training</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label">Training Name</label>
-                  <input
-                    type="text"
-                    value={newTraining.name}
-                    onChange={(e) => setNewTraining(prev => ({ ...prev, name: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., CPR Certification"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Provider</label>
-                  <input
-                    type="text"
-                    value={newTraining.provider}
-                    onChange={(e) => setNewTraining(prev => ({ ...prev, provider: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., American Heart Association"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Completion Date</label>
-                  <input
-                    type="date"
-                    value={newTraining.completionDate}
-                    onChange={(e) => setNewTraining(prev => ({ ...prev, completionDate: e.target.value }))}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Hours</label>
-                  <input
-                    type="number"
-                    value={newTraining.hours}
-                    onChange={(e) => setNewTraining(prev => ({ ...prev, hours: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., 8"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="form-label">Certificate Number (optional)</label>
-                  <input
-                    type="text"
-                    value={newTraining.certificate}
-                    onChange={(e) => setNewTraining(prev => ({ ...prev, certificate: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., CPR-2024-001"
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={addTraining}
-                className="btn btn-secondary mt-4"
-              >
-                Add Training
-              </button>
-            </div>
-          </div>
-
-          {/* Licenses */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Professional Licenses</h3>
-            
-            <div className="space-y-4 mb-6">
-              {form.licenses.map((license, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{license.type}</h4>
-                      <p className="text-sm text-gray-600">License #{license.number}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeLicense(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <p>State: {license.issuingState}</p>
-                    <p>Issued: {license.issueDate}</p>
-                    {!license.current && license.expiryDate && <p>Expires: {license.expiryDate}</p>}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-4">Add License</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label">License Type</label>
-                  <select
-                    value={newLicense.type}
-                    onChange={(e) => setNewLicense(prev => ({ ...prev, type: e.target.value }))}
-                    className="form-input"
-                  >
-                    <option value="">Select license type</option>
-                    <option value="CNA">Certified Nursing Assistant (CNA)</option>
-                    <option value="LPN">Licensed Practical Nurse (LPN)</option>
-                    <option value="RN">Registered Nurse (RN)</option>
-                    <option value="LVN">Licensed Vocational Nurse (LVN)</option>
-                    <option value="HHA">Home Health Aide (HHA)</option>
-                    <option value="PCA">Personal Care Assistant (PCA)</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">License Number</label>
-                  <input
-                    type="text"
-                    value={newLicense.number}
-                    onChange={(e) => setNewLicense(prev => ({ ...prev, number: e.target.value }))}
-                    className="form-input"
-                    placeholder="e.g., CNA-12345"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Issuing State</label>
-                  <select
-                    value={newLicense.issuingState}
-                    onChange={(e) => setNewLicense(prev => ({ ...prev, issuingState: e.target.value }))}
-                    className="form-input"
-                  >
-                    <option value="">Select state</option>
-                    <option value="CA">California</option>
-                    <option value="NY">New York</option>
-                    <option value="TX">Texas</option>
-                    <option value="FL">Florida</option>
-                    <option value="IL">Illinois</option>
-                    <option value="PA">Pennsylvania</option>
-                    <option value="OH">Ohio</option>
-                    <option value="GA">Georgia</option>
-                    <option value="NC">North Carolina</option>
-                    <option value="MI">Michigan</option>
-                    {/* Add more states as needed */}
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">Issue Date</label>
-                  <input
-                    type="date"
-                    value={newLicense.issueDate}
-                    onChange={(e) => setNewLicense(prev => ({ ...prev, issueDate: e.target.value }))}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Expiry Date</label>
-                  <input
-                    type="date"
-                    value={newLicense.expiryDate}
-                    onChange={(e) => setNewLicense(prev => ({ ...prev, expiryDate: e.target.value }))}
-                    className="form-input"
-                    disabled={newLicense.current}
-                  />
-                </div>
-                <div className="flex items-center">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={newLicense.current}
-                      onChange={(e) => setNewLicense(prev => ({ 
-                        ...prev, 
-                        current: e.target.checked,
-                        expiryDate: e.target.checked ? '' : prev.expiryDate
-                      }))}
-                      className="form-checkbox"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Currently valid</span>
-                  </label>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={addLicense}
-                className="btn btn-secondary mt-4"
-              >
-                Add License
-              </button>
-            </div>
-          </div>
-
+          {/* Navigation */}
           <div className="flex justify-between">
             <button
               type="button"
               onClick={() => navigate('/caregiver/onboarding/career')}
-              className="btn btn-outline"
+              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
-              Back
+              Previous
             </button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
+            <button
+              type="submit"
+              disabled={saving || !form.medicalQualification || !form.backgroundCheckConsent || !form.drugTestConsent || !form.medicalExamConsent}
+              className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {saving ? 'Saving...' : 'Continue to References'}
             </button>
           </div>
