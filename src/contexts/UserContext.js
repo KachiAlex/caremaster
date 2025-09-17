@@ -99,28 +99,8 @@ export const UserProvider = ({ children }) => {
   };
 
   const getCaregiverOnboardingRoute = () => {
-    if (!userProfile || userProfile.userType !== 'caregiver') {
-      return '/caregiver/onboarding/career'; // Default first step
-    }
-
-    // Check which step they need to complete next
-    if (!userProfile.onboardingCareerComplete) {
-      return '/caregiver/onboarding/career';
-    }
-    if (!userProfile.onboardingQualificationsComplete) {
-      return '/caregiver/onboarding/qualifications';
-    }
-    if (!userProfile.onboardingReferencesComplete) {
-      return '/caregiver/onboarding/references';
-    }
-    if (!userProfile.onboardingDocumentsComplete) {
-      return '/caregiver/onboarding/documents';
-    }
-    if (!userProfile.onboardingStatementComplete) {
-      return '/caregiver/onboarding/statement';
-    }
-
-    return '/caregiver/onboarding/career'; // Fallback to first step
+    // Always redirect to the new comprehensive onboarding page
+    return '/caregiver/onboarding';
   };
 
   const isOnboardingIncomplete = () => {

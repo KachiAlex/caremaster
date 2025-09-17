@@ -73,7 +73,7 @@ const Signup = () => {
       
       // Start onboarding after signup based on user type
       if (formData.userType === 'caregiver') {
-        navigate('/caregiver/onboarding/career');
+        navigate('/caregiver/onboarding');
       } else {
         navigate('/onboarding/profile');
       }

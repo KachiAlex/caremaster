@@ -41,6 +41,8 @@ import OnboardingProfile from './pages/OnboardingProfile';
 import OnboardingMedical from './pages/OnboardingMedical';
 import CaregiverOnboardingCareer from './pages/CaregiverOnboardingCareer';
 import CaregiverOnboardingQualifications from './pages/CaregiverOnboardingQualifications';
+import CaregiverOnboarding from './pages/CaregiverOnboarding';
+import TestQualifications from './pages/TestQualifications';
 import CaregiverOnboardingReferences from './pages/CaregiverOnboardingReferences';
 import CaregiverOnboardingDocuments from './pages/CaregiverOnboardingDocuments';
 import CaregiverOnboardingStatement from './pages/CaregiverOnboardingStatement';
@@ -314,8 +316,9 @@ function App() {
       <Route path="/onboarding/medical" element={<OnboardingMedical />} />
       
       {/* Caregiver onboarding routes */}
+      <Route path="/caregiver/onboarding" element={<CaregiverOnboarding />} />
       <Route path="/caregiver/onboarding/career" element={<CaregiverOnboardingCareer />} />
-      <Route path="/caregiver/onboarding/qualifications" element={<CaregiverOnboardingQualifications />} />
+      <Route path="/caregiver/onboarding/qualifications" element={<TestQualifications />} />
       <Route path="/caregiver/onboarding/references" element={<CaregiverOnboardingReferences />} />
       <Route path="/caregiver/onboarding/documents" element={<CaregiverOnboardingDocuments />} />
       <Route path="/caregiver/onboarding/statement" element={<CaregiverOnboardingStatement />} />
