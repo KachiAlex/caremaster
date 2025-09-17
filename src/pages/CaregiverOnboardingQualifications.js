@@ -10,9 +10,7 @@ import {
   FileText, 
   Award,
   CheckCircle,
-  XCircle,
-  Plus,
-  Trash2
+  XCircle
 } from 'lucide-react';
 
 const CaregiverOnboardingQualifications = () => {
@@ -36,10 +34,6 @@ const CaregiverOnboardingQualifications = () => {
     medicationDetails: userProfile?.medicationDetails || '',
     hasAllergies: userProfile?.hasAllergies || false,
     allergyDetails: userProfile?.allergyDetails || '',
-    
-    // Professional Details
-    certifications: userProfile?.certifications || [],
-    education: userProfile?.education || [],
     
     // Background Checks
     hasConvictions: userProfile?.hasConvictions || false,
@@ -121,12 +115,14 @@ const CaregiverOnboardingQualifications = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="form-label">Primary Medical Qualification *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Primary Medical Qualification *
+                </label>
                 <select
                   name="medicalQualification"
                   value={form.medicalQualification}
                   onChange={onChange}
-                  className="form-input"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   <option value="">Select your qualification</option>
@@ -137,35 +133,41 @@ const CaregiverOnboardingQualifications = () => {
               </div>
 
               <div>
-                <label className="form-label">License Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  License Number
+                </label>
                 <input
                   name="licenseNumber"
                   value={form.licenseNumber}
                   onChange={onChange}
-                  className="form-input"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Professional license number"
                 />
               </div>
 
               <div>
-                <label className="form-label">Licensing Board/Authority</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Licensing Board/Authority
+                </label>
                 <input
                   name="licensingBoard"
                   value={form.licensingBoard}
                   onChange={onChange}
-                  className="form-input"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., State Board of Nursing"
                 />
               </div>
 
               <div>
-                <label className="form-label">License Expiry Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  License Expiry Date
+                </label>
                 <input
                   type="date"
                   name="licenseExpiry"
                   value={form.licenseExpiry}
                   onChange={onChange}
-                  className="form-input"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -199,7 +201,7 @@ const CaregiverOnboardingQualifications = () => {
                     value={form.disabilityDetails}
                     onChange={onChange}
                     rows={3}
-                    className="form-input mt-2"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
                     placeholder="Please describe your disabilities and any accommodations needed"
                   />
                 )}
@@ -225,7 +227,7 @@ const CaregiverOnboardingQualifications = () => {
                     value={form.healthConditionDetails}
                     onChange={onChange}
                     rows={3}
-                    className="form-input mt-2"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
                     placeholder="Please list any chronic health conditions"
                   />
                 )}
@@ -251,7 +253,7 @@ const CaregiverOnboardingQualifications = () => {
                     value={form.mentalHealthDetails}
                     onChange={onChange}
                     rows={3}
-                    className="form-input mt-2"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
                     placeholder="Please provide details (this information is confidential)"
                   />
                 )}
@@ -277,7 +279,7 @@ const CaregiverOnboardingQualifications = () => {
                     value={form.medicationDetails}
                     onChange={onChange}
                     rows={3}
-                    className="form-input mt-2"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
                     placeholder="Please list current medications and dosages"
                   />
                 )}
@@ -303,7 +305,7 @@ const CaregiverOnboardingQualifications = () => {
                     value={form.allergyDetails}
                     onChange={onChange}
                     rows={2}
-                    className="form-input mt-2"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
                     placeholder="Please list any allergies (medications, foods, environmental)"
                   />
                 )}
@@ -339,7 +341,7 @@ const CaregiverOnboardingQualifications = () => {
                     value={form.convictionDetails}
                     onChange={onChange}
                     rows={3}
-                    className="form-input mt-2"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-2"
                     placeholder="Please provide details of any convictions"
                   />
                 )}

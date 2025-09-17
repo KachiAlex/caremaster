@@ -27,11 +27,19 @@ export const UserProvider = ({ children }) => {
           
           // Get user profile from Firestore
           const profile = await getUserById(firebaseUser.uid);
+          console.log('🔍 UserContext Debug - Profile loaded:', {
+            userId: firebaseUser.uid,
+            profile: profile,
+            userType: profile?.userType,
+            type: profile?.type
+          });
+          
           if (profile) {
             setUserProfile(profile);
             // Handle both 'patient' and 'elderly' as the same role, also check userType field
             const roleFromProfile = profile.userType || profile.type || 'patient';
             setUserRole(roleFromProfile);
+            console.log('✅ User role set to:', roleFromProfile);
           } else {
             // User profile doesn't exist in Firestore yet - wait a bit for it to be created
             console.log('User profile not found in Firestore, waiting for profile creation...');

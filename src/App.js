@@ -486,17 +486,24 @@ export default App;
 function OnboardingGuardedLayout() {
   // Import hook normally; component is rendered under <UserProvider>
   const { useUser } = require('./contexts/UserContext');
-  const { isOnboardingIncomplete, userProfile, getCaregiverOnboardingRoute } = useUser();
+  const { isOnboardingIncomplete, userProfile, getCaregiverOnboardingRoute, user } = useUser();
+  
+  console.log('🔍 OnboardingGuardedLayout Debug:', {
+    user: user?.uid,
+    userProfile: userProfile,
+    userType: userProfile?.userType,
+    isIncomplete: isOnboardingIncomplete()
+  });
   
   if (isOnboardingIncomplete()) {
     // Redirect caregivers to appropriate onboarding step
     if (userProfile?.userType === 'caregiver') {
       const caregiverRoute = getCaregiverOnboardingRoute();
-      console.log('🔄 Redirecting caregiver to:', caregiverRoute);
+      console.log('🔄 Redirecting CAREGIVER to:', caregiverRoute);
       return <Navigate to={caregiverRoute} replace />;
     }
     // Redirect patients/elderly to patient onboarding
-    console.log('🔄 Redirecting patient to onboarding');
+    console.log('🔄 Redirecting PATIENT to onboarding, userType:', userProfile?.userType);
     return <Navigate to="/onboarding/profile" replace />;
   }
   

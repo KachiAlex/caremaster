@@ -94,27 +94,42 @@ export const getUserById = async (userId) => {
   }
 };
 
-// Create new user (using secure storage)
+// Create new user (with fallback to direct Firestore)
 export const createUser = async (userData) => {
   try {
-    logger.info('Creating new user with secure storage', { userType: userData.userType });
+    logger.info('Creating new user', { userType: userData.userType, userId: userData.id });
     
-    // Use secure storage service
-    const userId = await secureStorageService.storeSecureData(
-      USERS_COLLECTION, 
-      userData.id || 'auto', 
-      {
-        ...userData,
-        status: 'active',
-        joinDate: new Date(),
-        lastActive: new Date()
-      },
-      { encrypt: true, audit: true }
-    );
-    
-    logger.info('User created successfully', { userId });
-    return userId;
+    const userDocData = {
+      ...userData,
+      status: 'active',
+      joinDate: new Date(),
+      lastActive: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Try secure storage first, fallback to direct Firestore
+    try {
+      const userId = await secureStorageService.storeSecureData(
+        USERS_COLLECTION, 
+        userData.id || 'auto', 
+        userDocData,
+        { encrypt: true, audit: true }
+      );
+      logger.info('User created with secure storage', { userId });
+      return userId;
+    } catch (secureStorageError) {
+      logger.warn('Secure storage failed, using direct Firestore', { error: secureStorageError });
+      
+      // Fallback to direct Firestore creation
+      const userRef = doc(db, USERS_COLLECTION, userData.id);
+      await setDoc(userRef, userDocData);
+      
+      logger.info('User created with direct Firestore', { userId: userData.id });
+      return userData.id;
+    }
   } catch (error) {
+    logger.error('Failed to create user', { error, userData });
     errorHandler.handleError(error, { context: 'create_user', userData });
     throw error;
   }

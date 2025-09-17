@@ -111,7 +111,7 @@
       "fields": [
         { "fieldPath": "status", "mode": "ASCENDING" },
         { "fieldPath": "joinDate", "mode": "ASCENDING" },
-        { "fieldPath": "__name__", "mode": "DESCENDING" }
+        { "fieldPath": "__name__", "mode": "ASCENDING" }
       ]
     }
   ],
