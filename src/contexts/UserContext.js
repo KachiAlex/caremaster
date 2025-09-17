@@ -90,6 +90,31 @@ export const UserProvider = ({ children }) => {
     return userRole === 'admin';
   };
 
+  const getCaregiverOnboardingRoute = () => {
+    if (!userProfile || userProfile.userType !== 'caregiver') {
+      return '/caregiver/onboarding/career'; // Default first step
+    }
+
+    // Check which step they need to complete next
+    if (!userProfile.onboardingCareerComplete) {
+      return '/caregiver/onboarding/career';
+    }
+    if (!userProfile.onboardingQualificationsComplete) {
+      return '/caregiver/onboarding/qualifications';
+    }
+    if (!userProfile.onboardingReferencesComplete) {
+      return '/caregiver/onboarding/references';
+    }
+    if (!userProfile.onboardingDocumentsComplete) {
+      return '/caregiver/onboarding/documents';
+    }
+    if (!userProfile.onboardingStatementComplete) {
+      return '/caregiver/onboarding/statement';
+    }
+
+    return '/caregiver/onboarding/career'; // Fallback to first step
+  };
+
   const isOnboardingIncomplete = () => {
     if (!userProfile) {
       console.log('No user profile found, onboarding required');
@@ -99,22 +124,33 @@ export const UserProvider = ({ children }) => {
     console.log('Checking onboarding completion:', {
       userRole,
       userType: userProfile.userType,
-      onboardingComplete: userProfile.onboardingComplete
+      onboardingComplete: userProfile.onboardingComplete,
+      onboardingProfileComplete: userProfile.onboardingProfileComplete
     });
 
-    // For caregivers, check if they've completed caregiver onboarding
-    if (userProfile.userType === 'caregiver' && !userProfile.onboardingComplete) {
-      console.log('Caregiver onboarding incomplete, redirecting to career onboarding');
-      return true;
+    // For caregivers, STRICTLY enforce onboarding completion
+    if (userProfile.userType === 'caregiver') {
+      if (!userProfile.onboardingComplete) {
+        console.log('🚫 CAREGIVER ONBOARDING INCOMPLETE - blocking access');
+        return true;
+      }
+      console.log('✅ Caregiver onboarding complete');
+      return false;
     }
 
     // For elderly/patients, check if they've completed patient onboarding  
-    if ((userProfile.userType === 'elderly' || userRole === 'patient') && !userProfile.onboardingProfileComplete) {
-      console.log('Patient onboarding incomplete');
-      return true;
+    if (userProfile.userType === 'elderly' || userRole === 'patient') {
+      if (!userProfile.onboardingProfileComplete) {
+        console.log('🚫 PATIENT ONBOARDING INCOMPLETE - blocking access');
+        return true;
+      }
+      console.log('✅ Patient onboarding complete');
+      return false;
     }
 
-    return false;
+    // Default to requiring onboarding for unknown user types
+    console.log('⚠️ Unknown user type, requiring onboarding');
+    return true;
     
     /* Original logic - commented out for testing
     if (!userProfile) {
@@ -172,6 +208,7 @@ export const UserProvider = ({ children }) => {
     userRole,
     loading,
     isOnboardingIncomplete,
+    getCaregiverOnboardingRoute,
     isServiceProvider,
     isDoctor,
     isCaregiver,

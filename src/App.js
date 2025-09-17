@@ -402,7 +402,7 @@ function App() {
       </Route>
       <Route 
         path="/caregiver" 
-        element={user ? <CaregiverLayout /> : <Navigate to="/login" replace />} 
+        element={user ? <CaregiverOnboardingGuard /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<CaregiverDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
@@ -486,16 +486,36 @@ export default App;
 function OnboardingGuardedLayout() {
   // Import hook normally; component is rendered under <UserProvider>
   const { useUser } = require('./contexts/UserContext');
-  const { isOnboardingIncomplete, userProfile } = useUser();
+  const { isOnboardingIncomplete, userProfile, getCaregiverOnboardingRoute } = useUser();
   
   if (isOnboardingIncomplete()) {
-    // Redirect caregivers to caregiver onboarding
+    // Redirect caregivers to appropriate onboarding step
     if (userProfile?.userType === 'caregiver') {
-      return <Navigate to="/caregiver/onboarding/career" replace />;
+      const caregiverRoute = getCaregiverOnboardingRoute();
+      console.log('🔄 Redirecting caregiver to:', caregiverRoute);
+      return <Navigate to={caregiverRoute} replace />;
     }
     // Redirect patients/elderly to patient onboarding
+    console.log('🔄 Redirecting patient to onboarding');
     return <Navigate to="/onboarding/profile" replace />;
   }
   
+  console.log('✅ Onboarding complete, showing layout');
   return <Layout />;
+}
+
+// Caregiver-specific onboarding guard
+function CaregiverOnboardingGuard() {
+  const { useUser } = require('./contexts/UserContext');
+  const { userProfile, getCaregiverOnboardingRoute } = useUser();
+  
+  // Only allow access if caregiver has completed onboarding
+  if (userProfile?.userType === 'caregiver' && !userProfile?.onboardingComplete) {
+    const caregiverRoute = getCaregiverOnboardingRoute();
+    console.log('🚫 Caregiver onboarding incomplete, redirecting to:', caregiverRoute);
+    return <Navigate to={caregiverRoute} replace />;
+  }
+  
+  console.log('✅ Caregiver onboarding complete, showing caregiver layout');
+  return <CaregiverLayout />;
 }

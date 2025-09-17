@@ -23,12 +23,8 @@ const Login = () => {
       await signInWithEmailAndPassword(auth, email, password);
       toast.success('Welcome back!');
       
-      // Navigate based on user role
-      if (userRole === 'caregiver') {
-        navigate('/caregiver');
-      } else {
-        navigate('/dashboard');
-      }
+      // Always navigate to dashboard - the OnboardingGuardedLayout will handle redirects
+      navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
       
