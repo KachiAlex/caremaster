@@ -13,8 +13,7 @@ import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
 import ServiceProviderLayout from './components/ServiceProviderLayout';
 import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
+import Auth from './pages/Auth';
 import AdminLogin from './pages/AdminLogin';
 import Dashboard from './pages/Dashboard';
 import Medications from './pages/Medications';
@@ -37,16 +36,7 @@ import Messages from './pages/Messages';
 import Subscription from './pages/Subscription';
 import Services from './pages/Services';
 import Pricing from './pages/Pricing';
-import OnboardingProfile from './pages/OnboardingProfile';
-import OnboardingMedical from './pages/OnboardingMedical';
-import CaregiverOnboardingCareer from './pages/CaregiverOnboardingCareer';
-import CaregiverOnboardingQualifications from './pages/CaregiverOnboardingQualifications';
-import CaregiverOnboarding from './pages/CaregiverOnboarding';
-import CaregiverSignup from './pages/CaregiverSignup';
-import TestQualifications from './pages/TestQualifications';
-import CaregiverOnboardingReferences from './pages/CaregiverOnboardingReferences';
-import CaregiverOnboardingDocuments from './pages/CaregiverOnboardingDocuments';
-import CaregiverOnboardingStatement from './pages/CaregiverOnboardingStatement';
+// All onboarding is now integrated into Auth.js
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminReports from './pages/AdminReports';
@@ -312,33 +302,22 @@ function App() {
       />
       
       <Routes>
-      {/* Onboarding routes */}
-      <Route path="/onboarding/profile" element={<OnboardingProfile />} />
-      <Route path="/onboarding/medical" element={<OnboardingMedical />} />
-      
-      {/* Caregiver onboarding routes - PUBLIC (no guards) */}
-      <Route path="/caregiver/onboarding" element={<CaregiverOnboarding />} />
-      <Route path="/caregiver/onboarding/career" element={<CaregiverOnboardingCareer />} />
-      <Route path="/caregiver/onboarding/qualifications" element={<TestQualifications />} />
-      <Route path="/caregiver/onboarding/references" element={<CaregiverOnboardingReferences />} />
-      <Route path="/caregiver/onboarding/documents" element={<CaregiverOnboardingDocuments />} />
-      <Route path="/caregiver/onboarding/statement" element={<CaregiverOnboardingStatement />} />
       {/* Public routes */}
       <Route 
         path="/" 
         element={<Landing />} 
       />
       <Route 
+        path="/auth" 
+        element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
+      />
+      <Route 
         path="/login" 
-        element={user ? <Navigate to="/dashboard" replace /> : <Login />} 
+        element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
       />
       <Route 
         path="/signup" 
-        element={user ? <Navigate to="/dashboard" replace /> : <Signup />} 
-      />
-      <Route 
-        path="/caregiver-signup" 
-        element={user ? <Navigate to="/dashboard" replace /> : <CaregiverSignup />} 
+        element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
       />
       
       {/* Protected routes */}
