@@ -248,11 +248,17 @@ const Signup = () => {
               </button>
             </div>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <p className="text-gray-600">
                 Already have an account?{' '}
                 <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
                   Sign in here
+                </Link>
+              </p>
+              <p className="text-gray-600">
+                Healthcare Professional?{' '}
+                <Link to="/caregiver-signup" className="font-medium text-green-600 hover:text-green-500">
+                  Join as a Caregiver →
                 </Link>
               </p>
             </div>

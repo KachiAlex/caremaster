@@ -42,6 +42,7 @@ import OnboardingMedical from './pages/OnboardingMedical';
 import CaregiverOnboardingCareer from './pages/CaregiverOnboardingCareer';
 import CaregiverOnboardingQualifications from './pages/CaregiverOnboardingQualifications';
 import CaregiverOnboarding from './pages/CaregiverOnboarding';
+import CaregiverSignup from './pages/CaregiverSignup';
 import TestQualifications from './pages/TestQualifications';
 import CaregiverOnboardingReferences from './pages/CaregiverOnboardingReferences';
 import CaregiverOnboardingDocuments from './pages/CaregiverOnboardingDocuments';
@@ -334,6 +335,10 @@ function App() {
       <Route 
         path="/signup" 
         element={user ? <Navigate to="/dashboard" replace /> : <Signup />} 
+      />
+      <Route 
+        path="/caregiver-signup" 
+        element={user ? <Navigate to="/dashboard" replace /> : <CaregiverSignup />} 
       />
       
       {/* Protected routes */}
