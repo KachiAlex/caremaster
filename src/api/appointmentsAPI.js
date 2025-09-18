@@ -238,30 +238,13 @@ export const getTodaysAppointments = async (userId, userRole) => {
     const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
     let q;
 
+    // Use simple queries that don't require complex indexes
     if (userRole === 'doctor') {
-      q = query(
-        appointmentsRef,
-        where('doctorId', '==', userId),
-        where('scheduledTime', '>=', Timestamp.fromDate(today)),
-        where('scheduledTime', '<', Timestamp.fromDate(tomorrow)),
-        orderBy('scheduledTime', 'asc')
-      );
+      q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver') {
-      q = query(
-        appointmentsRef,
-        where('caregiverId', '==', userId),
-        where('scheduledTime', '>=', Timestamp.fromDate(today)),
-        where('scheduledTime', '<', Timestamp.fromDate(tomorrow)),
-        orderBy('scheduledTime', 'asc')
-      );
+      q = query(appointmentsRef, where('caregiverId', '==', userId));
     } else if (userRole === 'elderly') {
-      q = query(
-        appointmentsRef,
-        where('patientId', '==', userId),
-        where('scheduledTime', '>=', Timestamp.fromDate(today)),
-        where('scheduledTime', '<', Timestamp.fromDate(tomorrow)),
-        orderBy('scheduledTime', 'asc')
-      );
+      q = query(appointmentsRef, where('patientId', '==', userId));
     } else {
       throw new Error('Invalid user role');
     }
@@ -271,14 +254,22 @@ export const getTodaysAppointments = async (userId, userRole) => {
     
     querySnapshot.forEach((doc) => {
       const appointmentData = doc.data();
-      appointments.push({
-        id: doc.id,
-        ...appointmentData,
-        scheduledTime: appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime,
-        createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
-        updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
-      });
+      const scheduledTime = appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime;
+      
+      // Filter for today's appointments on client side
+      if (scheduledTime && scheduledTime >= today && scheduledTime < tomorrow) {
+        appointments.push({
+          id: doc.id,
+          ...appointmentData,
+          scheduledTime: scheduledTime,
+          createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
+          updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
+        });
+      }
     });
+    
+    // Sort by scheduled time
+    appointments.sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
     
     return appointments;
   } catch (error) {
@@ -298,30 +289,13 @@ export const getUpcomingAppointments = async (userId, userRole) => {
     const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
     let q;
 
+    // Use simple queries that don't require complex indexes
     if (userRole === 'doctor') {
-      q = query(
-        appointmentsRef,
-        where('doctorId', '==', userId),
-        where('scheduledTime', '>=', Timestamp.fromDate(today)),
-        where('scheduledTime', '<=', Timestamp.fromDate(nextWeek)),
-        orderBy('scheduledTime', 'asc')
-      );
+      q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver') {
-      q = query(
-        appointmentsRef,
-        where('caregiverId', '==', userId),
-        where('scheduledTime', '>=', Timestamp.fromDate(today)),
-        where('scheduledTime', '<=', Timestamp.fromDate(nextWeek)),
-        orderBy('scheduledTime', 'asc')
-      );
+      q = query(appointmentsRef, where('caregiverId', '==', userId));
     } else if (userRole === 'elderly') {
-      q = query(
-        appointmentsRef,
-        where('patientId', '==', userId),
-        where('scheduledTime', '>=', Timestamp.fromDate(today)),
-        where('scheduledTime', '<=', Timestamp.fromDate(nextWeek)),
-        orderBy('scheduledTime', 'asc')
-      );
+      q = query(appointmentsRef, where('patientId', '==', userId));
     } else {
       throw new Error('Invalid user role');
     }
@@ -331,14 +305,22 @@ export const getUpcomingAppointments = async (userId, userRole) => {
     
     querySnapshot.forEach((doc) => {
       const appointmentData = doc.data();
-      appointments.push({
-        id: doc.id,
-        ...appointmentData,
-        scheduledTime: appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime,
-        createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
-        updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
-      });
+      const scheduledTime = appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime;
+      
+      // Filter for upcoming appointments (next 7 days) on client side
+      if (scheduledTime && scheduledTime >= today && scheduledTime <= nextWeek) {
+        appointments.push({
+          id: doc.id,
+          ...appointmentData,
+          scheduledTime: scheduledTime,
+          createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
+          updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
+        });
+      }
     });
+    
+    // Sort by scheduled time
+    appointments.sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
     
     return appointments;
   } catch (error) {

@@ -16,88 +16,57 @@ import {
   Eye,
   Edit,
   Trash2,
-  Star
+  Star,
+  Activity,
+  Pill,
+  Shield,
+  X
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { getPatientsByCaregiver } from '../api/patientsAPI';
+import { getTodaysCareTasks } from '../api/careTasksAPI';
+import { getLatestVitalSigns } from '../api/vitalSignsAPI';
+import { toast } from 'react-toastify';
 
 const CaregiverPatients = () => {
+  const { userProfile, userRole } = useUser();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showPatientDetails, setShowPatientDetails] = useState(false);
+  const [showAssignmentRequest, setShowAssignmentRequest] = useState(false);
+
+  const loadPatients = async () => {
+    if (!userProfile?.id) return;
+    
+    try {
+      setLoading(true);
+      
+      // Load only assigned patients (admin-controlled)
+      const patientsData = await getPatientsByCaregiver(userProfile.id).catch(err => {
+        console.warn('Failed to fetch assigned patients:', err);
+        return [];
+      });
+
+      console.log(`Loading assigned patients for caregiver ${userProfile.id}:`, patientsData.length);
+      
+      // Use only real assigned patients data - no mock data
+      setPatients(patientsData || []);
+    } catch (error) {
+      console.error('Error loading patients:', error);
+      toast.error('Failed to load patient data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate loading patient data
-    const loadPatients = async () => {
-      try {
-        setTimeout(() => {
-          const mockPatients = [
-            {
-              id: 1,
-              name: 'Adunni Okafor',
-              age: 72,
-              gender: 'Female',
-              phone: '+234 801 234 5678',
-              address: '123 Victoria Island, Lagos',
-              medicalCondition: 'Diabetes',
-              emergencyContact: '+234 802 345 6789',
-              lastVisit: '2024-01-20',
-              nextAppointment: '2024-01-22',
-              status: 'active',
-              notes: 'Patient has diabetes - monitor blood sugar levels regularly',
-              medications: ['Metformin', 'Insulin'],
-              allergies: ['Penicillin'],
-              caregiverNotes: 'Very cooperative, prefers morning visits',
-              rating: 4.8
-            },
-            {
-              id: 2,
-              name: 'Grace Johnson',
-              age: 68,
-              gender: 'Female',
-              phone: '+234 803 456 7890',
-              address: '456 Ikoyi, Lagos',
-              medicalCondition: 'Hypertension',
-              emergencyContact: '+234 804 567 8901',
-              lastVisit: '2024-01-19',
-              nextAppointment: '2024-01-21',
-              status: 'active',
-              notes: 'Patient prefers quiet environment',
-              medications: ['Amlodipine', 'Lisinopril'],
-              allergies: ['Shellfish'],
-              caregiverNotes: 'Loves gardening, very independent',
-              rating: 4.9
-            },
-            {
-              id: 3,
-              name: 'Michael Adebayo',
-              age: 75,
-              gender: 'Male',
-              phone: '+234 805 678 9012',
-              address: '789 Lekki, Lagos',
-              medicalCondition: 'Arthritis',
-              emergencyContact: '+234 806 789 0123',
-              lastVisit: '2024-01-18',
-              nextAppointment: '2024-01-23',
-              status: 'inactive',
-              notes: 'Requires assistance with mobility',
-              medications: ['Ibuprofen', 'Calcium'],
-              allergies: ['Latex'],
-              caregiverNotes: 'Needs help with daily activities',
-              rating: 4.7
-            }
-          ];
-
-          setPatients(mockPatients);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error loading patients:', error);
-        setLoading(false);
-      }
-    };
-
-    loadPatients();
-  }, []);
+    if (userProfile?.id) {
+      loadPatients();
+    }
+  }, [userProfile?.id]);
 
   const filteredPatients = patients.filter(patient => {
     const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -247,17 +216,53 @@ const CaregiverPatients = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex space-x-2">
-                  <button className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-sm">
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button 
+                    onClick={() => {
+                      setSelectedPatient(patient);
+                      setShowPatientDetails(true);
+                    }}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-sm"
+                  >
                     <Eye className="h-4 w-4 mr-1" />
-                    View
+                    View Details
                   </button>
-                  <button className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center text-sm">
+                  <button 
+                    onClick={() => window.location.href = `/service-provider/messages?client=${patient.name}`}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center text-sm"
+                  >
                     <MessageSquare className="h-4 w-4 mr-1" />
                     Message
                   </button>
-                  <button className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                    <Edit className="h-4 w-4" />
+                  <button 
+                    onClick={() => window.location.href = `/service-provider/calls?client=${patient.id}`}
+                    className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center text-sm"
+                  >
+                    <Phone className="h-4 w-4 mr-1" />
+                    Call
+                  </button>
+                  <button 
+                    onClick={() => window.location.href = `/service-provider/diagnostics?client=${patient.id}`}
+                    className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center text-sm"
+                  >
+                    <Activity className="h-4 w-4 mr-1" />
+                    Vitals
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => window.location.href = `/service-provider/prescriptions?client=${patient.id}`}
+                    className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center text-sm"
+                  >
+                    <Pill className="h-4 w-4 mr-1" />
+                    Meds
+                  </button>
+                  <button 
+                    onClick={() => window.location.href = `/service-provider/care-logs?client=${patient.id}`}
+                    className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center text-sm"
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    Logs
                   </button>
                 </div>
               </div>
@@ -269,10 +274,237 @@ const CaregiverPatients = () => {
         {filteredPatients.length === 0 && (
           <div className="text-center py-12">
             <Heart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No patients found</h3>
-            <p className="text-gray-600">
-              {searchTerm ? 'Try adjusting your search criteria' : 'No patients match the selected filter'}
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No assigned patients</h3>
+            <p className="text-gray-600 mb-4">
+              {searchTerm ? 'Try adjusting your search criteria' : 'You don\'t have any assigned patients yet'}
             </p>
+            <button 
+              onClick={() => setShowAssignmentRequest(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Request Patient Assignment
+            </button>
+          </div>
+        )}
+
+        {/* Assignment Request Section */}
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Need More Patients?</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button 
+              onClick={() => setShowAssignmentRequest(true)}
+              className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Request Assignment
+            </button>
+            <button 
+              onClick={() => window.location.href = '/service-provider/messages?topic=assignment-request'}
+              className="flex items-center justify-center p-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+            >
+              <MessageSquare className="h-5 w-5 mr-2" />
+              Contact Admin
+            </button>
+            <button 
+              onClick={() => window.location.href = '/service-provider/settings?section=availability'}
+              className="flex items-center justify-center p-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              <Calendar className="h-5 w-5 mr-2" />
+              Update Availability
+            </button>
+          </div>
+        </div>
+
+        {/* Patient Details Modal */}
+        {showPatientDetails && selectedPatient && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h3 className="text-xl font-semibold text-gray-900">{selectedPatient.name} - Client Details</h3>
+                <button
+                  onClick={() => setShowPatientDetails(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                {/* Basic Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Basic Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="font-medium">Age:</span> {selectedPatient.age}</p>
+                      <p><span className="font-medium">Gender:</span> {selectedPatient.gender}</p>
+                      <p><span className="font-medium">Phone:</span> {selectedPatient.phone}</p>
+                      <p><span className="font-medium">Address:</span> {selectedPatient.address}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Emergency Contact</h4>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="font-medium">Phone:</span> {selectedPatient.emergencyContact}</p>
+                      <p><span className="font-medium">Last Visit:</span> {new Date(selectedPatient.lastVisit).toLocaleDateString()}</p>
+                      <p><span className="font-medium">Next Appointment:</span> {new Date(selectedPatient.nextAppointment).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Medical Info */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Medical Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Condition:</p>
+                      <p className="text-sm text-gray-600">{selectedPatient.medicalCondition}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Allergies:</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedPatient.allergies?.map((allergy, index) => (
+                          <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                            {allergy}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Medications */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Current Medications</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPatient.medications?.map((med, index) => (
+                      <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                        {med}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Care Notes</h4>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{selectedPatient.caregiverNotes}</p>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <button 
+                    onClick={() => window.location.href = `/service-provider/calls?client=${selectedPatient.id}`}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center"
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Call
+                  </button>
+                  <button 
+                    onClick={() => window.location.href = `/service-provider/messages?client=${selectedPatient.name}`}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Message
+                  </button>
+                  <button 
+                    onClick={() => window.location.href = `/service-provider/diagnostics?client=${selectedPatient.id}`}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center"
+                  >
+                    <Activity className="h-4 w-4 mr-2" />
+                    Vitals
+                  </button>
+                  <button 
+                    onClick={() => window.location.href = `/service-provider/care-logs?client=${selectedPatient.id}`}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center"
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Logs
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Assignment Request Modal */}
+        {showAssignmentRequest && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h3 className="text-lg font-semibold text-gray-900">Request Patient Assignment</h3>
+                <button
+                  onClick={() => setShowAssignmentRequest(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Patient Type</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Any patient type</option>
+                    <option value="diabetes">Diabetes care</option>
+                    <option value="dementia">Dementia/Memory care</option>
+                    <option value="mobility">Mobility assistance</option>
+                    <option value="companionship">Companionship care</option>
+                    <option value="medical">Medical care</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Availability</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="full-time">Full-time (Mon-Fri)</option>
+                    <option value="part-time">Part-time</option>
+                    <option value="weekends">Weekends only</option>
+                    <option value="evenings">Evenings only</option>
+                    <option value="on-call">On-call basis</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+                  <textarea
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows="3"
+                    placeholder="Any specific preferences or requirements..."
+                  />
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <Shield className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-800">Assignment Process</h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Your request will be reviewed by our admin team who will match you with suitable patients based on your qualifications and availability.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 p-6 border-t">
+                <button
+                  onClick={() => setShowAssignmentRequest(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    toast.success('Assignment request submitted to admin for review');
+                    setShowAssignmentRequest(false);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Submit Request
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

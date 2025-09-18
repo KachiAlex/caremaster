@@ -99,19 +99,11 @@ const Landing = () => {
       age: "72 years old"
     },
     {
-      name: "Dr. Kemi Adebayo",
-      location: "Abuja, Nigeria",
-      rating: 5,
-      text: "As a healthcare professional, I can confidently recommend ElderCare Nigeria. Their services are top-notch and their technology is cutting-edge.",
-      photo: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2",
-      age: "68 years old"
-    },
-    {
       name: "Mr. Chinedu Okoro",
       location: "Port Harcourt, Nigeria",
       rating: 5,
       text: "The medication management system has been incredibly helpful. I never miss a dose anymore, and my family is always informed about my health status.",
-      photo: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=3",
+      photo: null,
       age: "75 years old"
     }
   ];

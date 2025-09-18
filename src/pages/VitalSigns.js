@@ -4,7 +4,11 @@ import {
   Droplets, 
   Plus, 
   TrendingUp,
-  ChevronDown
+  ChevronDown,
+  MessageCircle,
+  Stethoscope,
+  Calendar,
+  FileText
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
@@ -401,6 +405,46 @@ const VitalSigns = () => {
               <p className="text-gray-600">Record more vital signs to see health trends over time.</p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Caregiver Monitoring Section */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Share with Your Care Team</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <button 
+            onClick={() => window.location.href = '/messages?topic=vital-signs'}
+            className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+          >
+            <MessageCircle className="h-5 w-5 mr-2" />
+            Share with Caregiver
+          </button>
+          <button 
+            onClick={() => window.location.href = '/telemedicine?type=health-review'}
+            className="flex items-center justify-center p-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+          >
+            <Stethoscope className="h-5 w-5 mr-2" />
+            Doctor Review
+          </button>
+          <button 
+            onClick={() => window.location.href = '/appointments?type=health-checkup'}
+            className="flex items-center justify-center p-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+          >
+            <Calendar className="h-5 w-5 mr-2" />
+            Schedule Checkup
+          </button>
+          <button 
+            onClick={() => {
+              const vitalsData = currentVitals.map(v => `${v.type}: ${v.value} ${v.unit || ''}`).join('\n');
+              navigator.share ? 
+                navigator.share({title: 'My Vital Signs', text: vitalsData}) :
+                navigator.clipboard.writeText(vitalsData).then(() => toast.success('Vital signs copied to clipboard'));
+            }}
+            className="flex items-center justify-center p-4 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+          >
+            <FileText className="h-5 w-5 mr-2" />
+            Export Data
+          </button>
         </div>
       </div>
     </div>

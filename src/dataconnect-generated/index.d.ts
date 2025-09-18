@@ -21,8 +21,13 @@ export interface Appointment_Key {
 
 export interface CaregiverRelationship_Key {
   caregiverId: UUIDString;
-  elderlyProfileId: UUIDString;
+  clientProfileId: UUIDString;
   __typename?: 'CaregiverRelationship_Key';
+}
+
+export interface ClientProfile_Key {
+  id: UUIDString;
+  __typename?: 'ClientProfile_Key';
 }
 
 export interface DoseLog_Key {
@@ -30,9 +35,104 @@ export interface DoseLog_Key {
   __typename?: 'DoseLog_Key';
 }
 
-export interface ElderlyProfile_Key {
-  id: UUIDString;
-  __typename?: 'ElderlyProfile_Key';
+export interface GetCaregiverClientsData {
+  caregiverRelationships: ({
+    clientProfile: {
+      id: UUIDString;
+      user: {
+        displayName: string;
+        email?: string | null;
+      };
+        emergencyContactName: string;
+        emergencyContactPhone: string;
+    } & ClientProfile_Key;
+      establishedAt: TimestampString;
+      accessLevel?: string | null;
+  })[];
+}
+
+export interface GetCaregiverClientsVariables {
+  caregiverId: UUIDString;
+}
+
+export interface GetClientAppointmentsData {
+  appointments: ({
+    id: UUIDString;
+    dateTime: TimestampString;
+    type: string;
+    location: string;
+    doctorName?: string | null;
+    notes?: string | null;
+  } & Appointment_Key)[];
+}
+
+export interface GetClientAppointmentsVariables {
+  clientProfileId: UUIDString;
+}
+
+export interface GetClientMedicationsData {
+  medications: ({
+    id: UUIDString;
+    name: string;
+    dosage: string;
+    frequency: string;
+    startTime: TimestampString;
+    instructions?: string | null;
+    notes?: string | null;
+    endDate?: DateString | null;
+  } & Medication_Key)[];
+}
+
+export interface GetClientMedicationsVariables {
+  clientProfileId: UUIDString;
+}
+
+export interface GetClientProfileData {
+  clientProfiles: ({
+    id: UUIDString;
+    user: {
+      id: UUIDString;
+      displayName: string;
+      email?: string | null;
+    } & User_Key;
+      emergencyContactName: string;
+      emergencyContactPhone: string;
+      primaryCareDoctor?: string | null;
+      allergies?: string | null;
+      medicalConditions?: string | null;
+  } & ClientProfile_Key)[];
+}
+
+export interface GetClientProfileVariables {
+  clientId: UUIDString;
+}
+
+export interface GetClientVitalSignsData {
+  vitalSigns: ({
+    id: UUIDString;
+    type: string;
+    value: number;
+    unit?: string | null;
+    recordedAt: TimestampString;
+    notes?: string | null;
+  } & VitalSign_Key)[];
+}
+
+export interface GetClientVitalSignsVariables {
+  clientProfileId: UUIDString;
+}
+
+export interface GetCurrentUserData {
+  users: ({
+    id: UUIDString;
+    firebaseUid: string;
+    displayName: string;
+    userType: string;
+    email?: string | null;
+    photoUrl?: string | null;
+    dateOfBirth?: DateString | null;
+    createdAt: TimestampString;
+  } & User_Key)[];
 }
 
 export interface GetMyMedicationsData {
@@ -44,7 +144,24 @@ export interface GetMyMedicationsData {
   } & Medication_Key)[];
 }
 
-export interface ListCaregiversForElderlyProfileData {
+export interface GetUserProfileData {
+  users: ({
+    id: UUIDString;
+    firebaseUid: string;
+    displayName: string;
+    userType: string;
+    email?: string | null;
+    photoUrl?: string | null;
+    dateOfBirth?: DateString | null;
+    createdAt: TimestampString;
+  } & User_Key)[];
+}
+
+export interface GetUserProfileVariables {
+  firebaseUid: string;
+}
+
+export interface ListCaregiversForClientProfileData {
   caregiverRelationships: ({
     caregiver: {
       id: UUIDString;
@@ -55,8 +172,8 @@ export interface ListCaregiversForElderlyProfileData {
   })[];
 }
 
-export interface ListCaregiversForElderlyProfileVariables {
-  elderlyProfileId: UUIDString;
+export interface ListCaregiversForClientProfileVariables {
+  clientProfileId: UUIDString;
 }
 
 export interface Medication_Key {
@@ -119,15 +236,99 @@ export const updateMedicationNotesRef: UpdateMedicationNotesRef;
 export function updateMedicationNotes(vars: UpdateMedicationNotesVariables): MutationPromise<UpdateMedicationNotesData, UpdateMedicationNotesVariables>;
 export function updateMedicationNotes(dc: DataConnect, vars: UpdateMedicationNotesVariables): MutationPromise<UpdateMedicationNotesData, UpdateMedicationNotesVariables>;
 
-interface ListCaregiversForElderlyProfileRef {
+interface ListCaregiversForClientProfileRef {
   /* Allow users to create refs without passing in DataConnect */
-  (vars: ListCaregiversForElderlyProfileVariables): QueryRef<ListCaregiversForElderlyProfileData, ListCaregiversForElderlyProfileVariables>;
+  (vars: ListCaregiversForClientProfileVariables): QueryRef<ListCaregiversForClientProfileData, ListCaregiversForClientProfileVariables>;
   /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect, vars: ListCaregiversForElderlyProfileVariables): QueryRef<ListCaregiversForElderlyProfileData, ListCaregiversForElderlyProfileVariables>;
+  (dc: DataConnect, vars: ListCaregiversForClientProfileVariables): QueryRef<ListCaregiversForClientProfileData, ListCaregiversForClientProfileVariables>;
   operationName: string;
 }
-export const listCaregiversForElderlyProfileRef: ListCaregiversForElderlyProfileRef;
+export const listCaregiversForClientProfileRef: ListCaregiversForClientProfileRef;
 
-export function listCaregiversForElderlyProfile(vars: ListCaregiversForElderlyProfileVariables): QueryPromise<ListCaregiversForElderlyProfileData, ListCaregiversForElderlyProfileVariables>;
-export function listCaregiversForElderlyProfile(dc: DataConnect, vars: ListCaregiversForElderlyProfileVariables): QueryPromise<ListCaregiversForElderlyProfileData, ListCaregiversForElderlyProfileVariables>;
+export function listCaregiversForClientProfile(vars: ListCaregiversForClientProfileVariables): QueryPromise<ListCaregiversForClientProfileData, ListCaregiversForClientProfileVariables>;
+export function listCaregiversForClientProfile(dc: DataConnect, vars: ListCaregiversForClientProfileVariables): QueryPromise<ListCaregiversForClientProfileData, ListCaregiversForClientProfileVariables>;
+
+interface GetUserProfileRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: GetUserProfileVariables): QueryRef<GetUserProfileData, GetUserProfileVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: GetUserProfileVariables): QueryRef<GetUserProfileData, GetUserProfileVariables>;
+  operationName: string;
+}
+export const getUserProfileRef: GetUserProfileRef;
+
+export function getUserProfile(vars: GetUserProfileVariables): QueryPromise<GetUserProfileData, GetUserProfileVariables>;
+export function getUserProfile(dc: DataConnect, vars: GetUserProfileVariables): QueryPromise<GetUserProfileData, GetUserProfileVariables>;
+
+interface GetCurrentUserRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (): QueryRef<GetCurrentUserData, undefined>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect): QueryRef<GetCurrentUserData, undefined>;
+  operationName: string;
+}
+export const getCurrentUserRef: GetCurrentUserRef;
+
+export function getCurrentUser(): QueryPromise<GetCurrentUserData, undefined>;
+export function getCurrentUser(dc: DataConnect): QueryPromise<GetCurrentUserData, undefined>;
+
+interface GetClientProfileRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: GetClientProfileVariables): QueryRef<GetClientProfileData, GetClientProfileVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: GetClientProfileVariables): QueryRef<GetClientProfileData, GetClientProfileVariables>;
+  operationName: string;
+}
+export const getClientProfileRef: GetClientProfileRef;
+
+export function getClientProfile(vars: GetClientProfileVariables): QueryPromise<GetClientProfileData, GetClientProfileVariables>;
+export function getClientProfile(dc: DataConnect, vars: GetClientProfileVariables): QueryPromise<GetClientProfileData, GetClientProfileVariables>;
+
+interface GetClientMedicationsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: GetClientMedicationsVariables): QueryRef<GetClientMedicationsData, GetClientMedicationsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: GetClientMedicationsVariables): QueryRef<GetClientMedicationsData, GetClientMedicationsVariables>;
+  operationName: string;
+}
+export const getClientMedicationsRef: GetClientMedicationsRef;
+
+export function getClientMedications(vars: GetClientMedicationsVariables): QueryPromise<GetClientMedicationsData, GetClientMedicationsVariables>;
+export function getClientMedications(dc: DataConnect, vars: GetClientMedicationsVariables): QueryPromise<GetClientMedicationsData, GetClientMedicationsVariables>;
+
+interface GetClientVitalSignsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: GetClientVitalSignsVariables): QueryRef<GetClientVitalSignsData, GetClientVitalSignsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: GetClientVitalSignsVariables): QueryRef<GetClientVitalSignsData, GetClientVitalSignsVariables>;
+  operationName: string;
+}
+export const getClientVitalSignsRef: GetClientVitalSignsRef;
+
+export function getClientVitalSigns(vars: GetClientVitalSignsVariables): QueryPromise<GetClientVitalSignsData, GetClientVitalSignsVariables>;
+export function getClientVitalSigns(dc: DataConnect, vars: GetClientVitalSignsVariables): QueryPromise<GetClientVitalSignsData, GetClientVitalSignsVariables>;
+
+interface GetClientAppointmentsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: GetClientAppointmentsVariables): QueryRef<GetClientAppointmentsData, GetClientAppointmentsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: GetClientAppointmentsVariables): QueryRef<GetClientAppointmentsData, GetClientAppointmentsVariables>;
+  operationName: string;
+}
+export const getClientAppointmentsRef: GetClientAppointmentsRef;
+
+export function getClientAppointments(vars: GetClientAppointmentsVariables): QueryPromise<GetClientAppointmentsData, GetClientAppointmentsVariables>;
+export function getClientAppointments(dc: DataConnect, vars: GetClientAppointmentsVariables): QueryPromise<GetClientAppointmentsData, GetClientAppointmentsVariables>;
+
+interface GetCaregiverClientsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: GetCaregiverClientsVariables): QueryRef<GetCaregiverClientsData, GetCaregiverClientsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: GetCaregiverClientsVariables): QueryRef<GetCaregiverClientsData, GetCaregiverClientsVariables>;
+  operationName: string;
+}
+export const getCaregiverClientsRef: GetCaregiverClientsRef;
+
+export function getCaregiverClients(vars: GetCaregiverClientsVariables): QueryPromise<GetCaregiverClientsData, GetCaregiverClientsVariables>;
+export function getCaregiverClients(dc: DataConnect, vars: GetCaregiverClientsVariables): QueryPromise<GetCaregiverClientsData, GetCaregiverClientsVariables>;
 

@@ -41,26 +41,44 @@ export const UserProvider = ({ children }) => {
             setUserRole(roleFromProfile);
             console.log('✅ User role set to:', roleFromProfile);
           } else {
-            // User profile doesn't exist in Firestore yet - wait a bit for it to be created
-            console.log('User profile not found in Firestore, waiting for profile creation...');
-            setTimeout(async () => {
-              try {
-                const retryProfile = await getUserById(firebaseUser.uid);
-                if (retryProfile) {
-                  setUserProfile(retryProfile);
-                  const roleFromProfile = retryProfile.userType || retryProfile.type || 'patient';
-                  setUserRole(roleFromProfile);
-                  console.log('Profile found on retry:', roleFromProfile);
-                } else {
-                  setUserProfile(null);
-                  setUserRole('patient'); // Default role
-                }
-              } catch (retryError) {
-                console.error('Error on profile retry:', retryError);
-                setUserProfile(null);
-                setUserRole('patient');
+            // User profile doesn't exist in Firestore - create it automatically
+            console.log('User profile not found in Firestore, creating profile...');
+            try {
+              // Import createUser function
+              const { createUser } = await import('../api/usersAPI');
+              
+              // Create basic user profile - admin will assign specializations later
+              const newUserData = {
+                id: firebaseUser.uid,
+                displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                email: firebaseUser.email,
+                userType: 'client', // Default to client, admin can change to caregiver after verification
+                photoUrl: firebaseUser.photoURL,
+                specializations: [], // Empty - to be filled by admin after verification
+                certifications: [], // Empty - to be verified by admin
+                experience: '', // To be filled during caregiver onboarding
+                qualificationLevel: 'pending', // Pending admin verification
+                profileComplete: false, // Requires admin verification for caregivers
+                createdAt: new Date()
+              };
+              
+              await createUser(newUserData);
+              console.log('✅ User profile created successfully');
+              
+              // Fetch the newly created profile
+              const newProfile = await getUserById(firebaseUser.uid);
+              if (newProfile) {
+                setUserProfile(newProfile);
+                const roleFromProfile = newProfile.userType || newProfile.type || 'caregiver';
+                setUserRole(roleFromProfile);
+                console.log('✅ New profile loaded:', roleFromProfile);
               }
-            }, 2000); // Wait 2 seconds for profile creation
+            } catch (createError) {
+              console.error('Error creating user profile:', createError);
+              // Fallback: set default role without profile
+              setUserProfile(null);
+              setUserRole('caregiver'); // Default role
+            }
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);

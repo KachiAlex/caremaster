@@ -1,88 +1,89 @@
-// import { getDataConnect } from 'firebase/data-connect';
-// import { connectorConfig } from '@dataconnect/generated';
+import { getDataConnect } from 'firebase/data-connect';
+import { 
+  connectorConfig, 
+  getUserProfile, 
+  getCurrentUser,
+  getMyMedications,
+  addNewVitalSign,
+  updateMedicationNotes,
+  listCaregiversForClientProfile,
+  getClientProfile,
+  getClientMedications,
+  getClientVitalSigns,
+  getClientAppointments,
+  getCaregiverClients
+} from '@dataconnect/generated';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
 
-// Initialize Data Connect (temporarily disabled)
-// const dataConnect = getDataConnect(connectorConfig);
-const dataConnect = null;
+// Initialize Data Connect
+const dataConnect = getDataConnect(connectorConfig);
 
 class DataConnectService {
   constructor() {
     this.dataConnect = dataConnect;
   }
 
-  // Generic query execution with error handling
-  async executeQuery(queryName, variables = {}) {
-    // Check if Data Connect is available
+  // Helper method to check if Data Connect is available
+  _checkDataConnect() {
     if (!this.dataConnect) {
       const error = new Error('Data Connect service is not available');
-      logger.error(`Data Connect query failed: ${queryName}`, { error, variables });
-      throw error;
-    }
-
-    try {
-      logger.debug(`Executing Data Connect query: ${queryName}`, { variables });
-      
-      const result = await this.dataConnect.executeQuery(queryName, variables);
-      
-      logger.info(`Data Connect query successful: ${queryName}`, { 
-        resultCount: result.data?.length || 0 
-      });
-      
-      return result;
-    } catch (error) {
-      logger.error(`Data Connect query failed: ${queryName}`, { error, variables });
-      errorHandler.handleError(error, { 
-        context: 'data_connect_query', 
-        queryName, 
-        variables 
-      });
       throw error;
     }
   }
 
-  // Generic mutation execution with error handling
-  async executeMutation(mutationName, variables = {}) {
-    // Check if Data Connect is available
-    if (!this.dataConnect) {
-      const error = new Error('Data Connect service is not available');
-      logger.error(`Data Connect mutation failed: ${mutationName}`, { error, variables });
-      throw error;
-    }
-
-    try {
-      logger.debug(`Executing Data Connect mutation: ${mutationName}`, { variables });
-      
-      const result = await this.dataConnect.executeMutation(mutationName, variables);
-      
-      logger.info(`Data Connect mutation successful: ${mutationName}`, { 
-        resultId: result.data?.id 
-      });
-      
-      return result;
-    } catch (error) {
-      logger.error(`Data Connect mutation failed: ${mutationName}`, { error, variables });
-      errorHandler.handleError(error, { 
-        context: 'data_connect_mutation', 
-        mutationName, 
-        variables 
-      });
-      throw error;
-    }
+  // Helper method for unimplemented queries
+  _throwUnimplementedError(queryName) {
+    const error = new Error(`Data Connect query '${queryName}' not implemented - using Firestore fallback`);
+    logger.warn(`Data Connect query not implemented: ${queryName}`);
+    throw error;
   }
 
   // User Management Methods
   async getUserProfile(userId) {
-    return this.executeQuery('GetUserProfile', { userId });
+    try {
+      logger.debug(`Executing Data Connect getUserProfile`, { userId });
+      
+      const result = await getUserProfile(this.dataConnect, { userId });
+      
+      logger.info(`Data Connect getUserProfile successful`, { 
+        resultCount: result.data?.users?.length || 0 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error(`Data Connect getUserProfile failed`, { error, userId });
+      errorHandler.handleError(error, { 
+        context: 'data_connect_getUserProfile', 
+        userId 
+      });
+      throw error;
+    }
   }
 
   async getCurrentUser() {
-    return this.executeQuery('GetCurrentUser');
+    try {
+      logger.debug(`Executing Data Connect getCurrentUser`);
+      
+      const result = await getCurrentUser(this.dataConnect);
+      
+      logger.info(`Data Connect getCurrentUser successful`, { 
+        resultCount: result.data?.users?.length || 0 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error(`Data Connect getCurrentUser failed`, { error });
+      errorHandler.handleError(error, { 
+        context: 'data_connect_getCurrentUser'
+      });
+      throw error;
+    }
   }
 
   async getAllUsers() {
-    return this.executeQuery('GetAllUsers');
+    // TODO: Add GetAllUsers query to Data Connect schema
+    throw new Error('GetAllUsers query not implemented in Data Connect schema');
   }
 
   async createUserProfile(userData) {
@@ -111,12 +112,40 @@ class DataConnectService {
   }
 
   // Medication Methods
-  async getMedications(elderlyProfileId) {
-    return this.executeQuery('GetMedications', { elderlyProfileId });
+  async getMedications(clientProfileId) {
+    try {
+      logger.debug(`Executing Data Connect getClientMedications`, { clientProfileId });
+      
+      const result = await getClientMedications(this.dataConnect, { clientProfileId });
+      
+      logger.info(`Data Connect getClientMedications successful`, { 
+        resultCount: result.data?.medications?.length || 0 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error(`Data Connect getClientMedications failed`, { error, clientProfileId });
+      // Re-throw the actual error instead of masking it
+      throw error;
+    }
   }
 
   async getCurrentUserMedications() {
-    return this.executeQuery('GetCurrentUserMedications');
+    try {
+      logger.debug(`Executing Data Connect getMyMedications`);
+      
+      const result = await getMyMedications(this.dataConnect);
+      
+      logger.info(`Data Connect getMyMedications successful`, { 
+        resultCount: result.data?.medications?.length || 0 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error(`Data Connect getMyMedications failed`, { error });
+      // Re-throw the actual error instead of masking it
+      throw error;
+    }
   }
 
   async getActiveMedications(elderlyProfileId) {

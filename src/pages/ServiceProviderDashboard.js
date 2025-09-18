@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
+import SpecializedCaregiverDashboard from '../components/SpecializedCaregiverDashboard';
 import { 
   Users, 
   Calendar, 
@@ -60,11 +61,25 @@ const DashboardHeader = ({ userProfile, userRole }) => {
   };
 
   const getRoleTitle = () => {
-    switch (userRole) {
-      case 'doctor': return 'Medical Dashboard';
-      case 'caregiver': return 'Care Dashboard';
-      default: return 'Service Provider Dashboard';
+    // Check for specializations in userProfile
+    const specializations = userProfile?.specializations || [];
+    
+    if (userRole === 'doctor') {
+      return 'Medical Dashboard';
+    } else if (userRole === 'caregiver') {
+      if (specializations.includes('Registered Nurse') || specializations.includes('LPN')) {
+        return 'Medical Care Specialist Dashboard';
+      } else if (specializations.includes('Physical Therapist')) {
+        return 'Physical Therapy Dashboard';
+      } else if (specializations.includes('Dementia Care') || specializations.includes('Memory Care Specialist')) {
+        return 'Memory Care Specialist Dashboard';
+      } else if (specializations.includes('Companion Care')) {
+        return 'Companion Care Dashboard';
+      } else {
+        return 'General Care Dashboard';
+      }
     }
+    return 'Service Provider Dashboard';
   };
 
   return (
@@ -79,6 +94,20 @@ const DashboardHeader = ({ userProfile, userRole }) => {
             <p className="text-gray-600">
               Welcome back, {userProfile?.name || 'User'}
             </p>
+            {userProfile?.specializations && userProfile.specializations.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {userProfile.specializations.slice(0, 3).map((spec, index) => (
+                  <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    {spec}
+                  </span>
+                ))}
+                {userProfile.specializations.length > 3 && (
+                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                    +{userProfile.specializations.length - 3} more
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center space-x-4">
@@ -407,7 +436,12 @@ const ServiceProviderDashboard = () => {
       )}
       
       {userRole === 'caregiver' && (
-        <CaregiverSpecificSections userProfile={userProfile} />
+        <div className="p-6">
+          <SpecializedCaregiverDashboard />
+          <div className="mt-6">
+            <CaregiverSpecificSections userProfile={userProfile} />
+          </div>
+        </div>
       )}
     </div>
   );

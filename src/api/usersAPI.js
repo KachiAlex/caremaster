@@ -15,7 +15,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db, auth } from '../firebase/config';
 import dataConnectService from '../services/dataConnectService';
 import secureStorageService from '../services/secureStorageService';
 import errorHandler from '../utils/errorHandler';
@@ -60,15 +60,9 @@ export const getUserById = async (userId) => {
     
     logger.debug('Fetching user by ID', { userId });
     
-    // Try Data Connect first
-    try {
-      const result = await dataConnectService.getUserProfile(userId);
-      if (result.data && result.data.length > 0) {
-        return result.data[0];
-      }
-    } catch (dataConnectError) {
-      logger.warn('Data Connect failed, falling back to Firestore', { error: dataConnectError });
-    }
+    // TODO: Data Connect user queries disabled until schema includes Firebase UID field
+    // The current schema uses auto-generated UUIDs, but Firebase Auth uses string UIDs
+    logger.debug('Skipping Data Connect for user queries - schema mismatch with Firebase Auth UIDs');
     
     // Fallback to Firestore
     const userRef = doc(db, USERS_COLLECTION, userId);

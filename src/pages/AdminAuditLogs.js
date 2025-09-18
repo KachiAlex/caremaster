@@ -183,7 +183,7 @@ const AdminAuditLogs = () => {
             details: {
               appointmentDate: '2024-01-25',
               patientName: 'Adunni Okafor',
-              doctorName: 'Dr. Kemi Adebayo',
+              doctorName: 'Healthcare Provider',
               reason: 'Patient requested cancellation'
             },
             changes: {

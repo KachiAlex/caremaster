@@ -20,7 +20,8 @@ import {
   UserCheck,
   TrendingUp,
   MessageSquare,
-  ClipboardList
+  ClipboardList,
+  Building
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -42,15 +43,16 @@ const AdminLayout = () => {
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: BarChart3 },
-    { name: 'Users', href: '/admin/users', icon: Users },
-    { name: 'Appointments', href: '/admin/appointments', icon: Activity },
+    { name: 'Patient Database', href: '/admin/patient-database', icon: Users },
+    { name: 'Caregiver Management', href: '/admin/caregiver-management', icon: UserCheck },
+    { name: 'Task Assignment', href: '/admin/task-assignment', icon: Activity },
+    { name: 'Care Monitoring', href: '/admin/care-monitoring', icon: Heart },
+    { name: 'Doctor Reports', href: '/admin/doctor-reports', icon: FileText },
     { name: 'Emergency', href: '/admin/emergency', icon: AlertTriangle },
-    { name: 'Medications', href: '/admin/medications', icon: Pill },
-    { name: 'Caregivers', href: '/admin/caregivers', icon: UserCheck },
     { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
-    { name: 'Communication', href: '/admin/communication', icon: MessageSquare },
+    { name: 'Agency Management', href: '/admin/agency-management', icon: Building },
     { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList },
-    { name: 'Reports', href: '/admin/reports', icon: FileText },
+    { name: 'System Status', href: '/admin/system-status', icon: Activity },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 

@@ -18,7 +18,14 @@ You can also follow the instructions from the [Data Connect documentation](https
   - [*Connecting to the local Emulator*](#connecting-to-the-local-emulator)
 - [**Queries**](#queries)
   - [*GetMyMedications*](#getmymedications)
-  - [*ListCaregiversForElderlyProfile*](#listcaregiversforelderlyprofile)
+  - [*ListCaregiversForClientProfile*](#listcaregiversforclientprofile)
+  - [*GetUserProfile*](#getuserprofile)
+  - [*GetCurrentUser*](#getcurrentuser)
+  - [*GetClientProfile*](#getclientprofile)
+  - [*GetClientMedications*](#getclientmedications)
+  - [*GetClientVitalSigns*](#getclientvitalsigns)
+  - [*GetClientAppointments*](#getclientappointments)
+  - [*GetCaregiverClients*](#getcaregiverclients)
 - [**Mutations**](#mutations)
   - [*AddNewVitalSign*](#addnewvitalsign)
   - [*UpdateMedicationNotes*](#updatemedicationnotes)
@@ -187,33 +194,33 @@ export default function GetMyMedicationsComponent() {
 }
 ```
 
-## ListCaregiversForElderlyProfile
-You can execute the `ListCaregiversForElderlyProfile` Query using the following Query hook function, which is defined in [dataconnect-generated/react/index.d.ts](./index.d.ts):
+## ListCaregiversForClientProfile
+You can execute the `ListCaregiversForClientProfile` Query using the following Query hook function, which is defined in [dataconnect-generated/react/index.d.ts](./index.d.ts):
 
 ```javascript
-useListCaregiversForElderlyProfile(dc: DataConnect, vars: ListCaregiversForElderlyProfileVariables, options?: useDataConnectQueryOptions<ListCaregiversForElderlyProfileData>): UseDataConnectQueryResult<ListCaregiversForElderlyProfileData, ListCaregiversForElderlyProfileVariables>;
+useListCaregiversForClientProfile(dc: DataConnect, vars: ListCaregiversForClientProfileVariables, options?: useDataConnectQueryOptions<ListCaregiversForClientProfileData>): UseDataConnectQueryResult<ListCaregiversForClientProfileData, ListCaregiversForClientProfileVariables>;
 ```
 You can also pass in a `DataConnect` instance to the Query hook function.
 ```javascript
-useListCaregiversForElderlyProfile(vars: ListCaregiversForElderlyProfileVariables, options?: useDataConnectQueryOptions<ListCaregiversForElderlyProfileData>): UseDataConnectQueryResult<ListCaregiversForElderlyProfileData, ListCaregiversForElderlyProfileVariables>;
+useListCaregiversForClientProfile(vars: ListCaregiversForClientProfileVariables, options?: useDataConnectQueryOptions<ListCaregiversForClientProfileData>): UseDataConnectQueryResult<ListCaregiversForClientProfileData, ListCaregiversForClientProfileVariables>;
 ```
 
 ### Variables
-The `ListCaregiversForElderlyProfile` Query requires an argument of type `ListCaregiversForElderlyProfileVariables`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+The `ListCaregiversForClientProfile` Query requires an argument of type `ListCaregiversForClientProfileVariables`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
 
 ```javascript
-export interface ListCaregiversForElderlyProfileVariables {
-  elderlyProfileId: UUIDString;
+export interface ListCaregiversForClientProfileVariables {
+  clientProfileId: UUIDString;
 }
 ```
 ### Return Type
-Recall that calling the `ListCaregiversForElderlyProfile` Query hook function returns a `UseQueryResult` object. This object holds the state of your Query, including whether the Query is loading, has completed, or has succeeded/failed, and any data returned by the Query, among other things.
+Recall that calling the `ListCaregiversForClientProfile` Query hook function returns a `UseQueryResult` object. This object holds the state of your Query, including whether the Query is loading, has completed, or has succeeded/failed, and any data returned by the Query, among other things.
 
 To check the status of a Query, use the `UseQueryResult.status` field. You can also check for pending / success / error status using the `UseQueryResult.isPending`, `UseQueryResult.isSuccess`, and `UseQueryResult.isError` fields.
 
-To access the data returned by a Query, use the `UseQueryResult.data` field. The data for the `ListCaregiversForElderlyProfile` Query is of type `ListCaregiversForElderlyProfileData`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+To access the data returned by a Query, use the `UseQueryResult.data` field. The data for the `ListCaregiversForClientProfile` Query is of type `ListCaregiversForClientProfileData`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
 ```javascript
-export interface ListCaregiversForElderlyProfileData {
+export interface ListCaregiversForClientProfileData {
   caregiverRelationships: ({
     caregiver: {
       id: UUIDString;
@@ -227,37 +234,663 @@ export interface ListCaregiversForElderlyProfileData {
 
 To learn more about the `UseQueryResult` object, see the [TanStack React Query documentation](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery).
 
-### Using `ListCaregiversForElderlyProfile`'s Query hook function
+### Using `ListCaregiversForClientProfile`'s Query hook function
 
 ```javascript
 import { getDataConnect } from 'firebase/data-connect';
-import { connectorConfig, ListCaregiversForElderlyProfileVariables } from '@dataconnect/generated';
-import { useListCaregiversForElderlyProfile } from '@dataconnect/generated/react'
+import { connectorConfig, ListCaregiversForClientProfileVariables } from '@dataconnect/generated';
+import { useListCaregiversForClientProfile } from '@dataconnect/generated/react'
 
-export default function ListCaregiversForElderlyProfileComponent() {
-  // The `useListCaregiversForElderlyProfile` Query hook requires an argument of type `ListCaregiversForElderlyProfileVariables`:
-  const listCaregiversForElderlyProfileVars: ListCaregiversForElderlyProfileVariables = {
-    elderlyProfileId: ..., 
+export default function ListCaregiversForClientProfileComponent() {
+  // The `useListCaregiversForClientProfile` Query hook requires an argument of type `ListCaregiversForClientProfileVariables`:
+  const listCaregiversForClientProfileVars: ListCaregiversForClientProfileVariables = {
+    clientProfileId: ..., 
   };
 
   // You don't have to do anything to "execute" the Query.
   // Call the Query hook function to get a `UseQueryResult` object which holds the state of your Query.
-  const query = useListCaregiversForElderlyProfile(listCaregiversForElderlyProfileVars);
+  const query = useListCaregiversForClientProfile(listCaregiversForClientProfileVars);
   // Variables can be defined inline as well.
-  const query = useListCaregiversForElderlyProfile({ elderlyProfileId: ..., });
+  const query = useListCaregiversForClientProfile({ clientProfileId: ..., });
 
   // You can also pass in a `DataConnect` instance to the Query hook function.
   const dataConnect = getDataConnect(connectorConfig);
-  const query = useListCaregiversForElderlyProfile(dataConnect, listCaregiversForElderlyProfileVars);
+  const query = useListCaregiversForClientProfile(dataConnect, listCaregiversForClientProfileVars);
 
   // You can also pass in a `useDataConnectQueryOptions` object to the Query hook function.
   const options = { staleTime: 5 * 1000 };
-  const query = useListCaregiversForElderlyProfile(listCaregiversForElderlyProfileVars, options);
+  const query = useListCaregiversForClientProfile(listCaregiversForClientProfileVars, options);
 
   // You can also pass both a `DataConnect` instance and a `useDataConnectQueryOptions` object.
   const dataConnect = getDataConnect(connectorConfig);
   const options = { staleTime: 5 * 1000 };
-  const query = useListCaregiversForElderlyProfile(dataConnect, listCaregiversForElderlyProfileVars, options);
+  const query = useListCaregiversForClientProfile(dataConnect, listCaregiversForClientProfileVars, options);
+
+  // Then, you can render your component dynamically based on the status of the Query.
+  if (query.isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (query.isError) {
+    return <div>Error: {query.error.message}</div>;
+  }
+
+  // If the Query is successful, you can access the data returned using the `UseQueryResult.data` field.
+  if (query.isSuccess) {
+    console.log(query.data.caregiverRelationships);
+  }
+  return <div>Query execution {query.isSuccess ? 'successful' : 'failed'}!</div>;
+}
+```
+
+## GetUserProfile
+You can execute the `GetUserProfile` Query using the following Query hook function, which is defined in [dataconnect-generated/react/index.d.ts](./index.d.ts):
+
+```javascript
+useGetUserProfile(dc: DataConnect, vars: GetUserProfileVariables, options?: useDataConnectQueryOptions<GetUserProfileData>): UseDataConnectQueryResult<GetUserProfileData, GetUserProfileVariables>;
+```
+You can also pass in a `DataConnect` instance to the Query hook function.
+```javascript
+useGetUserProfile(vars: GetUserProfileVariables, options?: useDataConnectQueryOptions<GetUserProfileData>): UseDataConnectQueryResult<GetUserProfileData, GetUserProfileVariables>;
+```
+
+### Variables
+The `GetUserProfile` Query requires an argument of type `GetUserProfileVariables`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+
+```javascript
+export interface GetUserProfileVariables {
+  firebaseUid: string;
+}
+```
+### Return Type
+Recall that calling the `GetUserProfile` Query hook function returns a `UseQueryResult` object. This object holds the state of your Query, including whether the Query is loading, has completed, or has succeeded/failed, and any data returned by the Query, among other things.
+
+To check the status of a Query, use the `UseQueryResult.status` field. You can also check for pending / success / error status using the `UseQueryResult.isPending`, `UseQueryResult.isSuccess`, and `UseQueryResult.isError` fields.
+
+To access the data returned by a Query, use the `UseQueryResult.data` field. The data for the `GetUserProfile` Query is of type `GetUserProfileData`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+```javascript
+export interface GetUserProfileData {
+  users: ({
+    id: UUIDString;
+    firebaseUid: string;
+    displayName: string;
+    userType: string;
+    email?: string | null;
+    photoUrl?: string | null;
+    dateOfBirth?: DateString | null;
+    createdAt: TimestampString;
+  } & User_Key)[];
+}
+```
+
+To learn more about the `UseQueryResult` object, see the [TanStack React Query documentation](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery).
+
+### Using `GetUserProfile`'s Query hook function
+
+```javascript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, GetUserProfileVariables } from '@dataconnect/generated';
+import { useGetUserProfile } from '@dataconnect/generated/react'
+
+export default function GetUserProfileComponent() {
+  // The `useGetUserProfile` Query hook requires an argument of type `GetUserProfileVariables`:
+  const getUserProfileVars: GetUserProfileVariables = {
+    firebaseUid: ..., 
+  };
+
+  // You don't have to do anything to "execute" the Query.
+  // Call the Query hook function to get a `UseQueryResult` object which holds the state of your Query.
+  const query = useGetUserProfile(getUserProfileVars);
+  // Variables can be defined inline as well.
+  const query = useGetUserProfile({ firebaseUid: ..., });
+
+  // You can also pass in a `DataConnect` instance to the Query hook function.
+  const dataConnect = getDataConnect(connectorConfig);
+  const query = useGetUserProfile(dataConnect, getUserProfileVars);
+
+  // You can also pass in a `useDataConnectQueryOptions` object to the Query hook function.
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetUserProfile(getUserProfileVars, options);
+
+  // You can also pass both a `DataConnect` instance and a `useDataConnectQueryOptions` object.
+  const dataConnect = getDataConnect(connectorConfig);
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetUserProfile(dataConnect, getUserProfileVars, options);
+
+  // Then, you can render your component dynamically based on the status of the Query.
+  if (query.isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (query.isError) {
+    return <div>Error: {query.error.message}</div>;
+  }
+
+  // If the Query is successful, you can access the data returned using the `UseQueryResult.data` field.
+  if (query.isSuccess) {
+    console.log(query.data.users);
+  }
+  return <div>Query execution {query.isSuccess ? 'successful' : 'failed'}!</div>;
+}
+```
+
+## GetCurrentUser
+You can execute the `GetCurrentUser` Query using the following Query hook function, which is defined in [dataconnect-generated/react/index.d.ts](./index.d.ts):
+
+```javascript
+useGetCurrentUser(dc: DataConnect, options?: useDataConnectQueryOptions<GetCurrentUserData>): UseDataConnectQueryResult<GetCurrentUserData, undefined>;
+```
+You can also pass in a `DataConnect` instance to the Query hook function.
+```javascript
+useGetCurrentUser(options?: useDataConnectQueryOptions<GetCurrentUserData>): UseDataConnectQueryResult<GetCurrentUserData, undefined>;
+```
+
+### Variables
+The `GetCurrentUser` Query has no variables.
+### Return Type
+Recall that calling the `GetCurrentUser` Query hook function returns a `UseQueryResult` object. This object holds the state of your Query, including whether the Query is loading, has completed, or has succeeded/failed, and any data returned by the Query, among other things.
+
+To check the status of a Query, use the `UseQueryResult.status` field. You can also check for pending / success / error status using the `UseQueryResult.isPending`, `UseQueryResult.isSuccess`, and `UseQueryResult.isError` fields.
+
+To access the data returned by a Query, use the `UseQueryResult.data` field. The data for the `GetCurrentUser` Query is of type `GetCurrentUserData`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+```javascript
+export interface GetCurrentUserData {
+  users: ({
+    id: UUIDString;
+    firebaseUid: string;
+    displayName: string;
+    userType: string;
+    email?: string | null;
+    photoUrl?: string | null;
+    dateOfBirth?: DateString | null;
+    createdAt: TimestampString;
+  } & User_Key)[];
+}
+```
+
+To learn more about the `UseQueryResult` object, see the [TanStack React Query documentation](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery).
+
+### Using `GetCurrentUser`'s Query hook function
+
+```javascript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig } from '@dataconnect/generated';
+import { useGetCurrentUser } from '@dataconnect/generated/react'
+
+export default function GetCurrentUserComponent() {
+  // You don't have to do anything to "execute" the Query.
+  // Call the Query hook function to get a `UseQueryResult` object which holds the state of your Query.
+  const query = useGetCurrentUser();
+
+  // You can also pass in a `DataConnect` instance to the Query hook function.
+  const dataConnect = getDataConnect(connectorConfig);
+  const query = useGetCurrentUser(dataConnect);
+
+  // You can also pass in a `useDataConnectQueryOptions` object to the Query hook function.
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetCurrentUser(options);
+
+  // You can also pass both a `DataConnect` instance and a `useDataConnectQueryOptions` object.
+  const dataConnect = getDataConnect(connectorConfig);
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetCurrentUser(dataConnect, options);
+
+  // Then, you can render your component dynamically based on the status of the Query.
+  if (query.isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (query.isError) {
+    return <div>Error: {query.error.message}</div>;
+  }
+
+  // If the Query is successful, you can access the data returned using the `UseQueryResult.data` field.
+  if (query.isSuccess) {
+    console.log(query.data.users);
+  }
+  return <div>Query execution {query.isSuccess ? 'successful' : 'failed'}!</div>;
+}
+```
+
+## GetClientProfile
+You can execute the `GetClientProfile` Query using the following Query hook function, which is defined in [dataconnect-generated/react/index.d.ts](./index.d.ts):
+
+```javascript
+useGetClientProfile(dc: DataConnect, vars: GetClientProfileVariables, options?: useDataConnectQueryOptions<GetClientProfileData>): UseDataConnectQueryResult<GetClientProfileData, GetClientProfileVariables>;
+```
+You can also pass in a `DataConnect` instance to the Query hook function.
+```javascript
+useGetClientProfile(vars: GetClientProfileVariables, options?: useDataConnectQueryOptions<GetClientProfileData>): UseDataConnectQueryResult<GetClientProfileData, GetClientProfileVariables>;
+```
+
+### Variables
+The `GetClientProfile` Query requires an argument of type `GetClientProfileVariables`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+
+```javascript
+export interface GetClientProfileVariables {
+  clientId: UUIDString;
+}
+```
+### Return Type
+Recall that calling the `GetClientProfile` Query hook function returns a `UseQueryResult` object. This object holds the state of your Query, including whether the Query is loading, has completed, or has succeeded/failed, and any data returned by the Query, among other things.
+
+To check the status of a Query, use the `UseQueryResult.status` field. You can also check for pending / success / error status using the `UseQueryResult.isPending`, `UseQueryResult.isSuccess`, and `UseQueryResult.isError` fields.
+
+To access the data returned by a Query, use the `UseQueryResult.data` field. The data for the `GetClientProfile` Query is of type `GetClientProfileData`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+```javascript
+export interface GetClientProfileData {
+  clientProfiles: ({
+    id: UUIDString;
+    user: {
+      id: UUIDString;
+      displayName: string;
+      email?: string | null;
+    } & User_Key;
+      emergencyContactName: string;
+      emergencyContactPhone: string;
+      primaryCareDoctor?: string | null;
+      allergies?: string | null;
+      medicalConditions?: string | null;
+  } & ClientProfile_Key)[];
+}
+```
+
+To learn more about the `UseQueryResult` object, see the [TanStack React Query documentation](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery).
+
+### Using `GetClientProfile`'s Query hook function
+
+```javascript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, GetClientProfileVariables } from '@dataconnect/generated';
+import { useGetClientProfile } from '@dataconnect/generated/react'
+
+export default function GetClientProfileComponent() {
+  // The `useGetClientProfile` Query hook requires an argument of type `GetClientProfileVariables`:
+  const getClientProfileVars: GetClientProfileVariables = {
+    clientId: ..., 
+  };
+
+  // You don't have to do anything to "execute" the Query.
+  // Call the Query hook function to get a `UseQueryResult` object which holds the state of your Query.
+  const query = useGetClientProfile(getClientProfileVars);
+  // Variables can be defined inline as well.
+  const query = useGetClientProfile({ clientId: ..., });
+
+  // You can also pass in a `DataConnect` instance to the Query hook function.
+  const dataConnect = getDataConnect(connectorConfig);
+  const query = useGetClientProfile(dataConnect, getClientProfileVars);
+
+  // You can also pass in a `useDataConnectQueryOptions` object to the Query hook function.
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetClientProfile(getClientProfileVars, options);
+
+  // You can also pass both a `DataConnect` instance and a `useDataConnectQueryOptions` object.
+  const dataConnect = getDataConnect(connectorConfig);
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetClientProfile(dataConnect, getClientProfileVars, options);
+
+  // Then, you can render your component dynamically based on the status of the Query.
+  if (query.isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (query.isError) {
+    return <div>Error: {query.error.message}</div>;
+  }
+
+  // If the Query is successful, you can access the data returned using the `UseQueryResult.data` field.
+  if (query.isSuccess) {
+    console.log(query.data.clientProfiles);
+  }
+  return <div>Query execution {query.isSuccess ? 'successful' : 'failed'}!</div>;
+}
+```
+
+## GetClientMedications
+You can execute the `GetClientMedications` Query using the following Query hook function, which is defined in [dataconnect-generated/react/index.d.ts](./index.d.ts):
+
+```javascript
+useGetClientMedications(dc: DataConnect, vars: GetClientMedicationsVariables, options?: useDataConnectQueryOptions<GetClientMedicationsData>): UseDataConnectQueryResult<GetClientMedicationsData, GetClientMedicationsVariables>;
+```
+You can also pass in a `DataConnect` instance to the Query hook function.
+```javascript
+useGetClientMedications(vars: GetClientMedicationsVariables, options?: useDataConnectQueryOptions<GetClientMedicationsData>): UseDataConnectQueryResult<GetClientMedicationsData, GetClientMedicationsVariables>;
+```
+
+### Variables
+The `GetClientMedications` Query requires an argument of type `GetClientMedicationsVariables`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+
+```javascript
+export interface GetClientMedicationsVariables {
+  clientProfileId: UUIDString;
+}
+```
+### Return Type
+Recall that calling the `GetClientMedications` Query hook function returns a `UseQueryResult` object. This object holds the state of your Query, including whether the Query is loading, has completed, or has succeeded/failed, and any data returned by the Query, among other things.
+
+To check the status of a Query, use the `UseQueryResult.status` field. You can also check for pending / success / error status using the `UseQueryResult.isPending`, `UseQueryResult.isSuccess`, and `UseQueryResult.isError` fields.
+
+To access the data returned by a Query, use the `UseQueryResult.data` field. The data for the `GetClientMedications` Query is of type `GetClientMedicationsData`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+```javascript
+export interface GetClientMedicationsData {
+  medications: ({
+    id: UUIDString;
+    name: string;
+    dosage: string;
+    frequency: string;
+    startTime: TimestampString;
+    instructions?: string | null;
+    notes?: string | null;
+    endDate?: DateString | null;
+  } & Medication_Key)[];
+}
+```
+
+To learn more about the `UseQueryResult` object, see the [TanStack React Query documentation](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery).
+
+### Using `GetClientMedications`'s Query hook function
+
+```javascript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, GetClientMedicationsVariables } from '@dataconnect/generated';
+import { useGetClientMedications } from '@dataconnect/generated/react'
+
+export default function GetClientMedicationsComponent() {
+  // The `useGetClientMedications` Query hook requires an argument of type `GetClientMedicationsVariables`:
+  const getClientMedicationsVars: GetClientMedicationsVariables = {
+    clientProfileId: ..., 
+  };
+
+  // You don't have to do anything to "execute" the Query.
+  // Call the Query hook function to get a `UseQueryResult` object which holds the state of your Query.
+  const query = useGetClientMedications(getClientMedicationsVars);
+  // Variables can be defined inline as well.
+  const query = useGetClientMedications({ clientProfileId: ..., });
+
+  // You can also pass in a `DataConnect` instance to the Query hook function.
+  const dataConnect = getDataConnect(connectorConfig);
+  const query = useGetClientMedications(dataConnect, getClientMedicationsVars);
+
+  // You can also pass in a `useDataConnectQueryOptions` object to the Query hook function.
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetClientMedications(getClientMedicationsVars, options);
+
+  // You can also pass both a `DataConnect` instance and a `useDataConnectQueryOptions` object.
+  const dataConnect = getDataConnect(connectorConfig);
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetClientMedications(dataConnect, getClientMedicationsVars, options);
+
+  // Then, you can render your component dynamically based on the status of the Query.
+  if (query.isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (query.isError) {
+    return <div>Error: {query.error.message}</div>;
+  }
+
+  // If the Query is successful, you can access the data returned using the `UseQueryResult.data` field.
+  if (query.isSuccess) {
+    console.log(query.data.medications);
+  }
+  return <div>Query execution {query.isSuccess ? 'successful' : 'failed'}!</div>;
+}
+```
+
+## GetClientVitalSigns
+You can execute the `GetClientVitalSigns` Query using the following Query hook function, which is defined in [dataconnect-generated/react/index.d.ts](./index.d.ts):
+
+```javascript
+useGetClientVitalSigns(dc: DataConnect, vars: GetClientVitalSignsVariables, options?: useDataConnectQueryOptions<GetClientVitalSignsData>): UseDataConnectQueryResult<GetClientVitalSignsData, GetClientVitalSignsVariables>;
+```
+You can also pass in a `DataConnect` instance to the Query hook function.
+```javascript
+useGetClientVitalSigns(vars: GetClientVitalSignsVariables, options?: useDataConnectQueryOptions<GetClientVitalSignsData>): UseDataConnectQueryResult<GetClientVitalSignsData, GetClientVitalSignsVariables>;
+```
+
+### Variables
+The `GetClientVitalSigns` Query requires an argument of type `GetClientVitalSignsVariables`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+
+```javascript
+export interface GetClientVitalSignsVariables {
+  clientProfileId: UUIDString;
+}
+```
+### Return Type
+Recall that calling the `GetClientVitalSigns` Query hook function returns a `UseQueryResult` object. This object holds the state of your Query, including whether the Query is loading, has completed, or has succeeded/failed, and any data returned by the Query, among other things.
+
+To check the status of a Query, use the `UseQueryResult.status` field. You can also check for pending / success / error status using the `UseQueryResult.isPending`, `UseQueryResult.isSuccess`, and `UseQueryResult.isError` fields.
+
+To access the data returned by a Query, use the `UseQueryResult.data` field. The data for the `GetClientVitalSigns` Query is of type `GetClientVitalSignsData`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+```javascript
+export interface GetClientVitalSignsData {
+  vitalSigns: ({
+    id: UUIDString;
+    type: string;
+    value: number;
+    unit?: string | null;
+    recordedAt: TimestampString;
+    notes?: string | null;
+  } & VitalSign_Key)[];
+}
+```
+
+To learn more about the `UseQueryResult` object, see the [TanStack React Query documentation](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery).
+
+### Using `GetClientVitalSigns`'s Query hook function
+
+```javascript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, GetClientVitalSignsVariables } from '@dataconnect/generated';
+import { useGetClientVitalSigns } from '@dataconnect/generated/react'
+
+export default function GetClientVitalSignsComponent() {
+  // The `useGetClientVitalSigns` Query hook requires an argument of type `GetClientVitalSignsVariables`:
+  const getClientVitalSignsVars: GetClientVitalSignsVariables = {
+    clientProfileId: ..., 
+  };
+
+  // You don't have to do anything to "execute" the Query.
+  // Call the Query hook function to get a `UseQueryResult` object which holds the state of your Query.
+  const query = useGetClientVitalSigns(getClientVitalSignsVars);
+  // Variables can be defined inline as well.
+  const query = useGetClientVitalSigns({ clientProfileId: ..., });
+
+  // You can also pass in a `DataConnect` instance to the Query hook function.
+  const dataConnect = getDataConnect(connectorConfig);
+  const query = useGetClientVitalSigns(dataConnect, getClientVitalSignsVars);
+
+  // You can also pass in a `useDataConnectQueryOptions` object to the Query hook function.
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetClientVitalSigns(getClientVitalSignsVars, options);
+
+  // You can also pass both a `DataConnect` instance and a `useDataConnectQueryOptions` object.
+  const dataConnect = getDataConnect(connectorConfig);
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetClientVitalSigns(dataConnect, getClientVitalSignsVars, options);
+
+  // Then, you can render your component dynamically based on the status of the Query.
+  if (query.isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (query.isError) {
+    return <div>Error: {query.error.message}</div>;
+  }
+
+  // If the Query is successful, you can access the data returned using the `UseQueryResult.data` field.
+  if (query.isSuccess) {
+    console.log(query.data.vitalSigns);
+  }
+  return <div>Query execution {query.isSuccess ? 'successful' : 'failed'}!</div>;
+}
+```
+
+## GetClientAppointments
+You can execute the `GetClientAppointments` Query using the following Query hook function, which is defined in [dataconnect-generated/react/index.d.ts](./index.d.ts):
+
+```javascript
+useGetClientAppointments(dc: DataConnect, vars: GetClientAppointmentsVariables, options?: useDataConnectQueryOptions<GetClientAppointmentsData>): UseDataConnectQueryResult<GetClientAppointmentsData, GetClientAppointmentsVariables>;
+```
+You can also pass in a `DataConnect` instance to the Query hook function.
+```javascript
+useGetClientAppointments(vars: GetClientAppointmentsVariables, options?: useDataConnectQueryOptions<GetClientAppointmentsData>): UseDataConnectQueryResult<GetClientAppointmentsData, GetClientAppointmentsVariables>;
+```
+
+### Variables
+The `GetClientAppointments` Query requires an argument of type `GetClientAppointmentsVariables`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+
+```javascript
+export interface GetClientAppointmentsVariables {
+  clientProfileId: UUIDString;
+}
+```
+### Return Type
+Recall that calling the `GetClientAppointments` Query hook function returns a `UseQueryResult` object. This object holds the state of your Query, including whether the Query is loading, has completed, or has succeeded/failed, and any data returned by the Query, among other things.
+
+To check the status of a Query, use the `UseQueryResult.status` field. You can also check for pending / success / error status using the `UseQueryResult.isPending`, `UseQueryResult.isSuccess`, and `UseQueryResult.isError` fields.
+
+To access the data returned by a Query, use the `UseQueryResult.data` field. The data for the `GetClientAppointments` Query is of type `GetClientAppointmentsData`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+```javascript
+export interface GetClientAppointmentsData {
+  appointments: ({
+    id: UUIDString;
+    dateTime: TimestampString;
+    type: string;
+    location: string;
+    doctorName?: string | null;
+    notes?: string | null;
+  } & Appointment_Key)[];
+}
+```
+
+To learn more about the `UseQueryResult` object, see the [TanStack React Query documentation](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery).
+
+### Using `GetClientAppointments`'s Query hook function
+
+```javascript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, GetClientAppointmentsVariables } from '@dataconnect/generated';
+import { useGetClientAppointments } from '@dataconnect/generated/react'
+
+export default function GetClientAppointmentsComponent() {
+  // The `useGetClientAppointments` Query hook requires an argument of type `GetClientAppointmentsVariables`:
+  const getClientAppointmentsVars: GetClientAppointmentsVariables = {
+    clientProfileId: ..., 
+  };
+
+  // You don't have to do anything to "execute" the Query.
+  // Call the Query hook function to get a `UseQueryResult` object which holds the state of your Query.
+  const query = useGetClientAppointments(getClientAppointmentsVars);
+  // Variables can be defined inline as well.
+  const query = useGetClientAppointments({ clientProfileId: ..., });
+
+  // You can also pass in a `DataConnect` instance to the Query hook function.
+  const dataConnect = getDataConnect(connectorConfig);
+  const query = useGetClientAppointments(dataConnect, getClientAppointmentsVars);
+
+  // You can also pass in a `useDataConnectQueryOptions` object to the Query hook function.
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetClientAppointments(getClientAppointmentsVars, options);
+
+  // You can also pass both a `DataConnect` instance and a `useDataConnectQueryOptions` object.
+  const dataConnect = getDataConnect(connectorConfig);
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetClientAppointments(dataConnect, getClientAppointmentsVars, options);
+
+  // Then, you can render your component dynamically based on the status of the Query.
+  if (query.isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (query.isError) {
+    return <div>Error: {query.error.message}</div>;
+  }
+
+  // If the Query is successful, you can access the data returned using the `UseQueryResult.data` field.
+  if (query.isSuccess) {
+    console.log(query.data.appointments);
+  }
+  return <div>Query execution {query.isSuccess ? 'successful' : 'failed'}!</div>;
+}
+```
+
+## GetCaregiverClients
+You can execute the `GetCaregiverClients` Query using the following Query hook function, which is defined in [dataconnect-generated/react/index.d.ts](./index.d.ts):
+
+```javascript
+useGetCaregiverClients(dc: DataConnect, vars: GetCaregiverClientsVariables, options?: useDataConnectQueryOptions<GetCaregiverClientsData>): UseDataConnectQueryResult<GetCaregiverClientsData, GetCaregiverClientsVariables>;
+```
+You can also pass in a `DataConnect` instance to the Query hook function.
+```javascript
+useGetCaregiverClients(vars: GetCaregiverClientsVariables, options?: useDataConnectQueryOptions<GetCaregiverClientsData>): UseDataConnectQueryResult<GetCaregiverClientsData, GetCaregiverClientsVariables>;
+```
+
+### Variables
+The `GetCaregiverClients` Query requires an argument of type `GetCaregiverClientsVariables`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+
+```javascript
+export interface GetCaregiverClientsVariables {
+  caregiverId: UUIDString;
+}
+```
+### Return Type
+Recall that calling the `GetCaregiverClients` Query hook function returns a `UseQueryResult` object. This object holds the state of your Query, including whether the Query is loading, has completed, or has succeeded/failed, and any data returned by the Query, among other things.
+
+To check the status of a Query, use the `UseQueryResult.status` field. You can also check for pending / success / error status using the `UseQueryResult.isPending`, `UseQueryResult.isSuccess`, and `UseQueryResult.isError` fields.
+
+To access the data returned by a Query, use the `UseQueryResult.data` field. The data for the `GetCaregiverClients` Query is of type `GetCaregiverClientsData`, which is defined in [dataconnect-generated/index.d.ts](../index.d.ts). It has the following fields:
+```javascript
+export interface GetCaregiverClientsData {
+  caregiverRelationships: ({
+    clientProfile: {
+      id: UUIDString;
+      user: {
+        displayName: string;
+        email?: string | null;
+      };
+        emergencyContactName: string;
+        emergencyContactPhone: string;
+    } & ClientProfile_Key;
+      establishedAt: TimestampString;
+      accessLevel?: string | null;
+  })[];
+}
+```
+
+To learn more about the `UseQueryResult` object, see the [TanStack React Query documentation](https://tanstack.com/query/v5/docs/framework/react/reference/useQuery).
+
+### Using `GetCaregiverClients`'s Query hook function
+
+```javascript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, GetCaregiverClientsVariables } from '@dataconnect/generated';
+import { useGetCaregiverClients } from '@dataconnect/generated/react'
+
+export default function GetCaregiverClientsComponent() {
+  // The `useGetCaregiverClients` Query hook requires an argument of type `GetCaregiverClientsVariables`:
+  const getCaregiverClientsVars: GetCaregiverClientsVariables = {
+    caregiverId: ..., 
+  };
+
+  // You don't have to do anything to "execute" the Query.
+  // Call the Query hook function to get a `UseQueryResult` object which holds the state of your Query.
+  const query = useGetCaregiverClients(getCaregiverClientsVars);
+  // Variables can be defined inline as well.
+  const query = useGetCaregiverClients({ caregiverId: ..., });
+
+  // You can also pass in a `DataConnect` instance to the Query hook function.
+  const dataConnect = getDataConnect(connectorConfig);
+  const query = useGetCaregiverClients(dataConnect, getCaregiverClientsVars);
+
+  // You can also pass in a `useDataConnectQueryOptions` object to the Query hook function.
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetCaregiverClients(getCaregiverClientsVars, options);
+
+  // You can also pass both a `DataConnect` instance and a `useDataConnectQueryOptions` object.
+  const dataConnect = getDataConnect(connectorConfig);
+  const options = { staleTime: 5 * 1000 };
+  const query = useGetCaregiverClients(dataConnect, getCaregiverClientsVars, options);
 
   // Then, you can render your component dynamically based on the status of the Query.
   if (query.isPending) {

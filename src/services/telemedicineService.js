@@ -1,4 +1,5 @@
 import AgoraRTC from 'agora-rtc-sdk-ng';
+import agoraTokenService from './agoraTokenService';
 
 class TelemedicineService {
   constructor() {
@@ -11,11 +12,11 @@ class TelemedicineService {
     this.isInitialized = false;
     this.eventListeners = new Map();
     
-    // Agora configuration with better defaults
+    // Agora configuration - removed expired token
     this.config = {
-      appId: process.env.REACT_APP_AGORA_APP_ID || '43c43dc3e6a44a99b2b75a4997e3b1a4',
+      appId: agoraTokenService.getAppId(),
       channel: process.env.REACT_APP_AGORA_CHANNEL || 'elderx_dev',
-      token: process.env.REACT_APP_AGORA_TOKEN || '007eJxTYAj736zimGlilN56YtmltxEzVy/6tjyKYx73BPWFcnNFEswVGEyMk02MU5KNU80STUwSLS2TjJLMTRNNLC3NU42TDBNNeP4ezmgIZGRIe8LJwAiFID4XQ2pOSmpRRXxKahkDAwDgxiEn',
+      token: null, // Will be generated dynamically
       uid: null, // Will be set when joining
       mode: 'rtc',
       codec: 'vp8'
@@ -149,11 +150,15 @@ class TelemedicineService {
         throw new Error('Channel name is required');
       }
 
-      // Join the channel
+      // Generate fresh token for this session
+      console.log('🔑 Generating Agora token for channel:', channel);
+      const token = await agoraTokenService.generateToken(channel, finalUid, 'publisher');
+      
+      // Join the channel with fresh token
       await this.client.join(
         this.config.appId,
         channel,
-        this.config.token,
+        token,
         finalUid
       );
 
@@ -168,9 +173,42 @@ class TelemedicineService {
       return finalUid;
     } catch (error) {
       console.error("Failed to join channel:", error);
+      
+      // Check if this is a token-related error and try to recover
+      if (agoraTokenService.isTokenExpired(error)) {
+        console.log('🔄 Token expired, attempting to refresh and retry...');
+        try {
+          // Try once more with a fresh token
+          const channel = channelName || this.config.channel;
+          const finalUid = uid || Math.floor(Math.random() * 100000);
+          const newToken = await agoraTokenService.refreshToken(channel, finalUid, 'publisher');
+          
+          await this.client.join(
+            this.config.appId,
+            channel,
+            newToken,
+            finalUid
+          );
+          
+          this.isJoined = true;
+          this.config.uid = finalUid;
+          console.log("✅ Successfully joined channel after token refresh:", channel);
+          
+          // Create and publish local tracks
+          await this.createLocalTracks();
+          await this.publishLocalTracks();
+          
+          this.triggerEvent('joined', { uid: finalUid, channel });
+          return finalUid;
+        } catch (retryError) {
+          console.error("Failed to join even after token refresh:", retryError);
+        }
+      }
+      
       this.triggerEvent('error', { 
         type: 'join', 
-        error: error.message 
+        error: error.message,
+        isTokenError: agoraTokenService.isTokenExpired(error)
       });
       throw error;
     }

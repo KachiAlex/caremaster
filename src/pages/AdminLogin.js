@@ -23,12 +23,18 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // Additional admin verification could be added here
-      // For now, we'll assume any successful login with this form is admin
-      toast.success('Admin login successful');
-      navigate('/admin');
+      // Set temporary admin session flag
+      sessionStorage.setItem('elderx_admin_session', 'true');
+      sessionStorage.setItem('elderx_admin_user', userCredential.user.uid);
+      
+      toast.success('Admin login successful - Redirecting to admin dashboard');
+      
+      // Force navigation to temporary admin dashboard
+      setTimeout(() => {
+        window.location.replace('/temp-admin');
+      }, 1000);
     } catch (error) {
       console.error('Admin login error:', error);
       

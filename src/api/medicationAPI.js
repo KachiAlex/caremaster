@@ -43,18 +43,22 @@ export const medicationAPI = {
         logger.warn('Data Connect failed, falling back to Firestore', { error: dataConnectError });
       }
       
-      // Fallback to Firestore
-      let medicationsQuery = query(
-        collection(db, 'medications'),
-        orderBy('startDate', 'desc')
-      );
+      // Fallback to Firestore with simplified query to avoid index requirements
+      let medicationsQuery;
       
       if (filters.patientId) {
-        medicationsQuery = query(medicationsQuery, where('patientId', '==', filters.patientId));
-      }
-      
-      if (filters.status) {
-        medicationsQuery = query(medicationsQuery, where('status', '==', filters.status));
+        // Primary filter by patientId only, sort client-side
+        medicationsQuery = query(
+          collection(db, 'medications'),
+          where('patientId', '==', filters.patientId)
+        );
+      } else {
+        // If no patientId filter, get recent medications
+        medicationsQuery = query(
+          collection(db, 'medications'),
+          orderBy('startDate', 'desc'),
+          limit(50)
+        );
       }
       
       if (filters.limit) {
@@ -62,7 +66,7 @@ export const medicationAPI = {
       }
 
       const medicationsSnapshot = await getDocs(medicationsQuery);
-      const medications = [];
+      let medications = [];
 
       medicationsSnapshot.forEach((doc) => {
         medications.push({
@@ -76,6 +80,20 @@ export const medicationAPI = {
           updatedAt: doc.data().updatedAt?.toDate()
         });
       });
+
+      // Apply client-side filtering for status if needed
+      if (filters.status) {
+        medications = medications.filter(med => med.status === filters.status);
+      }
+
+      // Apply client-side sorting if patientId filter was used
+      if (filters.patientId) {
+        medications.sort((a, b) => {
+          const aDate = a.startDate || new Date(0);
+          const bDate = b.startDate || new Date(0);
+          return bDate - aDate;
+        });
+      }
 
       return medications;
     } catch (error) {

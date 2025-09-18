@@ -1,9 +1,9 @@
 mutation AddNewVitalSign @auth(level: USER) {
-  vitalSign_insert(data: {elderlyProfileId_expr: "uuidV4()", type: "Blood Pressure", value: 120.0, recordedAt_expr: "request.time"})
+  vitalSign_insert(data: {clientProfileId_expr: "auth.uid", type: "Blood Pressure", value: 120.0, recordedAt_expr: "request.time"})
 }
 
 query GetMyMedications @auth(level: USER) {
-  medications(where: {elderlyProfileId: {eq_expr: "auth.uid"}}) {
+  medications(where: {clientProfileId: {eq_expr: "auth.uid"}}) {
     id
     name
     dosage
@@ -15,13 +15,112 @@ mutation UpdateMedicationNotes($id: UUID!, $notes: String) @auth(level: USER) {
   medication_update(key: {id: $id}, data: {notes: $notes})
 }
 
-query ListCaregiversForElderlyProfile($elderlyProfileId: UUID!) @auth(level: USER) {
-  caregiverRelationships(where: {elderlyProfileId: {eq: $elderlyProfileId}}) {
+query ListCaregiversForClientProfile($clientProfileId: UUID!) @auth(level: USER) {
+  caregiverRelationships(where: {clientProfileId: {eq: $clientProfileId}}) {
     caregiver {
       id
       displayName
       email
     }
+    accessLevel
+  }
+}
+
+# User Profile Queries
+query GetUserProfile($firebaseUid: String!) @auth(level: USER) {
+  users(where: {firebaseUid: {eq: $firebaseUid}}) {
+    id
+    firebaseUid
+    displayName
+    userType
+    email
+    photoUrl
+    dateOfBirth
+    createdAt
+  }
+}
+
+query GetCurrentUser @auth(level: USER) {
+  users(where: {firebaseUid: {eq_expr: "auth.uid"}}) {
+    id
+    firebaseUid
+    displayName
+    userType
+    email
+    photoUrl
+    dateOfBirth
+    createdAt
+  }
+}
+
+# Client Profile Queries
+query GetClientProfile($clientId: UUID!) @auth(level: USER) {
+  clientProfiles(where: {id: {eq: $clientId}}) {
+    id
+    user {
+      id
+      displayName
+      email
+    }
+    emergencyContactName
+    emergencyContactPhone
+    primaryCareDoctor
+    allergies
+    medicalConditions
+  }
+}
+
+# Medication Queries
+query GetClientMedications($clientProfileId: UUID!) @auth(level: USER) {
+  medications(where: {clientProfileId: {eq: $clientProfileId}}) {
+    id
+    name
+    dosage
+    frequency
+    startTime
+    instructions
+    notes
+    endDate
+  }
+}
+
+# Vital Signs Queries
+query GetClientVitalSigns($clientProfileId: UUID!) @auth(level: USER) {
+  vitalSigns(where: {clientProfileId: {eq: $clientProfileId}}) {
+    id
+    type
+    value
+    unit
+    recordedAt
+    notes
+  }
+}
+
+# Appointment Queries
+query GetClientAppointments($clientProfileId: UUID!) @auth(level: USER) {
+  appointments(where: {clientProfileId: {eq: $clientProfileId}}) {
+    id
+    dateTime
+    type
+    location
+    doctorName
+    notes
+  }
+}
+
+# Caregiver Relationship Queries
+query GetCaregiverClients($caregiverId: UUID!) @auth(level: USER) {
+  caregiverRelationships(where: {caregiverId: {eq: $caregiverId}}) {
+    clientProfile {
+      id
+      user {
+        displayName
+        email
+      }
+      emergencyContactName
+      emergencyContactPhone
+    }
+    establishedAt
     accessLevel
   }
 }

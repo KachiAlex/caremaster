@@ -19,10 +19,21 @@ import {
   DollarSign,
   MapPin,
   Phone,
-  Mail
+  Mail,
+  Plus,
+  Settings
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { useNavigate } from 'react-router-dom';
+import { getAllUsers } from '../api/usersAPI';
+import { analyticsAPI } from '../api/analyticsAPI';
+import { emergencyAPI } from '../api/emergencyAPI';
+import { caregiverAPI } from '../api/caregiverAPI';
+import { toast } from 'react-toastify';
 
 const AdminDashboard = () => {
+  const { userProfile } = useUser();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalUsers: 0,
     elderlyUsers: 0,
@@ -42,128 +53,108 @@ const AdminDashboard = () => {
   const [systemAlerts, setSystemAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    // Simulate loading dashboard data
-    const loadDashboardData = async () => {
-      try {
-        // In a real app, this would fetch from your API
-        setTimeout(() => {
-          setStats({
-            totalUsers: 1247,
-            elderlyUsers: 892,
-            caregivers: 355,
-            activeAppointments: 23,
-            emergencyAlerts: 2,
-            medicationReminders: 156,
-            systemHealth: 'Good',
-            revenue: 45680,
-            satisfaction: 94.5,
-            responseTime: 2.3,
-            uptime: 99.8
-          });
-
-          setRecentActivity([
-            {
-              id: 1,
-              type: 'emergency',
-              message: 'Emergency alert from Adunni Okafor',
-              time: '2 minutes ago',
-              status: 'active'
-            },
-            {
-              id: 2,
-              type: 'appointment',
-              message: 'New appointment scheduled with Dr. Kemi',
-              time: '15 minutes ago',
-              status: 'completed'
-            },
-            {
-              id: 3,
-              type: 'medication',
-              message: 'Medication reminder sent to 12 users',
-              time: '1 hour ago',
-              status: 'completed'
-            },
-            {
-              id: 4,
-              type: 'user',
-              message: 'New caregiver registered: Tunde Adebayo',
-              time: '2 hours ago',
-              status: 'completed'
-            }
-          ]);
-
-          setTopCaregivers([
-            {
-              id: 1,
-              name: 'Sarah Johnson',
-              rating: 4.9,
-              patientsServed: 12,
-              tasksCompleted: 145,
-              responseTime: 2.1,
-              avatar: null
-            },
-            {
-              id: 2,
-              name: 'Michael Adebayo',
-              rating: 4.8,
-              patientsServed: 10,
-              tasksCompleted: 132,
-              responseTime: 2.3,
-              avatar: null
-            },
-            {
-              id: 3,
-              name: 'Grace Okafor',
-              rating: 4.7,
-              patientsServed: 8,
-              tasksCompleted: 118,
-              responseTime: 2.5,
-              avatar: null
-            }
-          ]);
-
-          setSystemAlerts([
-            {
-              id: 1,
-              type: 'warning',
-              message: 'High server load detected',
-              time: '5 minutes ago',
-              severity: 'medium'
-            },
-            {
-              id: 2,
-              type: 'info',
-              message: 'Database backup completed',
-              time: '1 hour ago',
-              severity: 'low'
-            },
-            {
-              id: 3,
-              type: 'success',
-              message: 'New caregiver verification completed',
-              time: '2 hours ago',
-              severity: 'low'
-            }
-          ]);
-
-          setLastUpdated(new Date());
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        setLoading(false);
-      }
-    };
-
     loadDashboardData();
   }, []);
 
-  const refreshData = () => {
-    setLoading(true);
-    loadDashboardData();
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load real data from backend APIs
+      const [analytics, users, emergencies, caregivers] = await Promise.all([
+        analyticsAPI.getOverviewAnalytics().catch(err => {
+          console.warn('Failed to fetch analytics:', err);
+          return {};
+        }),
+        getAllUsers().catch(err => {
+          console.warn('Failed to fetch users:', err);
+          return [];
+        }),
+        emergencyAPI.getEmergencyHistory({ status: 'active', limit: 10 }).catch(err => {
+          console.warn('Failed to fetch emergencies:', err);
+          return [];
+        }),
+        caregiverAPI.getCaregivers({ limit: 10 }).catch(err => {
+          console.warn('Failed to fetch caregivers:', err);
+          return [];
+        })
+      ]);
+
+      // Use real data only - no fallback to demo data
+      const realStats = {
+        totalUsers: users.length,
+        elderlyUsers: users.filter(u => u.userType === 'elderly' || u.userType === 'client' || u.userType === 'patient').length,
+        caregivers: users.filter(u => u.userType === 'caregiver').length,
+        activeAppointments: analytics.totalAppointments || 0,
+        emergencyAlerts: emergencies.length,
+        medicationReminders: analytics.medicationCompliance || 0,
+        systemHealth: analytics.systemUptime > 95 ? 'Good' : analytics.systemUptime > 90 ? 'Warning' : 'Critical',
+        revenue: analytics.revenue || 0,
+        satisfaction: analytics.caregiverSatisfaction || 0,
+        responseTime: analytics.averageResponseTime || 0,
+        uptime: analytics.systemUptime || 0
+      };
+
+      setStats(realStats);
+
+      // Use real activity data from the system
+      setRecentActivity(analytics.recentActivity || []);
+      setTopCaregivers(caregivers.slice(0, 3).map(caregiver => ({
+        id: caregiver.id,
+        name: caregiver.displayName || caregiver.name || 'Unknown Caregiver',
+        rating: caregiver.rating || 0,
+        patientsServed: caregiver.patientsServed || 0,
+        tasksCompleted: caregiver.tasksCompleted || 0,
+        responseTime: caregiver.responseTime || 0,
+        avatar: caregiver.photoURL || null
+      })));
+      setSystemAlerts(analytics.systemAlerts || []);
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const refreshData = async () => {
+    setRefreshing(true);
+    await loadDashboardData();
+    setRefreshing(false);
+    toast.success('Dashboard data refreshed');
+  };
+
+  // Quick action functions
+  const quickActions = [
+    {
+      name: 'Add User',
+      icon: Plus,
+      color: 'bg-blue-600 hover:bg-blue-700',
+      action: () => navigate('/admin/users?action=create')
+    },
+    {
+      name: 'View Analytics',
+      icon: BarChart3,
+      color: 'bg-green-600 hover:bg-green-700',
+      action: () => navigate('/admin/analytics')
+    },
+    {
+      name: 'Emergency Center',
+      icon: AlertTriangle,
+      color: 'bg-red-600 hover:bg-red-700',
+      action: () => navigate('/admin/emergency')
+    },
+    {
+      name: 'System Settings',
+      icon: Settings,
+      color: 'bg-gray-600 hover:bg-gray-700',
+      action: () => navigate('/admin/settings')
+    }
+  ];
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -202,9 +193,25 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Temporary Access Banner */}
+      {userProfile?.userType === 'caregiver' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
+            <div>
+              <h4 className="text-sm font-medium text-yellow-800">Temporary Admin Access</h4>
+              <p className="text-sm text-yellow-700">
+                You're accessing admin features as a caregiver for testing purposes. 
+                In production, only admin users will have access to this dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-gray-600">Monitor and manage the ElderX platform</p>
@@ -212,23 +219,49 @@ const AdminDashboard = () => {
             Last updated: {lastUpdated.toLocaleTimeString()}
           </p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={refreshData}
-            disabled={loading}
-            className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            disabled={refreshing}
+            className="flex items-center px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-          <button className="flex items-center px-3 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <button 
+            onClick={() => navigate('/admin/patient-database')}
+            className="flex items-center px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Patient
           </button>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-sm text-gray-600">System Healthy</span>
-          </div>
+          <button 
+            onClick={() => navigate('/admin/caregiver-management')}
+            className="flex items-center px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <UserCheck className="h-4 w-4 mr-2" />
+            Add Caregiver
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {quickActions.map((action, index) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={index}
+                onClick={action.action}
+                className={`${action.color} text-white p-4 rounded-lg transition-colors flex flex-col items-center space-y-2`}
+              >
+                <Icon className="h-6 w-6" />
+                <span className="text-sm font-medium text-center">{action.name}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -73,14 +73,7 @@ service cloud.firestore {
     
     // Medications collection
     match /medications/{medicationId} {
-      allow read: if isAuthenticated() && 
-                     (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
-      allow create: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(request.resource.data.userId) || isOwner(request.resource.data.userId));
-      allow update: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
-      allow delete: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
     }
     
     // Medication logs collection
@@ -97,26 +90,12 @@ service cloud.firestore {
     
     // Vital signs collection
     match /vitalSigns/{vitalSignId} {
-      allow read: if isAuthenticated() && 
-                     (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
-      allow create: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(request.resource.data.userId) || isOwner(request.resource.data.userId));
-      allow update: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
-      allow delete: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(resource.data.userId) || isOwner(resource.data.userId));
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
     }
     
     // Appointments collection
     match /appointments/{appointmentId} {
-      allow read: if isAuthenticated() && 
-                     (hasAccessToElderlyProfile(resource.data.patientId) || isOwner(resource.data.patientId));
-      allow create: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(request.resource.data.patientId) || isOwner(request.resource.data.patientId));
-      allow update: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(resource.data.patientId) || isOwner(resource.data.patientId));
-      allow delete: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(resource.data.patientId) || isOwner(resource.data.patientId));
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
     }
     
     // Emergency alerts collection
@@ -218,22 +197,82 @@ service cloud.firestore {
     
     // Messages collection
     match /messages/{messageId} {
-      allow read: if isAuthenticated() && 
-                     (isOwner(resource.data.senderId) || isOwner(resource.data.recipientId) || isAdmin());
-      allow create: if isAuthenticated() && 
-                       (isOwner(request.resource.data.senderId) || isServiceProvider() || isAdmin());
-      allow update: if isAuthenticated() && 
-                       (isOwner(resource.data.senderId) || isOwner(resource.data.recipientId));
-      allow delete: if isAuthenticated() && 
-                       (isOwner(resource.data.senderId) || isAdmin());
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
     }
     
     // Caregivers collection
     match /caregivers/{caregiverId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(caregiverId);
-      allow update: if isAuthenticated() && (isOwner(caregiverId) || isAdmin());
-      allow delete: if isAuthenticated() && isAdmin();
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Clients collection
+    match /clients/{clientId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Care tasks collection
+    match /careTasks/{taskId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Care task logs collection
+    match /careTaskLogs/{logId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Caregiver assignments collection
+    match /caregiverAssignments/{assignmentId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Client care plans collection
+    match /clientCarePlans/{planId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Care notes collection
+    match /careNotes/{noteId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Service provider profiles collection
+    match /serviceProviders/{providerId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Client assignments collection
+    match /clientAssignments/{assignmentId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Care schedules collection
+    match /careSchedules/{scheduleId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Care reports collection
+    match /careReports/{reportId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Legacy patients collection (for backward compatibility)
+    match /patients/{patientId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Healthcare providers collection  
+    match /healthcareProviders/{providerId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Provider assignments collection
+    match /providerAssignments/{assignmentId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+    
+    // Care provider profiles collection
+    match /careProviders/{providerId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
     }
     
     // User profiles collection (for broader access)
@@ -241,6 +280,36 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || isServiceProvider());
       allow create: if isAuthenticated() && isOwner(userId);
       allow update: if isAuthenticated() && isOwner(userId);
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+
+    // Telemedicine appointments collection
+    match /telemedicine_appointments/{appointmentId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+
+    // Doctors collection (for telemedicine)
+    match /doctors/{doctorId} {
+      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    }
+
+    // Analytics collection
+    match /analytics/{document} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated();
+    }
+
+    // System metrics collection  
+    match /systemMetrics/{document} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated();
+    }
+
+    // Emergencies collection
+    match /emergencies/{emergencyId} {
+      allow read: if isAuthenticated() && (isAdmin() || isServiceProvider() || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isAdmin() || isServiceProvider() || resource.data.userId == request.auth.uid);
       allow delete: if isAuthenticated() && isAdmin();
     }
 

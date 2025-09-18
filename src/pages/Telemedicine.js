@@ -37,13 +37,15 @@ import telemedicineService from '../services/telemedicineService';
 import telemedicineAPI from '../api/telemedicineAPI';
 import { toast } from 'react-toastify';
 import { testTelemedicineService, quickTest } from '../utils/telemedicineTest';
-import { seedTelemedicineData } from '../utils/seedTelemedicineData';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase/config';
+import DocumentManager from '../components/DocumentManager';
 
 const Telemedicine = () => {
   const [user, userLoading] = useAuthState(auth);
   const [appointments, setAppointments] = useState([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [completedAppointments, setCompletedAppointments] = useState([]);
   const [activeCall, setActiveCall] = useState(null);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isAudioOn, setIsAudioOn] = useState(true);
@@ -57,6 +59,8 @@ const Telemedicine = () => {
   const [availableDevices, setAvailableDevices] = useState({ cameras: [], microphones: [] });
   const [isInitializing, setIsInitializing] = useState(false);
   const [userType, setUserType] = useState('patient'); // 'patient' or 'doctor'
+  const [showDocuments, setShowDocuments] = useState(false);
+  const [selectedAppointmentForDocs, setSelectedAppointmentForDocs] = useState(null);
 
   useEffect(() => {
     if (user && !userLoading) {
@@ -132,7 +136,11 @@ const Telemedicine = () => {
           toast.error('Failed to initialize video calling');
           break;
         case 'join':
-          toast.error('Failed to join call');
+          if (event.detail.isTokenError) {
+            toast.error('Video call authentication failed. Please try again.');
+          } else {
+            toast.error('Failed to join call. Please check your connection.');
+          }
           break;
         case 'track-creation':
           toast.error('Failed to access camera/microphone');
@@ -197,70 +205,14 @@ const Telemedicine = () => {
       setError('Failed to load appointments. Please try again.');
       setLoading(false);
       
-      // Fallback to mock data if Firebase fails
-      loadMockData();
+      // No fallback - use empty data if Firebase fails
+      setAppointments([]);
+      setUpcomingAppointments([]);
+      setCompletedAppointments([]);
+      setLoading(false);
     }
   };
 
-  // Fallback to mock data if Firebase is unavailable
-  const loadMockData = () => {
-    const mockAppointments = [
-      {
-        id: 'mock-1',
-        doctorName: 'Dr. Kemi Adebayo',
-        doctorSpecialty: 'Cardiologist',
-        doctorImage: null,
-        patientName: 'Adunni Okafor',
-        patientAge: 72,
-        appointmentDate: new Date('2024-01-20T15:00:00Z'),
-        duration: 30,
-        status: 'scheduled',
-        type: 'video',
-        notes: 'Follow-up consultation for heart condition',
-        symptoms: ['Chest pain', 'Shortness of breath'],
-        vitalSigns: {
-          bloodPressure: '140/90',
-          heartRate: 85,
-          temperature: 98.6
-        },
-        prescription: null,
-        recording: null
-      },
-      {
-        id: 'mock-2',
-        doctorName: 'Dr. Tunde Williams',
-        doctorSpecialty: 'General Practitioner',
-        doctorImage: null,
-        patientName: 'Grace Johnson',
-        patientAge: 68,
-        appointmentDate: new Date('2024-01-20T16:30:00Z'),
-        duration: 45,
-        status: 'completed',
-        type: 'video',
-        notes: 'Regular checkup and medication review',
-        symptoms: ['Fatigue', 'Joint pain'],
-        vitalSigns: {
-          bloodPressure: '130/80',
-          heartRate: 72,
-          temperature: 98.4
-        },
-        prescription: {
-          medications: [
-            { name: 'Metformin', dosage: '500mg', frequency: 'twice daily' },
-            { name: 'Ibuprofen', dosage: '200mg', frequency: 'as needed' }
-          ]
-        },
-        recording: {
-          url: 'https://example.com/recording1.mp4',
-          duration: '42 minutes',
-          size: '1.2GB'
-        }
-      }
-    ];
-
-    setAppointments(mockAppointments);
-    toast.warning('Using offline data. Some features may be limited.');
-  };
 
   const startCall = async (appointment) => {
     try {
@@ -475,7 +427,7 @@ const Telemedicine = () => {
       // In a real app, this would open a form or modal
       const newAppointment = {
         patientId: userType === 'patient' ? user.uid : 'sample-patient-id',
-        doctorId: userType === 'doctor' ? user.uid : 'sample-doctor-id',
+        doctorId: userType === 'doctor' ? user.uid : null,
         appointmentDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
         duration: 30,
         type: 'video',
@@ -497,7 +449,7 @@ const Telemedicine = () => {
   const seedData = async () => {
     try {
       toast.info('Seeding sample data...');
-      await seedTelemedicineData();
+      // Seeding removed - use real appointment data only
       toast.success('Sample data seeded successfully!');
       
       // Reload appointments to show the new data
@@ -506,6 +458,11 @@ const Telemedicine = () => {
       console.error('Failed to seed data:', error);
       toast.error('Failed to seed sample data');
     }
+  };
+
+  const openDocuments = (appointment) => {
+    setSelectedAppointmentForDocs(appointment);
+    setShowDocuments(true);
   };
 
   const formatDuration = (seconds) => {
@@ -1013,7 +970,11 @@ const Telemedicine = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">
+                      <button 
+                        onClick={() => openDocuments(appointment)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Download Invoice & Prescription"
+                      >
                         <FileText className="h-4 w-4" />
                       </button>
                       {appointment.recording && (
@@ -1032,6 +993,32 @@ const Telemedicine = () => {
           </table>
         </div>
       </div>
+
+      {/* Document Manager Modal */}
+      {showDocuments && selectedAppointmentForDocs && (
+        <DocumentManager
+          appointment={selectedAppointmentForDocs}
+          patientInfo={{
+            name: user?.displayName || 'Patient Name',
+            email: user?.email,
+            phone: user?.phoneNumber || '+234 XXX XXX XXXX',
+            address: 'Patient Address',
+            age: 65,
+            gender: 'Not specified',
+            id: user?.uid
+          }}
+          doctorInfo={{
+            name: selectedAppointmentForDocs.doctorName || 'Healthcare Provider',
+            specialty: selectedAppointmentForDocs.doctorSpecialty || 'General Practice',
+            email: 'doctor@elderx.com',
+            phone: '+234 800 ELDERX',
+            licenseNumber: 'MD-2024-001',
+            qualifications: ['MBBS', 'MD'],
+            hospital: 'ElderX Telemedicine Platform'
+          }}
+          onClose={() => setShowDocuments(false)}
+        />
+      )}
     </div>
   );
 };

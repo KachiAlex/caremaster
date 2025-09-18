@@ -34,12 +34,13 @@ const Layout = () => {
   };
 
   const navigation = [
-    { name: 'Overview', href: '/dashboard', icon: Home },
-    { name: 'Request Care', href: '/appointments', icon: Calendar },
-    { name: 'Health Vitals', href: '/vital-signs', icon: Heart },
-    { name: 'Telemedicine', href: '/telemedicine', icon: Video },
+    { name: 'My Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Care Appointments', href: '/appointments', icon: Calendar },
+    { name: 'Health Monitoring', href: '/vital-signs', icon: Heart },
+    { name: 'Video Consultations', href: '/telemedicine', icon: Video },
+    { name: 'Medical Documents', href: '/medical-documents', icon: FileText },
     { name: 'Messages', href: '/messages', icon: MessageCircle },
-    { name: 'Subscription', href: '/subscription', icon: CreditCard },
+    { name: 'Care Plan', href: '/subscription', icon: CreditCard },
   ];
 
   const isCurrentPath = (path) => location.pathname === path;

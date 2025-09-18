@@ -24,8 +24,14 @@ import {
   Users,
   Shield
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { emergencyAPI } from '../api/emergencyAPI';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const AdminEmergency = () => {
+  const { userProfile } = useUser();
+  const navigate = useNavigate();
   const [emergencies, setEmergencies] = useState([]);
   const [filteredEmergencies, setFilteredEmergencies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,10 +47,31 @@ const AdminEmergency = () => {
   });
 
   useEffect(() => {
-    // Simulate loading emergency data
-    const loadEmergencyData = async () => {
-      try {
-        setTimeout(() => {
+    loadEmergencyData();
+  }, []);
+
+  const loadEmergencyData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load real emergency data
+      const [activeEmergencies, emergencyStats] = await Promise.all([
+        emergencyAPI.getAllEmergencies().catch(err => {
+          console.warn('Failed to fetch emergencies:', err);
+          return [];
+        }),
+        emergencyAPI.getEmergencyStats().catch(err => {
+          console.warn('Failed to fetch emergency stats:', err);
+          return { active: 0, resolved: 0, averageResponseTime: 0, totalToday: 0 };
+        })
+      ]);
+
+      setEmergencies(activeEmergencies);
+      setFilteredEmergencies(activeEmergencies);
+      setStats(emergencyStats);
+
+      // If no real data, show demo data
+      if (activeEmergencies.length === 0) {
           const mockEmergencies = [
             {
               id: 1,
@@ -184,18 +211,16 @@ const AdminEmergency = () => {
             totalToday: totalToday
           });
 
-          setEmergencies(mockEmergencies);
-          setFilteredEmergencies(mockEmergencies);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error loading emergency data:', error);
-        setLoading(false);
+        setEmergencies(mockEmergencies);
+        setFilteredEmergencies(mockEmergencies);
       }
-    };
-
-    loadEmergencyData();
-  }, []);
+    } catch (error) {
+      console.error('Error loading emergency data:', error);
+      toast.error('Failed to load emergency data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let filtered = emergencies;

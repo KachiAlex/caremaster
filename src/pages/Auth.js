@@ -59,9 +59,9 @@ const Auth = () => {
     yearsOfExperience: '',
     specializations: [],
     hourlyRate: '',
-    hasDisabilities: false,
+    hasDisabilities: '',
     disabilityDetails: '',
-    hasHealthConditions: false,
+    hasHealthConditions: '',
     healthConditionDetails: '',
     backgroundCheckConsent: false,
     drugTestConsent: false
@@ -149,7 +149,7 @@ const Auth = () => {
       case 1: return form.email && form.password && form.password === form.confirmPassword && form.password.length >= 6;
       case 2: return form.name && form.phone && form.address && form.dateOfBirth;
       case 3: return form.medicalQualification && form.yearsOfExperience && form.specializations.length > 0;
-      case 4: return form.backgroundCheckConsent && form.drugTestConsent;
+      case 4: return form.hasDisabilities && form.hasHealthConditions && form.backgroundCheckConsent && form.drugTestConsent;
       default: return true;
     }
   };
@@ -824,29 +824,113 @@ const Auth = () => {
             {currentStep === 4 && (
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-gray-900">Health Screening</h3>
+                <p className="text-sm text-gray-600">
+                  This information helps us ensure the safety of both caregivers and patients. 
+                  All information is kept confidential and used only for care planning purposes.
+                </p>
                 
-                <div className="space-y-3">
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      name="hasDisabilities"
-                      checked={form.hasDisabilities}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                    />
-                    <span className="text-sm text-gray-700">Do you have any disabilities?</span>
-                  </label>
+                <div className="space-y-6">
+                  {/* Disabilities Question */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-3">Do you have any disabilities?</p>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="hasDisabilities"
+                          value="no"
+                          checked={form.hasDisabilities === 'no'}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-blue-600 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">No</span>
+                      </label>
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="hasDisabilities"
+                          value="yes"
+                          checked={form.hasDisabilities === 'yes'}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-blue-600 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">Yes</span>
+                      </label>
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="hasDisabilities"
+                          value="prefer-not-to-say"
+                          checked={form.hasDisabilities === 'prefer-not-to-say'}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-blue-600 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">Prefer not to say</span>
+                      </label>
+                    </div>
+                    
+                    {form.hasDisabilities === 'yes' && (
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Please specify your disabilities (optional):
+                        </label>
+                        <textarea
+                          name="disabilityDetails"
+                          value={form.disabilityDetails}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          rows="3"
+                          placeholder="Please describe any disabilities that may affect your ability to provide care..."
+                        />
+                      </div>
+                    )}
+                  </div>
 
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      name="hasHealthConditions"
-                      checked={form.hasHealthConditions}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                    />
-                    <span className="text-sm text-gray-700">Do you have any health conditions?</span>
-                  </label>
+                  {/* Health Conditions Question */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-3">Do you have any health conditions?</p>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="hasHealthConditions"
+                          value="no"
+                          checked={form.hasHealthConditions === 'no'}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-blue-600 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">No</span>
+                      </label>
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="hasHealthConditions"
+                          value="yes"
+                          checked={form.hasHealthConditions === 'yes'}
+                          onChange={handleChange}
+                          className="h-4 w-4 text-blue-600 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">Yes</span>
+                      </label>
+                    </div>
+                    
+                    {form.hasHealthConditions === 'yes' && (
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Please describe your health conditions:
+                        </label>
+                        <textarea
+                          name="healthConditionDetails"
+                          value={form.healthConditionDetails}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          rows="3"
+                          placeholder="Please list any health conditions that may affect your ability to provide care..."
+                          required={form.hasHealthConditions === 'yes'}
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   <label className="flex items-center space-x-3">
                     <input

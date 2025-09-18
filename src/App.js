@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
-import { UserProvider } from './contexts/UserContext';
+import { UserProvider, useUser } from './contexts/UserContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import errorHandler from './utils/errorHandler';
 import logger from './utils/logger';
@@ -10,7 +10,7 @@ import securityMonitoringService from './services/securityMonitoringService';
 import biometricAuthService from './services/biometricAuthService';
 import secureConfigService from './services/secureConfigService';
 import Layout from './components/Layout';
-import AdminLayout from './components/AdminLayout';
+// Old admin components removed - using new admin system
 import ServiceProviderLayout from './components/ServiceProviderLayout';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
@@ -50,6 +50,14 @@ import AdminCaregivers from './pages/AdminCaregivers';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminCommunication from './pages/AdminCommunication';
 import AdminAuditLogs from './pages/AdminAuditLogs';
+import AdminPatientAssignments from './pages/AdminPatientAssignments';
+import AdminUserVerification from './pages/AdminUserVerification';
+import SystemStatus from './pages/SystemStatus';
+import MedicalDocuments from './pages/MedicalDocuments';
+import AdminPatientDatabase from './pages/AdminPatientDatabase';
+import AdminCaregiverManagement from './pages/AdminCaregiverManagement';
+import NewAdminLogin from './pages/NewAdminLogin';
+import NewAdminDashboard from './pages/NewAdminDashboard';
 import ServiceProviderDashboard from './pages/ServiceProviderDashboard';
 import UserManagement from './pages/UserManagement';
 import CallsPage from './pages/CallsPage';
@@ -313,20 +321,14 @@ function App() {
       />
       <Route 
         path="/login" 
-        element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
+        element={user ? <Navigate to="/caregiver" replace /> : <Auth />} 
       />
       <Route 
         path="/signup" 
-        element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
+        element={<Navigate to="/admin/login" replace />} 
       />
       
-      {/* Protected routes */}
-      <Route 
-        path="/dashboard" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
-      >
-        <Route index element={<Dashboard />} />
-      </Route>
+      {/* Protected routes - Dashboard removed (patients don't have accounts) */}
       <Route 
         path="/medications" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
@@ -352,14 +354,19 @@ function App() {
         <Route index element={<Telemedicine />} />
       </Route>
       <Route 
+        path="/medical-documents" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<MedicalDocuments />} />
+      </Route>
+      <Route 
         path="/webrtc-test" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<WebRTCTest />} />
       </Route>
       
-      {/* Direct test route for caregiver onboarding */}
-      <Route path="/test-caregiver-onboarding" element={<CaregiverOnboarding />} />
+      {/* Direct test route for caregiver onboarding - removed as onboarding is now integrated into Auth.js */}
       <Route 
         path="/profile" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
@@ -435,32 +442,23 @@ function App() {
         element={<Pricing />} 
       />
       
-      {/* Secret Admin Login Route */}
+      {/* Admin Login Route */}
       <Route 
         path="/admin/login" 
-        element={user ? <Navigate to="/admin" replace /> : <AdminLogin />} 
+        element={<NewAdminLogin />} 
       />
       
-      {/* Admin routes */}
+      {/* Admin Dashboard Route */}
+      <Route 
+        path="/admin/dashboard" 
+        element={<NewAdminDashboard />} 
+      />
+      
+      {/* Admin Root Redirect */}
       <Route 
         path="/admin" 
-        element={user ? <AdminLayout /> : <Navigate to="/admin/login" replace />} 
-      >
-        <Route index element={<AdminDashboard />} />
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="user-management" element={<UserManagement />} />
-        <Route path="appointments" element={<AdminAppointments />} />
-        <Route path="emergency" element={<AdminEmergency />} />
-        <Route path="emergency/protocols" element={<AdminEmergencyProtocols />} />
-        <Route path="medications" element={<AdminMedications />} />
-        <Route path="medications/analytics" element={<AdminMedicationAnalytics />} />
-        <Route path="caregivers" element={<AdminCaregivers />} />
-        <Route path="analytics" element={<AdminAnalytics />} />
-        <Route path="communication" element={<AdminCommunication />} />
-        <Route path="audit-logs" element={<AdminAuditLogs />} />
-        <Route path="reports" element={<AdminReports />} />
-        <Route path="settings" element={<AdminSettings />} />
-      </Route>
+        element={<Navigate to="/admin/dashboard" replace />} 
+      />
       
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -468,6 +466,41 @@ function App() {
       </UserProvider>
     </ErrorBoundary>
   );
+}
+
+// Role-based dashboard routing component
+function RoleBasedDashboardRoute() {
+  const { userRole, userProfile, loading } = useUser();
+  
+  // Show loading while user profile is being fetched
+  if (loading || !userProfile) {
+    return <LoadingSpinner />;
+  }
+  
+  console.log('🔄 RoleBasedDashboardRoute - Checking user role:', {
+    userRole,
+    userType: userProfile?.userType,
+    redirecting: userRole === 'caregiver' || userRole === 'doctor'
+  });
+  
+  // Check for admin session override
+  const hasAdminSession = sessionStorage.getItem('elderx_admin_session') === 'true';
+  
+  // Redirect admins to admin dashboard
+  if (userRole === 'admin' || hasAdminSession) {
+    console.log('🚀 Redirecting admin to /admin');
+    return <Navigate to="/admin" replace />;
+  }
+  
+  // Redirect caregivers and doctors to service provider dashboard (unless they have admin session)
+  if ((userRole === 'caregiver' || userRole === 'doctor') && !hasAdminSession) {
+    console.log('🚀 Redirecting service provider to /service-provider');
+    return <Navigate to="/service-provider" replace />;
+  }
+  
+  // Default to patient dashboard for elderly/patient users
+  console.log('✅ Showing patient dashboard for role:', userRole);
+  return <Layout />;
 }
 
 export default App;

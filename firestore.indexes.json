@@ -68,8 +68,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "patientId", "mode": "ASCENDING" },
-        { "fieldPath": "scheduledTime", "mode": "ASCENDING" },
-        { "fieldPath": "__name__", "mode": "ASCENDING" }
+        { "fieldPath": "scheduledTime", "mode": "ASCENDING" }
       ]
     },
     {
@@ -77,8 +76,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "patientId", "mode": "ASCENDING" },
-        { "fieldPath": "scheduledTime", "mode": "DESCENDING" },
-        { "fieldPath": "__name__", "mode": "DESCENDING" }
+        { "fieldPath": "scheduledTime", "mode": "DESCENDING" }
       ]
     },
     {
@@ -110,8 +108,123 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "mode": "ASCENDING" },
+        { "fieldPath": "joinDate", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "caregivers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "mode": "ASCENDING" },
         { "fieldPath": "joinDate", "mode": "ASCENDING" },
         { "fieldPath": "__name__", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "careTasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caregiverId", "mode": "ASCENDING" },
+        { "fieldPath": "scheduledTime", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "careTasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caregiverId", "mode": "ASCENDING" },
+        { "fieldPath": "scheduledTime", "mode": "ASCENDING" },
+        { "fieldPath": "__name__", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "careTasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caregiverId", "mode": "ASCENDING" },
+        { "fieldPath": "status", "mode": "ASCENDING" },
+        { "fieldPath": "scheduledTime", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "careTasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caregiverId", "mode": "ASCENDING" },
+        { "fieldPath": "status", "mode": "ASCENDING" },
+        { "fieldPath": "scheduledTime", "mode": "ASCENDING" },
+        { "fieldPath": "__name__", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "patients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedCaregiver", "mode": "ASCENDING" },
+        { "fieldPath": "createdAt", "mode": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "patients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedCaregiver", "mode": "ASCENDING" },
+        { "fieldPath": "createdAt", "mode": "DESCENDING" },
+        { "fieldPath": "__name__", "mode": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caregiverId", "mode": "ASCENDING" },
+        { "fieldPath": "scheduledTime", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caregiverId", "mode": "ASCENDING" },
+        { "fieldPath": "scheduledTime", "mode": "ASCENDING" },
+        { "fieldPath": "__name__", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "doctorId", "mode": "ASCENDING" },
+        { "fieldPath": "scheduledTime", "mode": "ASCENDING" },
+        { "fieldPath": "__name__", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "serviceProviderId", "mode": "ASCENDING" },
+        { "fieldPath": "scheduledTime", "mode": "ASCENDING" },
+        { "fieldPath": "__name__", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "vitalSigns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientId", "mode": "ASCENDING" },
+        { "fieldPath": "recordedAt", "mode": "DESCENDING" },
+        { "fieldPath": "__name__", "mode": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "medications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientId", "mode": "ASCENDING" },
+        { "fieldPath": "status", "mode": "ASCENDING" },
+        { "fieldPath": "startDate", "mode": "DESCENDING" },
+        { "fieldPath": "__name__", "mode": "DESCENDING" }
       ]
     }
   ],

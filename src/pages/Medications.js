@@ -1,15 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pill, Clock, CheckCircle, XCircle, Edit, Trash2, Calendar } from 'lucide-react';
+import { 
+  Plus, 
+  Pill, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  Edit, 
+  Trash2, 
+  Calendar,
+  AlertTriangle,
+  User,
+  MessageCircle,
+  Bell,
+  Activity,
+  FileText,
+  Camera
+} from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
 import { medicationAPI } from '../api/medicationAPI';
+import { useNavigate } from 'react-router-dom';
 
 const Medications = () => {
   const { user } = useUser();
+  const navigate = useNavigate();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingMed, setEditingMed] = useState(null);
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCaregiverContact, setShowCaregiverContact] = useState(false);
 
   const [newMedication, setNewMedication] = useState({
     name: '',
@@ -314,6 +333,48 @@ const Medications = () => {
           </button>
         </div>
       )}
+
+      {/* Caregiver Support Section */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Need Help with Medications?</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button 
+            onClick={() => navigate('/messages?topic=medication')}
+            className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+          >
+            <MessageCircle className="h-5 w-5 mr-2" />
+            Message Caregiver
+          </button>
+          <button 
+            onClick={() => navigate('/telemedicine?type=medication-consult')}
+            className="flex items-center justify-center p-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+          >
+            <User className="h-5 w-5 mr-2" />
+            Video Consultation
+          </button>
+          <button 
+            onClick={() => navigate('/appointments?type=medication-review')}
+            className="flex items-center justify-center p-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+          >
+            <Calendar className="h-5 w-5 mr-2" />
+            Schedule Review
+          </button>
+        </div>
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-start">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-medium text-yellow-800">Important Reminders</h4>
+              <ul className="text-sm text-yellow-700 mt-1 space-y-1">
+                <li>• Always take medications as prescribed by your doctor</li>
+                <li>• Contact your caregiver if you experience side effects</li>
+                <li>• Never skip doses without consulting your healthcare provider</li>
+                <li>• Keep medications in a safe, dry place</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

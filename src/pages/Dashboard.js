@@ -1,13 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Calendar, Phone, MessageCircle, AlertTriangle, User } from 'lucide-react';
+import { 
+  Heart, 
+  Calendar, 
+  Phone, 
+  MessageCircle, 
+  AlertTriangle, 
+  User,
+  Plus,
+  Activity,
+  Pill,
+  Video,
+  Shield,
+  Bell,
+  Settings,
+  HelpCircle,
+  Stethoscope,
+  Clock,
+  TrendingUp,
+  FileText
+} from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { getUpcomingAppointments } from '../api/appointmentsAPI';
 import { getLatestVitalSigns } from '../api/vitalSignsAPI';
 import { getUnreadMessageCount } from '../api/messagesAPI';
 import { medicationAPI } from '../api/medicationAPI';
+import { emergencyAPI } from '../api/emergencyAPI';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user, userProfile } = useUser();
+  const navigate = useNavigate();
   const displayName = userProfile?.name || userProfile?.displayName || user?.displayName || user?.email || 'there';
   
   // State for dashboard data
@@ -42,6 +65,74 @@ const Dashboard = () => {
   const getSubscriptionStatus = () => {
     return userProfile?.subscriptionStatus || 'Premium';
   };
+
+  // Emergency alert function
+  const handleEmergencyAlert = async () => {
+    try {
+      const result = await emergencyAPI.triggerEmergencyAlert({
+        userId: user.uid,
+        type: 'medical',
+        severity: 'high',
+        location: userProfile?.address || 'Unknown location',
+        description: 'Emergency assistance requested from client dashboard'
+      });
+      
+      if (result.success) {
+        toast.success('Emergency alert sent! Help is on the way.');
+      } else {
+        toast.error('Failed to send emergency alert');
+      }
+    } catch (error) {
+      console.error('Error sending emergency alert:', error);
+      toast.error('Failed to send emergency alert');
+    }
+  };
+
+  // Quick actions
+  const quickActions = [
+    {
+      name: 'Request Care Visit',
+      icon: Calendar,
+      color: 'bg-blue-600 hover:bg-blue-700',
+      action: () => navigate('/appointments')
+    },
+    {
+      name: 'Record Vital Signs',
+      icon: Heart,
+      color: 'bg-red-600 hover:bg-red-700',
+      action: () => navigate('/vital-signs')
+    },
+    {
+      name: 'Message Caregiver',
+      icon: MessageCircle,
+      color: 'bg-green-600 hover:bg-green-700',
+      action: () => navigate('/messages')
+    },
+    {
+      name: 'Video Consultation',
+      icon: Video,
+      color: 'bg-purple-600 hover:bg-purple-700',
+      action: () => navigate('/telemedicine')
+    },
+    {
+      name: 'View Medications',
+      icon: Pill,
+      color: 'bg-orange-600 hover:bg-orange-700',
+      action: () => navigate('/medications')
+    },
+    {
+      name: 'Medical Documents',
+      icon: FileText,
+      color: 'bg-indigo-600 hover:bg-indigo-700',
+      action: () => navigate('/medical-documents')
+    },
+    {
+      name: 'Emergency Help',
+      icon: AlertTriangle,
+      color: 'bg-red-600 hover:bg-red-700',
+      action: handleEmergencyAlert
+    }
+  ];
 
   // Fetch dashboard data
   useEffect(() => {
@@ -135,7 +226,10 @@ const Dashboard = () => {
 
         {/* Right - Emergency & Contact */}
         <div className="space-y-4">
-          <button className="w-full bg-red-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-700 transition-colors">
+          <button 
+            onClick={handleEmergencyAlert}
+            className="w-full bg-red-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-700 transition-colors"
+          >
             <AlertTriangle className="h-6 w-6 inline mr-2" />
             EMERGENCY - NEED HELP NOW
           </button>
@@ -158,16 +252,42 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Quick Actions */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {quickActions.map((action, index) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={index}
+                onClick={action.action}
+                className={`${action.color} text-white p-4 rounded-lg transition-colors flex flex-col items-center space-y-2`}
+              >
+                <Icon className="h-6 w-6" />
+                <span className="text-sm font-medium text-center">{action.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="card text-center">
+        <button 
+          onClick={() => navigate('/appointments')}
+          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
+        >
           <Calendar className="h-8 w-8 text-blue-600 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900">
             {dashboardData.loading ? '...' : dashboardData.upcomingAppointments.length}
           </div>
           <div className="text-sm text-gray-500">Upcoming Visits</div>
-        </div>
-        <div className="card text-center">
+        </button>
+        <button 
+          onClick={() => navigate('/vital-signs')}
+          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
+        >
           <Heart className="h-8 w-8 text-red-600 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900">
             {dashboardData.loading ? '...' : (
@@ -179,21 +299,27 @@ const Dashboard = () => {
           <div className="text-sm text-gray-500">
             {dashboardData.latestVitalSigns?.type || 'Last Reading'}
           </div>
-        </div>
-        <div className="card text-center">
+        </button>
+        <button 
+          onClick={() => navigate('/messages')}
+          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
+        >
           <MessageCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900">
             {dashboardData.loading ? '...' : dashboardData.unreadMessages}
           </div>
           <div className="text-sm text-gray-500">New Messages</div>
-        </div>
-        <div className="card text-center">
-          <Heart className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+        </button>
+        <button 
+          onClick={() => navigate('/medications')}
+          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
+        >
+          <Pill className="h-8 w-8 text-purple-600 mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900">
             {dashboardData.loading ? '...' : dashboardData.activeMedications.length}
           </div>
           <div className="text-sm text-gray-500">Active Medications</div>
-        </div>
+        </button>
       </div>
 
       {/* Upcoming Care Visits */}

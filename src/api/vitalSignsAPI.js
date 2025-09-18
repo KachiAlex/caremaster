@@ -52,16 +52,23 @@ export const getVitalSignsByPatient = async (patientId) => {
 export const getLatestVitalSigns = async (patientId) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
+    // Simplified query without composite index requirement
     const q = query(
       vitalSignsRef, 
       where('patientId', '==', patientId),
-      orderBy('recordedAt', 'desc'),
-      limit(1)
+      limit(10) // Get more records and sort client-side
     );
     const querySnapshot = await getDocs(q);
     
     if (!querySnapshot.empty) {
-      const doc = querySnapshot.docs[0];
+      // Sort client-side by recordedAt desc and get the latest
+      const sortedDocs = querySnapshot.docs.sort((a, b) => {
+        const aTime = a.data().recordedAt?.toDate?.() || new Date(a.data().recordedAt);
+        const bTime = b.data().recordedAt?.toDate?.() || new Date(b.data().recordedAt);
+        return bTime - aTime;
+      });
+      
+      const doc = sortedDocs[0];
       const vitalData = doc.data();
       return {
         id: doc.id,
