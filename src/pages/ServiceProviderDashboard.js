@@ -184,15 +184,11 @@ const DoctorSpecificSections = ({ userProfile }) => {
 
   useEffect(() => {
     // Mock data - replace with real API calls
-    setRecentPatients([
-      { id: 1, name: 'Adunni Okafor', lastVisit: '2024-01-20', condition: 'Hypertension', status: 'stable' },
-      { id: 2, name: 'Grace Johnson', lastVisit: '2024-01-19', condition: 'Diabetes', status: 'improving' },
-    ]);
+    // Use only real data - no mock data
+    setRecentPatients([]);
     
-    setUpcomingConsultations([
-      { id: 1, patient: 'Samuel Adekunle', time: '10:00 AM', type: 'Follow-up' },
-      { id: 2, patient: 'Maryam Ibrahim', time: '2:00 PM', type: 'Initial Consultation' },
-    ]);
+    // Use only real data - no mock data
+    setUpcomingConsultations([]);
   }, []);
 
   return (
@@ -261,16 +257,9 @@ const CaregiverSpecificSections = ({ userProfile }) => {
   const [recentUpdates, setRecentUpdates] = useState([]);
 
   useEffect(() => {
-    // Mock data - replace with real API calls
-    setTodayTasks([
-      { id: 1, patient: 'Adunni Okafor', task: 'Morning medication', time: '8:00 AM', completed: false },
-      { id: 2, patient: 'Grace Johnson', task: 'Physical therapy', time: '10:00 AM', completed: true },
-    ]);
-    
-    setRecentUpdates([
-      { id: 1, patient: 'Samuel Adekunle', type: 'Photo Update', time: '2 hours ago' },
-      { id: 2, patient: 'Maryam Ibrahim', type: 'Care Log', time: '4 hours ago' },
-    ]);
+    // Use only real data - no mock data
+    setTodayTasks([]);
+    setRecentUpdates([]);
   }, []);
 
   return (

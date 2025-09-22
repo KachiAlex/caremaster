@@ -91,7 +91,7 @@ const Landing = () => {
 
   const testimonials = [
     {
-      name: "Mrs. Adunni Okafor",
+      name: "Satisfied Client",
       location: "Lagos, Nigeria",
       rating: 5,
       text: "ElderCare Nigeria has been a blessing for my family. The caregivers are professional and caring, and the 24/7 support gives us peace of mind.",
@@ -394,11 +394,11 @@ const Landing = () => {
                 <img
                   className="w-full h-96 object-cover"
                   src={process.env.PUBLIC_URL + '/images/story-care-checkup-2.png'}
-                  alt="Mrs. Adunni's Story"
+                  alt="Client Story"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                 <div className="absolute bottom-4 left-4 text-white">
-                  <h3 className="text-lg font-semibold">Mrs. Adunni's Story</h3>
+                  <h3 className="text-lg font-semibold">Client Success Story</h3>
                   <p className="text-sm opacity-90">Lagos, Nigeria</p>
                 </div>
               </div>

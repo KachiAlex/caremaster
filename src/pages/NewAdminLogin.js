@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Shield, Mail, Lock, Eye, EyeOff, Building } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase/config';
 
 const NewAdminLogin = () => {
   const [credentials, setCredentials] = useState({
@@ -21,34 +23,33 @@ const NewAdminLogin = () => {
     setLoading(true);
 
     try {
-      // Simple admin authentication - for demo purposes
-      // In production, this would validate against a secure admin database
-      const validAdmins = [
-        { email: 'admin@elderx.com', password: 'admin123' },
-        { email: 'admin@test.com', password: 'admin123' },
-        { email: credentials.email, password: credentials.password } // Allow any login for testing
-      ];
-
-      const isValidAdmin = validAdmins.some(admin => 
-        admin.email === credentials.email && admin.password === credentials.password
-      );
-
-      if (isValidAdmin) {
-        // Set admin session
-        localStorage.setItem('elderx_admin_authenticated', 'true');
-        localStorage.setItem('elderx_admin_email', credentials.email);
-        localStorage.setItem('elderx_admin_timestamp', Date.now().toString());
-        
-        toast.success('Admin authentication successful!');
-        
-        // Direct navigation to admin dashboard
-        window.location.href = '/admin/dashboard';
-      } else {
-        toast.error('Invalid admin credentials');
-      }
+      // Authenticate with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+      const user = userCredential.user;
+      
+      // Set admin session flags
+      localStorage.setItem('elderx_admin_authenticated', 'true');
+      localStorage.setItem('elderx_admin_email', credentials.email);
+      localStorage.setItem('elderx_admin_timestamp', Date.now().toString());
+      
+      toast.success('Admin authentication successful!');
+      
+      // Set session flag to prevent redirects
+      sessionStorage.setItem('elderx_admin_session', 'true');
+      
+      // Direct navigation to admin dashboard
+      window.location.href = '/admin/dashboard';
     } catch (error) {
       console.error('Admin login error:', error);
-      toast.error('Login failed. Please try again.');
+      if (error.code === 'auth/user-not-found') {
+        toast.error('Admin account not found. Please contact system administrator.');
+      } else if (error.code === 'auth/wrong-password') {
+        toast.error('Invalid password. Please try again.');
+      } else if (error.code === 'auth/invalid-email') {
+        toast.error('Invalid email format.');
+      } else {
+        toast.error('Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -151,13 +152,12 @@ const NewAdminLogin = () => {
 
           {/* Demo Credentials */}
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</h4>
+            <h4 className="text-sm font-medium text-blue-800 mb-2">Admin Access</h4>
             <p className="text-sm text-blue-700">
-              Email: <code className="bg-blue-100 px-1 rounded">admin@elderx.com</code><br />
-              Password: <code className="bg-blue-100 px-1 rounded">admin123</code>
+              Use your registered admin credentials to access the dashboard.
             </p>
             <p className="text-xs text-blue-600 mt-2">
-              Or use any email/password combination for testing
+              Contact system administrator if you need admin account creation.
             </p>
           </div>
         </div>

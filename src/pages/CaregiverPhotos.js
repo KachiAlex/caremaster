@@ -35,88 +35,9 @@ const CaregiverPhotos = () => {
     // Simulate loading photo data
     const loadPhotos = async () => {
       try {
-        setTimeout(() => {
-          const mockPhotos = [
-            {
-              id: 1,
-              patientName: 'Adunni Okafor',
-              patientId: 'ELD001',
-              title: 'Morning medication administration',
-              description: 'Patient taking morning diabetes medication as prescribed',
-              category: 'medication',
-              imageUrl: null,
-              thumbnailUrl: null,
-              uploadedAt: '2024-01-21T09:30:00Z',
-              location: '123 Victoria Island, Lagos',
-              tags: ['medication', 'morning', 'diabetes'],
-              status: 'approved',
-              notes: 'Patient compliant with medication schedule'
-            },
-            {
-              id: 2,
-              patientName: 'Grace Johnson',
-              patientId: 'ELD002',
-              title: 'Physical therapy progress',
-              description: 'Patient completing physical therapy exercises',
-              category: 'therapy',
-              imageUrl: null,
-              thumbnailUrl: null,
-              uploadedAt: '2024-01-21T10:15:00Z',
-              location: '456 Ikoyi, Lagos',
-              tags: ['therapy', 'exercise', 'progress'],
-              status: 'pending',
-              notes: 'Good progress in mobility exercises'
-            },
-            {
-              id: 3,
-              patientName: 'Michael Adebayo',
-              patientId: 'ELD003',
-              title: 'Lunch meal preparation',
-              description: 'Healthy diabetic-friendly meal prepared',
-              category: 'meal',
-              imageUrl: null,
-              thumbnailUrl: null,
-              uploadedAt: '2024-01-21T12:45:00Z',
-              location: '789 Lekki, Lagos',
-              tags: ['meal', 'nutrition', 'diabetic'],
-              status: 'approved',
-              notes: 'Meal follows dietary guidelines'
-            },
-            {
-              id: 4,
-              patientName: 'Sarah Williams',
-              patientId: 'ELD004',
-              title: 'Evening care routine',
-              description: 'Patient ready for evening medication and bedtime routine',
-              category: 'care',
-              imageUrl: null,
-              thumbnailUrl: null,
-              uploadedAt: '2024-01-21T18:30:00Z',
-              location: '321 Surulere, Lagos',
-              tags: ['care', 'evening', 'routine'],
-              status: 'pending',
-              notes: 'Patient comfortable and ready for rest'
-            },
-            {
-              id: 5,
-              patientName: 'Adunni Okafor',
-              patientId: 'ELD001',
-              title: 'Blood sugar monitoring',
-              description: 'Blood glucose level check - within normal range',
-              category: 'health',
-              imageUrl: null,
-              thumbnailUrl: null,
-              uploadedAt: '2024-01-21T14:00:00Z',
-              location: '123 Victoria Island, Lagos',
-              tags: ['health', 'monitoring', 'diabetes'],
-              status: 'approved',
-              notes: 'Blood sugar levels stable'
-            }
-          ];
-
-          setPhotos(mockPhotos);
-          setLoading(false);
-        }, 1000);
+        // Use only real photo data - no mock data
+        setPhotos([]);
+        setLoading(false);
       } catch (error) {
         console.error('Error loading photos:', error);
         setLoading(false);
@@ -239,10 +160,6 @@ const CaregiverPhotos = () => {
                 onChange={(e) => setFilterPatient(e.target.value)}
               >
                 <option value="all">All Patients</option>
-                <option value="ELD001">Adunni Okafor</option>
-                <option value="ELD002">Grace Johnson</option>
-                <option value="ELD003">Michael Adebayo</option>
-                <option value="ELD004">Sarah Williams</option>
               </select>
               <select
                 className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -382,10 +299,7 @@ const CaregiverPhotos = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Patient</label>
                 <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                  <option>Adunni Okafor</option>
-                  <option>Grace Johnson</option>
-                  <option>Michael Adebayo</option>
-                  <option>Sarah Williams</option>
+                  <option value="">Select a patient</option>
                 </select>
               </div>
               <div>

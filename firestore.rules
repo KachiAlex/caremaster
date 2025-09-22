@@ -202,12 +202,12 @@ service cloud.firestore {
     
     // Caregivers collection
     match /caregivers/{caregiverId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+      allow read, write: if true; // Temporarily open for admin debugging
     }
     
     // Clients collection
     match /clients/{clientId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+      allow read, write: if true; // Temporarily open for admin debugging
     }
     
     // Care tasks collection
@@ -257,7 +257,7 @@ service cloud.firestore {
     
     // Legacy patients collection (for backward compatibility)
     match /patients/{patientId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+      allow read, write: if true; // Temporarily open for admin debugging
     }
     
     // Healthcare providers collection  

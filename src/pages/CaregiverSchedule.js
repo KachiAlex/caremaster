@@ -101,72 +101,11 @@ const CaregiverSchedule = () => {
       setCareTasks(allTasks);
       setAppointments(allAppointments);
       
-      // If no real data, show sample data for demo
-      if (allTasks.length === 0 && allAppointments.length === 0) {
-        const mockAppointments = [
-          {
-            id: 1,
-            patientName: 'Adunni Okafor',
-            patientAge: 72,
-            patientAddress: '123 Victoria Island, Lagos',
-            patientPhone: '+234 801 234 5678',
-            appointmentTime: '09:00',
-            duration: 60,
-            type: 'Home Visit',
-            status: 'scheduled',
-            tasks: [
-              'Medication administration',
-              'Vital signs check',
-              'Meal preparation',
-              'Light housekeeping'
-            ],
-            notes: 'Patient has diabetes, check blood sugar levels',
-            priority: 'high',
-            estimatedTravelTime: 25
-          },
-          {
-            id: 2,
-            patientName: 'Tunde Adebayo',
-            patientAge: 68,
-            patientAddress: '456 Ikoyi, Lagos',
-            patientPhone: '+234 802 345 6789',
-            appointmentTime: '11:30',
-            duration: 90,
-            type: 'Home Visit',
-            status: 'scheduled',
-            tasks: [
-              'Physical therapy exercises',
-              'Medication reminder',
-              'Grocery shopping',
-              'Companionship'
-            ],
-            notes: 'Patient recovering from hip surgery',
-            priority: 'medium',
-            estimatedTravelTime: 15
-          },
-          {
-            id: 3,
-            patientName: 'Grace Johnson',
-            patientAge: 75,
-            patientAddress: '789 Lekki, Lagos',
-            patientPhone: '+234 803 456 7890',
-            appointmentTime: '14:00',
-            duration: 45,
-            type: 'Home Visit',
-            status: 'completed',
-            tasks: [
-              'Medication administration',
-              'Vital signs check',
-              'Meal preparation'
-            ],
-            notes: 'Regular checkup visit',
-            priority: 'low',
-            estimatedTravelTime: 30
-          }
-        ];
-
-        setAppointments(mockAppointments);
-      }
+      // No mock data - use only real data from Firebase
+      console.log('Loaded real data:', { 
+        tasks: allTasks.length, 
+        appointments: allAppointments.length 
+      });
     } catch (error) {
       console.error('Error loading schedule data:', error);
       toast.error('Failed to load schedule data');
@@ -420,10 +359,18 @@ const CaregiverSchedule = () => {
       <div className="card">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Schedule Timeline</h2>
         <div className="space-y-4">
-          {appointments
-            .filter(apt => apt.status === 'scheduled')
-            .sort((a, b) => a.appointmentTime.localeCompare(b.appointmentTime))
-            .map((appointment) => (
+          {appointments.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Appointments Today</h3>
+              <p className="text-gray-600">You have no scheduled appointments for {formatDate(selectedDate)}</p>
+              <p className="text-sm text-gray-500 mt-2">Check with your admin for task assignments</p>
+            </div>
+          ) : (
+            appointments
+              .filter(apt => apt.status === 'scheduled')
+              .sort((a, b) => a.appointmentTime.localeCompare(b.appointmentTime))
+              .map((appointment) => (
             <div key={appointment.id} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
@@ -514,7 +461,8 @@ const CaregiverSchedule = () => {
                 </div>
               </div>
             </div>
-          ))}
+              ))
+          )}
         </div>
       </div>
 

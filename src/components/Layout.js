@@ -173,7 +173,7 @@ const Layout = () => {
               </button>
               <div className="flex items-center gap-x-2">
                 <User className="h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-700">Mrs. Adunni Okafor</span>
+                <span className="text-sm text-gray-700">Client</span>
               </div>
             </div>
           </div>

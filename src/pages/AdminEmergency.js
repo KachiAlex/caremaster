@@ -70,149 +70,17 @@ const AdminEmergency = () => {
       setFilteredEmergencies(activeEmergencies);
       setStats(emergencyStats);
 
-      // If no real data, show demo data
+      // Use only real emergency data - no mock data
       if (activeEmergencies.length === 0) {
-          const mockEmergencies = [
-            {
-              id: 1,
-              patientName: 'Adunni Okafor',
-              patientId: 'ELD001',
-              patientPhone: '+234 801 987 6543',
-              patientEmail: 'adunni@example.com',
-              emergencyType: 'Medical Emergency',
-              severity: 'Critical',
-              description: 'Chest pain and difficulty breathing',
-              location: 'Lagos, Nigeria',
-              coordinates: { lat: 6.5244, lng: 3.3792 },
-              triggeredAt: '2024-01-20T14:30:00Z',
-              status: 'active',
-              responseTime: 0,
-              assignedTo: 'Dr. Kemi Okafor',
-              assignedToPhone: '+234 802 123 4567',
-              familyContact: 'Tunde Adebayo',
-              familyPhone: '+234 803 456 7890',
-              medicalHistory: ['Hypertension', 'Diabetes Type 2'],
-              currentMedications: ['Metformin', 'Lisinopril'],
-              notes: 'Patient reported severe chest pain. Emergency services contacted.',
-              actions: [
-                {
-                  id: 1,
-                  action: 'Emergency services contacted',
-                  timestamp: '2024-01-20T14:32:00Z',
-                  performedBy: 'System',
-                  status: 'completed'
-                },
-                {
-                  id: 2,
-                  action: 'Family notified',
-                  timestamp: '2024-01-20T14:35:00Z',
-                  performedBy: 'Admin',
-                  status: 'completed'
-                }
-              ]
-            },
-            {
-              id: 2,
-              patientName: 'Grace Johnson',
-              patientId: 'ELD002',
-              patientPhone: '+234 803 456 7890',
-              patientEmail: 'grace@example.com',
-              emergencyType: 'Fall Detection',
-              severity: 'High',
-              description: 'Patient fell and may be injured',
-              location: 'Abuja, Nigeria',
-              coordinates: { lat: 9.0765, lng: 7.3986 },
-              triggeredAt: '2024-01-20T10:15:00Z',
-              status: 'resolved',
-              responseTime: 12,
-              assignedTo: 'Dr. Michael Johnson',
-              assignedToPhone: '+234 804 567 8901',
-              familyContact: 'John Johnson',
-              familyPhone: '+234 805 678 9012',
-              medicalHistory: ['Arthritis', 'Osteoporosis'],
-              currentMedications: ['Calcium', 'Vitamin D'],
-              notes: 'Patient fell in bathroom. Minor injuries reported. Family assisted.',
-              actions: [
-                {
-                  id: 1,
-                  action: 'Fall detected by sensor',
-                  timestamp: '2024-01-20T10:15:00Z',
-                  performedBy: 'IoT Device',
-                  status: 'completed'
-                },
-                {
-                  id: 2,
-                  action: 'Family contacted',
-                  timestamp: '2024-01-20T10:18:00Z',
-                  performedBy: 'System',
-                  status: 'completed'
-                },
-                {
-                  id: 3,
-                  action: 'Emergency resolved',
-                  timestamp: '2024-01-20T10:27:00Z',
-                  performedBy: 'Dr. Michael Johnson',
-                  status: 'completed'
-                }
-              ]
-            },
-            {
-              id: 3,
-              patientName: 'Tunde Adebayo',
-              patientId: 'ELD003',
-              patientPhone: '+234 802 123 4567',
-              patientEmail: 'tunde@example.com',
-              emergencyType: 'Medication Overdose',
-              severity: 'Critical',
-              description: 'Patient may have taken double dose of medication',
-              location: 'Ibadan, Nigeria',
-              coordinates: { lat: 7.3775, lng: 3.9470 },
-              triggeredAt: '2024-01-20T08:45:00Z',
-              status: 'active',
-              responseTime: 0,
-              assignedTo: 'Dr. Sarah Williams',
-              assignedToPhone: '+234 806 789 0123',
-              familyContact: 'Adebayo Family',
-              familyPhone: '+234 807 890 1234',
-              medicalHistory: ['Diabetes Type 2', 'Heart Disease'],
-              currentMedications: ['Insulin', 'Metformin', 'Aspirin'],
-              notes: 'Patient accidentally took double dose of insulin. Monitoring blood sugar levels.',
-              actions: [
-                {
-                  id: 1,
-                  action: 'Overdose alert triggered',
-                  timestamp: '2024-01-20T08:45:00Z',
-                  performedBy: 'Medication Tracker',
-                  status: 'completed'
-                },
-                {
-                  id: 2,
-                  action: 'Emergency services contacted',
-                  timestamp: '2024-01-20T08:47:00Z',
-                  performedBy: 'System',
-                  status: 'completed'
-                }
-              ]
-            }
-          ];
-
-          // Calculate stats
-          const activeCount = mockEmergencies.filter(e => e.status === 'active').length;
-          const resolvedCount = mockEmergencies.filter(e => e.status === 'resolved').length;
-          const totalToday = mockEmergencies.length;
-          const avgResponseTime = mockEmergencies
-            .filter(e => e.responseTime > 0)
-            .reduce((sum, e) => sum + e.responseTime, 0) / resolvedCount || 0;
-
-          setStats({
-            active: activeCount,
-            resolved: resolvedCount,
-            averageResponseTime: Math.round(avgResponseTime),
-            totalToday: totalToday
-          });
-
-        setEmergencies(mockEmergencies);
-        setFilteredEmergencies(mockEmergencies);
+        // Show empty state - no mock data
+        setEmergencies([]);
+        setFilteredEmergencies([]);
+        setStats({
+          active: 0,
+          resolved: 0,
+          averageResponseTime: 0,
+          totalToday: 0
+        });
       }
     } catch (error) {
       console.error('Error loading emergency data:', error);

@@ -21,6 +21,7 @@ import VitalSigns from './pages/VitalSigns';
 import Appointments from './pages/Appointments';
 import Profile from './pages/Profile';
 import CaregiverDashboard from './pages/CaregiverDashboard';
+import PreclinicCaregiverDashboard from './pages/PreclinicCaregiverDashboard';
 import CaregiverSchedule from './pages/CaregiverSchedule';
 import CaregiverPatients from './pages/CaregiverPatients';
 import CaregiverTasks from './pages/CaregiverTasks';
@@ -451,7 +452,7 @@ function App() {
       {/* Admin Dashboard Route */}
       <Route 
         path="/admin/dashboard" 
-        element={<NewAdminDashboard />} 
+        element={<AdminGuardedRoute><NewAdminDashboard /></AdminGuardedRoute>} 
       />
       
       {/* Admin Root Redirect */}
@@ -501,6 +502,20 @@ function RoleBasedDashboardRoute() {
   // Default to patient dashboard for elderly/patient users
   console.log('✅ Showing patient dashboard for role:', userRole);
   return <Layout />;
+}
+
+// Admin Guard Component to prevent redirects
+function AdminGuardedRoute({ children }) {
+  const isAdminAuthenticated = localStorage.getItem('elderx_admin_authenticated') === 'true';
+  
+  if (!isAdminAuthenticated) {
+    return <Navigate to="/admin/login" replace />;
+  }
+  
+  // Set session flag to prevent other guards from interfering
+  sessionStorage.setItem('elderx_admin_session', 'true');
+  
+  return children;
 }
 
 export default App;
