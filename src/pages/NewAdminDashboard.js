@@ -23,7 +23,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getAllPatients, createPatient, subscribeToPatients } from '../api/patientsAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
@@ -39,6 +39,10 @@ const NewAdminDashboard = () => {
   // Modal states
   const [selectedCaregiver, setSelectedCaregiver] = useState(null);
   const [showCaregiverModal, setShowCaregiverModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showPatientModal, setShowPatientModal] = useState(false);
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [editingCaregiver, setEditingCaregiver] = useState(null);
   
   // Tasks state
   const [tasks, setTasks] = useState([]);
@@ -408,6 +412,77 @@ const NewAdminDashboard = () => {
     console.log('🔥 Modal state set to true');
   };
 
+  // Patient actions
+  const viewPatientDetails = (patient) => {
+    setSelectedPatient(patient);
+    setShowPatientModal(true);
+  };
+
+  const handleDeletePatient = async (patientId) => {
+    if (!window.confirm('Delete this patient permanently?')) return;
+    try {
+      await deleteDoc(doc(db, 'patients', patientId));
+      setPatients((prev) => prev.filter((p) => p.id !== patientId));
+      toast.success('Patient deleted');
+    } catch (err) {
+      console.error('Delete patient failed:', err);
+      toast.error('Failed to delete patient');
+    }
+  };
+
+  const handleStartEditPatient = (patient) => {
+    setEditingPatient({ ...patient });
+    setSelectedPatient(patient);
+    setShowPatientModal(true);
+  };
+
+  const handleSavePatient = async () => {
+    try {
+      const { id, ...data } = editingPatient;
+      await updateDoc(doc(db, 'patients', id), data);
+      setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)));
+      toast.success('Patient updated');
+      setEditingPatient(null);
+      setShowPatientModal(false);
+    } catch (err) {
+      console.error('Update patient failed:', err);
+      toast.error('Failed to update patient');
+    }
+  };
+
+  // Caregiver actions
+  const handleDeleteCaregiver = async (caregiverId) => {
+    if (!window.confirm('Delete this caregiver permanently?')) return;
+    try {
+      await deleteDoc(doc(db, 'caregivers', caregiverId));
+      setCaregivers((prev) => prev.filter((c) => c.id !== caregiverId));
+      toast.success('Caregiver deleted');
+    } catch (err) {
+      console.error('Delete caregiver failed:', err);
+      toast.error('Failed to delete caregiver');
+    }
+  };
+
+  const handleStartEditCaregiver = (caregiver) => {
+    setEditingCaregiver({ ...caregiver });
+    setSelectedCaregiver(caregiver);
+    setShowCaregiverModal(true);
+  };
+
+  const handleSaveCaregiver = async () => {
+    try {
+      const { id, ...data } = editingCaregiver;
+      await updateDoc(doc(db, 'caregivers', id), data);
+      setCaregivers((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
+      toast.success('Caregiver updated');
+      setEditingCaregiver(null);
+      setShowCaregiverModal(false);
+    } catch (err) {
+      console.error('Update caregiver failed:', err);
+      toast.error('Failed to update caregiver');
+    }
+  };
+
   // Task form handlers
   const handleTaskFormChange = (e) => {
     const { name, value } = e.target;
@@ -704,43 +779,90 @@ const NewAdminDashboard = () => {
             </div>
             
             <div className="space-y-4">
-              <div>
-                <strong>Name:</strong> {selectedCaregiver.name}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-600">Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={editingCaregiver?.name ?? selectedCaregiver.name}
+                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600">Email</label>
+                  <input
+                    type="email"
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={editingCaregiver?.email ?? selectedCaregiver.email}
+                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600">Phone</label>
+                  <input
+                    type="tel"
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={(editingCaregiver?.phone ?? selectedCaregiver.phone) || ''}
+                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), phone: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600">Role</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={(editingCaregiver?.role ?? selectedCaregiver.role) || selectedCaregiver.medicalQualification || ''}
+                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), role: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600">Experience</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={(editingCaregiver?.experience ?? selectedCaregiver.experience) || ''}
+                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), experience: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600">Status</label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={(editingCaregiver?.status ?? selectedCaregiver.status) || 'active'}
+                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), status: e.target.value }))}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pending">Pending</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <strong>Email:</strong> {selectedCaregiver.email}
-              </div>
-              <div>
-                <strong>Phone:</strong> {selectedCaregiver.phone || 'N/A'}
-              </div>
-              <div>
-                <strong>Role:</strong> {selectedCaregiver.role || selectedCaregiver.medicalQualification || 'General Caregiver'}
-              </div>
-              <div>
-                <strong>Experience:</strong> {selectedCaregiver.experience || selectedCaregiver.yearsOfExperience || 'Not specified'}
-              </div>
-              <div>
-                <strong>Status:</strong> {selectedCaregiver.status || 'Pending'}
-              </div>
-              
+
               <div className="bg-gray-50 p-4 rounded">
                 <h4 className="font-semibold mb-2">Assignment History & Reports</h4>
                 <p className="text-gray-600">
                   📋 Assignment history and care reports will be displayed here.
-                  This section will show client assignments, visit reports, and performance metrics.
                 </p>
               </div>
             </div>
             
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-end mt-6 space-x-3">
               <button
                 onClick={() => {
+                  setEditingCaregiver(null);
                   setShowCaregiverModal(false);
                   setSelectedCaregiver(null);
                 }}
                 className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
               >
                 Close
+              </button>
+              <button
+                onClick={handleSaveCaregiver}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Save Changes
               </button>
             </div>
           </div>
@@ -885,9 +1007,9 @@ const NewAdminDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.phone || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.age || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-4">View</button>
-                      <button className="text-green-600 hover:text-green-900 mr-4">Edit</button>
-                      <button className="text-red-600 hover:text-red-900">Delete</button>
+                      <button className="text-blue-600 hover:text-blue-900 mr-4" onClick={() => viewPatientDetails(client)}>View</button>
+                      <button className="text-green-600 hover:text-green-900 mr-4" onClick={() => handleStartEditPatient(client)}>Edit</button>
+                      <button className="text-red-600 hover:text-red-900" onClick={() => handleDeletePatient(client.id)}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -974,8 +1096,8 @@ const NewAdminDashboard = () => {
                       >
                         View
                       </button>
-                      <button className="text-green-600 hover:text-green-900 mr-4">Edit</button>
-                      <button className="text-red-600 hover:text-red-900">Delete</button>
+                      <button className="text-green-600 hover:text-green-900 mr-4" onClick={() => handleStartEditCaregiver(cg)}>Edit</button>
+                      <button className="text-red-600 hover:text-red-900" onClick={() => handleDeleteCaregiver(cg.id)}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -2796,6 +2918,83 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Patient Modal */}
+      {showPatientModal && selectedPatient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Patient Details</h2>
+              <button
+                onClick={() => {
+                  setEditingPatient(null);
+                  setShowPatientModal(false);
+                  setSelectedPatient(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600">Name</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={editingPatient?.name ?? selectedPatient.name}
+                  onChange={(e) => setEditingPatient((prev) => ({ ...(prev || selectedPatient), name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600">Phone</label>
+                <input
+                  type="tel"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={(editingPatient && editingPatient.phone !== undefined ? editingPatient.phone : selectedPatient.phone) || ''}
+                  onChange={(e) => setEditingPatient((prev) => ({ ...(prev || selectedPatient), phone: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600">Age</label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={(editingPatient && editingPatient.age !== undefined ? editingPatient.age : selectedPatient.age) || ''}
+                  onChange={(e) => setEditingPatient((prev) => ({ ...(prev || selectedPatient), age: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600">Address</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={(editingPatient && editingPatient.address !== undefined ? editingPatient.address : selectedPatient.address) || ''}
+                  onChange={(e) => setEditingPatient((prev) => ({ ...(prev || selectedPatient), address: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => {
+                  setEditingPatient(null);
+                  setShowPatientModal(false);
+                  setSelectedPatient(null);
+                }}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleSavePatient}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}
