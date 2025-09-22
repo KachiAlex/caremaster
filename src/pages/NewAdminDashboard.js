@@ -26,6 +26,7 @@ import { toast } from 'react-toastify';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getAllPatients, createPatient, subscribeToPatients } from '../api/patientsAPI';
+import { caregiverAPI } from '../api/caregiverAPI';
 
 const NewAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -87,40 +88,77 @@ const NewAdminDashboard = () => {
       return;
     }
 
-    // Load caregivers
+    // Load caregivers (robust): primary caregivers collection + fallback users
     const loadCaregivers = async () => {
       try {
-        // Simple approach - load from users collection
+        // Primary source: caregivers collection
+        const primaryCaregivers = await caregiverAPI.getCaregivers();
+        console.log('✅ Loaded caregivers (primary collection):', {
+          count: primaryCaregivers?.length || 0,
+          sample: primaryCaregivers?.slice?.(0, 5) || []
+        });
+
+        // Fallback/merge from users
         const usersRef = collection(db, 'users');
         const usersSnapshot = await getDocs(usersRef);
-        
-        const caregiversData = [];
-        usersSnapshot.forEach((doc) => {
-          const userData = doc.data();
-          console.log('🔍 Checking user:', userData.email, 'userType:', userData.userType, 'type:', userData.type, 'medicalQualification:', userData.medicalQualification);
-          
-          // Only include actual caregivers (not elderly/clients)
-          const isCaregiver = (userData.userType === 'caregiver' || userData.type === 'caregiver' || 
-                              userData.medicalQualification) && userData.userType !== 'elderly' && userData.userType !== 'client';
-          
+        const usersCaregivers = [];
+        usersSnapshot.forEach((docu) => {
+          const u = docu.data();
+          const isCaregiver = (u.userType === 'caregiver' || u.type === 'caregiver' || u.medicalQualification) && u.userType !== 'elderly' && u.userType !== 'client';
           if (isCaregiver) {
-            const caregiverObj = {
-              id: doc.id,
-              name: userData.displayName || userData.name || userData.email?.split('@')[0],
-              email: userData.email,
-              phone: userData.phone || '',
-              role: userData.medicalQualification || userData.type || 'General Caregiver',
-              experience: userData.yearsOfExperience || userData.experience || '',
-              status: userData.status || 'active',
-              ...userData
-            };
-            console.log('✅ Adding caregiver:', caregiverObj.name, caregiverObj.email);
-            caregiversData.push(caregiverObj);
+            usersCaregivers.push({
+              id: docu.id,
+              name: u.displayName || u.name || u.email?.split('@')[0],
+              email: u.email,
+              phone: u.phone || '',
+              role: u.medicalQualification || u.type || 'General Caregiver',
+              experience: u.yearsOfExperience || u.experience || '',
+              status: u.status || 'active',
+              source: 'users',
+              ...u
+            });
           }
         });
-        
-        console.log('✅ Loaded caregivers:', caregiversData);
-        setCaregivers(caregiversData);
+
+        // Merge by email then id
+        const byEmail = new Map();
+        (primaryCaregivers || []).forEach((c) => {
+          const key = (c.email || '').toLowerCase();
+          if (key) byEmail.set(key, c);
+        });
+        usersCaregivers.forEach((c) => {
+          const key = (c.email || '').toLowerCase();
+          if (key && !byEmail.has(key)) byEmail.set(key, c);
+        });
+        const merged = Array.from(byEmail.values());
+
+        console.log('✅ Caregivers merged (primary + users fallback):', {
+          primary: primaryCaregivers.length,
+          usersFallback: usersCaregivers.length,
+          merged: merged.length
+        });
+        setCaregivers(merged);
+
+        // Real-time subscription to caregivers collection
+        try {
+          const unsubscribeCaregivers = caregiverAPI.subscribeToCaregivers((liveCaregivers) => {
+            // Merge with users fallback again on updates
+            const liveMap = new Map();
+            (liveCaregivers || []).forEach((c) => {
+              const key = (c.email || '').toLowerCase();
+              if (key) liveMap.set(key, c);
+            });
+            usersCaregivers.forEach((c) => {
+              const key = (c.email || '').toLowerCase();
+              if (key && !liveMap.has(key)) liveMap.set(key, c);
+            });
+            setCaregivers(Array.from(liveMap.values()));
+          });
+          // attach to cleanup
+          window.__elderx_unsub_caregivers = unsubscribeCaregivers;
+        } catch (subErr) {
+          console.warn('Caregivers subscription failed:', subErr);
+        }
       } catch (error) {
         console.error('Error loading caregivers:', error);
       }
@@ -683,10 +721,41 @@ const NewAdminDashboard = () => {
   );
 
   const renderAddCaregiver = () => (
-    <AddCaregiverForm onBack={() => setActiveTab('caregivers')} onCreate={(caregiver) => {
-      setCaregivers(prev => [...prev, { ...caregiver, id: Date.now(), status: 'active' }]);
-      setActiveTab('caregivers');
-      toast.success('Caregiver account created successfully!');
+    <AddCaregiverForm onBack={() => setActiveTab('caregivers')} onCreate={async (caregiver) => {
+      try {
+        // Persist caregiver to Firestore via dedicated API
+        const result = await caregiverAPI.createCaregiver({
+          name: caregiver.name,
+          email: caregiver.email,
+          phone: caregiver.phone,
+          role: caregiver.role,
+          specializations: caregiver.specialization ? [caregiver.specialization] : [],
+          qualifications: caregiver.qualifications || '',
+          experience: caregiver.experience || '',
+          status: 'active'
+        });
+
+        // Optimistic local update; realtime subscription will reconcile
+        setCaregivers(prev => [
+          ...prev,
+          {
+            id: result.id,
+            name: caregiver.name,
+            email: caregiver.email,
+            phone: caregiver.phone,
+            role: caregiver.role,
+            experience: caregiver.experience || '',
+            status: 'active',
+            source: 'caregivers'
+          }
+        ]);
+
+        setActiveTab('caregivers');
+        toast.success('Caregiver account created and saved!');
+      } catch (err) {
+        console.error('Error creating caregiver:', err);
+        toast.error('Failed to create caregiver. Please try again.');
+      }
     }} />
   );
 
