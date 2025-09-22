@@ -27,6 +27,8 @@ import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getAllPatients, createPatient, subscribeToPatients } from '../api/patientsAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
+import fileStorageService from '../services/fileStorageService';
+import { deleteDoc } from 'firebase/firestore';
 
 const NewAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -132,17 +134,19 @@ const NewAdminDashboard = () => {
           }
         });
 
-        // Merge by email then id
-        const byEmail = new Map();
-        [...(primaryCaregivers || []), ...(rawCaregivers || [])].forEach((c) => {
-          const key = (c.email || '').toLowerCase();
-          if (key) byEmail.set(key, c);
-        });
-        usersCaregivers.forEach((c) => {
-          const key = (c.email || '').toLowerCase();
-          if (key && !byEmail.has(key)) byEmail.set(key, c);
-        });
-        const merged = Array.from(byEmail.values());
+        // Merge by robust key (email || id || phone)
+        const byKey = new Map();
+        const put = (c) => {
+          const emailKey = (c.email || '').toString().trim().toLowerCase();
+          const idKey = (c.id || '').toString().trim();
+          const phoneKey = (c.phone || '').toString().trim();
+          const key = emailKey || idKey || phoneKey;
+          if (!key) return;
+          if (!byKey.has(key)) byKey.set(key, c);
+        };
+        [...(primaryCaregivers || []), ...(rawCaregivers || [])].forEach(put);
+        usersCaregivers.forEach(put);
+        const merged = Array.from(byKey.values());
 
         console.log('✅ Caregivers merged (primary + raw + users fallback):', {
           primary: primaryCaregivers.length,
@@ -157,14 +161,16 @@ const NewAdminDashboard = () => {
           const unsubscribeCaregivers = caregiverAPI.subscribeToCaregivers((liveCaregivers) => {
             // Merge with users fallback again on updates
             const liveMap = new Map();
-            (liveCaregivers || []).forEach((c) => {
-              const key = (c.email || '').toLowerCase();
-              if (key) liveMap.set(key, c);
-            });
-            usersCaregivers.forEach((c) => {
-              const key = (c.email || '').toLowerCase();
-              if (key && !liveMap.has(key)) liveMap.set(key, c);
-            });
+            const putLive = (c) => {
+              const emailKey = (c.email || '').toString().trim().toLowerCase();
+              const idKey = (c.id || '').toString().trim();
+              const phoneKey = (c.phone || '').toString().trim();
+              const key = emailKey || idKey || phoneKey;
+              if (!key) return;
+              if (!liveMap.has(key)) liveMap.set(key, c);
+            };
+            (liveCaregivers || []).forEach(putLive);
+            usersCaregivers.forEach(putLive);
             setCaregivers(Array.from(liveMap.values()));
           });
           // Also subscribe to users caregivers for legacy updates
@@ -188,14 +194,16 @@ const NewAdminDashboard = () => {
               }
             });
             const liveMap = new Map();
-            (liveCaregivers || []).forEach((c) => {
-              const key = (c.email || '').toLowerCase();
-              if (key) liveMap.set(key, c);
-            });
-            updatedUsersCaregivers.forEach((c) => {
-              const key = (c.email || '').toLowerCase();
-              if (key && !liveMap.has(key)) liveMap.set(key, c);
-            });
+            const putLive2 = (c) => {
+              const emailKey = (c.email || '').toString().trim().toLowerCase();
+              const idKey = (c.id || '').toString().trim();
+              const phoneKey = (c.phone || '').toString().trim();
+              const key = emailKey || idKey || phoneKey;
+              if (!key) return;
+              if (!liveMap.has(key)) liveMap.set(key, c);
+            };
+            (liveCaregivers || []).forEach(putLive2);
+            updatedUsersCaregivers.forEach(putLive2);
             setCaregivers(Array.from(liveMap.values()));
           });
 
@@ -909,29 +917,86 @@ const NewAdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Caregiver Management</h1>
-        <button
-          onClick={() => setActiveTab('add-caregiver')}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Caregiver Account
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              if (!window.confirm('This will delete ALL caregivers from the database. Are you sure?')) return;
+              try {
+                const snap = await getDocs(collection(db, 'caregivers'));
+                const deletions = [];
+                snap.forEach((d) => deletions.push(deleteDoc(d.ref)));
+                await Promise.all(deletions);
+                setCaregivers([]);
+                toast.success('All caregivers deleted.');
+              } catch (err) {
+                console.error('Delete all caregivers failed:', err);
+                toast.error('Failed to delete caregivers.');
+              }
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Reset Caregivers
+          </button>
+          <button
+            onClick={() => setActiveTab('add-caregiver')}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Caregiver Account
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow border">
-        <div className="p-6">
-          <div className="text-center py-12">
-            <UserCheck className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Caregivers Yet</h3>
-            <p className="text-gray-600 mb-4">Create the first caregiver account</p>
-            <button
-              onClick={() => setActiveTab('add-caregiver')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Create First Caregiver
-            </button>
+        {caregivers && caregivers.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {caregivers.map((cg) => (
+                  <tr key={`${cg.id || ''}-${cg.email || Math.random()}`}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cg.name || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cg.email || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cg.role || cg.medicalQualification || 'General Caregiver'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cg.status || 'active'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => viewCaregiverDetails(cg)}
+                        className="text-blue-600 hover:text-blue-900 mr-4"
+                      >
+                        View
+                      </button>
+                      <button className="text-green-600 hover:text-green-900 mr-4">Edit</button>
+                      <button className="text-red-600 hover:text-red-900">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        ) : (
+          <div className="p-6">
+            <div className="text-center py-12">
+              <UserCheck className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Caregivers Yet</h3>
+              <p className="text-gray-600 mb-4">Create the first caregiver account</p>
+              <button
+                onClick={() => setActiveTab('add-caregiver')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Create First Caregiver
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
