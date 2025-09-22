@@ -25,7 +25,7 @@ import {
 import { toast } from 'react-toastify';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { getAllPatients } from '../api/patientsAPI';
+import { getAllPatients, createPatient, subscribeToPatients } from '../api/patientsAPI';
 
 const NewAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -60,6 +60,24 @@ const NewAdminDashboard = () => {
     dataRetention: 365,
     backupFrequency: 'daily'
   });
+
+  // Create task form state
+  const [taskFormData, setTaskFormData] = useState({
+    title: '',
+    description: '',
+    assignedTo: '',
+    patient: '',
+    priority: '',
+    dueDate: '',
+    taskType: '',
+    estimatedDuration: '',
+    specialInstructions: ''
+  });
+
+  const [taskFormErrors, setTaskFormErrors] = useState({});
+  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+  const [caregiverSearch, setCaregiverSearch] = useState('');
+  const [patientSearch, setPatientSearch] = useState('');
 
   // Check admin authentication and load data
   useEffect(() => {
@@ -108,12 +126,74 @@ const NewAdminDashboard = () => {
       }
     };
 
-    // Load clients
+    // Load clients with robust fallbacks
     const loadClients = async () => {
       try {
         const clientsData = await getAllPatients();
-        console.log('✅ Loaded clients:', clientsData);
-        setPatients(clientsData);
+        console.log('✅ Loaded clients (API):', {
+          count: clientsData?.length || 0,
+          sample: clientsData?.slice?.(0, 5) || []
+        });
+        setPatients(clientsData || []);
+
+        // Fallback 1: raw fetch from patients collection without orderBy (handles missing createdAt)
+        try {
+          const rawSnap = await getDocs(collection(db, 'patients'));
+          const rawPatients = [];
+          rawSnap.forEach((d) => rawPatients.push({ id: d.id, ...d.data() }));
+          if (rawPatients.length > clientsData.length) {
+            console.log('ℹ️ Using raw patients fallback due to count mismatch:', {
+              apiCount: clientsData.length,
+              rawCount: rawPatients.length,
+              sample: rawPatients.slice(0, 5)
+            });
+            setPatients(rawPatients);
+          }
+        } catch (rawErr) {
+          console.warn('Raw patients fallback failed:', rawErr);
+        }
+
+        // Fallback 2: derive patients from users collection (legacy data)
+        try {
+          const usersRef = collection(db, 'users');
+          const usersSnapshot = await getDocs(usersRef);
+          const legacyPatients = [];
+          usersSnapshot.forEach((docu) => {
+            const u = docu.data();
+            const isPatient = ['elderly', 'client', 'patient'].includes((u.userType || u.type || '').toLowerCase());
+            if (isPatient) {
+              legacyPatients.push({
+                id: docu.id,
+                name: u.displayName || u.name || (u.email ? u.email.split('@')[0] : 'Patient'),
+                email: u.email || '',
+                phone: u.phone || '',
+                age: u.age || '',
+                gender: u.gender || '',
+                status: u.status || 'active',
+                address: u.address || '',
+                source: 'users'
+              });
+            }
+          });
+          if (legacyPatients.length > 0) {
+            // Merge unique by id/email
+            const existingById = new Set((clientsData || []).map(p => p.id));
+            const existingByEmail = new Set((clientsData || []).map(p => (p.email || '').toLowerCase()));
+            const merged = [
+              ...(clientsData || []),
+              ...legacyPatients.filter(lp => !existingById.has(lp.id) && !existingByEmail.has((lp.email || '').toLowerCase()))
+            ];
+            if (merged.length !== (clientsData || []).length) {
+              console.log('ℹ️ Merged legacy patients from users collection:', {
+                added: merged.length - (clientsData || []).length,
+                sampleAdded: legacyPatients.slice(0, 3)
+              });
+              setPatients(merged);
+            }
+          }
+        } catch (legacyErr) {
+          console.warn('Legacy users fallback failed:', legacyErr);
+        }
       } catch (error) {
         console.error('Error loading clients:', error);
       }
@@ -121,7 +201,63 @@ const NewAdminDashboard = () => {
 
     loadCaregivers();
     loadClients();
+    loadSampleTasks();
+
+    // Real-time patients subscription
+    const unsubscribePatients = subscribeToPatients((livePatients) => {
+      setPatients(livePatients);
+    });
+
+    return () => {
+      if (typeof unsubscribePatients === 'function') {
+        unsubscribePatients();
+      }
+    };
   }, []);
+
+  // Load some sample tasks for demonstration
+  const loadSampleTasks = () => {
+    const sampleTasks = [
+      {
+        id: '1',
+        title: 'Morning Medication Administration',
+        description: 'Administer blood pressure medication and vitamins',
+        assignedTo: 'Sarah Johnson',
+        assignedToId: 'caregiver1',
+        patient: 'John Doe',
+        patientId: 'patient1',
+        priority: 'high',
+        dueDate: new Date().toISOString().split('T')[0],
+        taskType: 'medication',
+        estimatedDuration: '30',
+        specialInstructions: 'Check blood pressure before administering medication',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: 'admin@elderx.com'
+      },
+      {
+        id: '2',
+        title: 'Physical Therapy Session',
+        description: 'Assist with prescribed physical therapy exercises',
+        assignedTo: 'Dr. Smith',
+        assignedToId: 'caregiver2',
+        patient: 'Mary Wilson',
+        patientId: 'patient2',
+        priority: 'medium',
+        dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
+        taskType: 'exercise',
+        estimatedDuration: '60',
+        specialInstructions: 'Focus on leg strength exercises, avoid overexertion',
+        status: 'in_progress',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: 'admin@elderx.com'
+      }
+    ];
+    
+    setTasks(sampleTasks);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('elderx_admin_authenticated');
@@ -140,6 +276,158 @@ const NewAdminDashboard = () => {
     setShowCaregiverModal(true);
     console.log('🔥 Modal state set to true');
   };
+
+  // Task form handlers
+  const handleTaskFormChange = (e) => {
+    const { name, value } = e.target;
+    setTaskFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (taskFormErrors[name]) {
+      setTaskFormErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateTaskForm = () => {
+    const errors = {};
+    
+    if (!taskFormData.title.trim()) {
+      errors.title = 'Task title is required';
+    }
+    
+    if (!taskFormData.assignedTo) {
+      errors.assignedTo = 'Please select a caregiver';
+    }
+    
+    if (!taskFormData.patient) {
+      errors.patient = 'Please select a patient';
+    }
+    
+    if (!taskFormData.priority) {
+      errors.priority = 'Please select priority level';
+    }
+    
+    if (!taskFormData.dueDate) {
+      errors.dueDate = 'Due date is required';
+    } else {
+      const selectedDate = new Date(taskFormData.dueDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        errors.dueDate = 'Due date cannot be in the past';
+      }
+    }
+    
+    if (!taskFormData.taskType) {
+      errors.taskType = 'Please select task type';
+    }
+
+    return errors;
+  };
+
+  const resetTaskForm = () => {
+    setTaskFormData({
+      title: '',
+      description: '',
+      assignedTo: '',
+      patient: '',
+      priority: '',
+      dueDate: '',
+      taskType: '',
+      estimatedDuration: '',
+      specialInstructions: ''
+    });
+    setTaskFormErrors({});
+  };
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    
+    const errors = validateTaskForm();
+    if (Object.keys(errors).length > 0) {
+      setTaskFormErrors(errors);
+      return;
+    }
+
+    setIsSubmittingTask(true);
+    
+    try {
+      // Get caregiver and patient details
+      const assignedCaregiver = caregivers.find(c => c.id === taskFormData.assignedTo);
+      const assignedPatient = patients.find(p => p.id === taskFormData.patient);
+      
+      // Create new task object
+      const newTask = {
+        id: Date.now().toString(), // In production, use proper UUID
+        title: taskFormData.title.trim(),
+        description: taskFormData.description.trim(),
+        assignedTo: assignedCaregiver?.name || 'Unknown Caregiver',
+        assignedToId: taskFormData.assignedTo,
+        patient: assignedPatient?.name || 'Unknown Patient',
+        patientId: taskFormData.patient,
+        priority: taskFormData.priority,
+        dueDate: taskFormData.dueDate,
+        taskType: taskFormData.taskType,
+        estimatedDuration: taskFormData.estimatedDuration,
+        specialInstructions: taskFormData.specialInstructions.trim(),
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: adminEmail
+      };
+
+      // Add to tasks state (in production, save to Firebase)
+      setTasks(prev => [...prev, newTask]);
+      
+      // TODO: Save to Firebase
+      // await addDoc(collection(db, 'tasks'), newTask);
+      
+      toast.success('Task created successfully!');
+      setShowCreateTaskModal(false);
+      resetTaskForm();
+      
+      console.log('✅ Task created:', newTask);
+      
+    } catch (error) {
+      console.error('Error creating task:', error);
+      toast.error('Failed to create task. Please try again.');
+    } finally {
+      setIsSubmittingTask(false);
+    }
+  };
+
+  const handleCloseCreateTaskModal = () => {
+    setShowCreateTaskModal(false);
+    resetTaskForm();
+  };
+
+  // Derived lists for active caregivers/patients and search filtering
+  const activeCaregivers = caregivers.filter((c) => (c.status === 'active' || !c.status));
+  const filteredCaregivers = activeCaregivers.filter((c) => {
+    const q = caregiverSearch.toLowerCase();
+    return (
+      c.name?.toLowerCase().includes(q) ||
+      c.email?.toLowerCase().includes(q) ||
+      (c.role || c.medicalQualification || '').toLowerCase().includes(q)
+    );
+  });
+
+  const activePatients = patients.filter((p) => (p.status !== 'inactive'));
+  const filteredPatients = activePatients.filter((p) => {
+    const q = patientSearch.toLowerCase();
+    return (
+      p.name?.toLowerCase().includes(q) ||
+      p.email?.toLowerCase().includes(q) ||
+      (p.phone || '').toLowerCase().includes(q)
+    );
+  });
 
   const renderDashboard = () => (
     <div className="space-y-6">
@@ -283,19 +571,50 @@ const NewAdminDashboard = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow border">
-        <div className="p-6">
-          <div className="text-center py-12">
-            <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Patients Yet</h3>
-            <p className="text-gray-600 mb-4">Start by adding your first patient to the database</p>
-            <button
-              onClick={() => setActiveTab('add-patient')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Add First Patient
-            </button>
+        {patients && patients.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Age</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {patients.map((client) => (
+                  <tr key={client.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.name || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.email || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.phone || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.age || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button className="text-blue-600 hover:text-blue-900 mr-4">View</button>
+                      <button className="text-green-600 hover:text-green-900 mr-4">Edit</button>
+                      <button className="text-red-600 hover:text-red-900">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        ) : (
+          <div className="p-6">
+            <div className="text-center py-12">
+              <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Patients Yet</h3>
+              <p className="text-gray-600 mb-4">Start by adding your first patient to the database</p>
+              <button
+                onClick={() => setActiveTab('add-patient')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Add First Patient
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -332,10 +651,34 @@ const NewAdminDashboard = () => {
   );
 
   const renderAddPatient = () => (
-    <AddPatientForm onBack={() => setActiveTab('patients')} onAdd={(patient) => {
-      setPatients(prev => [...prev, { ...patient, id: Date.now() }]);
-      setActiveTab('patients');
-      toast.success('Patient added successfully!');
+    <AddPatientForm onBack={() => setActiveTab('patients')} onAdd={async (patient) => {
+      try {
+        // Save to Firebase
+        const patientId = await createPatient(patient);
+        
+        // Add to local state with the Firebase ID
+        const newPatient = { ...patient, id: patientId };
+        setPatients(prev => [...prev, newPatient]);
+        
+        setActiveTab('patients');
+        toast.success('Patient added successfully!');
+        
+        console.log('✅ Patient saved to Firebase:', newPatient);
+        
+        // Refresh the patients list from Firebase
+        setTimeout(async () => {
+          try {
+            const updatedPatients = await getAllPatients();
+            setPatients(updatedPatients);
+          } catch (error) {
+            console.error('Error refreshing patients:', error);
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Error saving patient:', error);
+        toast.error('Failed to save patient. Please try again.');
+      }
     }} />
   );
 
@@ -352,7 +695,10 @@ const NewAdminDashboard = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Task Management</h1>
         <button
-          onClick={() => setShowCreateTaskModal(true)}
+          onClick={() => {
+            console.log('🔥 Create Task button clicked');
+            setShowCreateTaskModal(true);
+          }}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -381,7 +727,7 @@ const NewAdminDashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Completed Today</p>
-              <p className="text-2xl font-semibold text-gray-900">{tasks.filter(t => t.status === 'completed' && new Date(t.updatedAt).toDateString() === new Date().toDateString()).length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{tasks.filter(t => t.status === 'completed' && t.updatedAt && new Date(t.updatedAt).toDateString() === new Date().toDateString()).length}</p>
             </div>
           </div>
         </div>
@@ -393,7 +739,7 @@ const NewAdminDashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Overdue</p>
-              <p className="text-2xl font-semibold text-gray-900">{tasks.filter(t => t.status === 'pending' && new Date(t.dueDate) < new Date()).length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{tasks.filter(t => t.status === 'pending' && t.dueDate && new Date(t.dueDate) < new Date()).length}</p>
             </div>
           </div>
         </div>
@@ -458,7 +804,10 @@ const NewAdminDashboard = () => {
                     <p className="text-lg font-medium text-gray-900 mb-2">No Tasks Yet</p>
                     <p className="text-gray-600 mb-4">Start by creating your first task assignment</p>
                     <button
-                      onClick={() => setShowCreateTaskModal(true)}
+                      onClick={() => {
+                        console.log('🔥 Create First Task button clicked');
+                        setShowCreateTaskModal(true);
+                      }}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                       Create First Task
@@ -1747,112 +2096,324 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
       {/* Create Task Modal */}
       {showCreateTaskModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
+          {console.log('🔥 Create Task Modal is rendering')}
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Create New Task</h2>
               <button
-                onClick={() => setShowCreateTaskModal(false)}
+                onClick={handleCloseCreateTaskModal}
                 className="text-gray-500 hover:text-gray-700"
+                disabled={isSubmittingTask}
               >
                 ✕
               </button>
             </div>
             
-            <form className="space-y-4">
+            <form onSubmit={handleCreateTask} className="space-y-4">
+              {/* Task Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Task Title *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Task Title *
+                </label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  name="title"
+                  value={taskFormData.title}
+                  onChange={handleTaskFormChange}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                    taskFormErrors.title ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Enter task title..."
+                  disabled={isSubmittingTask}
                 />
+                {taskFormErrors.title && (
+                  <p className="text-red-500 text-sm mt-1">{taskFormErrors.title}</p>
+                )}
               </div>
               
+              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                 <textarea
+                  name="description"
+                  value={taskFormData.description}
+                  onChange={handleTaskFormChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                   rows="3"
-                  placeholder="Describe the task..."
+                  placeholder="Describe the task in detail..."
+                  disabled={isSubmittingTask}
                 />
               </div>
               
+              {/* Assignment and Patient */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Assign To *</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Assign To *
+                  </label>
+                  {/* Caregiver quick picker */}
+                  <div className="mb-2">
+                    <div className="flex items-center mb-2">
+                      <Search className="h-4 w-4 text-gray-400 mr-2" />
+                      <input
+                        type="text"
+                        value={caregiverSearch}
+                        onChange={(e) => setCaregiverSearch(e.target.value)}
+                        placeholder="Search caregivers by name, email or role"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="max-h-36 overflow-y-auto border border-gray-200 rounded-md">
+                      {filteredCaregivers.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500">No caregivers found</div>
+                      ) : (
+                        filteredCaregivers.slice(0, 6).map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setTaskFormData((prev) => ({ ...prev, assignedTo: c.id }))}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
+                              taskFormData.assignedTo === c.id ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{c.name}</span>
+                              <span className="text-xs text-gray-500">{c.role || c.medicalQualification || 'Caregiver'}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">{c.email}</div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <select
+                    name="assignedTo"
+                    value={taskFormData.assignedTo}
+                    onChange={handleTaskFormChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.assignedTo ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
+                  >
                     <option value="">Select Caregiver</option>
-                    {caregivers.map(caregiver => (
-                      <option key={caregiver.id} value={caregiver.id}>{caregiver.name}</option>
+                    {filteredCaregivers.map(caregiver => (
+                      <option key={caregiver.id} value={caregiver.id}>
+                        {caregiver.name} - {caregiver.role || 'General Caregiver'}
+                      </option>
                     ))}
                   </select>
+                  {taskFormErrors.assignedTo && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.assignedTo}</p>
+                  )}
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Patient *</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Patient *
+                  </label>
+                  {/* Patient quick picker */}
+                  <div className="mb-2">
+                    <div className="flex items-center mb-2">
+                      <Search className="h-4 w-4 text-gray-400 mr-2" />
+                      <input
+                        type="text"
+                        value={patientSearch}
+                        onChange={(e) => setPatientSearch(e.target.value)}
+                        placeholder="Search patients by name, email or phone"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="max-h-36 overflow-y-auto border border-gray-200 rounded-md">
+                      {filteredPatients.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500">No patients found</div>
+                      ) : (
+                        filteredPatients.slice(0, 6).map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setTaskFormData((prev) => ({ ...prev, patient: p.id }))}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
+                              taskFormData.patient === p.id ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{p.name}</span>
+                              <span className="text-xs text-gray-500">{p.age ? `Age ${p.age}` : p.gender || ''}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">{p.email || p.phone || ''}</div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <select
+                    name="patient"
+                    value={taskFormData.patient}
+                    onChange={handleTaskFormChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.patient ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
+                  >
                     <option value="">Select Patient</option>
-                    {patients.map(patient => (
-                      <option key={patient.id} value={patient.id}>{patient.name}</option>
+                    {filteredPatients.map(patient => (
+                      <option key={patient.id} value={patient.id}>
+                        {patient.name} - Age {patient.age || 'N/A'}
+                      </option>
                     ))}
                   </select>
+                  {taskFormErrors.patient && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.patient}</p>
+                  )}
                 </div>
               </div>
               
+              {/* Priority and Due Date */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Priority *</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Priority *
+                  </label>
+                  <select
+                    name="priority"
+                    value={taskFormData.priority}
+                    onChange={handleTaskFormChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.priority ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
+                  >
                     <option value="">Select Priority</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
+                    <option value="low">🟢 Low Priority</option>
+                    <option value="medium">🟡 Medium Priority</option>
+                    <option value="high">🔴 High Priority</option>
                   </select>
+                  {taskFormErrors.priority && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.priority}</p>
+                  )}
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Due Date *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Due Date *
+                  </label>
                   <input
                     type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    name="dueDate"
+                    value={taskFormData.dueDate}
+                    onChange={handleTaskFormChange}
+                    min={new Date().toISOString().split('T')[0]}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.dueDate ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
                   />
+                  {taskFormErrors.dueDate && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.dueDate}</p>
+                  )}
                 </div>
               </div>
               
+              {/* Task Type and Duration */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Task Type *
+                  </label>
+                  <select
+                    name="taskType"
+                    value={taskFormData.taskType}
+                    onChange={handleTaskFormChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.taskType ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
+                  >
+                    <option value="">Select Task Type</option>
+                    <option value="medication">💊 Medication Administration</option>
+                    <option value="vital_signs">📊 Vital Signs Check</option>
+                    <option value="personal_care">🛁 Personal Care</option>
+                    <option value="companionship">👥 Companionship</option>
+                    <option value="appointment">🏥 Medical Appointment</option>
+                    <option value="exercise">🏃 Physical Exercise</option>
+                    <option value="nutrition">🍽️ Nutrition/Meal Prep</option>
+                    <option value="housekeeping">🏠 Light Housekeeping</option>
+                    <option value="transportation">🚗 Transportation</option>
+                    <option value="other">📝 Other</option>
+                  </select>
+                  {taskFormErrors.taskType && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.taskType}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Estimated Duration
+                  </label>
+                  <select
+                    name="estimatedDuration"
+                    value={taskFormData.estimatedDuration}
+                    onChange={handleTaskFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmittingTask}
+                  >
+                    <option value="">Select Duration</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">1 hour</option>
+                    <option value="120">2 hours</option>
+                    <option value="180">3 hours</option>
+                    <option value="240">4 hours</option>
+                    <option value="480">8 hours</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Special Instructions */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Task Type</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
-                  <option value="">Select Task Type</option>
-                  <option value="medication">Medication Administration</option>
-                  <option value="vital_signs">Vital Signs Check</option>
-                  <option value="personal_care">Personal Care</option>
-                  <option value="companionship">Companionship</option>
-                  <option value="appointment">Medical Appointment</option>
-                  <option value="exercise">Physical Exercise</option>
-                  <option value="nutrition">Nutrition/Meal Prep</option>
-                  <option value="other">Other</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Special Instructions
+                </label>
+                <textarea
+                  name="specialInstructions"
+                  value={taskFormData.specialInstructions}
+                  onChange={handleTaskFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  rows="3"
+                  placeholder="Any special instructions or notes for the caregiver..."
+                  disabled={isSubmittingTask}
+                />
+              </div>
+              
+              {/* Form Actions */}
+              <div className="flex justify-end mt-6 space-x-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={handleCloseCreateTaskModal}
+                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
+                  disabled={isSubmittingTask}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center"
+                  disabled={isSubmittingTask}
+                >
+                  {isSubmittingTask ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Task
+                    </>
+                  )}
+                </button>
               </div>
             </form>
-            
-            <div className="flex justify-end mt-6 space-x-3">
-              <button
-                onClick={() => setShowCreateTaskModal(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  // Add task creation logic here
-                  toast.success('Task created successfully!');
-                  setShowCreateTaskModal(false);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Create Task
-              </button>
-            </div>
           </div>
         </div>
       )}
