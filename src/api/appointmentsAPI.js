@@ -239,7 +239,10 @@ export const getTodaysAppointments = async (userId, userRole) => {
     let q;
 
     // Use simple queries that don't require complex indexes
-    if (userRole === 'doctor') {
+    if (userRole === 'admin') {
+      // Admin can see all appointments
+      q = query(appointmentsRef);
+    } else if (userRole === 'doctor') {
       q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
@@ -290,7 +293,10 @@ export const getUpcomingAppointments = async (userId, userRole) => {
     let q;
 
     // Use simple queries that don't require complex indexes
-    if (userRole === 'doctor') {
+    if (userRole === 'admin') {
+      // Admin can see all appointments
+      q = query(appointmentsRef);
+    } else if (userRole === 'doctor') {
       q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
@@ -358,7 +364,10 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
   const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
   let q;
 
-  if (userRole === 'doctor') {
+  if (userRole === 'admin') {
+    // Admin can see all appointments
+    q = query(appointmentsRef, orderBy('scheduledTime', 'asc'));
+  } else if (userRole === 'doctor') {
     q = query(appointmentsRef, where('doctorId', '==', userId), orderBy('scheduledTime', 'asc'));
   } else if (userRole === 'caregiver') {
     q = query(appointmentsRef, where('caregiverId', '==', userId), orderBy('scheduledTime', 'asc'));
