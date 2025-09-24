@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { flushSync } from 'react-dom';
 import { 
   Users, 
   UserCheck, 
@@ -23,12 +25,12 @@ import {
   Trash2
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { collection, getDocs, query, where, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, deleteDoc, updateDoc, onSnapshot, addDoc, serverTimestamp, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getAllPatients, createPatient, subscribeToPatients } from '../api/patientsAPI';
+import { assignmentAPI } from '../api/assignmentAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
 import fileStorageService from '../services/fileStorageService';
-import { deleteDoc } from 'firebase/firestore';
 
 const NewAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -39,10 +41,18 @@ const NewAdminDashboard = () => {
   // Modal states
   const [selectedCaregiver, setSelectedCaregiver] = useState(null);
   const [showCaregiverModal, setShowCaregiverModal] = useState(false);
+  const [expandedCaregiverId, setExpandedCaregiverId] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientModal, setShowPatientModal] = useState(false);
+  const [expandedPatientId, setExpandedPatientId] = useState(null);
   const [editingPatient, setEditingPatient] = useState(null);
   const [editingCaregiver, setEditingCaregiver] = useState(null);
+  const [caregiverAssignments, setCaregiverAssignments] = useState([]);
+  const [patientAssignments, setPatientAssignments] = useState([]);
+  const [taskStatusFilter, setTaskStatusFilter] = useState('all'); // all | pending | in_progress | completed | overdue
+  const [taskSearch, setTaskSearch] = useState('');
+  const [taskDateFrom, setTaskDateFrom] = useState('');
+  const [taskDateTo, setTaskDateTo] = useState('');
   
   // Tasks state
   const [tasks, setTasks] = useState([]);
@@ -53,7 +63,13 @@ const NewAdminDashboard = () => {
   // Monitoring state
   const [alerts, setAlerts] = useState([]);
   const [vitalSigns, setVitalSigns] = useState([]);
+  const [vitalsPatientId, setVitalsPatientId] = useState('all');
+  const [vitalsRange, setVitalsRange] = useState('24h');
   const [systemMetrics, setSystemMetrics] = useState({});
+  const [alertSearch, setAlertSearch] = useState('');
+  const [alertSeverity, setAlertSeverity] = useState('all'); // all|critical|warning|info
+  const [alertDateFrom, setAlertDateFrom] = useState('');
+  const [alertDateTo, setAlertDateTo] = useState('');
   
   // Settings state
   const [systemSettings, setSystemSettings] = useState({
@@ -85,6 +101,16 @@ const NewAdminDashboard = () => {
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [caregiverSearch, setCaregiverSearch] = useState('');
   const [patientSearch, setPatientSearch] = useState('');
+
+  // Helpers for safely rendering possibly object-shaped fields
+  const formatValue = (val) => {
+    if (val === null || val === undefined) return 'N/A';
+    if (Array.isArray(val)) return val.filter(Boolean).join(', ');
+    if (typeof val === 'object') return formatAddress(val);
+    return String(val);
+  };
+
+  // formatAddress is defined later (single definition only)
 
   // Check admin authentication and load data
   useEffect(() => {
@@ -206,7 +232,7 @@ const NewAdminDashboard = () => {
               if (!key) return;
               if (!liveMap.has(key)) liveMap.set(key, c);
             };
-            (liveCaregivers || []).forEach(putLive2);
+            (caregivers || []).forEach(putLive2);
             updatedUsersCaregivers.forEach(putLive2);
             setCaregivers(Array.from(liveMap.values()));
           });
@@ -299,7 +325,71 @@ const NewAdminDashboard = () => {
 
     loadCaregivers();
     loadClients();
-    loadSampleTasks();
+    // Real-time tasks subscription
+    try {
+      const tasksRef = collection(db, 'tasks');
+      const tasksQuery = query(tasksRef, orderBy('createdAt', 'desc'));
+      const unsubscribeTasks = onSnapshot(tasksQuery, (snap) => {
+        const liveTasks = [];
+        snap.forEach((d) => {
+          const t = d.data();
+          liveTasks.push({
+            id: d.id,
+            ...t,
+            createdAt: t.createdAt?.toDate?.() || t.createdAt || null,
+            updatedAt: t.updatedAt?.toDate?.() || t.updatedAt || null
+          });
+        });
+        setTasks(liveTasks);
+      });
+      window.__elderx_unsub_tasks = unsubscribeTasks;
+    } catch (e) {
+      console.warn('Tasks subscription failed, using sample tasks fallback.', e);
+      loadSampleTasks();
+    }
+
+    // Real-time alerts subscription
+    try {
+      const alertsRef = collection(db, 'alerts');
+      const alertsQuery = query(alertsRef, orderBy('timestamp', 'desc'));
+      const unsubscribeAlerts = onSnapshot(alertsQuery, (snap) => {
+        const liveAlerts = [];
+        snap.forEach((d) => {
+          const a = d.data();
+          liveAlerts.push({
+            id: d.id,
+            ...a,
+            timestamp: a.timestamp?.toDate?.() || a.timestamp || null
+          });
+        });
+        setAlerts(liveAlerts);
+      });
+      window.__elderx_unsub_alerts = unsubscribeAlerts;
+    } catch (e) {
+      console.warn('Alerts subscription failed', e);
+    }
+
+    // Real-time vitals subscription (7-day rolling window)
+    try {
+      const since = new Date();
+      since.setDate(since.getDate() - 7);
+      const vitalsRef = collection(db, 'vitalSigns');
+      const vitalsQuery = query(vitalsRef, orderBy('timestamp', 'desc'));
+      const unsubscribeVitals = onSnapshot(vitalsQuery, (snap) => {
+        const list = [];
+        snap.forEach((d) => {
+          const v = d.data();
+          const ts = v.timestamp?.toDate?.() || v.timestamp || null;
+          if (!ts) return;
+          if (ts < since) return;
+          list.push({ id: d.id, ...v, timestamp: ts });
+        });
+        setVitalSigns(list);
+      });
+      window.__elderx_unsub_vitals = unsubscribeVitals;
+    } catch (e) {
+      console.warn('Vitals subscription failed', e);
+    }
 
     // Real-time patients subscription
     const unsubscribePatients = subscribeToPatients((livePatients) => {
@@ -310,6 +400,9 @@ const NewAdminDashboard = () => {
       if (typeof unsubscribePatients === 'function') {
         unsubscribePatients();
       }
+      try { window.__elderx_unsub_tasks && window.__elderx_unsub_tasks(); } catch {}
+      try { window.__elderx_unsub_alerts && window.__elderx_unsub_alerts(); } catch {}
+      try { window.__elderx_unsub_vitals && window.__elderx_unsub_vitals(); } catch {}
     };
   }, []);
 
@@ -402,20 +495,56 @@ const NewAdminDashboard = () => {
     window.location.href = '/';
   };
 
+  // Merged formatter (single definition)
+  const formatAddress = (addr) => {
+    if (!addr) return 'N/A';
+    if (typeof addr === 'string') return addr;
+    if (typeof addr === 'object') {
+      const { completeAddress, street, city, state, zipCode, country } = addr;
+      const parts = [completeAddress, street, city, state, zipCode, country]
+        .map((v) => (v || '').toString().trim())
+        .filter(Boolean);
+      return parts.join(', ') || 'N/A';
+    }
+    try { return String(addr); } catch { return 'N/A'; }
+  };
+
   const adminEmail = localStorage.getItem('elderx_admin_email') || 'admin@elderx.com';
 
   // Simple modal functions
   const viewCaregiverDetails = (caregiver) => {
     console.log('🔥 SIMPLE VIEW FUNCTION - Caregiver:', caregiver);
-    setSelectedCaregiver(caregiver);
-    setShowCaregiverModal(true);
+    flushSync(() => {
+      setSelectedCaregiver(caregiver);
+      setExpandedCaregiverId(null);
+      setShowCaregiverModal(true);
+    });
     console.log('🔥 Modal state set to true');
+    // Load assignments
+    if (caregiver?.id) {
+      assignmentAPI.getAssignmentsByCaregiver(caregiver.id)
+        .then(setCaregiverAssignments)
+        .catch((e) => console.warn('Failed to load caregiver assignments', e));
+    } else {
+      setCaregiverAssignments([]);
+    }
   };
 
   // Patient actions
   const viewPatientDetails = (patient) => {
-    setSelectedPatient(patient);
-    setShowPatientModal(true);
+    flushSync(() => {
+      setSelectedPatient(patient);
+      setExpandedPatientId(patient.id);
+      setShowPatientModal(true);
+    });
+    // Load assignments
+    if (patient?.id) {
+      assignmentAPI.getAssignmentsByPatient(patient.id)
+        .then(setPatientAssignments)
+        .catch((e) => console.warn('Failed to load patient assignments', e));
+    } else {
+      setPatientAssignments([]);
+    }
   };
 
   const handleDeletePatient = async (patientId) => {
@@ -467,6 +596,52 @@ const NewAdminDashboard = () => {
     setEditingCaregiver({ ...caregiver });
     setSelectedCaregiver(caregiver);
     setShowCaregiverModal(true);
+  };
+
+  const handleToggleCaregiverStatus = async (caregiver) => {
+    try {
+      const currentStatus = caregiver.status || 'active';
+      const newStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+
+      // Always update the users collection first (this is the primary source)
+      if (caregiver.email) {
+        try {
+          const usersRef = collection(db, 'users');
+          const qUsers = query(usersRef, where('email', '==', caregiver.email));
+          const usersSnap = await getDocs(qUsers);
+          for (const userDoc of usersSnap.docs) {
+            await updateDoc(doc(db, 'users', userDoc.id), { status: newStatus });
+          }
+        } catch (userErr) {
+          console.warn('Updating users status failed:', userErr);
+          throw userErr; // Re-throw to show error to user
+        }
+      }
+
+      // Try to update caregivers collection if it exists
+      if (caregiver.id) {
+        try {
+          await updateDoc(doc(db, 'caregivers', caregiver.id), { status: newStatus });
+        } catch (e) {
+          console.warn('Caregiver doc update by id failed (non-blocking):', e);
+        }
+      }
+
+      // Update local state
+      setCaregivers((prev) => prev.map((c) => {
+        const sameId = caregiver.id && c.id === caregiver.id;
+        const sameEmail = caregiver.email && c.email === caregiver.email;
+        if (sameId || sameEmail) {
+          return { ...c, status: newStatus };
+        }
+        return c;
+      }));
+
+      toast.success(`Caregiver ${newStatus === 'suspended' ? 'suspended' : 'activated'}`);
+    } catch (err) {
+      console.error('Toggle caregiver status failed:', err);
+      toast.error('Failed to update caregiver status');
+    }
   };
 
   const handleSaveCaregiver = async () => {
@@ -571,7 +746,6 @@ const NewAdminDashboard = () => {
       
       // Create new task object
       const newTask = {
-        id: Date.now().toString(), // In production, use proper UUID
         title: taskFormData.title.trim(),
         description: taskFormData.description.trim(),
         assignedTo: assignedCaregiver?.name || 'Unknown Caregiver',
@@ -584,22 +758,18 @@ const NewAdminDashboard = () => {
         estimatedDuration: taskFormData.estimatedDuration,
         specialInstructions: taskFormData.specialInstructions.trim(),
         status: 'pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         createdBy: adminEmail
       };
 
-      // Add to tasks state (in production, save to Firebase)
-      setTasks(prev => [...prev, newTask]);
-      
-      // TODO: Save to Firebase
-      // await addDoc(collection(db, 'tasks'), newTask);
-      
+      await addDoc(collection(db, 'tasks'), newTask);
+
       toast.success('Task created successfully!');
       setShowCreateTaskModal(false);
       resetTaskForm();
       
-      console.log('✅ Task created:', newTask);
+      console.log('✅ Task created (Firestore):', newTask);
       
     } catch (error) {
       console.error('Error creating task:', error);
@@ -634,6 +804,90 @@ const NewAdminDashboard = () => {
       (p.phone || '').toLowerCase().includes(q)
     );
   });
+
+  // Derived filtered tasks based on search, status, and date range
+  const getFilteredTasks = () => {
+    const q = taskSearch.toLowerCase();
+    return tasks
+      .filter((task) => {
+        const matchesText =
+          task.title?.toLowerCase().includes(q) ||
+          task.description?.toLowerCase().includes(q) ||
+          (task.assignedTo || '').toLowerCase().includes(q) ||
+          (task.patient || '').toLowerCase().includes(q);
+
+        const isOverdue = (() => {
+          if (!task.dueDate || task.status === 'completed') return false;
+          try {
+            const due = new Date(task.dueDate);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            return due < today;
+          } catch { return false; }
+        })();
+
+        const matchesStatus =
+          taskStatusFilter === 'all' ? true :
+          taskStatusFilter === 'overdue' ? isOverdue :
+          (task.status === taskStatusFilter);
+
+        const withinDateRange = (() => {
+          if (!task.dueDate) return true;
+          try {
+            const due = new Date(task.dueDate);
+            if (taskDateFrom) {
+              const from = new Date(taskDateFrom);
+              from.setHours(0,0,0,0);
+              if (due < from) return false;
+            }
+            if (taskDateTo) {
+              const to = new Date(taskDateTo);
+              to.setHours(23,59,59,999);
+              if (due > to) return false;
+            }
+            return true;
+          } catch { return true; }
+        })();
+
+        return matchesText && matchesStatus && withinDateRange;
+      });
+  };
+
+  const exportFilteredTasksToCSV = () => {
+    try {
+      const rows = getFilteredTasks();
+      const headers = ['Title','Caregiver','Patient','Priority','Due Date','Status','Created At'];
+      const escape = (val) => {
+        const s = (val ?? '').toString();
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      };
+      const csv = [headers.join(',')]
+        .concat(rows.map(t => [
+          escape(t.title),
+          escape(t.assignedTo),
+          escape(t.patient),
+          escape(t.priority),
+          escape(t.dueDate ? new Date(t.dueDate).toISOString().slice(0,10) : ''),
+          escape(t.status),
+          escape(t.createdAt ? new Date(t.createdAt).toISOString() : '')
+        ].join(',')))
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'tasks_export.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('Exported tasks CSV');
+    } catch (err) {
+      console.error('Export CSV failed', err);
+      toast.error('Failed to export CSV');
+    }
+  };
 
   const renderDashboard = () => (
     <div className="space-y-6">
@@ -762,9 +1016,9 @@ const NewAdminDashboard = () => {
       </div>
 
       {/* Caregiver Modal */}
-      {showCaregiverModal && selectedCaregiver && (
+      {showCaregiverModal && selectedCaregiver && createPortal((
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Caregiver Details</h2>
               <button
@@ -777,80 +1031,107 @@ const NewAdminDashboard = () => {
                 ✕
               </button>
             </div>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600">Name</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={editingCaregiver?.name ?? selectedCaregiver.name}
-                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600">Email</label>
-                  <input
-                    type="email"
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={editingCaregiver?.email ?? selectedCaregiver.email}
-                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), email: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600">Phone</label>
-                  <input
-                    type="tel"
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={(editingCaregiver?.phone ?? selectedCaregiver.phone) || ''}
-                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), phone: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600">Role</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={(editingCaregiver?.role ?? selectedCaregiver.role) || selectedCaregiver.medicalQualification || ''}
-                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), role: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600">Experience</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={(editingCaregiver?.experience ?? selectedCaregiver.experience) || ''}
-                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), experience: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600">Status</label>
-                  <select
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={(editingCaregiver?.status ?? selectedCaregiver.status) || 'active'}
-                    onChange={(e) => setEditingCaregiver((prev) => ({ ...(prev || selectedCaregiver), status: e.target.value }))}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="pending">Pending</option>
-                  </select>
-                </div>
-              </div>
 
-              <div className="bg-gray-50 p-4 rounded">
-                <h4 className="font-semibold mb-2">Assignment History & Reports</h4>
-                <p className="text-gray-600">
-                  📋 Assignment history and care reports will be displayed here.
-                </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-gray-500">Name</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.name}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Email</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.email}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Phone</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.phone || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Role</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.role || selectedCaregiver.medicalQualification || 'General Caregiver'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Experience</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.experience || selectedCaregiver.yearsOfExperience || 'Not specified'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Status</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.status || 'Pending'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Address</div>
+                <div className="text-sm text-gray-900">{formatAddress(selectedCaregiver.address || selectedCaregiver.location)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">License Number</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.licenseNumber || 'N/A'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Specializations</div>
+                <div className="text-sm text-gray-900">{Array.isArray(selectedCaregiver.specializations) ? selectedCaregiver.specializations.join(', ') : (selectedCaregiver.specialization || 'N/A')}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Qualifications</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.qualifications || selectedCaregiver.medicalQualification || 'N/A'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Bio</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.bio || '—'}</div>
               </div>
             </div>
-            
+
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-4 rounded">
+                <h4 className="font-semibold mb-2">Assignments</h4>
+                {caregiverAssignments && caregiverAssignments.length > 0 ? (
+                  <ul className="list-disc list-inside text-sm text-gray-800 space-y-1 max-h-48 overflow-y-auto">
+                    {caregiverAssignments.map(a => (
+                      <li key={a.id}>
+                        Patient: {a.patientName || a.patientId} • Status: {a.status || 'active'} • Start: {a.startDate ? new Date(a.startDate).toLocaleDateString() : 'N/A'}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-gray-600 text-sm">No assignments found.</div>
+                )}
+              </div>
+              <div className="bg-gray-50 p-4 rounded">
+                <h4 className="font-semibold mb-2">Recent Activity</h4>
+                <div className="text-gray-600 text-sm">Activity feed integration pending.</div>
+              </div>
+            </div>
+
             <div className="flex justify-end mt-6 space-x-3">
               <button
+                onClick={() => handleStartEditCaregiver(selectedCaregiver)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Edit Details
+              </button>
+              <button
+                onClick={() => handleToggleCaregiverStatus(selectedCaregiver)}
+                className={`px-4 py-2 rounded text-white ${((selectedCaregiver.status || 'active') === 'suspended') ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}
+              >
+                {((selectedCaregiver.status || 'active') === 'suspended') ? 'Activate' : 'Suspend'}
+              </button>
+        <button
+          onClick={() => {
+            try {
+              setShowCaregiverModal(false);
+              setActiveTab('tasks');
+              setTaskFormData((prev) => ({
+                ...prev,
+                assignedTo: selectedCaregiver?.id || '',
+                title: prev.title && prev.title.trim().length > 0 ? prev.title : `Task for ${selectedCaregiver?.name || 'Caregiver'}`,
+              }));
+              setShowCreateTaskModal(true);
+            } catch {}
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Assign Task
+        </button>
+              <button
                 onClick={() => {
-                  setEditingCaregiver(null);
                   setShowCaregiverModal(false);
                   setSelectedCaregiver(null);
                 }}
@@ -858,16 +1139,10 @@ const NewAdminDashboard = () => {
               >
                 Close
               </button>
-              <button
-                onClick={handleSaveCaregiver}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Save Changes
-              </button>
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       {/* Task Details Modal */}
       {showTaskModal && selectedTask && (
@@ -1013,6 +1288,26 @@ const NewAdminDashboard = () => {
                     </td>
                   </tr>
                 ))}
+                {expandedPatientId && selectedPatient && selectedPatient.id === expandedPatientId && (
+                  <tr>
+                    <td colSpan="5" className="bg-gray-50 px-6 py-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-gray-500">Email</div>
+                          <div className="text-sm text-gray-900">{selectedPatient.email || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Address</div>
+                          <div className="text-sm text-gray-900">{formatAddress(selectedPatient.address)}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Emergency Contact</div>
+                          <div className="text-sm text-gray-900">{selectedPatient.emergencyContactName || 'N/A'} ({selectedPatient.emergencyContactPhone || 'N/A'})</div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -1084,7 +1379,7 @@ const NewAdminDashboard = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {caregivers.map((cg) => (
-                  <tr key={`${cg.id || ''}-${cg.email || Math.random()}`}>
+                  <tr key={`${cg.id || cg.email || Math.random()}`}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cg.name || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cg.email || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cg.role || cg.medicalQualification || 'General Caregiver'}</td>
@@ -1098,9 +1393,39 @@ const NewAdminDashboard = () => {
                       </button>
                       <button className="text-green-600 hover:text-green-900 mr-4" onClick={() => handleStartEditCaregiver(cg)}>Edit</button>
                       <button className="text-red-600 hover:text-red-900" onClick={() => handleDeleteCaregiver(cg.id)}>Delete</button>
+                      <button
+                        className="ml-4 text-yellow-700 hover:text-yellow-900"
+                        onClick={() => handleToggleCaregiverStatus(cg)}
+                      >
+                        {(cg.status || 'active') === 'suspended' ? 'Activate' : 'Suspend'}
+                      </button>
                     </td>
                   </tr>
                 ))}
+                {expandedCaregiverId && selectedCaregiver && selectedCaregiver.id === expandedCaregiverId && (
+                  <tr>
+                    <td colSpan="5" className="bg-gray-50 px-6 py-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-gray-500">Phone</div>
+                          <div className="text-sm text-gray-900">{selectedCaregiver.phone || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Experience</div>
+                          <div className="text-sm text-gray-900">{selectedCaregiver.experience || selectedCaregiver.yearsOfExperience || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Qualifications</div>
+                          <div className="text-sm text-gray-900">{selectedCaregiver.qualifications || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Specializations</div>
+                          <div className="text-sm text-gray-900">{Array.isArray(selectedCaregiver.specializations) ? selectedCaregiver.specializations.join(', ') : (selectedCaregiver.specialization || 'N/A')}</div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -1198,7 +1523,37 @@ const NewAdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Task Management</h1>
-        <button
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Search tasks, caregiver, patient"
+            value={taskSearch}
+            onChange={(e) => setTaskSearch(e.target.value)}
+            className="px-3 py-2 border rounded-md text-sm w-64"
+          />
+          <input
+            type="date"
+            value={taskDateFrom}
+            onChange={(e) => setTaskDateFrom(e.target.value)}
+            className="px-3 py-2 border rounded-md text-sm"
+            aria-label="From date"
+          />
+          <span className="text-gray-400">to</span>
+          <input
+            type="date"
+            value={taskDateTo}
+            onChange={(e) => setTaskDateTo(e.target.value)}
+            className="px-3 py-2 border rounded-md text-sm"
+            aria-label="To date"
+          />
+          <button
+            onClick={exportFilteredTasksToCSV}
+            className="flex items-center px-3 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm"
+            title="Export filtered tasks to CSV"
+          >
+            Export CSV
+          </button>
+          <button
           onClick={() => {
             console.log('🔥 Create Task button clicked');
             setShowCreateTaskModal(true);
@@ -1207,7 +1562,8 @@ const NewAdminDashboard = () => {
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Task
-        </button>
+          </button>
+        </div>
       </div>
 
       {/* Task Statistics */}
@@ -1264,21 +1620,25 @@ const NewAdminDashboard = () => {
       {/* Task Filters */}
       <div className="bg-white p-4 rounded-lg shadow border">
         <div className="flex flex-wrap gap-2">
-          <button className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200">
-            All Tasks
-          </button>
-          <button className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200">
-            Pending
-          </button>
-          <button className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200">
-            In Progress
-          </button>
-          <button className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200">
-            Completed
-          </button>
-          <button className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200">
-            Overdue
-          </button>
+          {[
+            { key: 'all', label: 'All Tasks' },
+            { key: 'pending', label: 'Pending' },
+            { key: 'in_progress', label: 'In Progress' },
+            { key: 'completed', label: 'Completed' },
+            { key: 'overdue', label: 'Overdue' }
+          ].map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setTaskStatusFilter(f.key)}
+              className={`px-3 py-1 rounded-full text-sm ${
+                taskStatusFilter === f.key
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -1319,7 +1679,8 @@ const NewAdminDashboard = () => {
                   </td>
                 </tr>
               ) : (
-                tasks.map((task) => (
+                getFilteredTasks()
+                  .map((task) => (
                   <tr key={task.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{task.title}</div>
@@ -1344,13 +1705,24 @@ const NewAdminDashboard = () => {
                       {new Date(task.dueDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {task.status.replace('_', ' ')}
-                      </span>
+                      <select
+                        className="border rounded px-2 py-1 text-sm"
+                        value={task.status || 'pending'}
+                        onChange={async (e) => {
+                          try {
+                            const newStatus = e.target.value;
+                            await updateDoc(doc(db, 'tasks', task.id), { status: newStatus, updatedAt: serverTimestamp() });
+                            toast.success('Task status updated');
+                          } catch (err) {
+                            console.error('Update status failed', err);
+                            toast.error('Failed to update status');
+                          }
+                        }}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                      </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
@@ -1365,7 +1737,19 @@ const NewAdminDashboard = () => {
                       <button className="text-green-600 hover:text-green-900 mr-4">
                         <Edit className="h-4 w-4" />
                       </button>
-                      <button className="text-red-600 hover:text-red-900">
+                      <button
+                        className="text-red-600 hover:text-red-900"
+                        onClick={async () => {
+                          if (!window.confirm('Delete this task?')) return;
+                          try {
+                            await deleteDoc(doc(db, 'tasks', task.id));
+                            toast.success('Task deleted');
+                          } catch (err) {
+                            console.error('Delete task failed', err);
+                            toast.error('Failed to delete task');
+                          }
+                        }}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </td>
@@ -1454,9 +1838,32 @@ const NewAdminDashboard = () => {
               <Bell className="h-5 w-5 mr-2" />
               Recent Alerts
             </h3>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                placeholder="Search alerts"
+                value={alertSearch}
+                onChange={(e) => setAlertSearch(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm"
+              />
+              {['all','critical','warning','info'].map((sev) => (
+                <button
+                  key={sev}
+                  onClick={() => setAlertSeverity(sev)}
+                  className={`px-3 py-1 rounded-full text-sm ${alertSeverity === sev ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  {sev.charAt(0).toUpperCase() + sev.slice(1)}
+                </button>
+              ))}
+              <div className="flex items-center gap-2 ml-auto">
+                <input type="date" value={alertDateFrom} onChange={(e)=>setAlertDateFrom(e.target.value)} className="px-3 py-2 border rounded-md text-sm" />
+                <span className="text-gray-400">to</span>
+                <input type="date" value={alertDateTo} onChange={(e)=>setAlertDateTo(e.target.value)} className="px-3 py-2 border rounded-md text-sm" />
+              </div>
+            </div>
           </div>
           <div className="p-6">
-            {alerts.length === 0 ? (
+            {getFilteredAlerts().length === 0 ? (
               <div className="text-center py-8">
                 <AlertTriangle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-600">No active alerts</p>
@@ -1464,7 +1871,7 @@ const NewAdminDashboard = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {alerts.slice(0, 5).map((alert) => (
+                {getFilteredAlerts().slice(0, 10).map((alert) => (
                   <div key={alert.id} className={`p-4 rounded-lg border-l-4 ${
                     alert.severity === 'critical' ? 'bg-red-50 border-red-400' :
                     alert.severity === 'warning' ? 'bg-yellow-50 border-yellow-400' :
@@ -1475,16 +1882,26 @@ const NewAdminDashboard = () => {
                         <p className="font-medium text-gray-900">{alert.title}</p>
                         <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
                         <p className="text-xs text-gray-500 mt-2">
-                          {new Date(alert.timestamp).toLocaleString()}
+                          {alert.timestamp ? new Date(alert.timestamp).toLocaleString() : ''}
                         </p>
                       </div>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        alert.severity === 'critical' ? 'bg-red-100 text-red-800' :
-                        alert.severity === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {alert.severity}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          alert.severity === 'critical' ? 'bg-red-100 text-red-800' :
+                          alert.severity === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {alert.severity}
+                        </span>
+                        {!alert.acknowledged && (
+                          <button
+                            onClick={() => acknowledgeAlert(alert)}
+                            className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
+                          >
+                            Acknowledge
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1578,6 +1995,119 @@ const NewAdminDashboard = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Vital Signs Trends */}
+      <div className="bg-white rounded-lg shadow border">
+        <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center gap-3">
+          <h3 className="text-lg font-medium text-gray-900">Vitals Trends</h3>
+          <select
+            className="ml-auto px-3 py-2 border rounded-md text-sm"
+            value={vitalsPatientId}
+            onChange={(e) => setVitalsPatientId(e.target.value)}
+          >
+            <option value="all">All Patients</option>
+            {patients.map((p) => (
+              <option key={p.id} value={p.id}>{p.name || p.email || p.id}</option>
+            ))}
+          </select>
+          <select
+            className="px-3 py-2 border rounded-md text-sm"
+            value={vitalsRange}
+            onChange={(e) => setVitalsRange(e.target.value)}
+          >
+            <option value="24h">Last 24h</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+          </select>
+        </div>
+        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {(() => {
+            const rangeMs = vitalsRange === '24h' ? 24*3600e3 : vitalsRange === '7d' ? 7*24*3600e3 : 30*24*3600e3;
+            const cutoff = Date.now() - rangeMs;
+            const filtered = vitalSigns.filter(v => {
+              const inRange = new Date(v.timestamp).getTime() >= cutoff;
+              const matchesPatient = vitalsPatientId === 'all' ? true : (v.patientId === vitalsPatientId);
+              return inRange && matchesPatient;
+            });
+            const metrics = [
+              { key: 'heartRate', label: 'Heart Rate (bpm)', color: '#ef4444' },
+              { key: 'systolic', label: 'Systolic BP (mmHg)', color: '#3b82f6' },
+              { key: 'diastolic', label: 'Diastolic BP (mmHg)', color: '#06b6d4' },
+              { key: 'spo2', label: 'SpO₂ (%)', color: '#10b981' }
+            ];
+              const Chart = ({ points, color, thresholdMin, thresholdMax }) => {
+              if (points.length === 0) return <div className="text-sm text-gray-500">No data in range</div>;
+              const w = 500, h = 140, pad = 20;
+              const xs = points.map(p => +p.timestamp);
+              const ys = points.map(p => p.value);
+              const minX = Math.min(...xs), maxX = Math.max(...xs);
+              const minY = Math.min(...ys), maxY = Math.max(...ys);
+              const norm = (v, a, b) => (a === b ? 0.5 : (v - a) / (b - a));
+                const d = points
+                .sort((a,b)=>+a.timestamp-+b.timestamp)
+                .map((p,i) => {
+                  const x = pad + norm(+p.timestamp, minX, maxX) * (w - 2*pad);
+                  const y = h - pad - norm(p.value, minY, maxY) * (h - 2*pad);
+                  return `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+                })
+                .join(' ');
+                const circles = points.map((p, idx) => {
+                  const x = pad + norm(+p.timestamp, minX, maxX) * (w - 2*pad);
+                  const y = h - pad - norm(p.value, minY, maxY) * (h - 2*pad);
+                  const outOfRange = (thresholdMin != null && p.value < thresholdMin) || (thresholdMax != null && p.value > thresholdMax);
+                  return (
+                    <g key={idx}>
+                      <circle cx={x} cy={y} r={2.5} fill={outOfRange ? '#ef4444' : color}>
+                        <title>{`${new Date(p.timestamp).toLocaleString()}\n${p.value}`}</title>
+                      </circle>
+                    </g>
+                  );
+                });
+                const thresholdLines = [];
+                if (thresholdMin != null) {
+                  const yMin = h - pad - norm(thresholdMin, minY, maxY) * (h - 2*pad);
+                  thresholdLines.push(<line key="min" x1={pad} x2={w-pad} y1={yMin} y2={yMin} stroke="#f59e0b" strokeDasharray="4 4" />);
+                }
+                if (thresholdMax != null) {
+                  const yMax = h - pad - norm(thresholdMax, minY, maxY) * (h - 2*pad);
+                  thresholdLines.push(<line key="max" x1={pad} x2={w-pad} y1={yMax} y2={yMax} stroke="#f59e0b" strokeDasharray="4 4" />);
+                }
+              return (
+                <svg width={w} height={h} className="w-full h-40">
+                  <rect x="0" y="0" width={w} height={h} fill="#fff" />
+                    {thresholdLines}
+                  <path d={d} stroke={color} strokeWidth="2" fill="none" />
+                    {circles}
+                </svg>
+              );
+            };
+            return metrics.map((m) => {
+              const pts = filtered
+                .map(v => ({ timestamp: v.timestamp, value: (v[m.key] ?? v[m.key + 'Value']) }))
+                .filter(p => typeof p.value === 'number');
+              const avg = pts.length ? (pts.reduce((s,p)=>s+p.value,0)/pts.length) : null;
+              const safeRanges = {
+                heartRate: { min: 60, max: 100 },
+                systolic: { min: 90, max: 120 },
+                diastolic: { min: 60, max: 80 },
+                spo2: { min: 95, max: 100 }
+              };
+              const range = safeRanges[m.key] || {};
+              return (
+                <div key={m.key} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-sm font-medium text-gray-700">{m.label}</div>
+                    {avg != null && (
+                      <div className="text-xs text-gray-600">Avg: {avg.toFixed(1)}</div>
+                    )}
+                  </div>
+                  <Chart points={pts} color={m.color} thresholdMin={range.min} thresholdMax={range.max} />
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
     </div>
@@ -1829,6 +2359,46 @@ const NewAdminDashboard = () => {
       </div>
     </div>
   );
+
+  const getFilteredAlerts = () => {
+    const q = alertSearch.toLowerCase();
+    return alerts.filter((a) => {
+      const matchesText =
+        (a.title || '').toLowerCase().includes(q) ||
+        (a.message || '').toLowerCase().includes(q) ||
+        (a.patientName || a.patientId || '').toLowerCase().includes(q) ||
+        (a.caregiverName || a.caregiverId || '').toLowerCase().includes(q);
+      const matchesSeverity = alertSeverity === 'all' ? true : (a.severity === alertSeverity);
+      const withinDateRange = (() => {
+        if (!a.timestamp) return true;
+        try {
+          const ts = new Date(a.timestamp);
+          if (alertDateFrom) {
+            const from = new Date(alertDateFrom);
+            from.setHours(0,0,0,0);
+            if (ts < from) return false;
+          }
+          if (alertDateTo) {
+            const to = new Date(alertDateTo);
+            to.setHours(23,59,59,999);
+            if (ts > to) return false;
+          }
+          return true;
+        } catch { return true; }
+      })();
+      return matchesText && matchesSeverity && withinDateRange;
+    });
+  };
+
+  const acknowledgeAlert = async (alert) => {
+    try {
+      await updateDoc(doc(db, 'alerts', alert.id), { acknowledged: true, acknowledgedAt: serverTimestamp() });
+      toast.success('Alert acknowledged');
+    } catch (err) {
+      console.error('Acknowledge failed', err);
+      toast.error('Failed to acknowledge alert');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -2370,13 +2940,13 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
                         {client.age || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-4">
+                        <button className="text-blue-600 hover:text-blue-900 mr-4" onClick={() => viewPatientDetails(client)}>
                           View
                         </button>
-                        <button className="text-green-600 hover:text-green-900 mr-4">
+                        <button className="text-green-600 hover:text-green-900 mr-4" onClick={() => handleStartEditPatient(client)}>
                           Edit
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button className="text-red-600 hover:text-red-900" onClick={() => handleDeletePatient(client.id)}>
                           Delete
                         </button>
                       </td>
@@ -2398,6 +2968,7 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
@@ -2422,6 +2993,9 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {caregiver.role || caregiver.medicalQualification || 'General Caregiver'}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {caregiver.status || 'active'}
+                      </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
                               onClick={() => viewCaregiverDetails(caregiver)}
@@ -2429,11 +3003,17 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
                             >
                               View
                             </button>
-                            <button className="text-green-600 hover:text-green-900 mr-4">
+                            <button className="text-green-600 hover:text-green-900 mr-4" onClick={() => handleStartEditCaregiver(caregiver)}>
                               Edit
                             </button>
-                            <button className="text-red-600 hover:text-red-900">
+                            <button className="text-red-600 hover:text-red-900" onClick={() => handleDeleteCaregiver(caregiver.id)}>
                               Delete
+                            </button>
+                            <button
+                              className="ml-4 text-yellow-700 hover:text-yellow-900"
+                              onClick={() => handleToggleCaregiverStatus(caregiver)}
+                            >
+                              {(caregiver.status || 'active') === 'suspended' ? 'Activate' : 'Suspend'}
                             </button>
                           </td>
                         </tr>
@@ -2457,12 +3037,11 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
       {/* Caregiver Modal */}
       {showCaregiverModal && selectedCaregiver && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Caregiver Details</h2>
               <button
                 onClick={() => {
-                  console.log('🔴 Closing modal');
                   setShowCaregiverModal(false);
                   setSelectedCaregiver(null);
                 }}
@@ -2471,37 +3050,94 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
                 ✕
               </button>
             </div>
-            
-            <div className="space-y-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <strong>Name:</strong> {selectedCaregiver.name}
+                <div className="text-sm text-gray-500">Name</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.name}</div>
               </div>
               <div>
-                <strong>Email:</strong> {selectedCaregiver.email}
+                <div className="text-sm text-gray-500">Email</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.email}</div>
               </div>
               <div>
-                <strong>Phone:</strong> {selectedCaregiver.phone || 'N/A'}
+                <div className="text-sm text-gray-500">Phone</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.phone || 'N/A'}</div>
               </div>
               <div>
-                <strong>Role:</strong> {selectedCaregiver.role || selectedCaregiver.medicalQualification || 'General Caregiver'}
+                <div className="text-sm text-gray-500">Role</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.role || selectedCaregiver.medicalQualification || 'General Caregiver'}</div>
               </div>
               <div>
-                <strong>Experience:</strong> {selectedCaregiver.experience || selectedCaregiver.yearsOfExperience || 'Not specified'}
+                <div className="text-sm text-gray-500">Experience</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.experience || selectedCaregiver.yearsOfExperience || 'Not specified'}</div>
               </div>
               <div>
-                <strong>Status:</strong> {selectedCaregiver.status || 'Pending'}
+                <div className="text-sm text-gray-500">Status</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.status || 'Pending'}</div>
               </div>
-              
-              <div className="bg-gray-50 p-4 rounded">
-                <h4 className="font-semibold mb-2">Assignment History & Reports</h4>
-                <p className="text-gray-600">
-                  📋 Assignment history and care reports will be displayed here.
-                  This section will show client assignments, visit reports, and performance metrics.
-                </p>
+              <div>
+                <div className="text-sm text-gray-500">Address</div>
+                <div className="text-sm text-gray-900">{formatAddress(selectedCaregiver.address || selectedCaregiver.location)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">License Number</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.licenseNumber || 'N/A'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Specializations</div>
+                <div className="text-sm text-gray-900">{Array.isArray(selectedCaregiver.specializations) ? selectedCaregiver.specializations.join(', ') : (selectedCaregiver.specialization || 'N/A')}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Qualifications</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.qualifications || selectedCaregiver.medicalQualification || 'N/A'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Bio</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.bio || '—'}</div>
               </div>
             </div>
-            
-            <div className="flex justify-end mt-6">
+
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-4 rounded">
+                <h4 className="font-semibold mb-2">Assignments</h4>
+                {caregiverAssignments && caregiverAssignments.length > 0 ? (
+                  <ul className="list-disc list-inside text-sm text-gray-800 space-y-1 max-h-48 overflow-y-auto">
+                    {caregiverAssignments.map(a => (
+                      <li key={a.id}>
+                        Patient: {a.patientName || a.patientId} • Status: {a.status || 'active'} • Start: {a.startDate ? new Date(a.startDate).toLocaleDateString() : 'N/A'}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-gray-600 text-sm">No assignments found.</div>
+                )}
+              </div>
+              <div className="bg-gray-50 p-4 rounded">
+                <h4 className="font-semibold mb-2">Recent Activity</h4>
+                <div className="text-gray-600 text-sm">Activity feed integration pending.</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => handleStartEditCaregiver(selectedCaregiver)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Edit Details
+              </button>
+              <button
+                onClick={() => handleToggleCaregiverStatus(selectedCaregiver)}
+                className={`px-4 py-2 rounded text-white ${((selectedCaregiver.status || 'active') === 'suspended') ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}
+              >
+                {((selectedCaregiver.status || 'active') === 'suspended') ? 'Activate' : 'Suspend'}
+              </button>
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Assign Task
+              </button>
               <button
                 onClick={() => {
                   setShowCaregiverModal(false);
@@ -2923,7 +3559,7 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
       )}
 
       {/* Patient Modal */}
-      {showPatientModal && selectedPatient && (
+      {showPatientModal && selectedPatient && createPortal((
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
             <div className="flex justify-between items-center mb-4">
@@ -2977,6 +3613,20 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
                 />
               </div>
             </div>
+            <div className="mt-6 bg-gray-50 p-4 rounded">
+              <h4 className="font-semibold mb-2">Assignments</h4>
+              {patientAssignments && patientAssignments.length > 0 ? (
+                <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                  {patientAssignments.map(a => (
+                    <li key={a.id}>
+                      Caregiver: {a.caregiverName || a.caregiverId} • Status: {a.status || 'active'} • Start: {a.startDate ? new Date(a.startDate).toLocaleDateString() : 'N/A'}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-gray-600 text-sm">No assignments found.</div>
+              )}
+            </div>
             <div className="flex justify-end mt-6 space-x-3">
               <button
                 onClick={() => {
@@ -2989,6 +3639,23 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
                 Close
               </button>
               <button
+                onClick={() => {
+                  try {
+                    setShowPatientModal(false);
+                    setActiveTab('tasks');
+                    setTaskFormData((prev) => ({
+                      ...prev,
+                      patient: selectedPatient?.id || '',
+                      title: prev.title && prev.title.trim().length > 0 ? prev.title : `Task for ${selectedPatient?.name || 'Patient'}`,
+                    }));
+                    setShowCreateTaskModal(true);
+                  } catch {}
+                }}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Assign Task
+              </button>
+              <button
                 onClick={handleSavePatient}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
@@ -2997,7 +3664,7 @@ const AddCaregiverForm = ({ onBack, onCreate }) => {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </>
   );
 };

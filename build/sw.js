@@ -70,6 +70,18 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Ignore non-http(s) schemes and localhost/0.0.0.0 dev hosts to avoid
+  // caching or intercepting chrome-extension and dev-server assets
+  const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
+  const isDevHost = url.hostname === 'localhost' || url.hostname === '0.0.0.0';
+  const isSameOrigin = url.origin === self.location.origin;
+  const isDevWsPath = url.pathname === '/ws' || url.pathname.startsWith('/ws/');
+
+  // Skip if non-http(s), dev-hosted, cross-origin, or webpack-dev-server ws path
+  if (!isHttp || isDevHost || !isSameOrigin || isDevWsPath) {
+    return; // Let the browser handle it without SW interference
+  }
+
   // Handle different types of requests
   if (request.method === 'GET') {
     // Static assets - cache first strategy

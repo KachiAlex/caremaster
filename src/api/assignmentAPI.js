@@ -52,14 +52,13 @@ export const assignmentAPI = {
     }
   },
 
-  // Get assignments by caregiver
+  // Get assignments by caregiver (no composite index required)
   getAssignmentsByCaregiver: async (caregiverId) => {
     try {
+      // Keep the query minimal to avoid composite index requirements
       const assignmentsQuery = query(
         collection(db, ASSIGNMENTS_COLLECTION),
-        where('caregiverId', '==', caregiverId),
-        where('status', '==', 'active'),
-        orderBy('createdAt', 'desc')
+        where('caregiverId', '==', caregiverId)
       );
 
       const querySnapshot = await getDocs(assignmentsQuery);
@@ -77,20 +76,26 @@ export const assignmentAPI = {
         });
       });
 
-      return assignments;
+      // Filter and sort client-side
+      return assignments
+        .filter((a) => (a.status ?? 'active') === 'active')
+        .sort((a, b) => {
+          const aTime = a.createdAt?.getTime?.() ?? 0;
+          const bTime = b.createdAt?.getTime?.() ?? 0;
+          return bTime - aTime;
+        });
     } catch (error) {
       logger.error('Error fetching caregiver assignments', { error, caregiverId });
       throw error;
     }
   },
 
-  // Get assignments by patient
+  // Get assignments by patient (no composite index required)
   getAssignmentsByPatient: async (patientId) => {
     try {
       const assignmentsQuery = query(
         collection(db, ASSIGNMENTS_COLLECTION),
-        where('patientId', '==', patientId),
-        orderBy('createdAt', 'desc')
+        where('patientId', '==', patientId)
       );
 
       const querySnapshot = await getDocs(assignmentsQuery);
@@ -108,7 +113,12 @@ export const assignmentAPI = {
         });
       });
 
-      return assignments;
+      // Sort client-side by createdAt desc
+      return assignments.sort((a, b) => {
+        const aTime = a.createdAt?.getTime?.() ?? 0;
+        const bTime = b.createdAt?.getTime?.() ?? 0;
+        return bTime - aTime;
+      });
     } catch (error) {
       logger.error('Error fetching patient assignments', { error, patientId });
       throw error;

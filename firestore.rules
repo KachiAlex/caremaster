@@ -1,321 +1,55 @@
-rules_version='2'
-
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
+    // Helper function to check if user is admin
     function isAdmin() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
+      return request.auth != null && 
+             (request.auth.token.admin == true || 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin');
     }
     
-    function isCaregiver() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'caregiver';
-    }
-    
-    function isDoctor() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'doctor';
-    }
-    
-    function isElderly() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'elderly';
-    }
-    
-    function isServiceProvider() {
-      return isCaregiver() || isDoctor();
-    }
-    
-    function hasAccessToElderlyProfile(elderlyUserId) {
-      return isOwner(elderlyUserId) || 
-             isAdmin() || 
-             (isServiceProvider() && 
-              exists(/databases/$(database)/documents/caregiverRelationships/$(request.auth.uid + '_' + elderlyUserId)));
-    }
-    
-    function isValidUserType() {
-      return request.resource.data.userType in ['elderly', 'caregiver', 'doctor', 'admin'];
-    }
-    
-    function isValidMedicationStatus() {
-      return request.resource.data.status in ['taken', 'missed', 'skipped'];
-    }
-    
-    function isValidEmergencySeverity() {
-      return request.resource.data.severity in ['low', 'medium', 'high', 'critical'];
-    }
-    
-    // Users collection
+    // Users collection - users can read their own data, admins can read/write all
     match /users/{userId} {
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || isServiceProvider());
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUserType();
-      allow update: if isAuthenticated() && isOwner(userId);
-      allow delete: if isAuthenticated() && isAdmin();
+      allow read: if request.auth != null && 
+                    (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && 
+                     (request.auth.uid == userId || isAdmin());
     }
     
-    // Elderly profiles collection
-    match /elderlyProfiles/{elderlyUserId} {
-      allow read: if isAuthenticated() && hasAccessToElderlyProfile(elderlyUserId);
-      allow create: if isAuthenticated() && isOwner(elderlyUserId);
-      allow update: if isAuthenticated() && hasAccessToElderlyProfile(elderlyUserId);
-      allow delete: if isAuthenticated() && isAdmin();
+    // Admin-only collections - only admins can access
+    match /caregivers/{document=**} {
+      allow read, write: if isAdmin();
     }
     
-    // Medications collection
-    match /medications/{medicationId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    match /patients/{document=**} {
+      allow read, write: if isAdmin();
     }
     
-    // Medication logs collection
-    match /medicationLogs/{logId} {
-      allow read: if isAuthenticated() && 
-                     hasAccessToElderlyProfile(resource.data.userId);
-      allow create: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(request.resource.data.userId) &&
-                       isValidMedicationStatus();
-      allow update: if isAuthenticated() && 
-                       hasAccessToElderlyProfile(resource.data.userId);
-      allow delete: if isAuthenticated() && isAdmin();
+    match /tasks/{document=**} {
+      allow read, write: if isAdmin();
     }
     
-    // Vital signs collection
-    match /vitalSigns/{vitalSignId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    match /patientAssignments/{document=**} {
+      allow read, write: if isAdmin();
     }
     
-    // Appointments collection
-    match /appointments/{appointmentId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
+    match /alerts/{document=**} {
+      allow read, write: if isAdmin();
     }
     
-    // Emergency alerts collection
-    match /emergencyAlerts/{alertId} {
-      allow read: if isAuthenticated() && 
-                     (hasAccessToElderlyProfile(resource.data.userId) || isAdmin());
-      allow create: if isAuthenticated() && 
-                       isOwner(request.resource.data.userId) &&
-                       isValidEmergencySeverity();
-      allow update: if isAuthenticated() && 
-                       (hasAccessToElderlyProfile(resource.data.userId) || isAdmin());
-      allow delete: if isAuthenticated() && isAdmin();
+    match /vitalSigns/{document=**} {
+      allow read, write: if isAdmin();
     }
     
-    // Emergency responses collection
-    match /emergencyResponses/{responseId} {
-      allow read: if isAuthenticated() && 
-                     (hasAccessToElderlyProfile(resource.data.alertId) || isAdmin());
-      allow create: if isAuthenticated() && isServiceProvider();
-      allow update: if isAuthenticated() && 
-                       (isOwner(resource.data.responderId) || isAdmin());
-      allow delete: if isAuthenticated() && isAdmin();
+    // Assignment requests
+    match /assignmentRequests/{document=**} {
+      allow read, write: if isAdmin();
     }
     
-    // Caregiver relationships collection
-    match /caregiverRelationships/{relationshipId} {
-      allow read: if isAuthenticated() && 
-                     (hasAccessToElderlyProfile(resource.data.elderlyProfileId) || isAdmin());
-      allow create: if isAuthenticated() && isAdmin();
-      allow update: if isAuthenticated() && isAdmin();
-      allow delete: if isAuthenticated() && isAdmin();
-    }
-    
-    // Notifications collection
-    match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && 
-                       (isOwner(request.resource.data.userId) || isServiceProvider() || isAdmin());
-      allow update: if isAuthenticated() && isOwner(resource.data.userId);
-      allow delete: if isAuthenticated() && 
-                       (isOwner(resource.data.userId) || isAdmin());
-    }
-    
-    // Scheduled notifications collection
-    match /scheduledNotifications/{notificationId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && 
-                       (isOwner(request.resource.data.userId) || isServiceProvider() || isAdmin());
-      allow update: if isAuthenticated() && 
-                       (isOwner(resource.data.userId) || isAdmin());
-      allow delete: if isAuthenticated() && 
-                       (isOwner(resource.data.userId) || isAdmin());
-    }
-    
-    // Voice commands collection
-    match /voiceCommands/{commandId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-      allow update: if isAuthenticated() && isOwner(resource.data.userId);
-      allow delete: if isAuthenticated() && 
-                       (isOwner(resource.data.userId) || isAdmin());
-    }
-    
-    // Health recommendations collection
-    match /healthRecommendations/{recommendationId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-      allow update: if isAuthenticated() && isOwner(resource.data.userId);
-      allow delete: if isAuthenticated() && 
-                       (isOwner(resource.data.userId) || isAdmin());
-    }
-    
-    // Audit logs collection (admin only)
-    match /auditLogs/{logId} {
-      allow read: if isAuthenticated() && isAdmin();
-      allow create: if isAuthenticated(); // Functions can create audit logs
-      allow update: if false; // Audit logs should not be updated
-      allow delete: if isAuthenticated() && isAdmin();
-    }
-    
-    // Medication reminders collection
-    match /medicationReminders/{reminderId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-      allow update: if isAuthenticated() && isOwner(resource.data.userId);
-      allow delete: if isAuthenticated() && 
-                       (isOwner(resource.data.userId) || isAdmin());
-    }
-    
-    // Healthcare providers collection
-    match /healthcareProviders/{providerId} {
-      allow read: if isAuthenticated() && 
-                     (isOwner(resource.data.userId) || isAdmin());
-      allow create: if isAuthenticated() && isAdmin();
-      allow update: if isAuthenticated() && 
-                       (isOwner(resource.data.userId) || isAdmin());
-      allow delete: if isAuthenticated() && isAdmin();
-    }
-    
-    // Messages collection
-    match /messages/{messageId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Caregivers collection
-    match /caregivers/{caregiverId} {
-      allow read, write: if true; // Temporarily open for admin debugging
-    }
-    
-    // Clients collection
-    match /clients/{clientId} {
-      allow read, write: if true; // Temporarily open for admin debugging
-    }
-    
-    // Care tasks collection
-    match /careTasks/{taskId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Care task logs collection
-    match /careTaskLogs/{logId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Caregiver assignments collection
-    match /caregiverAssignments/{assignmentId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Client care plans collection
-    match /clientCarePlans/{planId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Care notes collection
-    match /careNotes/{noteId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Service provider profiles collection
-    match /serviceProviders/{providerId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Client assignments collection
-    match /clientAssignments/{assignmentId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Care schedules collection
-    match /careSchedules/{scheduleId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Care reports collection
-    match /careReports/{reportId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Legacy patients collection (for backward compatibility)
-    match /patients/{patientId} {
-      allow read, write: if true; // Temporarily open for admin debugging
-    }
-    
-    // Healthcare providers collection  
-    match /healthcareProviders/{providerId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Provider assignments collection
-    match /providerAssignments/{assignmentId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // Care provider profiles collection
-    match /careProviders/{providerId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-    
-    // User profiles collection (for broader access)
-    match /userProfiles/{userId} {
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || isServiceProvider());
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && isOwner(userId);
-      allow delete: if isAuthenticated() && isAdmin();
-    }
-
-    // Telemedicine appointments collection
-    match /telemedicine_appointments/{appointmentId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-
-    // Doctors collection (for telemedicine)
-    match /doctors/{doctorId} {
-      allow read, write: if isAuthenticated(); // Temporarily permissive for debugging
-    }
-
-    // Analytics collection
-    match /analytics/{document} {
-      allow read: if isAuthenticated() && isAdmin();
-      allow write: if isAuthenticated();
-    }
-
-    // System metrics collection  
-    match /systemMetrics/{document} {
-      allow read: if isAuthenticated() && isAdmin();
-      allow write: if isAuthenticated();
-    }
-
-    // Emergencies collection
-    match /emergencies/{emergencyId} {
-      allow read: if isAuthenticated() && (isAdmin() || isServiceProvider() || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (isAdmin() || isServiceProvider() || resource.data.userId == request.auth.uid);
-      allow delete: if isAuthenticated() && isAdmin();
-    }
-
-    // Default deny rule
+    // Allow admins to read/write any other collections
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if isAdmin();
     }
   }
 }

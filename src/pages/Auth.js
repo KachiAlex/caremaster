@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
 import { 
@@ -121,9 +121,28 @@ const Auth = () => {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, loginForm.email, loginForm.password);
+      const credential = await signInWithEmailAndPassword(auth, loginForm.email, loginForm.password);
+      const user = credential.user;
+
+      // Check suspension status for caregivers
+      try {
+        const userSnap = await getDoc(doc(db, 'users', user.uid));
+        if (userSnap.exists()) {
+          const profile = userSnap.data();
+          const isCaregiver = (profile.userType === 'caregiver' || profile.type === 'caregiver');
+          const isSuspended = (profile.status || '').toLowerCase() === 'suspended';
+          if (isCaregiver && isSuspended) {
+            await auth.signOut();
+            toast.error('Your account has been suspended. Please contact support.');
+            return;
+          }
+        }
+      } catch (statusErr) {
+        // Non-blocking: if status check fails, proceed as normal
+        console.warn('User status check failed:', statusErr);
+      }
+
       toast.success('Welcome back!');
-      // Let the app handle routing based on user type
       window.location.href = '/dashboard';
     } catch (error) {
       console.error('Login error:', error);
