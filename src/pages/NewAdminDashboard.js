@@ -1015,134 +1015,7 @@ const NewAdminDashboard = () => {
         </div>
       </div>
 
-      {/* Caregiver Modal */}
-      {showCaregiverModal && selectedCaregiver && createPortal((
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Caregiver Details</h2>
-              <button
-                onClick={() => {
-                  setShowCaregiverModal(false);
-                  setSelectedCaregiver(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm text-gray-500">Name</div>
-                <div className="text-sm text-gray-900">{selectedCaregiver.name}</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Email</div>
-                <div className="text-sm text-gray-900">{selectedCaregiver.email}</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Phone</div>
-                <div className="text-sm text-gray-900">{selectedCaregiver.phone || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Role</div>
-                <div className="text-sm text-gray-900">{selectedCaregiver.role || selectedCaregiver.medicalQualification || 'General Caregiver'}</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Experience</div>
-                <div className="text-sm text-gray-900">{selectedCaregiver.experience || selectedCaregiver.yearsOfExperience || 'Not specified'}</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Status</div>
-                <div className="text-sm text-gray-900">{selectedCaregiver.status || 'Pending'}</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Address</div>
-                <div className="text-sm text-gray-900">{formatAddress(selectedCaregiver.address || selectedCaregiver.location)}</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">License Number</div>
-                <div className="text-sm text-gray-900">{selectedCaregiver.licenseNumber || 'N/A'}</div>
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-sm text-gray-500">Specializations</div>
-                <div className="text-sm text-gray-900">{Array.isArray(selectedCaregiver.specializations) ? selectedCaregiver.specializations.join(', ') : (selectedCaregiver.specialization || 'N/A')}</div>
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-sm text-gray-500">Qualifications</div>
-                <div className="text-sm text-gray-900">{selectedCaregiver.qualifications || selectedCaregiver.medicalQualification || 'N/A'}</div>
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-sm text-gray-500">Bio</div>
-                <div className="text-sm text-gray-900">{selectedCaregiver.bio || '—'}</div>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded">
-                <h4 className="font-semibold mb-2">Assignments</h4>
-                {caregiverAssignments && caregiverAssignments.length > 0 ? (
-                  <ul className="list-disc list-inside text-sm text-gray-800 space-y-1 max-h-48 overflow-y-auto">
-                    {caregiverAssignments.map(a => (
-                      <li key={a.id}>
-                        Patient: {a.patientName || a.patientId} • Status: {a.status || 'active'} • Start: {a.startDate ? new Date(a.startDate).toLocaleDateString() : 'N/A'}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-gray-600 text-sm">No assignments found.</div>
-                )}
-              </div>
-              <div className="bg-gray-50 p-4 rounded">
-                <h4 className="font-semibold mb-2">Recent Activity</h4>
-                <div className="text-gray-600 text-sm">Activity feed integration pending.</div>
-              </div>
-            </div>
-
-            <div className="flex justify-end mt-6 space-x-3">
-              <button
-                onClick={() => handleStartEditCaregiver(selectedCaregiver)}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                Edit Details
-              </button>
-              <button
-                onClick={() => handleToggleCaregiverStatus(selectedCaregiver)}
-                className={`px-4 py-2 rounded text-white ${((selectedCaregiver.status || 'active') === 'suspended') ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}
-              >
-                {((selectedCaregiver.status || 'active') === 'suspended') ? 'Activate' : 'Suspend'}
-              </button>
-        <button
-          onClick={() => {
-            try {
-              setShowCaregiverModal(false);
-              setActiveTab('tasks');
-              setTaskFormData((prev) => ({
-                ...prev,
-                assignedTo: selectedCaregiver?.id || '',
-                title: prev.title && prev.title.trim().length > 0 ? prev.title : `Task for ${selectedCaregiver?.name || 'Caregiver'}`,
-              }));
-              setShowCreateTaskModal(true);
-            } catch {}
-          }}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Assign Task
-        </button>
-              <button
-                onClick={() => {
-                  setShowCaregiverModal(false);
-                  setSelectedCaregiver(null);
-                }}
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      ), document.body)}
+      {/* Caregiver Modal moved to global section */}
 
       {/* Task Details Modal */}
       {showTaskModal && selectedTask && (
@@ -1283,7 +1156,6 @@ const NewAdminDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.age || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button className="text-blue-600 hover:text-blue-900 mr-4" onClick={() => viewPatientDetails(client)}>View</button>
-                      <button className="text-green-600 hover:text-green-900 mr-4" onClick={() => handleStartEditPatient(client)}>Edit</button>
                       <button className="text-red-600 hover:text-red-900" onClick={() => handleDeletePatient(client.id)}>Delete</button>
                     </td>
                   </tr>
@@ -1391,14 +1263,7 @@ const NewAdminDashboard = () => {
                       >
                         View
                       </button>
-                      <button className="text-green-600 hover:text-green-900 mr-4" onClick={() => handleStartEditCaregiver(cg)}>Edit</button>
                       <button className="text-red-600 hover:text-red-900" onClick={() => handleDeleteCaregiver(cg.id)}>Delete</button>
-                      <button
-                        className="ml-4 text-yellow-700 hover:text-yellow-900"
-                        onClick={() => handleToggleCaregiverStatus(cg)}
-                      >
-                        {(cg.status || 'active') === 'suspended' ? 'Activate' : 'Suspend'}
-                      </button>
                     </td>
                   </tr>
                 ))}
@@ -2467,6 +2332,218 @@ const NewAdminDashboard = () => {
         {activeTab === 'monitoring' && renderMonitoring()}
         {activeTab === 'settings' && renderSettings()}
       </div>
+
+      {/* Global Portals: Caregiver & Patient Modals rendered at root to avoid tab layout interference */}
+      {showCaregiverModal && selectedCaregiver && createPortal((
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Caregiver Details</h2>
+              <button
+                onClick={() => {
+                  setShowCaregiverModal(false);
+                  setSelectedCaregiver(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-gray-500">Name</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.name}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Email</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.email}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Phone</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.phone || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Role</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.role || selectedCaregiver.medicalQualification || 'General Caregiver'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Experience</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.experience || selectedCaregiver.yearsOfExperience || 'Not specified'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Status</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.status || 'Pending'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Address</div>
+                <div className="text-sm text-gray-900">{formatAddress(selectedCaregiver.address || selectedCaregiver.location)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">License Number</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.licenseNumber || 'N/A'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Specializations</div>
+                <div className="text-sm text-gray-900">{Array.isArray(selectedCaregiver.specializations) ? selectedCaregiver.specializations.join(', ') : (selectedCaregiver.specialization || 'N/A')}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Qualifications</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.qualifications || selectedCaregiver.medicalQualification || 'N/A'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Bio</div>
+                <div className="text-sm text-gray-900">{selectedCaregiver.bio || '—'}</div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-4 rounded">
+                <h4 className="font-semibold mb-2">Assignments</h4>
+                {caregiverAssignments && caregiverAssignments.length > 0 ? (
+                  <ul className="list-disc list-inside text-sm text-gray-800 space-y-1 max-h-48 overflow-y-auto">
+                    {caregiverAssignments.map(a => (
+                      <li key={a.id}>
+                        Patient: {a.patientName || a.patientId} • Status: {a.status || 'active'} • Start: {a.startDate ? new Date(a.startDate).toLocaleDateString() : 'N/A'}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-gray-600 text-sm">No assignments found.</div>
+                )}
+              </div>
+              <div className="bg-gray-50 p-4 rounded">
+                <h4 className="font-semibold mb-2">Recent Activity</h4>
+                <div className="text-gray-600 text-sm">Activity feed integration pending.</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => handleStartEditCaregiver(selectedCaregiver)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Edit Details
+              </button>
+              <button
+                onClick={() => handleToggleCaregiverStatus(selectedCaregiver)}
+                className={`px-4 py-2 rounded text-white ${((selectedCaregiver.status || 'active') === 'suspended') ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}
+              >
+                {((selectedCaregiver.status || 'active') === 'suspended') ? 'Activate' : 'Suspend'}
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    setShowCaregiverModal(false);
+                    setActiveTab('tasks');
+                    setTaskFormData((prev) => ({
+                      ...prev,
+                      assignedTo: selectedCaregiver?.id || '',
+                      title: prev.title && prev.title.trim().length > 0 ? prev.title : `Task for ${selectedCaregiver?.name || 'Caregiver'}`,
+                    }));
+                    setShowCreateTaskModal(true);
+                  } catch {}
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Assign Task
+              </button>
+              <button
+                onClick={() => {
+                  setShowCaregiverModal(false);
+                  setSelectedCaregiver(null);
+                }}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+
+      {showPatientModal && selectedPatient && createPortal((
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Patient Details</h2>
+              <button
+                onClick={() => {
+                  setEditingPatient(null);
+                  setShowPatientModal(false);
+                  setSelectedPatient(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-gray-500">Name</div>
+                <div className="text-sm text-gray-900">{selectedPatient.name || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Email</div>
+                <div className="text-sm text-gray-900">{selectedPatient.email || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Phone</div>
+                <div className="text-sm text-gray-900">{selectedPatient.phone || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Age</div>
+                <div className="text-sm text-gray-900">{selectedPatient.age || 'N/A'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Address</div>
+                <div className="text-sm text-gray-900">{formatAddress(selectedPatient.address)}</div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm text-gray-500">Emergency Contact</div>
+                <div className="text-sm text-gray-900">{selectedPatient.emergencyContactName || 'N/A'} ({selectedPatient.emergencyContactPhone || 'N/A'})</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => {
+                  try {
+                    setShowPatientModal(false);
+                    setActiveTab('tasks');
+                    setTaskFormData((prev) => ({
+                      ...prev,
+                      patient: selectedPatient?.id || '',
+                      assignedTo: '',
+                      title: prev.title && prev.title.trim().length > 0 ? prev.title : `Task for ${selectedPatient?.name || 'Patient'}`,
+                    }));
+                    setShowCreateTaskModal(true);
+                  } catch {}
+                }}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Assign Task
+              </button>
+              <button
+                onClick={handleSavePatient}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Save Changes
+              </button>
+              <button
+                onClick={() => {
+                  setEditingPatient(null);
+                  setShowPatientModal(false);
+                  setSelectedPatient(null);
+                }}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
     </div>
   );
 };
