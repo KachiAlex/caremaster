@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "elderx-f5c2b"
-  }
+  },
+  "targets": {
+    "elderx-f5c2b": {
+      "hosting": {
+        "site": [
+          "elderx-f5c2b"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

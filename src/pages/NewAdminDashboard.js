@@ -1098,329 +1098,6 @@ const NewAdminDashboard = () => {
         </div>
       )}
 
-      {/* Create Task Modal - Global Portal (single instance) */}
-      {showCreateTaskModal && createPortal((
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Create New Task</h2>
-              <button
-                onClick={handleCloseCreateTaskModal}
-                className="text-gray-500 hover:text-gray-700"
-                disabled={isSubmittingTask}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateTask} className="space-y-4">
-              {/* Task Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Task Title *
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  value={taskFormData.title}
-                  onChange={handleTaskFormChange}
-                  className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                    taskFormErrors.title ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Enter task title..."
-                  disabled={isSubmittingTask}
-                />
-                {taskFormErrors.title && (
-                  <p className="text-red-500 text-sm mt-1">{taskFormErrors.title}</p>
-                )}
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea
-                  name="description"
-                  value={taskFormData.description}
-                  onChange={handleTaskFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  rows="3"
-                  placeholder="Describe the task in detail..."
-                  disabled={isSubmittingTask}
-                />
-              </div>
-
-              {/* Assignment and Patient */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assign To *
-                  </label>
-                  {/* Caregiver quick picker */}
-                  <div className="mb-2">
-                    <div className="flex items-center mb-2">
-                      <Search className="h-4 w-4 text-gray-400 mr-2" />
-                      <input
-                        type="text"
-                        value={caregiverSearch}
-                        onChange={(e) => setCaregiverSearch(e.target.value)}
-                        placeholder="Search caregivers by name, email or role"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="max-h-36 overflow-y-auto border border-gray-200 rounded-md">
-                      {filteredCaregivers.length === 0 ? (
-                        <div className="p-3 text-sm text-gray-500">No caregivers found</div>
-                      ) : (
-                        filteredCaregivers.slice(0, 6).map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => setTaskFormData((prev) => ({ ...prev, assignedTo: c.id }))}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                              taskFormData.assignedTo === c.id ? 'bg-blue-50' : ''
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-gray-900">{c.name}</span>
-                              <span className="text-xs text-gray-500">{c.role || c.medicalQualification || 'Caregiver'}</span>
-                            </div>
-                            <div className="text-xs text-gray-500">{c.email}</div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                  <select
-                    name="assignedTo"
-                    value={taskFormData.assignedTo}
-                    onChange={handleTaskFormChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      taskFormErrors.assignedTo ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    disabled={isSubmittingTask}
-                  >
-                    <option value="">Select Caregiver</option>
-                    {filteredCaregivers.map(caregiver => (
-                      <option key={caregiver.id} value={caregiver.id}>
-                        {caregiver.name} - {caregiver.role || 'General Caregiver'}
-                      </option>
-                    ))}
-                  </select>
-                  {taskFormErrors.assignedTo && (
-                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.assignedTo}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Patient *
-                  </label>
-                  {/* Patient quick picker */}
-                  <div className="mb-2">
-                    <div className="flex items-center mb-2">
-                      <Search className="h-4 w-4 text-gray-400 mr-2" />
-                      <input
-                        type="text"
-                        value={patientSearch}
-                        onChange={(e) => setPatientSearch(e.target.value)}
-                        placeholder="Search patients by name, email or phone"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="max-h-36 overflow-y-auto border border-gray-200 rounded-md">
-                      {filteredPatients.length === 0 ? (
-                        <div className="p-3 text-sm text-gray-500">No patients found</div>
-                      ) : (
-                        filteredPatients.slice(0, 6).map((p) => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => setTaskFormData((prev) => ({ ...prev, patient: p.id }))}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                              taskFormData.patient === p.id ? 'bg-blue-50' : ''
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-gray-900">{p.name}</span>
-                              <span className="text-xs text-gray-500">{p.age ? `Age ${p.age}` : p.gender || ''}</span>
-                            </div>
-                            <div className="text-xs text-gray-500">{p.email || p.phone || ''}</div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                  <select
-                    name="patient"
-                    value={taskFormData.patient}
-                    onChange={handleTaskFormChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      taskFormErrors.patient ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    disabled={isSubmittingTask}
-                  >
-                    <option value="">Select Patient</option>
-                    {filteredPatients.map(patient => (
-                      <option key={patient.id} value={patient.id}>
-                        {patient.name} - Age {patient.age || 'N/A'}
-                      </option>
-                    ))}
-                  </select>
-                  {taskFormErrors.patient && (
-                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.patient}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Priority and Due Date */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Priority *
-                  </label>
-                  <select
-                    name="priority"
-                    value={taskFormData.priority}
-                    onChange={handleTaskFormChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      taskFormErrors.priority ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    disabled={isSubmittingTask}
-                  >
-                    <option value="">Select Priority</option>
-                    <option value="low">🟢 Low Priority</option>
-                    <option value="medium">🟡 Medium Priority</option>
-                    <option value="high">🔴 High Priority</option>
-                  </select>
-                  {taskFormErrors.priority && (
-                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.priority}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Due Date *
-                  </label>
-                  <input
-                    type="date"
-                    name="dueDate"
-                    value={taskFormData.dueDate}
-                    onChange={handleTaskFormChange}
-                    min={new Date().toISOString().split('T')[0]}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      taskFormErrors.dueDate ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    disabled={isSubmittingTask}
-                  />
-                  {taskFormErrors.dueDate && (
-                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.dueDate}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Task Type and Duration */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Task Type *
-                  </label>
-                  <select
-                    name="taskType"
-                    value={taskFormData.taskType}
-                    onChange={handleTaskFormChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                      taskFormErrors.taskType ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    disabled={isSubmittingTask}
-                  >
-                    <option value="">Select Task Type</option>
-                    <option value="medication">💊 Medication Administration</option>
-                    <option value="vital_signs">📊 Vital Signs Check</option>
-                    <option value="personal_care">🛁 Personal Care</option>
-                    <option value="companionship">👥 Companionship</option>
-                    <option value="appointment">🏥 Medical Appointment</option>
-                    <option value="exercise">🏃 Physical Exercise</option>
-                    <option value="nutrition">🍽️ Nutrition/Meal Prep</option>
-                    <option value="housekeeping">🏠 Light Housekeeping</option>
-                    <option value="transportation">🚗 Transportation</option>
-                    <option value="other">📝 Other</option>
-                  </select>
-                  {taskFormErrors.taskType && (
-                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.taskType}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Estimated Duration
-                  </label>
-                  <select
-                    name="estimatedDuration"
-                    value={taskFormData.estimatedDuration}
-                    onChange={handleTaskFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                    disabled={isSubmittingTask}
-                  >
-                    <option value="">Select Duration</option>
-                    <option value="15">15 minutes</option>
-                    <option value="30">30 minutes</option>
-                    <option value="60">1 hour</option>
-                    <option value="120">2 hours</option>
-                    <option value="180">3 hours</option>
-                    <option value="240">4 hours</option>
-                    <option value="480">8 hours</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Special Instructions */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Special Instructions
-                </label>
-                <textarea
-                  name="specialInstructions"
-                  value={taskFormData.specialInstructions}
-                  onChange={handleTaskFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  rows="3"
-                  placeholder="Any special instructions or notes for the caregiver..."
-                  disabled={isSubmittingTask}
-                />
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex justify-end mt-6 space-x-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={handleCloseCreateTaskModal}
-                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
-                  disabled={isSubmittingTask}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center"
-                  disabled={isSubmittingTask}
-                >
-                  {isSubmittingTask ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Task
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ), document.body)}
     </div>
   );
 
@@ -2761,6 +2438,330 @@ const NewAdminDashboard = () => {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      ), document.body)}
+
+      {/* Create Task Modal - Global Portal */}
+      {showCreateTaskModal && createPortal((
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{zIndex: 9999}}>
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Create New Task</h2>
+              <button
+                onClick={handleCloseCreateTaskModal}
+                className="text-gray-500 hover:text-gray-700"
+                disabled={isSubmittingTask}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTask} className="space-y-4">
+              {/* Task Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Task Title *
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={taskFormData.title}
+                  onChange={handleTaskFormChange}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                    taskFormErrors.title ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter task title..."
+                  disabled={isSubmittingTask}
+                />
+                {taskFormErrors.title && (
+                  <p className="text-red-500 text-sm mt-1">{taskFormErrors.title}</p>
+                )}
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  name="description"
+                  value={taskFormData.description}
+                  onChange={handleTaskFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  rows="3"
+                  placeholder="Describe the task in detail..."
+                  disabled={isSubmittingTask}
+                />
+              </div>
+
+              {/* Assignment and Patient */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Assign To *
+                  </label>
+                  {/* Caregiver quick picker */}
+                  <div className="mb-2">
+                    <div className="flex items-center mb-2">
+                      <Search className="h-4 w-4 text-gray-400 mr-2" />
+                      <input
+                        type="text"
+                        value={caregiverSearch}
+                        onChange={(e) => setCaregiverSearch(e.target.value)}
+                        placeholder="Search caregivers by name, email or role"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="max-h-36 overflow-y-auto border border-gray-200 rounded-md">
+                      {filteredCaregivers.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500">No caregivers found</div>
+                      ) : (
+                        filteredCaregivers.slice(0, 6).map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setTaskFormData((prev) => ({ ...prev, assignedTo: c.id }))}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
+                              taskFormData.assignedTo === c.id ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{c.name}</span>
+                              <span className="text-xs text-gray-500">{c.role || c.medicalQualification || 'Caregiver'}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">{c.email}</div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <select
+                    name="assignedTo"
+                    value={taskFormData.assignedTo}
+                    onChange={handleTaskFormChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.assignedTo ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
+                  >
+                    <option value="">Select Caregiver</option>
+                    {filteredCaregivers.map(caregiver => (
+                      <option key={caregiver.id} value={caregiver.id}>
+                        {caregiver.name} - {caregiver.role || 'General Caregiver'}
+                      </option>
+                    ))}
+                  </select>
+                  {taskFormErrors.assignedTo && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.assignedTo}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Patient *
+                  </label>
+                  {/* Patient quick picker */}
+                  <div className="mb-2">
+                    <div className="flex items-center mb-2">
+                      <Search className="h-4 w-4 text-gray-400 mr-2" />
+                      <input
+                        type="text"
+                        value={patientSearch}
+                        onChange={(e) => setPatientSearch(e.target.value)}
+                        placeholder="Search patients by name, email or phone"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="max-h-36 overflow-y-auto border border-gray-200 rounded-md">
+                      {filteredPatients.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500">No patients found</div>
+                      ) : (
+                        filteredPatients.slice(0, 6).map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setTaskFormData((prev) => ({ ...prev, patient: p.id }))}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
+                              taskFormData.patient === p.id ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{p.name}</span>
+                              <span className="text-xs text-gray-500">{p.age ? `Age ${p.age}` : p.gender || ''}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">{p.email || p.phone || ''}</div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <select
+                    name="patient"
+                    value={taskFormData.patient}
+                    onChange={handleTaskFormChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.patient ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
+                  >
+                    <option value="">Select Patient</option>
+                    {filteredPatients.map(patient => (
+                      <option key={patient.id} value={patient.id}>
+                        {patient.name} - Age {patient.age || 'N/A'}
+                      </option>
+                    ))}
+                  </select>
+                  {taskFormErrors.patient && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.patient}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Priority and Due Date */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Priority *
+                  </label>
+                  <select
+                    name="priority"
+                    value={taskFormData.priority}
+                    onChange={handleTaskFormChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.priority ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
+                  >
+                    <option value="">Select Priority</option>
+                    <option value="low">🟢 Low Priority</option>
+                    <option value="medium">🟡 Medium Priority</option>
+                    <option value="high">🔴 High Priority</option>
+                  </select>
+                  {taskFormErrors.priority && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.priority}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Due Date *
+                  </label>
+                  <input
+                    type="date"
+                    name="dueDate"
+                    value={taskFormData.dueDate}
+                    onChange={handleTaskFormChange}
+                    min={new Date().toISOString().split('T')[0]}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.dueDate ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
+                  />
+                  {taskFormErrors.dueDate && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.dueDate}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Task Type and Duration */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Task Type *
+                  </label>
+                  <select
+                    name="taskType"
+                    value={taskFormData.taskType}
+                    onChange={handleTaskFormChange}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
+                      taskFormErrors.taskType ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isSubmittingTask}
+                  >
+                    <option value="">Select Task Type</option>
+                    <option value="medication">💊 Medication Administration</option>
+                    <option value="vital_signs">📊 Vital Signs Check</option>
+                    <option value="personal_care">🛁 Personal Care</option>
+                    <option value="companionship">👥 Companionship</option>
+                    <option value="appointment">🏥 Medical Appointment</option>
+                    <option value="exercise">🏃 Physical Exercise</option>
+                    <option value="nutrition">🍽️ Nutrition/Meal Prep</option>
+                    <option value="housekeeping">🏠 Light Housekeeping</option>
+                    <option value="transportation">🚗 Transportation</option>
+                    <option value="other">📝 Other</option>
+                  </select>
+                  {taskFormErrors.taskType && (
+                    <p className="text-red-500 text-sm mt-1">{taskFormErrors.taskType}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Estimated Duration
+                  </label>
+                  <select
+                    name="estimatedDuration"
+                    value={taskFormData.estimatedDuration}
+                    onChange={handleTaskFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmittingTask}
+                  >
+                    <option value="">Select Duration</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">1 hour</option>
+                    <option value="120">2 hours</option>
+                    <option value="180">3 hours</option>
+                    <option value="240">4 hours</option>
+                    <option value="480">8 hours</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Special Instructions */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Special Instructions
+                </label>
+                <textarea
+                  name="specialInstructions"
+                  value={taskFormData.specialInstructions}
+                  onChange={handleTaskFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  rows="3"
+                  placeholder="Any special instructions or notes for the caregiver..."
+                  disabled={isSubmittingTask}
+                />
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end mt-6 space-x-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={handleCloseCreateTaskModal}
+                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
+                  disabled={isSubmittingTask}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center"
+                  disabled={isSubmittingTask}
+                >
+                  {isSubmittingTask ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Task
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ), document.body)}
