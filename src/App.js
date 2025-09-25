@@ -587,6 +587,12 @@ function StrictCaregiverGuard() {
     onboardingComplete: userProfile?.onboardingComplete
   });
   
+  // Allow admin users to access caregiver dashboard
+  if (userProfile?.userType === 'admin') {
+    console.log('✅ Admin access granted to caregiver dashboard');
+    return <CaregiverLayout />;
+  }
+  
   // Force onboarding for incomplete caregivers
   if (userProfile?.userType === 'caregiver' && !userProfile?.onboardingComplete) {
     console.log('🚫 STRICT: Caregiver onboarding required - forcing redirect');
@@ -594,6 +600,12 @@ function StrictCaregiverGuard() {
     return <LoadingSpinner />;
   }
   
-  // Allow access to caregiver dashboard
-  return <CaregiverLayout />;
+  // Allow access to caregiver dashboard for complete caregivers
+  if (userProfile?.userType === 'caregiver') {
+    return <CaregiverLayout />;
+  }
+  
+  // Redirect other user types
+  console.log('🚫 Access denied: Invalid user type for caregiver dashboard');
+  return <Navigate to="/dashboard" replace />;
 }
