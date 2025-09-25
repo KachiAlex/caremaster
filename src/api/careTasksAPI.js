@@ -413,3 +413,81 @@ export const subscribeToCareTasks = (callback, caregiverId = null) => {
     callback(tasks);
   });
 };
+
+// Get today's tasks for a caregiver
+export const getTodayTasks = async (caregiverId) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const tasksRef = collection(db, CARE_TASKS_COLLECTION);
+    const q = query(
+      tasksRef,
+      where('caregiverId', '==', caregiverId),
+      where('scheduledTime', '>=', Timestamp.fromDate(today)),
+      where('scheduledTime', '<', Timestamp.fromDate(tomorrow)),
+      orderBy('scheduledTime', 'asc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const tasks = [];
+    
+    querySnapshot.forEach((doc) => {
+      const taskData = doc.data();
+      tasks.push({
+        id: doc.id,
+        ...taskData,
+        scheduledTime: taskData.scheduledTime?.toDate?.() || taskData.scheduledTime,
+        completedAt: taskData.completedAt?.toDate?.() || taskData.completedAt,
+        createdAt: taskData.createdAt?.toDate?.() || taskData.createdAt,
+        updatedAt: taskData.updatedAt?.toDate?.() || taskData.updatedAt,
+      });
+    });
+    
+    return tasks;
+  } catch (error) {
+    console.error('Error fetching today\'s tasks:', error);
+    throw error;
+  }
+};
+
+// Get upcoming tasks for a caregiver (next 7 days)
+export const getUpcomingTasks = async (caregiverId) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    const tasksRef = collection(db, CARE_TASKS_COLLECTION);
+    const q = query(
+      tasksRef,
+      where('caregiverId', '==', caregiverId),
+      where('scheduledTime', '>=', Timestamp.fromDate(today)),
+      where('scheduledTime', '<=', Timestamp.fromDate(nextWeek)),
+      orderBy('scheduledTime', 'asc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const tasks = [];
+    
+    querySnapshot.forEach((doc) => {
+      const taskData = doc.data();
+      tasks.push({
+        id: doc.id,
+        ...taskData,
+        scheduledTime: taskData.scheduledTime?.toDate?.() || taskData.scheduledTime,
+        completedAt: taskData.completedAt?.toDate?.() || taskData.completedAt,
+        createdAt: taskData.createdAt?.toDate?.() || taskData.createdAt,
+        updatedAt: taskData.updatedAt?.toDate?.() || taskData.updatedAt,
+      });
+    });
+    
+    return tasks;
+  } catch (error) {
+    console.error('Error fetching upcoming tasks:', error);
+    throw error;
+  }
+};

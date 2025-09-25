@@ -31,6 +31,9 @@ import {
   UserCheck
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { caregiverAPI } from '../api/caregiverAPI';
+import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
+import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
 
 const CaregiverDashboard = () => {
   const { userProfile } = useUser();
@@ -136,14 +139,67 @@ const CaregiverDashboard = () => {
   const dashboardConfig = getDashboardConfig();
 
   useEffect(() => {
-    // Simulate loading caregiver data
     const loadCaregiverData = async () => {
-      // This function now uses real data from loadDashboardData
-      // No mock data needed
+      if (!userProfile) return;
+      
+      try {
+        setLoading(true);
+        
+        // Load caregiver profile data
+        const caregiverData = await caregiverAPI.getCaregiverById(userProfile.uid);
+        setCaregiver(caregiverData);
+        
+        // Load today's schedule (appointments + tasks)
+        const [todaysAppointments, todaysTasks] = await Promise.all([
+          getTodaysAppointments(userProfile.uid, 'caregiver'),
+          getTodayTasks(userProfile.uid)
+        ]);
+        
+        // Combine appointments and tasks for today's schedule
+        const combinedSchedule = [
+          ...todaysAppointments.map(apt => ({
+            id: apt.id,
+            type: 'appointment',
+            title: apt.title || 'Appointment',
+            time: apt.scheduledTime,
+            patient: apt.patientName || 'Patient',
+            status: apt.status || 'scheduled'
+          })),
+          ...todaysTasks.map(task => ({
+            id: task.id,
+            type: 'task',
+            title: task.title,
+            time: task.scheduledTime,
+            patient: task.patientName || 'Patient',
+            status: task.status || 'pending'
+          }))
+        ];
+        
+        // Sort by time
+        combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
+        setTodaySchedule(combinedSchedule);
+        
+        // Load recent tasks
+        const recentTasks = await getCareTasksByCaregiver(userProfile.uid);
+        setRecentTasks(recentTasks.slice(0, 5)); // Show only last 5 tasks
+        
+        // Load performance data (placeholder for now)
+        setPerformance({
+          completedTasks: recentTasks.filter(task => task.status === 'completed').length,
+          totalTasks: recentTasks.length,
+          rating: 4.8,
+          hoursWorked: 40
+        });
+        
+      } catch (error) {
+        console.error('Error loading caregiver data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadCaregiverData();
-  }, []);
+  }, [userProfile]);
 
   const handleClockIn = (scheduleId) => {
     // Handle clock in

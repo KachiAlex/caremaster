@@ -143,7 +143,29 @@ const Auth = () => {
       }
 
       toast.success('Welcome back!');
-      window.location.href = '/dashboard';
+      
+      // Redirect based on user role
+      try {
+        const userSnap = await getDoc(doc(db, 'users', user.uid));
+        if (userSnap.exists()) {
+          const profile = userSnap.data();
+          const userType = profile.userType || profile.type;
+          
+          if (userType === 'caregiver') {
+            window.location.href = '/caregiver';
+          } else if (userType === 'admin') {
+            window.location.href = '/admin';
+          } else {
+            window.location.href = '/dashboard';
+          }
+        } else {
+          // Default redirect if profile not found
+          window.location.href = '/dashboard';
+        }
+      } catch (redirectError) {
+        console.warn('Error determining user role for redirect:', redirectError);
+        window.location.href = '/dashboard';
+      }
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Invalid email or password');
