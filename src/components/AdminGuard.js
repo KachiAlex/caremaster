@@ -20,18 +20,14 @@ const AdminGuard = ({ children }) => {
   // Check for admin session flag (from admin login)
   const hasAdminSession = sessionStorage.getItem('elderx_admin_session') === 'true';
   
-  // Temporary: Allow caregivers to access admin for testing
-  const isCaregiver = userProfile?.userType === 'caregiver' || userProfile?.type === 'caregiver';
-  
   console.log('🔍 AdminGuard Debug:', {
     userProfile: userProfile?.userType || userProfile?.type,
     isAdmin,
     hasAdminSession,
-    isCaregiver,
-    allowAccess: isAdmin || hasAdminSession || isCaregiver
+    allowAccess: isAdmin || hasAdminSession
   });
 
-  if (!isAdmin && !hasAdminSession && !isCaregiver) {
+  if (!isAdmin && !hasAdminSession) {
     // Redirect non-admin users to admin login
     return <Navigate to="/admin/login" replace />;
   }

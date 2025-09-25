@@ -455,10 +455,10 @@ function App() {
         element={<AdminGuardedRoute><NewAdminDashboard /></AdminGuardedRoute>} 
       />
       
-      {/* Admin Root Redirect */}
+      {/* Admin Root Redirect - always send to admin login to enforce session */}
       <Route 
         path="/admin" 
-        element={<Navigate to="/admin/dashboard" replace />} 
+        element={<Navigate to="/admin/login" replace />} 
       />
       
       {/* Catch all route */}

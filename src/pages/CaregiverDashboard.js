@@ -34,14 +34,19 @@ import { useUser } from '../contexts/UserContext';
 import { caregiverAPI } from '../api/caregiverAPI';
 import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
+import { getPatientsByDoctor, getPatientById } from '../api/patientsAPI';
+import { assignmentAPI } from '../api/assignmentAPI';
 
 const CaregiverDashboard = () => {
-  const { userProfile } = useUser();
+  const { user, userProfile } = useUser();
   const [caregiver, setCaregiver] = useState(null);
   const [todaySchedule, setTodaySchedule] = useState([]);
   const [recentTasks, setRecentTasks] = useState([]);
   const [performance, setPerformance] = useState({});
   const [loading, setLoading] = useState(true);
+  const [assignedPatients, setAssignedPatients] = useState([]);
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   // Get qualification-specific dashboard configuration
   const getDashboardConfig = () => {
@@ -146,13 +151,38 @@ const CaregiverDashboard = () => {
         setLoading(true);
         
         // Load caregiver profile data
-        const caregiverData = await caregiverAPI.getCaregiverById(userProfile.uid);
+        const caregiverData = await caregiverAPI.getCaregiverById(user?.uid);
         setCaregiver(caregiverData);
+
+        // If doctor, load assigned patients STRICTLY from admin-created assignments
+        const isDoctor = (userProfile.medicalQualification || '').includes('Doctor');
+        if (isDoctor) {
+          let patients = [];
+          try {
+            const assignments = await assignmentAPI.getAssignmentsByCaregiver(user?.uid);
+            const uniquePatientIds = Array.from(new Set(assignments.map(a => a.patientId).filter(Boolean)));
+            const fetched = await Promise.all(uniquePatientIds.map(pid => getPatientById(pid).catch(() => null)));
+            patients = fetched.filter(Boolean);
+          } catch {}
+          // Fallback to patients.assignedDoctor only if no assignment docs found
+          if ((!patients || patients.length === 0)) {
+            try {
+              const alt = await getPatientsByDoctor(user?.uid);
+              patients = alt || [];
+            } catch {}
+          }
+          setAssignedPatients(patients);
+          // Auto-select first patient if not set
+          if (patients.length > 0 && !selectedPatientId) {
+            setSelectedPatientId(patients[0].id);
+            setSelectedPatient(patients[0]);
+          }
+        }
         
         // Load today's schedule (appointments + tasks)
         const [todaysAppointments, todaysTasks] = await Promise.all([
-          getTodaysAppointments(userProfile.uid, 'caregiver'),
-          getTodayTasks(userProfile.uid)
+          getTodaysAppointments(user?.uid, 'caregiver'),
+          getTodayTasks(user?.uid)
         ]);
         
         // Combine appointments and tasks for today's schedule
@@ -201,9 +231,108 @@ const CaregiverDashboard = () => {
     loadCaregiverData();
   }, [userProfile]);
 
+  useEffect(() => {
+    // when selectedPatientId changes, refresh selectedPatient from cache/list
+    if (!selectedPatientId) {
+      setSelectedPatient(null);
+      return;
+    }
+    const found = assignedPatients.find(p => p.id === selectedPatientId);
+    if (found) setSelectedPatient(found);
+  }, [selectedPatientId, assignedPatients]);
+
+  // Doctor action guards and navigation helpers
+  const requirePatient = () => {
+    if (!selectedPatientId) {
+      alert('Please select a patient first.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleNewConsultation = () => {
+    if (!requirePatient()) return;
+    window.location.href = `/service-provider/consultations/new?patientId=${encodeURIComponent(selectedPatientId)}`;
+  };
+
+  const handleWritePrescription = () => {
+    if (!requirePatient()) return;
+    window.location.href = `/service-provider/prescriptions/new?patientId=${encodeURIComponent(selectedPatientId)}`;
+  };
+
+  const handleCreateCarePlan = () => {
+    if (!requirePatient()) return;
+    window.location.href = `/service-provider/care-plans/new?patientId=${encodeURIComponent(selectedPatientId)}`;
+  };
+
+  const handleVideoConsultation = async () => {
+    if (!requirePatient()) return;
+    // Try to find nurse assigned to this patient
+    let nurseId = '';
+    try {
+      const assignments = await assignmentAPI.getAssignmentsByPatient(selectedPatientId);
+      const nurseAssignment = assignments.find(a => {
+        const role = (a.caregiverRole || a.role || '').toLowerCase();
+        const mq = (a.caregiverMedicalQualification || '').toLowerCase();
+        return role.includes('nurse') || mq.includes('nurse');
+      });
+      nurseId = nurseAssignment?.caregiverId || '';
+    } catch {}
+    const query = new URLSearchParams({ patientId: selectedPatientId, nurseId }).toString();
+    window.location.href = `/service-provider/calls?${query}`;
+  };
+
   const handleClockIn = (scheduleId) => {
     // Handle clock in
     console.log('Clock in for schedule:', scheduleId);
+  };
+
+  // --- Doctor-specific UI helpers ---
+  const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor');
+
+  const renderDoctorPatientSelector = () => {
+    if (!isDoctor) return null;
+    return (
+      <div className="bg-white rounded-lg border p-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <div className="text-sm text-gray-600">Assigned Patients</div>
+            <select
+              className="mt-1 w-72 max-w-full px-3 py-2 border rounded-md"
+              value={selectedPatientId}
+              onChange={(e) => setSelectedPatientId(e.target.value)}
+            >
+              <option value="">Select patient...</option>
+              {assignedPatients.map(p => (
+                <option key={p.id} value={p.id}>{p.name || p.fullName || p.email || p.id}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={handleNewConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>New Consultation</button>
+            <button onClick={handleWritePrescription} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>Write Prescription</button>
+            <button onClick={handleCreateCarePlan} className="px-3 py-2 bg-emerald-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>Create Care Plan</button>
+            <button onClick={handleVideoConsultation} className="px-3 py-2 bg-purple-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>Video Consultation</button>
+          </div>
+        </div>
+        {selectedPatient && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <div className="text-gray-500">Patient</div>
+              <div className="text-gray-900 font-medium">{selectedPatient.name || selectedPatient.fullName || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-500">Age</div>
+              <div className="text-gray-900">{selectedPatient.age || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-500">Last Visit</div>
+              <div className="text-gray-900">{selectedPatient.lastVisit ? new Date(selectedPatient.lastVisit).toLocaleDateString() : '—'}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleClockOut = (scheduleId) => {
@@ -280,6 +409,11 @@ const CaregiverDashboard = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Doctor Patient Selector (if doctor) */}
+      <div className="w-full p-8 pt-6">
+        {renderDoctorPatientSelector()}
       </div>
 
       {/* Main Content */}

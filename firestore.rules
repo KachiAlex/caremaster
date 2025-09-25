@@ -9,6 +9,31 @@ service cloud.firestore {
               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin');
     }
     
+    // Helper: user is caregiver or doctor
+    function isCaregiver() {
+      return request.auth != null && (
+        request.auth.token.caregiver == true ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'caregiver'
+      );
+    }
+    function isDoctor() {
+      return request.auth != null && (
+        request.auth.token.doctor == true ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'doctor'
+      );
+    }
+    
+    // Helpers: assignment checks based on denormalized fields on the resource
+    function isAssignedCaregiverToResource() {
+      return (
+        resource.data.assignedCaregiver == request.auth.uid ||
+        (resource.data.assignedCaregivers != null && request.auth.uid in resource.data.assignedCaregivers)
+      );
+    }
+    function isAssignedDoctorToResource() {
+      return resource.data.assignedDoctor == request.auth.uid;
+    }
+    
     // Users collection - users can read their own data, admins can read/write all
     match /users/{userId} {
       allow read: if request.auth != null && 
@@ -17,21 +42,32 @@ service cloud.firestore {
                      (request.auth.uid == userId || isAdmin());
     }
     
-    // Admin-only collections - only admins can access
-    match /caregivers/{document=**} {
-      allow read, write: if isAdmin();
+    // Caregivers collection - caregivers can read their own document, admins full access
+    match /caregivers/{caregiverId} {
+      allow read: if isAdmin() || (isCaregiver() && request.auth.uid == caregiverId);
+      allow write: if isAdmin();
     }
     
-    match /patients/{document=**} {
-      allow read, write: if isAdmin();
+    // Patients collection
+    match /patients/{patientId} {
+      // Admin full access. Caregivers/doctors can read patients assigned to them via denormalized fields
+      allow read: if isAdmin() || (isCaregiver() && isAssignedCaregiverToResource()) || (isDoctor() && isAssignedDoctorToResource());
+      // Writes restricted to admin
+      allow write: if isAdmin();
     }
     
-    match /tasks/{document=**} {
-      allow read, write: if isAdmin();
+    // Care tasks assigned to caregivers
+    match /careTasks/{taskId} {
+      allow read: if isAdmin() || (isCaregiver() && resource.data.caregiverId == request.auth.uid);
+      // Allow caregivers to update tasks assigned to them (e.g., status, completion)
+      allow update: if isCaregiver() && resource.data.caregiverId == request.auth.uid;
+      allow create, delete: if isAdmin();
     }
     
-    match /patientAssignments/{document=**} {
-      allow read, write: if isAdmin();
+    // Patient-caregiver assignments: caregivers can read their own
+    match /patientAssignments/{assignmentId} {
+      allow read: if isAdmin() || (isCaregiver() && resource.data.caregiverId == request.auth.uid);
+      allow write: if isAdmin();
     }
     
     match /alerts/{document=**} {
@@ -39,7 +75,21 @@ service cloud.firestore {
     }
     
     match /vitalSigns/{document=**} {
-      allow read, write: if isAdmin();
+      // Allow read for assigned caregivers/doctors via patient linkage if denormalized fields exist
+      allow read: if isAdmin() || isCaregiver() || isDoctor();
+      allow write: if isAdmin();
+    }
+    
+    // Appointments: caregivers/doctors/patients can read their own
+    match /appointments/{appointmentId} {
+      allow read: if isAdmin() || (
+        request.auth != null && (
+          resource.data.caregiverId == request.auth.uid ||
+          resource.data.doctorId == request.auth.uid ||
+          resource.data.patientId == request.auth.uid
+        )
+      );
+      allow write: if isAdmin();
     }
     
     // Assignment requests
