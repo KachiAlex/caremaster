@@ -88,6 +88,29 @@ export const getUserById = async (userId) => {
   }
 };
 
+// Get user by email
+export const getUserByEmail = async (email) => {
+  try {
+    const usersRef = collection(db, USERS_COLLECTION);
+    const q = query(usersRef, where('email', '==', email), limit(1));
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    const docu = snap.docs[0];
+    const data = docu.data();
+    return {
+      id: docu.id,
+      ...data,
+      joinDate: data.joinDate?.toDate?.() || data.joinDate,
+      lastActive: data.lastActive?.toDate?.() || data.lastActive,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+    };
+  } catch (error) {
+    console.error('Error fetching user by email:', error);
+    throw error;
+  }
+};
+
 // Create new user (with fallback to direct Firestore)
 export const createUser = async (userData) => {
   try {

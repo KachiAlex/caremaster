@@ -205,8 +205,10 @@ export const markConversationAsRead = async (conversationId, userId) => {
 export const getUnreadMessageCount = async (userId) => {
   try {
     const messagesRef = collection(db, MESSAGES_COLLECTION);
+    // Query for messages where user is recipient and message is unread
     const q = query(
       messagesRef,
+      where('recipientId', '==', userId),
       where('read', '==', false)
     );
     
@@ -215,11 +217,8 @@ export const getUnreadMessageCount = async (userId) => {
     
     querySnapshot.forEach((doc) => {
       const messageData = doc.data();
-      // Get conversation to check if user is a participant
-      // This is a simplified version - in production, you might want to optimize this
-      const conversationRef = doc(db, CONVERSATIONS_COLLECTION, messageData.conversationId);
-      // For now, we'll count all unread messages
-      if (messageData.senderId !== userId) {
+      // Count unread messages where user is the recipient
+      if (messageData.recipientId === userId && !messageData.read) {
         unreadCount++;
       }
     });

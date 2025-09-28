@@ -123,9 +123,15 @@ const Landing = () => {
               <p className="ml-4 text-sm text-gray-600 hidden sm:block">Professional Home Healthcare</p>
             </div>
 
-            {/* Right side - Empty for clean header */}
-            <div className="flex items-center">
-              {/* Header actions can be added here if needed */}
+            {/* Right side - Sign In Button */}
+            <div className="flex items-center space-x-4">
+              <Link
+                to="/caregiver/login"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Caregiver Portal
+              </Link>
             </div>
           </div>
         </div>
@@ -157,7 +163,7 @@ const Landing = () => {
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link
-                to="/login"
+                to="/caregiver/login"
                 className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 transition-colors"
               >
                 Get Started
@@ -444,7 +450,7 @@ const Landing = () => {
               
               <div className="pt-4">
                 <Link
-                  to="/login"
+                  to="/caregiver/login"
                   className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Video className="mr-2 h-5 w-5" />
@@ -465,7 +471,7 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/login"
+              to="/caregiver/login"
               className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50"
             >
               <Zap className="mr-2 h-5 w-5" />

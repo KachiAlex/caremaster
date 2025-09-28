@@ -46,7 +46,6 @@ const CaregiverLayout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/caregiver', icon: Activity },
     { name: 'Today\'s Schedule', href: '/caregiver/schedule', icon: Calendar },
-    { name: 'My Patients', href: '/caregiver/patients', icon: Heart },
     { name: 'Tasks', href: '/caregiver/tasks', icon: CheckCircle },
     { name: 'Messages', href: '/caregiver/messages', icon: MessageSquare },
     { name: 'Navigation', href: '/caregiver/navigation', icon: Navigation },

@@ -30,7 +30,6 @@ const PreclinicLayout = ({ children, userRole = 'admin', activeTab, setActiveTab
       ],
       caregiver: [
         { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-        { id: 'patients', label: 'My Patients', icon: Users },
         { id: 'schedule', label: 'Schedule', icon: Calendar },
         { id: 'activities', label: 'Activities', icon: Activity },
         { id: 'settings', label: 'Settings', icon: Settings }

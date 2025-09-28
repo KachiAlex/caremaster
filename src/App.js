@@ -25,6 +25,7 @@ import PreclinicCaregiverDashboard from './pages/PreclinicCaregiverDashboard';
 import CaregiverSchedule from './pages/CaregiverSchedule';
 import CaregiverPatients from './pages/CaregiverPatients';
 import CaregiverTasks from './pages/CaregiverTasks';
+import CaregiverOnboarding from './pages/CaregiverOnboarding';
 import CaregiverMessages from './pages/CaregiverMessages';
 import CaregiverNavigation from './pages/CaregiverNavigation';
 import CaregiverPhotos from './pages/CaregiverPhotos';
@@ -318,11 +319,11 @@ function App() {
       />
       <Route 
         path="/auth" 
-        element={user ? <Navigate to="/dashboard" replace /> : <Auth />} 
+        element={user ? <RoleBasedDashboardRoute /> : <Auth />} 
       />
       <Route 
         path="/login" 
-        element={user ? <Navigate to="/caregiver" replace /> : <Auth />} 
+        element={user ? <SignInRouteHandler /> : <Auth />} 
       />
       <Route 
         path="/signup" 
@@ -404,7 +405,6 @@ function App() {
       >
         <Route index element={<CaregiverDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
-        <Route path="patients" element={<CaregiverPatients />} />
         <Route path="tasks" element={<CaregiverTasks />} />
         <Route path="messages" element={<CaregiverMessages />} />
         <Route path="navigation" element={<CaregiverNavigation />} />
@@ -417,11 +417,10 @@ function App() {
       {/* Service Provider routes (unified for doctors and caregivers) */}
       <Route 
         path="/service-provider" 
-        element={user ? <ServiceProviderLayout /> : <Navigate to="/login" replace />} 
+        element={user ? <ServiceProviderGuard /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<ServiceProviderDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
-        <Route path="patients" element={<CaregiverPatients />} />
         <Route path="messages" element={<MessagingInterface />} />
         <Route path="calls" element={<CallsPage />} />
         <Route path="tasks" element={<CaregiverTasks />} />
@@ -441,6 +440,17 @@ function App() {
       <Route 
         path="/pricing" 
         element={<Pricing />} 
+      />
+      
+      {/* Caregiver Login Route */}
+      <Route 
+        path="/caregiver/login" 
+        element={<Auth />} 
+      />
+      {/* Caregiver Onboarding Route */}
+      <Route 
+        path="/caregiver/onboarding" 
+        element={user ? <CaregiverOnboarding /> : <Navigate to="/caregiver/login" replace />} 
       />
       
       {/* Admin Login Route */}
@@ -467,6 +477,32 @@ function App() {
       </UserProvider>
     </ErrorBoundary>
   );
+}
+
+// Sign-in route handler - focuses on caregiver/service provider access
+function SignInRouteHandler() {
+  const { userRole, userProfile, loading } = useUser();
+  
+  // Show loading while user profile is being fetched
+  if (loading || !userProfile) {
+    return <LoadingSpinner />;
+  }
+  
+  console.log('🔄 SignInRouteHandler - Checking user role:', {
+    userRole,
+    userType: userProfile?.userType
+  });
+  
+  // Redirect ALL users (caregivers, doctors, and admins) to service provider dashboard
+  // This allows admins to access caregiver functionality when using the caregiver portal
+  if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'admin') {
+    console.log('🚀 Redirecting user to /service-provider (caregiver portal)');
+    return <Navigate to="/service-provider" replace />;
+  }
+  
+  // For other users (patients, elderly), show message that this is for caregivers
+  console.log('✅ Patient/elderly accessing caregiver portal, redirecting to home');
+  return <Navigate to="/" replace />;
 }
 
 // Role-based dashboard routing component
@@ -523,7 +559,6 @@ export default App;
 // Small component that runs inside UserProvider to read context safely
 function OnboardingGuardedLayout() {
   // Import hook normally; component is rendered under <UserProvider>
-  const { useUser } = require('./contexts/UserContext');
   const { isOnboardingIncomplete, userProfile, getCaregiverOnboardingRoute, user, loading } = useUser();
   
   console.log('🔍 OnboardingGuardedLayout Debug:', {
@@ -558,7 +593,6 @@ function OnboardingGuardedLayout() {
 
 // Caregiver-specific onboarding guard
 function CaregiverOnboardingGuard() {
-  const { useUser } = require('./contexts/UserContext');
   const { userProfile, getCaregiverOnboardingRoute } = useUser();
   
   // Only allow access if caregiver has completed onboarding
@@ -574,17 +608,23 @@ function CaregiverOnboardingGuard() {
 
 // Strict caregiver guard with immediate redirect
 function StrictCaregiverGuard() {
-  const { useUser } = require('./contexts/UserContext');
   const { userProfile, user, loading } = useUser();
   
+  // CRITICAL: If no user is authenticated, redirect to login immediately
+  if (!user) {
+    console.log('🚫 STRICT: No authenticated user - redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+  
   // Show loading while profile loads
-  if (loading || (user && !userProfile)) {
+  if (loading || !userProfile) {
     return <LoadingSpinner />;
   }
   
   console.log('🔍 StrictCaregiverGuard Check:', {
     userType: userProfile?.userType,
-    onboardingComplete: userProfile?.onboardingComplete
+    onboardingComplete: userProfile?.onboardingComplete,
+    userId: user?.uid
   });
   
   // Allow admin users to access caregiver dashboard
@@ -602,10 +642,66 @@ function StrictCaregiverGuard() {
   
   // Allow access to caregiver dashboard for complete caregivers
   if (userProfile?.userType === 'caregiver') {
+    console.log('✅ Caregiver access granted to caregiver dashboard');
     return <CaregiverLayout />;
   }
   
-  // Redirect other user types
-  console.log('🚫 Access denied: Invalid user type for caregiver dashboard');
+  // Allow doctors to access caregiver dashboard
+  if (userProfile?.userType === 'doctor') {
+    console.log('✅ Doctor access granted to caregiver dashboard');
+    return <CaregiverLayout />;
+  }
+  
+  // Redirect other user types to their appropriate dashboard
+  console.log('🚫 Access denied: Invalid user type for caregiver dashboard - redirecting to dashboard');
+  return <Navigate to="/dashboard" replace />;
+}
+
+// Service Provider Guard - ensures only authenticated doctors and caregivers can access
+function ServiceProviderGuard() {
+  const { userProfile, user, loading } = useUser();
+  
+  // CRITICAL: If no user is authenticated, redirect to login immediately
+  if (!user) {
+    console.log('🚫 SERVICE PROVIDER: No authenticated user - redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Show loading while profile loads
+  if (loading || !userProfile) {
+    return <LoadingSpinner />;
+  }
+  
+  console.log('🔍 ServiceProviderGuard Check:', {
+    userType: userProfile?.userType,
+    onboardingComplete: userProfile?.onboardingComplete,
+    userId: user?.uid
+  });
+  
+  // Allow admin users to access service provider dashboard
+  if (userProfile?.userType === 'admin') {
+    console.log('✅ Admin access granted to service provider dashboard');
+    return <ServiceProviderLayout />;
+  }
+  
+  // Allow doctors to access service provider dashboard
+  if (userProfile?.userType === 'doctor') {
+    console.log('✅ Doctor access granted to service provider dashboard');
+    return <ServiceProviderLayout />;
+  }
+  
+  // Allow caregivers to access service provider dashboard (after onboarding)
+  if (userProfile?.userType === 'caregiver') {
+    if (!userProfile?.onboardingComplete) {
+      console.log('🚫 SERVICE PROVIDER: Caregiver onboarding required - redirecting to onboarding');
+      window.location.replace('/caregiver/onboarding');
+      return <LoadingSpinner />;
+    }
+    console.log('✅ Caregiver access granted to service provider dashboard');
+    return <ServiceProviderLayout />;
+  }
+  
+  // Redirect other user types to their appropriate dashboard
+  console.log('🚫 Access denied: Invalid user type for service provider dashboard - redirecting to dashboard');
   return <Navigate to="/dashboard" replace />;
 }

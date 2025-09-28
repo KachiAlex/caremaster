@@ -23,7 +23,12 @@ import {
   Mail,
   Bell,
   Settings,
-  LogOut
+  LogOut,
+  X,
+  Thermometer,
+  Weight,
+  Eye,
+  Zap
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { 
@@ -49,6 +54,8 @@ import {
   getUnreadNotificationCount, 
   getNotificationsByUser 
 } from '../api/notificationsAPI';
+import { getNurseReportsByPatient, createNurseReport } from '../api/nurseReportsAPI';
+import { createCarePlan } from '../api/carePlansAPI';
 
 // Shared Components
 const DashboardHeader = ({ userProfile, userRole }) => {
@@ -126,7 +133,7 @@ const DashboardHeader = ({ userProfile, userRole }) => {
   );
 };
 
-const QuickStats = ({ userRole, stats, loading }) => {
+const QuickStats = ({ userRole, stats, loading, onPatientClick }) => {
   const getStatsForRole = () => {
     if (userRole === 'doctor') {
       return [
@@ -159,8 +166,38 @@ const QuickStats = ({ userRole, stats, loading }) => {
           orange: 'bg-orange-100 text-orange-600',
         };
 
+        const handleClick = () => {
+          if (stat.label === "Today's Tasks" || stat.label === "Pending Tasks") {
+            // Show task modal instead of redirecting
+            toast.info('Task management feature coming soon!');
+          } else if (stat.label === "Assigned Patients") {
+            // Show patient modal instead of redirecting
+            // We'll need to load patients and show them in a modal
+            // For now, show a placeholder patient
+            const placeholderPatient = {
+              id: 'placeholder',
+              name: 'Patient Name',
+              age: 'N/A',
+              condition: 'General Care',
+              phone: 'N/A',
+              allergies: 'None reported',
+              medications: 'None',
+              status: 'stable'
+            };
+            onPatientClick(placeholderPatient);
+          } else if (stat.label === "Unread Messages") {
+            window.location.href = '/service-provider/messages';
+          } else if (stat.label === "Today's Appointments" || stat.label === "Upcoming") {
+            window.location.href = '/service-provider/consultations';
+          }
+        };
+
         return (
-          <div key={index} className="bg-white rounded-lg shadow p-6">
+          <div 
+            key={index} 
+            className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow cursor-pointer" 
+            onClick={handleClick}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">{stat.label}</p>
@@ -252,20 +289,20 @@ const DoctorSpecificSections = ({ userProfile }) => {
 };
 
 // Caregiver-Specific Components
-const CaregiverSpecificSections = ({ userProfile }) => {
+const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks = [] }) => {
   const [todayTasks, setTodayTasks] = useState([]);
   const [recentUpdates, setRecentUpdates] = useState([]);
 
   useEffect(() => {
-    // Use only real data - no mock data
-    setTodayTasks([]);
-    setRecentUpdates([]);
-  }, []);
+    // Use real task data from props
+    setTodayTasks(todaysTasks || []);
+    setRecentUpdates(pendingTasks || []);
+  }, [todaysTasks, pendingTasks]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
       {/* Today's Tasks */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/service-provider/tasks'}>
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Today's Tasks</h3>
@@ -279,15 +316,17 @@ const CaregiverSpecificSections = ({ userProfile }) => {
                 <div className="flex items-center space-x-3">
                   <input 
                     type="checkbox" 
-                    checked={task.completed}
+                    checked={task.status === 'completed'}
                     className="h-4 w-4 text-blue-600 rounded"
                   />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{task.task}</p>
+                    <p className="text-sm font-medium text-gray-900">{task.title}</p>
                     <p className="text-xs text-gray-500">{task.patient}</p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">{task.time}</p>
+                <p className="text-xs text-gray-500">
+                  {task.scheduledTime ? new Date(task.scheduledTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'No time set'}
+                </p>
               </div>
             ))}
           </div>
@@ -304,13 +343,15 @@ const CaregiverSpecificSections = ({ userProfile }) => {
         </div>
         <div className="p-6">
           <div className="space-y-4">
-            {recentUpdates.map((update) => (
-              <div key={update.id} className="flex items-center justify-between">
+            {recentUpdates.map((task) => (
+              <div key={task.id} className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{update.type}</p>
-                  <p className="text-xs text-gray-500">{update.patient}</p>
+                  <p className="text-sm font-medium text-gray-900">{task.title}</p>
+                  <p className="text-xs text-gray-500">{task.patient} - {task.priority} priority</p>
                 </div>
-                <p className="text-xs text-gray-500">{update.time}</p>
+                <p className="text-xs text-gray-500">
+                  {task.scheduledTime ? new Date(task.scheduledTime).toLocaleDateString() : 'No date set'}
+                </p>
               </div>
             ))}
           </div>
@@ -323,6 +364,12 @@ const CaregiverSpecificSections = ({ userProfile }) => {
 // Main Dashboard Component
 const ServiceProviderDashboard = () => {
   const { userProfile, userRole, loading: userLoading } = useUser();
+  // Derive robust role flags (prevents misclassification)
+  const normalizedQualification = (userProfile?.medicalQualification || '').toString().toLowerCase();
+  const normalizedType = (userProfile?.type || userProfile?.userType || '').toString().toLowerCase();
+  const isDoctor = (userRole === 'doctor') || normalizedType === 'doctor' || normalizedQualification.includes('doctor');
+  const isCaregiver = (userRole === 'caregiver') || normalizedType === 'caregiver' || (!isDoctor && !!normalizedType);
+  const effectiveRole = isDoctor ? 'doctor' : (isCaregiver ? 'caregiver' : (userRole || 'caregiver'));
   const [stats, setStats] = useState({
     patients: 0,
     todaysAppointments: 0,
@@ -331,7 +378,31 @@ const ServiceProviderDashboard = () => {
     pendingTasks: 0,
     unreadMessages: 0,
   });
+  const [todaysTasksData, setTodaysTasksData] = useState([]);
+  const [pendingTasksData, setPendingTasksData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showPatientModal, setShowPatientModal] = useState(false);
+  const [nurseReport, setNurseReport] = useState({
+    bloodPressure: '',
+    heartRate: '',
+    temperature: '',
+    weight: '',
+    height: '',
+    oxygenSaturation: '',
+    painLevel: '',
+    notes: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+  const [nurseReports, setNurseReports] = useState([]);
+  const [carePlan, setCarePlan] = useState({
+    diagnosis: '',
+    treatmentPlan: '',
+    medications: '',
+    followUpDate: '',
+    specialInstructions: '',
+    priority: 'medium'
+  });
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -342,30 +413,51 @@ const ServiceProviderDashboard = () => {
         
         const promises = [];
         
-        // Load patients
-        if (userRole === 'doctor') {
-          promises.push(getPatientsByDoctor(userProfile.id));
-        } else if (userRole === 'caregiver') {
-          promises.push(getPatientsByCaregiver(userProfile.id));
+        // Load patients with error handling
+        if (isDoctor) {
+          promises.push(getPatientsByDoctor(userProfile.id).catch(error => {
+            console.log('Could not load patients by doctor - this is normal for new users');
+            return [];
+          }));
+        } else if (isCaregiver) {
+          promises.push(getPatientsByCaregiver(userProfile.id).catch(error => {
+            console.log('Could not load caregiver patients - this is normal for new users');
+            return [];
+          }));
         } else {
           promises.push(Promise.resolve([]));
         }
         
-        // Load appointments
-        promises.push(getTodaysAppointments(userProfile.id, userRole));
-        promises.push(getUpcomingAppointments(userProfile.id, userRole));
+        // Load appointments with error handling
+        promises.push(getTodaysAppointments(userProfile.id, userRole).catch(error => {
+          console.log('Could not load today\'s appointments - this is normal for new users');
+          return [];
+        }));
+        promises.push(getUpcomingAppointments(userProfile.id, userRole).catch(error => {
+          console.log('Could not load upcoming appointments - this is normal for new users');
+          return [];
+        }));
         
-        // Load tasks (for caregivers)
-        if (userRole === 'caregiver') {
-          promises.push(getTodaysCareTasks(userProfile.id));
-          promises.push(getPendingCareTasks(userProfile.id));
+        // Load tasks for assignees (caregivers and doctors)
+        if (isCaregiver || isDoctor) {
+          promises.push(getTodaysCareTasks(userProfile.id).catch(error => {
+            console.log('Could not load today\'s tasks - this is normal for new users');
+            return [];
+          }));
+          promises.push(getPendingCareTasks(userProfile.id).catch(error => {
+            console.log('Could not load pending tasks - this is normal for new users');
+            return [];
+          }));
         } else {
           promises.push(Promise.resolve([]));
           promises.push(Promise.resolve([]));
         }
         
-        // Load messages
-        promises.push(getUnreadMessageCount(userProfile.id));
+        // Load messages with error handling
+        promises.push(getUnreadMessageCount(userProfile.id).catch(error => {
+          console.log('Could not load unread message count - this is normal for new users');
+          return 0;
+        }));
         
         const [
           patients,
@@ -384,6 +476,10 @@ const ServiceProviderDashboard = () => {
           pendingTasks: pendingTasks.length,
           unreadMessages,
         });
+        
+        // Store actual task data for caregiver sections
+        setTodaysTasksData(todaysTasks || []);
+        setPendingTasksData(pendingTasks || []);
         
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -415,20 +511,491 @@ const ServiceProviderDashboard = () => {
     );
   }
 
+  // Patient modal handlers
+  const handlePatientClick = (patient) => {
+    setSelectedPatient(patient);
+    setShowPatientModal(true);
+    
+    // Load nurse reports from Firestore (for doctors view)
+    if (isDoctor && patient?.id) {
+      getNurseReportsByPatient(patient.id)
+        .then((reports) => setNurseReports(reports))
+        .catch(() => setNurseReports([]));
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowPatientModal(false);
+    setSelectedPatient(null);
+    setNurseReports([]);
+  };
+
+  const handleNurseReportChange = (field, value) => {
+    setNurseReport(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleCarePlanChange = (field, value) => {
+    setCarePlan(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmitNurseReport = async () => {
+    try {
+      if (!selectedPatient?.id) {
+        toast.error('No patient selected');
+        return;
+      }
+      await createNurseReport({
+        patientId: selectedPatient.id,
+        nurseId: userProfile.id,
+        nurseName: userProfile.name,
+        ...nurseReport,
+      });
+      toast.success('Nurse report submitted successfully!');
+      handleCloseModal();
+    } catch (error) {
+      toast.error('Failed to submit nurse report');
+      console.error('Error submitting nurse report:', error);
+    }
+  };
+
+  const handleSubmitCarePlan = async () => {
+    try {
+      if (!selectedPatient?.id) {
+        toast.error('No patient selected');
+        return;
+      }
+      await createCarePlan({
+        patientId: selectedPatient.id,
+        doctorId: userProfile.id,
+        doctorName: userProfile.name,
+        ...carePlan,
+      });
+      toast.success('Care plan created successfully!');
+      handleCloseModal();
+    } catch (error) {
+      toast.error('Failed to create care plan');
+      console.error('Error creating care plan:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader userProfile={userProfile} userRole={userRole} />
-      <QuickStats userRole={userRole} stats={stats} loading={loading} />
+      <DashboardHeader userProfile={userProfile} userRole={effectiveRole} />
+      <QuickStats userRole={effectiveRole} stats={stats} loading={loading} onPatientClick={handlePatientClick} />
       
-      {userRole === 'doctor' && (
+      {isDoctor && (
         <DoctorSpecificSections userProfile={userProfile} />
       )}
       
-      {userRole === 'caregiver' && (
+      {isCaregiver && (
         <div className="p-6">
-          <SpecializedCaregiverDashboard />
+          <SpecializedCaregiverDashboard onPatientClick={handlePatientClick} />
           <div className="mt-6">
-            <CaregiverSpecificSections userProfile={userProfile} />
+            <CaregiverSpecificSections 
+              userProfile={userProfile} 
+              todaysTasks={todaysTasksData}
+              pendingTasks={pendingTasksData}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Patient Details Modal */}
+      {showPatientModal && selectedPatient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Patient Details</h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {/* Patient Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <Users className="h-5 w-5 text-gray-400 mr-3" />
+                      <span className="text-gray-600">Name:</span>
+                      <span className="ml-2 font-medium">{selectedPatient.name}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Calendar className="h-5 w-5 text-gray-400 mr-3" />
+                      <span className="text-gray-600">Age:</span>
+                      <span className="ml-2 font-medium">{selectedPatient.age || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Heart className="h-5 w-5 text-gray-400 mr-3" />
+                      <span className="text-gray-600">Condition:</span>
+                      <span className="ml-2 font-medium">{selectedPatient.condition || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Phone className="h-5 w-5 text-gray-400 mr-3" />
+                      <span className="text-gray-600">Phone:</span>
+                      <span className="ml-2 font-medium">{selectedPatient.phone || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Medical History</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <FileText className="h-5 w-5 text-gray-400 mr-3" />
+                      <span className="text-gray-600">Allergies:</span>
+                      <span className="ml-2 font-medium">{selectedPatient.allergies || 'None reported'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Pill className="h-5 w-5 text-gray-400 mr-3" />
+                      <span className="text-gray-600">Medications:</span>
+                      <span className="ml-2 font-medium">{selectedPatient.medications || 'None'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Activity className="h-5 w-5 text-gray-400 mr-3" />
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                        selectedPatient.status === 'stable' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {selectedPatient.status || 'Unknown'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Doctor View: Nurse Reports & Care Plan */}
+              {isDoctor && (
+                <>
+                  {/* Nurse Reports Section */}
+                  <div className="border-t border-gray-200 pt-6 mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Stethoscope className="h-5 w-5 text-blue-600 mr-2" />
+                      Nurse Reports ({nurseReports.length})
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      {nurseReports.map((report) => (
+                        <div key={report.id} className="bg-gray-50 rounded-lg p-4 border">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center">
+                              <span className="font-medium text-gray-900">{report.nurseName}</span>
+                              <span className="ml-2 text-sm text-gray-500">• {report.date}</span>
+                            </div>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              report.status === 'stable' ? 'bg-green-100 text-green-800' : 
+                              report.status === 'improving' ? 'bg-blue-100 text-blue-800' : 
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {report.status}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                            <div className="text-center">
+                              <div className="text-sm text-gray-500">Blood Pressure</div>
+                              <div className="font-medium">{report.bloodPressure}</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm text-gray-500">Heart Rate</div>
+                              <div className="font-medium">{report.heartRate} BPM</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm text-gray-500">Temperature</div>
+                              <div className="font-medium">{report.temperature}°F</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm text-gray-500">Pain Level</div>
+                              <div className="font-medium">{report.painLevel}/10</div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-sm text-gray-600">
+                            <strong>Notes:</strong> {report.notes}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Care Plan Section */}
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FileText className="h-5 w-5 text-green-600 mr-2" />
+                      Care Plan Preparation
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      {/* Diagnosis */}
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Diagnosis
+                        </label>
+                        <input
+                          type="text"
+                          value={carePlan.diagnosis}
+                          onChange={(e) => handleCarePlanChange('diagnosis', e.target.value)}
+                          placeholder="Enter primary diagnosis..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
+                      </div>
+
+                      {/* Treatment Plan */}
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Treatment Plan
+                        </label>
+                        <textarea
+                          value={carePlan.treatmentPlan}
+                          onChange={(e) => handleCarePlanChange('treatmentPlan', e.target.value)}
+                          placeholder="Describe the treatment approach..."
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
+                      </div>
+
+                      {/* Medications */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Medications
+                        </label>
+                        <textarea
+                          value={carePlan.medications}
+                          onChange={(e) => handleCarePlanChange('medications', e.target.value)}
+                          placeholder="List prescribed medications..."
+                          rows="2"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
+                      </div>
+
+                      {/* Follow-up Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Follow-up Date
+                        </label>
+                        <input
+                          type="date"
+                          value={carePlan.followUpDate}
+                          onChange={(e) => handleCarePlanChange('followUpDate', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
+                      </div>
+
+                      {/* Priority */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Priority Level
+                        </label>
+                        <select
+                          value={carePlan.priority}
+                          onChange={(e) => handleCarePlanChange('priority', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                          <option value="urgent">Urgent</option>
+                        </select>
+                      </div>
+
+                      {/* Special Instructions */}
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Special Instructions
+                        </label>
+                        <textarea
+                          value={carePlan.specialInstructions}
+                          onChange={(e) => handleCarePlanChange('specialInstructions', e.target.value)}
+                          placeholder="Any special instructions for caregivers..."
+                          rows="3"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Submit Care Plan Button */}
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        onClick={handleCloseModal}
+                        className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSubmitCarePlan}
+                        className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Create Care Plan
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Caregiver View: Nurse Report Submission */}
+              {isCaregiver && (
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Stethoscope className="h-5 w-5 text-blue-600 mr-2" />
+                    Nurse Report & Vital Signs
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    {/* Blood Pressure */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Heart className="h-4 w-4 inline mr-1" />
+                        Blood Pressure (mmHg)
+                      </label>
+                      <input
+                        type="text"
+                        value={nurseReport.bloodPressure}
+                        onChange={(e) => handleNurseReportChange('bloodPressure', e.target.value)}
+                        placeholder="120/80"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Heart Rate */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Zap className="h-4 w-4 inline mr-1" />
+                        Heart Rate (BPM)
+                      </label>
+                      <input
+                        type="number"
+                        value={nurseReport.heartRate}
+                        onChange={(e) => handleNurseReportChange('heartRate', e.target.value)}
+                        placeholder="72"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Temperature */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Thermometer className="h-4 w-4 inline mr-1" />
+                        Temperature (°F)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={nurseReport.temperature}
+                        onChange={(e) => handleNurseReportChange('temperature', e.target.value)}
+                        placeholder="98.6"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Weight */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Weight className="h-4 w-4 inline mr-1" />
+                        Weight (lbs)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={nurseReport.weight}
+                        onChange={(e) => handleNurseReportChange('weight', e.target.value)}
+                        placeholder="150"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Height */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Eye className="h-4 w-4 inline mr-1" />
+                        Height (inches)
+                      </label>
+                      <input
+                        type="number"
+                        value={nurseReport.height}
+                        onChange={(e) => handleNurseReportChange('height', e.target.value)}
+                        placeholder="68"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Oxygen Saturation */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <Activity className="h-4 w-4 inline mr-1" />
+                        O2 Saturation (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={nurseReport.oxygenSaturation}
+                        onChange={(e) => handleNurseReportChange('oxygenSaturation', e.target.value)}
+                        placeholder="98"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pain Level */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Pain Level (0-10)
+                    </label>
+                    <select
+                      value={nurseReport.painLevel}
+                      onChange={(e) => handleNurseReportChange('painLevel', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select pain level</option>
+                      {[0,1,2,3,4,5,6,7,8,9,10].map(level => (
+                        <option key={level} value={level}>{level} - {level === 0 ? 'No pain' : level <= 3 ? 'Mild' : level <= 6 ? 'Moderate' : 'Severe'}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Notes */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Clinical Notes
+                    </label>
+                    <textarea
+                      value={nurseReport.notes}
+                      onChange={(e) => handleNurseReportChange('notes', e.target.value)}
+                      placeholder="Enter any observations, symptoms, or concerns..."
+                      rows="4"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={handleCloseModal}
+                      className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSubmitNurseReport}
+                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Submit Nurse Report
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

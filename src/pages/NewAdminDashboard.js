@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { flushSync } from 'react-dom';
 import { 
@@ -2829,10 +2829,12 @@ const NewAdminDashboard = () => {
                 Assign Task
               </button>
               <button
-                onClick={handleSavePatient}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                onClick={() => {
+                  setEditingPatient(selectedPatient);
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
               >
-                Save Changes
+                Edit
               </button>
               <button
                 onClick={() => {

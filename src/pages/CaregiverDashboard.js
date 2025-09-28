@@ -36,6 +36,7 @@ import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
 import { getPatientsByDoctor, getPatientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
+import CaregiverGuard from '../components/CaregiverGuard';
 
 const CaregiverDashboard = () => {
   const { user, userProfile } = useUser();
@@ -150,9 +151,50 @@ const CaregiverDashboard = () => {
       try {
         setLoading(true);
         
-        // Load caregiver profile data
+        // Load caregiver profile data only if user is a caregiver
+        if (userProfile?.userType === 'caregiver') {
+          try {
         const caregiverData = await caregiverAPI.getCaregiverById(user?.uid);
         setCaregiver(caregiverData);
+          } catch (error) {
+            console.log('Creating caregiver profile from user data - this is normal for new users');
+            // Create a basic caregiver profile from user profile
+            setCaregiver({
+              id: user?.uid,
+              name: userProfile?.name || userProfile?.displayName || 'Caregiver',
+              email: userProfile?.email,
+              status: 'active',
+              rating: 0,
+              totalPatients: 0,
+              currentPatients: 0,
+              specializations: userProfile?.specializations || [],
+              location: userProfile?.location || 'Lagos, Nigeria',
+              experience: userProfile?.experience || '0 years',
+              thisMonthEarnings: 0,
+              lastMonthEarnings: 0,
+              totalEarnings: 0,
+              ...userProfile
+            });
+          }
+        } else {
+          // For non-caregivers (doctors, admins), create a mock caregiver profile from user profile
+          setCaregiver({
+            id: user?.uid,
+            name: userProfile?.name || userProfile?.displayName || 'User',
+            email: userProfile?.email,
+            status: 'active',
+            rating: 0,
+            totalPatients: 0,
+            currentPatients: 0,
+            specializations: userProfile?.specializations || [],
+            location: userProfile?.location || 'Lagos, Nigeria',
+            experience: userProfile?.experience || '0 years',
+            thisMonthEarnings: 0,
+            lastMonthEarnings: 0,
+            totalEarnings: 0,
+            ...userProfile
+          });
+        }
 
         // If doctor, load assigned patients STRICTLY from admin-created assignments
         const isDoctor = (userProfile.medicalQualification || '').includes('Doctor');
@@ -163,14 +205,20 @@ const CaregiverDashboard = () => {
             const uniquePatientIds = Array.from(new Set(assignments.map(a => a.patientId).filter(Boolean)));
             const fetched = await Promise.all(uniquePatientIds.map(pid => getPatientById(pid).catch(() => null)));
             patients = fetched.filter(Boolean);
-          } catch {}
-          // Fallback to patients.assignedDoctor only if no assignment docs found
-          if ((!patients || patients.length === 0)) {
-            try {
-              const alt = await getPatientsByDoctor(user?.uid);
-              patients = alt || [];
-            } catch {}
+          } catch (error) {
+            console.log('No patient assignments found - this is normal for new users');
           }
+          
+          // Fallback to patients.assignedDoctor only if no assignment docs found
+          if ((!patients || patients.length === 0) && user?.uid) {
+            try {
+              const alt = await getPatientsByDoctor(user.uid);
+              patients = alt || [];
+            } catch (error) {
+              console.log('No patients assigned to doctor - contact admin for patient assignments');
+            }
+          }
+          
           setAssignedPatients(patients);
           // Auto-select first patient if not set
           if (patients.length > 0 && !selectedPatientId) {
@@ -210,19 +258,46 @@ const CaregiverDashboard = () => {
         setTodaySchedule(combinedSchedule);
         
         // Load recent tasks
-        const recentTasks = await getCareTasksByCaregiver(userProfile.uid);
-        setRecentTasks(recentTasks.slice(0, 5)); // Show only last 5 tasks
+        let loadedRecentTasks = [];
+        if (user?.uid) {
+          try {
+            loadedRecentTasks = await getCareTasksByCaregiver(user.uid);
+            setRecentTasks(loadedRecentTasks.slice(0, 5)); // Show only last 5 tasks
+          } catch (error) {
+            console.log('No recent tasks found - this is normal for new users');
+            setRecentTasks([]);
+          }
+        } else {
+          setRecentTasks([]);
+        }
         
         // Load performance data (placeholder for now)
         setPerformance({
-          completedTasks: recentTasks.filter(task => task.status === 'completed').length,
-          totalTasks: recentTasks.length,
+          completedTasks: loadedRecentTasks.filter(task => task.status === 'completed').length,
+          totalTasks: loadedRecentTasks.length,
           rating: 4.8,
           hoursWorked: 40
         });
         
       } catch (error) {
         console.error('Error loading caregiver data:', error);
+        // Set a fallback caregiver profile to prevent crashes
+        setCaregiver({
+          id: user?.uid,
+          name: userProfile?.name || userProfile?.displayName || 'User',
+          email: userProfile?.email,
+          status: 'active',
+          rating: 0,
+          totalPatients: 0,
+          currentPatients: 0,
+          specializations: userProfile?.specializations || [],
+          location: userProfile?.location || 'Lagos, Nigeria',
+          experience: userProfile?.experience || '0 years',
+          thisMonthEarnings: 0,
+          lastMonthEarnings: 0,
+          totalEarnings: 0,
+          ...userProfile
+        });
       } finally {
         setLoading(false);
       }
@@ -308,6 +383,19 @@ const CaregiverDashboard = () => {
               ))}
             </select>
           </div>
+          {assignedPatients.length === 0 && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center">
+                <User className="h-5 w-5 text-blue-600 mr-2" />
+                <div>
+                  <h4 className="text-sm font-medium text-blue-800">No patients assigned yet</h4>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Contact your administrator to get patients assigned to your care. Once assigned, you'll be able to create care plans, write prescriptions, and conduct consultations.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             <button onClick={handleNewConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>New Consultation</button>
             <button onClick={handleWritePrescription} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>Write Prescription</button>
@@ -378,7 +466,8 @@ const CaregiverDashboard = () => {
   }
 
   return (
-    <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container">
+    <CaregiverGuard>
+      <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container">
       {/* Header */}
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
@@ -475,7 +564,7 @@ const CaregiverDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
-                  <p className="text-3xl font-bold text-gray-900">₦{caregiver?.thisMonthEarnings.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-gray-900">₦{(caregiver?.thisMonthEarnings || 0).toLocaleString()}</p>
                 </div>
                 <div className="p-3 bg-purple-50 rounded-xl">
                   <TrendingUp className="h-8 w-8 text-purple-600" />
@@ -674,6 +763,7 @@ const CaregiverDashboard = () => {
         </div>
       </div>
     </div>
+    </CaregiverGuard>
   );
 };
 

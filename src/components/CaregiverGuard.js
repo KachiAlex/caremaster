@@ -5,17 +5,17 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
 
-const AdminGuard = ({ children }) => {
+const CaregiverGuard = ({ children }) => {
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCaregiver, setIsCaregiver] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         // No user logged in
-        toast.error('Please log in to access the admin panel');
-        navigate('/new-admin-login');
+        toast.error('Please log in to access the caregiver panel');
+        navigate('/login');
         return;
       }
 
@@ -25,23 +25,23 @@ const AdminGuard = ({ children }) => {
         
         if (!userDoc.exists()) {
           toast.error('User profile not found');
-          navigate('/new-admin-login');
+          navigate('/login');
           return;
         }
 
         const userData = userDoc.data();
         const userRole = userData.userType || userData.type;
         
-        // Check if user is admin
-        if (userRole === 'admin') {
-          setIsAdmin(true);
+        // Check if user is caregiver or doctor
+        if (userRole === 'caregiver' || userRole === 'doctor') {
+          setIsCaregiver(true);
           setLoading(false);
         } else {
-          // User is not admin - redirect to appropriate dashboard
-          toast.error('Access denied. Admin privileges required.');
+          // User is not caregiver/doctor - redirect to appropriate dashboard
+          toast.error('Access denied. Caregiver/Doctor privileges required.');
           
-          if (userRole === 'caregiver' || userRole === 'doctor') {
-            navigate('/caregiver-dashboard');
+          if (userRole === 'admin') {
+            navigate('/new-admin-dashboard');
           } else if (userRole === 'elderly' || userRole === 'client') {
             navigate('/patient-dashboard');
           } else {
@@ -50,9 +50,9 @@ const AdminGuard = ({ children }) => {
           return;
         }
       } catch (error) {
-        console.error('Error checking admin status:', error);
-        toast.error('Error verifying admin access');
-        navigate('/new-admin-login');
+        console.error('Error checking caregiver status:', error);
+        toast.error('Error verifying caregiver access');
+        navigate('/login');
       }
     });
 
@@ -64,13 +64,13 @@ const AdminGuard = ({ children }) => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying admin access...</p>
+          <p className="text-gray-600">Verifying caregiver access...</p>
         </div>
       </div>
     );
   }
 
-  if (!isAdmin) {
+  if (!isCaregiver) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -80,9 +80,9 @@ const AdminGuard = ({ children }) => {
             </svg>
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-600 mb-4">You don't have permission to access the admin panel.</p>
+          <p className="text-gray-600 mb-4">You don't have permission to access the caregiver panel.</p>
           <button
-            onClick={() => navigate('/new-admin-login')}
+            onClick={() => navigate('/login')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Login
@@ -95,4 +95,4 @@ const AdminGuard = ({ children }) => {
   return children;
 };
 
-export default AdminGuard;
+export default CaregiverGuard;

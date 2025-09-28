@@ -35,12 +35,22 @@ const SpecializedCaregiverDashboard = () => {
       
       try {
         const caregiver = await caregiverAPI.getCaregiverById(userProfile.id).catch(err => {
-          console.warn('Caregiver profile not found, using default:', err);
+          console.log('Creating caregiver profile from user data - this is normal for new users');
           return {
-            specializations: ['General Care'],
-            certifications: ['CPR Certified'],
-            experience: '1 year',
-            qualificationLevel: 'basic'
+            id: userProfile.id,
+            name: userProfile.name || userProfile.displayName || 'Caregiver',
+            email: userProfile.email,
+            specializations: userProfile.specializations || ['General Care'],
+            certifications: userProfile.certifications || ['CPR Certified'],
+            experience: userProfile.experience || '1 year',
+            qualificationLevel: userProfile.qualificationLevel || 'basic',
+            status: 'active',
+            rating: 0,
+            totalPatients: 0,
+            currentPatients: 0,
+            thisMonthEarnings: 0,
+            lastMonthEarnings: 0,
+            location: userProfile.location || 'Lagos, Nigeria'
           };
         });
         

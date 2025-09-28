@@ -73,14 +73,15 @@ export const getPatientById = async (patientId) => {
 // Get patients assigned to a caregiver
 export const getPatientsByCaregiver = async (caregiverId) => {
   try {
+    // First try to get patients directly assigned to caregiver
     const patientsRef = collection(db, PATIENTS_COLLECTION);
-    const q = query(patientsRef, where('assignedCaregiver', '==', caregiverId), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
+    const directQuery = query(patientsRef, where('assignedCaregiver', '==', caregiverId));
+    const directSnapshot = await getDocs(directQuery);
     
-    const patients = [];
-    querySnapshot.forEach((doc) => {
+    const directPatients = [];
+    directSnapshot.forEach((doc) => {
       const patientData = doc.data();
-      patients.push({
+      directPatients.push({
         id: doc.id,
         ...patientData,
         dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
@@ -89,8 +90,53 @@ export const getPatientsByCaregiver = async (caregiverId) => {
         lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
       });
     });
+
+    // Also get patients from tasks assigned to this caregiver
+    const tasksRef = collection(db, 'careTasks');
+    const tasksQuery = query(tasksRef, where('caregiverId', '==', caregiverId));
+    const tasksSnapshot = await getDocs(tasksQuery);
     
-    return patients;
+    const patientIds = new Set();
+    tasksSnapshot.forEach((doc) => {
+      const taskData = doc.data();
+      if (taskData.patientId) {
+        patientIds.add(taskData.patientId);
+      }
+    });
+
+    // Get patient details for task-assigned patients
+    const taskPatients = [];
+    for (const patientId of patientIds) {
+      try {
+        const patientDoc = await getDoc(doc(db, PATIENTS_COLLECTION, patientId));
+        if (patientDoc.exists()) {
+          const patientData = patientDoc.data();
+          taskPatients.push({
+            id: patientDoc.id,
+            ...patientData,
+            dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
+            createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
+            updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
+            lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+          });
+        }
+      } catch (error) {
+        console.log('Could not fetch patient from task:', error);
+      }
+    }
+
+          // Combine and deduplicate patients
+          const allPatients = [...directPatients, ...taskPatients];
+          const uniquePatients = allPatients.filter((patient, index, self) => 
+            index === self.findIndex(p => p.id === patient.id)
+          );
+          
+          // Sort by createdAt in memory (newest first)
+          return uniquePatients.sort((a, b) => {
+            const aTime = a.createdAt?.getTime?.() || 0;
+            const bTime = b.createdAt?.getTime?.() || 0;
+            return bTime - aTime;
+          });
   } catch (error) {
     console.error('Error fetching patients by caregiver:', error);
     throw error;
@@ -101,7 +147,8 @@ export const getPatientsByCaregiver = async (caregiverId) => {
 export const getPatientsByDoctor = async (doctorId) => {
   try {
     const patientsRef = collection(db, PATIENTS_COLLECTION);
-    const q = query(patientsRef, where('assignedDoctor', '==', doctorId), orderBy('createdAt', 'desc'));
+    // Remove orderBy to avoid index requirement - we'll sort in memory
+    const q = query(patientsRef, where('assignedDoctor', '==', doctorId));
     const querySnapshot = await getDocs(q);
     
     const patients = [];
@@ -117,7 +164,12 @@ export const getPatientsByDoctor = async (doctorId) => {
       });
     });
     
-    return patients;
+    // Sort by createdAt in memory (newest first)
+    return patients.sort((a, b) => {
+      const aTime = a.createdAt?.getTime?.() || 0;
+      const bTime = b.createdAt?.getTime?.() || 0;
+      return bTime - aTime;
+    });
   } catch (error) {
     console.error('Error fetching patients by doctor:', error);
     throw error;

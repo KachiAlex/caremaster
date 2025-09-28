@@ -49,10 +49,9 @@ const ServiceProviderLayout = () => {
   };
 
   // Base navigation items that all service providers have
-  const baseNavigation = [
+const baseNavigation = [
     { name: 'Dashboard', href: '/service-provider', icon: BarChart3 },
     { name: 'Schedule', href: '/service-provider/schedule', icon: Calendar },
-    { name: 'Patients', href: '/service-provider/patients', icon: Users },
     { name: 'Messages', href: '/service-provider/messages', icon: MessageSquare },
     { name: 'Calls', href: '/service-provider/calls', icon: Phone },
     { name: 'Settings', href: '/service-provider/settings', icon: Settings },
