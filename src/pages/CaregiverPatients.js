@@ -26,6 +26,7 @@ import { useUser } from '../contexts/UserContext';
 import { getPatientsByCaregiver } from '../api/patientsAPI';
 import { getTodaysCareTasks } from '../api/careTasksAPI';
 import { getLatestVitalSigns } from '../api/vitalSignsAPI';
+import { assignmentAPI } from '../api/assignmentAPI';
 import { toast } from 'react-toastify';
 
 const CaregiverPatients = () => {
@@ -44,11 +45,30 @@ const CaregiverPatients = () => {
     try {
       setLoading(true);
       
-      // Load only assigned patients (admin-controlled)
-      const patientsData = await getPatientsByCaregiver(userProfile.id).catch(err => {
-        console.warn('Failed to fetch assigned patients:', err);
-        return [];
-      });
+      // Load assigned patients from admin-created assignments
+      let patientsData = [];
+      try {
+        const assignments = await assignmentAPI.getAssignmentsByCaregiver(userProfile.id);
+        console.log(`Found ${assignments.length} assignments for caregiver ${userProfile.id}`);
+        
+        // Extract patient information from assignments
+        patientsData = assignments.map(assignment => ({
+          id: assignment.patientId,
+          name: assignment.patientName,
+          email: assignment.patientEmail,
+          assignedAt: assignment.assignedAt,
+          status: assignment.status,
+          assignmentId: assignment.id
+        }));
+      } catch (error) {
+        console.warn('Failed to fetch assigned patients from assignments:', error);
+        
+        // Fallback to legacy method
+        patientsData = await getPatientsByCaregiver(userProfile.id).catch(err => {
+          console.warn('Failed to fetch assigned patients (fallback):', err);
+          return [];
+        });
+      }
 
       console.log(`Loading assigned patients for caregiver ${userProfile.id}:`, patientsData.length);
       
@@ -65,6 +85,28 @@ const CaregiverPatients = () => {
   useEffect(() => {
     if (userProfile?.id) {
       loadPatients();
+      
+      // Set up real-time subscription for assignments
+      const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
+        console.log(`Real-time update: Found ${assignments.length} patient assignments for caregiver ${userProfile.id}`);
+        
+        // Filter assignments for this specific caregiver
+        const caregiverAssignments = assignments.filter(a => a.caregiverId === userProfile.id);
+        
+        // Extract patient information from assignments
+        const patientsData = caregiverAssignments.map(assignment => ({
+          id: assignment.patientId,
+          name: assignment.patientName,
+          email: assignment.patientEmail,
+          assignedAt: assignment.assignedAt,
+          status: assignment.status,
+          assignmentId: assignment.id
+        }));
+        
+        setPatients(patientsData || []);
+      }, userProfile.id);
+      
+      return () => unsubscribe();
     }
   }, [userProfile?.id]);
 

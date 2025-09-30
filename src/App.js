@@ -37,6 +37,7 @@ import CaregiverLayout from './components/CaregiverLayout';
 import Messages from './pages/Messages';
 import Subscription from './pages/Subscription';
 import Services from './pages/Services';
+import PatientCaregivers from './pages/PatientCaregivers';
 import Pricing from './pages/Pricing';
 // All onboarding is now integrated into Auth.js
 import AdminDashboard from './pages/AdminDashboard';
@@ -388,6 +389,12 @@ function App() {
         <Route index element={<Subscription />} />
       </Route>
       <Route 
+        path="/patient-caregivers" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<PatientCaregivers />} />
+      </Route>
+      <Route 
         path="/security" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
@@ -459,10 +466,16 @@ function App() {
         element={<NewAdminLogin />} 
       />
       
+      {/* Alternative Admin Login Route */}
+      <Route 
+        path="/new-admin-login" 
+        element={<NewAdminLogin />} 
+      />
+      
       {/* Admin Dashboard Route */}
       <Route 
         path="/admin/dashboard" 
-        element={<AdminGuardedRoute><NewAdminDashboard /></AdminGuardedRoute>} 
+        element={<NewAdminDashboard />} 
       />
       
       {/* Admin Root Redirect - always send to admin login to enforce session */}
@@ -540,19 +553,6 @@ function RoleBasedDashboardRoute() {
   return <Layout />;
 }
 
-// Admin Guard Component to prevent redirects
-function AdminGuardedRoute({ children }) {
-  const isAdminAuthenticated = localStorage.getItem('elderx_admin_authenticated') === 'true';
-  
-  if (!isAdminAuthenticated) {
-    return <Navigate to="/admin/login" replace />;
-  }
-  
-  // Set session flag to prevent other guards from interfering
-  sessionStorage.setItem('elderx_admin_session', 'true');
-  
-  return children;
-}
 
 export default App;
 

@@ -40,10 +40,10 @@ const AdminGuard = ({ children }) => {
           // User is not admin - redirect to appropriate dashboard
           toast.error('Access denied. Admin privileges required.');
           
-          if (userRole === 'caregiver' || userRole === 'doctor') {
-            navigate('/caregiver-dashboard');
-          } else if (userRole === 'elderly' || userRole === 'client') {
-            navigate('/patient-dashboard');
+          if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'admin') {
+            navigate('/service-provider');
+          } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
+            navigate('/');
           } else {
             navigate('/login');
           }

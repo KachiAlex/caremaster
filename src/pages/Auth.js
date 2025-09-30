@@ -323,7 +323,7 @@ const Auth = () => {
   };
 
   const getStepTitle = () => {
-    if (mode === 'signin') return 'Welcome Back';
+    if (mode === 'signin') return 'Caregiver Portal';
     if (mode === 'signup-patient') {
       const steps = ['Create Account', 'Personal Info', 'Medical Info'];
       return steps[currentStep - 1] || 'Complete';
@@ -350,29 +350,11 @@ const Auth = () => {
           <p className="text-gray-600 mt-2">{getStepTitle()}</p>
         </div>
 
-        {/* Mode Selection */}
+        {/* Welcome Message */}
         {mode === 'signin' && (
-          <div className="space-y-4">
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setMode('signin')}
-                className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg font-medium"
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => setMode('signup-patient')}
-                className="flex-1 py-3 px-4 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300"
-              >
-                Patient Signup
-              </button>
-              <button
-                onClick={() => setMode('signup-caregiver')}
-                className="flex-1 py-3 px-4 bg-green-200 text-green-700 rounded-lg font-medium hover:bg-green-300"
-              >
-                Caregiver Signup
-              </button>
-            </div>
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome back Caregiver</h3>
+            <p className="text-gray-600">Please sign in to access your dashboard</p>
           </div>
         )}
 

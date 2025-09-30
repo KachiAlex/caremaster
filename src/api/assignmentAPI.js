@@ -347,6 +347,36 @@ export const assignmentAPI = {
       logger.error('Error setting up assignment subscription', { error, caregiverId });
       throw error;
     }
+  },
+
+  // Real-time subscription for assignments by patient
+  subscribeToAssignmentsByPatient: (patientId, callback) => {
+    try {
+      const assignmentsQuery = query(
+        collection(db, ASSIGNMENTS_COLLECTION),
+        where('patientId', '==', patientId),
+        orderBy('createdAt', 'desc')
+      );
+
+      return onSnapshot(assignmentsQuery, (snapshot) => {
+        const assignments = [];
+        snapshot.forEach((doc) => {
+          const assignmentData = doc.data();
+          assignments.push({
+            id: doc.id,
+            ...assignmentData,
+            createdAt: assignmentData.createdAt?.toDate(),
+            updatedAt: assignmentData.updatedAt?.toDate(),
+            startDate: assignmentData.startDate?.toDate(),
+            endDate: assignmentData.endDate?.toDate()
+          });
+        });
+        callback(assignments);
+      });
+    } catch (error) {
+      logger.error('Error setting up patient assignment subscription', { error, patientId });
+      throw error;
+    }
   }
 };
 

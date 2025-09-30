@@ -46,6 +46,7 @@ import {
   getPendingCareTasks, 
   getCareTaskStats 
 } from '../api/careTasksAPI';
+import { getTaskAssignmentsByCaregiver } from '../api/taskAssignmentAPI';
 import { 
   getUnreadMessageCount, 
   getConversationsByUser 
@@ -448,7 +449,13 @@ const ServiceProviderDashboard = () => {
             console.log('Could not load pending tasks - this is normal for new users');
             return [];
           }));
+          // Also load admin-created task assignments and merge into views
+          promises.push(getTaskAssignmentsByCaregiver(userProfile.id).catch(error => {
+            console.log('Could not load task assignments - this is normal for new users');
+            return [];
+          }));
         } else {
+          promises.push(Promise.resolve([]));
           promises.push(Promise.resolve([]));
           promises.push(Promise.resolve([]));
         }
@@ -465,21 +472,30 @@ const ServiceProviderDashboard = () => {
           upcomingAppointments,
           todaysTasks,
           pendingTasks,
+          taskAssignments,
           unreadMessages
         ] = await Promise.all(promises);
         
+        const mergedPending = [...(pendingTasks || []), ...(taskAssignments || [])].filter(Boolean);
+        const mergedToday = [...(todaysTasks || []), ...(taskAssignments || []).filter(t => {
+          const d = t.scheduledTime ? new Date(t.scheduledTime) : null;
+          if (!d) return false;
+          const now = new Date();
+          return d.toDateString() === now.toDateString();
+        })];
+
         setStats({
           patients: patients.length,
           todaysAppointments: todaysAppointments.length,
           upcomingAppointments: upcomingAppointments.length,
-          todaysTasks: todaysTasks.length,
-          pendingTasks: pendingTasks.length,
+          todaysTasks: mergedToday.length,
+          pendingTasks: mergedPending.length,
           unreadMessages,
         });
         
-        // Store actual task data for caregiver sections
-        setTodaysTasksData(todaysTasks || []);
-        setPendingTasksData(pendingTasks || []);
+        // Store actual task data for caregiver sections (merged)
+        setTodaysTasksData(mergedToday);
+        setPendingTasksData(mergedPending);
         
       } catch (error) {
         console.error('Error loading dashboard data:', error);

@@ -5,12 +5,12 @@ const DYNAMIC_CACHE = 'elderx-dynamic-v1';
 const API_CACHE = 'elderx-api-v1';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
+// Keep this list restricted to assets that are guaranteed to exist.
 const STATIC_ASSETS = [
   '/',
   '/offline.html',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon-192x192.png'
 ];
 
 // API endpoints to cache
@@ -28,9 +28,17 @@ self.addEventListener('install', (event) => {
   console.log('Service Worker installing...');
   event.waitUntil(
     Promise.all([
-      caches.open(STATIC_CACHE).then((cache) => {
-        console.log('Caching static assets...');
-        return cache.addAll(STATIC_ASSETS);
+      caches.open(STATIC_CACHE).then(async (cache) => {
+        console.log('Caching static assets (safe mode)...');
+        // Add assets one by one so a single failure doesn't reject the entire install
+        for (const url of STATIC_ASSETS) {
+          try {
+            await cache.add(url);
+          } catch (err) {
+            console.warn('Failed to precache asset:', url, err);
+          }
+        }
+        return cache;
       }),
       caches.open(API_CACHE).then((cache) => {
         console.log('API cache ready...');

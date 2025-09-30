@@ -104,7 +104,19 @@ export const getPatientsByCaregiver = async (caregiverId) => {
       }
     });
 
-    // Get patient details for task-assigned patients
+    // Also get patients from explicit patientAssignments collection
+    const assignmentsRef = collection(db, 'patientAssignments');
+    const assignmentsQuery = query(assignmentsRef, where('caregiverId', '==', caregiverId));
+    const assignmentsSnapshot = await getDocs(assignmentsQuery);
+
+    assignmentsSnapshot.forEach((doc) => {
+      const assignmentData = doc.data();
+      if (assignmentData.patientId && (assignmentData.status ?? 'active') === 'active') {
+        patientIds.add(assignmentData.patientId);
+      }
+    });
+
+    // Get patient details for task-assigned and explicitly assigned patients
     const taskPatients = [];
     for (const patientId of patientIds) {
       try {

@@ -304,7 +304,35 @@ const CaregiverDashboard = () => {
     };
 
     loadCaregiverData();
-  }, [userProfile]);
+    
+    // Set up real-time subscription for assignments (for doctors)
+    const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor');
+    if (isDoctor && user?.uid) {
+      const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
+        console.log(`Real-time update: Found ${assignments.length} patient assignments for doctor ${user.uid}`);
+        
+        // Filter assignments for this specific caregiver
+        const caregiverAssignments = assignments.filter(a => a.caregiverId === user.uid);
+        const uniquePatientIds = Array.from(new Set(caregiverAssignments.map(a => a.patientId).filter(Boolean)));
+        Promise.all(uniquePatientIds.map(pid => getPatientById(pid).catch(() => null)))
+          .then(fetched => {
+            const patients = fetched.filter(Boolean);
+            setAssignedPatients(patients);
+            
+            // Auto-select first patient if not set
+            if (patients.length > 0 && !selectedPatientId) {
+              setSelectedPatientId(patients[0].id);
+              setSelectedPatient(patients[0]);
+            }
+          })
+          .catch(error => {
+            console.log('Error fetching patient details from assignments:', error);
+          });
+      }, user.uid);
+      
+      return () => unsubscribe();
+    }
+  }, [userProfile, user?.uid, selectedPatientId]);
 
   useEffect(() => {
     // when selectedPatientId changes, refresh selectedPatient from cache/list
@@ -467,7 +495,7 @@ const CaregiverDashboard = () => {
 
   return (
     <CaregiverGuard>
-      <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container">
+    <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container">
       {/* Header */}
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">

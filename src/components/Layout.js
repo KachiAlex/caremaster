@@ -13,7 +13,8 @@ import {
   X,
   LogOut,
   Bell,
-  User
+  User,
+  FileText
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -35,6 +36,7 @@ const Layout = () => {
 
   const navigation = [
     { name: 'My Dashboard', href: '/dashboard', icon: Home },
+    { name: 'My Care Team', href: '/patient-caregivers', icon: User },
     { name: 'Care Appointments', href: '/appointments', icon: Calendar },
     { name: 'Health Monitoring', href: '/vital-signs', icon: Heart },
     { name: 'Video Consultations', href: '/telemedicine', icon: Video },
