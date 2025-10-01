@@ -58,6 +58,10 @@ import {
 } from '../api/notificationsAPI';
 import { getNurseReportsByPatient, createNurseReport } from '../api/nurseReportsAPI';
 import { createCarePlan } from '../api/carePlansAPI';
+import MorningBriefing from '../components/MorningBriefing';
+import TaskCompletionModal from '../components/TaskCompletionModal';
+import VitalsQuickEntry from '../components/VitalsQuickEntry';
+import { createVitalSign } from '../api/vitalSignsAPI';
 
 // Shared Components
 const DashboardHeader = ({ userProfile, userRole }) => {
@@ -384,9 +388,14 @@ const ServiceProviderDashboard = () => {
   const [pendingTasksData, setPendingTasksData] = useState([]);
   const [assignedPatientsData, setAssignedPatientsData] = useState([]);
   const [upcomingAppointmentsData, setUpcomingAppointmentsData] = useState([]);
+  const [todaysAppointmentsData, setTodaysAppointmentsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientModal, setShowPatientModal] = useState(false);
+  const [showMorningBriefing, setShowMorningBriefing] = useState(false);
+  const [showTaskCompletion, setShowTaskCompletion] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [showVitalsEntry, setShowVitalsEntry] = useState(false);
   const [nurseReport, setNurseReport] = useState({
     bloodPressure: '',
     heartRate: '',
@@ -512,6 +521,13 @@ const ServiceProviderDashboard = () => {
         setPendingTasksData(mergedPending);
         setAssignedPatientsData(patients || []);
         setUpcomingAppointmentsData(upcomingAppointments || []);
+        setTodaysAppointmentsData(todaysAppointments || []);
+        
+        // Show morning briefing on first load if caregiver has tasks
+        const hasShownToday = sessionStorage.getItem(`morning_briefing_${new Date().toDateString()}`);
+        if (!hasShownToday && (mergedToday.length > 0 || todaysAppointments.length > 0) && isCaregiver) {
+          setShowMorningBriefing(true);
+        }
         
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -522,7 +538,7 @@ const ServiceProviderDashboard = () => {
     };
 
     loadDashboardData();
-  }, [userProfile, userRole]);
+  }, [userProfile, userRole, isCaregiver]);
 
   if (userLoading || loading) {
     return (
@@ -626,6 +642,35 @@ const ServiceProviderDashboard = () => {
 
   const handleShowMessages = () => {
     navigate('/service-provider/messages');
+  };
+
+  const handleStartDay = () => {
+    sessionStorage.setItem(`morning_briefing_${new Date().toDateString()}`, 'true');
+    if (todaysTasksData.length > 0) {
+      navigate('/service-provider/tasks');
+    }
+  };
+
+  const handleSaveVitals = async (vitalData) => {
+    try {
+      await createVitalSign(vitalData);
+      toast.success('Vitals recorded successfully');
+      return true;
+    } catch (error) {
+      console.error('Error saving vitals:', error);
+      toast.error('Failed to save vitals');
+      return false;
+    }
+  };
+
+  const handleTaskComplete = () => {
+    // Reload dashboard data
+    const userId = userProfile?.id || userProfile?.uid;
+    if (userId && isCaregiver) {
+      getTodaysCareTasks(userId)
+        .then(tasks => setTodaysTasksData(tasks))
+        .catch(() => {});
+    }
   };
 
   return (
@@ -1057,6 +1102,42 @@ const ServiceProviderDashboard = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Morning Briefing Modal */}
+      {showMorningBriefing && (
+        <MorningBriefing
+          patients={assignedPatientsData}
+          todaysTasks={todaysTasksData}
+          todaysAppointments={todaysAppointmentsData}
+          onClose={() => setShowMorningBriefing(false)}
+          onStartDay={handleStartDay}
+        />
+      )}
+
+      {/* Task Completion Modal */}
+      {showTaskCompletion && selectedTask && (
+        <TaskCompletionModal
+          task={selectedTask}
+          patient={selectedPatient}
+          onClose={() => {
+            setShowTaskCompletion(false);
+            setSelectedTask(null);
+          }}
+          onComplete={handleTaskComplete}
+        />
+      )}
+
+      {/* Vitals Quick Entry */}
+      {showVitalsEntry && selectedPatient && (
+        <VitalsQuickEntry
+          patient={selectedPatient}
+          onClose={() => {
+            setShowVitalsEntry(false);
+            setSelectedPatient(null);
+          }}
+          onSave={handleSaveVitals}
+        />
       )}
     </div>
   );
