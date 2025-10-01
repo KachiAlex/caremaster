@@ -23,7 +23,7 @@ import { caregiverAPI } from '../api/caregiverAPI';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
-const SpecializedCaregiverDashboard = () => {
+const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }) => {
   const { userProfile } = useUser();
   const navigate = useNavigate();
   const [caregiverData, setCaregiverData] = useState(null);
@@ -194,7 +194,10 @@ const SpecializedCaregiverDashboard = () => {
 
       {/* Specializations & Certifications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
+        <div 
+          className="card cursor-pointer hover:shadow-md transition-shadow" 
+          onClick={() => navigate('/service-provider/settings')}
+        >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Specializations</h3>
           <div className="flex flex-wrap gap-2">
             {specializationInfo.specializations.map((spec, index) => (
@@ -204,7 +207,10 @@ const SpecializedCaregiverDashboard = () => {
             ))}
           </div>
         </div>
-        <div className="card">
+        <div 
+          className="card cursor-pointer hover:shadow-md transition-shadow" 
+          onClick={() => navigate('/service-provider/settings')}
+        >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Certifications</h3>
           <div className="flex flex-wrap gap-2">
             {specializationInfo.certifications.map((cert, index) => (

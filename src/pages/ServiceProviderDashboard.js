@@ -216,23 +216,16 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick }) => {
 };
 
 // Doctor-Specific Components
-const DoctorSpecificSections = ({ userProfile }) => {
-  const [recentPatients, setRecentPatients] = useState([]);
-  const [upcomingConsultations, setUpcomingConsultations] = useState([]);
-
-  useEffect(() => {
-    // Mock data - replace with real API calls
-    // Use only real data - no mock data
-    setRecentPatients([]);
-    
-    // Use only real data - no mock data
-    setUpcomingConsultations([]);
-  }, []);
+const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAppointments = [] }) => {
+  const navigate = useNavigate();
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
       {/* Recent Patients */}
-      <div className="bg-white rounded-lg shadow">
+      <div 
+        className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+        onClick={() => navigate('/service-provider/medical-records')}
+      >
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Recent Patients</h3>
@@ -241,28 +234,35 @@ const DoctorSpecificSections = ({ userProfile }) => {
         </div>
         <div className="p-6">
           <div className="space-y-4">
-            {recentPatients.map((patient) => (
-              <div key={patient.id} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{patient.name}</p>
-                  <p className="text-xs text-gray-500">{patient.condition}</p>
+            {assignedPatients.length > 0 ? (
+              assignedPatients.slice(0, 5).map((patient) => (
+                <div key={patient.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{patient.name}</p>
+                    <p className="text-xs text-gray-500">{patient.medicalConditions || 'General care'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">{patient.lastVisit ? new Date(patient.lastVisit).toLocaleDateString() : 'No visits'}</p>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      patient.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {patient.status || 'active'}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">{patient.lastVisit}</p>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    patient.status === 'stable' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {patient.status}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-gray-500 text-sm text-center">No patients assigned yet</p>
+            )}
           </div>
         </div>
       </div>
 
       {/* Upcoming Consultations */}
-      <div className="bg-white rounded-lg shadow">
+      <div 
+        className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+        onClick={() => navigate('/service-provider/consultations')}
+      >
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Upcoming Consultations</h3>
@@ -271,17 +271,23 @@ const DoctorSpecificSections = ({ userProfile }) => {
         </div>
         <div className="p-6">
           <div className="space-y-4">
-            {upcomingConsultations.map((consultation) => (
-              <div key={consultation.id} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{consultation.patient}</p>
-                  <p className="text-xs text-gray-500">{consultation.type}</p>
+            {upcomingAppointments.length > 0 ? (
+              upcomingAppointments.slice(0, 5).map((consultation) => (
+                <div key={consultation.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{consultation.patientName || 'Patient'}</p>
+                    <p className="text-xs text-gray-500">{consultation.type || 'Consultation'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {consultation.scheduledTime ? new Date(consultation.scheduledTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'TBD'}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{consultation.time}</p>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-gray-500 text-sm text-center">No upcoming consultations</p>
+            )}
           </div>
         </div>
       </div>
@@ -393,6 +399,8 @@ const ServiceProviderDashboard = () => {
   });
   const [todaysTasksData, setTodaysTasksData] = useState([]);
   const [pendingTasksData, setPendingTasksData] = useState([]);
+  const [assignedPatientsData, setAssignedPatientsData] = useState([]);
+  const [upcomingAppointmentsData, setUpcomingAppointmentsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientModal, setShowPatientModal] = useState(false);
@@ -519,6 +527,8 @@ const ServiceProviderDashboard = () => {
         // Store actual task data for caregiver sections (merged)
         setTodaysTasksData(mergedToday);
         setPendingTasksData(mergedPending);
+        setAssignedPatientsData(patients || []);
+        setUpcomingAppointmentsData(upcomingAppointments || []);
         
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -629,12 +639,19 @@ const ServiceProviderDashboard = () => {
       <QuickStats userRole={effectiveRole} stats={stats} loading={loading} onPatientClick={handlePatientClick} />
       
       {isDoctor && (
-        <DoctorSpecificSections userProfile={userProfile} />
+        <DoctorSpecificSections 
+          userProfile={userProfile}
+          assignedPatients={assignedPatientsData}
+          upcomingAppointments={upcomingAppointmentsData}
+        />
       )}
       
       {isCaregiver && (
         <div className="p-6">
-          <SpecializedCaregiverDashboard onPatientClick={handlePatientClick} />
+          <SpecializedCaregiverDashboard 
+            onPatientClick={handlePatientClick}
+            assignedPatients={assignedPatientsData}
+          />
           <div className="mt-6">
             <CaregiverSpecificSections 
               userProfile={userProfile} 
