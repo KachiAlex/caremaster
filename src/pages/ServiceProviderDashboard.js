@@ -218,7 +218,7 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick }) => {
 // Doctor-Specific Components
 const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAppointments = [] }) => {
   const navigate = useNavigate();
-
+  
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
       {/* Recent Patients */}
