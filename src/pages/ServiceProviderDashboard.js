@@ -424,16 +424,27 @@ const ServiceProviderDashboard = () => {
       try {
         setLoading(true);
         
+        console.log('📊 ServiceProviderDashboard loading data for:', {
+          userId: userProfile.id,
+          uid: userProfile.uid,
+          userRole,
+          userType: userProfile.userType,
+          email: userProfile.email
+        });
+        
         const promises = [];
+        
+        // Use uid if id is not available (Firebase Auth users)
+        const userId = userProfile.id || userProfile.uid;
         
         // Load patients with error handling
         if (isDoctor) {
-          promises.push(getPatientsByDoctor(userProfile.id).catch(error => {
+          promises.push(getPatientsByDoctor(userId).catch(error => {
             console.log('Could not load patients by doctor - this is normal for new users');
             return [];
           }));
         } else if (isCaregiver) {
-          promises.push(getPatientsByCaregiver(userProfile.id).catch(error => {
+          promises.push(getPatientsByCaregiver(userId).catch(error => {
             console.log('Could not load caregiver patients - this is normal for new users');
             return [];
           }));
@@ -442,27 +453,27 @@ const ServiceProviderDashboard = () => {
         }
         
         // Load appointments with error handling
-        promises.push(getTodaysAppointments(userProfile.id, userRole).catch(error => {
+        promises.push(getTodaysAppointments(userId, userRole).catch(error => {
           console.log('Could not load today\'s appointments - this is normal for new users');
           return [];
         }));
-        promises.push(getUpcomingAppointments(userProfile.id, userRole).catch(error => {
+        promises.push(getUpcomingAppointments(userId, userRole).catch(error => {
           console.log('Could not load upcoming appointments - this is normal for new users');
           return [];
         }));
         
         // Load tasks for assignees (caregivers and doctors)
         if (isCaregiver || isDoctor) {
-          promises.push(getTodaysCareTasks(userProfile.id).catch(error => {
+          promises.push(getTodaysCareTasks(userId).catch(error => {
             console.log('Could not load today\'s tasks - this is normal for new users');
             return [];
           }));
-          promises.push(getPendingCareTasks(userProfile.id).catch(error => {
+          promises.push(getPendingCareTasks(userId).catch(error => {
             console.log('Could not load pending tasks - this is normal for new users');
             return [];
           }));
           // Also load admin-created task assignments (supports legacy 'assignedTo') and merge
-          promises.push(getTaskAssignmentsByCaregiver(userProfile.id).catch(error => {
+          promises.push(getTaskAssignmentsByCaregiver(userId).catch(error => {
             console.log('Could not load task assignments - this is normal for new users');
             return [];
           }));
@@ -473,7 +484,7 @@ const ServiceProviderDashboard = () => {
         }
         
         // Load messages with error handling
-        promises.push(getUnreadMessageCount(userProfile.id).catch(error => {
+        promises.push(getUnreadMessageCount(userId).catch(error => {
           console.log('Could not load unread message count - this is normal for new users');
           return 0;
         }));
