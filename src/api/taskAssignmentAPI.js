@@ -72,28 +72,52 @@ export const getAllTaskAssignments = async () => {
 export const getTaskAssignmentsByCaregiver = async (caregiverId) => {
   try {
     const assignmentsRef = collection(db, TASK_ASSIGNMENTS_COLLECTION);
-    const q = query(
-      assignmentsRef, 
-      where('caregiverId', '==', caregiverId),
-      orderBy('scheduledTime', 'asc')
+
+    // Primary query: new schema where tasks include caregiverId
+    const qByCaregiverId = query(
+      assignmentsRef,
+      where('caregiverId', '==', caregiverId)
     );
-    const querySnapshot = await getDocs(q);
-    
-    const assignments = [];
-    querySnapshot.forEach((doc) => {
-      const assignmentData = doc.data();
-      assignments.push({
-        id: doc.id,
+
+    // Fallback query: older tasks that used 'assignedTo' instead of 'caregiverId'
+    const qByAssignedTo = query(
+      assignmentsRef,
+      where('assignedTo', '==', caregiverId)
+    );
+
+    const [snapByCaregiver, snapByAssigned] = await Promise.all([
+      getDocs(qByCaregiverId).catch(() => ({ empty: true, docs: [] })),
+      getDocs(qByAssignedTo).catch(() => ({ empty: true, docs: [] }))
+    ]);
+
+    const mapDoc = (docu) => {
+      const assignmentData = docu.data();
+      const scheduled = assignmentData.scheduledTime?.toDate?.() || assignmentData.scheduledTime || assignmentData.dueDate?.toDate?.() || assignmentData.dueDate;
+      return {
+        id: docu.id,
         ...assignmentData,
-        scheduledTime: assignmentData.scheduledTime?.toDate?.() || assignmentData.scheduledTime,
+        caregiverId: assignmentData.caregiverId || assignmentData.assignedTo || caregiverId,
+        scheduledTime: scheduled,
         dueDate: assignmentData.dueDate?.toDate?.() || assignmentData.dueDate,
         completedAt: assignmentData.completedAt?.toDate?.() || assignmentData.completedAt,
         createdAt: assignmentData.createdAt?.toDate?.() || assignmentData.createdAt,
         updatedAt: assignmentData.updatedAt?.toDate?.() || assignmentData.updatedAt,
-      });
+      };
+    };
+
+    const merged = [...snapByCaregiver.docs.map(mapDoc), ...snapByAssigned.docs.map(mapDoc)];
+
+    // Deduplicate by id
+    const unique = Array.from(new Map(merged.map(a => [a.id, a])).values());
+
+    // Sort in memory by scheduledTime asc, fallback to createdAt
+    unique.sort((a, b) => {
+      const aTime = (a.scheduledTime ? new Date(a.scheduledTime) : (a.createdAt ? new Date(a.createdAt) : new Date(0))).getTime();
+      const bTime = (b.scheduledTime ? new Date(b.scheduledTime) : (b.createdAt ? new Date(b.createdAt) : new Date(0))).getTime();
+      return aTime - bTime;
     });
-    
-    return assignments;
+
+    return unique;
   } catch (error) {
     console.error('Error fetching caregiver task assignments:', error);
     throw error;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
@@ -12,59 +12,59 @@ import secureConfigService from './services/secureConfigService';
 import Layout from './components/Layout';
 // Old admin components removed - using new admin system
 import ServiceProviderLayout from './components/ServiceProviderLayout';
-import Landing from './pages/Landing';
-import Auth from './pages/Auth';
-import AdminLogin from './pages/AdminLogin';
-import Dashboard from './pages/Dashboard';
-import Medications from './pages/Medications';
-import VitalSigns from './pages/VitalSigns';
-import Appointments from './pages/Appointments';
-import Profile from './pages/Profile';
-import CaregiverDashboard from './pages/CaregiverDashboard';
-import PreclinicCaregiverDashboard from './pages/PreclinicCaregiverDashboard';
-import CaregiverSchedule from './pages/CaregiverSchedule';
-import CaregiverPatients from './pages/CaregiverPatients';
-import CaregiverTasks from './pages/CaregiverTasks';
-import CaregiverOnboarding from './pages/CaregiverOnboarding';
-import CaregiverMessages from './pages/CaregiverMessages';
-import CaregiverNavigation from './pages/CaregiverNavigation';
-import CaregiverPhotos from './pages/CaregiverPhotos';
-import CaregiverPerformance from './pages/CaregiverPerformance';
-import CaregiverEmergency from './pages/CaregiverEmergency';
-import CaregiverSettings from './pages/CaregiverSettings';
-import Telemedicine from './pages/Telemedicine';
+const Landing = lazy(() => import('./pages/Landing'));
+const Auth = lazy(() => import('./pages/Auth'));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Medications = lazy(() => import('./pages/Medications'));
+const VitalSigns = lazy(() => import('./pages/VitalSigns'));
+const Appointments = lazy(() => import('./pages/Appointments'));
+const Profile = lazy(() => import('./pages/Profile'));
+const CaregiverDashboard = lazy(() => import('./pages/CaregiverDashboard'));
+const PreclinicCaregiverDashboard = lazy(() => import('./pages/PreclinicCaregiverDashboard'));
+const CaregiverSchedule = lazy(() => import('./pages/CaregiverSchedule'));
+const CaregiverPatients = lazy(() => import('./pages/CaregiverPatients'));
+const CaregiverTasks = lazy(() => import('./pages/CaregiverTasks'));
+const CaregiverOnboarding = lazy(() => import('./pages/CaregiverOnboarding'));
+const CaregiverMessages = lazy(() => import('./pages/CaregiverMessages'));
+const CaregiverNavigation = lazy(() => import('./pages/CaregiverNavigation'));
+const CaregiverPhotos = lazy(() => import('./pages/CaregiverPhotos'));
+const CaregiverPerformance = lazy(() => import('./pages/CaregiverPerformance'));
+const CaregiverEmergency = lazy(() => import('./pages/CaregiverEmergency'));
+const CaregiverSettings = lazy(() => import('./pages/CaregiverSettings'));
+const Telemedicine = lazy(() => import('./pages/Telemedicine'));
 import CaregiverLayout from './components/CaregiverLayout';
-import Messages from './pages/Messages';
-import Subscription from './pages/Subscription';
-import Services from './pages/Services';
-import PatientCaregivers from './pages/PatientCaregivers';
-import Pricing from './pages/Pricing';
+const Messages = lazy(() => import('./pages/Messages'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const Services = lazy(() => import('./pages/Services'));
+const PatientCaregivers = lazy(() => import('./pages/PatientCaregivers'));
+const Pricing = lazy(() => import('./pages/Pricing'));
 // All onboarding is now integrated into Auth.js
-import AdminDashboard from './pages/AdminDashboard';
-import AdminUsers from './pages/AdminUsers';
-import AdminReports from './pages/AdminReports';
-import AdminAppointments from './pages/AdminAppointments';
-import AdminSettings from './pages/AdminSettings';
-import AdminEmergency from './pages/AdminEmergency';
-import AdminEmergencyProtocols from './pages/AdminEmergencyProtocols';
-import AdminMedications from './pages/AdminMedications';
-import AdminMedicationAnalytics from './pages/AdminMedicationAnalytics';
-import AdminCaregivers from './pages/AdminCaregivers';
-import AdminAnalytics from './pages/AdminAnalytics';
-import AdminCommunication from './pages/AdminCommunication';
-import AdminAuditLogs from './pages/AdminAuditLogs';
-import AdminPatientAssignments from './pages/AdminPatientAssignments';
-import AdminUserVerification from './pages/AdminUserVerification';
-import SystemStatus from './pages/SystemStatus';
-import MedicalDocuments from './pages/MedicalDocuments';
-import AdminPatientDatabase from './pages/AdminPatientDatabase';
-import AdminCaregiverManagement from './pages/AdminCaregiverManagement';
-import NewAdminLogin from './pages/NewAdminLogin';
-import NewAdminDashboard from './pages/NewAdminDashboard';
-import ServiceProviderDashboard from './pages/ServiceProviderDashboard';
-import UserManagement from './pages/UserManagement';
-import CallsPage from './pages/CallsPage';
-import WebRTCTest from './pages/WebRTCTest';
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const AdminReports = lazy(() => import('./pages/AdminReports'));
+const AdminAppointments = lazy(() => import('./pages/AdminAppointments'));
+const AdminSettings = lazy(() => import('./pages/AdminSettings'));
+const AdminEmergency = lazy(() => import('./pages/AdminEmergency'));
+const AdminEmergencyProtocols = lazy(() => import('./pages/AdminEmergencyProtocols'));
+const AdminMedications = lazy(() => import('./pages/AdminMedications'));
+const AdminMedicationAnalytics = lazy(() => import('./pages/AdminMedicationAnalytics'));
+const AdminCaregivers = lazy(() => import('./pages/AdminCaregivers'));
+const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
+const AdminCommunication = lazy(() => import('./pages/AdminCommunication'));
+const AdminAuditLogs = lazy(() => import('./pages/AdminAuditLogs'));
+const AdminPatientAssignments = lazy(() => import('./pages/AdminPatientAssignments'));
+const AdminUserVerification = lazy(() => import('./pages/AdminUserVerification'));
+const SystemStatus = lazy(() => import('./pages/SystemStatus'));
+const MedicalDocuments = lazy(() => import('./pages/MedicalDocuments'));
+const AdminPatientDatabase = lazy(() => import('./pages/AdminPatientDatabase'));
+const AdminCaregiverManagement = lazy(() => import('./pages/AdminCaregiverManagement'));
+const NewAdminLogin = lazy(() => import('./pages/NewAdminLogin'));
+const NewAdminDashboard = lazy(() => import('./pages/NewAdminDashboard'));
+const ServiceProviderDashboard = lazy(() => import('./pages/ServiceProviderDashboard'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
+const CallsPage = lazy(() => import('./pages/CallsPage'));
+const WebRTCTest = lazy(() => import('./pages/WebRTCTest'));
 import MessagingInterface from './components/MessagingInterface';
 import MobileOptimization from './components/MobileOptimization';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -312,6 +312,7 @@ function App() {
         onGesture={handleGesture}
       />
       
+      <Suspense fallback={<LoadingSpinner />}>
       <Routes>
       {/* Public routes */}
       <Route 
@@ -487,6 +488,7 @@ function App() {
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
       </UserProvider>
     </ErrorBoundary>
   );

@@ -449,7 +449,7 @@ const ServiceProviderDashboard = () => {
             console.log('Could not load pending tasks - this is normal for new users');
             return [];
           }));
-          // Also load admin-created task assignments and merge into views
+          // Also load admin-created task assignments (supports legacy 'assignedTo') and merge
           promises.push(getTaskAssignmentsByCaregiver(userProfile.id).catch(error => {
             console.log('Could not load task assignments - this is normal for new users');
             return [];

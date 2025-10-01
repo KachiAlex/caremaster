@@ -11,7 +11,7 @@ const LOG_LEVELS = {
 
 class Logger {
   constructor() {
-    this.logLevel = environmentConfig.isDevelopment() ? LOG_LEVELS.DEBUG : LOG_LEVELS.INFO;
+    this.logLevel = environmentConfig.isDevelopment() ? LOG_LEVELS.DEBUG : LOG_LEVELS.WARN;
     this.logs = [];
     this.maxLogSize = 1000;
   }
@@ -68,8 +68,12 @@ class Logger {
       this.logs = this.logs.slice(-this.maxLogSize);
     }
 
-    // Console logging
-    this.consoleLog(levelName, message, data);
+    // Console logging (throttled in production for INFO/DEBUG)
+    if (environmentConfig.isProduction() && (levelName === 'INFO' || levelName === 'DEBUG')) {
+      // Skip noisy logs in production
+    } else {
+      this.consoleLog(levelName, message, data);
+    }
 
     // Store in localStorage for persistence
     this.persistLog(logEntry);
