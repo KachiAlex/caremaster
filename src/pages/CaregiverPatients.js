@@ -40,39 +40,22 @@ const CaregiverPatients = () => {
   const [showAssignmentRequest, setShowAssignmentRequest] = useState(false);
 
   const loadPatients = async () => {
-    if (!userProfile?.id) return;
+    const userId = userProfile?.id || userProfile?.uid;
+    if (!userId) return;
     
     try {
       setLoading(true);
       
-      // Load assigned patients from admin-created assignments
-      let patientsData = [];
-      try {
-        const assignments = await assignmentAPI.getAssignmentsByCaregiver(userProfile.id);
-        console.log(`Found ${assignments.length} assignments for caregiver ${userProfile.id}`);
-        
-        // Extract patient information from assignments
-        patientsData = assignments.map(assignment => ({
-          id: assignment.patientId,
-          name: assignment.patientName,
-          email: assignment.patientEmail,
-          assignedAt: assignment.assignedAt,
-          status: assignment.status,
-          assignmentId: assignment.id
-        }));
-      } catch (error) {
-        console.warn('Failed to fetch assigned patients from assignments:', error);
-        
-        // Fallback to legacy method
-        patientsData = await getPatientsByCaregiver(userProfile.id).catch(err => {
-          console.warn('Failed to fetch assigned patients (fallback):', err);
-          return [];
-        });
-      }
-
-      console.log(`Loading assigned patients for caregiver ${userProfile.id}:`, patientsData.length);
+      console.log('🔍 CaregiverPatients loading for userId:', userId);
       
-      // Use only real assigned patients data - no mock data
+      // Load assigned patients from admin-created assignments AND legacy sources
+      const patientsData = await getPatientsByCaregiver(userId).catch(err => {
+        console.warn('Failed to fetch assigned patients:', err);
+        return [];
+      });
+
+      console.log(`✅ Loaded ${patientsData.length} assigned patients for caregiver ${userId}`);
+      
       setPatients(patientsData || []);
     } catch (error) {
       console.error('Error loading patients:', error);
@@ -83,15 +66,17 @@ const CaregiverPatients = () => {
   };
 
   useEffect(() => {
-    if (userProfile?.id) {
+    const userId = userProfile?.id || userProfile?.uid;
+    if (userId) {
       loadPatients();
       
       // Set up real-time subscription for assignments
       const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
-        console.log(`Real-time update: Found ${assignments.length} patient assignments for caregiver ${userProfile.id}`);
+        console.log(`Real-time update: Found ${assignments.length} total assignments`);
         
         // Filter assignments for this specific caregiver
-        const caregiverAssignments = assignments.filter(a => a.caregiverId === userProfile.id);
+        const caregiverAssignments = assignments.filter(a => a.caregiverId === userId);
+        console.log(`Filtered to ${caregiverAssignments.length} for caregiver ${userId}`);
         
         // Extract patient information from assignments
         const patientsData = caregiverAssignments.map(assignment => ({

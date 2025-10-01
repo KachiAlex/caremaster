@@ -135,21 +135,23 @@ const DashboardHeader = ({ userProfile, userRole }) => {
   );
 };
 
-const QuickStats = ({ userRole, stats, loading, onPatientClick }) => {
+const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onShowAppointments, onShowMessages }) => {
+  const navigate = useNavigate();
+  
   const getStatsForRole = () => {
     if (userRole === 'doctor') {
       return [
-        { label: 'Patients', value: stats.patients || 0, icon: Users, color: 'blue' },
-        { label: 'Today\'s Appointments', value: stats.todaysAppointments || 0, icon: Calendar, color: 'green' },
-        { label: 'Upcoming', value: stats.upcomingAppointments || 0, icon: Clock, color: 'purple' },
-        { label: 'Unread Messages', value: stats.unreadMessages || 0, icon: MessageSquare, color: 'orange' },
+        { label: 'Patients', value: stats.patients || 0, icon: Users, color: 'blue', action: () => navigate('/service-provider/medical-records') },
+        { label: 'Today\'s Appointments', value: stats.todaysAppointments || 0, icon: Calendar, color: 'green', action: onShowAppointments },
+        { label: 'Upcoming', value: stats.upcomingAppointments || 0, icon: Clock, color: 'purple', action: () => navigate('/service-provider/consultations') },
+        { label: 'Unread Messages', value: stats.unreadMessages || 0, icon: MessageSquare, color: 'orange', action: onShowMessages },
       ];
     } else if (userRole === 'caregiver') {
       return [
-        { label: 'Assigned Patients', value: stats.patients || 0, icon: Users, color: 'blue' },
-        { label: 'Today\'s Tasks', value: stats.todaysTasks || 0, icon: ClipboardList, color: 'green' },
-        { label: 'Pending Tasks', value: stats.pendingTasks || 0, icon: Clock, color: 'purple' },
-        { label: 'Unread Messages', value: stats.unreadMessages || 0, icon: MessageSquare, color: 'orange' },
+        { label: 'Assigned Patients', value: stats.patients || 0, icon: Users, color: 'blue', action: () => navigate('/service-provider/medical-records') },
+        { label: 'Today\'s Tasks', value: stats.todaysTasks || 0, icon: ClipboardList, color: 'green', action: onShowTasks },
+        { label: 'Pending Tasks', value: stats.pendingTasks || 0, icon: Clock, color: 'purple', action: onShowTasks },
+        { label: 'Unread Messages', value: stats.unreadMessages || 0, icon: MessageSquare, color: 'orange', action: onShowMessages },
       ];
     }
     return [];
@@ -169,28 +171,8 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick }) => {
         };
 
         const handleClick = () => {
-          if (stat.label === "Today's Tasks" || stat.label === "Pending Tasks") {
-            // Show task modal instead of redirecting
-            toast.info('Task management feature coming soon!');
-          } else if (stat.label === "Assigned Patients") {
-            // Show patient modal instead of redirecting
-            // We'll need to load patients and show them in a modal
-            // For now, show a placeholder patient
-            const placeholderPatient = {
-              id: 'placeholder',
-              name: 'Patient Name',
-              age: 'N/A',
-              condition: 'General Care',
-              phone: 'N/A',
-              allergies: 'None reported',
-              medications: 'None',
-              status: 'stable'
-            };
-            onPatientClick(placeholderPatient);
-          } else if (stat.label === "Unread Messages") {
-            window.location.href = '/service-provider/messages';
-          } else if (stat.label === "Today's Appointments" || stat.label === "Upcoming") {
-            window.location.href = '/service-provider/consultations';
+          if (stat.action) {
+            stat.action();
           }
         };
 
@@ -634,10 +616,30 @@ const ServiceProviderDashboard = () => {
     }
   };
 
+  const handleShowTasks = () => {
+    navigate('/service-provider/tasks');
+  };
+
+  const handleShowAppointments = () => {
+    navigate('/service-provider/consultations');
+  };
+
+  const handleShowMessages = () => {
+    navigate('/service-provider/messages');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardHeader userProfile={userProfile} userRole={effectiveRole} />
-      <QuickStats userRole={effectiveRole} stats={stats} loading={loading} onPatientClick={handlePatientClick} />
+      <QuickStats 
+        userRole={effectiveRole} 
+        stats={stats} 
+        loading={loading} 
+        onPatientClick={handlePatientClick}
+        onShowTasks={handleShowTasks}
+        onShowAppointments={handleShowAppointments}
+        onShowMessages={handleShowMessages}
+      />
       
       {isDoctor && (
         <DoctorSpecificSections 
