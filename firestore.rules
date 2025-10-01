@@ -93,6 +93,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Caregiver assignments (alternative collection name)
+    match /caregiverAssignments/{assignmentId} {
+      allow read: if isAdmin() || (request.auth != null && isCaregiver());
+      allow write: if isAdmin();
+    }
+    
     match /alerts/{document=**} {
       allow read, write: if isAdmin();
     }

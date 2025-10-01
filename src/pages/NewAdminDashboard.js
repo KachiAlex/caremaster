@@ -66,6 +66,8 @@ import AdminGuard from '../components/AdminGuard';
 import { toast } from 'react-toastify';
 import { forceLoadCaregivers, forceLoadPatients } from '../utils/forceLoadData';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
+import { updateUserStatus } from '../api/usersAPI';
+import { updatePatient } from '../api/patientsAPI';
 
 const NewAdminDashboard = () => {
   const { userProfile } = useUser();
@@ -306,6 +308,79 @@ const NewAdminDashboard = () => {
       navigate('/admin/login');
     } catch (e) {
       toast.error('Failed to log out');
+    }
+  };
+
+  const handleUnassign = async (assignmentId) => {
+    try {
+      if (!window.confirm('Are you sure you want to unassign this caregiver from the patient?')) {
+        return;
+      }
+
+      await assignmentAPI.endAssignment(assignmentId, 'Unassigned by admin');
+      toast.success('Assignment removed successfully');
+      loadAssignments();
+      
+      // Refresh patient modal if open
+      if (viewingPatient) {
+        const updatedAssignments = await assignmentAPI.getAssignmentsByPatient(viewingPatient.id);
+        setViewingPatient({
+          ...viewingPatient,
+          assignedCaregivers: updatedAssignments
+        });
+      }
+    } catch (error) {
+      console.error('Error unassigning:', error);
+      toast.error('Failed to remove assignment');
+    }
+  };
+
+  const handleSuspendCaregiver = async (caregiver) => {
+    try {
+      const newStatus = caregiver.status === 'suspended' ? 'active' : 'suspended';
+      const action = newStatus === 'suspended' ? 'suspend' : 'activate';
+      
+      if (!window.confirm(`Are you sure you want to ${action} ${caregiver.name}?`)) {
+        return;
+      }
+
+      await updateUserStatus(caregiver.id, newStatus);
+      
+      // Send notification to caregiver
+      if (newStatus === 'suspended') {
+        await createNotification({
+          userId: caregiver.id,
+          type: NOTIFICATION_TYPES.SYSTEM,
+          title: 'Account Suspended',
+          message: 'Your account has been suspended. Please contact administration.',
+          priority: NOTIFICATION_PRIORITIES.URGENT
+        });
+      }
+      
+      toast.success(`Caregiver ${action}d successfully`);
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error updating caregiver status:', error);
+      toast.error('Failed to update caregiver status');
+    }
+  };
+
+  const handleArchivePatient = async (patient) => {
+    try {
+      if (!window.confirm(`Are you sure you want to archive ${patient.name}'s record? This will mark them as inactive.`)) {
+        return;
+      }
+
+      await updatePatient(patient.id, { status: 'archived', archivedAt: new Date().toISOString() });
+      toast.success('Patient record archived successfully');
+      loadDashboardData();
+      
+      if (showPatientModal) {
+        setShowPatientModal(false);
+      }
+    } catch (error) {
+      console.error('Error archiving patient:', error);
+      toast.error('Failed to archive patient record');
     }
   };
 
@@ -750,11 +825,11 @@ const NewAdminDashboard = () => {
                       <ClipboardList className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => setShowTelemedicine(true)}
-                      className="text-orange-600 hover:text-orange-900"
-                      title="Video Call"
+                      onClick={() => handleSuspendCaregiver(caregiver)}
+                      className={`${caregiver.status === 'suspended' ? 'text-green-600 hover:text-green-900' : 'text-red-600 hover:text-red-900'} mr-3`}
+                      title={caregiver.status === 'suspended' ? 'Activate' : 'Suspend'}
                     >
-                      <Video className="h-4 w-4" />
+                      <Shield className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
@@ -860,11 +935,20 @@ const NewAdminDashboard = () => {
                         setSelectedPatient(patient);
                         setShowNurseReport(true);
                       }}
-                      className="text-orange-600 hover:text-orange-900"
+                      className="text-orange-600 hover:text-orange-900 mr-3"
                       title="Medical Report"
                     >
                       <FileText className="h-4 w-4" />
                     </button>
+                    {patient.status !== 'archived' && (
+                      <button
+                        onClick={() => handleArchivePatient(patient)}
+                        className="text-gray-600 hover:text-gray-900"
+                        title="Archive Patient"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -1030,10 +1114,19 @@ const NewAdminDashboard = () => {
                                 </button>
                                 <button
                                   onClick={() => handleViewPatient({ id: assignment.patientId, name: assignment.patientName })}
-                                  className="text-green-600 hover:text-green-900"
+                                  className="text-green-600 hover:text-green-900 mr-3"
                                 >
                                   View Details
                                 </button>
+                                {assignment.status === 'active' && (
+                                  <button
+                                    onClick={() => handleUnassign(assignment.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                    title="Unassign"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -1428,24 +1521,35 @@ const NewAdminDashboard = () => {
                       viewingPatient.assignedCaregivers.map((assignment, index) => (
                         <div key={index} className="bg-white p-3 rounded border">
                           <div className="flex items-center justify-between">
-                            <div>
+                            <div className="flex-1">
                               <p className="font-medium text-sm">{assignment.caregiverName}</p>
                               <p className="text-xs text-gray-600 mt-1">{assignment.caregiverRole}</p>
                               {assignment.caregiverEmail && (
                                 <p className="text-xs text-gray-500">{assignment.caregiverEmail}</p>
                               )}
+                              <p className="text-xs text-gray-500 mt-2">
+                                Assigned: {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString() : 'N/A'}
+                              </p>
                             </div>
-                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                              assignment.status === 'active' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {assignment.status || 'active'}
-                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                assignment.status === 'active' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {assignment.status || 'active'}
+                              </span>
+                              {assignment.status === 'active' && (
+                                <button
+                                  onClick={() => handleUnassign(assignment.id)}
+                                  className="text-red-600 hover:text-red-900"
+                                  title="Unassign"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Assigned: {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString() : 'N/A'}
-                          </p>
                         </div>
                       ))
                     ) : (
