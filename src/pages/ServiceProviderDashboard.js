@@ -371,6 +371,18 @@ const ServiceProviderDashboard = () => {
   const isDoctor = (userRole === 'doctor') || normalizedType === 'doctor' || normalizedQualification.includes('doctor');
   const isCaregiver = (userRole === 'caregiver') || normalizedType === 'caregiver' || (!isDoctor && !!normalizedType);
   const effectiveRole = isDoctor ? 'doctor' : (isCaregiver ? 'caregiver' : (userRole || 'caregiver'));
+  
+  // Check if caregiver is a nurse (can submit nurse reports)
+  const isNurse = () => {
+    const specs = userProfile?.specializations || [];
+    const qual = (userProfile?.medicalQualification || '').toLowerCase();
+    return specs.includes('Registered Nurse') || 
+           specs.includes('LPN') || 
+           specs.includes('Licensed Practical Nurse (LPN)') ||
+           qual.includes('nurse') || 
+           qual.includes('rn') ||
+           qual.includes('lpn');
+  };
   const [stats, setStats] = useState({
     patients: 0,
     todaysAppointments: 0,
@@ -860,8 +872,8 @@ const ServiceProviderDashboard = () => {
                 </>
               )}
 
-              {/* Caregiver View: Nurse Report Submission */}
-              {isCaregiver && (
+              {/* Caregiver View: Nurse Report Submission (Nurses Only) */}
+              {isCaregiver && isNurse() && (
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                     <Stethoscope className="h-5 w-5 text-blue-600 mr-2" />

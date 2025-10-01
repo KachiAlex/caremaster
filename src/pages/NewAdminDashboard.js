@@ -65,6 +65,7 @@ import TelemedicineInterface from '../components/TelemedicineInterface';
 import AdminGuard from '../components/AdminGuard';
 import { toast } from 'react-toastify';
 import { forceLoadCaregivers, forceLoadPatients } from '../utils/forceLoadData';
+import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 
 const NewAdminDashboard = () => {
   const { userProfile } = useUser();
@@ -366,6 +367,21 @@ const NewAdminDashboard = () => {
         status: 'active'
       });
       
+      // Send notification to caregiver
+      await createNotification({
+        userId: selectedCaregiverForAssignment,
+        type: NOTIFICATION_TYPES.TASK,
+        title: 'New Patient Assigned',
+        message: `You have been assigned to care for ${patient?.name || 'a new patient'}`,
+        priority: NOTIFICATION_PRIORITIES.HIGH,
+        metadata: {
+          patientId: selectedPatientForAssignment,
+          patientName: patient?.name,
+          assignmentType: 'patient',
+          navigateTo: '/service-provider/medical-records'
+        }
+      });
+      
       toast.success('Assignment created successfully');
       setShowAssignmentModal(false);
       setSelectedPatientForAssignment('');
@@ -382,6 +398,11 @@ const NewAdminDashboard = () => {
       const caregiverId = selectedCaregiver?.id || selectedCaregiverForAssignment || '';
       const patientId = selectedPatient?.id || newTask.patientId || '';
 
+      if (!caregiverId) {
+        toast.error('Please select a caregiver');
+        return;
+      }
+
       await createTaskAssignment({
         ...newTask,
         caregiverId,
@@ -390,6 +411,22 @@ const NewAdminDashboard = () => {
         assignedByName: userProfile.displayName || userProfile.email,
         caregiverName: selectedCaregiver?.name,
         patientName: selectedPatient?.name
+      });
+      
+      // Send notification to caregiver
+      await createNotification({
+        userId: caregiverId,
+        type: NOTIFICATION_TYPES.TASK,
+        title: 'New Task Assigned',
+        message: `New task: ${newTask.title}${selectedPatient?.name ? ` for ${selectedPatient.name}` : ''}`,
+        priority: newTask.priority === 'high' ? NOTIFICATION_PRIORITIES.HIGH : NOTIFICATION_PRIORITIES.MEDIUM,
+        metadata: {
+          taskTitle: newTask.title,
+          patientId,
+          patientName: selectedPatient?.name,
+          dueDate: newTask.dueDate,
+          navigateTo: '/service-provider/tasks'
+        }
       });
       
       toast.success('Task assigned successfully');
