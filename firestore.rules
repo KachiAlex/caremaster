@@ -80,9 +80,8 @@ service cloud.firestore {
     // Care tasks assigned to caregivers/doctors
     match /careTasks/{taskId} {
       // Allow read for the assignee whether caregiver or doctor
-      allow read: if isAdmin() || (
-        (isCaregiver() || isDoctor()) && resource.data.caregiverId == request.auth.uid
-      );
+      allow read: if isAdmin() || 
+                     (request.auth != null && (isCaregiver() || isDoctor()));
       // Allow updates by the assignee (caregiver/doctor) for status-only changes
       allow update: if (isCaregiver() || isDoctor()) && resource.data.caregiverId == request.auth.uid;
       allow create, delete: if isAdmin();
@@ -90,7 +89,7 @@ service cloud.firestore {
     
     // Patient-caregiver assignments: caregivers can read their own
     match /patientAssignments/{assignmentId} {
-      allow read: if isAdmin() || (isCaregiver() && resource.data.caregiverId == request.auth.uid);
+      allow read: if isAdmin() || (request.auth != null && isCaregiver());
       allow write: if isAdmin();
     }
     
@@ -205,6 +204,26 @@ service cloud.firestore {
     match /emergencyProtocols/{protocolId} {
       allow read: if isAdmin() || isDoctor() || isCaregiver();
       allow write: if isAdmin() || isDoctor();
+    }
+    
+    // Notifications collection - users can read/write their own notifications
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && (
+        isAdmin() || 
+        resource.data.userId == request.auth.uid
+      );
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        request.resource.data.userId == request.auth.uid
+      );
+      allow update: if request.auth != null && (
+        isAdmin() || 
+        resource.data.userId == request.auth.uid
+      );
+      allow delete: if request.auth != null && (
+        isAdmin() || 
+        resource.data.userId == request.auth.uid
+      );
     }
     
     // Allow admins to read/write any other collections

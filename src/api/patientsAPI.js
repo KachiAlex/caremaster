@@ -73,10 +73,14 @@ export const getPatientById = async (patientId) => {
 // Get patients assigned to a caregiver
 export const getPatientsByCaregiver = async (caregiverId) => {
   try {
+    console.log('🔍 getPatientsByCaregiver called with caregiverId:', caregiverId);
+    
     // First try to get patients directly assigned to caregiver
     const patientsRef = collection(db, PATIENTS_COLLECTION);
     const directQuery = query(patientsRef, where('assignedCaregiver', '==', caregiverId));
     const directSnapshot = await getDocs(directQuery);
+    
+    console.log(`  → Found ${directSnapshot.size} patients in 'patients' collection with assignedCaregiver`);
     
     const directPatients = [];
     directSnapshot.forEach((doc) => {
@@ -96,6 +100,8 @@ export const getPatientsByCaregiver = async (caregiverId) => {
     const tasksQuery = query(tasksRef, where('caregiverId', '==', caregiverId));
     const tasksSnapshot = await getDocs(tasksQuery);
     
+    console.log(`  → Found ${tasksSnapshot.size} tasks in 'careTasks' collection`);
+    
     const patientIds = new Set();
     tasksSnapshot.forEach((doc) => {
       const taskData = doc.data();
@@ -109,12 +115,17 @@ export const getPatientsByCaregiver = async (caregiverId) => {
     const assignmentsQuery = query(assignmentsRef, where('caregiverId', '==', caregiverId));
     const assignmentsSnapshot = await getDocs(assignmentsQuery);
 
+    console.log(`  → Found ${assignmentsSnapshot.size} assignments in 'patientAssignments' collection`);
+
     assignmentsSnapshot.forEach((doc) => {
       const assignmentData = doc.data();
+      console.log(`    - Assignment: patientId=${assignmentData.patientId}, status=${assignmentData.status}`);
       if (assignmentData.patientId && (assignmentData.status ?? 'active') === 'active') {
         patientIds.add(assignmentData.patientId);
       }
     });
+    
+    console.log(`  → Total unique patient IDs to fetch: ${patientIds.size}`);
 
     // Get patient details for task-assigned and explicitly assigned patients
     const taskPatients = [];
@@ -142,6 +153,8 @@ export const getPatientsByCaregiver = async (caregiverId) => {
           const uniquePatients = allPatients.filter((patient, index, self) => 
             index === self.findIndex(p => p.id === patient.id)
           );
+          
+          console.log(`  → Returning ${uniquePatients.length} unique patients for caregiver ${caregiverId}`);
           
           // Sort by createdAt in memory (newest first)
           return uniquePatients.sort((a, b) => {

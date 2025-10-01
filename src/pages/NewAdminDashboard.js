@@ -311,16 +311,31 @@ const NewAdminDashboard = () => {
 
   const handleViewPatient = async (patient) => {
     try {
-      // Load patient's medical history and care plans
-      const [reports, plans] = await Promise.all([
+      // Load patient's medical history, care plans, and assigned caregivers
+      const [reports, plans, patientAssignments] = await Promise.all([
         getNurseReportsByPatient(patient.id).catch(() => []),
-        getCarePlansByPatient(patient.id).catch(() => [])
+        getCarePlansByPatient(patient.id).catch(() => []),
+        assignmentAPI.getAssignmentsByPatient(patient.id).catch(() => [])
       ]);
+      
+      // Get caregiver details for each assignment
+      const assignmentsWithDetails = await Promise.all(
+        patientAssignments.map(async (assignment) => {
+          const caregiver = caregivers.find(c => c.id === assignment.caregiverId);
+          return {
+            ...assignment,
+            caregiverName: caregiver?.name || assignment.caregiverName || 'Unknown',
+            caregiverRole: caregiver?.role || assignment.caregiverRole || 'Caregiver',
+            caregiverEmail: caregiver?.email || assignment.caregiverEmail
+          };
+        })
+      );
       
       setViewingPatient({
         ...patient,
         medicalHistory: reports,
-        carePlans: plans
+        carePlans: plans,
+        assignedCaregivers: assignmentsWithDetails
       });
       setShowPatientModal(true);
     } catch (error) {
@@ -1402,6 +1417,40 @@ const NewAdminDashboard = () => {
                         {viewingPatient.status}
                       </span>
                     </p>
+                  </div>
+                </div>
+
+                {/* Assigned Caregivers */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">Assigned Caregivers</h4>
+                  <div className="space-y-3">
+                    {viewingPatient.assignedCaregivers && viewingPatient.assignedCaregivers.length > 0 ? (
+                      viewingPatient.assignedCaregivers.map((assignment, index) => (
+                        <div key={index} className="bg-white p-3 rounded border">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-sm">{assignment.caregiverName}</p>
+                              <p className="text-xs text-gray-600 mt-1">{assignment.caregiverRole}</p>
+                              {assignment.caregiverEmail && (
+                                <p className="text-xs text-gray-500">{assignment.caregiverEmail}</p>
+                              )}
+                            </div>
+                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                              assignment.status === 'active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {assignment.status || 'active'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Assigned: {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-sm">No caregivers assigned yet</p>
+                    )}
                   </div>
                 </div>
 
