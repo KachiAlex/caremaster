@@ -29,7 +29,8 @@ import {
   Thermometer,
   Weight,
   Eye,
-  Zap
+  Zap,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { 
@@ -61,6 +62,7 @@ import { createCarePlan } from '../api/carePlansAPI';
 import MorningBriefing from '../components/MorningBriefing';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import VitalsQuickEntry from '../components/VitalsQuickEntry';
+import WeeklyCalendar from '../components/WeeklyCalendar';
 import { createVitalSign } from '../api/vitalSignsAPI';
 
 // Shared Components
@@ -124,6 +126,13 @@ const DashboardHeader = ({ userProfile, userRole }) => {
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Refresh</span>
+          </button>
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900">{userProfile?.name}</p>
             <p className="text-xs text-gray-500 capitalize">{userRole}</p>
@@ -358,12 +367,15 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
 // Main Dashboard Component
 const ServiceProviderDashboard = () => {
   const { userProfile, userRole, loading: userLoading } = useUser();
+  const navigate = useNavigate();
   // Derive robust role flags (prevents misclassification)
   const normalizedQualification = (userProfile?.medicalQualification || '').toString().toLowerCase();
   const normalizedType = (userProfile?.type || userProfile?.userType || '').toString().toLowerCase();
-  const isDoctor = (userRole === 'doctor') || normalizedType === 'doctor' || normalizedQualification.includes('doctor');
-  const isCaregiver = (userRole === 'caregiver') || normalizedType === 'caregiver' || (!isDoctor && !!normalizedType);
-  const effectiveRole = isDoctor ? 'doctor' : (isCaregiver ? 'caregiver' : (userRole || 'caregiver'));
+  
+  // Fix role detection - prioritize userRole from context
+  const isDoctor = userRole === 'doctor';
+  const isCaregiver = userRole === 'caregiver';
+  const effectiveRole = userRole || 'caregiver';
   
   // Check if caregiver is a nurse (can submit nurse reports)
   const isNurse = () => {
@@ -396,6 +408,7 @@ const ServiceProviderDashboard = () => {
   const [showTaskCompletion, setShowTaskCompletion] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showVitalsEntry, setShowVitalsEntry] = useState(false);
+  const [showWeeklyCalendar, setShowWeeklyCalendar] = useState(false);
   const [nurseReport, setNurseReport] = useState({
     bloodPressure: '',
     heartRate: '',
@@ -417,126 +430,159 @@ const ServiceProviderDashboard = () => {
     priority: 'medium'
   });
 
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      if (!userProfile || !userRole) return;
+  const loadDashboardData = async () => {
+    if (!userProfile || !userRole) return;
+    
+    try {
+      setLoading(true);
       
-      try {
-        setLoading(true);
-        
-        console.log('📊 ServiceProviderDashboard loading data for:', {
-          userId: userProfile.id,
-          uid: userProfile.uid,
-          userRole,
-          userType: userProfile.userType,
-          email: userProfile.email
-        });
-        
-        const promises = [];
-        
-        // Use uid if id is not available (Firebase Auth users)
-        const userId = userProfile.id || userProfile.uid;
-        
-        // Load patients with error handling
-        if (isDoctor) {
-          promises.push(getPatientsByDoctor(userId).catch(error => {
-            console.log('Could not load patients by doctor - this is normal for new users');
-            return [];
-          }));
-        } else if (isCaregiver) {
-          promises.push(getPatientsByCaregiver(userId).catch(error => {
-            console.log('Could not load caregiver patients - this is normal for new users');
-            return [];
-          }));
-        } else {
-          promises.push(Promise.resolve([]));
-        }
-        
-        // Load appointments with error handling
-        promises.push(getTodaysAppointments(userId, userRole).catch(error => {
-          console.log('Could not load today\'s appointments - this is normal for new users');
+      console.log('📊 ServiceProviderDashboard loading data for:', {
+        userId: userProfile.id,
+        uid: userProfile.uid,
+        userRole,
+        userType: userProfile.userType,
+        email: userProfile.email
+      });
+      
+      console.log('🔍 Role flags:', {
+        isDoctor,
+        isCaregiver,
+        effectiveRole
+      });
+      
+      const promises = [];
+      
+      // Use uid if id is not available (Firebase Auth users)
+      const userId = userProfile.id || userProfile.uid;
+      
+      // Load patients with error handling
+      if (isDoctor) {
+        promises.push(getPatientsByDoctor(userId).catch(error => {
+          console.log('Could not load patients by doctor - this is normal for new users');
           return [];
         }));
-        promises.push(getUpcomingAppointments(userId, userRole).catch(error => {
-          console.log('Could not load upcoming appointments - this is normal for new users');
+      } else if (isCaregiver) {
+        console.log('🔍 About to call getPatientsByCaregiver with userId:', userId);
+        promises.push(getPatientsByCaregiver(userId).catch(error => {
+          console.log('❌ Could not load caregiver patients:', error);
           return [];
         }));
-        
-        // Load tasks for assignees (caregivers and doctors)
-        if (isCaregiver || isDoctor) {
-          promises.push(getTodaysCareTasks(userId).catch(error => {
-            console.log('Could not load today\'s tasks - this is normal for new users');
-            return [];
-          }));
-          promises.push(getPendingCareTasks(userId).catch(error => {
-            console.log('Could not load pending tasks - this is normal for new users');
-            return [];
-          }));
-          // Also load admin-created task assignments (supports legacy 'assignedTo') and merge
-          promises.push(getTaskAssignmentsByCaregiver(userId).catch(error => {
-            console.log('Could not load task assignments - this is normal for new users');
-            return [];
-          }));
-        } else {
-          promises.push(Promise.resolve([]));
-          promises.push(Promise.resolve([]));
-          promises.push(Promise.resolve([]));
-        }
-        
-        // Load messages with error handling
-        promises.push(getUnreadMessageCount(userId).catch(error => {
-          console.log('Could not load unread message count - this is normal for new users');
-          return 0;
-        }));
-        
-        const [
-          patients,
-          todaysAppointments,
-          upcomingAppointments,
-          todaysTasks,
-          pendingTasks,
-          taskAssignments,
-          unreadMessages
-        ] = await Promise.all(promises);
-        
-        const mergedPending = [...(pendingTasks || []), ...(taskAssignments || [])].filter(Boolean);
-        const mergedToday = [...(todaysTasks || []), ...(taskAssignments || []).filter(t => {
-          const d = t.scheduledTime ? new Date(t.scheduledTime) : null;
-          if (!d) return false;
-          const now = new Date();
-          return d.toDateString() === now.toDateString();
-        })];
-
-        setStats({
-          patients: patients.length,
-          todaysAppointments: todaysAppointments.length,
-          upcomingAppointments: upcomingAppointments.length,
-          todaysTasks: mergedToday.length,
-          pendingTasks: mergedPending.length,
-          unreadMessages,
-        });
-        
-        // Store actual task data for caregiver sections (merged)
-        setTodaysTasksData(mergedToday);
-        setPendingTasksData(mergedPending);
-        setAssignedPatientsData(patients || []);
-        setUpcomingAppointmentsData(upcomingAppointments || []);
-        setTodaysAppointmentsData(todaysAppointments || []);
-        
-        // Show morning briefing on first load if caregiver has tasks
-        const hasShownToday = sessionStorage.getItem(`morning_briefing_${new Date().toDateString()}`);
-        if (!hasShownToday && (mergedToday.length > 0 || todaysAppointments.length > 0) && isCaregiver) {
-          setShowMorningBriefing(true);
-        }
-        
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        toast.error('Failed to load dashboard data');
-      } finally {
-        setLoading(false);
+      } else {
+        promises.push(Promise.resolve([]));
       }
-    };
+      
+      // Load appointments with error handling
+      promises.push(getTodaysAppointments(userId, userRole).catch(error => {
+        console.log('Could not load today\'s appointments - this is normal for new users');
+        return [];
+      }));
+      promises.push(getUpcomingAppointments(userId, userRole).catch(error => {
+        console.log('Could not load upcoming appointments - this is normal for new users');
+        return [];
+      }));
+      
+      // Load tasks for assignees (caregivers and doctors)
+      if (isCaregiver || isDoctor) {
+        promises.push(getTodaysCareTasks(userId).catch(error => {
+          console.log('Could not load today\'s tasks - this is normal for new users');
+          return [];
+        }));
+        promises.push(getPendingCareTasks(userId).catch(error => {
+          console.log('Could not load pending tasks - this is normal for new users');
+          return [];
+        }));
+        // Also load admin-created task assignments (supports legacy 'assignedTo') and merge
+        promises.push(getTaskAssignmentsByCaregiver(userId).catch(error => {
+          console.log('Could not load task assignments - this is normal for new users');
+          return [];
+        }));
+      } else {
+        promises.push(Promise.resolve([]));
+        promises.push(Promise.resolve([]));
+        promises.push(Promise.resolve([]));
+      }
+      
+      // Load messages with error handling
+      promises.push(getUnreadMessageCount(userId).catch(error => {
+        console.log('Could not load unread message count - this is normal for new users');
+        return 0;
+      }));
+      
+      const [
+        patients,
+        todaysAppointments,
+        upcomingAppointments,
+        todaysTasks,
+        pendingTasks,
+        taskAssignments,
+        unreadMessages
+      ] = await Promise.all(promises);
+      
+      console.log('🔍 Raw patients data from API:');
+      console.log('  - patientsCount:', patients?.length || 0);
+      console.log('  - isArray:', Array.isArray(patients));
+      console.log('  - patients data:', patients);
+      
+      const mergedPending = [...(pendingTasks || []), ...(taskAssignments || [])].filter(Boolean);
+      const mergedToday = [...(todaysTasks || []), ...(taskAssignments || []).filter(t => {
+        const d = t.scheduledTime ? new Date(t.scheduledTime) : null;
+        if (!d) return false;
+        const now = new Date();
+        return d.toDateString() === now.toDateString();
+      })];
 
+      // Update stats with actual data
+      const actualPatients = patients || [];
+      const actualTodaysAppointments = todaysAppointments || [];
+      const actualUpcomingAppointments = upcomingAppointments || [];
+      
+      console.log('📊 Dashboard stats update:');
+      console.log('  - patients:', actualPatients.length);
+      console.log('  - todaysAppointments:', actualTodaysAppointments.length);
+      console.log('  - upcomingAppointments:', actualUpcomingAppointments.length);
+      console.log('  - todaysTasks:', mergedToday.length);
+      console.log('  - pendingTasks:', mergedPending.length);
+      console.log('  - unreadMessages:', unreadMessages);
+      
+      console.log('🔍 Detailed patient data:');
+      console.log('  - patientsArray length:', actualPatients.length);
+      console.log('  - patientNames:', actualPatients.map(p => p.name));
+      console.log('  - patientIds:', actualPatients.map(p => p.id));
+      console.log('  - full patients array:', actualPatients);
+
+      setStats({
+        patients: actualPatients.length,
+        todaysAppointments: actualTodaysAppointments.length,
+        upcomingAppointments: actualUpcomingAppointments.length,
+        todaysTasks: mergedToday.length,
+        pendingTasks: mergedPending.length,
+        unreadMessages,
+      });
+      
+      console.log('✅ Stats set with patients count:', actualPatients.length);
+      
+      // Store actual task data for caregiver sections (merged)
+      setTodaysTasksData(mergedToday);
+      setPendingTasksData(mergedPending);
+      setAssignedPatientsData(patients || []);
+      setUpcomingAppointmentsData(upcomingAppointments || []);
+      setTodaysAppointmentsData(todaysAppointments || []);
+      
+      // Show morning briefing on first load if caregiver has tasks
+      const hasShownToday = sessionStorage.getItem(`morning_briefing_${new Date().toDateString()}`);
+      if (!hasShownToday && (mergedToday.length > 0 || todaysAppointments.length > 0) && isCaregiver) {
+        setShowMorningBriefing(true);
+      }
+      
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadDashboardData();
   }, [userProfile, userRole, isCaregiver]);
 
@@ -633,21 +679,47 @@ const ServiceProviderDashboard = () => {
   };
 
   const handleShowTasks = () => {
-    navigate('/service-provider/tasks');
+    try {
+      // Prefer client-side navigation if available
+      if (navigate) {
+        navigate('/service-provider/tasks');
+        return;
+      }
+    } catch (_) {}
+    // Fallback to hard navigation to avoid ReferenceError in some builds
+    window.location.href = '/service-provider/tasks';
   };
 
   const handleShowAppointments = () => {
-    navigate('/service-provider/consultations');
+    try {
+      if (navigate) {
+        navigate('/service-provider/consultations');
+        return;
+      }
+    } catch (_) {}
+    window.location.href = '/service-provider/consultations';
   };
 
   const handleShowMessages = () => {
-    navigate('/service-provider/messages');
+    try {
+      if (navigate) {
+        navigate('/service-provider/messages');
+        return;
+      }
+    } catch (_) {}
+    window.location.href = '/service-provider/messages';
   };
 
   const handleStartDay = () => {
     sessionStorage.setItem(`morning_briefing_${new Date().toDateString()}`, 'true');
     if (todaysTasksData.length > 0) {
-      navigate('/service-provider/tasks');
+      try {
+        if (navigate) {
+          navigate('/service-provider/tasks');
+          return;
+        }
+      } catch (_) {}
+      window.location.href = '/service-provider/tasks';
     }
   };
 
@@ -671,6 +743,8 @@ const ServiceProviderDashboard = () => {
         .then(tasks => setTodaysTasksData(tasks))
         .catch(() => {});
     }
+    // Refresh the entire dashboard
+    loadDashboardData();
   };
 
   return (
@@ -685,6 +759,14 @@ const ServiceProviderDashboard = () => {
         onShowAppointments={handleShowAppointments}
         onShowMessages={handleShowMessages}
       />
+      <div className="px-6 -mt-4 mb-2 flex items-center justify-end">
+        <button
+          onClick={() => setShowWeeklyCalendar(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Weekly Overview
+        </button>
+      </div>
       
       {isDoctor && (
         <DoctorSpecificSections 
@@ -1137,6 +1219,15 @@ const ServiceProviderDashboard = () => {
             setSelectedPatient(null);
           }}
           onSave={handleSaveVitals}
+        />
+      )}
+
+      {/* Weekly Calendar Modal */}
+      {showWeeklyCalendar && (
+        <WeeklyCalendar
+          onClose={() => setShowWeeklyCalendar(false)}
+          tasks={[...(todaysTasksData || []), ...(pendingTasksData || [])]}
+          appointments={[...(todaysAppointmentsData || []), ...(upcomingAppointmentsData || [])]}
         />
       )}
     </div>

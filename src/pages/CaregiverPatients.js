@@ -27,6 +27,7 @@ import { getPatientsByCaregiver } from '../api/patientsAPI';
 import { getTodaysCareTasks } from '../api/careTasksAPI';
 import { getLatestVitalSigns } from '../api/vitalSignsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
+import { getCareLogsByPatient } from '../api/careLogsAPI';
 import { toast } from 'react-toastify';
 
 const CaregiverPatients = () => {
@@ -38,6 +39,9 @@ const CaregiverPatients = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientDetails, setShowPatientDetails] = useState(false);
   const [showAssignmentRequest, setShowAssignmentRequest] = useState(false);
+  const [patientLogs, setPatientLogs] = useState([]);
+  const [logsPage, setLogsPage] = useState(1);
+  const logsPageSize = 5;
 
   const loadPatients = async () => {
     const userId = userProfile?.id || userProfile?.uid;
@@ -51,8 +55,8 @@ const CaregiverPatients = () => {
       // Load assigned patients from admin-created assignments AND legacy sources
       const patientsData = await getPatientsByCaregiver(userId).catch(err => {
         console.warn('Failed to fetch assigned patients:', err);
-        return [];
-      });
+          return [];
+        });
 
       console.log(`✅ Loaded ${patientsData.length} assigned patients for caregiver ${userId}`);
       
@@ -209,19 +213,23 @@ const CaregiverPatients = () => {
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center text-sm text-gray-600">
                     <Heart className="h-4 w-4 mr-2 text-red-500" />
-                    <span className="font-medium">{patient.medicalCondition}</span>
+                    <span className="font-medium">
+                      {patient.condition || patient.medicalCondition || 'No medical conditions recorded'}
+                    </span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Phone className="h-4 w-4 mr-2 text-green-500" />
-                    <span>{patient.phone}</span>
+                    <span>{patient.phone || 'No phone number available'}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <MapPin className="h-4 w-4 mr-2 text-blue-500" />
-                    <span>{patient.address}</span>
+                    <span>{patient.address || 'No address available'}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Calendar className="h-4 w-4 mr-2 text-purple-500" />
-                    <span>Next: {new Date(patient.nextAppointment).toLocaleDateString()}</span>
+                    <span>
+                      Next: {patient.nextAppointment ? new Date(patient.nextAppointment).toLocaleDateString() : 'No upcoming appointments'}
+                    </span>
                   </div>
                 </div>
 
@@ -245,8 +253,14 @@ const CaregiverPatients = () => {
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <button 
-                    onClick={() => {
+                    onClick={async () => {
                       setSelectedPatient(patient);
+                      try {
+                        const logs = await getCareLogsByPatient(patient.id);
+                        setPatientLogs(logs);
+                      } catch(e) {
+                        setPatientLogs([]);
+                      }
                       setShowPatientDetails(true);
                     }}
                     className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-sm"
@@ -262,7 +276,7 @@ const CaregiverPatients = () => {
                     Message
                   </button>
                   <button 
-                    onClick={() => window.location.href = `/service-provider/calls?client=${patient.id}`}
+                    onClick={() => window.location.href = `/service-provider/messages?user=${patient.id}`}
                     className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center text-sm"
                   >
                     <Phone className="h-4 w-4 mr-1" />
@@ -412,16 +426,77 @@ const CaregiverPatients = () => {
                   </div>
                 </div>
 
-                {/* Notes */}
+                {/* Care Logs */}
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Care Notes</h4>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{selectedPatient.caregiverNotes}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900">Care Logs</h4>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="date" 
+                        className="px-2 py-1 border border-gray-300 rounded"
+                        onChange={async (e)=>{
+                          const v = e.target.value;
+                          const start = v ? new Date(v).getTime() : null;
+                          const logs = await getCareLogsByPatient(selectedPatient.id);
+                          setPatientLogs(logs.filter(l=> !start || (l.createdAt?.toDate ? l.createdAt.toDate().getTime()>=start : true)));
+                        }}
+                        placeholder="Start date"/>
+                      <input 
+                        type="date" 
+                        className="px-2 py-1 border border-gray-300 rounded"
+                        onChange={async (e)=>{
+                          const v = e.target.value;
+                          const end = v ? new Date(v).getTime()+86399999 : null;
+                          const logs = await getCareLogsByPatient(selectedPatient.id);
+                          setPatientLogs(logs.filter(l=> !end || (l.createdAt?.toDate ? l.createdAt.toDate().getTime()<=end : true)));
+                        }}
+                        placeholder="End date"/>
+                    </div>
+                  </div>
+                  {patientLogs.length === 0 && (
+                    <p className="text-sm text-gray-600">No care logs yet.</p>
+                  )}
+                  <div className="space-y-3">
+                    {patientLogs.slice((logsPage-1)*logsPageSize, logsPage*logsPageSize).map(log => (
+                      <div key={log.id} className="border rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm font-medium text-gray-900">{log.title || 'Care Log'}</p>
+                          <span className="text-xs text-gray-500">{log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : ''}</span>
+                        </div>
+                        <p className="text-sm text-gray-700 mb-2">{log.content}</p>
+                        {Array.isArray(log.media) && log.media.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {log.media.map((m, idx)=> (
+                              <a key={idx} href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 underline">
+                                {m.type?.startsWith('image/') ? 'View Image' : m.type?.startsWith('video/') ? 'View Video' : 'View File'}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {patientLogs.length > logsPageSize && (
+                    <div className="mt-3 flex items-center justify-between">
+                      <button
+                        disabled={logsPage<=1}
+                        onClick={()=> setLogsPage(p=> Math.max(1, p-1))}
+                        className={`px-3 py-1 rounded border ${logsPage<=1? 'text-gray-400 border-gray-200':'text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                      >Previous</button>
+                      <span className="text-xs text-gray-600">Page {logsPage} of {Math.max(1, Math.ceil(patientLogs.length/logsPageSize))}</span>
+                      <button
+                        disabled={logsPage>=Math.ceil(patientLogs.length/logsPageSize)}
+                        onClick={()=> setLogsPage(p=> Math.min(Math.ceil(patientLogs.length/logsPageSize), p+1))}
+                        className={`px-3 py-1 rounded border ${logsPage>=Math.ceil(patientLogs.length/logsPageSize)? 'text-gray-400 border-gray-200':'text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                      >Next</button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <button 
-                    onClick={() => window.location.href = `/service-provider/calls?client=${selectedPatient.id}`}
+                    onClick={() => window.location.href = `/service-provider/messages?user=${selectedPatient.id}`}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center"
                   >
                     <Phone className="h-4 w-4 mr-2" />

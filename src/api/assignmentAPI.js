@@ -4,6 +4,7 @@ import {
   getDocs, 
   getDoc, 
   addDoc, 
+  setDoc,
   updateDoc, 
   deleteDoc, 
   query, 
@@ -26,6 +27,24 @@ export const assignmentAPI = {
   // Create new patient-caregiver assignment
   createAssignment: async (assignmentData) => {
     try {
+      // Ensure referenced patient document exists; create a minimal placeholder if missing
+      if (assignmentData.patientId) {
+        const patientRef = doc(db, 'patients', assignmentData.patientId);
+        const patientSnap = await getDoc(patientRef);
+        if (!patientSnap.exists()) {
+          await setDoc(patientRef, {
+            name: assignmentData.patientName || 'Assigned Patient',
+            email: assignmentData.patientEmail || '',
+            status: 'active',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          logger.warn('Created placeholder patient document for assignment', {
+            patientId: assignmentData.patientId
+          });
+        }
+      }
+
       const assignment = {
         ...assignmentData,
         status: 'active',

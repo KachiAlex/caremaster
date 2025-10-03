@@ -26,98 +26,13 @@ const CaregiverTasks = () => {
   const [filterPriority, setFilterPriority] = useState('all');
 
   useEffect(() => {
-    // Simulate loading task data
     const loadTasks = async () => {
       try {
-        setTimeout(() => {
-          const mockTasks = [
-            {
-              id: 1,
-              title: 'Morning Medication Administration',
-              patientName: 'Adunni Okafor',
-              patientId: 'ELD001',
-              description: 'Administer morning diabetes medications and check blood sugar levels',
-              status: 'pending',
-              priority: 'high',
-              dueDate: '2024-01-21T09:00:00Z',
-              estimatedDuration: 30,
-              location: '123 Victoria Island, Lagos',
-              type: 'medication',
-              notes: 'Patient has diabetes - monitor blood sugar levels',
-              completedAt: null,
-              createdAt: '2024-01-20T08:00:00Z'
-            },
-            {
-              id: 2,
-              title: 'Physical Therapy Session',
-              patientName: 'Grace Johnson',
-              patientId: 'ELD002',
-              description: 'Assist with 30-minute physical therapy exercises',
-              status: 'completed',
-              priority: 'medium',
-              dueDate: '2024-01-20T10:00:00Z',
-              estimatedDuration: 45,
-              location: '456 Ikoyi, Lagos',
-              type: 'therapy',
-              notes: 'Patient prefers gentle exercises',
-              completedAt: '2024-01-20T10:30:00Z',
-              createdAt: '2024-01-20T07:00:00Z'
-            },
-            {
-              id: 3,
-              title: 'Lunch Preparation',
-              patientName: 'Adunni Okafor',
-              patientId: 'ELD001',
-              description: 'Prepare diabetic-friendly lunch meal',
-              status: 'in-progress',
-              priority: 'medium',
-              dueDate: '2024-01-21T12:00:00Z',
-              estimatedDuration: 60,
-              location: '123 Victoria Island, Lagos',
-              type: 'meal',
-              notes: 'Follow diabetic diet guidelines',
-              completedAt: null,
-              createdAt: '2024-01-20T08:30:00Z'
-            },
-            {
-              id: 4,
-              title: 'Emergency Response',
-              patientName: 'Michael Adebayo',
-              patientId: 'ELD003',
-              description: 'Respond to emergency alert - check patient condition',
-              status: 'pending',
-              priority: 'critical',
-              dueDate: '2024-01-21T14:30:00Z',
-              estimatedDuration: 15,
-              location: '789 Lekki, Lagos',
-              type: 'emergency',
-              notes: 'Patient has mobility issues',
-              completedAt: null,
-              createdAt: '2024-01-20T14:15:00Z'
-            },
-            {
-              id: 5,
-              title: 'Evening Care Routine',
-              patientName: 'Grace Johnson',
-              patientId: 'ELD002',
-              description: 'Evening medication and bedtime routine',
-              status: 'pending',
-              priority: 'medium',
-              dueDate: '2024-01-21T18:00:00Z',
-              estimatedDuration: 45,
-              location: '456 Ikoyi, Lagos',
-              type: 'care',
-              notes: 'Patient prefers quiet environment',
-              completedAt: null,
-              createdAt: '2024-01-20T17:00:00Z'
-            }
-          ];
-
-          setTasks(mockTasks);
-          setLoading(false);
-        }, 1000);
+        // TODO: Integrate with real API: getPendingCareTasks(userId) or taskAssignments
+        setTasks([]);
       } catch (error) {
         console.error('Error loading tasks:', error);
+      } finally {
         setLoading(false);
       }
     };

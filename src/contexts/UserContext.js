@@ -31,13 +31,14 @@ export const UserProvider = ({ children }) => {
             userId: firebaseUser.uid,
             profile: profile,
             userType: profile?.userType,
-            type: profile?.type
+            type: profile?.type,
+            role: profile?.role
           });
           
           if (profile) {
             setUserProfile(profile);
-            // Handle both 'patient' and 'elderly' as the same role, also check userType field
-            const roleFromProfile = profile.userType || profile.type || 'patient';
+            // Handle both 'patient' and 'elderly' as the same role, also check userType field and role field
+            const roleFromProfile = profile.role || profile.userType || profile.type || 'patient';
             setUserRole(roleFromProfile);
             console.log('✅ User role set to:', roleFromProfile);
           } else {
@@ -146,6 +147,12 @@ export const UserProvider = ({ children }) => {
         return true;
       }
       console.log('✅ Caregiver onboarding complete');
+      return false;
+    }
+
+    // For admins, always allow access (no onboarding required)
+    if (userRole === 'admin' || userProfile.userType === 'admin') {
+      console.log('✅ Admin access - no onboarding required');
       return false;
     }
 

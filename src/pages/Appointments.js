@@ -16,7 +16,7 @@ import { toast } from 'react-toastify';
 
 const Appointments = () => {
   const { user, userProfile } = useUser();
-  const [careType, setCareType] = useState('immediate'); // 'immediate' or 'scheduled'
+  const [careType, setCareType] = useState('scheduled'); // 'scheduled' only
   const [formData, setFormData] = useState({
     careType: 'Blood Pressure Check',
     preferredDate: '',
@@ -105,23 +105,21 @@ const Appointments = () => {
     }
 
     // Validation for scheduled appointments
-    if (careType === 'scheduled') {
-      if (!formData.preferredDate) {
-        toast.error('Please select a preferred date');
-        return;
-      }
-      if (!formData.preferredTime) {
-        toast.error('Please select a preferred time');
-        return;
-      }
-      
-      // Check if the selected date/time is in the future
-      const selectedDateTime = new Date(`${formData.preferredDate}T${formData.preferredTime}`);
-      const now = new Date();
-      if (selectedDateTime <= now) {
-        toast.error('Please select a future date and time');
-        return;
-      }
+    if (!formData.preferredDate) {
+      toast.error('Please select a preferred date');
+      return;
+    }
+    if (!formData.preferredTime) {
+      toast.error('Please select a preferred time');
+      return;
+    }
+    
+    // Check if the selected date/time is in the future
+    const selectedDateTime = new Date(`${formData.preferredDate}T${formData.preferredTime}`);
+    const now = new Date();
+    if (selectedDateTime <= now) {
+      toast.error('Please select a future date and time');
+      return;
     }
 
     setSubmitting(true);
@@ -134,12 +132,12 @@ const Appointments = () => {
         patientName: userProfile?.name || userProfile?.displayName || user?.displayName || 'Patient',
         careType: formData.careType,
         notes: formData.additionalNotes,
-        priority: careType === 'immediate' ? 'high' : 'medium',
+        priority: 'medium',
         status: 'pending'
       };
 
-      // Add scheduled time if it's a scheduled appointment
-      if (careType === 'scheduled' && formData.preferredDate && formData.preferredTime) {
+      // Add scheduled time
+      if (formData.preferredDate && formData.preferredTime) {
         const scheduledDateTime = new Date(`${formData.preferredDate}T${formData.preferredTime}`);
         appointmentData.scheduledTime = scheduledDateTime;
         appointmentData.status = 'scheduled';
@@ -150,7 +148,7 @@ const Appointments = () => {
       const appointmentId = await createAppointment(appointmentData);
       console.log('Appointment created successfully:', appointmentId);
       
-      toast.success(careType === 'immediate' ? 'Immediate care request submitted!' : 'Care visit scheduled successfully!');
+      toast.success('Care visit scheduled successfully!');
       
       // Reset form
       setFormData({
@@ -240,30 +238,10 @@ const Appointments = () => {
 
         {/* Care Type Selection */}
         <div className="flex space-x-4 mb-6">
-          <button
-            onClick={() => setCareType('immediate')}
-            className={`flex items-center px-6 py-3 rounded-lg border-2 transition-colors ${
-              careType === 'immediate'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-            }`}
-          >
-            <div className="w-6 h-6 rounded-full border-2 border-current flex items-center justify-center mr-3">
-              <span className="text-xs font-bold">!</span>
-            </div>
-            Need Care Now
-          </button>
-          <button
-            onClick={() => setCareType('scheduled')}
-            className={`flex items-center px-6 py-3 rounded-lg border-2 transition-colors ${
-              careType === 'scheduled'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-            }`}
-          >
+          <div className="flex items-center px-6 py-3 rounded-lg border-2 bg-blue-600 text-white border-blue-600">
             <Calendar className="h-5 w-5 mr-3" />
             Schedule Visit
-          </button>
+          </div>
         </div>
 
         {/* Form */}
@@ -286,42 +264,38 @@ const Appointments = () => {
             </div>
           </div>
 
-          {careType === 'scheduled' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Preferred Date
-                </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={formData.preferredDate}
-                    onChange={(e) => setFormData({...formData, preferredDate: e.target.value})}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="mm/dd/yyyy"
-                  />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Preferred Date
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={formData.preferredDate}
+                onChange={(e) => setFormData({...formData, preferredDate: e.target.value})}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="mm/dd/yyyy"
+              />
+              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Preferred Time
-                </label>
-                <div className="relative">
-                  <input
-                    type="time"
-                    value={formData.preferredTime}
-                    onChange={(e) => setFormData({...formData, preferredTime: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="--:--"
-                  />
-                  <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-            </>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Preferred Time
+            </label>
+            <div className="relative">
+              <input
+                type="time"
+                value={formData.preferredTime}
+                onChange={(e) => setFormData({...formData, preferredTime: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="--:--"
+              />
+              <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -354,7 +328,7 @@ const Appointments = () => {
                 Submitting...
               </div>
             ) : (
-              careType === 'immediate' ? 'Request Immediate Care' : 'Schedule Care Visit'
+              'Schedule Care Visit'
             )}
           </button>
         </form>

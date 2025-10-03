@@ -22,6 +22,18 @@ const CONVERSATIONS_COLLECTION = 'conversations';
 // Create a conversation between users
 export const createConversation = async (participants, conversationType = 'general') => {
   try {
+    // Validate input parameters
+    if (!participants || !Array.isArray(participants) || participants.length < 2) {
+      throw new Error('Participants must be an array with at least 2 users');
+    }
+    
+    // Check for undefined values in participants
+    if (participants.some(id => !id)) {
+      throw new Error('All participant IDs must be defined');
+    }
+    
+    console.log('Creating conversation with participants:', participants);
+    
     const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
     const newConversation = {
       participants,
@@ -33,6 +45,7 @@ export const createConversation = async (participants, conversationType = 'gener
     };
     
     const docRef = await addDoc(conversationsRef, newConversation);
+    console.log('Created conversation with ID:', docRef.id);
     return docRef.id;
   } catch (error) {
     console.error('Error creating conversation:', error);
@@ -44,26 +57,59 @@ export const createConversation = async (participants, conversationType = 'gener
 export const getConversationsByUser = async (userId) => {
   try {
     const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
-    const q = query(
-      conversationsRef, 
-      where('participants', 'array-contains', userId),
-      orderBy('lastMessageTime', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
     
-    const conversations = [];
-    querySnapshot.forEach((doc) => {
-      const conversationData = doc.data();
-      conversations.push({
-        id: doc.id,
-        ...conversationData,
-        lastMessageTime: conversationData.lastMessageTime?.toDate?.() || conversationData.lastMessageTime,
-        createdAt: conversationData.createdAt?.toDate?.() || conversationData.createdAt,
-        updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
+    // Try the optimized query first
+    try {
+      const q = query(
+        conversationsRef, 
+        where('participants', 'array-contains', userId),
+        orderBy('lastMessageTime', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      
+      const conversations = [];
+      querySnapshot.forEach((doc) => {
+        const conversationData = doc.data();
+        conversations.push({
+          id: doc.id,
+          ...conversationData,
+          lastMessageTime: conversationData.lastMessageTime?.toDate?.() || conversationData.lastMessageTime,
+          createdAt: conversationData.createdAt?.toDate?.() || conversationData.createdAt,
+          updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
+        });
       });
-    });
-    
-    return conversations;
+      
+      return conversations;
+    } catch (indexError) {
+      console.log('Index not ready, using fallback query');
+      
+      // Fallback: get all conversations and filter client-side
+      const q = query(conversationsRef);
+      const querySnapshot = await getDocs(q);
+      
+      const conversations = [];
+      querySnapshot.forEach((doc) => {
+        const conversationData = doc.data();
+        if (conversationData.participants && conversationData.participants.includes(userId)) {
+          conversations.push({
+            id: doc.id,
+            ...conversationData,
+            lastMessageTime: conversationData.lastMessageTime?.toDate?.() || conversationData.lastMessageTime,
+            createdAt: conversationData.createdAt?.toDate?.() || conversationData.createdAt,
+            updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
+          });
+        }
+      });
+      
+      // Sort by lastMessageTime descending
+      conversations.sort((a, b) => {
+        const timeA = a.lastMessageTime ? new Date(a.lastMessageTime) : new Date(0);
+        const timeB = b.lastMessageTime ? new Date(b.lastMessageTime) : new Date(0);
+        return timeB - timeA;
+      });
+      
+      return conversations;
+    }
   } catch (error) {
     console.error('Error fetching conversations:', error);
     throw error;
@@ -73,6 +119,13 @@ export const getConversationsByUser = async (userId) => {
 // Get or create conversation between two users
 export const getOrCreateConversation = async (user1Id, user2Id, conversationType = 'general') => {
   try {
+    // Validate input parameters
+    if (!user1Id || !user2Id) {
+      throw new Error('Both user1Id and user2Id are required');
+    }
+    
+    console.log('Getting or creating conversation between:', user1Id, 'and', user2Id);
+    
     // First, try to find existing conversation
     const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
     const q = query(
@@ -84,13 +137,26 @@ export const getOrCreateConversation = async (user1Id, user2Id, conversationType
     
     for (const doc of querySnapshot.docs) {
       const conversationData = doc.data();
-      if (conversationData.participants.includes(user2Id)) {
+      if (conversationData.participants && conversationData.participants.includes(user2Id)) {
+        console.log('Found existing conversation:', doc.id);
         return { id: doc.id, ...conversationData };
       }
     }
     
     // If no existing conversation, create new one
-    return await createConversation([user1Id, user2Id], conversationType);
+    console.log('Creating new conversation between:', user1Id, 'and', user2Id);
+    const conversationId = await createConversation([user1Id, user2Id], conversationType);
+    
+    // Return the conversation object with the ID
+    return {
+      id: conversationId,
+      participants: [user1Id, user2Id],
+      conversationType,
+      lastMessage: null,
+      lastMessageTime: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   } catch (error) {
     console.error('Error getting or creating conversation:', error);
     throw error;
@@ -100,6 +166,17 @@ export const getOrCreateConversation = async (user1Id, user2Id, conversationType
 // Send a message
 export const sendMessage = async (conversationId, senderId, messageData) => {
   try {
+    // Validate input parameters
+    if (!conversationId || !senderId) {
+      throw new Error('Conversation ID and sender ID are required');
+    }
+    
+    if (!messageData || (!messageData.text && !messageData.content)) {
+      throw new Error('Message content is required');
+    }
+    
+    console.log('Sending message to conversation:', conversationId, 'from:', senderId);
+    
     const messagesRef = collection(db, MESSAGES_COLLECTION);
     const newMessage = {
       ...messageData,
@@ -119,6 +196,7 @@ export const sendMessage = async (conversationId, senderId, messageData) => {
       updatedAt: serverTimestamp(),
     });
     
+    console.log('Message sent with ID:', docRef.id);
     return docRef.id;
   } catch (error) {
     console.error('Error sending message:', error);
@@ -129,6 +207,13 @@ export const sendMessage = async (conversationId, senderId, messageData) => {
 // Get messages for a conversation
 export const getMessagesByConversation = async (conversationId, limitCount = 50) => {
   try {
+    // Validate input parameters
+    if (!conversationId) {
+      throw new Error('Conversation ID is required');
+    }
+    
+    console.log('Fetching messages for conversation:', conversationId);
+    
     const messagesRef = collection(db, MESSAGES_COLLECTION);
     const q = query(
       messagesRef,
@@ -148,6 +233,7 @@ export const getMessagesByConversation = async (conversationId, limitCount = 50)
       });
     });
     
+    console.log('Found', messages.length, 'messages for conversation:', conversationId);
     return messages.reverse(); // Return in chronological order
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -320,24 +406,58 @@ export const subscribeToConversationMessages = (conversationId, callback) => {
 // Real-time listener for conversations
 export const subscribeToUserConversations = (userId, callback) => {
   const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
-  const q = query(
-    conversationsRef, 
-    where('participants', 'array-contains', userId),
-    orderBy('lastMessageTime', 'desc')
-  );
   
-  return onSnapshot(q, (querySnapshot) => {
-    const conversations = [];
-    querySnapshot.forEach((doc) => {
-      const conversationData = doc.data();
-      conversations.push({
-        id: doc.id,
-        ...conversationData,
-        lastMessageTime: conversationData.lastMessageTime?.toDate?.() || conversationData.lastMessageTime,
-        createdAt: conversationData.createdAt?.toDate?.() || conversationData.createdAt,
-        updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
+  // Try the optimized query first
+  try {
+    const q = query(
+      conversationsRef, 
+      where('participants', 'array-contains', userId),
+      orderBy('lastMessageTime', 'desc')
+    );
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const conversations = [];
+      querySnapshot.forEach((doc) => {
+        const conversationData = doc.data();
+        conversations.push({
+          id: doc.id,
+          ...conversationData,
+          lastMessageTime: conversationData.lastMessageTime?.toDate?.() || conversationData.lastMessageTime,
+          createdAt: conversationData.createdAt?.toDate?.() || conversationData.createdAt,
+          updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
+        });
       });
+      callback(conversations);
     });
-    callback(conversations);
-  });
+  } catch (indexError) {
+    console.log('Index not ready for real-time listener, using fallback');
+    
+    // Fallback: listen to all conversations and filter client-side
+    const q = query(conversationsRef);
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const conversations = [];
+      querySnapshot.forEach((doc) => {
+        const conversationData = doc.data();
+        if (conversationData.participants && conversationData.participants.includes(userId)) {
+          conversations.push({
+            id: doc.id,
+            ...conversationData,
+            lastMessageTime: conversationData.lastMessageTime?.toDate?.() || conversationData.lastMessageTime,
+            createdAt: conversationData.createdAt?.toDate?.() || conversationData.createdAt,
+            updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
+          });
+        }
+      });
+      
+      // Sort by lastMessageTime descending
+      conversations.sort((a, b) => {
+        const timeA = a.lastMessageTime ? new Date(a.lastMessageTime) : new Date(0);
+        const timeB = b.lastMessageTime ? new Date(b.lastMessageTime) : new Date(0);
+        return timeB - timeA;
+      });
+      
+      callback(conversations);
+    });
+  }
 };

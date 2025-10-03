@@ -228,7 +228,7 @@ const AIVoiceAssistant = ({ isOpen, onClose, onCommand }) => {
     actions.forEach(action => {
       switch (action) {
         case 'navigate_to_calls':
-          onCommand?.('navigate', { page: '/service-provider/calls' });
+          onCommand?.('navigate', { page: '/service-provider/messages' });
           break;
         case 'navigate_to_messages':
           onCommand?.('navigate', { page: '/service-provider/messages' });

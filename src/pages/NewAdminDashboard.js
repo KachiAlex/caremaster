@@ -695,6 +695,14 @@ const NewAdminDashboard = () => {
             <Bell className="h-6 w-6 text-gray-400 mr-2" />
             <span className="text-sm font-medium text-gray-700">Emergency Alert</span>
           </button>
+          
+          <button
+            onClick={() => window.location.href = '/admin/patient-feedback'}
+            className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-yellow-500 hover:bg-yellow-50 transition-colors"
+          >
+            <Star className="h-6 w-6 text-gray-400 mr-2" />
+            <span className="text-sm font-medium text-gray-700">Patient Feedback</span>
+          </button>
         </div>
       </div>
 

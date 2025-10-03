@@ -161,15 +161,7 @@ class CallService {
   // Send call notification
   async sendCallNotification(userId, notificationData) {
     try {
-      await addDoc(collection(db, 'notifications'), {
-        userId,
-        type: 'call',
-        data: notificationData,
-        read: false,
-        createdAt: serverTimestamp()
-      });
-
-      // Also send to real-time notifications collection for immediate updates
+      // Only send to callNotifications collection for now to avoid permission issues
       await addDoc(collection(db, 'callNotifications'), {
         userId,
         ...notificationData,

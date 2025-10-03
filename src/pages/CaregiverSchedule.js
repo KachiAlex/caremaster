@@ -438,7 +438,7 @@ const CaregiverSchedule = () => {
                     Navigate
                   </button>
                   <button 
-                    onClick={() => window.location.href = `/service-provider/calls?start=${appointment.id}`}
+                    onClick={() => window.location.href = `/service-provider/messages`}
                     className="btn btn-secondary"
                   >
                     <Phone className="h-4 w-4 mr-2" />

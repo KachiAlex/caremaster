@@ -63,7 +63,7 @@ const CaregiverDashboard = () => {
           { name: 'New Consultation', icon: Stethoscope, href: '/service-provider/consultations' },
           { name: 'Write Prescription', icon: Pill, href: '/service-provider/prescriptions' },
           { name: 'Review Lab Results', icon: FlaskConical, href: '/service-provider/diagnostics' },
-          { name: 'Video Consultation', icon: Camera, href: '/service-provider/calls' }
+          { name: 'Video Consultation', icon: Camera, href: '/service-provider/messages' }
         ]
       },
       'Nurse (RN)': {
@@ -99,7 +99,7 @@ const CaregiverDashboard = () => {
           { name: 'Therapy Sessions', icon: Brain, href: '/service-provider/consultations' },
           { name: 'Assessments', icon: FileText, href: '/service-provider/diagnostics' },
           { name: 'Treatment Plans', icon: Heart, href: '/service-provider/care-logs' },
-          { name: 'Video Therapy', icon: Camera, href: '/service-provider/calls' }
+          { name: 'Video Therapy', icon: Camera, href: '/service-provider/messages' }
         ]
       },
       'Pharmacist': {
@@ -382,7 +382,7 @@ const CaregiverDashboard = () => {
       nurseId = nurseAssignment?.caregiverId || '';
     } catch {}
     const query = new URLSearchParams({ patientId: selectedPatientId, nurseId }).toString();
-    window.location.href = `/service-provider/calls?${query}`;
+    window.location.href = `/service-provider/messages`;
   };
 
   const handleClockIn = (scheduleId) => {

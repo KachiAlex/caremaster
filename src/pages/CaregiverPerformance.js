@@ -19,53 +19,78 @@ import {
   Filter,
   Download
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { getPatientFeedbackByCaregiver, calculateCaregiverRating, getFeedbackStatistics } from '../api/patientFeedbackAPI';
 
 const CaregiverPerformance = () => {
+  const { userProfile } = useUser();
   const [performanceData, setPerformanceData] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [selectedMetric, setSelectedMetric] = useState('overall');
+  const [patientFeedback, setPatientFeedback] = useState([]);
+  const [feedbackStats, setFeedbackStats] = useState({});
 
   useEffect(() => {
-    // Simulate loading performance data
-    const loadPerformanceData = async () => {
-      try {
-        setTimeout(() => {
-          const mockData = {
-            overall: {
-              rating: 4.8,
-              totalPatients: 12,
-              totalTasks: 156,
-              completedTasks: 148,
-              onTimeRate: 94.9,
-              patientSatisfaction: 96.2,
-              emergencyResponseTime: 8.5
-            },
-            weekly: {
-              tasksCompleted: 32,
-              tasksOnTime: 30,
-              patientsServed: 8,
-              hoursWorked: 40,
-              emergencyResponses: 2,
-              patientCalls: 15,
-              medicationAdministrations: 24,
-              therapySessions: 8
-            },
-            monthly: {
-              tasksCompleted: 148,
-              tasksOnTime: 141,
-              patientsServed: 12,
-              hoursWorked: 160,
-              emergencyResponses: 8,
-              patientCalls: 65,
-              medicationAdministrations: 96,
-              therapySessions: 32
-            },
-            trends: {
-              tasksCompleted: [28, 32, 30, 35, 32, 38, 32],
-              onTimeRate: [92, 94, 91, 96, 94, 98, 95],
-              patientSatisfaction: [94, 95, 93, 97, 96, 98, 96]
-            },
+    loadPerformanceData();
+  }, [userProfile]);
+
+  const loadPerformanceData = async () => {
+    try {
+      setLoading(true);
+      
+      if (!userProfile?.id && !userProfile?.uid) {
+        console.warn('No user profile available');
+        return;
+      }
+      
+      const caregiverId = userProfile.id || userProfile.uid;
+      
+      // Load patient feedback data
+      const feedback = await getPatientFeedbackByCaregiver(caregiverId);
+      setPatientFeedback(feedback);
+      
+      // Calculate rating from patient feedback
+      const calculatedRating = calculateCaregiverRating(feedback);
+      const stats = getFeedbackStatistics(feedback);
+      setFeedbackStats(stats);
+      
+      // Create performance data with real feedback ratings
+      const performanceData = {
+        overall: {
+          rating: calculatedRating,
+          totalPatients: stats.totalFeedback,
+          totalTasks: 156, // This could be calculated from actual task data
+          completedTasks: 148,
+          onTimeRate: 94.9,
+          patientSatisfaction: calculatedRating * 20, // Convert 5-star to percentage
+          emergencyResponseTime: 8.5
+        },
+        weekly: {
+          tasksCompleted: 32,
+          tasksOnTime: 30,
+          patientsServed: 8,
+          hoursWorked: 40,
+          emergencyResponses: 2,
+          patientCalls: 15,
+          medicationAdministrations: 24,
+          therapySessions: 8
+        },
+        monthly: {
+          tasksCompleted: 148,
+          tasksOnTime: 141,
+          patientsServed: 12,
+          hoursWorked: 160,
+          emergencyResponses: 8,
+          patientCalls: 65,
+          medicationAdministrations: 96,
+          therapySessions: 32
+        },
+        trends: {
+          tasksCompleted: [28, 32, 30, 35, 32, 38, 32],
+          onTimeRate: [92, 94, 91, 96, 94, 98, 95],
+          patientSatisfaction: stats.trends?.overallSatisfaction || [94, 95, 93, 97, 96, 98, 96]
+        },
             achievements: [
               {
                 id: 1,
@@ -120,17 +145,13 @@ const CaregiverPerformance = () => {
             ]
           };
 
-          setPerformanceData(mockData);
+          setPerformanceData(performanceData);
           setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error loading performance data:', error);
-        setLoading(false);
-      }
-    };
-
-    loadPerformanceData();
-  }, []);
+        } catch (error) {
+          console.error('Error loading performance data:', error);
+          setLoading(false);
+        }
+      };
 
   const getRatingColor = (rating) => {
     if (rating >= 4.5) return 'text-green-600';
@@ -256,6 +277,79 @@ const CaregiverPerformance = () => {
             <p className="text-sm text-gray-600 mt-2">Average response time</p>
           </div>
         </div>
+
+        {/* Patient Feedback Section */}
+        {patientFeedback.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Recent Patient Feedback</h3>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Based on {feedbackStats.totalFeedback} feedback entries</span>
+                <div className="flex items-center">
+                  <Star className="h-4 w-4 text-yellow-400 mr-1" />
+                  <span className={`text-sm font-medium ${getRatingColor(feedbackStats.averageRating)}`}>
+                    {feedbackStats.averageRating.toFixed(1)}/5.0
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {patientFeedback.slice(0, 6).map((feedback, index) => {
+                const avgRating = (feedback.punctuality + feedback.communication + feedback.careQuality + feedback.responsiveness + feedback.overallSatisfaction) / 5;
+                return (
+                  <div key={feedback.id || index} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                          <Users className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{feedback.patientName}</div>
+                          <div className="text-xs text-gray-500">{new Date(feedback.weekOf).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="flex mr-1">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <Star 
+                              key={i} 
+                              className={`h-3 w-3 ${i < avgRating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                            />
+                          ))}
+                        </div>
+                        <span className={`text-xs font-medium ${getRatingColor(avgRating)}`}>
+                          {avgRating.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
+                      <div>Punctuality: {feedback.punctuality}/5</div>
+                      <div>Communication: {feedback.communication}/5</div>
+                      <div>Care Quality: {feedback.careQuality}/5</div>
+                      <div>Responsiveness: {feedback.responsiveness}/5</div>
+                    </div>
+                    
+                    {feedback.comments && (
+                      <div className="text-xs text-gray-700 bg-white rounded p-2 mt-2">
+                        "{feedback.comments.length > 100 ? feedback.comments.substring(0, 100) + '...' : feedback.comments}"
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {patientFeedback.length > 6 && (
+              <div className="mt-4 text-center">
+                <button className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                  View All Feedback ({patientFeedback.length} entries)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Performance Metrics */}

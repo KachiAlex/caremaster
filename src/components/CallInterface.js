@@ -361,7 +361,15 @@ const CallInterface = ({
                     <>
                       <Loader2 className="animate-spin mx-auto mb-4" size={48} />
                       <h2 className="text-xl font-semibold mb-2">Connecting...</h2>
-                      <p>Establishing connection with {participantInfo?.name}</p>
+                      <p className="mb-6">Establishing connection with {participantInfo?.name}</p>
+                      <div className="flex justify-center">
+                        <button
+                          onClick={handleEndCall}
+                          className="w-16 h-16 md:w-14 md:h-14 rounded-full bg-red-500 hover:bg-red-600 active:bg-red-700 flex items-center justify-center transition-colors touch-manipulation"
+                        >
+                          <PhoneOff className="text-white" size={28} />
+                        </button>
+                      </div>
                     </>
                   )}
                   
@@ -385,6 +393,13 @@ const CallInterface = ({
                         >
                           <Check className="text-white" size={28} />
                         </button>
+                        {/* End call while ringing (decline) */}
+                        <button
+                          onClick={handleEndCall}
+                          className="hidden md:flex w-16 h-16 bg-red-600 rounded-full items-center justify-center hover:bg-red-700 active:bg-red-800 transition-colors touch-manipulation"
+                        >
+                          <PhoneOff className="text-white" size={24} />
+                        </button>
                       </div>
                     </>
                   )}
@@ -403,7 +418,7 @@ const CallInterface = ({
             )}
 
             {/* Call controls */}
-            {callState === 'connected' && (
+            {(callState === 'connected') && (
               <div className="absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-md px-4">
                 <div className="flex items-center justify-center space-x-2 md:space-x-4 bg-black bg-opacity-50 rounded-full px-4 md:px-6 py-3">
                   {/* Mute toggle */}
@@ -476,6 +491,17 @@ const CallInterface = ({
                     <PhoneOff className="text-white" size={28} />
                   </button>
                 </div>
+              </div>
+            )}
+            {/* Always show a minimal End button on mobile while connecting to allow cancellation */}
+            {callState === 'connecting' && (
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
+                <button
+                  onClick={handleEndCall}
+                  className="md:hidden w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 active:bg-red-700 flex items-center justify-center transition-colors touch-manipulation"
+                >
+                  <PhoneOff className="text-white" size={22} />
+                </button>
               </div>
             )}
 

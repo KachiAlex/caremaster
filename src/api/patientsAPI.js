@@ -4,6 +4,7 @@ import {
   getDocs, 
   getDoc, 
   addDoc, 
+  setDoc,
   updateDoc, 
   deleteDoc, 
   query, 
@@ -74,6 +75,7 @@ export const getPatientById = async (patientId) => {
 export const getPatientsByCaregiver = async (caregiverId) => {
   try {
     console.log('🔍 getPatientsByCaregiver called with caregiverId:', caregiverId);
+    console.log('🔍 Function started - about to query Firestore');
     
     // First try to get patients directly assigned to caregiver
     const patientsRef = collection(db, PATIENTS_COLLECTION);
@@ -117,13 +119,20 @@ export const getPatientsByCaregiver = async (caregiverId) => {
 
     console.log(`  → Found ${assignmentsSnapshot.size} assignments in 'patientAssignments' collection`);
 
+    // Build a map to enrich placeholders if patient doc is missing
+    const assignmentByPatientId = new Map();
     assignmentsSnapshot.forEach((doc) => {
       const assignmentData = doc.data();
-      console.log(`    - Assignment: patientId=${assignmentData.patientId}, status=${assignmentData.status}`);
+      console.log(`    - Assignment: patientId=${assignmentData.patientId}, caregiverId=${assignmentData.caregiverId}, status=${assignmentData.status}`);
       if (assignmentData.patientId && (assignmentData.status ?? 'active') === 'active') {
         patientIds.add(assignmentData.patientId);
+        if (!assignmentByPatientId.has(assignmentData.patientId)) {
+          assignmentByPatientId.set(assignmentData.patientId, assignmentData);
+        }
       }
     });
+    
+    console.log(`  → Final patientIds set:`, Array.from(patientIds));
     
     console.log(`  → Total unique patient IDs to fetch: ${patientIds.size}`);
 
@@ -141,6 +150,28 @@ export const getPatientsByCaregiver = async (caregiverId) => {
             createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
             updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
             lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+          });
+        } else {
+          // Patient doc is missing; create a placeholder so UI can still show the assignment
+          const assignment = assignmentByPatientId.get(patientId) || {};
+          // Use assignment data as placeholder since we can't create patient documents
+          // due to security rules (only admins can create patient documents)
+          console.log(`⚠️ Missing patient document for assigned patientId=${patientId}. Using assignment data as placeholder.`);
+          
+          taskPatients.push({
+            id: patientId,
+            name: assignment.patientName || 'Assigned Patient',
+            email: assignment.patientEmail || '',
+            status: assignment.status || 'active',
+            address: assignment.patientAddress || assignment.address || 'Address not provided',
+            phone: assignment.patientPhone || assignment.phone || 'Phone not provided',
+            condition: assignment.condition || assignment.patientCondition || 'Medical condition not specified',
+            age: assignment.age || 'Age not specified',
+            gender: assignment.gender || 'Gender not specified',
+            assignedCaregiver: caregiverId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastVisit: null
           });
         }
       } catch (error) {
@@ -163,7 +194,12 @@ export const getPatientsByCaregiver = async (caregiverId) => {
             return bTime - aTime;
           });
   } catch (error) {
-    console.error('Error fetching patients by caregiver:', error);
+    console.error('❌ Error fetching patients by caregiver:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      caregiverId: caregiverId
+    });
     throw error;
   }
 };

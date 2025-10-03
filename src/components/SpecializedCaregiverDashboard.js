@@ -16,7 +16,8 @@ import {
   Zap,
   Eye,
   MessageSquare,
-  Calendar
+  Calendar,
+  MapPin
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { caregiverAPI } from '../api/caregiverAPI';
@@ -241,6 +242,20 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
             );
           })}
         </div>
+      </div>
+
+      {/* Route Optimization Quick Access */}
+      <div className="card">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">Optimize Todays Route</h3>
+          <button
+            onClick={() => navigate('/service-provider/routes')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
+          >
+            <MapPin className="h-4 w-4 mr-2" /> Open Route Optimization
+          </button>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">See your assigned patients on a route and launch navigation.</p>
       </div>
 
       {/* Qualification-based Alerts */}

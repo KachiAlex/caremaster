@@ -61,11 +61,12 @@ const AdminPatientDatabase = lazy(() => import('./pages/AdminPatientDatabase'));
 const AdminCaregiverManagement = lazy(() => import('./pages/AdminCaregiverManagement'));
 const NewAdminLogin = lazy(() => import('./pages/NewAdminLogin'));
 const NewAdminDashboard = lazy(() => import('./pages/NewAdminDashboard'));
+const AdminPatientFeedback = lazy(() => import('./pages/AdminPatientFeedback'));
 const ServiceProviderDashboard = lazy(() => import('./pages/ServiceProviderDashboard'));
+const RouteOptimization = lazy(() => import('./pages/RouteOptimization'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
-const CallsPage = lazy(() => import('./pages/CallsPage'));
 const WebRTCTest = lazy(() => import('./pages/WebRTCTest'));
-import MessagingInterface from './components/MessagingInterface';
+import EnhancedMessagingInterface from './components/EnhancedMessagingInterface';
 import MobileOptimization from './components/MobileOptimization';
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -162,8 +163,8 @@ function App() {
     
     switch (command) {
       case 'call':
-        // Navigate to calls page
-        window.location.href = '/service-provider/calls';
+        // Navigate to messages page (calls tab removed)
+        window.location.href = '/service-provider/messages';
         break;
       case 'endCall':
         // End current call (implement call service integration)
@@ -429,8 +430,8 @@ function App() {
       >
         <Route index element={<ServiceProviderDashboard />} />
         <Route path="schedule" element={<CaregiverSchedule />} />
-        <Route path="messages" element={<MessagingInterface />} />
-        <Route path="calls" element={<CallsPage />} />
+        <Route path="routes" element={<RouteOptimization />} />
+        <Route path="messages" element={<EnhancedMessagingInterface />} />
         <Route path="tasks" element={<CaregiverTasks />} />
         <Route path="care-logs" element={<CaregiverPhotos />} />
         <Route path="photos" element={<CaregiverPhotos />} />
@@ -477,6 +478,12 @@ function App() {
       <Route 
         path="/admin/dashboard" 
         element={<NewAdminDashboard />} 
+      />
+      
+      {/* Admin Patient Feedback Route */}
+      <Route 
+        path="/admin/patient-feedback" 
+        element={<AdminPatientFeedback />} 
       />
       
       {/* Admin Root Redirect - always send to admin login to enforce session */}
