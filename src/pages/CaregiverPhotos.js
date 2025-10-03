@@ -179,6 +179,7 @@ const CaregiverPhotos = () => {
   };
 
   const handleDeletePhoto = async (photoId) => {
+    console.log('Delete photo clicked:', photoId);
     if (window.confirm('Are you sure you want to delete this care log? This action cannot be undone.')) {
       try {
         // Import the delete function from the API
@@ -202,6 +203,7 @@ const CaregiverPhotos = () => {
   };
 
   const handleEditPhoto = (photo) => {
+    console.log('Edit photo clicked:', photo);
     setSelectedPhoto(photo);
     setForm({
       patientId: photo.patientId || '',
@@ -217,6 +219,7 @@ const CaregiverPhotos = () => {
   };
 
   const handleUpdatePhoto = async () => {
+    console.log('Update photo clicked:', selectedPhoto, form);
     try {
       setUploading(true);
       const { updateCareLog } = await import('../api/careLogsAPI');
@@ -228,6 +231,7 @@ const CaregiverPhotos = () => {
         patientName: form.patientName
       };
 
+      console.log('Updating with data:', updateData);
       await updateCareLog(selectedPhoto.id, updateData);
       
       // Update local state
@@ -447,14 +451,24 @@ const CaregiverPhotos = () => {
                         </button>
                         <div className="flex items-center space-x-1">
                           <button 
-                            onClick={() => handleEditPhoto(photo)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('Edit button clicked for photo:', photo);
+                              handleEditPhoto(photo);
+                            }}
                             className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                             title="Edit care log"
                           >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button 
-                            onClick={() => handleDeletePhoto(photo.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('Delete button clicked for photo ID:', photo.id);
+                              handleDeletePhoto(photo.id);
+                            }}
                             className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                             title="Delete care log"
                           >
@@ -818,14 +832,24 @@ const CaregiverPhotos = () => {
                   Close
                 </button>
                 <button 
-                  onClick={() => handleEditPhoto(selectedPhoto)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Modal edit button clicked for photo:', selectedPhoto);
+                    handleEditPhoto(selectedPhoto);
+                  }}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                 >
                   <Edit className="h-4 w-4 mr-2 inline" />
                   Edit Log
                 </button>
                 <button 
-                  onClick={() => handleDeletePhoto(selectedPhoto.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Modal delete button clicked for photo ID:', selectedPhoto.id);
+                    handleDeletePhoto(selectedPhoto.id);
+                  }}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   <Trash2 className="h-4 w-4 mr-2 inline" />
