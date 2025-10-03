@@ -30,6 +30,7 @@ import { assignmentAPI } from '../api/assignmentAPI';
 import { getCareLogsByPatient } from '../api/careLogsAPI';
 import { getNurseReportsByPatient } from '../api/nurseReportsAPI';
 import { toast } from 'react-toastify';
+import { medicationAPI } from '../api/medicationAPI';
 
 const CaregiverPatients = () => {
   const { userProfile, userRole } = useUser();
@@ -44,6 +45,8 @@ const CaregiverPatients = () => {
   const [patientLogs, setPatientLogs] = useState([]);
   const [patientVitals, setPatientVitals] = useState([]);
   const [nurseReports, setNurseReports] = useState([]);
+  const [showMedsModal, setShowMedsModal] = useState(false);
+  const [patientMedications, setPatientMedications] = useState([]);
   const [logsPage, setLogsPage] = useState(1);
   const logsPageSize = 5;
 
@@ -521,11 +524,20 @@ const CaregiverPatients = () => {
                     View Vitals
                   </button>
                   <button 
-                    onClick={() => window.location.href = `/service-provider/care-logs?client=${selectedPatient.id}`}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center"
+                    onClick={async () => {
+                      try {
+                        const meds = await medicationAPI.getMedications({ patientId: selectedPatient.id });
+                        setPatientMedications(meds || []);
+                        setShowMedsModal(true);
+                      } catch (e) {
+                        console.error('Failed to load medications', e);
+                        toast.error('Failed to load medications');
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                   >
-                    <Camera className="h-4 w-4 mr-2" />
-                    Care Logs
+                    <Pill className="h-4 w-4 mr-2 inline" />
+                    View Medications
                   </button>
                 </div>
               </div>
@@ -678,14 +690,80 @@ const CaregiverPatients = () => {
                   >
                     Close
                   </button>
-                  <button
-                    onClick={() => window.location.href = `/service-provider/care-logs?client=${selectedPatient.id}`}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    <FileText className="h-4 w-4 mr-2 inline" />
-                    View Care Logs
-                  </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Medications Modal */}
+        {showMedsModal && selectedPatient && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h3 className="text-xl font-semibold text-gray-900">{selectedPatient.name} - Prescriptions</h3>
+                <button
+                  onClick={() => setShowMedsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {patientMedications.length === 0 && (
+                  <div className="text-center py-12">
+                    <Pill className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-600">No prescriptions found for this patient.</p>
+                  </div>
+                )}
+
+                {patientMedications.length > 0 && (
+                  <div className="space-y-3">
+                    {patientMedications.map((med) => (
+                      <div key={med.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-lg font-semibold text-gray-900">{med.name || med.medicationName || 'Medication'}</div>
+                            <div className="text-sm text-gray-600">{med.dosage || med.dose} {med.unit || ''} • {med.frequency || med.schedule}</div>
+                          </div>
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${med.status === 'active' ? 'bg-green-100 text-green-800':'bg-gray-100 text-gray-800'}`}>
+                            {med.status || 'active'}
+                          </span>
+                        </div>
+                        <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-700">
+                          <div>
+                            <div className="text-gray-500">Start Date</div>
+                            <div>{(med.startDate?.toLocaleDateString?.() || (med.startDate && new Date(med.startDate).toLocaleDateString())) || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">End Date</div>
+                            <div>{(med.endDate?.toLocaleDateString?.() || (med.endDate && new Date(med.endDate).toLocaleDateString())) || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Prescribed By</div>
+                            <div>{med.prescribedBy || med.doctorName || '—'}</div>
+                          </div>
+                        </div>
+                        {med.instructions && (
+                          <div className="mt-3 text-sm text-gray-700">
+                            <div className="text-gray-500">Instructions</div>
+                            <div>{med.instructions}</div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3 p-6 border-t">
+                <button
+                  onClick={() => setShowMedsModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
