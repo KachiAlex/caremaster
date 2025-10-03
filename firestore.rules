@@ -238,6 +238,17 @@ service cloud.firestore {
         isAdmin() || request.auth.uid == request.resource.data.caregiverId
       );
     }
+
+    // Patient feedback collection - caregivers can read their own feedback; admins manage
+    match /patientFeedback/{feedbackId} {
+      // Caregivers can read feedback where they are the subject
+      allow read: if request.auth != null && (
+        isAdmin() || resource.data.caregiverId == request.auth.uid
+      );
+
+      // Only admins can create/update/delete patient feedback
+      allow create, update, delete: if isAdmin();
+    }
     
     // Allow admins to read/write any other collections
     match /{document=**} {

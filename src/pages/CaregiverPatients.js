@@ -25,9 +25,10 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { getPatientsByCaregiver } from '../api/patientsAPI';
 import { getTodaysCareTasks } from '../api/careTasksAPI';
-import { getLatestVitalSigns } from '../api/vitalSignsAPI';
+import { getLatestVitalSigns, getVitalSignsByPatient } from '../api/vitalSignsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { getCareLogsByPatient } from '../api/careLogsAPI';
+import { getNurseReportsByPatient } from '../api/nurseReportsAPI';
 import { toast } from 'react-toastify';
 
 const CaregiverPatients = () => {
@@ -38,8 +39,11 @@ const CaregiverPatients = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientDetails, setShowPatientDetails] = useState(false);
+  const [showVitalsModal, setShowVitalsModal] = useState(false);
   const [showAssignmentRequest, setShowAssignmentRequest] = useState(false);
   const [patientLogs, setPatientLogs] = useState([]);
+  const [patientVitals, setPatientVitals] = useState([]);
+  const [nurseReports, setNurseReports] = useState([]);
   const [logsPage, setLogsPage] = useState(1);
   const logsPageSize = 5;
 
@@ -269,21 +273,22 @@ const CaregiverPatients = () => {
                     View Details
                   </button>
                   <button 
-                    onClick={() => window.location.href = `/service-provider/messages?client=${patient.name}`}
-                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center text-sm"
-                  >
-                    <MessageSquare className="h-4 w-4 mr-1" />
-                    Message
-                  </button>
-                  <button 
-                    onClick={() => window.location.href = `/service-provider/messages?user=${patient.id}`}
-                    className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center text-sm"
-                  >
-                    <Phone className="h-4 w-4 mr-1" />
-                    Call
-                  </button>
-                  <button 
-                    onClick={() => window.location.href = `/service-provider/diagnostics?client=${patient.id}`}
+                    onClick={async () => {
+                      setSelectedPatient(patient);
+                      try {
+                        const [vitals, reports] = await Promise.all([
+                          getVitalSignsByPatient(patient.id),
+                          getNurseReportsByPatient(patient.id)
+                        ]);
+                        setPatientVitals(vitals);
+                        setNurseReports(reports);
+                      } catch(e) {
+                        console.error('Error loading vitals data:', e);
+                        setPatientVitals([]);
+                        setNurseReports([]);
+                      }
+                      setShowVitalsModal(true);
+                    }}
                     className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center text-sm"
                   >
                     <Activity className="h-4 w-4 mr-1" />
@@ -494,34 +499,191 @@ const CaregiverPatients = () => {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button 
-                    onClick={() => window.location.href = `/service-provider/messages?user=${selectedPatient.id}`}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center"
-                  >
-                    <Phone className="h-4 w-4 mr-2" />
-                    Call
-                  </button>
-                  <button 
-                    onClick={() => window.location.href = `/service-provider/messages?client=${selectedPatient.name}`}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center"
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Message
-                  </button>
-                  <button 
-                    onClick={() => window.location.href = `/service-provider/diagnostics?client=${selectedPatient.id}`}
+                    onClick={async () => {
+                      try {
+                        const [vitals, reports] = await Promise.all([
+                          getVitalSignsByPatient(selectedPatient.id),
+                          getNurseReportsByPatient(selectedPatient.id)
+                        ]);
+                        setPatientVitals(vitals);
+                        setNurseReports(reports);
+                        setShowVitalsModal(true);
+                      } catch(e) {
+                        console.error('Error loading vitals data:', e);
+                        toast.error('Failed to load vitals data');
+                      }
+                    }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center"
                   >
                     <Activity className="h-4 w-4 mr-2" />
-                    Vitals
+                    View Vitals
                   </button>
                   <button 
                     onClick={() => window.location.href = `/service-provider/care-logs?client=${selectedPatient.id}`}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center"
                   >
                     <Camera className="h-4 w-4 mr-2" />
-                    Logs
+                    Care Logs
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Vitals Modal */}
+        {showVitalsModal && selectedPatient && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h3 className="text-xl font-semibold text-gray-900">{selectedPatient.name} - Vitals & Health Data</h3>
+                <button
+                  onClick={() => setShowVitalsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                {/* Latest Vitals */}
+                {patientVitals.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Latest Vital Signs</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {patientVitals.slice(0, 6).map((vital, index) => (
+                        <div key={vital.id || index} className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h5 className="font-medium text-gray-900 capitalize">{vital.type || 'Vital Sign'}</h5>
+                            <span className="text-sm text-gray-500">
+                              {vital.recordedAt ? new Date(vital.recordedAt).toLocaleDateString() : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="text-2xl font-bold text-blue-600">{vital.value || 'N/A'}</div>
+                          <div className="text-sm text-gray-600">{vital.unit || ''}</div>
+                          {vital.notes && (
+                            <div className="text-xs text-gray-500 mt-1">{vital.notes}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Nurse Reports */}
+                {nurseReports.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Nurse Reports ({nurseReports.length})</h4>
+                    <div className="space-y-4">
+                      {nurseReports.slice(0, 5).map((report, index) => (
+                        <div key={report.id || index} className="bg-white border rounded-lg p-4 border-l-4 border-blue-500">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <Activity className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <h5 className="font-medium text-gray-900">Nurse Report</h5>
+                                <p className="text-sm text-gray-600">by {report.nurseName || 'Nurse'}</p>
+                              </div>
+                            </div>
+                            <span className="text-sm text-gray-500">
+                              {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : 'N/A'}
+                            </span>
+                          </div>
+                          
+                          {/* Vital Signs from Report */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                            {report.bloodPressure && (
+                              <div className="bg-gray-50 rounded p-2">
+                                <div className="text-xs text-gray-600">Blood Pressure</div>
+                                <div className="font-medium">{report.bloodPressure}</div>
+                              </div>
+                            )}
+                            {report.heartRate && (
+                              <div className="bg-gray-50 rounded p-2">
+                                <div className="text-xs text-gray-600">Heart Rate</div>
+                                <div className="font-medium">{report.heartRate} bpm</div>
+                              </div>
+                            )}
+                            {report.temperature && (
+                              <div className="bg-gray-50 rounded p-2">
+                                <div className="text-xs text-gray-600">Temperature</div>
+                                <div className="font-medium">{report.temperature}°F</div>
+                              </div>
+                            )}
+                            {report.oxygenSaturation && (
+                              <div className="bg-gray-50 rounded p-2">
+                                <div className="text-xs text-gray-600">Oxygen</div>
+                                <div className="font-medium">{report.oxygenSaturation}%</div>
+                              </div>
+                            )}
+                            {report.weight && (
+                              <div className="bg-gray-50 rounded p-2">
+                                <div className="text-xs text-gray-600">Weight</div>
+                                <div className="font-medium">{report.weight} lbs</div>
+                              </div>
+                            )}
+                            {report.painLevel && (
+                              <div className="bg-gray-50 rounded p-2">
+                                <div className="text-xs text-gray-600">Pain Level</div>
+                                <div className="font-medium">{report.painLevel}/10</div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {report.notes && (
+                            <div className="bg-blue-50 rounded p-3">
+                              <div className="text-sm font-medium text-blue-900 mb-1">Notes:</div>
+                              <div className="text-sm text-blue-800">{report.notes}</div>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between mt-3">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              report.status === 'stable' ? 'bg-green-100 text-green-800' :
+                              report.status === 'critical' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {report.status || 'Unknown'}
+                            </span>
+                            <div className="text-xs text-gray-500">
+                              {report.createdAt ? new Date(report.createdAt).toLocaleString() : 'N/A'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No Data State */}
+                {patientVitals.length === 0 && nurseReports.length === 0 && (
+                  <div className="text-center py-12">
+                    <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Vitals Data Available</h3>
+                    <p className="text-gray-600">
+                      No vital signs or nurse reports have been recorded for this patient yet.
+                    </p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex justify-end space-x-3 pt-6 border-t">
+                  <button
+                    onClick={() => setShowVitalsModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => window.location.href = `/service-provider/care-logs?client=${selectedPatient.id}`}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    <FileText className="h-4 w-4 mr-2 inline" />
+                    View Care Logs
                   </button>
                 </div>
               </div>
