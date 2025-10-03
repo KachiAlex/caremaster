@@ -239,6 +239,25 @@ service cloud.firestore {
       );
     }
 
+    // Medications collection - patients can read their own; caregivers/doctors can read; providers can create
+    match /medications/{medicationId} {
+      // Allow reads for:
+      // - Admins
+      // - Doctors/Caregivers (service providers)
+      // - The patient who owns the record (by patientId)
+      allow read: if request.auth != null && (
+        isAdmin() || isDoctor() || isCaregiver() ||
+        (request.resource == null && resource.data.patientId == request.auth.uid) ||
+        (request.resource != null && request.resource.data.patientId == request.auth.uid)
+      );
+
+      // Allow creates for admins, doctors, and caregivers
+      allow create: if request.auth != null && (isAdmin() || isDoctor() || isCaregiver());
+
+      // Allow updates/deletes for admins and doctors
+      allow update, delete: if request.auth != null && (isAdmin() || isDoctor());
+    }
+
     // Patient feedback collection - caregivers can read their own feedback; admins manage
     match /patientFeedback/{feedbackId} {
       // Caregivers can read feedback where they are the subject

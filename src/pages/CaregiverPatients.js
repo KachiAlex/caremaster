@@ -47,6 +47,7 @@ const CaregiverPatients = () => {
   const [nurseReports, setNurseReports] = useState([]);
   const [showMedsModal, setShowMedsModal] = useState(false);
   const [patientMedications, setPatientMedications] = useState([]);
+  const [showLogsModal, setShowLogsModal] = useState(false);
   const [logsPage, setLogsPage] = useState(1);
   const logsPageSize = 5;
 
@@ -300,14 +301,36 @@ const CaregiverPatients = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button 
-                    onClick={() => window.location.href = `/service-provider/prescriptions?client=${patient.id}`}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        setSelectedPatient(patient);
+                        const meds = await medicationAPI.getMedications({ patientId: patient.id });
+                        setPatientMedications(meds || []);
+                        setShowMedsModal(true);
+                      } catch (e) {
+                        console.error('Failed to load medications', e);
+                        toast.error('Failed to load medications');
+                      }
+                    }}
                     className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center text-sm"
                   >
                     <Pill className="h-4 w-4 mr-1" />
                     Meds
                   </button>
                   <button 
-                    onClick={() => window.location.href = `/service-provider/care-logs?client=${patient.id}`}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        setSelectedPatient(patient);
+                        const logs = await getCareLogsByPatient(patient.id);
+                        setPatientLogs(logs || []);
+                        setShowLogsModal(true);
+                      } catch (e) {
+                        console.error('Failed to load care logs', e);
+                        toast.error('Failed to load care logs');
+                      }
+                    }}
                     className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center text-sm"
                   >
                     <FileText className="h-4 w-4 mr-1" />
@@ -439,6 +462,21 @@ const CaregiverPatients = () => {
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-semibold text-gray-900">Care Logs</h4>
                     <div className="flex items-center gap-2">
+                      <button
+                        className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                        onClick={async ()=>{
+                          try {
+                            const logs = await getCareLogsByPatient(selectedPatient.id);
+                            setPatientLogs(logs || []);
+                            setShowLogsModal(true);
+                          } catch (e) {
+                            console.error('Failed to load care logs', e);
+                            toast.error('Failed to load care logs');
+                          }
+                        }}
+                      >
+                        View All
+                      </button>
                       <input 
                         type="date" 
                         className="px-2 py-1 border border-gray-300 rounded"
@@ -760,6 +798,67 @@ const CaregiverPatients = () => {
               <div className="flex justify-end space-x-3 p-6 border-t">
                 <button
                   onClick={() => setShowMedsModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showLogsModal && selectedPatient && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h3 className="text-xl font-semibold text-gray-900">{selectedPatient.name} - Care Logs</h3>
+                <button
+                  onClick={() => setShowLogsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {(!patientLogs || patientLogs.length === 0) && (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-600">No care logs found for this patient.</p>
+                  </div>
+                )}
+
+                {patientLogs && patientLogs.length > 0 && (
+                  <div className="space-y-3">
+                    {patientLogs.map(log => (
+                      <div key={log.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-lg font-semibold text-gray-900">{log.title || 'Care Log'}</div>
+                            <div className="text-sm text-gray-600 mt-1 whitespace-pre-line">{log.content}</div>
+                          </div>
+                          <div className="text-right text-xs text-gray-500">
+                            {log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : ''}
+                          </div>
+                        </div>
+                        {Array.isArray(log.media) && log.media.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {log.media.map((m, idx)=> (
+                              <a key={idx} href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 underline">
+                                {m.type?.startsWith('image/') ? 'View Image' : m.type?.startsWith('video/') ? 'View Video' : 'View File'}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3 p-6 border-t">
+                <button
+                  onClick={() => setShowLogsModal(false)}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
                 >
                   Close

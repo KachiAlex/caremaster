@@ -25,22 +25,21 @@ const logMedicationDose = httpsCallable(functions, 'logMedicationDose');
 const getMedicationAnalytics = httpsCallable(functions, 'getMedicationAnalytics');
 
 export const medicationAPI = {
-  // Get all medications with filtering (using Data Connect)
+  // Get all medications with filtering (prefer Firestore when a patientId is provided)
   getMedications: async (filters = {}) => {
     try {
       logger.debug('Fetching medications', { filters });
       
-      // Try Data Connect first
-      try {
-        if (filters.patientId) {
-          const result = await dataConnectService.getMedications(filters.patientId);
-          return result.data || [];
-        } else {
+      // When a specific patientId is provided (doctor/caregiver views), use Firestore directly.
+      // Data Connect often expects a patient profile context and can fail for provider lookups.
+      if (!filters.patientId) {
+        // Try Data Connect only for current-user context (likely patient portal)
+        try {
           const result = await dataConnectService.getCurrentUserMedications();
           return result.data || [];
+        } catch (dataConnectError) {
+          logger.warn('Data Connect failed, falling back to Firestore', { error: dataConnectError });
         }
-      } catch (dataConnectError) {
-        logger.warn('Data Connect failed, falling back to Firestore', { error: dataConnectError });
       }
       
       // Fallback to Firestore with simplified query to avoid index requirements
