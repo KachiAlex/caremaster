@@ -58,7 +58,7 @@ import {
   getNotificationsByUser 
 } from '../api/notificationsAPI';
 import { getNurseReportsByPatient, createNurseReport } from '../api/nurseReportsAPI';
-import { createCarePlan } from '../api/carePlansAPI';
+import { carePlansAPI } from '../api/carePlansAPI';
 import MorningBriefing from '../components/MorningBriefing';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import VitalsQuickEntry from '../components/VitalsQuickEntry';
@@ -664,7 +664,7 @@ const ServiceProviderDashboard = () => {
         toast.error('No patient selected');
         return;
       }
-      await createCarePlan({
+      await carePlansAPI.createCarePlan({
         patientId: selectedPatient.id,
         doctorId: userProfile.id,
         doctorName: userProfile.name,

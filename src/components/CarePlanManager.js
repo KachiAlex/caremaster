@@ -18,7 +18,7 @@ import {
   Eye
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { createCarePlan, getCarePlansByPatient } from '../api/carePlansAPI';
+import { carePlansAPI } from '../api/carePlansAPI';
 import { getNurseReportsByPatient } from '../api/nurseReportsAPI';
 
 const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
@@ -69,7 +69,7 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
 
   const loadCarePlans = async () => {
     try {
-      const plans = await getCarePlansByPatient(patientId);
+      const plans = await carePlansAPI.getCarePlansByPatient(patientId);
       setCarePlans(plans);
     } catch (error) {
       console.error('Error loading care plans:', error);
@@ -172,7 +172,7 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
         monitoringRequirements: carePlanForm.monitoringRequirements
       };
 
-      await createCarePlan(carePlanData);
+      await carePlansAPI.createCarePlan(carePlanData);
       
       toast.success('Care plan created successfully!');
       setShowCreateForm(false);

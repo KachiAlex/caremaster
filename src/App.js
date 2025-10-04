@@ -19,6 +19,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Medications = lazy(() => import('./pages/Medications'));
 const VitalSigns = lazy(() => import('./pages/VitalSigns'));
 const Appointments = lazy(() => import('./pages/Appointments'));
+const Consultation = lazy(() => import('./pages/Consultation'));
 const Profile = lazy(() => import('./pages/Profile'));
 const CaregiverDashboard = lazy(() => import('./pages/CaregiverDashboard'));
 const PreclinicCaregiverDashboard = lazy(() => import('./pages/PreclinicCaregiverDashboard'));
@@ -438,7 +439,7 @@ function App() {
         <Route path="activities" element={<CaregiverPerformance />} />
         <Route path="medical-records" element={<CaregiverPatients />} />
         <Route path="prescriptions" element={<Medications />} />
-        <Route path="consultations" element={<Appointments />} />
+        <Route path="consultations" element={<Consultation />} />
         <Route path="diagnostics" element={<VitalSigns />} />
         <Route path="settings" element={<CaregiverSettings />} />
       </Route>

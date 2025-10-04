@@ -56,7 +56,7 @@ import { caregiverAPI } from '../api/caregiverAPI';
 import { getAllPatients } from '../api/patientsAPI';
 import { createTaskAssignment } from '../api/taskAssignmentAPI';
 import { createNurseReport, getNurseReportsByPatient } from '../api/nurseReportsAPI';
-import { createCarePlan, getCarePlansByPatient } from '../api/carePlansAPI';
+import { carePlansAPI } from '../api/carePlansAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import telemedicineAPI from '../api/telemedicineAPI';
 import CarePlanManager from '../components/CarePlanManager';
@@ -74,6 +74,7 @@ const NewAdminDashboard = () => {
   const { userProfile } = useUser();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [consultations, setConsultations] = useState([]);
   
   // Dashboard Stats
   const [stats, setStats] = useState({
@@ -171,6 +172,7 @@ const NewAdminDashboard = () => {
   useEffect(() => {
     loadDashboardData();
     loadAssignments();
+    loadConsultations();
     
     // Subscribe to real-time emergency updates
     const unsubscribeEmergencies = emergencyAPI.subscribeToEmergencies((emergencyData) => {
@@ -289,9 +291,20 @@ const NewAdminDashboard = () => {
     }
   };
 
+  const loadConsultations = async () => {
+    try {
+      console.log('🔄 Loading consultations...');
+      const consultationsData = await carePlansAPI.getAllCarePlans();
+      setConsultations(consultationsData);
+      console.log('✅ Consultations loaded:', consultationsData.length);
+    } catch (error) {
+      console.error('❌ Error loading consultations:', error);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadDashboardData(), loadAssignments()]);
+    await Promise.all([loadDashboardData(), loadAssignments(), loadConsultations()]);
     setRefreshing(false);
     toast.success('Dashboard refreshed');
   };
@@ -390,7 +403,7 @@ const NewAdminDashboard = () => {
       // Load patient's medical history, care plans, and assigned caregivers
       const [reports, plans, patientAssignments] = await Promise.all([
         getNurseReportsByPatient(patient.id).catch(() => []),
-        getCarePlansByPatient(patient.id).catch(() => []),
+        carePlansAPI.getCarePlansByPatient(patient.id).catch(() => []),
         assignmentAPI.getAssignmentsByPatient(patient.id).catch(() => [])
       ]);
       
@@ -568,7 +581,7 @@ const NewAdminDashboard = () => {
 
   const handleCreateCarePlan = async () => {
     try {
-      await createCarePlan({
+      await carePlansAPI.createCarePlan({
         ...newCarePlan,
         doctorId: userProfile.uid,
         doctorName: userProfile.displayName || userProfile.email
@@ -661,6 +674,39 @@ const NewAdminDashboard = () => {
         </div>
       </div>
 
+      {/* Additional Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Active Consultations</p>
+              <p className="text-2xl font-bold text-gray-900">{consultations.filter(c => c.status === 'active').length}</p>
+            </div>
+            <Stethoscope className="h-8 w-8 text-purple-600" />
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Care Plans</p>
+              <p className="text-2xl font-bold text-gray-900">{consultations.length}</p>
+            </div>
+            <FileText className="h-8 w-8 text-indigo-600" />
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Completed Plans</p>
+              <p className="text-2xl font-bold text-gray-900">{consultations.filter(c => c.status === 'completed').length}</p>
+            </div>
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+      </div>
+
       {/* Quick Actions */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
@@ -687,6 +733,14 @@ const NewAdminDashboard = () => {
           >
             <ClipboardList className="h-6 w-6 text-gray-400 mr-2" />
             <span className="text-sm font-medium text-gray-700">Assign Task</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('consultations')}
+            className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
+          >
+            <Stethoscope className="h-6 w-6 text-gray-400 mr-2" />
+            <span className="text-sm font-medium text-gray-700">Manage Consultations</span>
           </button>
           
           <button
@@ -968,6 +1022,124 @@ const NewAdminDashboard = () => {
     </div>
   );
 
+  const renderConsultations = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Consultations & Care Plans</h2>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => loadConsultations()}
+            className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </button>
+        </div>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-sm border">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Care Plan</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {consultations.map((consultation) => (
+                <tr key={consultation.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <span className="text-sm font-medium text-blue-600">
+                            {consultation.patientName?.charAt(0) || 'P'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{consultation.patientName}</div>
+                        <div className="text-sm text-gray-500">{consultation.patientId}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{consultation.title}</div>
+                    <div className="text-sm text-gray-500 truncate max-w-xs">{consultation.description}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{consultation.createdByName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      consultation.status === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : consultation.status === 'completed'
+                        ? 'bg-blue-100 text-blue-800'
+                        : consultation.status === 'paused'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {consultation.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      consultation.priority === 'high' 
+                        ? 'bg-red-100 text-red-800' 
+                        : consultation.priority === 'medium'
+                        ? 'bg-orange-100 text-orange-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {consultation.priority}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {consultation.createdAt ? new Date(consultation.createdAt).toLocaleDateString() : 'Unknown'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => {
+                          // View consultation details
+                          console.log('View consultation:', consultation.id);
+                        }}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Edit consultation
+                          console.log('Edit consultation:', consultation.id);
+                        }}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {consultations.length === 0 && (
+        <div className="text-center py-12">
+          <Stethoscope className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No consultations yet</h3>
+          <p className="text-gray-600">Consultations will appear here when doctors create care plans for patients.</p>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <AdminGuard>
       <div className="min-h-screen bg-gray-50">
@@ -1006,9 +1178,10 @@ const NewAdminDashboard = () => {
                 { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
                 { id: 'caregivers', name: 'Caregivers & Doctors', icon: UserCheck },
                 { id: 'patients', name: 'Patients', icon: Heart },
+                { id: 'consultations', name: 'Consultations', icon: Stethoscope },
                 { id: 'tasks', name: 'Task Assignments', icon: ClipboardList },
                 { id: 'reports', name: 'Nurse Reports', icon: FileText },
-                { id: 'careplans', name: 'Care Plans', icon: Stethoscope },
+                { id: 'careplans', name: 'Care Plans', icon: FileText },
                 { id: 'telemedicine', name: 'Telemedicine', icon: Video },
                 { id: 'emergencies', name: 'Emergencies', icon: AlertTriangle }
               ].map((tab) => (
@@ -1041,6 +1214,7 @@ const NewAdminDashboard = () => {
               {activeTab === 'dashboard' && renderDashboard()}
               {activeTab === 'caregivers' && renderCaregivers()}
               {activeTab === 'patients' && renderPatients()}
+              {activeTab === 'consultations' && renderConsultations()}
               {activeTab === 'tasks' && (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
