@@ -60,12 +60,9 @@ const InstitutionLanding = () => {
     loadInstitutionData();
   }, [institutionId]);
 
-  const handleGetStarted = () => {
-    navigate(`/institution/login?institution=${institutionId}`);
-  };
-
-  const handleSignIn = () => {
-    navigate(`/institution/login?institution=${institutionId}`);
+  const handleRoleSelect = (role) => {
+    // Navigate to login with role pre-selected
+    navigate(`/institution/login?institution=${institutionId}&role=${role}`);
   };
 
   if (loading) {
@@ -97,21 +94,38 @@ const InstitutionLanding = () => {
     );
   }
 
-  const features = [
-    {
-      icon: Users,
-      title: 'Staff Management',
-      description: 'Manage doctors, nurses, and caregivers efficiently'
-    },
+  const accessRoles = [
     {
       icon: Shield,
-      title: 'Secure & Compliant',
-      description: 'HIPAA-compliant healthcare data management'
+      title: 'Institution Admin',
+      description: 'Full management access',
+      role: 'admin',
+      color: 'from-blue-500 to-blue-600',
+      hoverColor: 'hover:from-blue-600 hover:to-blue-700'
     },
     {
-      icon: CheckCircle,
-      title: 'Real-time Updates',
-      description: 'Track patient care and staff activities in real-time'
+      icon: Users,
+      title: 'Doctor',
+      description: 'Medical staff access',
+      role: 'doctor',
+      color: 'from-purple-500 to-purple-600',
+      hoverColor: 'hover:from-purple-600 hover:to-purple-700'
+    },
+    {
+      icon: Users,
+      title: 'Nurse',
+      description: 'Nursing staff access',
+      role: 'nurse',
+      color: 'from-green-500 to-green-600',
+      hoverColor: 'hover:from-green-600 hover:to-green-700'
+    },
+    {
+      icon: Users,
+      title: 'Caregiver',
+      description: 'Care provider access',
+      role: 'caregiver',
+      color: 'from-orange-500 to-orange-600',
+      hoverColor: 'hover:from-orange-600 hover:to-orange-700'
     }
   ];
 
@@ -120,144 +134,110 @@ const InstitutionLanding = () => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center">
             <div className="flex items-center space-x-3">
               <Building2 className="h-8 w-8 text-blue-600" />
-              <div>
+              <div className="text-center">
                 <h1 className="text-2xl font-bold text-gray-900">{institution.name}</h1>
                 {institution.slug && (
                   <p className="text-sm text-gray-500">{institution.slug}</p>
                 )}
               </div>
             </div>
-            <button
-              onClick={handleSignIn}
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Sign In
-            </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left Column - Hero Content */}
-          <div>
-            <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-6">
-              <Shield className="h-4 w-4 mr-2" />
-              Licensed Healthcare Platform
-            </div>
-            
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Welcome to Your Healthcare Management Portal
-            </h2>
-            
-            <p className="text-xl text-gray-600 mb-8">
-              Streamline your institution's operations with our comprehensive platform for 
-              managing staff, patients, and care delivery.
-            </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center px-4 py-2 bg-white rounded-full text-sm font-medium mb-6 shadow-sm">
+            <Shield className="h-4 w-4 mr-2 text-green-600" />
+            <span className="text-green-600 font-semibold">Licensed & Active</span>
+          </div>
+          
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
+            {institution.name}
+          </h1>
+          
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+            Healthcare Management Portal
+          </p>
 
-            <div className="space-y-4 mb-8">
-              {features.map((feature, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <feature.icon className="h-5 w-5 text-blue-600" />
-                    </div>
+          {license && (
+            <div className="inline-flex items-center space-x-6 text-sm text-gray-600">
+              <div className="flex items-center">
+                <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
+                <span className="capitalize">{license.plan} Plan</span>
+              </div>
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-1 text-blue-600" />
+                <span>{license.seats} User Seats</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Access Roles Section */}
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
+            Select Your Access Level
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {accessRoles.map((role, index) => (
+              <button
+                key={index}
+                onClick={() => handleRoleSelect(role.role)}
+                className={`group relative bg-gradient-to-br ${role.color} ${role.hoverColor} text-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-200`}
+              >
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="h-16 w-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-30 transition-all">
+                    <role.icon className="h-8 w-8" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{feature.title}</h3>
-                    <p className="text-gray-600">{feature.description}</p>
+                    <h3 className="font-bold text-lg mb-1">{role.title}</h3>
+                    <p className="text-sm text-white text-opacity-90">{role.description}</p>
                   </div>
+                  <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-              ))}
-            </div>
-
-            <button
-              onClick={handleGetStarted}
-              className="inline-flex items-center px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold text-lg"
-            >
-              Get Started
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </button>
+              </button>
+            ))}
           </div>
 
-          {/* Right Column - Info Card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Institution Details</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <span className="text-gray-600">Institution</span>
-                <span className="font-semibold text-gray-900">{institution.name}</span>
-              </div>
-
-              {institution.domain && (
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <span className="text-gray-600">Domain</span>
-                  <span className="font-semibold text-gray-900">{institution.domain}</span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <span className="text-gray-600">Status</span>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  institution.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {institution.active ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Active
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      Inactive
-                    </>
-                  )}
-                </span>
-              </div>
-
-              {license && (
-                <>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <span className="text-gray-600">Plan</span>
-                    <span className="font-semibold text-gray-900 capitalize">{license.plan}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <span className="text-gray-600">User Seats</span>
-                    <span className="font-semibold text-gray-900">{license.seats}</span>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>New to the platform?</strong> Click "Get Started" to create your account 
-                and access your institution's dashboard.
-              </p>
-            </div>
+          <div className="mt-12 text-center">
+            <p className="text-gray-600 mb-4">
+              Don't have an account? Contact your institution administrator to get access credentials.
+            </p>
           </div>
         </div>
 
-        {/* Footer Section */}
-        <div className="mt-16 pt-8 border-t border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-bold text-blue-600 mb-2">24/7</div>
-              <p className="text-gray-600">Support Available</p>
+        {/* Features/Info Section */}
+        <div className="mt-20 bg-white rounded-2xl shadow-xl p-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Shield className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Secure & Compliant</h3>
+              <p className="text-sm text-gray-600">HIPAA-compliant healthcare data management</p>
             </div>
-            <div>
-              <div className="text-3xl font-bold text-blue-600 mb-2">100%</div>
-              <p className="text-gray-600">Data Security</p>
+            
+            <div className="text-center">
+              <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Users className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Staff Management</h3>
+              <p className="text-sm text-gray-600">Manage doctors, nurses, and caregivers efficiently</p>
             </div>
-            <div>
-              <div className="text-3xl font-bold text-blue-600 mb-2">HIPAA</div>
-              <p className="text-gray-600">Compliant Platform</p>
+            
+            <div className="text-center">
+              <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Activity className="h-6 w-6 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Real-time Updates</h3>
+              <p className="text-sm text-gray-600">Track patient care and staff activities in real-time</p>
             </div>
           </div>
         </div>
