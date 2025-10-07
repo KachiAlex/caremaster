@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-const db = admin.firestore();
+const getDb = () => admin.firestore();
 
 // Send notification
 export const sendNotification = async (data: {
@@ -26,7 +26,7 @@ export const sendNotification = async (data: {
     }
 
     // Create notification document
-    const notificationRef = await db.collection('notifications').add({
+    const notificationRef = await getDb().collection('notifications').add({
       userId,
       type,
       title,
@@ -38,7 +38,7 @@ export const sendNotification = async (data: {
     });
 
     // Send push notification if user has FCM token
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await getDb().collection('users').doc(userId).get();
     if (userDoc.exists) {
       const userData = userDoc.data();
       if (userData?.fcmToken) {
@@ -47,7 +47,7 @@ export const sendNotification = async (data: {
     }
 
     // Log the event
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId: context.auth.uid,
       action: 'NOTIFICATION_SENT',
       details: {
@@ -98,7 +98,7 @@ export const scheduleNotification = async (data: {
     }
 
     // Create scheduled notification document
-    const notificationRef = await db.collection('scheduledNotifications').add({
+    const notificationRef = await getDb().collection('scheduledNotifications').add({
       userId,
       type,
       title,
@@ -111,7 +111,7 @@ export const scheduleNotification = async (data: {
     });
 
     // Log the event
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId: context.auth.uid,
       action: 'NOTIFICATION_SCHEDULED',
       details: {
@@ -148,7 +148,7 @@ async function sendPushNotification(
   priority: 'low' | 'normal' | 'high' = 'normal'
 ) {
   try {
-    const messagePayload = {
+    const messagePayload: admin.messaging.TokenMessage = {
       token: fcmToken,
       notification: {
         title,
@@ -161,8 +161,7 @@ async function sendPushNotification(
       android: {
         priority: priority === 'high' ? 'high' : 'normal',
         notification: {
-          sound: 'default',
-          priority: priority === 'high' ? 'high' : 'normal'
+          sound: 'default'
         }
       },
       apns: {
@@ -191,7 +190,7 @@ export const processScheduledNotifications = functions.pubsub
       const now = admin.firestore.Timestamp.now();
       
       // Get all scheduled notifications that are due
-      const scheduledNotificationsSnapshot = await db.collection('scheduledNotifications')
+      const scheduledNotificationsSnapshot = await getDb().collection('scheduledNotifications')
         .where('scheduledFor', '<=', now)
         .where('status', '==', 'scheduled')
         .get();
@@ -201,7 +200,7 @@ export const processScheduledNotifications = functions.pubsub
         
         try {
           // Send the notification
-          await db.collection('notifications').add({
+          await getDb().collection('notifications').add({
             userId: notification.userId,
             type: notification.type,
             title: notification.title,
@@ -213,7 +212,7 @@ export const processScheduledNotifications = functions.pubsub
           });
 
           // Send push notification if user has FCM token
-          const userDoc = await db.collection('users').doc(notification.userId).get();
+          const userDoc = await getDb().collection('users').doc(notification.userId).get();
           if (userDoc.exists) {
             const userData = userDoc.data();
             if (userData?.fcmToken) {
@@ -238,9 +237,9 @@ export const processScheduledNotifications = functions.pubsub
           console.error(`Error processing scheduled notification ${doc.id}:`, error);
           
           // Mark as failed
-          await doc.ref.update({
+        await doc.ref.update({
             status: 'failed',
-            error: error.message,
+          error: String(error && (error as any).message || error),
             failedAt: admin.firestore.FieldValue.serverTimestamp()
           });
         }

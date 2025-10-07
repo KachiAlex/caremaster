@@ -1,9 +1,10 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-const db = admin.firestore();
+const getDb = () => admin.firestore();
 
 interface MedicationReminder {
+  id?: string;
   userId: string;
   medicationId: string;
   medicationName: string;
@@ -20,7 +21,7 @@ export const sendMedicationReminder = async () => {
     const oneHourFromNow = new admin.firestore.Timestamp(now.seconds + 3600, now.nanoseconds);
 
     // Get all active medication reminders due within the next hour
-    const remindersSnapshot = await db.collection('medicationReminders')
+    const remindersSnapshot = await getDb().collection('medicationReminders')
       .where('nextDoseTime', '<=', oneHourFromNow)
       .where('isActive', '==', true)
       .get();
@@ -34,7 +35,7 @@ export const sendMedicationReminder = async () => {
     for (const reminder of reminders) {
       try {
         // Get user details
-        const userDoc = await db.collection('users').doc(reminder.userId).get();
+        const userDoc = await getDb().collection('users').doc(reminder.userId).get();
         if (!userDoc.exists) continue;
 
         const userData = userDoc.data();
@@ -45,14 +46,17 @@ export const sendMedicationReminder = async () => {
         // Update next dose time based on frequency
         const nextDoseTime = calculateNextDoseTime(reminder.frequency, now);
         
-        await db.collection('medicationReminders').doc(reminder.id).update({
+        if (!reminder.id) {
+          continue;
+        }
+        await getDb().collection('medicationReminders').doc(reminder.id as string).update({
           nextDoseTime,
           lastReminderSent: now,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
         // Log the reminder
-        await db.collection('auditLogs').add({
+        await getDb().collection('auditLogs').add({
           userId: reminder.userId,
           action: 'MEDICATION_REMINDER_SENT',
           details: {
@@ -100,7 +104,7 @@ export const processMedicationLog = async (data: {
     const timestamp = takenAt || admin.firestore.Timestamp.now();
 
     // Create medication log entry
-    await db.collection('medicationLogs').add({
+    await getDb().collection('medicationLogs').add({
       medicationId,
       userId,
       status,
@@ -112,7 +116,7 @@ export const processMedicationLog = async (data: {
 
     // Update medication reminder if taken
     if (status === 'taken') {
-      const reminderSnapshot = await db.collection('medicationReminders')
+      const reminderSnapshot = await getDb().collection('medicationReminders')
         .where('userId', '==', userId)
         .where('medicationId', '==', medicationId)
         .where('isActive', '==', true)
@@ -132,7 +136,7 @@ export const processMedicationLog = async (data: {
     }
 
     // Log the event
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId: context.auth.uid,
       action: 'MEDICATION_LOG_CREATED',
       details: {
@@ -159,7 +163,7 @@ export const processMedicationLog = async (data: {
 async function sendMedicationNotification(reminder: MedicationReminder, userData: any) {
   try {
     // Create notification document
-    await db.collection('notifications').add({
+    await getDb().collection('notifications').add({
       userId: reminder.userId,
       type: 'medication_reminder',
       title: 'Medication Reminder',

@@ -6,6 +6,7 @@ import { handleEmergencyAlert, processEmergencyResponse } from './emergencyManag
 import { processAIVoiceCommand, generateHealthRecommendations } from './aiProcessing';
 import { sendNotification, scheduleNotification } from './notificationService';
 import { logAuditEvent, getAuditLogs } from './auditLogging';
+import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins } from './licensing';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -47,3 +48,19 @@ export const healthCheck = functions.https.onRequest((req, res) => {
     version: '1.0.0'
   });
 });
+
+// Licensing Functions
+export const createInstitutionFunction = createInstitution;
+export const createLicenseFunction = createLicense;
+export const assignInstitutionAdminFunction = assignInstitutionAdmin;
+export const getLicenseStatusFunction = getLicenseStatus;
+export const setSuperAdminClaimFunction = setSuperAdminClaim;
+export const getInstitutionsFunction = getInstitutions;
+export const getLicensesFunction = getLicenses;
+export const updateInstitutionFunction = updateInstitution;
+export const deleteInstitutionFunction = deleteInstitution;
+export const updateLicenseFunction = updateLicense;
+export const suspendLicenseFunction = suspendLicense;
+export const activateLicenseFunction = activateLicense;
+export const migrateInstitutionLinksFunction = migrateInstitutionLinks;
+export const getInstitutionAdminsFunction = getInstitutionAdmins;

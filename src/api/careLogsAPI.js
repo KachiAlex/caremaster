@@ -5,12 +5,13 @@ import { db } from '../firebase/config';
 
 const CARE_LOGS_COLLECTION = 'careLogs';
 
-export async function createCareLog(log) {
+export async function createCareLog(log, institutionId = null) {
   if (!log || !log.patientId || !log.caregiverId || !log.content) {
     throw new Error('patientId, caregiverId and content are required');
   }
   const payload = {
     ...log,
+    institutionId: institutionId || log.institutionId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
@@ -33,13 +34,24 @@ export async function deleteCareLog(logId) {
   return true;
 }
 
-export async function getCareLogsByPatient(patientId) {
+export async function getCareLogsByPatient(patientId, institutionId = null) {
   if (!patientId) throw new Error('patientId required');
-  const q = query(
+  let q = query(
     collection(db, CARE_LOGS_COLLECTION),
     where('patientId', '==', patientId),
     orderBy('createdAt', 'desc')
   );
+  
+  // Add institution filtering if provided
+  if (institutionId) {
+    q = query(
+      collection(db, CARE_LOGS_COLLECTION),
+      where('patientId', '==', patientId),
+      where('institutionId', '==', institutionId),
+      orderBy('createdAt', 'desc')
+    );
+  }
+  
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
@@ -54,6 +66,7 @@ export async function getCareLogsByCaregiver(caregiverId) {
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
 
 
 

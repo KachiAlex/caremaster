@@ -20,10 +20,19 @@ import { db } from '../firebase/config';
 const PATIENTS_COLLECTION = 'patients';
 
 // Get all patients (admin only)
-export const getAllPatients = async () => {
+export const getAllPatients = async (institutionId = null) => {
   try {
     const patientsRef = collection(db, PATIENTS_COLLECTION);
-    const q = query(patientsRef, orderBy('createdAt', 'desc'));
+    let q = query(patientsRef, orderBy('createdAt', 'desc'));
+    
+    // Add institution filtering if provided
+    if (institutionId) {
+      q = query(patientsRef, 
+        where('institutionId', '==', institutionId),
+        orderBy('createdAt', 'desc')
+      );
+    }
+    
     const querySnapshot = await getDocs(q);
     
     const patients = [];
@@ -42,6 +51,36 @@ export const getAllPatients = async () => {
     return patients;
   } catch (error) {
     console.error('Error fetching patients:', error);
+    throw error;
+  }
+};
+
+// Get patients by institution
+export const getPatientsByInstitution = async (institutionId) => {
+  try {
+    const patientsRef = collection(db, PATIENTS_COLLECTION);
+    const q = query(patientsRef, 
+      where('institutionId', '==', institutionId),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const patients = [];
+    querySnapshot.forEach((doc) => {
+      const patientData = doc.data();
+      patients.push({
+        id: doc.id,
+        ...patientData,
+        dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
+        createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
+        updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
+        lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+      });
+    });
+    
+    return patients;
+  } catch (error) {
+    console.error('Error fetching patients by institution:', error);
     throw error;
   }
 };
@@ -72,14 +111,23 @@ export const getPatientById = async (patientId) => {
 };
 
 // Get patients assigned to a caregiver
-export const getPatientsByCaregiver = async (caregiverId) => {
+export const getPatientsByCaregiver = async (caregiverId, institutionId = null) => {
   try {
-    console.log('🔍 getPatientsByCaregiver called with caregiverId:', caregiverId);
+    console.log('🔍 getPatientsByCaregiver called with caregiverId:', caregiverId, 'institutionId:', institutionId);
     console.log('🔍 Function started - about to query Firestore');
     
     // First try to get patients directly assigned to caregiver
     const patientsRef = collection(db, PATIENTS_COLLECTION);
-    const directQuery = query(patientsRef, where('assignedCaregiver', '==', caregiverId));
+    let directQuery = query(patientsRef, where('assignedCaregiver', '==', caregiverId));
+    
+    // Add institution filtering if provided
+    if (institutionId) {
+      directQuery = query(patientsRef, 
+        where('assignedCaregiver', '==', caregiverId),
+        where('institutionId', '==', institutionId)
+      );
+    }
+    
     const directSnapshot = await getDocs(directQuery);
     
     console.log(`  → Found ${directSnapshot.size} patients in 'patients' collection with assignedCaregiver`);
@@ -205,11 +253,20 @@ export const getPatientsByCaregiver = async (caregiverId) => {
 };
 
 // Get patients assigned to a doctor
-export const getPatientsByDoctor = async (doctorId) => {
+export const getPatientsByDoctor = async (doctorId, institutionId = null) => {
   try {
     const patientsRef = collection(db, PATIENTS_COLLECTION);
     // Remove orderBy to avoid index requirement - we'll sort in memory
-    const q = query(patientsRef, where('assignedDoctor', '==', doctorId));
+    let q = query(patientsRef, where('assignedDoctor', '==', doctorId));
+    
+    // Add institution filtering if provided
+    if (institutionId) {
+      q = query(patientsRef, 
+        where('assignedDoctor', '==', doctorId),
+        where('institutionId', '==', institutionId)
+      );
+    }
+    
     const querySnapshot = await getDocs(q);
     
     const patients = [];

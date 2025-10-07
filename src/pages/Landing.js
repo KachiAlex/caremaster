@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
 import { 
   Heart, 
   Bell, 
@@ -21,6 +22,26 @@ import {
 } from 'lucide-react';
 
 const Landing = () => {
+  const navigate = useNavigate();
+  const { userRole } = useUser();
+
+  React.useEffect(() => {
+    const onKeyDown = (e) => {
+      try {
+        if (e.ctrlKey && e.altKey && (e.key === 'a' || e.key === 'A')) {
+          e.preventDefault();
+          if (userRole === 'admin') {
+            navigate('/admin/dashboard');
+          } else {
+            navigate('/admin/login');
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [navigate, userRole]);
+
   const features = [
     {
       icon: Heart,

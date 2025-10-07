@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-const db = admin.firestore();
+const getDb = () => admin.firestore();
 
 interface EmergencyAlert {
   userId: string;
@@ -38,8 +38,8 @@ export const handleEmergencyAlert = async (data: {
     const timestamp = admin.firestore.Timestamp.now();
 
     // Get user profile and emergency contacts
-    const userDoc = await db.collection('users').doc(userId).get();
-    const elderlyProfileDoc = await db.collection('elderlyProfiles').doc(userId).get();
+    const userDoc = await getDb().collection('users').doc(userId).get();
+    const elderlyProfileDoc = await getDb().collection('elderlyProfiles').doc(userId).get();
 
     if (!userDoc.exists) {
       throw new functions.https.HttpsError('not-found', 'User profile not found');
@@ -58,7 +58,7 @@ export const handleEmergencyAlert = async (data: {
       timestamp
     };
 
-    const alertRef = await db.collection('emergencyAlerts').add({
+    const alertRef = await getDb().collection('emergencyAlerts').add({
       ...alertData,
       status: 'active',
       createdAt: admin.firestore.FieldValue.serverTimestamp()
@@ -81,7 +81,7 @@ export const handleEmergencyAlert = async (data: {
     }
 
     // Log the emergency
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId,
       action: 'EMERGENCY_ALERT_CREATED',
       details: {
@@ -127,7 +127,7 @@ export const processEmergencyResponse = async (data: {
     const responderUserId = context.auth.uid;
 
     // Get the emergency alert
-    const alertDoc = await db.collection('emergencyAlerts').doc(alertId).get();
+    const alertDoc = await getDb().collection('emergencyAlerts').doc(alertId).get();
     if (!alertDoc.exists) {
       throw new functions.https.HttpsError('not-found', 'Emergency alert not found');
     }
@@ -135,7 +135,7 @@ export const processEmergencyResponse = async (data: {
     const alertData = alertDoc.data();
 
     // Update alert status
-    await db.collection('emergencyAlerts').doc(alertId).update({
+    await getDb().collection('emergencyAlerts').doc(alertId).update({
       status: responseType === 'resolved' ? 'resolved' : 'in_progress',
       lastResponse: {
         type: responseType,
@@ -147,7 +147,7 @@ export const processEmergencyResponse = async (data: {
     });
 
     // Create response record
-    await db.collection('emergencyResponses').add({
+    await getDb().collection('emergencyResponses').add({
       alertId,
       responderId: responderId || responderUserId,
       responseType,
@@ -157,7 +157,7 @@ export const processEmergencyResponse = async (data: {
 
     // Send notification to user if resolved
     if (responseType === 'resolved') {
-      await db.collection('notifications').add({
+      await getDb().collection('notifications').add({
         userId: alertData?.userId,
         type: 'emergency_resolved',
         title: 'Emergency Resolved',
@@ -172,7 +172,7 @@ export const processEmergencyResponse = async (data: {
     }
 
     // Log the response
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId: responderUserId,
       action: 'EMERGENCY_RESPONSE_PROCESSED',
       details: {
@@ -237,7 +237,7 @@ async function sendEmergencyNotification(
     const message = `EMERGENCY ALERT: ${userData.displayName} has triggered a ${alertData.severity} ${alertData.type} emergency. Location: ${alertData.location?.address || 'Unknown'}`;
 
     // Create notification for emergency contact
-    await db.collection('notifications').add({
+    await getDb().collection('notifications').add({
       userId: alertData.userId,
       type: 'emergency_alert',
       title: 'Emergency Alert',
@@ -266,7 +266,7 @@ async function sendEmergencyNotification(
 async function notifyCaregivers(userId: string, alertData: EmergencyAlert, userData: any) {
   try {
     // Get caregivers for this user
-    const caregiversSnapshot = await db.collection('caregiverRelationships')
+    const caregiversSnapshot = await getDb().collection('caregiverRelationships')
       .where('elderlyProfileId', '==', userId)
       .get();
 
@@ -275,7 +275,7 @@ async function notifyCaregivers(userId: string, alertData: EmergencyAlert, userD
       const caregiverId = relationship.caregiverId;
 
       // Create notification for caregiver
-      await db.collection('notifications').add({
+      await getDb().collection('notifications').add({
         userId: caregiverId,
         type: 'emergency_alert',
         title: 'Emergency Alert - Your Patient',
@@ -299,7 +299,7 @@ async function notifyCaregivers(userId: string, alertData: EmergencyAlert, userD
 async function notifyHealthcareProviders(userId: string, alertData: EmergencyAlert, userData: any) {
   try {
     // Get healthcare providers for this user
-    const providersSnapshot = await db.collection('healthcareProviders')
+    const providersSnapshot = await getDb().collection('healthcareProviders')
       .where('patientIds', 'array-contains', userId)
       .get();
 
@@ -307,7 +307,7 @@ async function notifyHealthcareProviders(userId: string, alertData: EmergencyAle
       const provider = doc.data();
 
       // Create notification for healthcare provider
-      await db.collection('notifications').add({
+      await getDb().collection('notifications').add({
         userId: provider.userId,
         type: 'emergency_alert',
         title: 'Emergency Alert - Patient',

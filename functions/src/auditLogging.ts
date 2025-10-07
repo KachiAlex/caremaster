@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-const db = admin.firestore();
+const getDb = () => admin.firestore();
 
 // Log audit event
 export const logAuditEvent = async (data: {
@@ -19,7 +19,7 @@ export const logAuditEvent = async (data: {
     const userId = context.auth.uid;
 
     // Create audit log entry
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId,
       action,
       details,
@@ -64,7 +64,7 @@ export const getAuditLogs = async (data: {
     }
 
     // Build query
-    let query = db.collection('auditLogs').orderBy('timestamp', 'desc');
+    let query = getDb().collection('auditLogs').orderBy('timestamp', 'desc');
 
     // Apply filters
     if (userId) {
@@ -94,7 +94,7 @@ export const getAuditLogs = async (data: {
     }));
 
     // Get total count for pagination
-    const totalSnapshot = await db.collection('auditLogs').get();
+    const totalSnapshot = await getDb().collection('auditLogs').get();
     const totalCount = totalSnapshot.size;
 
     return {
@@ -126,7 +126,7 @@ export const cleanupAuditLogs = functions.pubsub
       const cutoffDate = admin.firestore.Timestamp.fromDate(sixMonthsAgo);
 
       // Get old audit logs
-      const oldLogsSnapshot = await db.collection('auditLogs')
+      const oldLogsSnapshot = await getDb().collection('auditLogs')
         .where('timestamp', '<', cutoffDate)
         .limit(1000) // Process in batches
         .get();
@@ -137,7 +137,7 @@ export const cleanupAuditLogs = functions.pubsub
       }
 
       // Delete old logs
-      const batch = db.batch();
+      const batch = getDb().batch();
       oldLogsSnapshot.docs.forEach(doc => {
         batch.delete(doc.ref);
       });

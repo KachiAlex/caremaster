@@ -19,10 +19,19 @@ import { db } from '../firebase/config';
 const APPOINTMENTS_COLLECTION = 'appointments';
 
 // Get all appointments
-export const getAllAppointments = async () => {
+export const getAllAppointments = async (institutionId = null) => {
   try {
     const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
-    const q = query(appointmentsRef, orderBy('scheduledTime', 'asc'));
+    let q = query(appointmentsRef, orderBy('scheduledTime', 'asc'));
+    
+    // Add institution filtering if provided
+    if (institutionId) {
+      q = query(appointmentsRef, 
+        where('institutionId', '==', institutionId),
+        orderBy('scheduledTime', 'asc')
+      );
+    }
+    
     const querySnapshot = await getDocs(q);
     
     const appointments = [];

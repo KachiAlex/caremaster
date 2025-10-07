@@ -18,6 +18,9 @@ export const UserProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
+  const [licenseActive, setLicenseActive] = useState(true);
+  const [institutionId, setInstitutionId] = useState(null);
+  const [institutionData, setInstitutionData] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -41,6 +44,33 @@ export const UserProvider = ({ children }) => {
             const roleFromProfile = profile.role || profile.userType || profile.type || 'patient';
             setUserRole(roleFromProfile);
             console.log('✅ User role set to:', roleFromProfile);
+
+            // Institution and License check
+            try {
+              const token = await firebaseUser.getIdTokenResult();
+              const tokenInstitutionId = token?.claims?.institutionId || profile?.institutionId;
+              
+              if (tokenInstitutionId) {
+                setInstitutionId(tokenInstitutionId);
+                
+                // Fetch license status
+                const { fetchLicenseStatus } = await import('../services/licenseService');
+                const licenseStatus = await fetchLicenseStatus(tokenInstitutionId);
+                setLicenseActive(Boolean(licenseStatus?.active));
+                
+                // TODO: Fetch institution data if needed
+                // const { getInstitution } = await import('../services/institutionService');
+                // const institution = await getInstitution(tokenInstitutionId);
+                // setInstitutionData(institution);
+              } else {
+                setLicenseActive(true);
+                setInstitutionId(null);
+              }
+            } catch (e) {
+              console.error('Error checking institution/license:', e);
+              setLicenseActive(true);
+              setInstitutionId(null);
+            }
           } else {
             // User profile doesn't exist in Firestore - create it automatically
             console.log('User profile not found in Firestore, creating profile...');
@@ -90,6 +120,9 @@ export const UserProvider = ({ children }) => {
         setUser(null);
         setUserProfile(null);
         setUserRole(null);
+        setLicenseActive(true);
+        setInstitutionId(null);
+        setInstitutionData(null);
       }
       setLoading(false);
     });
@@ -233,6 +266,9 @@ export const UserProvider = ({ children }) => {
     isElderly,
     isAdmin,
     updateUserProfile: setUserProfile,
+    licenseActive,
+    institutionId,
+    institutionData,
   };
 
   return (

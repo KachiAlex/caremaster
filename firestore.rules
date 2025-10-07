@@ -1,6 +1,37 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Multi-tenant helpers
+    function userInstitution() {
+      return request.auth != null ? request.auth.token.institutionId : null;
+    }
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.superAdmin == true;
+    }
+    function licenseActive() {
+      // License enforcement via cached flag on institution doc
+      // Institutions should be updated by backend when license changes
+      return exists(/databases/$(database)/documents/institutions/$(userInstitution())) &&
+             get(/databases/$(database)/documents/institutions/$(userInstitution())).data.active == true;
+    }
+
+    // Tenant isolation guard: collections with institutionId must match caller's institution
+    function belongsToCaller(resourceData) {
+      return resourceData.institutionId == userInstitution();
+    }
+
+    // Institutions: super-admin only
+    match /institutions/{institutionId} {
+      allow read, write: if isSuperAdmin();
+    }
+    // Licenses: super-admin only
+    match /licenses/{licenseId} {
+      allow read, write: if isSuperAdmin();
+    }
+    // Institution admins mapping: super-admin only
+    match /institutionAdmins/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
     
     // Helper function to check if user is admin
     function isAdmin() {
@@ -54,13 +85,8 @@ service cloud.firestore {
     // Users collection - users can read their own data, admins can read/write all
     // Also allow service providers (caregivers/doctors) to read other users for messaging
     match /users/{userId} {
-      allow read: if request.auth != null && 
-                    (request.auth.uid == userId || 
-                     isAdmin() || 
-                     isCaregiver() || 
-                     isDoctor());
-      allow write: if request.auth != null && 
-                     (request.auth.uid == userId || isAdmin());
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin() || isCaregiver() || isDoctor());
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
     
     // Caregivers collection - caregivers can read their own document, admins full access
@@ -73,28 +99,27 @@ service cloud.firestore {
     match /patients/{patientId} {
       // Admin full access. Caregivers/doctors can read patients assigned to them via denormalized fields
       // Also allow caregivers to read patients if they have tasks assigned to them
-      allow read: if isAdmin() || 
+      allow read: if licenseActive() && (isAdmin() || 
                     (isCaregiver() && isAssignedCaregiverToResource()) || 
                     (isDoctor() && isAssignedDoctorToResource()) ||
-                    (isCaregiver() && request.auth != null);
+                    (isCaregiver() && request.auth != null));
       // Writes restricted to admin
-      allow write: if isAdmin();
+      allow write: if licenseActive() && isAdmin();
     }
     
     // Care tasks assigned to caregivers/doctors
     match /careTasks/{taskId} {
       // Allow read for the assignee whether caregiver or doctor
-      allow read: if isAdmin() || 
-                     (request.auth != null && (isCaregiver() || isDoctor()));
+      allow read: if licenseActive() && (isAdmin() || (request.auth != null && (isCaregiver() || isDoctor())));
       // Allow updates by the assignee (caregiver/doctor) for status-only changes
-      allow update: if (isCaregiver() || isDoctor()) && resource.data.caregiverId == request.auth.uid;
-      allow create, delete: if isAdmin();
+      allow update: if licenseActive() && (isCaregiver() || isDoctor()) && resource.data.caregiverId == request.auth.uid;
+      allow create, delete: if licenseActive() && isAdmin();
     }
     
     // Patient-caregiver assignments: caregivers can read their own
     match /patientAssignments/{assignmentId} {
-      allow read: if isAdmin() || (request.auth != null && isCaregiver());
-      allow write: if isAdmin();
+      allow read: if licenseActive() && (isAdmin() || (request.auth != null && isCaregiver()));
+      allow write: if licenseActive() && isAdmin();
     }
     
     // Caregiver assignments (alternative collection name)
@@ -109,20 +134,20 @@ service cloud.firestore {
     
     match /vitalSigns/{document=**} {
       // Allow read for assigned caregivers/doctors via patient linkage if denormalized fields exist
-      allow read: if isAdmin() || isCaregiver() || isDoctor();
-      allow write: if isAdmin();
+      allow read: if licenseActive() && (isAdmin() || isCaregiver() || isDoctor());
+      allow write: if licenseActive() && isAdmin();
     }
     
     // Appointments: caregivers/doctors/patients can read their own
     match /appointments/{appointmentId} {
-      allow read: if isAdmin() || (
+      allow read: if licenseActive() && (isAdmin() || (
         request.auth != null && (
           resource.data.caregiverId == request.auth.uid ||
           resource.data.doctorId == request.auth.uid ||
           resource.data.patientId == request.auth.uid
         )
-      );
-      allow write: if isAdmin();
+      ));
+      allow write: if licenseActive() && isAdmin();
     }
     
     // Assignment requests
@@ -232,9 +257,9 @@ service cloud.firestore {
     
     // Care logs collection - caregivers can create logs; authenticated users can read
     match /careLogs/{logId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && (
+      allow read: if licenseActive() && request.auth != null;
+      allow create: if licenseActive() && request.auth != null;
+      allow update, delete: if licenseActive() && request.auth != null && (
         isAdmin() || request.auth.uid == request.resource.data.caregiverId
       );
     }
@@ -245,17 +270,17 @@ service cloud.firestore {
       // - Admins
       // - Doctors/Caregivers (service providers)
       // - The patient who owns the record (by patientId)
-      allow read: if request.auth != null && (
+      allow read: if licenseActive() && request.auth != null && (
         isAdmin() || isDoctor() || isCaregiver() ||
         (request.resource == null && resource.data.patientId == request.auth.uid) ||
         (request.resource != null && request.resource.data.patientId == request.auth.uid)
       );
 
       // Allow creates for admins, doctors, and caregivers
-      allow create: if request.auth != null && (isAdmin() || isDoctor() || isCaregiver());
+      allow create: if licenseActive() && request.auth != null && (isAdmin() || isDoctor() || isCaregiver());
 
       // Allow updates/deletes for admins and doctors
-      allow update, delete: if request.auth != null && (isAdmin() || isDoctor());
+      allow update, delete: if licenseActive() && request.auth != null && (isAdmin() || isDoctor());
     }
 
     // Patient feedback collection - caregivers can read their own feedback; admins manage

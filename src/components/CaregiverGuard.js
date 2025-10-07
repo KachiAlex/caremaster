@@ -4,10 +4,12 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
+import { httpsCallable, getFunctions } from 'firebase/functions';
 
 const CaregiverGuard = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isCaregiver, setIsCaregiver] = useState(false);
+  const [licenseActive, setLicenseActive] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,6 +37,22 @@ const CaregiverGuard = ({ children }) => {
         // Check if user is caregiver or doctor
         if (userRole === 'caregiver' || userRole === 'doctor') {
           setIsCaregiver(true);
+          // License check via callable, if institutionId claim exists
+          try {
+            const token = await user.getIdTokenResult();
+            const institutionId = token?.claims?.institutionId || userData?.institutionId;
+            if (institutionId) {
+              const functions = getFunctions();
+              const callable = httpsCallable(functions, 'getLicenseStatusFunction');
+              const res = await callable({ institutionId });
+              setLicenseActive(Boolean(res.data?.active));
+            } else {
+              setLicenseActive(true);
+            }
+          } catch (e) {
+            console.error('Error checking license status:', e);
+            setLicenseActive(true);
+          }
           setLoading(false);
         } else {
           // User is not caregiver/doctor - redirect to appropriate dashboard
@@ -87,6 +105,22 @@ const CaregiverGuard = ({ children }) => {
           >
             Back to Login
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!licenseActive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-yellow-600 mb-4">
+            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M4.93 19h14.14c1.24 0 2.02-1.341 1.4-2.414L13.4 4.586c-.62-1.073-2.18-1.073-2.8 0L3.53 16.586C2.91 17.659 3.69 19 4.93 19z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">License Inactive</h3>
+          <p className="text-gray-600 mb-4">Your institution's license is not active. Please contact your administrator.</p>
         </div>
       </div>
     );

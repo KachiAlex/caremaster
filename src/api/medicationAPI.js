@@ -568,6 +568,13 @@ export const medicationAPI = {
   }
 };
 
+// Convenience named export to maintain backwards compatibility with components
+// expecting a getMedicationsByPatient function.
+export const getMedicationsByPatient = async (patientId, limitCount) => {
+  if (!patientId) return [];
+  return medicationAPI.getMedications({ patientId, limit: limitCount });
+};
+
 // Helper function to calculate next dose time
 const calculateNextDoseTime = (currentTime, frequency, reminderTimes) => {
   const now = new Date(currentTime);

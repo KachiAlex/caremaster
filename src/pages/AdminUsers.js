@@ -51,6 +51,20 @@ const AdminUsers = () => {
     inactive: 0
   });
 
+  const formatDateTime = (value) => {
+    if (!value) return 'N/A';
+    try {
+      // Firestore Timestamp support
+      if (value.seconds) {
+        return new Date(value.seconds * 1000).toLocaleString();
+      }
+      // ISO or ms
+      return new Date(value).toLocaleString();
+    } catch {
+      return 'N/A';
+    }
+  };
+
   useEffect(() => {
     const loadUsers = async () => {
       try {
@@ -347,10 +361,10 @@ const AdminUsers = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.joinDate ? new Date(user.joinDate).toLocaleDateString() : 'N/A'}
+                    {formatDateTime(user.createdAt || user.joinDate)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.lastActive ? new Date(user.lastActive).toLocaleDateString() : 'N/A'}
+                    {formatDateTime(user.lastActive)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
@@ -512,16 +526,12 @@ const AdminUsers = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Join Date</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {selectedUser.joinDate ? new Date(selectedUser.joinDate).toLocaleDateString() : 'N/A'}
-                    </p>
+                    <label className="block text-sm font-medium text-gray-700">Account Created</label>
+                    <p className="mt-1 text-sm text-gray-900">{formatDateTime(selectedUser.createdAt || selectedUser.joinDate)}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Last Active</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {selectedUser.lastActive ? new Date(selectedUser.lastActive).toLocaleDateString() : 'N/A'}
-                    </p>
+                    <p className="mt-1 text-sm text-gray-900">{formatDateTime(selectedUser.lastActive)}</p>
                   </div>
                 </div>
               </div>

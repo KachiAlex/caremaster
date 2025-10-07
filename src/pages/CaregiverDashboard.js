@@ -37,9 +37,14 @@ import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointme
 import { getPatientsByDoctor, getPatientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import CaregiverGuard from '../components/CaregiverGuard';
+import CaregiverSettings from '../components/CaregiverSettings';
+import NurseVitalsInput from '../components/NurseVitalsInput';
+import NurseCareLogs from '../components/NurseCareLogs';
+import NurseReportGenerator from '../components/NurseReportGenerator';
+import NurseMedicationManager from '../components/NurseMedicationManager';
 
 const CaregiverDashboard = () => {
-  const { user, userProfile } = useUser();
+  const { user, userProfile, institutionId, institutionData } = useUser();
   const [caregiver, setCaregiver] = useState(null);
   const [todaySchedule, setTodaySchedule] = useState([]);
   const [recentTasks, setRecentTasks] = useState([]);
@@ -48,6 +53,13 @@ const CaregiverDashboard = () => {
   const [assignedPatients, setAssignedPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [showSettings, setShowSettings] = useState(false);
+  const [showVitalsModal, setShowVitalsModal] = useState(false);
+  const [showCareLogsModal, setShowCareLogsModal] = useState(false);
+  const [showNurseReportModal, setShowNurseReportModal] = useState(false);
+  const [showMedicationModal, setShowMedicationModal] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
 
   // Get qualification-specific dashboard configuration
   const getDashboardConfig = () => {
@@ -212,7 +224,7 @@ const CaregiverDashboard = () => {
           // Fallback to patients.assignedDoctor only if no assignment docs found
           if ((!patients || patients.length === 0) && user?.uid) {
             try {
-              const alt = await getPatientsByDoctor(user.uid);
+              const alt = await getPatientsByDoctor(user.uid, institutionId);
               patients = alt || [];
             } catch (error) {
               console.log('No patients assigned to doctor - contact admin for patient assignments');
@@ -278,6 +290,9 @@ const CaregiverDashboard = () => {
           rating: 4.8,
           hoursWorked: 40
         });
+
+        // Load profile image from settings
+        loadProfileImage();
         
       } catch (error) {
         console.error('Error loading caregiver data:', error);
@@ -390,8 +405,11 @@ const CaregiverDashboard = () => {
     console.log('Clock in for schedule:', scheduleId);
   };
 
-  // --- Doctor-specific UI helpers ---
+  // --- Role-specific UI helpers ---
   const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor');
+  const isNurse = (userProfile?.medicalQualification || '').includes('Nurse');
+  const isMedicalProfessional = isDoctor || isNurse;
+  const isNonMedicalCaregiver = !isMedicalProfessional;
 
   const renderDoctorPatientSelector = () => {
     if (!isDoctor) return null;
@@ -466,6 +484,32 @@ const CaregiverDashboard = () => {
     console.log('Emergency for patient:', patientId);
   };
 
+  const loadProfileImage = () => {
+    // Load profile image from localStorage or settings
+    const savedSettings = localStorage.getItem('caregiverSettings');
+    console.log('Loading profile image from localStorage:', savedSettings);
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        console.log('Parsed settings:', settings);
+        if (settings.profile?.profileImage) {
+          console.log('Setting profile image:', settings.profile.profileImage);
+          setProfileImage(settings.profile.profileImage);
+        } else {
+          console.log('No profile image found in settings');
+        }
+      } catch (error) {
+        console.log('Error parsing saved settings:', error);
+      }
+    } else {
+      console.log('No saved settings found in localStorage');
+    }
+  };
+
+  const updateProfileImage = (imageUrl) => {
+    setProfileImage(imageUrl);
+  };
+
   const formatTime = (timeString) => {
     return timeString;
   };
@@ -483,6 +527,335 @@ const CaregiverDashboard = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const renderPatientsTab = () => {
+    if (!selectedPatient) {
+      return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+          <User className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Patient Selected</h3>
+          <p className="text-gray-600 mb-4">
+            {isDoctor 
+              ? "Please select a patient from the dropdown above to view their information and provide care."
+              : "Please select a patient to record vital signs and care logs."
+            }
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Patient Header */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center">
+                <span className="text-white font-semibold text-xl">
+                  {(selectedPatient.name || selectedPatient.fullName || 'P').split(' ').map(n => n[0]).join('')}
+                </span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+                </h2>
+                <p className="text-gray-600">Patient ID: {selectedPatient.id}</p>
+                {selectedPatient.age && (
+                  <p className="text-sm text-gray-500">Age: {selectedPatient.age}</p>
+                )}
+              </div>
+            </div>
+            
+            {/* Nurse-specific actions */}
+            {isNurse && (
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setShowVitalsModal(true)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
+                >
+                  <Activity className="h-4 w-4 mr-2" />
+                  Record Vitals
+                </button>
+                <button
+                  onClick={() => setShowCareLogsModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Care Logs
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Patient Information Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Basic Information */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <User className="h-5 w-5 text-blue-600 mr-2" />
+              Basic Information
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm text-gray-500">Name:</span>
+                <p className="font-medium text-gray-900">{selectedPatient.name || selectedPatient.fullName || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Age:</span>
+                <p className="font-medium text-gray-900">{selectedPatient.age || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Gender:</span>
+                <p className="font-medium text-gray-900">{selectedPatient.gender || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Phone:</span>
+                <p className="font-medium text-gray-900">{selectedPatient.phone || selectedPatient.phoneNumber || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Medical Information */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Heart className="h-5 w-5 text-red-600 mr-2" />
+              Medical Information
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm text-gray-500">Medical Conditions:</span>
+                <p className="font-medium text-gray-900">
+                  {selectedPatient.medicalConditions?.join(', ') || selectedPatient.conditions || 'None recorded'}
+                </p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Allergies:</span>
+                <p className="font-medium text-gray-900">
+                  {selectedPatient.allergies?.join(', ') || selectedPatient.allergyInfo || 'None recorded'}
+                </p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Current Medications:</span>
+                <p className="font-medium text-gray-900">
+                  {selectedPatient.medications?.join(', ') || selectedPatient.currentMedications || 'None recorded'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Emergency Contact */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Phone className="h-5 w-5 text-green-600 mr-2" />
+              Emergency Contact
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm text-gray-500">Contact Name:</span>
+                <p className="font-medium text-gray-900">
+                  {selectedPatient.emergencyContact?.name || selectedPatient.emergencyContactName || 'N/A'}
+                </p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Contact Phone:</span>
+                <p className="font-medium text-gray-900">
+                  {selectedPatient.emergencyContact?.phone || selectedPatient.emergencyContactPhone || 'N/A'}
+                </p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Relationship:</span>
+                <p className="font-medium text-gray-900">
+                  {selectedPatient.emergencyContact?.relationship || selectedPatient.emergencyContactRelationship || 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Nurse-specific Quick Actions */}
+        {isNurse && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Nurse Actions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <button
+                onClick={() => setShowVitalsModal(true)}
+                className="flex flex-col items-center p-4 border-2 border-red-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
+              >
+                <Activity className="h-8 w-8 text-red-600 mb-2" />
+                <span className="text-sm font-medium text-gray-700">Record Vital Signs</span>
+              </button>
+              
+              <button
+                onClick={() => setShowCareLogsModal(true)}
+                className="flex flex-col items-center p-4 border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+              >
+                <FileText className="h-8 w-8 text-blue-600 mb-2" />
+                <span className="text-sm font-medium text-gray-700">Add Care Log</span>
+              </button>
+              
+              <button
+                onClick={() => setShowNurseReportModal(true)}
+                className="flex flex-col items-center p-4 border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors"
+              >
+                <FileText className="h-8 w-8 text-orange-600 mb-2" />
+                <span className="text-sm font-medium text-gray-700">Generate Report</span>
+              </button>
+              
+              <button
+                onClick={() => setShowMedicationModal(true)}
+                className="flex flex-col items-center p-4 border-2 border-green-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors"
+              >
+                <Pill className="h-8 w-8 text-green-600 mb-2" />
+                <span className="text-sm font-medium text-gray-700">Medications</span>
+              </button>
+              
+              <button className="flex flex-col items-center p-4 border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors">
+                <Camera className="h-8 w-8 text-purple-600 mb-2" />
+                <span className="text-sm font-medium text-gray-700">Photo Update</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // View-only tab renderers for non-medical caregivers
+  const renderPrescriptionsTab = () => {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+          <div className="text-center">
+            <Pill className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Prescriptions (View Only)</h2>
+            <p className="text-gray-600 mb-6">
+              As a non-medical caregiver, you can view prescribed medications for your assigned patients but cannot prescribe new medications.
+            </p>
+            
+            {selectedPatient ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                  Patient: {selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+                </h3>
+                <p className="text-blue-700">
+                  Prescribed medications for this patient would be displayed here. 
+                  You can view medication details, dosage instructions, and administration schedules.
+                </p>
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => setShowMedicationModal(true)}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Medications
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <p className="text-gray-600">
+                  Please select a patient from the dropdown above to view their prescribed medications.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderConsultationsTab = () => {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+          <div className="text-center">
+            <Stethoscope className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Consultations (View Only)</h2>
+            <p className="text-gray-600 mb-6">
+              As a non-medical caregiver, you can view consultation notes and medical reports for your assigned patients but cannot conduct medical consultations.
+            </p>
+            
+            {selectedPatient ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-green-900 mb-2">
+                  Patient: {selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+                </h3>
+                <p className="text-green-700">
+                  Consultation history, medical reports, and doctor's notes for this patient would be displayed here.
+                  You can review these documents to better understand the patient's medical condition and care requirements.
+                </p>
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-semibold text-gray-900">Recent Consultations</h4>
+                    <p className="text-gray-600">View consultation history and notes</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-semibold text-gray-900">Medical Reports</h4>
+                    <p className="text-gray-600">Review lab results and diagnostic reports</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <p className="text-gray-600">
+                  Please select a patient from the dropdown above to view their consultation history.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderDiagnosticsTab = () => {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+          <div className="text-center">
+            <FlaskConical className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Diagnostics (View Only)</h2>
+            <p className="text-gray-600 mb-6">
+              As a non-medical caregiver, you can view diagnostic results and test reports for your assigned patients but cannot order new diagnostic tests.
+            </p>
+            
+            {selectedPatient ? (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-purple-900 mb-2">
+                  Patient: {selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+                </h3>
+                <p className="text-purple-700">
+                  Diagnostic test results, lab reports, and imaging studies for this patient would be displayed here.
+                  You can review these results to understand the patient's medical status and any ongoing monitoring requirements.
+                </p>
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-semibold text-gray-900">Lab Results</h4>
+                    <p className="text-gray-600">Blood tests, urine tests, etc.</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-semibold text-gray-900">Imaging</h4>
+                    <p className="text-gray-600">X-rays, CT scans, MRIs</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-semibold text-gray-900">Vital Signs</h4>
+                    <p className="text-gray-600">Recent vital signs history</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <p className="text-gray-600">
+                  Please select a patient from the dropdown above to view their diagnostic results.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -503,22 +876,47 @@ const CaregiverDashboard = () => {
             <div className={`p-3 bg-${dashboardConfig.color}-100 rounded-full`}>
               <dashboardConfig.icon className={`h-8 w-8 text-${dashboardConfig.color}-600`} />
             </div>
-            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
-              <span className="text-white font-semibold text-lg">
-                {caregiver?.name.split(' ').map(n => n[0]).join('')}
-              </span>
+            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                  onLoad={() => console.log('Profile image loaded successfully')}
+                  onError={() => console.log('Profile image failed to load')}
+                />
+              ) : (
+                <span className="text-white font-semibold text-lg">
+                  {caregiver?.name.split(' ').map(n => n[0]).join('')}
+                </span>
+              )}
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{dashboardConfig.title}</h1>
               <p className="text-gray-600">Welcome, {userProfile?.name || caregiver?.name}</p>
               <p className="text-sm text-gray-500">{userProfile?.medicalQualification || 'Healthcare Professional'}</p>
+              {institutionId && (
+                <div className="flex items-center mt-1">
+                  <Shield className="h-3 w-3 text-green-600 mr-1" />
+                  <span className="text-xs text-green-600 font-medium">
+                    {institutionData?.name || `Institution: ${institutionId.slice(0, 8)}...`}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center space-x-6">
             <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
               <Bell className="h-6 w-6" />
             </button>
-            <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className={`p-3 rounded-full transition-colors ${
+                showSettings 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+            >
               <Settings className="h-6 w-6" />
             </button>
             <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
@@ -533,9 +931,87 @@ const CaregiverDashboard = () => {
         {renderDoctorPatientSelector()}
       </div>
 
+      {/* Tab Navigation */}
+      {(isDoctor || isNurse || isNonMedicalCaregiver) && (
+        <div className="w-full px-8">
+          <div className="bg-white rounded-lg border border-gray-200">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8 px-6">
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'dashboard'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => setActiveTab('patients')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'patients'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Patients
+                </button>
+                {/* View-only tabs for non-medical caregivers */}
+                {isNonMedicalCaregiver && (
+                  <>
+                    <button
+                      onClick={() => setActiveTab('prescriptions')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'prescriptions'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Prescriptions (View Only)
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('consultations')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'consultations'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Consultations (View Only)
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('diagnostics')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        activeTab === 'diagnostics'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Diagnostics (View Only)
+                    </button>
+                  </>
+                )}
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="w-full p-8 dashboard-full-width">
-        <div className="space-y-6">
+        {showSettings ? (
+          <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
+        ) : activeTab === 'patients' ? (
+          renderPatientsTab()
+        ) : activeTab === 'prescriptions' ? (
+          renderPrescriptionsTab()
+        ) : activeTab === 'consultations' ? (
+          renderConsultationsTab()
+        ) : activeTab === 'diagnostics' ? (
+          renderDiagnosticsTab()
+        ) : (
+          <div className="space-y-6">
           {/* Qualification-Specific Quick Actions */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
@@ -789,7 +1265,65 @@ const CaregiverDashboard = () => {
             </div>
           </div>
         </div>
+        )}
       </div>
+
+      {/* Modals */}
+      {showVitalsModal && selectedPatient && (
+        <NurseVitalsInput
+          patientId={selectedPatient.id}
+          patientName={selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+          nurseId={user?.uid}
+          nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
+          onSave={() => {
+            setShowVitalsModal(false);
+            // Refresh patient data if needed
+          }}
+          onCancel={() => setShowVitalsModal(false)}
+        />
+      )}
+
+      {showCareLogsModal && selectedPatient && (
+        <NurseCareLogs
+          patientId={selectedPatient.id}
+          patientName={selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+          nurseId={user?.uid}
+          nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
+          onSave={() => {
+            setShowCareLogsModal(false);
+            // Refresh patient data if needed
+          }}
+          onCancel={() => setShowCareLogsModal(false)}
+        />
+      )}
+
+      {showNurseReportModal && selectedPatient && (
+        <NurseReportGenerator
+          patientId={selectedPatient.id}
+          patientName={selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+          nurseId={user?.uid}
+          nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
+          onSave={() => {
+            setShowNurseReportModal(false);
+            // Refresh patient data if needed
+          }}
+          onCancel={() => setShowNurseReportModal(false)}
+        />
+      )}
+
+      {showMedicationModal && selectedPatient && (
+        <NurseMedicationManager
+          patientId={selectedPatient.id}
+          patientName={selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+          nurseId={user?.uid}
+          nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
+          onSave={() => {
+            setShowMedicationModal(false);
+            // Refresh patient data if needed
+          }}
+          onCancel={() => setShowMedicationModal(false)}
+        />
+      )}
     </div>
     </CaregiverGuard>
   );

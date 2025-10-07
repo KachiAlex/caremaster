@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-const db = admin.firestore();
+const getDb = () => admin.firestore();
 
 // Process AI voice command
 export const processAIVoiceCommand = async (data: {
@@ -23,7 +23,7 @@ export const processAIVoiceCommand = async (data: {
     }
 
     // Get user profile for context
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await getDb().collection('users').doc(userId).get();
     if (!userDoc.exists) {
       throw new functions.https.HttpsError('not-found', 'User profile not found');
     }
@@ -34,7 +34,7 @@ export const processAIVoiceCommand = async (data: {
     const aiResponse = await processVoiceCommandWithAI(command, userData, commandContext);
 
     // Log the voice command
-    await db.collection('voiceCommands').add({
+    await getDb().collection('voiceCommands').add({
       userId,
       command,
       response: aiResponse,
@@ -43,7 +43,7 @@ export const processAIVoiceCommand = async (data: {
     });
 
     // Log the event
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId: context.auth.uid,
       action: 'VOICE_COMMAND_PROCESSED',
       details: {
@@ -93,7 +93,7 @@ export const generateHealthRecommendations = async (data: {
     }
 
     // Get user profile and health data
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await getDb().collection('users').doc(userId).get();
     if (!userDoc.exists) {
       throw new functions.https.HttpsError('not-found', 'User profile not found');
     }
@@ -103,7 +103,7 @@ export const generateHealthRecommendations = async (data: {
     // Get recent vital signs if not provided
     let vitalSigns = healthData?.vitalSigns;
     if (!vitalSigns) {
-      const vitalSignsSnapshot = await db.collection('vitalSigns')
+      const vitalSignsSnapshot = await getDb().collection('vitalSigns')
         .where('userId', '==', userId)
         .orderBy('recordedAt', 'desc')
         .limit(10)
@@ -115,7 +115,7 @@ export const generateHealthRecommendations = async (data: {
     // Get current medications if not provided
     let medications = healthData?.medications;
     if (!medications) {
-      const medicationsSnapshot = await db.collection('medications')
+      const medicationsSnapshot = await getDb().collection('medications')
         .where('userId', '==', userId)
         .where('isActive', '==', true)
         .get();
@@ -133,7 +133,7 @@ export const generateHealthRecommendations = async (data: {
     );
 
     // Store recommendations
-    await db.collection('healthRecommendations').add({
+    await getDb().collection('healthRecommendations').add({
       userId,
       recommendations,
       generatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -147,7 +147,7 @@ export const generateHealthRecommendations = async (data: {
     });
 
     // Log the event
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId: context.auth.uid,
       action: 'HEALTH_RECOMMENDATIONS_GENERATED',
       details: {

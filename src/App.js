@@ -2,6 +2,8 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
+import { db } from './firebase/config';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { UserProvider, useUser } from './contexts/UserContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import errorHandler from './utils/errorHandler';
@@ -10,6 +12,8 @@ import securityMonitoringService from './services/securityMonitoringService';
 import biometricAuthService from './services/biometricAuthService';
 import secureConfigService from './services/secureConfigService';
 import Layout from './components/Layout';
+import SuperAdminGuard from './components/SuperAdminGuard';
+import InstitutionAdminGuard from './components/InstitutionAdminGuard';
 // Old admin components removed - using new admin system
 import ServiceProviderLayout from './components/ServiceProviderLayout';
 const Landing = lazy(() => import('./pages/Landing'));
@@ -27,6 +31,13 @@ const CaregiverSchedule = lazy(() => import('./pages/CaregiverSchedule'));
 const CaregiverPatients = lazy(() => import('./pages/CaregiverPatients'));
 const CaregiverTasks = lazy(() => import('./pages/CaregiverTasks'));
 const CaregiverOnboarding = lazy(() => import('./pages/CaregiverOnboarding'));
+const SuperAdminLicensing = lazy(() => import('./pages/SuperAdminLicensing'));
+const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
+const InstitutionAdminDashboard = lazy(() => import('./pages/InstitutionAdminDashboard'));
+const InstitutionUserManagement = lazy(() => import('./pages/InstitutionUserManagement'));
+const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
+const InstitutionLanding = lazy(() => import('./pages/InstitutionLanding'));
+const InstitutionLogin = lazy(() => import('./pages/InstitutionLogin'));
 const CaregiverMessages = lazy(() => import('./pages/CaregiverMessages'));
 const CaregiverNavigation = lazy(() => import('./pages/CaregiverNavigation'));
 const CaregiverPhotos = lazy(() => import('./pages/CaregiverPhotos'));
@@ -157,6 +168,28 @@ function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Ensure users/{uid}.createdAt exists (account creation timestamp)
+  useEffect(() => {
+    const ensureCreatedAt = async () => {
+      try {
+        if (!user?.uid) return;
+        const userDocRef = doc(db, 'users', user.uid);
+        const snap = await getDoc(userDocRef);
+        if (!snap.exists()) {
+          await setDoc(userDocRef, { createdAt: serverTimestamp(), id: user.uid, email: user.email || null }, { merge: true });
+          return;
+        }
+        const data = snap.data();
+        if (!data?.createdAt) {
+          await setDoc(userDocRef, { createdAt: serverTimestamp() }, { merge: true });
+        }
+      } catch (e) {
+        errorHandler.handleError(e, { context: 'ensure_user_createdAt' });
+      }
+    };
+    ensureCreatedAt();
+  }, [user?.uid, user?.email]);
 
   // Voice command handlers
   const handleVoiceCommand = (command, params) => {
@@ -332,6 +365,49 @@ function App() {
       <Route 
         path="/signup" 
         element={<Navigate to="/admin/login" replace />} 
+      />
+      
+      {/* Super Admin Routes - Must be before other protected routes */}
+      <Route 
+        path="/super-admin/login" 
+        element={<SuperAdminLogin />} 
+      />
+      
+      <Route 
+        path="/super-admin" 
+        element={<SuperAdminGuard><SuperAdminLicensing /></SuperAdminGuard>} 
+      />
+
+      {/* Institution Onboarding Routes - Public */}
+      <Route 
+        path="/onboard" 
+        element={<InstitutionLanding />} 
+      />
+      
+      <Route 
+        path="/institution/login" 
+        element={<InstitutionLogin />} 
+      />
+
+      {/* Institution Admin Routes */}
+      <Route 
+        path="/institution-admin/dashboard" 
+        element={<InstitutionAdminGuard><InstitutionAdminDashboard /></InstitutionAdminGuard>} 
+      />
+      
+      <Route 
+        path="/institution-admin/users" 
+        element={<InstitutionAdminGuard><InstitutionUserManagement /></InstitutionAdminGuard>} 
+      />
+      
+      <Route 
+        path="/institution-admin/settings" 
+        element={<InstitutionAdminGuard><InstitutionSettings /></InstitutionAdminGuard>} 
+      />
+      
+      <Route 
+        path="/institution-admin" 
+        element={<Navigate to="/institution-admin/dashboard" replace />} 
       />
       
       {/* Protected routes - Dashboard removed (patients don't have accounts) */}

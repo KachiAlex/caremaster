@@ -19,14 +19,25 @@ import { db } from '../firebase/config';
 const VITAL_SIGNS_COLLECTION = 'vitalSigns';
 
 // Get all vital signs for a patient
-export const getVitalSignsByPatient = async (patientId) => {
+export const getVitalSignsByPatient = async (patientId, institutionId = null) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
-    const q = query(
+    let q = query(
       vitalSignsRef, 
       where('patientId', '==', patientId),
       orderBy('recordedAt', 'desc')
     );
+    
+    // Add institution filtering if provided
+    if (institutionId) {
+      q = query(
+        vitalSignsRef, 
+        where('patientId', '==', patientId),
+        where('institutionId', '==', institutionId),
+        orderBy('recordedAt', 'desc')
+      );
+    }
+    
     const querySnapshot = await getDocs(q);
     
     const vitalSigns = [];
@@ -118,11 +129,12 @@ export const getVitalSignsByType = async (patientId, vitalType) => {
 };
 
 // Create new vital sign record
-export const createVitalSign = async (vitalSignData) => {
+export const createVitalSign = async (vitalSignData, institutionId = null) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
     const newVitalSign = {
       ...vitalSignData,
+      institutionId: institutionId || vitalSignData.institutionId,
       recordedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -342,3 +354,4 @@ export const getVitalSignsStats = async (patientId) => {
     throw error;
   }
 };
+

@@ -23,12 +23,27 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { db } from '../firebase/config';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const ServiceProviderLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { userProfile, userRole } = useUser();
+  React.useEffect(() => {
+    if (!userProfile?.id) return;
+    const settingsDocRef = doc(db, 'caregiverSettings', userProfile.id);
+    const unsubscribe = onSnapshot(settingsDocRef, (snap) => {
+      try {
+        const data = snap.data();
+        const url = data?.profile?.profileImage || null;
+        setProfileImage(url);
+      } catch {}
+    });
+    return () => unsubscribe();
+  }, [userProfile?.id]);
 
   const handleSignOut = async () => {
     try {
@@ -194,10 +209,14 @@ const ServiceProviderLayout = () => {
               {userProfile?.id && <NotificationPanel userId={userProfile.id} />}
               
               <div className="flex items-center gap-x-2">
-                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-blue-700">
-                    {userProfile?.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                  </span>
+                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
+                  {profileImage ? (
+                    <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-sm font-medium text-blue-700">
+                      {userProfile?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                    </span>
+                  )}
                 </div>
                 <div className="hidden sm:block">
                   <p className="text-sm font-medium text-gray-700">{userProfile?.name}</p>

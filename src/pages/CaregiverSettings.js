@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Settings, 
   User, 
@@ -22,24 +22,40 @@ import {
   Download,
   Upload
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { db, storage } from '../firebase/config';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-const CaregiverSettings = () => {
+const CaregiverSettings = ({ onProfileImageUpdate }) => {
+  const { user } = useUser();
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const fileInputRef = useRef(null);
+  const [profileImagePreview, setProfileImagePreview] = useState(null);
 
   useEffect(() => {
-    // Simulate loading settings data
     const loadSettings = async () => {
       try {
-        setTimeout(() => {
+        if (!user?.uid) {
+          setLoading(false);
+          return;
+        }
+        const settingsDocRef = doc(db, 'caregiverSettings', user.uid);
+        const snap = await getDoc(settingsDocRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setSettings(data);
+          if (data.profile?.profileImage) setProfileImagePreview(data.profile.profileImage);
+        } else {
           const mockSettings = {
             profile: {
               firstName: 'Sarah',
               lastName: 'Johnson',
-              email: 'sarah.johnson@elderx.com',
+              email: user?.email || 'sarah.johnson@elderx.com',
               phone: '+234 805 123 4567',
               profileImage: null,
               dateOfBirth: '1985-03-15',
@@ -77,10 +93,7 @@ const CaregiverSettings = () => {
               timezone: 'Africa/Lagos',
               dateFormat: 'DD/MM/YYYY',
               timeFormat: '24h',
-              workingHours: {
-                start: '08:00',
-                end: '18:00'
-              },
+              workingHours: { start: '08:00', end: '18:00' },
               breakDuration: 30,
               maxPatientsPerDay: 8
             },
@@ -91,20 +104,20 @@ const CaregiverSettings = () => {
               passwordChangeRequired: false,
               lastPasswordChange: '2024-01-01',
               loginNotifications: true
-            }
+            },
+            updatedAt: serverTimestamp()
           };
-
           setSettings(mockSettings);
-          setLoading(false);
-        }, 1000);
+        }
       } catch (error) {
         console.error('Error loading settings:', error);
+      } finally {
         setLoading(false);
       }
     };
 
     loadSettings();
-  }, []);
+  }, [user?.uid]);
 
   const handleSettingChange = (category, key, value) => {
     setSettings(prev => ({
@@ -116,10 +129,59 @@ const CaregiverSettings = () => {
     }));
   };
 
-  const handleSaveSettings = () => {
-    // Simulate saving settings
-    console.log('Saving settings:', settings);
-    // Show success message
+  const handleSaveSettings = async () => {
+    try {
+      if (!user?.uid) return alert('Not signed in');
+      if (!settings.profile?.firstName || !settings.profile?.lastName || !settings.profile?.email) {
+        alert('Please fill in all required fields (First Name, Last Name, Email)');
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(settings.profile?.email)) {
+        alert('Please enter a valid email address');
+        return;
+      }
+
+      const settingsDocRef = doc(db, 'caregiverSettings', user.uid);
+      const payload = { ...settings, updatedAt: serverTimestamp(), userId: user.uid };
+      await setDoc(settingsDocRef, payload, { merge: true });
+
+      try {
+        const evt = new CustomEvent('caregiverSettingsUpdated', { detail: payload });
+        window.dispatchEvent(evt);
+      } catch {}
+
+      if (payload.profile?.profileImage && onProfileImageUpdate) {
+        onProfileImageUpdate(payload.profile.profileImage);
+      }
+
+      alert('Settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Failed to save settings. Please try again.');
+    }
+  };
+
+  const handleProfileImageChange = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) return; // 5MB cap
+    try {
+      if (!user?.uid) return alert('Not signed in');
+      const path = `profileImages/${user.uid}`;
+      const ref = storageRef(storage, path);
+      await uploadBytes(ref, file);
+      const downloadURL = await getDownloadURL(ref);
+      setProfileImagePreview(downloadURL);
+      setSettings(prev => ({
+        ...prev,
+        profile: { ...(prev.profile || {}), profileImage: downloadURL }
+      }));
+    } catch (e) {
+      console.error('Image upload failed:', e);
+      alert('Image upload failed. Please try again.');
+    }
   };
 
   const tabs = [
@@ -198,18 +260,33 @@ const CaregiverSettings = () => {
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">Profile Information</h2>
-                
                 {/* Profile Image */}
                 <div className="flex items-center space-x-6">
-                  <div className="h-24 w-24 bg-gray-200 rounded-full flex items-center justify-center">
-                    <User className="h-12 w-12 text-gray-400" />
+                  <div className="relative h-24 w-24 rounded-full overflow-hidden border border-gray-300 bg-gray-100 flex items-center justify-center z-50">
+                    {profileImagePreview ? (
+                      <img src={profileImagePreview} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-12 w-12 text-gray-400" />
+                    )}
+                    <input
+                      id="profile-image-overlay"
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfileImageChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-50 pointer-events-auto"
+                      aria-label="Upload profile photo"
+                    />
                   </div>
                   <div>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                    <label
+                      htmlFor="profile-image-overlay"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center cursor-pointer"
+                    >
                       <Camera className="h-4 w-4 mr-2" />
-                      Change Photo
-                    </button>
-                    <p className="text-sm text-gray-600 mt-1">JPG, PNG up to 2MB</p>
+                      {profileImagePreview ? 'Change Photo' : 'Upload Photo'}
+                    </label>
+                    <p className="text-sm text-gray-600 mt-1">JPG, PNG up to 5MB</p>
                   </div>
                 </div>
 
@@ -251,24 +328,6 @@ const CaregiverSettings = () => {
                       onChange={(e) => handleSettingChange('profile', 'phone', e.target.value)}
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
-                    <input
-                      type="date"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={settings.profile?.dateOfBirth || ''}
-                      onChange={(e) => handleSettingChange('profile', 'dateOfBirth', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">License Number</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={settings.profile?.licenseNumber || ''}
-                      onChange={(e) => handleSettingChange('profile', 'licenseNumber', e.target.value)}
-                    />
-                  </div>
                 </div>
 
                 <div>
@@ -297,7 +356,6 @@ const CaregiverSettings = () => {
             {activeTab === 'notifications' && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">Notification Preferences</h2>
-                
                 <div className="space-y-4">
                   {Object.entries(settings.notifications || {}).map(([key, value]) => (
                     <div key={key} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
@@ -305,18 +363,6 @@ const CaregiverSettings = () => {
                         <h3 className="text-sm font-medium text-gray-900 capitalize">
                           {key.replace(/([A-Z])/g, ' $1').trim()}
                         </h3>
-                        <p className="text-sm text-gray-600">
-                          {key === 'emailNotifications' && 'Receive notifications via email'}
-                          {key === 'smsNotifications' && 'Receive notifications via SMS'}
-                          {key === 'pushNotifications' && 'Receive push notifications'}
-                          {key === 'taskReminders' && 'Get reminded about upcoming tasks'}
-                          {key === 'emergencyAlerts' && 'Get immediate alerts for emergencies'}
-                          {key === 'appointmentReminders' && 'Get reminded about appointments'}
-                          {key === 'medicationAlerts' && 'Get alerts for medication schedules'}
-                          {key === 'weeklyReports' && 'Receive weekly performance reports'}
-                          {key === 'patientUpdates' && 'Get updates about patient status'}
-                          {key === 'systemUpdates' && 'Receive system maintenance notifications'}
-                        </p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
@@ -325,7 +371,7 @@ const CaregiverSettings = () => {
                           checked={value}
                           onChange={(e) => handleSettingChange('notifications', key, e.target.checked)}
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
                   ))}

@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
-const db = admin.firestore();
+const getDb = () => admin.firestore();
 
 interface UserProfileData {
   displayName: string;
@@ -33,7 +33,7 @@ export const createUserProfile = async (user: admin.auth.UserRecord) => {
     };
 
     // Create user profile in Firestore
-    await db.collection('users').doc(user.uid).set({
+    await getDb().collection('users').doc(user.uid).set({
       ...userProfileData,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -42,7 +42,7 @@ export const createUserProfile = async (user: admin.auth.UserRecord) => {
 
     // Create elderly profile if user is elderly
     if (userProfileData.userType === 'elderly') {
-      await db.collection('elderlyProfiles').doc(user.uid).set({
+      await getDb().collection('elderlyProfiles').doc(user.uid).set({
         userId: user.uid,
         emergencyContactName: userProfileData.emergencyContactName || '',
         emergencyContactPhone: userProfileData.emergencyContactPhone || '',
@@ -55,7 +55,7 @@ export const createUserProfile = async (user: admin.auth.UserRecord) => {
     }
 
     // Log the event
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId: user.uid,
       action: 'USER_PROFILE_CREATED',
       details: {
@@ -89,7 +89,7 @@ export const updateUserProfile = async (data: { userId: string; profileData: Par
     }
 
     // Update user profile
-    await db.collection('users').doc(userId).update({
+    await getDb().collection('users').doc(userId).update({
       ...profileData,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     });
@@ -105,12 +105,12 @@ export const updateUserProfile = async (data: { userId: string; profileData: Par
 
       if (Object.keys(elderlyProfileData).length > 0) {
         elderlyProfileData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
-        await db.collection('elderlyProfiles').doc(userId).update(elderlyProfileData);
+        await getDb().collection('elderlyProfiles').doc(userId).update(elderlyProfileData);
       }
     }
 
     // Log the event
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId: context.auth.uid,
       action: 'USER_PROFILE_UPDATED',
       details: {
@@ -135,14 +135,14 @@ export const updateUserProfile = async (data: { userId: string; profileData: Par
 export const deleteUserProfile = async (user: admin.auth.UserRecord) => {
   try {
     // Soft delete - mark as inactive instead of hard delete
-    await db.collection('users').doc(user.uid).update({
+    await getDb().collection('users').doc(user.uid).update({
       isActive: false,
       deletedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
     // Log the event
-    await db.collection('auditLogs').add({
+    await getDb().collection('auditLogs').add({
       userId: user.uid,
       action: 'USER_PROFILE_DELETED',
       details: {
