@@ -78,10 +78,10 @@ export async function activateLicense(licenseId) {
   return res.data;
 }
 
-export async function migrateInstitutionLinks() {
+export async function migrateInstitutionLinks(options = {}) {
   const functions = getFunctions(getApp(), 'us-central1');
   const callable = httpsCallable(functions, 'migrateInstitutionLinksFunction');
-  const res = await callable();
+  const res = await callable(options);
   return res.data;
 }
 

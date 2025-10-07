@@ -487,6 +487,8 @@ export const migrateInstitutionLinks = functions.https.onCall(async (data, conte
     throw new functions.https.HttpsError('permission-denied', 'Only super-admin can migrate data');
   }
 
+  const { force } = data || {};
+
   try {
     const baseURL = 'https://elderx-f5c2b.web.app';
     const institutionsSnapshot = await getDb().collection('institutions').get();
@@ -494,13 +496,15 @@ export const migrateInstitutionLinks = functions.https.onCall(async (data, conte
     let updatedCount = 0;
 
     institutionsSnapshot.docs.forEach(doc => {
-      const data = doc.data();
+      const docData = doc.data();
       
-      // Only update if missing access links
-      if (!data.accessLink || !data.loginLink || !data.slug) {
-        const slug = data.slug || `${data.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${doc.id.substring(0, 8)}`;
-        const accessLink = data.accessLink || `${baseURL}/onboard?institution=${doc.id}`;
-        const loginLink = data.loginLink || `${baseURL}/institution/login?institution=${doc.id}`;
+      // Force update all institutions if force=true, otherwise only update missing links
+      const shouldUpdate = force || !docData.accessLink || !docData.loginLink || !docData.slug;
+      
+      if (shouldUpdate) {
+        const slug = docData.slug || `${docData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${doc.id.substring(0, 8)}`;
+        const accessLink = `${baseURL}/onboard?institution=${doc.id}`;
+        const loginLink = `${baseURL}/institution/login?institution=${doc.id}`;
         
         batch.update(doc.ref, {
           slug,

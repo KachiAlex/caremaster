@@ -406,7 +406,7 @@ const SuperAdminLicensing = () => {
               onClick={async () => {
                 setBusy(true);
                 try {
-                  const result = await migrateInstitutionLinks();
+                  const result = await migrateInstitutionLinks({ force: true });
                   setMessage(`${result.message}`);
                   // Refresh data
                   const updated = await getInstitutions();
@@ -419,8 +419,9 @@ const SuperAdminLicensing = () => {
               }}
               disabled={busy}
               className="px-3 py-2 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 disabled:opacity-50"
+              title="Force update all institution links to new /onboard format"
             >
-              Migrate Links
+              🔄 Force Update Links
             </button>
             <button
               onClick={() => setShowInstitutionModal(true)}
