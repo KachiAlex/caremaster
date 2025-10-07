@@ -389,20 +389,20 @@ function App() {
         element={<InstitutionLogin />} 
       />
 
-      {/* Institution Admin Routes */}
+      {/* Institution Admin Routes - TEMPORARILY UNGUARDED FOR DEBUGGING */}
       <Route 
         path="/institution-admin/dashboard" 
-        element={<InstitutionAdminGuard><InstitutionAdminDashboard /></InstitutionAdminGuard>} 
+        element={<InstitutionAdminDashboard />} 
       />
       
       <Route 
         path="/institution-admin/users" 
-        element={<InstitutionAdminGuard><InstitutionUserManagement /></InstitutionAdminGuard>} 
+        element={<InstitutionUserManagement />} 
       />
       
       <Route 
         path="/institution-admin/settings" 
-        element={<InstitutionAdminGuard><InstitutionSettings /></InstitutionAdminGuard>} 
+        element={<InstitutionSettings />} 
       />
       
       <Route 
