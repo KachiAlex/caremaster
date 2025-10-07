@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 const InstitutionAdminDashboard = () => {
-  const { user, userProfile } = useUser();
+  const { user, userProfile, institutionId } = useUser();
   const [stats, setStats] = useState({
     totalCaregivers: 0,
     totalPatients: 0,
@@ -28,11 +28,14 @@ const InstitutionAdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // Get institutionId from userProfile or context
+        const instId = institutionId || userProfile?.institutionId;
+        
         // TODO: Replace with actual institution-specific API calls
         // For now using mock data, but these would be real API calls:
-        // const caregivers = await getCaregiversByInstitution(institutionId);
-        // const patients = await getPatientsByInstitution(institutionId);
-        // const assignments = await getAssignmentsByInstitution(institutionId);
+        // const caregivers = await getCaregiversByInstitution(instId);
+        // const patients = await getPatientsByInstitution(instId);
+        // const assignments = await getAssignmentsByInstitution(instId);
         
         setStats({
           totalCaregivers: 12,
@@ -47,10 +50,10 @@ const InstitutionAdminDashboard = () => {
       }
     };
 
-    if (institutionId) {
+    if (userProfile) {
       fetchStats();
     }
-  }, [institutionId]);
+  }, [userProfile, institutionId]);
 
   const quickActions = [
     {
