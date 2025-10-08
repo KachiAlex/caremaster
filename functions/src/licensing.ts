@@ -99,17 +99,34 @@ export const assignInstitutionAdmin = functions.https.onCall(async (data: Assign
     throw new functions.https.HttpsError('permission-denied', 'Only super-admin can assign institution admins');
   }
 
-  const { institutionId, email, displayName } = data || {};
+  const { institutionId, email, displayName, password } = data || {};
   if (!institutionId || !email) {
     throw new functions.https.HttpsError('invalid-argument', 'institutionId and email are required');
+  }
+
+  if (password && password.length < 6) {
+    throw new functions.https.HttpsError('invalid-argument', 'Password must be at least 6 characters');
   }
 
   // Create or find auth user
   let userRecord;
   try {
     userRecord = await admin.auth().getUserByEmail(email);
+    // Update password if provided for existing user
+    if (password) {
+      await admin.auth().updateUser(userRecord.uid, { password });
+    }
   } catch (e) {
-    userRecord = await admin.auth().createUser({ email, displayName: displayName || email, emailVerified: true });
+    // Create new user with password if provided
+    const createUserData: any = { 
+      email, 
+      displayName: displayName || email, 
+      emailVerified: true 
+    };
+    if (password) {
+      createUserData.password = password;
+    }
+    userRecord = await admin.auth().createUser(createUserData);
   }
 
   // Set custom claims to tie user to institution and admin role

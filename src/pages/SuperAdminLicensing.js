@@ -329,11 +329,19 @@ const SuperAdminLicensing = () => {
       return;
     }
     
+    // Password validation
+    if (!adminUser.password || adminUser.password.length < 6) {
+      setMessage('Password must be at least 6 characters');
+      setBusy(false);
+      return;
+    }
+    
     try {
       const res = await assignInstitutionAdmin({
         institutionId: adminUser.institutionId.trim(),
         email: adminUser.email.trim(),
-        displayName: adminUser.displayName?.trim() || adminUser.email.trim()
+        displayName: adminUser.displayName?.trim() || adminUser.email.trim(),
+        password: adminUser.password
       });
       setMessage(`Admin assigned: ${res.email}`);
       
@@ -707,6 +715,7 @@ const SuperAdminLicensing = () => {
               <input 
                 className="border rounded p-2" 
                 placeholder="Email" 
+                type="email"
                 value={adminUser.email} 
                 onChange={e => setAdminUser({ ...adminUser, email: e.target.value })} 
               />
@@ -715,6 +724,14 @@ const SuperAdminLicensing = () => {
                 placeholder="Display Name (optional)" 
                 value={adminUser.displayName} 
                 onChange={e => setAdminUser({ ...adminUser, displayName: e.target.value })} 
+              />
+              <input 
+                className="border rounded p-2" 
+                placeholder="Password (min 6 characters)" 
+                type="password"
+                minLength={6}
+                value={adminUser.password || ''} 
+                onChange={e => setAdminUser({ ...adminUser, password: e.target.value })} 
               />
               <div className="flex justify-end gap-2">
                 <button 
@@ -728,9 +745,10 @@ const SuperAdminLicensing = () => {
                   Close
                 </button>
                 <button 
-                  disabled={busy || !adminUser.email} 
+                  disabled={busy || !adminUser.email || !adminUser.password || (adminUser.password && adminUser.password.length < 6)} 
                   onClick={handleAssignAdmin} 
                   className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:opacity-50"
+                  title={!adminUser.password || adminUser.password.length < 6 ? 'Password must be at least 6 characters' : ''}
                 >
                   {busy ? 'Adding...' : 'Add Admin'}
                 </button>
