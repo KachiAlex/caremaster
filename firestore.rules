@@ -20,13 +20,15 @@ service cloud.firestore {
       return resourceData.institutionId == userInstitution();
     }
 
-    // Institutions: super-admin only
+    // Institutions: public read (for login/landing pages), write super-admin only
     match /institutions/{institutionId} {
-      allow read, write: if isSuperAdmin();
+      allow read: if true; // Public read for institution branding on login pages
+      allow write: if isSuperAdmin();
     }
-    // Licenses: super-admin only
+    // Licenses: public read (for login/landing pages), write super-admin only
     match /licenses/{licenseId} {
-      allow read, write: if isSuperAdmin();
+      allow read: if true; // Public read for displaying license status on login pages
+      allow write: if isSuperAdmin();
     }
     // Institution admins mapping: super-admin only
     match /institutionAdmins/{docId} {
