@@ -9,7 +9,8 @@ import {
   CheckCircle, 
   ArrowRight,
   Loader,
-  AlertCircle
+  AlertCircle,
+  Activity
 } from 'lucide-react';
 
 const InstitutionLanding = () => {
