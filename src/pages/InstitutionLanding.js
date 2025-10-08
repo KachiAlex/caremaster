@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
+import { toast } from 'react-toastify';
 import { 
   Building2, 
   Users, 
@@ -79,8 +80,36 @@ const InstitutionLanding = () => {
     loadInstitutionData();
   }, [institutionId]);
 
-  const handleRoleSelect = (role) => {
-    // Navigate to login with role pre-selected
+  const handleRoleSelect = async (role) => {
+    // If user is already logged in, navigate directly to their dashboard
+    if (user) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const userRole = userData.type || userData.userType;
+          
+          // Navigate based on role
+          if (role === 'admin' && (userRole === 'admin' || userData.institutionAdmin)) {
+            navigate('/institution-admin/dashboard');
+          } else if (role === 'doctor' && userRole === 'doctor') {
+            navigate('/service-provider');
+          } else if (role === 'nurse' && userRole === 'nurse') {
+            navigate('/service-provider');
+          } else if (role === 'caregiver' && userRole === 'caregiver') {
+            navigate('/service-provider');
+          } else {
+            // User clicked wrong role, ask them to login with correct role
+            toast.error(`You are logged in as ${userRole}, not ${role}. Please logout and login with the correct role.`);
+          }
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error);
+      }
+    }
+    
+    // Not logged in or error - go to login
     navigate(`/institution/login?institution=${institutionId}&role=${role}`);
   };
 

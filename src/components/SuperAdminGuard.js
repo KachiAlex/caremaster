@@ -15,7 +15,7 @@ const SuperAdminGuard = ({ children }) => {
       if (!user) {
         // No user logged in
         toast.error('Please log in to access the super admin panel');
-        navigate('/admin/login');
+        navigate('/super-admin/login');
         return;
       }
 
@@ -53,7 +53,7 @@ const SuperAdminGuard = ({ children }) => {
       } catch (error) {
         console.error('Error checking super-admin status:', error);
         toast.error('Error verifying super-admin access');
-        navigate('/admin/login');
+        navigate('/super-admin/login');
       }
     });
 
@@ -83,7 +83,7 @@ const SuperAdminGuard = ({ children }) => {
           <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
           <p className="text-gray-600 mb-4">You don't have permission to access the super-admin panel.</p>
           <button
-            onClick={() => navigate('/admin/login')}
+            onClick={() => navigate('/super-admin/login')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Login
