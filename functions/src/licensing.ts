@@ -505,6 +505,8 @@ export const migrateInstitutionLinks = functions.https.onCall(async (data, conte
   }
 
   const { force } = data || {};
+  console.log('🔍 Migration called with data:', JSON.stringify(data));
+  console.log('🔍 Force parameter:', force, typeof force);
 
   try {
     const baseURL = 'https://elderx-f5c2b.web.app';
@@ -515,13 +517,23 @@ export const migrateInstitutionLinks = functions.https.onCall(async (data, conte
     institutionsSnapshot.docs.forEach(doc => {
       const docData = doc.data();
       
+      console.log('Checking institution:', doc.id, {
+        force,
+        hasAccessLink: !!docData.accessLink,
+        currentAccessLink: docData.accessLink
+      });
+      
       // Force update all institutions if force=true, otherwise only update missing links
       const shouldUpdate = force || !docData.accessLink || !docData.loginLink || !docData.slug;
+      
+      console.log('Should update?', shouldUpdate);
       
       if (shouldUpdate) {
         const slug = docData.slug || `${docData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${doc.id.substring(0, 8)}`;
         const accessLink = `${baseURL}/onboard?institution=${doc.id}`;
         const loginLink = `${baseURL}/institution/login?institution=${doc.id}`;
+        
+        console.log('Updating to:', accessLink);
         
         batch.update(doc.ref, {
           slug,
