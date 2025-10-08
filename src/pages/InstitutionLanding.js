@@ -37,6 +37,7 @@ const InstitutionLanding = () => {
       if (!currentUser && institutionId) {
         navigate(`/institution/login?institution=${institutionId}&returnTo=/onboard`);
       }
+      // If logged in, we show the access panel (don't auto-redirect)
     });
 
     return () => unsubscribe();
@@ -122,11 +123,6 @@ const InstitutionLanding = () => {
         </div>
       </div>
     );
-  }
-
-  // Don't render if not authenticated (will redirect)
-  if (!user) {
-    return null;
   }
 
   if (error || !institution) {
