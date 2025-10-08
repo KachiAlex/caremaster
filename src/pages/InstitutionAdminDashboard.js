@@ -67,12 +67,32 @@ const InstitutionAdminDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      setLoading(true);
-      
       // Get institutionId from userProfile or context
       const instId = institutionId || userProfile?.institutionId;
       
-      // Load real data from backend APIs (filtered by institution)
+      console.log('📊 Loading institution dashboard for:', instId);
+      
+      // Show loading state immediately but don't block rendering
+      setLoading(true);
+      
+      // Set default stats first so UI renders faster
+      setStats({
+        totalUsers: 0,
+        patients: 0,
+        caregivers: 0,
+        doctors: 0,
+        nurses: 0,
+        activeAppointments: 0,
+        emergencyAlerts: 0,
+        medicationReminders: 0,
+        systemHealth: 'Good',
+        satisfaction: 0,
+        responseTime: 0,
+        uptime: 0
+      });
+      setLoading(false);
+      
+      // Load real data from backend APIs (filtered by institution) - in background
       const [analytics, users, emergencies, caregivers] = await Promise.all([
         analyticsAPI.getOverviewAnalytics().catch(err => {
           console.warn('Failed to fetch analytics:', err);
