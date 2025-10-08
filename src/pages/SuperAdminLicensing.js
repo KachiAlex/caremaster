@@ -71,6 +71,28 @@ const SuperAdminLicensing = () => {
         ]);
         setInstitutions(institutionsData || []);
         setLicenses(licensesData || []);
+        
+        // Auto-migrate if any institutions have old/missing links
+        const needsMigration = institutionsData?.some(inst => 
+          !inst.accessLink || 
+          !inst.accessLink.includes('/onboard?institution=')
+        );
+        
+        if (needsMigration) {
+          console.log('🔄 Auto-migrating institution links to new format...');
+          try {
+            const result = await migrateInstitutionLinks({ force: true });
+            console.log('✅ Auto-migration complete:', result);
+            
+            // Refresh data to show updated links
+            const updatedInstitutions = await getInstitutions();
+            setInstitutions(updatedInstitutions || []);
+            setMessage('Institution links automatically updated to new format');
+          } catch (migrationError) {
+            console.error('Auto-migration failed:', migrationError);
+            // Don't show error to user, they can manually click the button
+          }
+        }
       } catch (error) {
         console.error('Error loading data:', error);
         setMessage('Failed to load data');
