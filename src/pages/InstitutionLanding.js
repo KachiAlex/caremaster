@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { auth, db } from '../firebase/config';
+import { onAuthStateChanged } from 'firebase/auth';
 import { 
   Building2, 
   Users, 
@@ -22,6 +23,23 @@ const InstitutionLanding = () => {
   const [institution, setInstitution] = useState(null);
   const [license, setLicense] = useState(null);
   const [error, setError] = useState('');
+  const [user, setUser] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Check authentication status
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setCheckingAuth(false);
+      
+      // If not logged in, redirect to institution login
+      if (!currentUser && institutionId) {
+        navigate(`/institution/login?institution=${institutionId}&returnTo=/onboard`);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [institutionId, navigate]);
 
   useEffect(() => {
     const loadInstitutionData = async () => {
@@ -66,15 +84,20 @@ const InstitutionLanding = () => {
     navigate(`/institution/login?institution=${institutionId}&role=${role}`);
   };
 
-  if (loading) {
+  if (checkingAuth || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <Loader className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading institution...</p>
+          <p className="text-gray-600">{checkingAuth ? 'Checking authentication...' : 'Loading institution...'}</p>
         </div>
       </div>
     );
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!user) {
+    return null;
   }
 
   if (error || !institution) {

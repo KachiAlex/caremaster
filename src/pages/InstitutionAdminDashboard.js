@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase/config';
 import { useUser } from '../contexts/UserContext';
 import { 
   Users, 
@@ -11,10 +14,12 @@ import {
   Settings,
   Shield,
   FileText,
-  BarChart3
+  BarChart3,
+  LogOut
 } from 'lucide-react';
 
 const InstitutionAdminDashboard = () => {
+  const navigate = useNavigate();
   const { user, userProfile, institutionId } = useUser();
   const [stats, setStats] = useState({
     totalCaregivers: 0,
@@ -136,10 +141,26 @@ const InstitutionAdminDashboard = () => {
               <span className="text-sm text-green-600 font-medium">License Active</span>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">Institution ID</div>
-            <div className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-              {userProfile?.institutionId || 'Loading...'}
+          <div className="text-right flex flex-col items-end gap-3">
+            <button
+              onClick={async () => {
+                try {
+                  await signOut(auth);
+                  navigate('/institution/login?institution=' + institutionId);
+                } catch (error) {
+                  console.error('Logout error:', error);
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
+            <div>
+              <div className="text-sm text-gray-500">Institution ID</div>
+              <div className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                {userProfile?.institutionId || 'Loading...'}
+              </div>
             </div>
           </div>
         </div>
