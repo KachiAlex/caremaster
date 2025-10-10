@@ -545,7 +545,7 @@ const InstitutionAdminDashboard = () => {
       await updatePatient(patientId, { 
         status: 'archived',
         archivedAt: new Date().toISOString(),
-        archivedBy: userProfile?.id || user?.uid
+        archivedBy: user?.uid || userProfile?.id || 'admin'
       });
       toast.success('Patient archived successfully');
       await loadDashboardData();
