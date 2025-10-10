@@ -3,7 +3,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Multi-tenant helpers
     function userInstitution() {
-      return request.auth != null ? request.auth.token.institutionId : null;
+      // Try to get institutionId from auth token first, then fall back to user document
+      return request.auth != null 
+        ? (request.auth.token.institutionId != null 
+            ? request.auth.token.institutionId 
+            : (exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+                ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institutionId 
+                : null))
+        : null;
     }
     function isSuperAdmin() {
       return request.auth != null && request.auth.token.superAdmin == true;
