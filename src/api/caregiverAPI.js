@@ -22,6 +22,77 @@ export const caregiverAPI = {
     try {
       let caregiversQuery;
       
+      // Handle institution filtering
+      if (filters.institutionId) {
+        // Query with institution filter (with fallback for missing index)
+        try {
+          caregiversQuery = query(
+            collection(db, 'caregivers'),
+            where('institutionId', '==', filters.institutionId),
+            orderBy('createdAt', 'desc')
+          );
+          
+          if (filters.limit) {
+            caregiversQuery = query(caregiversQuery, limit(filters.limit));
+          }
+          
+          const caregiversSnapshot = await getDocs(caregiversQuery);
+          const caregivers = [];
+
+          caregiversSnapshot.forEach((doc) => {
+            const data = doc.data();
+            caregivers.push({
+              id: doc.id,
+              ...data,
+              // Handle both Firestore Timestamps and ISO strings
+              joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
+              lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
+              updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null)
+            });
+          });
+
+          return caregivers;
+        } catch (indexError) {
+          console.warn('Firestore index not found for caregivers, using simpler query:', indexError);
+          // Fallback: query without orderBy
+          caregiversQuery = query(
+            collection(db, 'caregivers'),
+            where('institutionId', '==', filters.institutionId)
+          );
+          
+          if (filters.limit) {
+            caregiversQuery = query(caregiversQuery, limit(filters.limit));
+          }
+          
+          const caregiversSnapshot = await getDocs(caregiversQuery);
+          const caregivers = [];
+
+          caregiversSnapshot.forEach((doc) => {
+            const data = doc.data();
+            caregivers.push({
+              id: doc.id,
+              ...data,
+              // Handle both Firestore Timestamps and ISO strings
+              joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
+              lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
+              updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null)
+            });
+          });
+          
+          // Sort in memory
+          caregivers.sort((a, b) => {
+            const aTime = a.createdAt?.getTime?.() || 0;
+            const bTime = b.createdAt?.getTime?.() || 0;
+            return bTime - aTime;
+          });
+
+          return caregivers;
+        }
+      }
+      
+      // Original logic for non-institution queries
       if (filters.status) {
         // Use the indexed query when status filter is provided
         caregiversQuery = query(
@@ -53,13 +124,15 @@ export const caregiverAPI = {
       const caregivers = [];
 
       caregiversSnapshot.forEach((doc) => {
+        const data = doc.data();
         caregivers.push({
           id: doc.id,
-          ...doc.data(),
-          joinDate: doc.data().joinDate?.toDate(),
-          lastActive: doc.data().lastActive?.toDate(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
+          ...data,
+          // Handle both Firestore Timestamps and ISO strings
+          joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
+          lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null)
         });
       });
 
@@ -77,13 +150,15 @@ export const caregiverAPI = {
       const caregiverDoc = await getDoc(caregiverRef);
       
       if (caregiverDoc.exists()) {
+        const data = caregiverDoc.data();
         return {
           id: caregiverDoc.id,
-          ...caregiverDoc.data(),
-          joinDate: caregiverDoc.data().joinDate?.toDate(),
-          lastActive: caregiverDoc.data().lastActive?.toDate(),
-          createdAt: caregiverDoc.data().createdAt?.toDate(),
-          updatedAt: caregiverDoc.data().updatedAt?.toDate()
+          ...data,
+          // Handle both Firestore Timestamps and ISO strings
+          joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
+          lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null)
         };
       }
       
@@ -266,13 +341,15 @@ export const caregiverAPI = {
       const assignments = [];
 
       assignmentsSnapshot.forEach((doc) => {
+        const data = doc.data();
         assignments.push({
           id: doc.id,
-          ...doc.data(),
-          assignedAt: doc.data().assignedAt?.toDate(),
-          endDate: doc.data().endDate?.toDate(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
+          ...data,
+          // Handle both Firestore Timestamps and ISO strings
+          assignedAt: data.assignedAt?.toDate ? data.assignedAt.toDate() : (data.assignedAt ? new Date(data.assignedAt) : null),
+          endDate: data.endDate?.toDate ? data.endDate.toDate() : (data.endDate ? new Date(data.endDate) : null),
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null)
         });
       });
 
@@ -374,14 +451,16 @@ export const caregiverAPI = {
       const schedule = [];
 
       scheduleSnapshot.forEach((doc) => {
+        const data = doc.data();
         schedule.push({
           id: doc.id,
-          ...doc.data(),
-          scheduledDate: doc.data().scheduledDate?.toDate(),
-          startTime: doc.data().startTime?.toDate(),
-          endTime: doc.data().endTime?.toDate(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
+          ...data,
+          // Handle both Firestore Timestamps and ISO strings
+          scheduledDate: data.scheduledDate?.toDate ? data.scheduledDate.toDate() : (data.scheduledDate ? new Date(data.scheduledDate) : null),
+          startTime: data.startTime?.toDate ? data.startTime.toDate() : (data.startTime ? new Date(data.startTime) : null),
+          endTime: data.endTime?.toDate ? data.endTime.toDate() : (data.endTime ? new Date(data.endTime) : null),
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null)
         });
       });
 
@@ -447,11 +526,13 @@ export const caregiverAPI = {
       const earnings = [];
 
       earningsSnapshot.forEach((doc) => {
+        const data = doc.data();
         earnings.push({
           id: doc.id,
-          ...doc.data(),
-          earnedDate: doc.data().earnedDate?.toDate(),
-          createdAt: doc.data().createdAt?.toDate()
+          ...data,
+          // Handle both Firestore Timestamps and ISO strings
+          earnedDate: data.earnedDate?.toDate ? data.earnedDate.toDate() : (data.earnedDate ? new Date(data.earnedDate) : null),
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null)
         });
       });
 
@@ -478,8 +559,9 @@ export const caregiverAPI = {
       const schedule = await caregiverAPI.getCaregiverSchedule(caregiverId, dateRange);
       analytics.totalHours = schedule.reduce((total, shift) => {
         if (shift.actualStartTime && shift.actualEndTime) {
-          const start = shift.actualStartTime.toDate();
-          const end = shift.actualEndTime.toDate();
+          // Handle both Date objects and Firestore Timestamps
+          const start = shift.actualStartTime instanceof Date ? shift.actualStartTime : (shift.actualStartTime.toDate ? shift.actualStartTime.toDate() : new Date(shift.actualStartTime));
+          const end = shift.actualEndTime instanceof Date ? shift.actualEndTime : (shift.actualEndTime.toDate ? shift.actualEndTime.toDate() : new Date(shift.actualEndTime));
           return total + (end - start) / (1000 * 60 * 60); // Convert to hours
         }
         return total;
@@ -530,13 +612,15 @@ export const caregiverAPI = {
     return onSnapshot(caregiversQuery, (snapshot) => {
       const caregivers = [];
       snapshot.forEach((doc) => {
+        const data = doc.data();
         caregivers.push({
           id: doc.id,
-          ...doc.data(),
-          joinDate: doc.data().joinDate?.toDate(),
-          lastActive: doc.data().lastActive?.toDate(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
+          ...data,
+          // Handle both Firestore Timestamps and ISO strings
+          joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
+          lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null)
         });
       });
       callback(caregivers);
