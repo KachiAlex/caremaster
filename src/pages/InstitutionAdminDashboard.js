@@ -1145,6 +1145,7 @@ const InstitutionAdminDashboard = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Onboarding</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -1153,7 +1154,7 @@ const InstitutionAdminDashboard = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {caregivers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-8 text-center">
+                      <td colSpan="6" className="px-6 py-8 text-center">
                         <div className="text-gray-500">
                           <p className="text-sm font-medium">No caregivers found</p>
                           <p className="text-xs mt-1">Click "Add Caregiver" to create your first caregiver</p>
@@ -1179,6 +1180,19 @@ const InstitutionAdminDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{caregiver.userType || caregiver.type || 'Caregiver'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {caregiver.onboardingComplete ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Complete
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pending
+                            </span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             caregiver.status === 'active' 
@@ -2453,16 +2467,52 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Onboarding Status Alert */}
+          {!caregiver.onboardingComplete && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">Onboarding Incomplete</h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>This caregiver has not completed their onboarding process. They need to:</p>
+                    <ul className="list-disc list-inside mt-1">
+                      <li>Fill out their professional profile</li>
+                      <li>Upload required documents (license, certifications)</li>
+                      <li>Submit for review</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Basic Information */}
           <div>
             <h4 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <label className="block text-sm font-medium text-gray-500">Onboarding Status</label>
+                {caregiver.onboardingComplete ? (
+                  <span className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Complete - Documents Submitted
+                  </span>
+                ) : (
+                  <span className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Pending - Awaiting Completion
+                  </span>
+                )}
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-500">Role</label>
                 <p className="mt-1 text-gray-900">{caregiver.userType || caregiver.type || 'Caregiver'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500">Status</label>
+                <label className="block text-sm font-medium text-gray-500">Account Status</label>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   caregiver.status === 'active' 
                     ? 'bg-green-100 text-green-800' 
