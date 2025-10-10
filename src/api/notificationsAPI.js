@@ -26,7 +26,8 @@ export const NOTIFICATION_TYPES = {
   MEDICAL: 'medical',
   EMERGENCY: 'emergency',
   SYSTEM: 'system',
-  REMINDER: 'reminder'
+  REMINDER: 'reminder',
+  CAREGIVER_ONBOARDING: 'caregiver_onboarding'
 };
 
 // Notification priorities

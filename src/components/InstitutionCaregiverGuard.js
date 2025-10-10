@@ -67,21 +67,21 @@ const InstitutionCaregiverGuard = ({ children }) => {
         return;
       }
 
+      // Check if caregiver needs approval (onboarding complete but not yet approved)
+      if (userProfile.status === 'pending' || !userProfile.status) {
+        console.log('⏳ Caregiver pending approval - redirecting to pending approval page');
+        navigate(`/institution-caregiver/pending-approval?institution=${effectiveInstitutionId}`);
+        return;
+      }
+
       // Check if caregiver is approved/active
-      // Allow undefined status (for newly created caregivers) or active/pending status
-      const allowedStatuses = ['active', 'pending', undefined];
-      if (!allowedStatuses.includes(userProfile.status)) {
+      if (userProfile.status !== 'active') {
         console.log('❌ Caregiver status not allowed:', userProfile.status);
         toast.error(`Your account status is "${userProfile.status}". Contact your institution admin.`);
         signOut(auth).then(() => {
           navigate(`/institution/login?institution=${effectiveInstitutionId}&role=caregiver`, { replace: true });
         });
         return;
-      }
-      
-      // If status is undefined, log a warning
-      if (!userProfile.status) {
-        console.warn('⚠️ Caregiver status is undefined - allowing access but should be set to "active" or "pending"');
       }
     }
   }, [user, userProfile, loading, navigate, institutionId, urlInstitutionId, effectiveInstitutionId]);
@@ -130,9 +130,14 @@ const InstitutionCaregiverGuard = ({ children }) => {
       return null;
     }
 
+    // CRITICAL: Redirect to pending approval if not yet approved
+    if (userProfile.status === 'pending' || !userProfile.status) {
+      console.log('🚫 Blocking render - pending approval');
+      return <Navigate to={`/institution-caregiver/pending-approval?institution=${effectiveInstitutionId}`} replace />;
+    }
+
     // Check if caregiver is approved/active
-    const allowedStatuses = ['active', 'pending', undefined];
-    if (!allowedStatuses.includes(userProfile.status)) {
+    if (userProfile.status !== 'active') {
       // Will be handled by useEffect
       return null;
     }

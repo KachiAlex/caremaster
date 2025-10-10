@@ -41,6 +41,7 @@ const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
 const InstitutionLanding = lazy(() => import('./pages/InstitutionLanding'));
 const InstitutionLogin = lazy(() => import('./pages/InstitutionLogin'));
 const InstitutionCaregiverOnboarding = lazy(() => import('./pages/InstitutionCaregiverOnboarding'));
+const InstitutionCaregiverPendingApproval = lazy(() => import('./pages/InstitutionCaregiverPendingApproval'));
 const InstitutionCaregiverDashboard = lazy(() => import('./pages/InstitutionCaregiverDashboard'));
 const CaregiverMessages = lazy(() => import('./pages/CaregiverMessages'));
 const CaregiverNavigation = lazy(() => import('./pages/CaregiverNavigation'));
@@ -433,6 +434,11 @@ function App() {
       <Route 
         path="/institution-caregiver/onboarding" 
         element={user ? <InstitutionCaregiverOnboarding /> : <Navigate to="/institution/login" replace />} 
+      />
+      
+      <Route 
+        path="/institution-caregiver/pending-approval" 
+        element={user ? <InstitutionCaregiverPendingApproval /> : <Navigate to="/institution/login" replace />} 
       />
       
       <Route 

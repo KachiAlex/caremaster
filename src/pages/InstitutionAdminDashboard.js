@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useUser } from '../contexts/UserContext';
 import { 
@@ -527,6 +527,90 @@ const InstitutionAdminDashboard = () => {
     } catch (error) {
       console.error('Error deleting caregiver:', error);
       toast.error('Failed to delete caregiver');
+    }
+  };
+
+  const handleApproveCaregiver = async (caregiver) => {
+    if (!window.confirm(`Approve ${caregiver.name} as a caregiver? They will gain access to the dashboard.`)) {
+      return;
+    }
+    try {
+      // Update both users and caregivers collections
+      await updateDoc(doc(db, 'users', caregiver.id), { 
+        status: 'active',
+        approvedAt: new Date().toISOString(),
+        approvedBy: user?.uid || userProfile?.id
+      });
+      
+      await updateDoc(doc(db, 'caregivers', caregiver.id), { 
+        status: 'active',
+        approvedAt: new Date().toISOString(),
+        approvedBy: user?.uid || userProfile?.id
+      });
+      
+      // Send notification to the caregiver
+      await createNotification({
+        userId: caregiver.id,
+        type: NOTIFICATION_TYPES.SYSTEM,
+        priority: NOTIFICATION_PRIORITIES.HIGH,
+        title: 'Account Approved!',
+        message: `Your account has been approved by the administrator. You can now access the caregiver dashboard.`,
+        data: {
+          action: 'account_approved',
+          institutionId: institutionId
+        }
+      });
+      
+      toast.success(`${caregiver.name} has been approved successfully`);
+      await loadDashboardData(); // Reload to update the status
+    } catch (error) {
+      console.error('Error approving caregiver:', error);
+      toast.error('Failed to approve caregiver');
+    }
+  };
+
+  const handleRejectCaregiver = async (caregiver) => {
+    const reason = window.prompt(`Please provide a reason for rejecting ${caregiver.name}'s application:`);
+    if (!reason) {
+      toast.info('Rejection cancelled');
+      return;
+    }
+    
+    try {
+      // Update both users and caregivers collections
+      await updateDoc(doc(db, 'users', caregiver.id), { 
+        status: 'rejected',
+        rejectedAt: new Date().toISOString(),
+        rejectedBy: user?.uid || userProfile?.id,
+        rejectionReason: reason
+      });
+      
+      await updateDoc(doc(db, 'caregivers', caregiver.id), { 
+        status: 'rejected',
+        rejectedAt: new Date().toISOString(),
+        rejectedBy: user?.uid || userProfile?.id,
+        rejectionReason: reason
+      });
+      
+      // Send notification to the caregiver
+      await createNotification({
+        userId: caregiver.id,
+        type: NOTIFICATION_TYPES.SYSTEM,
+        priority: NOTIFICATION_PRIORITIES.HIGH,
+        title: 'Application Not Approved',
+        message: `Your caregiver application was not approved. Reason: ${reason}. Please contact the administrator for more information.`,
+        data: {
+          action: 'account_rejected',
+          reason: reason,
+          institutionId: institutionId
+        }
+      });
+      
+      toast.success(`${caregiver.name}'s application has been rejected`);
+      await loadDashboardData(); // Reload to update the status
+    } catch (error) {
+      console.error('Error rejecting caregiver:', error);
+      toast.error('Failed to reject caregiver');
     }
   };
 
@@ -1211,16 +1295,37 @@ const InstitutionAdminDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button 
-                            onClick={() => {
-                              setSelectedCaregiver(caregiver);
-                              setShowCaregiverDetails(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-900 inline-flex items-center"
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View Details
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => {
+                                setSelectedCaregiver(caregiver);
+                                setShowCaregiverDetails(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-900 inline-flex items-center"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </button>
+                            
+                            {caregiver.status === 'pending' && caregiver.onboardingComplete && (
+                              <>
+                                <button 
+                                  onClick={() => handleApproveCaregiver(caregiver)}
+                                  className="text-green-600 hover:text-green-900 inline-flex items-center px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Approve
+                                </button>
+                                <button 
+                                  onClick={() => handleRejectCaregiver(caregiver)}
+                                  className="text-red-600 hover:text-red-900 inline-flex items-center px-2 py-1 border border-red-600 rounded hover:bg-red-50"
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))

@@ -229,10 +229,10 @@ const InstitutionCaregiverOnboarding = () => {
 
       await completeOnboarding(user.uid);
       
-      toast.success('Onboarding completed! Redirecting to dashboard...');
+      toast.success('Onboarding completed! Awaiting admin approval...');
       
       setTimeout(() => {
-        navigate(`/institution-caregiver/dashboard${effectiveInstitutionId ? `?institution=${effectiveInstitutionId}` : ''}`);
+        navigate(`/institution-caregiver/pending-approval${effectiveInstitutionId ? `?institution=${effectiveInstitutionId}` : ''}`);
       }, 1500);
     } catch (error) {
       console.error('Error completing onboarding:', error);
