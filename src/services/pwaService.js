@@ -20,6 +20,12 @@ class PWAService {
 
   // Service Worker Registration
   async registerServiceWorker() {
+    // Skip service worker registration in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('⚠️ Service Worker disabled in development mode');
+      return;
+    }
+    
     if ('serviceWorker' in navigator) {
       try {
         this.swRegistration = await navigator.serviceWorker.register('/sw.js');
