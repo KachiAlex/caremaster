@@ -19,28 +19,28 @@ import { db } from '../firebase/config';
 import logger from '../utils/logger';
 import errorHandler from '../utils/errorHandler';
 
-const ASSIGNMENTS_COLLECTION = 'patientAssignments';
+const ASSIGNMENTS_COLLECTION = 'clientAssignments';
 const ASSIGNMENT_REQUESTS_COLLECTION = 'assignmentRequests';
 
 // Assignment Management API
 export const assignmentAPI = {
-  // Create new patient-caregiver assignment
+  // Create new client-caregiver assignment
   createAssignment: async (assignmentData) => {
     try {
-      // Ensure referenced patient document exists; create a minimal placeholder if missing
-      if (assignmentData.patientId) {
-        const patientRef = doc(db, 'patients', assignmentData.patientId);
-        const patientSnap = await getDoc(patientRef);
-        if (!patientSnap.exists()) {
-          await setDoc(patientRef, {
-            name: assignmentData.patientName || 'Assigned Patient',
-            email: assignmentData.patientEmail || '',
+      // Ensure referenced client document exists; create a minimal placeholder if missing
+      if (assignmentData.clientId) {
+        const clientRef = doc(db, 'clients', assignmentData.clientId);
+        const clientSnap = await getDoc(clientRef);
+        if (!clientSnap.exists()) {
+          await setDoc(clientRef, {
+            name: assignmentData.clientName || 'Assigned Client',
+            email: assignmentData.clientEmail || '',
             status: 'active',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           }, { merge: true });
-          logger.warn('Created placeholder patient document for assignment', {
-            patientId: assignmentData.patientId
+          logger.warn('Created placeholder client document for assignment', {
+            clientId: assignmentData.clientId
           });
         }
       }
@@ -54,9 +54,9 @@ export const assignmentAPI = {
 
       const docRef = await addDoc(collection(db, ASSIGNMENTS_COLLECTION), assignment);
       
-      logger.info('Patient assignment created', { 
+      logger.info('Client assignment created', { 
         assignmentId: docRef.id,
-        patientId: assignmentData.patientId,
+        clientId: assignmentData.clientId,
         caregiverId: assignmentData.caregiverId 
       });
 
@@ -109,12 +109,12 @@ export const assignmentAPI = {
     }
   },
 
-  // Get assignments by patient (no composite index required)
-  getAssignmentsByPatient: async (patientId) => {
+  // Get assignments by client (no composite index required)
+  getAssignmentsByClient: async (clientId) => {
     try {
       const assignmentsQuery = query(
         collection(db, ASSIGNMENTS_COLLECTION),
-        where('patientId', '==', patientId)
+        where('clientId', '==', clientId)
       );
 
       const querySnapshot = await getDocs(assignmentsQuery);
@@ -139,7 +139,7 @@ export const assignmentAPI = {
         return bTime - aTime;
       });
     } catch (error) {
-      logger.error('Error fetching patient assignments', { error, patientId });
+      logger.error('Error fetching client assignments', { error, clientId });
       throw error;
     }
   },
@@ -417,12 +417,12 @@ export const assignmentAPI = {
     }
   },
 
-  // Real-time subscription for assignments by patient
-  subscribeToAssignmentsByPatient: (patientId, callback) => {
+  // Real-time subscription for assignments by client
+  subscribeToAssignmentsByClient: (clientId, callback) => {
     try {
       const assignmentsQuery = query(
         collection(db, ASSIGNMENTS_COLLECTION),
-        where('patientId', '==', patientId),
+        where('clientId', '==', clientId),
         orderBy('createdAt', 'desc')
       );
 
@@ -442,7 +442,7 @@ export const assignmentAPI = {
         callback(assignments);
       });
     } catch (error) {
-      logger.error('Error setting up patient assignment subscription', { error, patientId });
+      logger.error('Error setting up client assignment subscription', { error, clientId });
       throw error;
     }
   }

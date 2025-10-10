@@ -15,7 +15,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { getPatientsByCaregiver } from '../api/patientsAPI';
+import { getClientsByCaregiver } from '../api/patientsAPI';
 import { carePlansAPI } from '../api/carePlansAPI';
 import { toast } from 'react-toastify';
 
@@ -44,7 +44,7 @@ const Consultation = () => {
       
       try {
         setLoading(true);
-        const patients = await getPatientsByCaregiver(user.uid);
+        const patients = await getClientsByCaregiver(user.uid);
         setAssignedPatients(patients);
         
         if (patients.length > 0 && !selectedPatientId) {

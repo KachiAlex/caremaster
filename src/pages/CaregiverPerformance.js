@@ -20,7 +20,7 @@ import {
   Download
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { getPatientFeedbackByCaregiver, calculateCaregiverRating, getFeedbackStatistics } from '../api/patientFeedbackAPI';
+import { getClientFeedbackByCaregiver, calculateCaregiverRating, getFeedbackStatistics } from '../api/patientFeedbackAPI';
 
 const CaregiverPerformance = () => {
   const { userProfile } = useUser();
@@ -47,7 +47,7 @@ const CaregiverPerformance = () => {
       const caregiverId = userProfile.id || userProfile.uid;
       
       // Load patient feedback data
-      const feedback = await getPatientFeedbackByCaregiver(caregiverId);
+      const feedback = await getClientFeedbackByCaregiver(caregiverId);
       setPatientFeedback(feedback);
       
       // Calculate rating from patient feedback

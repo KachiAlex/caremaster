@@ -27,15 +27,15 @@ import {
   X
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { createPatientFeedback, getAllPatientFeedback, updatePatientFeedback, deletePatientFeedback, calculateCaregiverRating, getFeedbackStatistics } from '../api/patientFeedbackAPI';
+import { createClientFeedback, getAllClientFeedback, updateClientFeedback, deleteClientFeedback, calculateCaregiverRating, getFeedbackStatistics } from '../api/patientFeedbackAPI';
 import { getAllUsers } from '../api/usersAPI';
 import { toast } from 'react-toastify';
 
-const AdminPatientFeedback = () => {
+const AdminClientFeedback = () => {
   const { userProfile } = useUser();
   const [feedbackList, setFeedbackList] = useState([]);
   const [filteredFeedback, setFilteredFeedback] = useState([]);
-  const [patients, setPatients] = useState([]);
+  const [clients, setClients] = useState([]);
   const [caregivers, setCaregivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -44,13 +44,13 @@ const AdminPatientFeedback = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterWeek, setFilterWeek] = useState('');
   const [filterCaregiver, setFilterCaregiver] = useState('');
-  const [filterPatient, setFilterPatient] = useState('');
+  const [filterClient, setFilterClient] = useState('');
   const [statistics, setStatistics] = useState({});
   
   // Form state for adding/editing feedback
   const [formData, setFormData] = useState({
-    patientId: '',
-    patientName: '',
+    clientId: '',
+    clientName: '',
     caregiverId: '',
     caregiverName: '',
     weekOf: '',
@@ -73,18 +73,18 @@ const AdminPatientFeedback = () => {
 
   useEffect(() => {
     filterFeedback();
-  }, [feedbackList, searchTerm, filterWeek, filterCaregiver, filterPatient]);
+  }, [feedbackList, searchTerm, filterWeek, filterCaregiver, filterClient]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [feedback, users] = await Promise.all([
-        getAllPatientFeedback(),
+        getAllClientFeedback(),
         getAllUsers()
       ]);
       
       setFeedbackList(feedback);
-      setPatients(users.filter(u => u.userType === 'elderly' || u.userType === 'client' || u.userType === 'patient'));
+      setClients(users.filter(u => u.userType === 'elderly' || u.userType === 'client' || u.userType === 'client'));
       setCaregivers(users.filter(u => u.userType === 'caregiver'));
       
       // Calculate statistics
@@ -103,7 +103,7 @@ const AdminPatientFeedback = () => {
     
     if (searchTerm) {
       filtered = filtered.filter(feedback => 
-        feedback.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        feedback.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         feedback.caregiverName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         feedback.comments?.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -117,8 +117,8 @@ const AdminPatientFeedback = () => {
       filtered = filtered.filter(feedback => feedback.caregiverId === filterCaregiver);
     }
     
-    if (filterPatient) {
-      filtered = filtered.filter(feedback => feedback.patientId === filterPatient);
+    if (filterClient) {
+      filtered = filtered.filter(feedback => feedback.clientId === filterClient);
     }
     
     setFilteredFeedback(filtered);
@@ -128,18 +128,18 @@ const AdminPatientFeedback = () => {
     e.preventDefault();
     try {
       if (selectedFeedback) {
-        await updatePatientFeedback(selectedFeedback.id, formData);
+        await updateClientFeedback(selectedFeedback.id, formData);
         toast.success('Feedback updated successfully');
         setShowEditModal(false);
       } else {
-        await createPatientFeedback(formData);
+        await createClientFeedback(formData);
         toast.success('Feedback added successfully');
         setShowAddModal(false);
       }
       
       setFormData({
-        patientId: '',
-        patientName: '',
+        clientId: '',
+        clientName: '',
         caregiverId: '',
         caregiverName: '',
         weekOf: '',
@@ -176,7 +176,7 @@ const AdminPatientFeedback = () => {
   const handleDeleteFeedback = async (feedbackId) => {
     if (window.confirm('Are you sure you want to delete this feedback?')) {
       try {
-        await deletePatientFeedback(feedbackId);
+        await deleteClientFeedback(feedbackId);
         toast.success('Feedback deleted successfully');
         loadData();
       } catch (error) {
@@ -208,7 +208,7 @@ const AdminPatientFeedback = () => {
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-gray-900">
-              {selectedFeedback ? 'Edit Patient Feedback' : 'Add Patient Feedback'}
+              {selectedFeedback ? 'Edit Client Feedback' : 'Add Client Feedback'}
             </h3>
             <button
               onClick={() => {
@@ -223,29 +223,29 @@ const AdminPatientFeedback = () => {
           </div>
 
           <form onSubmit={handleSubmitFeedback} className="space-y-6">
-            {/* Patient and Caregiver Selection */}
+            {/* Client and Caregiver Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Patient *
+                  Client *
                 </label>
                 <select
-                  value={formData.patientId}
+                  value={formData.clientId}
                   onChange={(e) => {
-                    const patient = patients.find(p => p.id === e.target.value);
+                    const client = clients.find(p => p.id === e.target.value);
                     setFormData({
                       ...formData,
-                      patientId: e.target.value,
-                      patientName: patient?.name || patient?.displayName || ''
+                      clientId: e.target.value,
+                      clientName: client?.name || client?.displayName || ''
                     });
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   required
                 >
-                  <option value="">Select Patient</option>
-                  {patients.map(patient => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.name || patient.displayName || patient.email}
+                  <option value="">Select Client</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>
+                      {client.name || client.displayName || client.email}
                     </option>
                   ))}
                 </select>
@@ -351,7 +351,7 @@ const AdminPatientFeedback = () => {
 
             {/* Rating Categories */}
             <div className="space-y-4">
-              <h4 className="text-lg font-medium text-gray-900">Patient Ratings (1-5 stars)</h4>
+              <h4 className="text-lg font-medium text-gray-900">Client Ratings (1-5 stars)</h4>
               
               {[
                 { key: 'punctuality', label: 'Punctuality', description: 'How well did the caregiver arrive on time?' },
@@ -391,14 +391,14 @@ const AdminPatientFeedback = () => {
             {/* Comments */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Patient Comments
+                Client Comments
               </label>
               <textarea
                 value={formData.comments}
                 onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
                 rows="3"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="Patient's feedback comments..."
+                placeholder="Client's feedback comments..."
               />
             </div>
 
@@ -455,8 +455,8 @@ const AdminPatientFeedback = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Patient Feedback Management</h1>
-          <p className="text-gray-600">Manage weekly patient feedback and caregiver ratings</p>
+          <h1 className="text-2xl font-bold text-gray-900">Client Feedback Management</h1>
+          <p className="text-gray-600">Manage weekly client feedback and caregiver ratings</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -575,16 +575,16 @@ const AdminPatientFeedback = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Patient</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Client</label>
             <select
-              value={filterPatient}
-              onChange={(e) => setFilterPatient(e.target.value)}
+              value={filterClient}
+              onChange={(e) => setFilterClient(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
-              <option value="">All Patients</option>
-              {patients.map(patient => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name || patient.displayName}
+              <option value="">All Clients</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>
+                  {client.name || client.displayName}
                 </option>
               ))}
             </select>
@@ -596,7 +596,7 @@ const AdminPatientFeedback = () => {
                 setSearchTerm('');
                 setFilterWeek('');
                 setFilterCaregiver('');
-                setFilterPatient('');
+                setFilterClient('');
               }}
               className="w-full px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
             >
@@ -613,7 +613,7 @@ const AdminPatientFeedback = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
+                  Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Caregiver
@@ -646,7 +646,7 @@ const AdminPatientFeedback = () => {
                         </div>
                         <div className="ml-3">
                           <div className="text-sm font-medium text-gray-900">
-                            {feedback.patientName}
+                            {feedback.clientName}
                           </div>
                         </div>
                       </div>
@@ -707,9 +707,9 @@ const AdminPatientFeedback = () => {
             <FileText className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No feedback found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || filterWeek || filterCaregiver || filterPatient
+              {searchTerm || filterWeek || filterCaregiver || filterClient
                 ? 'Try adjusting your search or filter criteria.'
-                : 'No patient feedback has been recorded yet.'}
+                : 'No client feedback has been recorded yet.'}
             </p>
           </div>
         )}
@@ -722,4 +722,4 @@ const AdminPatientFeedback = () => {
   );
 };
 
-export default AdminPatientFeedback;
+export default AdminClientFeedback;

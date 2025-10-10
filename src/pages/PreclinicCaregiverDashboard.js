@@ -30,7 +30,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { getPatientsByCaregiver } from '../api/patientsAPI';
+import { getClientsByCaregiver } from '../api/patientsAPI';
 import { collection, query, where, orderBy, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
@@ -145,7 +145,7 @@ const PreclinicCaregiverDashboard = () => {
       }
 
       // Load assigned clients
-      const assignedClientsData = await getPatientsByCaregiver(user.uid).catch(err => {
+      const assignedClientsData = await getClientsByCaregiver(user.uid).catch(err => {
         console.warn('Failed to fetch assigned clients:', err);
         return [];
       });

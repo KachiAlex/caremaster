@@ -332,7 +332,7 @@ const InstitutionLanding = () => {
                 <Activity className="h-6 w-6 text-purple-600" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Real-time Updates</h3>
-              <p className="text-sm text-gray-600">Track patient care and staff activities in real-time</p>
+              <p className="text-sm text-gray-600">Track client care and staff activities in real-time</p>
             </div>
           </div>
         </div>

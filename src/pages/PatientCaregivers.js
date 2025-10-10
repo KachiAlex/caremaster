@@ -22,7 +22,7 @@ import { useUser } from '../contexts/UserContext';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { toast } from 'react-toastify';
 
-const PatientCaregivers = () => {
+const ClientCaregivers = () => {
   const { userProfile } = useUser();
   const [caregivers, setCaregivers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,8 +38,8 @@ const PatientCaregivers = () => {
       setLoading(true);
       
       // Load assigned caregivers from admin-created assignments
-      const assignments = await assignmentAPI.getAssignmentsByPatient(userProfile.id);
-      console.log(`Found ${assignments.length} caregiver assignments for patient ${userProfile.id}`);
+      const assignments = await assignmentAPI.getAssignmentsByClient(userProfile.id);
+      console.log(`Found ${assignments.length} caregiver assignments for client ${userProfile.id}`);
       
       // Extract caregiver information from assignments
       const caregiversData = assignments.map(assignment => ({
@@ -52,7 +52,7 @@ const PatientCaregivers = () => {
         assignmentId: assignment.id
       }));
 
-      console.log(`Loading assigned caregivers for patient ${userProfile.id}:`, caregiversData.length);
+      console.log(`Loading assigned caregivers for client ${userProfile.id}:`, caregiversData.length);
       setCaregivers(caregiversData || []);
     } catch (error) {
       console.error('Error loading caregivers:', error);
@@ -67,8 +67,8 @@ const PatientCaregivers = () => {
       loadCaregivers();
       
       // Set up real-time subscription for assignments
-      const unsubscribe = assignmentAPI.subscribeToAssignmentsByPatient(userProfile.id, (assignments) => {
-        console.log(`Real-time update: Found ${assignments.length} caregiver assignments for patient ${userProfile.id}`);
+      const unsubscribe = assignmentAPI.subscribeToAssignmentsByClient(userProfile.id, (assignments) => {
+        console.log(`Real-time update: Found ${assignments.length} caregiver assignments for client ${userProfile.id}`);
         
         // Extract caregiver information from assignments
         const caregiversData = assignments.map(assignment => ({
@@ -292,4 +292,4 @@ const PatientCaregivers = () => {
   );
 };
 
-export default PatientCaregivers;
+export default ClientCaregivers;

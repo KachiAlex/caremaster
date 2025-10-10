@@ -19,7 +19,7 @@ import {
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
 import { medicationAPI } from '../api/medicationAPI';
-import { getPatientsByCaregiver } from '../api/patientsAPI';
+import { getClientsByCaregiver } from '../api/patientsAPI';
 import { createCareLog } from '../api/careLogsAPI';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -59,7 +59,7 @@ const Medications = () => {
         if (!userProfile) return;
         const isServiceProvider = ['doctor', 'caregiver', 'admin'].includes((userProfile.userType || '').toLowerCase());
         if (!isServiceProvider) return;
-        const patients = await getPatientsByCaregiver(userProfile.id || userProfile.uid);
+        const patients = await getClientsByCaregiver(userProfile.id || userProfile.uid);
         setAssignedPatients(patients || []);
       } catch (e) {
         console.warn('Failed to load assigned patients', e);

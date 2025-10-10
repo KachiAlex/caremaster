@@ -25,62 +25,62 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 
-const AdminPatientDatabase = () => {
+const AdminClientDatabase = () => {
   const { userProfile } = useUser();
-  const [patients, setPatients] = useState([]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showAddPatient, setShowAddPatient] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [showPatientDetails, setShowPatientDetails] = useState(false);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [showClientDetails, setShowClientDetails] = useState(false);
 
   useEffect(() => {
-    loadPatients();
+    loadClients();
   }, []);
 
-  const loadPatients = async () => {
+  const loadClients = async () => {
     try {
       setLoading(true);
-      // Load patients from admin-managed database
-      // In the new model, patients are created by admin, not self-registered
-      const patientsData = []; // Will be replaced with API call
-      setPatients(patientsData);
+      // Load clients from admin-managed database
+      // In the new model, clients are created by admin, not self-registered
+      const clientsData = []; // Will be replaced with API call
+      setClients(clientsData);
     } catch (error) {
-      console.error('Error loading patients:', error);
-      toast.error('Failed to load patient database');
+      console.error('Error loading clients:', error);
+      toast.error('Failed to load client database');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddPatient = async (patientData) => {
+  const handleAddClient = async (clientData) => {
     try {
-      // Create new patient record in admin database
-      const newPatient = {
-        id: `patient_${Date.now()}`,
-        ...patientData,
+      // Create new client record in admin database
+      const newClient = {
+        id: `client_${Date.now()}`,
+        ...clientData,
         createdBy: userProfile.id,
         createdAt: new Date(),
         status: 'active'
       };
 
       // API call would go here
-      console.log('Creating patient:', newPatient);
+      console.log('Creating client:', newClient);
       
-      setPatients(prev => [...prev, newPatient]);
-      setShowAddPatient(false);
-      toast.success('Patient added to database successfully');
+      setClients(prev => [...prev, newClient]);
+      setShowAddClient(false);
+      toast.success('Client added to database successfully');
     } catch (error) {
-      console.error('Error adding patient:', error);
-      toast.error('Failed to add patient');
+      console.error('Error adding client:', error);
+      toast.error('Failed to add client');
     }
   };
 
-  const filteredPatients = patients.filter(patient => {
-    const matchesSearch = patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.medicalConditions?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || patient.status === filterStatus;
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         client.medicalConditions?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || client.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
@@ -97,20 +97,20 @@ const AdminPatientDatabase = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Patient Database</h1>
-          <p className="text-gray-600">Manage all patient records and information</p>
+          <h1 className="text-2xl font-bold text-gray-900">Client Database</h1>
+          <p className="text-gray-600">Manage all client records and information</p>
         </div>
         <div className="flex items-center space-x-3">
           <button className="btn btn-secondary">
             <Upload className="h-4 w-4 mr-2" />
-            Import Patients
+            Import Clients
           </button>
           <button 
-            onClick={() => setShowAddPatient(true)}
+            onClick={() => setShowAddClient(true)}
             className="btn btn-primary"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add New Patient
+            Add New Client
           </button>
         </div>
       </div>
@@ -123,8 +123,8 @@ const AdminPatientDatabase = () => {
               <Users className="h-6 w-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Patients</p>
-              <p className="text-2xl font-semibold text-gray-900">{patients.length}</p>
+              <p className="text-sm font-medium text-gray-600">Total Clients</p>
+              <p className="text-2xl font-semibold text-gray-900">{clients.length}</p>
             </div>
           </div>
         </div>
@@ -134,9 +134,9 @@ const AdminPatientDatabase = () => {
               <Activity className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Patients</p>
+              <p className="text-sm font-medium text-gray-600">Active Clients</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {patients.filter(p => p.status === 'active').length}
+                {clients.filter(p => p.status === 'active').length}
               </p>
             </div>
           </div>
@@ -149,7 +149,7 @@ const AdminPatientDatabase = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">High Priority</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {patients.filter(p => p.priority === 'high').length}
+                {clients.filter(p => p.priority === 'high').length}
               </p>
             </div>
           </div>
@@ -175,7 +175,7 @@ const AdminPatientDatabase = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search patients by name, condition, or medical record number..."
+                placeholder="Search clients by name, condition, or medical record number..."
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -188,7 +188,7 @@ const AdminPatientDatabase = () => {
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
-              <option value="all">All Patients</option>
+              <option value="all">All Clients</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="critical">Critical Care</option>
@@ -198,17 +198,17 @@ const AdminPatientDatabase = () => {
         </div>
       </div>
 
-      {/* Patients Table */}
+      {/* Clients Table */}
       <div className="card">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Patient Records</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Client Records</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
+                  Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Medical Info
@@ -228,64 +228,64 @@ const AdminPatientDatabase = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPatients.length === 0 ? (
+              {filteredClients.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-12 text-center">
                     <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Patients Found</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Clients Found</h3>
                     <p className="text-gray-600 mb-4">
-                      {searchTerm ? 'No patients match your search criteria' : 'Start by adding your first patient to the database'}
+                      {searchTerm ? 'No clients match your search criteria' : 'Start by adding your first client to the database'}
                     </p>
                     <button 
-                      onClick={() => setShowAddPatient(true)}
+                      onClick={() => setShowAddClient(true)}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Add First Patient
+                      Add First Client
                     </button>
                   </td>
                 </tr>
               ) : (
-                filteredPatients.map((patient) => (
-                  <tr key={patient.id} className="hover:bg-gray-50">
+                filteredClients.map((client) => (
+                  <tr key={client.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                           <span className="text-blue-600 font-medium text-sm">
-                            {patient.name?.split(' ').map(n => n[0]).join('') || 'P'}
+                            {client.name?.split(' ').map(n => n[0]).join('') || 'P'}
                           </span>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{patient.name}</div>
-                          <div className="text-sm text-gray-500">ID: {patient.medicalRecordNumber || patient.id}</div>
+                          <div className="text-sm font-medium text-gray-900">{client.name}</div>
+                          <div className="text-sm text-gray-500">ID: {client.medicalRecordNumber || client.id}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">Age: {patient.age}</div>
-                      <div className="text-sm text-gray-500">{patient.medicalConditions}</div>
+                      <div className="text-sm text-gray-900">Age: {client.age}</div>
+                      <div className="text-sm text-gray-500">{client.medicalConditions}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{patient.assignedCaregiver || 'Unassigned'}</div>
+                      <div className="text-sm text-gray-900">{client.assignedCaregiver || 'Unassigned'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        patient.status === 'active' ? 'bg-green-100 text-green-800' :
-                        patient.status === 'critical' ? 'bg-red-100 text-red-800' :
+                        client.status === 'active' ? 'bg-green-100 text-green-800' :
+                        client.status === 'critical' ? 'bg-red-100 text-red-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {patient.status}
+                        {client.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {patient.lastActivity ? new Date(patient.lastActivity).toLocaleDateString() : 'No activity'}
+                      {client.lastActivity ? new Date(client.lastActivity).toLocaleDateString() : 'No activity'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button 
                           onClick={() => {
-                            setSelectedPatient(patient);
-                            setShowPatientDetails(true);
+                            setSelectedClient(client);
+                            setShowClientDetails(true);
                           }}
                           className="text-blue-600 hover:text-blue-900"
                         >
@@ -307,27 +307,27 @@ const AdminPatientDatabase = () => {
         </div>
       </div>
 
-      {/* Add Patient Modal */}
-      {showAddPatient && (
-        <AddPatientModal
-          onClose={() => setShowAddPatient(false)}
-          onAdd={handleAddPatient}
+      {/* Add Client Modal */}
+      {showAddClient && (
+        <AddClientModal
+          onClose={() => setShowAddClient(false)}
+          onAdd={handleAddClient}
         />
       )}
 
-      {/* Patient Details Modal */}
-      {showPatientDetails && selectedPatient && (
-        <PatientDetailsModal
-          patient={selectedPatient}
-          onClose={() => setShowPatientDetails(false)}
+      {/* Client Details Modal */}
+      {showClientDetails && selectedClient && (
+        <ClientDetailsModal
+          client={selectedClient}
+          onClose={() => setShowClientDetails(false)}
         />
       )}
     </div>
   );
 };
 
-// Add Patient Modal Component
-const AddPatientModal = ({ onClose, onAdd }) => {
+// Add Client Modal Component
+const AddClientModal = ({ onClose, onAdd }) => {
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -363,7 +363,7 @@ const AddPatientModal = ({ onClose, onAdd }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Add New Patient</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Add New Client</h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="h-5 w-5" />
           </button>
@@ -588,7 +588,7 @@ const AddPatientModal = ({ onClose, onAdd }) => {
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
-              Add Patient
+              Add Client
             </button>
           </div>
         </form>
@@ -597,13 +597,13 @@ const AddPatientModal = ({ onClose, onAdd }) => {
   );
 };
 
-// Patient Details Modal Component
-const PatientDetailsModal = ({ patient, onClose }) => {
+// Client Details Modal Component
+const ClientDetailsModal = ({ client, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Patient Details</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Client Details</h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="h-5 w-5" />
           </button>
@@ -614,20 +614,20 @@ const PatientDetailsModal = ({ patient, onClose }) => {
             <div>
               <h4 className="font-semibold text-gray-800 mb-3">Basic Information</h4>
               <div className="space-y-2">
-                <p><span className="text-gray-600">Name:</span> {patient.name}</p>
-                <p><span className="text-gray-600">Age:</span> {patient.age}</p>
-                <p><span className="text-gray-600">Gender:</span> {patient.gender}</p>
-                <p><span className="text-gray-600">Phone:</span> {patient.phone}</p>
-                <p><span className="text-gray-600">Email:</span> {patient.email}</p>
+                <p><span className="text-gray-600">Name:</span> {client.name}</p>
+                <p><span className="text-gray-600">Age:</span> {client.age}</p>
+                <p><span className="text-gray-600">Gender:</span> {client.gender}</p>
+                <p><span className="text-gray-600">Phone:</span> {client.phone}</p>
+                <p><span className="text-gray-600">Email:</span> {client.email}</p>
               </div>
             </div>
             <div>
               <h4 className="font-semibold text-gray-800 mb-3">Medical Information</h4>
               <div className="space-y-2">
-                <p><span className="text-gray-600">Conditions:</span> {patient.medicalConditions}</p>
-                <p><span className="text-gray-600">Medications:</span> {patient.medications}</p>
-                <p><span className="text-gray-600">Allergies:</span> {patient.allergies}</p>
-                <p><span className="text-gray-600">Primary Doctor:</span> {patient.primaryDoctor}</p>
+                <p><span className="text-gray-600">Conditions:</span> {client.medicalConditions}</p>
+                <p><span className="text-gray-600">Medications:</span> {client.medications}</p>
+                <p><span className="text-gray-600">Allergies:</span> {client.allergies}</p>
+                <p><span className="text-gray-600">Primary Doctor:</span> {client.primaryDoctor}</p>
               </div>
             </div>
           </div>
@@ -637,4 +637,4 @@ const PatientDetailsModal = ({ patient, onClose }) => {
   );
 };
 
-export default AdminPatientDatabase;
+export default AdminClientDatabase;

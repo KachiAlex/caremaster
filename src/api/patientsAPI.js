@@ -17,159 +17,159 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-const PATIENTS_COLLECTION = 'patients';
+const PATIENTS_COLLECTION = 'clients';
 
-// Get all patients (admin only)
-export const getAllPatients = async (institutionId = null) => {
+// Get all clients (admin only)
+export const getAllClients = async (institutionId = null) => {
   try {
-    const patientsRef = collection(db, PATIENTS_COLLECTION);
+    const clientsRef = collection(db, PATIENTS_COLLECTION);
     let q;
     
     // Add institution filtering if provided
     if (institutionId) {
       // Try with orderBy first, fallback to just where if index doesn't exist
       try {
-        q = query(patientsRef, 
+        q = query(clientsRef, 
           where('institutionId', '==', institutionId),
           orderBy('createdAt', 'desc')
         );
         const querySnapshot = await getDocs(q);
         
-        const patients = [];
+        const clients = [];
         querySnapshot.forEach((doc) => {
-          const patientData = doc.data();
-          patients.push({
+          const clientData = doc.data();
+          clients.push({
             id: doc.id,
-            ...patientData,
-            dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-            createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-            updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-            lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+            ...clientData,
+            dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+            createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+            updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+            lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
           });
         });
         
-        return patients;
+        return clients;
       } catch (indexError) {
         console.warn('Firestore index not found, using simpler query:', indexError);
         // Fallback: query without orderBy, then sort in memory
-        q = query(patientsRef, where('institutionId', '==', institutionId));
+        q = query(clientsRef, where('institutionId', '==', institutionId));
         const querySnapshot = await getDocs(q);
         
-        const patients = [];
+        const clients = [];
         querySnapshot.forEach((doc) => {
-          const patientData = doc.data();
-          patients.push({
+          const clientData = doc.data();
+          clients.push({
             id: doc.id,
-            ...patientData,
-            dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-            createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-            updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-            lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+            ...clientData,
+            dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+            createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+            updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+            lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
           });
         });
         
         // Sort in memory by createdAt
-        patients.sort((a, b) => {
+        clients.sort((a, b) => {
           const aTime = a.createdAt?.getTime?.() || 0;
           const bTime = b.createdAt?.getTime?.() || 0;
           return bTime - aTime; // Descending order
         });
         
-        return patients;
+        return clients;
       }
     } else {
-      q = query(patientsRef, orderBy('createdAt', 'desc'));
+      q = query(clientsRef, orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
       
-      const patients = [];
+      const clients = [];
       querySnapshot.forEach((doc) => {
-        const patientData = doc.data();
-        patients.push({
+        const clientData = doc.data();
+        clients.push({
           id: doc.id,
-          ...patientData,
-          dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-          createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-          updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-          lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+          ...clientData,
+          dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+          createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+          updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+          lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
         });
       });
       
-      return patients;
+      return clients;
     }
   } catch (error) {
-    console.error('Error fetching patients:', error);
+    console.error('Error fetching clients:', error);
     throw error;
   }
 };
 
-// Get patients by institution
-export const getPatientsByInstitution = async (institutionId) => {
+// Get clients by institution
+export const getClientsByInstitution = async (institutionId) => {
   try {
-    const patientsRef = collection(db, PATIENTS_COLLECTION);
-    const q = query(patientsRef, 
+    const clientsRef = collection(db, PATIENTS_COLLECTION);
+    const q = query(clientsRef, 
       where('institutionId', '==', institutionId),
       orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
     
-    const patients = [];
+    const clients = [];
     querySnapshot.forEach((doc) => {
-      const patientData = doc.data();
-      patients.push({
+      const clientData = doc.data();
+      clients.push({
         id: doc.id,
-        ...patientData,
-        dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-        createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-        updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-        lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+        ...clientData,
+        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
       });
     });
     
-    return patients;
+    return clients;
   } catch (error) {
-    console.error('Error fetching patients by institution:', error);
+    console.error('Error fetching clients by institution:', error);
     throw error;
   }
 };
 
-// Get patient by ID
-export const getPatientById = async (patientId) => {
+// Get client by ID
+export const getClientById = async (clientId) => {
   try {
-    const patientRef = doc(db, PATIENTS_COLLECTION, patientId);
-    const patientSnap = await getDoc(patientRef);
+    const clientRef = doc(db, PATIENTS_COLLECTION, clientId);
+    const clientSnap = await getDoc(clientRef);
     
-    if (patientSnap.exists()) {
-      const patientData = patientSnap.data();
+    if (clientSnap.exists()) {
+      const clientData = clientSnap.data();
       return {
-        id: patientSnap.id,
-        ...patientData,
-        dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-        createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-        updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-        lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+        id: clientSnap.id,
+        ...clientData,
+        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
       };
     } else {
-      throw new Error('Patient not found');
+      throw new Error('Client not found');
     }
   } catch (error) {
-    console.error('Error fetching patient:', error);
+    console.error('Error fetching client:', error);
     throw error;
   }
 };
 
-// Get patients assigned to a caregiver
-export const getPatientsByCaregiver = async (caregiverId, institutionId = null) => {
+// Get clients assigned to a caregiver
+export const getClientsByCaregiver = async (caregiverId, institutionId = null) => {
   try {
-    console.log('🔍 getPatientsByCaregiver called with caregiverId:', caregiverId, 'institutionId:', institutionId);
+    console.log('🔍 getClientsByCaregiver called with caregiverId:', caregiverId, 'institutionId:', institutionId);
     console.log('🔍 Function started - about to query Firestore');
     
-    // First try to get patients directly assigned to caregiver
-    const patientsRef = collection(db, PATIENTS_COLLECTION);
-    let directQuery = query(patientsRef, where('assignedCaregiver', '==', caregiverId));
+    // First try to get clients directly assigned to caregiver
+    const clientsRef = collection(db, PATIENTS_COLLECTION);
+    let directQuery = query(clientsRef, where('assignedCaregiver', '==', caregiverId));
     
     // Add institution filtering if provided
     if (institutionId) {
-      directQuery = query(patientsRef, 
+      directQuery = query(clientsRef, 
         where('assignedCaregiver', '==', caregiverId),
         where('institutionId', '==', institutionId)
       );
@@ -177,90 +177,90 @@ export const getPatientsByCaregiver = async (caregiverId, institutionId = null) 
     
     const directSnapshot = await getDocs(directQuery);
     
-    console.log(`  → Found ${directSnapshot.size} patients in 'patients' collection with assignedCaregiver`);
+    console.log(`  → Found ${directSnapshot.size} clients in 'clients' collection with assignedCaregiver`);
     
-    const directPatients = [];
+    const directClients = [];
     directSnapshot.forEach((doc) => {
-      const patientData = doc.data();
-      directPatients.push({
+      const clientData = doc.data();
+      directClients.push({
         id: doc.id,
-        ...patientData,
-        dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-        createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-        updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-        lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+        ...clientData,
+        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
       });
     });
 
-    // Also get patients from tasks assigned to this caregiver
+    // Also get clients from tasks assigned to this caregiver
     const tasksRef = collection(db, 'careTasks');
     const tasksQuery = query(tasksRef, where('caregiverId', '==', caregiverId));
     const tasksSnapshot = await getDocs(tasksQuery);
     
     console.log(`  → Found ${tasksSnapshot.size} tasks in 'careTasks' collection`);
     
-    const patientIds = new Set();
+    const clientIds = new Set();
     tasksSnapshot.forEach((doc) => {
       const taskData = doc.data();
-      if (taskData.patientId) {
-        patientIds.add(taskData.patientId);
+      if (taskData.clientId) {
+        clientIds.add(taskData.clientId);
       }
     });
 
-    // Also get patients from explicit patientAssignments collection
-    const assignmentsRef = collection(db, 'patientAssignments');
+    // Also get clients from explicit clientAssignments collection
+    const assignmentsRef = collection(db, 'clientAssignments');
     const assignmentsQuery = query(assignmentsRef, where('caregiverId', '==', caregiverId));
     const assignmentsSnapshot = await getDocs(assignmentsQuery);
 
-    console.log(`  → Found ${assignmentsSnapshot.size} assignments in 'patientAssignments' collection`);
+    console.log(`  → Found ${assignmentsSnapshot.size} assignments in 'clientAssignments' collection`);
 
-    // Build a map to enrich placeholders if patient doc is missing
-    const assignmentByPatientId = new Map();
+    // Build a map to enrich placeholders if client doc is missing
+    const assignmentByClientId = new Map();
     assignmentsSnapshot.forEach((doc) => {
       const assignmentData = doc.data();
-      console.log(`    - Assignment: patientId=${assignmentData.patientId}, caregiverId=${assignmentData.caregiverId}, status=${assignmentData.status}`);
-      if (assignmentData.patientId && (assignmentData.status ?? 'active') === 'active') {
-        patientIds.add(assignmentData.patientId);
-        if (!assignmentByPatientId.has(assignmentData.patientId)) {
-          assignmentByPatientId.set(assignmentData.patientId, assignmentData);
+      console.log(`    - Assignment: clientId=${assignmentData.clientId}, caregiverId=${assignmentData.caregiverId}, status=${assignmentData.status}`);
+      if (assignmentData.clientId && (assignmentData.status ?? 'active') === 'active') {
+        clientIds.add(assignmentData.clientId);
+        if (!assignmentByClientId.has(assignmentData.clientId)) {
+          assignmentByClientId.set(assignmentData.clientId, assignmentData);
         }
       }
     });
     
-    console.log(`  → Final patientIds set:`, Array.from(patientIds));
+    console.log(`  → Final clientIds set:`, Array.from(clientIds));
     
-    console.log(`  → Total unique patient IDs to fetch: ${patientIds.size}`);
+    console.log(`  → Total unique client IDs to fetch: ${clientIds.size}`);
 
-    // Get patient details for task-assigned and explicitly assigned patients
-    const taskPatients = [];
-    for (const patientId of patientIds) {
+    // Get client details for task-assigned and explicitly assigned clients
+    const taskClients = [];
+    for (const clientId of clientIds) {
       try {
-        const patientDoc = await getDoc(doc(db, PATIENTS_COLLECTION, patientId));
-        if (patientDoc.exists()) {
-          const patientData = patientDoc.data();
-          taskPatients.push({
-            id: patientDoc.id,
-            ...patientData,
-            dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-            createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-            updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-            lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+        const clientDoc = await getDoc(doc(db, PATIENTS_COLLECTION, clientId));
+        if (clientDoc.exists()) {
+          const clientData = clientDoc.data();
+          taskClients.push({
+            id: clientDoc.id,
+            ...clientData,
+            dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+            createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+            updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+            lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
           });
         } else {
-          // Patient doc is missing; create a placeholder so UI can still show the assignment
-          const assignment = assignmentByPatientId.get(patientId) || {};
-          // Use assignment data as placeholder since we can't create patient documents
-          // due to security rules (only admins can create patient documents)
-          console.log(`⚠️ Missing patient document for assigned patientId=${patientId}. Using assignment data as placeholder.`);
+          // Client doc is missing; create a placeholder so UI can still show the assignment
+          const assignment = assignmentByClientId.get(clientId) || {};
+          // Use assignment data as placeholder since we can't create client documents
+          // due to security rules (only admins can create client documents)
+          console.log(`⚠️ Missing client document for assigned clientId=${clientId}. Using assignment data as placeholder.`);
           
-          taskPatients.push({
-            id: patientId,
-            name: assignment.patientName || 'Assigned Patient',
-            email: assignment.patientEmail || '',
+          taskClients.push({
+            id: clientId,
+            name: assignment.clientName || 'Assigned Client',
+            email: assignment.clientEmail || '',
             status: assignment.status || 'active',
-            address: assignment.patientAddress || assignment.address || 'Address not provided',
-            phone: assignment.patientPhone || assignment.phone || 'Phone not provided',
-            condition: assignment.condition || assignment.patientCondition || 'Medical condition not specified',
+            address: assignment.clientAddress || assignment.address || 'Address not provided',
+            phone: assignment.clientPhone || assignment.phone || 'Phone not provided',
+            condition: assignment.condition || assignment.clientCondition || 'Medical condition not specified',
             age: assignment.age || 'Age not specified',
             gender: assignment.gender || 'Gender not specified',
             assignedCaregiver: caregiverId,
@@ -270,26 +270,26 @@ export const getPatientsByCaregiver = async (caregiverId, institutionId = null) 
           });
         }
       } catch (error) {
-        console.log('Could not fetch patient from task:', error);
+        console.log('Could not fetch client from task:', error);
       }
     }
 
-          // Combine and deduplicate patients
-          const allPatients = [...directPatients, ...taskPatients];
-          const uniquePatients = allPatients.filter((patient, index, self) => 
-            index === self.findIndex(p => p.id === patient.id)
+          // Combine and deduplicate clients
+          const allClients = [...directClients, ...taskClients];
+          const uniqueClients = allClients.filter((client, index, self) => 
+            index === self.findIndex(p => p.id === client.id)
           );
           
-          console.log(`  → Returning ${uniquePatients.length} unique patients for caregiver ${caregiverId}`);
+          console.log(`  → Returning ${uniqueClients.length} unique clients for caregiver ${caregiverId}`);
           
           // Sort by createdAt in memory (newest first)
-          return uniquePatients.sort((a, b) => {
+          return uniqueClients.sort((a, b) => {
             const aTime = a.createdAt?.getTime?.() || 0;
             const bTime = b.createdAt?.getTime?.() || 0;
             return bTime - aTime;
           });
   } catch (error) {
-    console.error('❌ Error fetching patients by caregiver:', error);
+    console.error('❌ Error fetching clients by caregiver:', error);
     console.error('❌ Error details:', {
       message: error.message,
       code: error.code,
@@ -299,16 +299,16 @@ export const getPatientsByCaregiver = async (caregiverId, institutionId = null) 
   }
 };
 
-// Get patients assigned to a doctor
-export const getPatientsByDoctor = async (doctorId, institutionId = null) => {
+// Get clients assigned to a doctor
+export const getClientsByDoctor = async (doctorId, institutionId = null) => {
   try {
-    const patientsRef = collection(db, PATIENTS_COLLECTION);
+    const clientsRef = collection(db, PATIENTS_COLLECTION);
     // Remove orderBy to avoid index requirement - we'll sort in memory
-    let q = query(patientsRef, where('assignedDoctor', '==', doctorId));
+    let q = query(clientsRef, where('assignedDoctor', '==', doctorId));
     
     // Add institution filtering if provided
     if (institutionId) {
-      q = query(patientsRef, 
+      q = query(clientsRef, 
         where('assignedDoctor', '==', doctorId),
         where('institutionId', '==', institutionId)
       );
@@ -316,103 +316,103 @@ export const getPatientsByDoctor = async (doctorId, institutionId = null) => {
     
     const querySnapshot = await getDocs(q);
     
-    const patients = [];
+    const clients = [];
     querySnapshot.forEach((doc) => {
-      const patientData = doc.data();
-      patients.push({
+      const clientData = doc.data();
+      clients.push({
         id: doc.id,
-        ...patientData,
-        dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-        createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-        updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-        lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+        ...clientData,
+        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
       });
     });
     
     // Sort by createdAt in memory (newest first)
-    return patients.sort((a, b) => {
+    return clients.sort((a, b) => {
       const aTime = a.createdAt?.getTime?.() || 0;
       const bTime = b.createdAt?.getTime?.() || 0;
       return bTime - aTime;
     });
   } catch (error) {
-    console.error('Error fetching patients by doctor:', error);
+    console.error('Error fetching clients by doctor:', error);
     throw error;
   }
 };
 
-// Create new patient
-export const createPatient = async (patientData) => {
+// Create new client
+export const createClient = async (clientData) => {
   try {
-    const patientsRef = collection(db, PATIENTS_COLLECTION);
-    const newPatient = {
-      ...patientData,
+    const clientsRef = collection(db, PATIENTS_COLLECTION);
+    const newClient = {
+      ...clientData,
       status: 'active',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       lastVisit: serverTimestamp(),
     };
     
-    const docRef = await addDoc(patientsRef, newPatient);
+    const docRef = await addDoc(clientsRef, newClient);
     return docRef.id;
   } catch (error) {
-    console.error('Error creating patient:', error);
+    console.error('Error creating client:', error);
     throw error;
   }
 };
 
-// Update patient
-export const updatePatient = async (patientId, updateData) => {
+// Update client
+export const updateClient = async (clientId, updateData) => {
   try {
-    const patientRef = doc(db, PATIENTS_COLLECTION, patientId);
+    const clientRef = doc(db, PATIENTS_COLLECTION, clientId);
     const updatedData = {
       ...updateData,
       updatedAt: serverTimestamp(),
     };
     
-    await updateDoc(patientRef, updatedData);
+    await updateDoc(clientRef, updatedData);
     return true;
   } catch (error) {
-    console.error('Error updating patient:', error);
+    console.error('Error updating client:', error);
     throw error;
   }
 };
 
-// Assign patient to caregiver
-export const assignPatientToCaregiver = async (patientId, caregiverId) => {
+// Assign client to caregiver
+export const assignClientToCaregiver = async (clientId, caregiverId) => {
   try {
-    const patientRef = doc(db, PATIENTS_COLLECTION, patientId);
-    await updateDoc(patientRef, {
+    const clientRef = doc(db, PATIENTS_COLLECTION, clientId);
+    await updateDoc(clientRef, {
       assignedCaregiver: caregiverId,
       updatedAt: serverTimestamp(),
     });
     return true;
   } catch (error) {
-    console.error('Error assigning patient to caregiver:', error);
+    console.error('Error assigning client to caregiver:', error);
     throw error;
   }
 };
 
-// Assign patient to doctor
-export const assignPatientToDoctor = async (patientId, doctorId) => {
+// Assign client to doctor
+export const assignClientToDoctor = async (clientId, doctorId) => {
   try {
-    const patientRef = doc(db, PATIENTS_COLLECTION, patientId);
-    await updateDoc(patientRef, {
+    const clientRef = doc(db, PATIENTS_COLLECTION, clientId);
+    await updateDoc(clientRef, {
       assignedDoctor: doctorId,
       updatedAt: serverTimestamp(),
     });
     return true;
   } catch (error) {
-    console.error('Error assigning patient to doctor:', error);
+    console.error('Error assigning client to doctor:', error);
     throw error;
   }
 };
 
-// Get patient's medical history
-export const getPatientMedicalHistory = async (patientId) => {
+// Get client's medical history
+export const getClientMedicalHistory = async (clientId) => {
   try {
     const medicalHistoryRef = collection(db, 'medicalHistory');
-    const q = query(medicalHistoryRef, where('patientId', '==', patientId), orderBy('date', 'desc'));
+    const q = query(medicalHistoryRef, where('clientId', '==', clientId), orderBy('date', 'desc'));
     const querySnapshot = await getDocs(q);
     
     const history = [];
@@ -428,25 +428,25 @@ export const getPatientMedicalHistory = async (patientId) => {
     
     return history;
   } catch (error) {
-    console.error('Error fetching patient medical history:', error);
+    console.error('Error fetching client medical history:', error);
     throw error;
   }
 };
 
-// Add medical record to patient
-export const addMedicalRecord = async (patientId, recordData) => {
+// Add medical record to client
+export const addMedicalRecord = async (clientId, recordData) => {
   try {
     const medicalHistoryRef = collection(db, 'medicalHistory');
     const newRecord = {
       ...recordData,
-      patientId,
+      clientId,
       createdAt: serverTimestamp(),
     };
     
     const docRef = await addDoc(medicalHistoryRef, newRecord);
     
-    // Update patient's last visit
-    await updatePatient(patientId, { lastVisit: serverTimestamp() });
+    // Update client's last visit
+    await updateClient(clientId, { lastVisit: serverTimestamp() });
     
     return docRef.id;
   } catch (error) {
@@ -455,51 +455,51 @@ export const addMedicalRecord = async (patientId, recordData) => {
   }
 };
 
-// Get patient statistics
-export const getPatientStats = async () => {
+// Get client statistics
+export const getClientStats = async () => {
   try {
-    const patients = await getAllPatients();
+    const clients = await getAllClients();
     
     const stats = {
-      total: patients.length,
-      active: patients.filter(patient => patient.status === 'active').length,
-      inactive: patients.filter(patient => patient.status === 'inactive').length,
-      withCaregiver: patients.filter(patient => patient.assignedCaregiver).length,
-      withDoctor: patients.filter(patient => patient.assignedDoctor).length,
-      averageAge: patients.reduce((sum, patient) => {
-        if (patient.dateOfBirth) {
-          const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
+      total: clients.length,
+      active: clients.filter(client => client.status === 'active').length,
+      inactive: clients.filter(client => client.status === 'inactive').length,
+      withCaregiver: clients.filter(client => client.assignedCaregiver).length,
+      withDoctor: clients.filter(client => client.assignedDoctor).length,
+      averageAge: clients.reduce((sum, client) => {
+        if (client.dateOfBirth) {
+          const age = new Date().getFullYear() - new Date(client.dateOfBirth).getFullYear();
           return sum + age;
         }
         return sum;
-      }, 0) / patients.length || 0,
+      }, 0) / clients.length || 0,
     };
     
     return stats;
   } catch (error) {
-    console.error('Error getting patient stats:', error);
+    console.error('Error getting client stats:', error);
     throw error;
   }
 };
 
-// Real-time listener for patients
-export const subscribeToPatients = (callback) => {
-  const patientsRef = collection(db, PATIENTS_COLLECTION);
-  const q = query(patientsRef, orderBy('createdAt', 'desc'));
+// Real-time listener for clients
+export const subscribeToClients = (callback) => {
+  const clientsRef = collection(db, PATIENTS_COLLECTION);
+  const q = query(clientsRef, orderBy('createdAt', 'desc'));
   
   return onSnapshot(q, (querySnapshot) => {
-    const patients = [];
+    const clients = [];
     querySnapshot.forEach((doc) => {
-      const patientData = doc.data();
-      patients.push({
+      const clientData = doc.data();
+      clients.push({
         id: doc.id,
-        ...patientData,
-        dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-        createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-        updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-        lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+        ...clientData,
+        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
       });
     });
-    callback(patients);
+    callback(clients);
   });
 };

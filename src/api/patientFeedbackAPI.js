@@ -3,11 +3,11 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-const PATIENT_FEEDBACK_COLLECTION = 'patientFeedback';
+const PATIENT_FEEDBACK_COLLECTION = 'clientFeedback';
 
-export async function createPatientFeedback(feedback) {
-  if (!feedback || !feedback.patientId || !feedback.caregiverId || !feedback.weekOf) {
-    throw new Error('patientId, caregiverId and weekOf are required');
+export async function createClientFeedback(feedback) {
+  if (!feedback || !feedback.clientId || !feedback.caregiverId || !feedback.weekOf) {
+    throw new Error('clientId, caregiverId and weekOf are required');
   }
   
   const payload = {
@@ -20,7 +20,7 @@ export async function createPatientFeedback(feedback) {
   return { id: ref.id, ...payload };
 }
 
-export async function updatePatientFeedback(feedbackId, updates) {
+export async function updateClientFeedback(feedbackId, updates) {
   if (!feedbackId || !updates) throw new Error('feedbackId and updates required');
   const ref = doc(db, PATIENT_FEEDBACK_COLLECTION, feedbackId);
   await updateDoc(ref, { ...updates, updatedAt: serverTimestamp() });
@@ -28,14 +28,14 @@ export async function updatePatientFeedback(feedbackId, updates) {
   return { id: snap.id, ...snap.data() };
 }
 
-export async function deletePatientFeedback(feedbackId) {
+export async function deleteClientFeedback(feedbackId) {
   if (!feedbackId) throw new Error('feedbackId required');
   const ref = doc(db, PATIENT_FEEDBACK_COLLECTION, feedbackId);
   await deleteDoc(ref);
   return true;
 }
 
-export async function getPatientFeedbackByCaregiver(caregiverId, dateRange = {}) {
+export async function getClientFeedbackByCaregiver(caregiverId, dateRange = {}) {
   if (!caregiverId) throw new Error('caregiverId required');
   
   let q = query(
@@ -58,19 +58,19 @@ export async function getPatientFeedbackByCaregiver(caregiverId, dateRange = {})
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-export async function getPatientFeedbackByPatient(patientId, dateRange = {}) {
-  if (!patientId) throw new Error('patientId required');
+export async function getClientFeedbackByClient(clientId, dateRange = {}) {
+  if (!clientId) throw new Error('clientId required');
   
   let q = query(
     collection(db, PATIENT_FEEDBACK_COLLECTION),
-    where('patientId', '==', patientId),
+    where('clientId', '==', clientId),
     orderBy('weekOf', 'desc')
   );
   
   if (dateRange.startDate && dateRange.endDate) {
     q = query(
       collection(db, PATIENT_FEEDBACK_COLLECTION),
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('weekOf', '>=', dateRange.startDate),
       where('weekOf', '<=', dateRange.endDate),
       orderBy('weekOf', 'desc')
@@ -81,7 +81,7 @@ export async function getPatientFeedbackByPatient(patientId, dateRange = {}) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-export async function getAllPatientFeedback(dateRange = {}) {
+export async function getAllClientFeedback(dateRange = {}) {
   let q = query(
     collection(db, PATIENT_FEEDBACK_COLLECTION),
     orderBy('weekOf', 'desc')

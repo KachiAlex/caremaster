@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapPin, Navigation, Clock, Users } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { getPatientsByCaregiver } from '../api/patientsAPI';
+import { getClientsByCaregiver } from '../api/patientsAPI';
 
 const RouteOptimization = () => {
   const { userProfile } = useUser();
@@ -13,7 +13,7 @@ const RouteOptimization = () => {
       try {
         const caregiverId = userProfile?.id || userProfile?.uid;
         if (!caregiverId) return;
-        const pts = await getPatientsByCaregiver(caregiverId).catch(() => []);
+        const pts = await getClientsByCaregiver(caregiverId).catch(() => []);
         setPatients(Array.isArray(pts) ? pts : []);
       } finally {
         setLoading(false);

@@ -34,8 +34,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { 
-  getPatientsByCaregiver, 
-  getPatientsByDoctor, 
+  getClientsByCaregiver, 
+  getClientsByDoctor, 
   getPatientStats 
 } from '../api/patientsAPI';
 import { 
@@ -457,13 +457,13 @@ const ServiceProviderDashboard = () => {
       
       // Load patients with error handling
       if (isDoctor) {
-        promises.push(getPatientsByDoctor(userId).catch(error => {
+        promises.push(getClientsByDoctor(userId).catch(error => {
           console.log('Could not load patients by doctor - this is normal for new users');
           return [];
         }));
       } else if (isCaregiver) {
-        console.log('🔍 About to call getPatientsByCaregiver with userId:', userId);
-        promises.push(getPatientsByCaregiver(userId).catch(error => {
+        console.log('🔍 About to call getClientsByCaregiver with userId:', userId);
+        promises.push(getClientsByCaregiver(userId).catch(error => {
           console.log('❌ Could not load caregiver patients:', error);
           return [];
         }));

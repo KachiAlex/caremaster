@@ -552,7 +552,7 @@ const InstitutionCaregiverOnboarding = () => {
                       <li>• Your profile will be reviewed by the institution administrator</li>
                       <li>• Your documents will be verified for authenticity</li>
                       <li>• You'll receive a notification once approved (typically within 24-48 hours)</li>
-                      <li>• Upon approval, you can start accepting patient assignments</li>
+                      <li>• Upon approval, you can start accepting client assignments</li>
                     </ul>
                   </div>
                 </div>

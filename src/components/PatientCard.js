@@ -13,20 +13,20 @@ import {
   CheckCircle,
   Calendar
 } from 'lucide-react';
-import { getCareTasksByPatient } from '../api/careTasksAPI';
+import { getCareTasksByClient } from '../api/careTasksAPI';
 import { getTaskAssignmentsByCaregiver } from '../api/taskAssignmentAPI';
 
-const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) => {
+const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => {
   const [todaysTasks, setTodaysTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadPatientTasks = async () => {
-      if (!patient?.id) return;
+    const loadClientTasks = async () => {
+      if (!client?.id) return;
       
       try {
-        // Get today's tasks for this patient
-        const tasks = await getCareTasksByPatient(patient.id).catch(() => []);
+        // Get today's tasks for this client
+        const tasks = await getCareTasksByClient(client.id).catch(() => []);
         const today = new Date().toDateString();
         const todayTasksFiltered = tasks.filter(task => {
           const taskDate = task.scheduledTime ? new Date(task.scheduledTime).toDateString() : null;
@@ -35,14 +35,14 @@ const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) =
         
         setTodaysTasks(todayTasksFiltered);
       } catch (error) {
-        console.error('Error loading patient tasks:', error);
+        console.error('Error loading client tasks:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadPatientTasks();
-  }, [patient?.id]);
+    loadClientTasks();
+  }, [client?.id]);
 
   const getNextVisitTime = () => {
     if (todaysTasks.length === 0) return null;
@@ -72,7 +72,7 @@ const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) =
     return (
       <div 
         className={`bg-white rounded-lg shadow p-4 hover:shadow-md transition-all cursor-pointer ${priorityColors[priority]}`}
-        onClick={() => onViewDetails(patient)}
+        onClick={() => onViewDetails(client)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -80,8 +80,8 @@ const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) =
               <User className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">{patient.name}</h3>
-              <p className="text-sm text-gray-600">{patient.age ? `Age ${patient.age}` : patient.email}</p>
+              <h3 className="font-semibold text-gray-900">{client.name}</h3>
+              <p className="text-sm text-gray-600">{client.age ? `Age ${client.age}` : client.email}</p>
             </div>
           </div>
           <ChevronRight className="h-5 w-5 text-gray-400" />
@@ -97,24 +97,24 @@ const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) =
         <div className="flex items-center space-x-4">
           <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
             <span className="text-white text-2xl font-bold">
-              {patient.name?.split(' ').map(n => n[0]).join('') || 'P'}
+              {client.name?.split(' ').map(n => n[0]).join('') || 'P'}
             </span>
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-900">{patient.name}</h3>
+            <h3 className="text-xl font-bold text-gray-900">{client.name}</h3>
             <div className="flex items-center space-x-4 mt-1">
-              {patient.age && (
-                <span className="text-sm text-gray-600">Age {patient.age}</span>
+              {client.age && (
+                <span className="text-sm text-gray-600">Age {client.age}</span>
               )}
-              {patient.gender && (
-                <span className="text-sm text-gray-600">{patient.gender}</span>
+              {client.gender && (
+                <span className="text-sm text-gray-600">{client.gender}</span>
               )}
               <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                patient.status === 'active' 
+                client.status === 'active' 
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-gray-100 text-gray-800'
               }`}>
-                {patient.status || 'active'}
+                {client.status || 'active'}
               </span>
             </div>
           </div>
@@ -127,22 +127,22 @@ const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) =
 
       {/* Quick Info Grid */}
       <div className="grid grid-cols-2 gap-4 mb-4">
-        {patient.phone && (
+        {client.phone && (
           <div className="flex items-center space-x-2">
             <Phone className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-700">{patient.phone}</span>
+            <span className="text-sm text-gray-700">{client.phone}</span>
           </div>
         )}
-        {patient.address && (
+        {client.address && (
           <div className="flex items-center space-x-2">
             <MapPin className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-700 truncate">{patient.address}</span>
+            <span className="text-sm text-gray-700 truncate">{client.address}</span>
           </div>
         )}
-        {patient.medicalConditions && (
+        {client.medicalConditions && (
           <div className="flex items-center space-x-2 col-span-2">
             <Heart className="h-4 w-4 text-red-400" />
-            <span className="text-sm text-gray-700">{patient.medicalConditions}</span>
+            <span className="text-sm text-gray-700">{client.medicalConditions}</span>
           </div>
         )}
       </div>
@@ -163,7 +163,7 @@ const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) =
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onStartCare(patient);
+                onStartCare(client);
               }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
             >
@@ -210,7 +210,7 @@ const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) =
       {/* Action Buttons */}
       <div className="flex space-x-2">
         <button
-          onClick={() => onViewDetails(patient)}
+          onClick={() => onViewDetails(client)}
           className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm flex items-center justify-center"
         >
           <Camera className="h-4 w-4 mr-2" />
@@ -218,7 +218,7 @@ const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) =
         </button>
         {nextVisit && (
           <button
-            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(patient.address || '')}`, '_blank')}
+            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(client.address || '')}`, '_blank')}
             className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex items-center justify-center"
           >
             <MapPin className="h-4 w-4 mr-2" />
@@ -230,5 +230,5 @@ const PatientCard = ({ patient, onViewDetails, onStartCare, compact = false }) =
   );
 };
 
-export default PatientCard;
+export default ClientCard;
 

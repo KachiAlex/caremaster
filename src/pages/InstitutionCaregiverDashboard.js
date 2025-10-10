@@ -35,7 +35,7 @@ import { useUser } from '../contexts/UserContext';
 import { caregiverAPI } from '../api/caregiverAPI';
 import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
-import { getPatientsByDoctor, getPatientById } from '../api/patientsAPI';
+import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import InstitutionCaregiverGuard from '../components/InstitutionCaregiverGuard';
 import CaregiverSettings from '../components/CaregiverSettings';
@@ -64,9 +64,9 @@ const InstitutionCaregiverDashboard = () => {
   const [recentTasks, setRecentTasks] = useState([]);
   const [performance, setPerformance] = useState({});
   const [loading, setLoading] = useState(true);
-  const [assignedPatients, setAssignedPatients] = useState([]);
-  const [selectedPatientId, setSelectedPatientId] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [assignedClients, setAssignedClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedClient, setSelectedClient] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
   const [showVitalsModal, setShowVitalsModal] = useState(false);
@@ -96,9 +96,9 @@ const InstitutionCaregiverDashboard = () => {
         title: 'Nurse Dashboard',
         icon: Heart,
         color: 'red',
-        features: ['patient-care', 'medications', 'vital-signs', 'care-plans'],
+        features: ['client-care', 'medications', 'vital-signs', 'care-plans'],
         quickActions: [
-          { name: 'Patient Rounds', icon: User, href: '/service-provider/patients' },
+          { name: 'Client Rounds', icon: User, href: '/service-provider/clients' },
           { name: 'Medication Admin', icon: Pill, href: '/service-provider/prescriptions' },
           { name: 'Vital Signs', icon: Activity, href: '/service-provider/diagnostics' },
           { name: 'Care Plans', icon: FileText, href: '/service-provider/care-logs' }
@@ -112,7 +112,7 @@ const InstitutionCaregiverDashboard = () => {
         quickActions: [
           { name: 'Therapy Sessions', icon: Dumbbell, href: '/service-provider/activities' },
           { name: 'Exercise Plans', icon: FileText, href: '/service-provider/care-logs' },
-          { name: 'Progress Notes', icon: TrendingUp, href: '/service-provider/patients' },
+          { name: 'Progress Notes', icon: TrendingUp, href: '/service-provider/clients' },
           { name: 'Schedule Session', icon: Calendar, href: '/service-provider/schedule' }
         ]
       },
@@ -137,7 +137,7 @@ const InstitutionCaregiverDashboard = () => {
           { name: 'Prescription Review', icon: Pill, href: '/service-provider/prescriptions' },
           { name: 'Drug Interactions', icon: AlertTriangle, href: '/service-provider/diagnostics' },
           { name: 'Medication Consult', icon: MessageSquare, href: '/service-provider/consultations' },
-          { name: 'Patient Education', icon: FileText, href: '/service-provider/patients' }
+          { name: 'Client Education', icon: FileText, href: '/service-provider/clients' }
         ]
       },
       'Lab Technician': {
@@ -149,7 +149,7 @@ const InstitutionCaregiverDashboard = () => {
           { name: 'Lab Results', icon: FlaskConical, href: '/service-provider/diagnostics' },
           { name: 'Collection Schedule', icon: Calendar, href: '/service-provider/schedule' },
           { name: 'Quality Control', icon: Shield, href: '/service-provider/activities' },
-          { name: 'Patient Reports', icon: FileText, href: '/service-provider/patients' }
+          { name: 'Client Reports', icon: FileText, href: '/service-provider/clients' }
         ]
       }
     };
@@ -158,9 +158,9 @@ const InstitutionCaregiverDashboard = () => {
       title: 'Caregiver Dashboard',
       icon: UserCheck,
       color: 'gray',
-      features: ['patient-care', 'basic-assistance', 'companionship'],
+      features: ['client-care', 'basic-assistance', 'companionship'],
       quickActions: [
-        { name: 'Patient Care', icon: User, href: '/service-provider/patients' },
+        { name: 'Client Care', icon: User, href: '/service-provider/clients' },
         { name: 'Daily Tasks', icon: CheckCircle, href: '/service-provider/tasks' },
         { name: 'Messages', icon: MessageSquare, href: '/service-provider/messages' },
         { name: 'Schedule', icon: Calendar, href: '/service-provider/schedule' }
@@ -202,8 +202,8 @@ const InstitutionCaregiverDashboard = () => {
               email: userProfile?.email,
               status: 'active',
               rating: 0,
-              totalPatients: 0,
-              currentPatients: 0,
+              totalClients: 0,
+              currentClients: 0,
               specializations: userProfile?.specializations || [],
               location: userProfile?.location || 'Lagos, Nigeria',
               experience: userProfile?.experience || '0 years',
@@ -221,8 +221,8 @@ const InstitutionCaregiverDashboard = () => {
             email: userProfile?.email,
             status: 'active',
             rating: 0,
-            totalPatients: 0,
-            currentPatients: 0,
+            totalClients: 0,
+            currentClients: 0,
             specializations: userProfile?.specializations || [],
             location: userProfile?.location || 'Lagos, Nigeria',
             experience: userProfile?.experience || '0 years',
@@ -233,34 +233,34 @@ const InstitutionCaregiverDashboard = () => {
           });
         }
 
-        // If doctor, load assigned patients STRICTLY from admin-created assignments
+        // If doctor, load assigned clients STRICTLY from admin-created assignments
         const isDoctor = (userProfile.medicalQualification || '').includes('Doctor');
         if (isDoctor) {
-          let patients = [];
+          let clients = [];
           try {
             const assignments = await assignmentAPI.getAssignmentsByCaregiver(user?.uid);
-            const uniquePatientIds = Array.from(new Set(assignments.map(a => a.patientId).filter(Boolean)));
-            const fetched = await Promise.all(uniquePatientIds.map(pid => getPatientById(pid).catch(() => null)));
-            patients = fetched.filter(Boolean);
+            const uniqueClientIds = Array.from(new Set(assignments.map(a => a.clientId).filter(Boolean)));
+            const fetched = await Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)));
+            clients = fetched.filter(Boolean);
           } catch (error) {
-            console.log('No patient assignments found - this is normal for new users');
+            console.log('No client assignments found - this is normal for new users');
           }
           
-          // Fallback to patients.assignedDoctor only if no assignment docs found
-          if ((!patients || patients.length === 0) && user?.uid) {
+          // Fallback to clients.assignedDoctor only if no assignment docs found
+          if ((!clients || clients.length === 0) && user?.uid) {
             try {
-              const alt = await getPatientsByDoctor(user.uid, institutionId);
-              patients = alt || [];
+              const alt = await getClientsByDoctor(user.uid, institutionId);
+              clients = alt || [];
             } catch (error) {
-              console.log('No patients assigned to doctor - contact admin for patient assignments');
+              console.log('No clients assigned to doctor - contact admin for client assignments');
             }
           }
           
-          setAssignedPatients(patients);
-          // Auto-select first patient if not set
-          if (patients.length > 0 && !selectedPatientId) {
-            setSelectedPatientId(patients[0].id);
-            setSelectedPatient(patients[0]);
+          setAssignedClients(clients);
+          // Auto-select first client if not set
+          if (clients.length > 0 && !selectedClientId) {
+            setSelectedClientId(clients[0].id);
+            setSelectedClient(clients[0]);
           }
         }
         
@@ -277,7 +277,7 @@ const InstitutionCaregiverDashboard = () => {
             type: 'appointment',
             title: apt.title || 'Appointment',
             time: apt.scheduledTime,
-            patient: apt.patientName || 'Patient',
+            client: apt.clientName || 'Client',
             status: apt.status || 'scheduled'
           })),
           ...todaysTasks.map(task => ({
@@ -285,7 +285,7 @@ const InstitutionCaregiverDashboard = () => {
             type: 'task',
             title: task.title,
             time: task.scheduledTime,
-            patient: task.patientName || 'Patient',
+            client: task.clientName || 'Client',
             status: task.status || 'pending'
           }))
         ];
@@ -328,8 +328,8 @@ const InstitutionCaregiverDashboard = () => {
           email: userProfile?.email,
           status: 'active',
           rating: 0,
-          totalPatients: 0,
-          currentPatients: 0,
+          totalClients: 0,
+          currentClients: 0,
           specializations: userProfile?.specializations || [],
           location: userProfile?.location || 'Lagos, Nigeria',
           experience: userProfile?.experience || '0 years',
@@ -349,71 +349,71 @@ const InstitutionCaregiverDashboard = () => {
     const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor');
     if (isDoctor && user?.uid) {
       const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
-        console.log(`Real-time update: Found ${assignments.length} patient assignments for doctor ${user.uid}`);
+        console.log(`Real-time update: Found ${assignments.length} client assignments for doctor ${user.uid}`);
         
         // Filter assignments for this specific caregiver
         const caregiverAssignments = assignments.filter(a => a.caregiverId === user.uid);
-        const uniquePatientIds = Array.from(new Set(caregiverAssignments.map(a => a.patientId).filter(Boolean)));
-        Promise.all(uniquePatientIds.map(pid => getPatientById(pid).catch(() => null)))
+        const uniqueClientIds = Array.from(new Set(caregiverAssignments.map(a => a.clientId).filter(Boolean)));
+        Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)))
           .then(fetched => {
-            const patients = fetched.filter(Boolean);
-            setAssignedPatients(patients);
+            const clients = fetched.filter(Boolean);
+            setAssignedClients(clients);
             
-            // Auto-select first patient if not set
-            if (patients.length > 0 && !selectedPatientId) {
-              setSelectedPatientId(patients[0].id);
-              setSelectedPatient(patients[0]);
+            // Auto-select first client if not set
+            if (clients.length > 0 && !selectedClientId) {
+              setSelectedClientId(clients[0].id);
+              setSelectedClient(clients[0]);
             }
           })
           .catch(error => {
-            console.log('Error fetching patient details from assignments:', error);
+            console.log('Error fetching client details from assignments:', error);
           });
       }, user.uid);
       
       return () => unsubscribe();
     }
-  }, [userProfile, user?.uid, selectedPatientId, effectiveInstitutionId]);
+  }, [userProfile, user?.uid, selectedClientId, effectiveInstitutionId]);
 
   useEffect(() => {
-    // when selectedPatientId changes, refresh selectedPatient from cache/list
-    if (!selectedPatientId) {
-      setSelectedPatient(null);
+    // when selectedClientId changes, refresh selectedClient from cache/list
+    if (!selectedClientId) {
+      setSelectedClient(null);
       return;
     }
-    const found = assignedPatients.find(p => p.id === selectedPatientId);
-    if (found) setSelectedPatient(found);
-  }, [selectedPatientId, assignedPatients]);
+    const found = assignedClients.find(p => p.id === selectedClientId);
+    if (found) setSelectedClient(found);
+  }, [selectedClientId, assignedClients]);
 
   // Doctor action guards and navigation helpers
-  const requirePatient = () => {
-    if (!selectedPatientId) {
-      alert('Please select a patient first.');
+  const requireClient = () => {
+    if (!selectedClientId) {
+      alert('Please select a client first.');
       return false;
     }
     return true;
   };
 
   const handleNewConsultation = () => {
-    if (!requirePatient()) return;
-    window.location.href = `/service-provider/consultations/new?patientId=${encodeURIComponent(selectedPatientId)}`;
+    if (!requireClient()) return;
+    window.location.href = `/service-provider/consultations/new?clientId=${encodeURIComponent(selectedClientId)}`;
   };
 
   const handleWritePrescription = () => {
-    if (!requirePatient()) return;
-    window.location.href = `/service-provider/prescriptions/new?patientId=${encodeURIComponent(selectedPatientId)}`;
+    if (!requireClient()) return;
+    window.location.href = `/service-provider/prescriptions/new?clientId=${encodeURIComponent(selectedClientId)}`;
   };
 
   const handleCreateCarePlan = () => {
-    if (!requirePatient()) return;
-    window.location.href = `/service-provider/care-plans/new?patientId=${encodeURIComponent(selectedPatientId)}`;
+    if (!requireClient()) return;
+    window.location.href = `/service-provider/care-plans/new?clientId=${encodeURIComponent(selectedClientId)}`;
   };
 
   const handleVideoConsultation = async () => {
-    if (!requirePatient()) return;
-    // Try to find nurse assigned to this patient
+    if (!requireClient()) return;
+    // Try to find nurse assigned to this client
     let nurseId = '';
     try {
-      const assignments = await assignmentAPI.getAssignmentsByPatient(selectedPatientId);
+      const assignments = await assignmentAPI.getAssignmentsByClient(selectedClientId);
       const nurseAssignment = assignments.find(a => {
         const role = (a.caregiverRole || a.role || '').toLowerCase();
         const mq = (a.caregiverMedicalQualification || '').toLowerCase();
@@ -421,7 +421,7 @@ const InstitutionCaregiverDashboard = () => {
       });
       nurseId = nurseAssignment?.caregiverId || '';
     } catch {}
-    const query = new URLSearchParams({ patientId: selectedPatientId, nurseId }).toString();
+    const query = new URLSearchParams({ clientId: selectedClientId, nurseId }).toString();
     window.location.href = `/service-provider/messages`;
   };
 
@@ -436,57 +436,57 @@ const InstitutionCaregiverDashboard = () => {
   const isMedicalProfessional = isDoctor || isNurse;
   const isNonMedicalCaregiver = !isMedicalProfessional;
 
-  const renderDoctorPatientSelector = () => {
+  const renderDoctorClientSelector = () => {
     if (!isDoctor) return null;
     return (
       <div className="bg-white rounded-lg border p-4 mb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <div className="text-sm text-gray-600">Assigned Patients</div>
+            <div className="text-sm text-gray-600">Assigned Clients</div>
             <select
               className="mt-1 w-72 max-w-full px-3 py-2 border rounded-md"
-              value={selectedPatientId}
-              onChange={(e) => setSelectedPatientId(e.target.value)}
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
             >
-              <option value="">Select patient...</option>
-              {assignedPatients.map(p => (
+              <option value="">Select client...</option>
+              {assignedClients.map(p => (
                 <option key={p.id} value={p.id}>{p.name || p.fullName || p.email || p.id}</option>
               ))}
             </select>
           </div>
-          {assignedPatients.length === 0 && (
+          {assignedClients.length === 0 && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center">
                 <User className="h-5 w-5 text-blue-600 mr-2" />
                 <div>
-                  <h4 className="text-sm font-medium text-blue-800">No patients assigned yet</h4>
+                  <h4 className="text-sm font-medium text-blue-800">No clients assigned yet</h4>
                   <p className="text-sm text-blue-600 mt-1">
-                    Contact your administrator to get patients assigned to your care. Once assigned, you'll be able to create care plans, write prescriptions, and conduct consultations.
+                    Contact your administrator to get clients assigned to your care. Once assigned, you'll be able to create care plans, write prescriptions, and conduct consultations.
                   </p>
                 </div>
               </div>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            <button onClick={handleNewConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>New Consultation</button>
-            <button onClick={handleWritePrescription} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>Write Prescription</button>
-            <button onClick={handleCreateCarePlan} className="px-3 py-2 bg-emerald-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>Create Care Plan</button>
-            <button onClick={handleVideoConsultation} className="px-3 py-2 bg-purple-600 text-white rounded disabled:opacity-50" disabled={!selectedPatientId}>Video Consultation</button>
+            <button onClick={handleNewConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>New Consultation</button>
+            <button onClick={handleWritePrescription} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Write Prescription</button>
+            <button onClick={handleCreateCarePlan} className="px-3 py-2 bg-emerald-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Create Care Plan</button>
+            <button onClick={handleVideoConsultation} className="px-3 py-2 bg-purple-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Video Consultation</button>
           </div>
         </div>
-        {selectedPatient && (
+        {selectedClient && (
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <div className="text-gray-500">Patient</div>
-              <div className="text-gray-900 font-medium">{selectedPatient.name || selectedPatient.fullName || '—'}</div>
+              <div className="text-gray-500">Client</div>
+              <div className="text-gray-900 font-medium">{selectedClient.name || selectedClient.fullName || '—'}</div>
             </div>
             <div>
               <div className="text-gray-500">Age</div>
-              <div className="text-gray-900">{selectedPatient.age || '—'}</div>
+              <div className="text-gray-900">{selectedClient.age || '—'}</div>
             </div>
             <div>
               <div className="text-gray-500">Last Visit</div>
-              <div className="text-gray-900">{selectedPatient.lastVisit ? new Date(selectedPatient.lastVisit).toLocaleDateString() : '—'}</div>
+              <div className="text-gray-900">{selectedClient.lastVisit ? new Date(selectedClient.lastVisit).toLocaleDateString() : '—'}</div>
             </div>
           </div>
         )}
@@ -504,9 +504,9 @@ const InstitutionCaregiverDashboard = () => {
     console.log('Complete task:', taskId);
   };
 
-  const handleEmergency = (patientId) => {
+  const handleEmergency = (clientId) => {
     // Handle emergency
-    console.log('Emergency for patient:', patientId);
+    console.log('Emergency for client:', clientId);
   };
 
   const loadProfileImage = () => {
@@ -554,16 +554,16 @@ const InstitutionCaregiverDashboard = () => {
     }
   };
 
-  const renderPatientsTab = () => {
-    if (!selectedPatient) {
+  const renderClientsTab = () => {
+    if (!selectedClient) {
       return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
           <User className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Patient Selected</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Client Selected</h3>
           <p className="text-gray-600 mb-4">
             {isDoctor 
-              ? "Please select a patient from the dropdown above to view their information and provide care."
-              : "Please select a patient to record vital signs and care logs."
+              ? "Please select a client from the dropdown above to view their information and provide care."
+              : "Please select a client to record vital signs and care logs."
             }
           </p>
         </div>
@@ -572,22 +572,22 @@ const InstitutionCaregiverDashboard = () => {
 
     return (
       <div className="space-y-6">
-        {/* Patient Header */}
+        {/* Client Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center">
                 <span className="text-white font-semibold text-xl">
-                  {(selectedPatient.name || selectedPatient.fullName || 'P').split(' ').map(n => n[0]).join('')}
+                  {(selectedClient.name || selectedClient.fullName || 'P').split(' ').map(n => n[0]).join('')}
                 </span>
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+                  {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h2>
-                <p className="text-gray-600">Patient ID: {selectedPatient.id}</p>
-                {selectedPatient.age && (
-                  <p className="text-sm text-gray-500">Age: {selectedPatient.age}</p>
+                <p className="text-gray-600">Client ID: {selectedClient.id}</p>
+                {selectedClient.age && (
+                  <p className="text-sm text-gray-500">Age: {selectedClient.age}</p>
                 )}
               </div>
             </div>
@@ -614,7 +614,7 @@ const InstitutionCaregiverDashboard = () => {
           </div>
         </div>
 
-        {/* Patient Information Grid */}
+        {/* Client Information Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Basic Information */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -625,19 +625,19 @@ const InstitutionCaregiverDashboard = () => {
             <div className="space-y-3">
               <div>
                 <span className="text-sm text-gray-500">Name:</span>
-                <p className="font-medium text-gray-900">{selectedPatient.name || selectedPatient.fullName || 'N/A'}</p>
+                <p className="font-medium text-gray-900">{selectedClient.name || selectedClient.fullName || 'N/A'}</p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Age:</span>
-                <p className="font-medium text-gray-900">{selectedPatient.age || 'N/A'}</p>
+                <p className="font-medium text-gray-900">{selectedClient.age || 'N/A'}</p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Gender:</span>
-                <p className="font-medium text-gray-900">{selectedPatient.gender || 'N/A'}</p>
+                <p className="font-medium text-gray-900">{selectedClient.gender || 'N/A'}</p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Phone:</span>
-                <p className="font-medium text-gray-900">{selectedPatient.phone || selectedPatient.phoneNumber || 'N/A'}</p>
+                <p className="font-medium text-gray-900">{selectedClient.phone || selectedClient.phoneNumber || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -652,19 +652,19 @@ const InstitutionCaregiverDashboard = () => {
               <div>
                 <span className="text-sm text-gray-500">Medical Conditions:</span>
                 <p className="font-medium text-gray-900">
-                  {selectedPatient.medicalConditions?.join(', ') || selectedPatient.conditions || 'None recorded'}
+                  {selectedClient.medicalConditions?.join(', ') || selectedClient.conditions || 'None recorded'}
                 </p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Allergies:</span>
                 <p className="font-medium text-gray-900">
-                  {selectedPatient.allergies?.join(', ') || selectedPatient.allergyInfo || 'None recorded'}
+                  {selectedClient.allergies?.join(', ') || selectedClient.allergyInfo || 'None recorded'}
                 </p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Current Medications:</span>
                 <p className="font-medium text-gray-900">
-                  {selectedPatient.medications?.join(', ') || selectedPatient.currentMedications || 'None recorded'}
+                  {selectedClient.medications?.join(', ') || selectedClient.currentMedications || 'None recorded'}
                 </p>
               </div>
             </div>
@@ -680,19 +680,19 @@ const InstitutionCaregiverDashboard = () => {
               <div>
                 <span className="text-sm text-gray-500">Contact Name:</span>
                 <p className="font-medium text-gray-900">
-                  {selectedPatient.emergencyContact?.name || selectedPatient.emergencyContactName || 'N/A'}
+                  {selectedClient.emergencyContact?.name || selectedClient.emergencyContactName || 'N/A'}
                 </p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Contact Phone:</span>
                 <p className="font-medium text-gray-900">
-                  {selectedPatient.emergencyContact?.phone || selectedPatient.emergencyContactPhone || 'N/A'}
+                  {selectedClient.emergencyContact?.phone || selectedClient.emergencyContactPhone || 'N/A'}
                 </p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Relationship:</span>
                 <p className="font-medium text-gray-900">
-                  {selectedPatient.emergencyContact?.relationship || selectedPatient.emergencyContactRelationship || 'N/A'}
+                  {selectedClient.emergencyContact?.relationship || selectedClient.emergencyContactRelationship || 'N/A'}
                 </p>
               </div>
             </div>
@@ -756,16 +756,16 @@ const InstitutionCaregiverDashboard = () => {
             <Pill className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Prescriptions (View Only)</h2>
             <p className="text-gray-600 mb-6">
-              As a non-medical caregiver, you can view prescribed medications for your assigned patients but cannot prescribe new medications.
+              As a non-medical caregiver, you can view prescribed medications for your assigned clients but cannot prescribe new medications.
             </p>
             
-            {selectedPatient ? (
+            {selectedClient ? (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                  Patient: {selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h3>
                 <p className="text-blue-700">
-                  Prescribed medications for this patient would be displayed here. 
+                  Prescribed medications for this client would be displayed here. 
                   You can view medication details, dosage instructions, and administration schedules.
                 </p>
                 <div className="mt-4 flex justify-center">
@@ -781,7 +781,7 @@ const InstitutionCaregiverDashboard = () => {
             ) : (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <p className="text-gray-600">
-                  Please select a patient from the dropdown above to view their prescribed medications.
+                  Please select a client from the dropdown above to view their prescribed medications.
                 </p>
               </div>
             )}
@@ -799,17 +799,17 @@ const InstitutionCaregiverDashboard = () => {
             <Stethoscope className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Consultations (View Only)</h2>
             <p className="text-gray-600 mb-6">
-              As a non-medical caregiver, you can view consultation notes and medical reports for your assigned patients but cannot conduct medical consultations.
+              As a non-medical caregiver, you can view consultation notes and medical reports for your assigned clients but cannot conduct medical consultations.
             </p>
             
-            {selectedPatient ? (
+            {selectedClient ? (
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-green-900 mb-2">
-                  Patient: {selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h3>
                 <p className="text-green-700">
-                  Consultation history, medical reports, and doctor's notes for this patient would be displayed here.
-                  You can review these documents to better understand the patient's medical condition and care requirements.
+                  Consultation history, medical reports, and doctor's notes for this client would be displayed here.
+                  You can review these documents to better understand the client's medical condition and care requirements.
                 </p>
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="bg-white p-3 rounded border">
@@ -825,7 +825,7 @@ const InstitutionCaregiverDashboard = () => {
             ) : (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <p className="text-gray-600">
-                  Please select a patient from the dropdown above to view their consultation history.
+                  Please select a client from the dropdown above to view their consultation history.
                 </p>
               </div>
             )}
@@ -843,17 +843,17 @@ const InstitutionCaregiverDashboard = () => {
             <FlaskConical className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Diagnostics (View Only)</h2>
             <p className="text-gray-600 mb-6">
-              As a non-medical caregiver, you can view diagnostic results and test reports for your assigned patients but cannot order new diagnostic tests.
+              As a non-medical caregiver, you can view diagnostic results and test reports for your assigned clients but cannot order new diagnostic tests.
             </p>
             
-            {selectedPatient ? (
+            {selectedClient ? (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-purple-900 mb-2">
-                  Patient: {selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h3>
                 <p className="text-purple-700">
-                  Diagnostic test results, lab reports, and imaging studies for this patient would be displayed here.
-                  You can review these results to understand the patient's medical status and any ongoing monitoring requirements.
+                  Diagnostic test results, lab reports, and imaging studies for this client would be displayed here.
+                  You can review these results to understand the client's medical status and any ongoing monitoring requirements.
                 </p>
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="bg-white p-3 rounded border">
@@ -873,7 +873,7 @@ const InstitutionCaregiverDashboard = () => {
             ) : (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                 <p className="text-gray-600">
-                  Please select a patient from the dropdown above to view their diagnostic results.
+                  Please select a client from the dropdown above to view their diagnostic results.
                 </p>
               </div>
             )}
@@ -958,9 +958,9 @@ const InstitutionCaregiverDashboard = () => {
         </div>
       </div>
 
-      {/* Doctor Patient Selector (if doctor) */}
+      {/* Doctor Client Selector (if doctor) */}
       <div className="w-full p-8 pt-6">
-        {renderDoctorPatientSelector()}
+        {renderDoctorClientSelector()}
       </div>
 
       {/* Tab Navigation */}
@@ -980,14 +980,14 @@ const InstitutionCaregiverDashboard = () => {
                   Dashboard
                 </button>
                 <button
-                  onClick={() => setActiveTab('patients')}
+                  onClick={() => setActiveTab('clients')}
                   className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'patients'
+                    activeTab === 'clients'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  Patients
+                  Clients
                 </button>
                 {/* View-only tabs for non-medical caregivers */}
                 {isNonMedicalCaregiver && (
@@ -1034,8 +1034,8 @@ const InstitutionCaregiverDashboard = () => {
       <div className="w-full p-8 dashboard-full-width">
         {showSettings ? (
           <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
-        ) : activeTab === 'patients' ? (
-          renderPatientsTab()
+        ) : activeTab === 'clients' ? (
+          renderClientsTab()
         ) : activeTab === 'prescriptions' ? (
           renderPrescriptionsTab()
         ) : activeTab === 'consultations' ? (
@@ -1121,7 +1121,7 @@ const InstitutionCaregiverDashboard = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-4 mb-4">
-                          <h3 className="text-xl font-semibold text-gray-900">{schedule.patientName}</h3>
+                          <h3 className="text-xl font-semibold text-gray-900">{schedule.clientName}</h3>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(schedule.status)}`}>
                             {schedule.status}
                           </span>
@@ -1168,7 +1168,7 @@ const InstitutionCaregiverDashboard = () => {
                           Clock Out
                         </button>
                         <button
-                          onClick={() => handleEmergency(schedule.patientId)}
+                          onClick={() => handleEmergency(schedule.clientId)}
                           className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center"
                         >
                           <AlertTriangle className="h-4 w-4 mr-2" />
@@ -1197,7 +1197,7 @@ const InstitutionCaregiverDashboard = () => {
                       </div>
                       <div>
                         <h4 className="text-base font-semibold text-gray-900">{task.task}</h4>
-                        <p className="text-sm text-gray-600">{task.patientName}</p>
+                        <p className="text-sm text-gray-600">{task.clientName}</p>
                         <p className="text-xs text-gray-500">
                           {new Date(task.completedAt).toLocaleString()}
                         </p>
@@ -1244,10 +1244,10 @@ const InstitutionCaregiverDashboard = () => {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Patient Satisfaction</span>
+                    <span className="text-base font-medium text-gray-700">Client Satisfaction</span>
                     <div className="flex items-center">
                       <Star className="h-5 w-5 text-yellow-400 mr-2" />
-                      <span className="text-lg font-bold text-gray-900">{performance.patientSatisfaction}</span>
+                      <span className="text-lg font-bold text-gray-900">{performance.clientSatisfaction}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
@@ -1301,57 +1301,57 @@ const InstitutionCaregiverDashboard = () => {
       </div>
 
       {/* Modals */}
-      {showVitalsModal && selectedPatient && (
+      {showVitalsModal && selectedClient && (
         <NurseVitalsInput
-          patientId={selectedPatient.id}
-          patientName={selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name || selectedClient.fullName || 'Unknown Client'}
           nurseId={user?.uid}
           nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
           onSave={() => {
             setShowVitalsModal(false);
-            // Refresh patient data if needed
+            // Refresh client data if needed
           }}
           onCancel={() => setShowVitalsModal(false)}
         />
       )}
 
-      {showCareLogsModal && selectedPatient && (
+      {showCareLogsModal && selectedClient && (
         <NurseCareLogs
-          patientId={selectedPatient.id}
-          patientName={selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name || selectedClient.fullName || 'Unknown Client'}
           nurseId={user?.uid}
           nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
           onSave={() => {
             setShowCareLogsModal(false);
-            // Refresh patient data if needed
+            // Refresh client data if needed
           }}
           onCancel={() => setShowCareLogsModal(false)}
         />
       )}
 
-      {showNurseReportModal && selectedPatient && (
+      {showNurseReportModal && selectedClient && (
         <NurseReportGenerator
-          patientId={selectedPatient.id}
-          patientName={selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name || selectedClient.fullName || 'Unknown Client'}
           nurseId={user?.uid}
           nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
           onSave={() => {
             setShowNurseReportModal(false);
-            // Refresh patient data if needed
+            // Refresh client data if needed
           }}
           onCancel={() => setShowNurseReportModal(false)}
         />
       )}
 
-      {showMedicationModal && selectedPatient && (
+      {showMedicationModal && selectedClient && (
         <NurseMedicationManager
-          patientId={selectedPatient.id}
-          patientName={selectedPatient.name || selectedPatient.fullName || 'Unknown Patient'}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name || selectedClient.fullName || 'Unknown Client'}
           nurseId={user?.uid}
           nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
           onSave={() => {
             setShowMedicationModal(false);
-            // Refresh patient data if needed
+            // Refresh client data if needed
           }}
           onCancel={() => setShowMedicationModal(false)}
         />

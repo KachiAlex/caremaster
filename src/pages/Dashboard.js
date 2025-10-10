@@ -158,17 +158,17 @@ const Dashboard = () => {
             console.warn('Failed to fetch unread messages:', err);
             return 0;
           }),
-          medicationAPI.getMedications({ patientId: user.uid, status: 'active' }).catch(err => {
+          medicationAPI.getMedications({ clientId: user.uid, status: 'active' }).catch(err => {
             console.warn('Failed to fetch medications:', err);
             return [];
           }),
-          assignmentAPI.getAssignmentsByPatient(user.uid).catch(err => {
+          assignmentAPI.getAssignmentsByClient(user.uid).catch(err => {
             console.warn('Failed to fetch caregiver tasks:', err);
             return [];
           })
         ]);
         
-        console.log('📋 Patient assignments loaded:', assignments?.length || 0);
+        console.log('📋 Client assignments loaded:', assignments?.length || 0);
         
         setDashboardData({
           upcomingAppointments: appointments || [],

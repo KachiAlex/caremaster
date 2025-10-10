@@ -33,18 +33,18 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { getAllUsers } from '../api/usersAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
-import { getPatientsByCaregiver } from '../api/patientsAPI';
+import { getClientsByCaregiver } from '../api/patientsAPI';
 import { toast } from 'react-toastify';
 
-const AdminPatientAssignments = () => {
+const AdminClientAssignments = () => {
   const { userProfile } = useUser();
-  const [patients, setPatients] = useState([]);
+  const [clients, setClients] = useState([]);
   const [caregivers, setCaregivers] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null);
   const [selectedCaregiver, setSelectedCaregiver] = useState(null);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showMatchingModal, setShowMatchingModal] = useState(false);
@@ -57,7 +57,7 @@ const AdminPatientAssignments = () => {
     try {
       setLoading(true);
       
-      // Load all users, filter patients and caregivers
+      // Load all users, filter clients and caregivers
       const [allUsers, allCaregivers] = await Promise.all([
         getAllUsers().catch(err => {
           console.warn('Failed to fetch users:', err);
@@ -69,9 +69,9 @@ const AdminPatientAssignments = () => {
         })
       ]);
 
-      // Filter patients (clients/elderly users only)
-      const patientUsers = allUsers.filter(user => 
-        user.userType === 'elderly' || user.userType === 'patient' || user.userType === 'client'
+      // Filter clients (clients/elderly users only)
+      const clientUsers = allUsers.filter(user => 
+        user.userType === 'elderly' || user.userType === 'client' || user.userType === 'client'
       );
 
       // Filter verified caregivers only
@@ -81,24 +81,24 @@ const AdminPatientAssignments = () => {
         user.qualificationLevel !== 'pending'
       );
 
-      setPatients(patientUsers);
+      setClients(clientUsers);
       setCaregivers(caregiverUsers);
 
       // Load existing assignments
       const assignmentPromises = caregiverUsers.map(async (caregiver) => {
         try {
-          const assignedPatients = await getPatientsByCaregiver(caregiver.id);
-          return assignedPatients.map(patient => ({
-            id: `${caregiver.id}-${patient.id}`,
+          const assignedClients = await getClientsByCaregiver(caregiver.id);
+          return assignedClients.map(client => ({
+            id: `${caregiver.id}-${client.id}`,
             caregiverId: caregiver.id,
             caregiverName: caregiver.displayName || caregiver.name,
             caregiverSpecializations: caregiver.specializations || [],
-            patientId: patient.id,
-            patientName: patient.displayName || patient.name,
-            patientConditions: patient.medicalConditions || [],
-            assignedAt: patient.assignedAt || new Date(),
+            clientId: client.id,
+            clientName: client.displayName || client.name,
+            clientConditions: client.medicalConditions || [],
+            assignedAt: client.assignedAt || new Date(),
             status: 'active',
-            matchScore: calculateMatchScore(caregiver, patient)
+            matchScore: calculateMatchScore(caregiver, client)
           }));
         } catch (error) {
           return [];
@@ -116,18 +116,18 @@ const AdminPatientAssignments = () => {
     }
   };
 
-  // Calculate caregiver-patient match score based on specializations and needs
-  const calculateMatchScore = (caregiver, patient) => {
+  // Calculate caregiver-client match score based on specializations and needs
+  const calculateMatchScore = (caregiver, client) => {
     let score = 70; // Base score
 
     const caregiverSpecs = caregiver.specializations || [];
-    const patientConditions = patient.medicalConditions?.toLowerCase() || '';
+    const clientConditions = client.medicalConditions?.toLowerCase() || '';
 
     // Medical conditions matching
-    if (patientConditions.includes('diabetes') && caregiverSpecs.includes('Diabetes Care')) score += 20;
-    if (patientConditions.includes('dementia') && caregiverSpecs.includes('Dementia Care')) score += 25;
-    if (patientConditions.includes('heart') && caregiverSpecs.includes('Cardiac Care')) score += 20;
-    if (patientConditions.includes('mobility') && caregiverSpecs.includes('Physical Therapist')) score += 25;
+    if (clientConditions.includes('diabetes') && caregiverSpecs.includes('Diabetes Care')) score += 20;
+    if (clientConditions.includes('dementia') && caregiverSpecs.includes('Dementia Care')) score += 25;
+    if (clientConditions.includes('heart') && caregiverSpecs.includes('Cardiac Care')) score += 20;
+    if (clientConditions.includes('mobility') && caregiverSpecs.includes('Physical Therapist')) score += 25;
 
     // Qualification level bonus
     if (caregiverSpecs.includes('Registered Nurse')) score += 15;
@@ -145,24 +145,24 @@ const AdminPatientAssignments = () => {
     return Math.min(Math.round(score), 100);
   };
 
-  // Smart caregiver matching for a patient
-  const findBestCaregiverMatches = (patient) => {
+  // Smart caregiver matching for a client
+  const findBestCaregiverMatches = (client) => {
     return caregivers
       .map(caregiver => ({
         ...caregiver,
-        matchScore: calculateMatchScore(caregiver, patient),
+        matchScore: calculateMatchScore(caregiver, client),
         isAvailable: !assignments.some(a => a.caregiverId === caregiver.id && a.status === 'active'),
-        currentPatients: assignments.filter(a => a.caregiverId === caregiver.id && a.status === 'active').length
+        currentClients: assignments.filter(a => a.caregiverId === caregiver.id && a.status === 'active').length
       }))
       .sort((a, b) => b.matchScore - a.matchScore)
       .slice(0, 5);
   };
 
   // Create new assignment
-  const handleCreateAssignment = async (patientId, caregiverId, assignmentData) => {
+  const handleCreateAssignment = async (clientId, caregiverId, assignmentData) => {
     try {
       const assignment = {
-        patientId,
+        clientId,
         caregiverId,
         assignedBy: userProfile.id,
         assignedAt: new Date(),
@@ -175,7 +175,7 @@ const AdminPatientAssignments = () => {
 
       // In a real implementation, this would call an assignment API
       console.log('Creating assignment:', assignment);
-      toast.success('Patient assigned to caregiver successfully');
+      toast.success('Client assigned to caregiver successfully');
       
       setShowAssignmentModal(false);
       loadAssignmentData();
@@ -185,22 +185,22 @@ const AdminPatientAssignments = () => {
     }
   };
 
-  // Get unassigned patients
-  const getUnassignedPatients = () => {
-    const assignedPatientIds = assignments.map(a => a.patientId);
-    return patients.filter(patient => !assignedPatientIds.includes(patient.id));
+  // Get unassigned clients
+  const getUnassignedClients = () => {
+    const assignedClientIds = assignments.map(a => a.clientId);
+    return clients.filter(client => !assignedClientIds.includes(client.id));
   };
 
   // Get available caregivers
   const getAvailableCaregivers = () => {
     return caregivers.filter(caregiver => {
       const currentAssignments = assignments.filter(a => a.caregiverId === caregiver.id && a.status === 'active');
-      return currentAssignments.length < 8; // Max 8 patients per caregiver
+      return currentAssignments.length < 8; // Max 8 clients per caregiver
     });
   };
 
   const filteredAssignments = assignments.filter(assignment => {
-    const matchesSearch = assignment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = assignment.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          assignment.caregiverName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'all' || assignment.status === filterStatus;
     return matchesSearch && matchesFilter;
@@ -219,8 +219,8 @@ const AdminPatientAssignments = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Patient Assignments</h1>
-          <p className="text-gray-600">Manage caregiver-patient assignments and matching</p>
+          <h1 className="text-2xl font-bold text-gray-900">Client Assignments</h1>
+          <p className="text-gray-600">Manage caregiver-client assignments and matching</p>
         </div>
         <div className="flex items-center space-x-3">
           <button 
@@ -272,8 +272,8 @@ const AdminPatientAssignments = () => {
               <AlertTriangle className="h-6 w-6 text-yellow-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Unassigned Patients</p>
-              <p className="text-2xl font-semibold text-gray-900">{getUnassignedPatients().length}</p>
+              <p className="text-sm font-medium text-gray-600">Unassigned Clients</p>
+              <p className="text-2xl font-semibold text-gray-900">{getUnassignedClients().length}</p>
             </div>
           </div>
         </div>
@@ -298,7 +298,7 @@ const AdminPatientAssignments = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search assignments by patient or caregiver name..."
+                placeholder="Search assignments by client or caregiver name..."
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -321,17 +321,17 @@ const AdminPatientAssignments = () => {
         </div>
       </div>
 
-      {/* Unassigned Patients Alert */}
-      {getUnassignedPatients().length > 0 && (
+      {/* Unassigned Clients Alert */}
+      {getUnassignedClients().length > 0 && (
         <div className="card border-l-4 border-yellow-500 bg-yellow-50">
           <div className="flex items-start">
             <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5" />
             <div className="flex-1">
               <h4 className="text-sm font-medium text-yellow-800">
-                {getUnassignedPatients().length} Patient(s) Need Assignment
+                {getUnassignedClients().length} Client(s) Need Assignment
               </h4>
               <p className="text-sm text-yellow-700 mt-1">
-                These patients don't have assigned caregivers and need immediate attention.
+                These clients don't have assigned caregivers and need immediate attention.
               </p>
               <button 
                 onClick={() => setShowMatchingModal(true)}
@@ -354,7 +354,7 @@ const AdminPatientAssignments = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
+                  Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Caregiver
@@ -380,13 +380,13 @@ const AdminPatientAssignments = () => {
                     <div className="flex items-center">
                       <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                         <span className="text-blue-600 font-medium text-sm">
-                          {assignment.patientName.split(' ').map(n => n[0]).join('')}
+                          {assignment.clientName.split(' ').map(n => n[0]).join('')}
                         </span>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{assignment.patientName}</div>
+                        <div className="text-sm font-medium text-gray-900">{assignment.clientName}</div>
                         <div className="text-sm text-gray-500">
-                          {assignment.patientConditions.length > 0 ? assignment.patientConditions.join(', ') : 'No conditions listed'}
+                          {assignment.clientConditions.length > 0 ? assignment.clientConditions.join(', ') : 'No conditions listed'}
                         </div>
                       </div>
                     </div>
@@ -444,7 +444,7 @@ const AdminPatientAssignments = () => {
                     <div className="flex items-center space-x-2">
                       <button 
                         onClick={() => {
-                          setSelectedPatient(patients.find(p => p.id === assignment.patientId));
+                          setSelectedClient(clients.find(p => p.id === assignment.clientId));
                           setSelectedCaregiver(caregivers.find(c => c.id === assignment.caregiverId));
                         }}
                         className="text-blue-600 hover:text-blue-900"
@@ -469,7 +469,7 @@ const AdminPatientAssignments = () => {
       {/* New Assignment Modal */}
       {showAssignmentModal && (
         <AssignmentModal
-          patients={getUnassignedPatients()}
+          clients={getUnassignedClients()}
           caregivers={getAvailableCaregivers()}
           onClose={() => setShowAssignmentModal(false)}
           onAssign={handleCreateAssignment}
@@ -480,7 +480,7 @@ const AdminPatientAssignments = () => {
       {/* Smart Matching Modal */}
       {showMatchingModal && (
         <SmartMatchingModal
-          unassignedPatients={getUnassignedPatients()}
+          unassignedClients={getUnassignedClients()}
           availableCaregivers={getAvailableCaregivers()}
           onClose={() => setShowMatchingModal(false)}
           onAssign={handleCreateAssignment}
@@ -492,8 +492,8 @@ const AdminPatientAssignments = () => {
 };
 
 // Assignment Modal Component
-const AssignmentModal = ({ patients, caregivers, onClose, onAssign, calculateMatchScore }) => {
-  const [selectedPatient, setSelectedPatient] = useState('');
+const AssignmentModal = ({ clients, caregivers, onClose, onAssign, calculateMatchScore }) => {
+  const [selectedClient, setSelectedClient] = useState('');
   const [selectedCaregiver, setSelectedCaregiver] = useState('');
   const [assignmentData, setAssignmentData] = useState({
     startDate: new Date().toISOString().split('T')[0],
@@ -504,18 +504,18 @@ const AssignmentModal = ({ patients, caregivers, onClose, onAssign, calculateMat
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedPatient || !selectedCaregiver) {
-      toast.error('Please select both patient and caregiver');
+    if (!selectedClient || !selectedCaregiver) {
+      toast.error('Please select both client and caregiver');
       return;
     }
-    onAssign(selectedPatient, selectedCaregiver, assignmentData);
+    onAssign(selectedClient, selectedCaregiver, assignmentData);
   };
 
   const getMatchScore = () => {
-    if (!selectedPatient || !selectedCaregiver) return 0;
-    const patient = patients.find(p => p.id === selectedPatient);
+    if (!selectedClient || !selectedCaregiver) return 0;
+    const client = clients.find(p => p.id === selectedClient);
     const caregiver = caregivers.find(c => c.id === selectedCaregiver);
-    return patient && caregiver ? calculateMatchScore(caregiver, patient) : 0;
+    return client && caregiver ? calculateMatchScore(caregiver, client) : 0;
   };
 
   return (
@@ -530,19 +530,19 @@ const AssignmentModal = ({ patients, caregivers, onClose, onAssign, calculateMat
         
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Patient Selection */}
+            {/* Client Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Patient</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Client</label>
               <select
-                value={selectedPatient}
-                onChange={(e) => setSelectedPatient(e.target.value)}
+                value={selectedClient}
+                onChange={(e) => setSelectedClient(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
-                <option value="">Choose a patient...</option>
-                {patients.map(patient => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.displayName || patient.name} - {patient.medicalConditions || 'No conditions'}
+                <option value="">Choose a client...</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>
+                    {client.displayName || client.name} - {client.medicalConditions || 'No conditions'}
                   </option>
                 ))}
               </select>
@@ -568,7 +568,7 @@ const AssignmentModal = ({ patients, caregivers, onClose, onAssign, calculateMat
           </div>
 
           {/* Match Score Display */}
-          {selectedPatient && selectedCaregiver && (
+          {selectedClient && selectedCaregiver && (
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-blue-900">Compatibility Match Score</span>
@@ -651,7 +651,7 @@ const AssignmentModal = ({ patients, caregivers, onClose, onAssign, calculateMat
 };
 
 // Smart Matching Modal Component
-const SmartMatchingModal = ({ unassignedPatients, availableCaregivers, onClose, onAssign, findBestMatches }) => {
+const SmartMatchingModal = ({ unassignedClients, availableCaregivers, onClose, onAssign, findBestMatches }) => {
   const [matchingResults, setMatchingResults] = useState([]);
   const [processing, setProcessing] = useState(false);
 
@@ -660,10 +660,10 @@ const SmartMatchingModal = ({ unassignedPatients, availableCaregivers, onClose, 
   }, []);
 
   const generateMatches = () => {
-    const matches = unassignedPatients.map(patient => {
-      const bestMatches = findBestMatches(patient);
+    const matches = unassignedClients.map(client => {
+      const bestMatches = findBestMatches(client);
       return {
-        patient,
+        client,
         recommendedCaregiver: bestMatches[0],
         alternativeMatches: bestMatches.slice(1, 3),
         matchScore: bestMatches[0]?.matchScore || 0
@@ -677,7 +677,7 @@ const SmartMatchingModal = ({ unassignedPatients, availableCaregivers, onClose, 
     try {
       for (const match of matchingResults) {
         if (match.recommendedCaregiver && match.matchScore >= 75) {
-          await onAssign(match.patient.id, match.recommendedCaregiver.id, {
+          await onAssign(match.client.id, match.recommendedCaregiver.id, {
             startDate: new Date().toISOString().split('T')[0],
             schedule: 'Mon-Fri 9AM-5PM',
             instructions: `Auto-assigned based on ${match.matchScore}% compatibility match`,
@@ -699,7 +699,7 @@ const SmartMatchingModal = ({ unassignedPatients, availableCaregivers, onClose, 
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Smart Patient-Caregiver Matching</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Smart Client-Caregiver Matching</h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <XCircle className="h-5 w-5" />
           </button>
@@ -711,8 +711,8 @@ const SmartMatchingModal = ({ unassignedPatients, availableCaregivers, onClose, 
               <div key={index} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h4 className="font-semibold text-gray-900">{match.patient.displayName || match.patient.name}</h4>
-                    <p className="text-sm text-gray-600">{match.patient.medicalConditions || 'No conditions listed'}</p>
+                    <h4 className="font-semibold text-gray-900">{match.client.displayName || match.client.name}</h4>
+                    <p className="text-sm text-gray-600">{match.client.medicalConditions || 'No conditions listed'}</p>
                   </div>
                   {match.recommendedCaregiver && (
                     <div className="text-right">
@@ -741,7 +741,7 @@ const SmartMatchingModal = ({ unassignedPatients, availableCaregivers, onClose, 
                         </div>
                       </div>
                       <button
-                        onClick={() => onAssign(match.patient.id, match.recommendedCaregiver.id, {
+                        onClick={() => onAssign(match.client.id, match.recommendedCaregiver.id, {
                           startDate: new Date().toISOString().split('T')[0],
                           schedule: 'Mon-Fri 9AM-5PM',
                           instructions: `Smart-matched with ${match.matchScore}% compatibility`,
@@ -784,4 +784,4 @@ const SmartMatchingModal = ({ unassignedPatients, availableCaregivers, onClose, 
   );
 };
 
-export default AdminPatientAssignments;
+export default AdminClientAssignments;

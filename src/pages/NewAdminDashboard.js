@@ -68,7 +68,7 @@ import { toast } from 'react-toastify';
 import { forceLoadCaregivers, forceLoadPatients } from '../utils/forceLoadData';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import { updateUserStatus } from '../api/usersAPI';
-import { updatePatient } from '../api/patientsAPI';
+import { updateClient } from '../api/patientsAPI';
 
 const NewAdminDashboard = () => {
   const { userProfile } = useUser();
@@ -385,7 +385,7 @@ const NewAdminDashboard = () => {
         return;
       }
 
-      await updatePatient(patient.id, { status: 'archived', archivedAt: new Date().toISOString() });
+      await updateClient(patient.id, { status: 'archived', archivedAt: new Date().toISOString() });
       toast.success('Patient record archived successfully');
       loadDashboardData();
       

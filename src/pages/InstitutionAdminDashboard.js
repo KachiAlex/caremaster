@@ -37,9 +37,9 @@ import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
 import { emergencyAPI } from '../api/emergencyAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
-import { getAllPatients, createPatient, updatePatient } from '../api/patientsAPI';
+import { getAllClients, createClient, updateClient } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
-import { getPatientReports, createPatientReport, getPatientCareLogs, createPatientCareLog } from '../api/patientReportsAPI';
+import { getClientReports, createClientReport, getClientCareLogs, createClientCareLog } from '../api/patientReportsAPI';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import { toast } from 'react-toastify';
 
@@ -58,7 +58,7 @@ const InstitutionAdminDashboard = () => {
   
   const [stats, setStats] = useState({
     totalUsers: 0,
-    patients: 0,
+    clients: 0,
     caregivers: 0,
     doctors: 0,
     nurses: 0,
@@ -81,22 +81,22 @@ const InstitutionAdminDashboard = () => {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
 
-  // Patient and Caregiver Management States
-  const [patients, setPatients] = useState([]);
+  // Client and Caregiver Management States
+  const [clients, setClients] = useState([]);
   const [caregivers, setCaregivers] = useState([]);
   const [assignments, setAssignments] = useState([]);
-  const [showAddPatient, setShowAddPatient] = useState(false);
+  const [showAddClient, setShowAddClient] = useState(false);
   const [showAddCaregiver, setShowAddCaregiver] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
-  const [assignmentType, setAssignmentType] = useState('patient-to-caregiver');
-  const [selectedPatientForAssignment, setSelectedPatientForAssignment] = useState('');
+  const [assignmentType, setAssignmentType] = useState('client-to-caregiver');
+  const [selectedClientForAssignment, setSelectedClientForAssignment] = useState('');
   const [selectedCaregiverForAssignment, setSelectedCaregiverForAssignment] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // View Details Modal States
-  const [showPatientDetails, setShowPatientDetails] = useState(false);
+  const [showClientDetails, setShowClientDetails] = useState(false);
   const [showCaregiverDetails, setShowCaregiverDetails] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null);
   const [selectedCaregiver, setSelectedCaregiver] = useState(null);
 
   useEffect(() => {
@@ -118,7 +118,7 @@ const InstitutionAdminDashboard = () => {
       // Set default stats first so UI renders faster
       setStats({
         totalUsers: 0,
-        patients: 0,
+        clients: 0,
         caregivers: 0,
         doctors: 0,
         nurses: 0,
@@ -136,7 +136,7 @@ const InstitutionAdminDashboard = () => {
       setLoading(false);
       
       // Load real data from backend APIs (filtered by institution) - in background
-      const [analytics, users, emergencies, caregiversData, patientsData, assignmentsData] = await Promise.all([
+      const [analytics, users, emergencies, caregiversData, clientsData, assignmentsData] = await Promise.all([
         analyticsAPI.getOverviewAnalytics().catch(err => {
           console.warn('Failed to fetch analytics:', err);
           return {};
@@ -153,8 +153,8 @@ const InstitutionAdminDashboard = () => {
           console.warn('Failed to fetch caregivers:', err);
           return [];
         }),
-        getAllPatients(instId).catch(err => {
-          console.warn('Failed to fetch patients:', err);
+        getAllClients(instId).catch(err => {
+          console.warn('Failed to fetch clients:', err);
           return [];
         }),
         assignmentAPI.getAssignmentsByInstitution(instId).catch(err => {
@@ -176,9 +176,9 @@ const InstitutionAdminDashboard = () => {
         ? caregiversData.filter(c => c.institutionId === instId)
         : caregiversData;
 
-      const institutionPatients = instId 
-        ? patientsData.filter(p => p.institutionId === instId)
-        : patientsData;
+      const institutionClients = instId 
+        ? clientsData.filter(p => p.institutionId === instId)
+        : clientsData;
         
       console.log('After filtering - institutionCaregivers:', institutionCaregivers.length);
       console.log('After filtering - institutionUsers:', institutionUsers.length);
@@ -227,7 +227,7 @@ const InstitutionAdminDashboard = () => {
       console.log('- Caregivers from caregivers collection:', institutionCaregivers.length);
       console.log('- Caregivers from users collection:', caregiversFromUsers.length);
       console.log('- Total merged caregivers:', allInstitutionCaregivers.length);
-      console.log('- Patients:', institutionPatients.length);
+      console.log('- Clients:', institutionClients.length);
       console.log('- Assignments:', assignmentsData.length);
       
       // Debug: Show raw caregiver data
@@ -254,7 +254,7 @@ const InstitutionAdminDashboard = () => {
       // Use real data only - no fallback to demo data
       const realStats = {
         totalUsers: institutionUsers.length,
-        patients: institutionPatients.length,
+        clients: institutionClients.length,
         caregivers: allInstitutionCaregivers.filter(c => c.userType === 'caregiver' || c.type === 'caregiver').length,
         doctors: allInstitutionCaregivers.filter(c => c.userType === 'doctor' || c.type === 'doctor').length,
         nurses: allInstitutionCaregivers.filter(c => c.userType === 'nurse' || c.type === 'nurse').length,
@@ -271,7 +271,7 @@ const InstitutionAdminDashboard = () => {
       };
 
       setStats(realStats);
-      setPatients(institutionPatients);
+      setClients(institutionClients);
       setCaregivers(allInstitutionCaregivers);
       setAssignments(assignmentsData || []);
 
@@ -281,7 +281,7 @@ const InstitutionAdminDashboard = () => {
         id: caregiver.id,
         name: caregiver.displayName || caregiver.name || 'Unknown Caregiver',
         rating: caregiver.rating || 0,
-        patientsServed: caregiver.patientsServed || 0,
+        clientsServed: caregiver.clientsServed || 0,
         tasksCompleted: caregiver.tasksCompleted || 0,
         responseTime: caregiver.responseTime || 0,
         avatar: caregiver.photoURL || null
@@ -313,27 +313,27 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
-  // Patient Management Functions
-  const handleAddPatient = async (patientData) => {
+  // Client Management Functions
+  const handleAddClient = async (clientData) => {
     try {
       const instId = institutionId || userProfile?.institutionId;
-      const newPatient = {
-        ...patientData,
+      const newClient = {
+        ...clientData,
         institutionId: instId,
         status: 'active'
       };
 
-      const patientId = await createPatient(newPatient);
-      console.log('✅ Patient created with ID:', patientId);
+      const clientId = await createClient(newClient);
+      console.log('✅ Client created with ID:', clientId);
       
-      setShowAddPatient(false);
-      toast.success('Patient added successfully');
+      setShowAddClient(false);
+      toast.success('Client added successfully');
       
-      // Reload dashboard data to get the newly created patient
+      // Reload dashboard data to get the newly created client
       await loadDashboardData();
     } catch (error) {
-      console.error('Error adding patient:', error);
-      toast.error(error.message || 'Failed to add patient');
+      console.error('Error adding client:', error);
+      toast.error(error.message || 'Failed to add client');
     }
   };
 
@@ -351,11 +351,11 @@ const InstitutionAdminDashboard = () => {
         institutionId: instId,
         status: 'pending',
         rating: 0,
-        totalPatients: 0,
-        currentPatients: 0,
+        totalClients: 0,
+        currentClients: 0,
         performance: {
           punctuality: 0,
-          patientSatisfaction: 0,
+          clientSatisfaction: 0,
           taskCompletion: 0,
           communication: 0,
           safety: 0
@@ -403,7 +403,7 @@ const InstitutionAdminDashboard = () => {
   const handleCreateAssignment = async (formData) => {
     try {
       const assignmentData = {
-        patientId: selectedPatientForAssignment,
+        clientId: selectedClientForAssignment,
         caregiverId: selectedCaregiverForAssignment,
         institutionId: institutionId || userProfile?.institutionId,
         assignedBy: userProfile?.id || user?.uid,
@@ -421,8 +421,8 @@ const InstitutionAdminDashboard = () => {
 
       const createdAssignment = await assignmentAPI.createAssignment(assignmentData);
       
-      // Get patient and caregiver details for notification
-      const patient = patients.find(p => p.id === selectedPatientForAssignment);
+      // Get client and caregiver details for notification
+      const client = clients.find(p => p.id === selectedClientForAssignment);
       const caregiver = caregivers.find(c => c.id === selectedCaregiverForAssignment);
       
       // Send notification to caregiver
@@ -435,11 +435,11 @@ const InstitutionAdminDashboard = () => {
                      formData.priority === 'high' ? NOTIFICATION_PRIORITIES.HIGH : 
                      NOTIFICATION_PRIORITIES.MEDIUM,
             title: 'New Task Assigned',
-            message: `You have been assigned a new task: "${formData.title}" for patient ${patient?.name || 'Unknown Patient'}`,
+            message: `You have been assigned a new task: "${formData.title}" for client ${client?.name || 'Unknown Client'}`,
             data: {
               assignmentId: createdAssignment.id,
-              patientId: selectedPatientForAssignment,
-              patientName: patient?.name,
+              clientId: selectedClientForAssignment,
+              clientName: client?.name,
               dueDate: formData.dueDate,
               dueTime: formData.dueTime
             },
@@ -452,11 +452,11 @@ const InstitutionAdminDashboard = () => {
         }
       }
       
-      // Send notification to patient
-      if (patient && patient.userId) {
+      // Send notification to client
+      if (client && client.userId) {
         try {
           await createNotification({
-            userId: patient.userId,
+            userId: client.userId,
             type: NOTIFICATION_TYPES.TASK,
             priority: formData.priority === 'urgent' ? NOTIFICATION_PRIORITIES.URGENT : 
                      formData.priority === 'high' ? NOTIFICATION_PRIORITIES.HIGH : 
@@ -473,14 +473,14 @@ const InstitutionAdminDashboard = () => {
             actionUrl: '/elderly-dashboard',
             read: false
           });
-          console.log('✅ Notification sent to patient:', patient.userId);
+          console.log('✅ Notification sent to client:', client.userId);
         } catch (notifError) {
-          console.error('Failed to send notification to patient:', notifError);
+          console.error('Failed to send notification to client:', notifError);
         }
       }
       
       setShowAssignmentModal(false);
-      setSelectedPatientForAssignment('');
+      setSelectedClientForAssignment('');
       setSelectedCaregiverForAssignment('');
       toast.success('Assignment created and notifications sent successfully');
       await loadDashboardData(); // Refresh data
@@ -536,29 +536,29 @@ const InstitutionAdminDashboard = () => {
     setShowAssignmentModal(true);
   };
 
-  // Patient Action Handlers
-  const handleDeletePatient = async (patientId) => {
-    if (!window.confirm('Are you sure you want to delete this patient? This will archive their data.')) {
+  // Client Action Handlers
+  const handleDeleteClient = async (clientId) => {
+    if (!window.confirm('Are you sure you want to delete this client? This will archive their data.')) {
       return;
     }
     try {
-      await updatePatient(patientId, { 
+      await updateClient(clientId, { 
         status: 'archived',
         archivedAt: new Date().toISOString(),
         archivedBy: user?.uid || userProfile?.id || 'admin'
       });
-      toast.success('Patient archived successfully');
+      toast.success('Client archived successfully');
       await loadDashboardData();
-      setShowPatientDetails(false);
+      setShowClientDetails(false);
     } catch (error) {
-      console.error('Error archiving patient:', error);
-      toast.error('Failed to archive patient');
+      console.error('Error archiving client:', error);
+      toast.error('Failed to archive client');
     }
   };
 
-  const handleAssignTaskToPatient = (patient) => {
-    setSelectedPatientForAssignment(patient.id);
-    setShowPatientDetails(false);
+  const handleAssignTaskToClient = (client) => {
+    setSelectedClientForAssignment(client.id);
+    setShowClientDetails(false);
     setShowAssignmentModal(true);
   };
 
@@ -580,10 +580,10 @@ const InstitutionAdminDashboard = () => {
   // Quick action functions
   const quickActions = [
     {
-      name: 'Add Patient',
+      name: 'Add Client',
       icon: Heart,
       color: 'bg-green-600 hover:bg-green-700',
-      action: () => setShowAddPatient(true)
+      action: () => setShowAddClient(true)
     },
     {
       name: 'Add Caregiver',
@@ -683,11 +683,11 @@ const InstitutionAdminDashboard = () => {
             Refresh
           </button>
           <button 
-            onClick={() => navigate('/admin/patient-database')}
+            onClick={() => navigate('/admin/client-database')}
             className="flex items-center px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Patient
+            Add Client
           </button>
           <button 
             onClick={() => navigate('/admin/caregiver-management')}
@@ -712,7 +712,7 @@ const InstitutionAdminDashboard = () => {
           <nav className="-mb-px flex space-x-8 px-6">
             {[
               { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
-              { id: 'patients', name: 'Patients', icon: Heart },
+              { id: 'clients', name: 'Clients', icon: Heart },
               { id: 'caregivers', name: 'Caregivers', icon: UserCheck },
               { id: 'assignments', name: 'Assignments', icon: Users }
             ].map((tab) => {
@@ -782,8 +782,8 @@ const InstitutionAdminDashboard = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Patients</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.patients.toLocaleString()}</p>
+              <p className="text-sm font-medium text-gray-600">Clients</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.clients.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
               <Heart className="h-6 w-6 text-green-600" />
@@ -965,7 +965,7 @@ const InstitutionAdminDashboard = () => {
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-900">{caregiver.name}</h4>
-                    <p className="text-xs text-gray-600">{caregiver.patientsServed} patients</p>
+                    <p className="text-xs text-gray-600">{caregiver.clientsServed} clients</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1048,17 +1048,17 @@ const InstitutionAdminDashboard = () => {
         </>
       )}
 
-      {/* Patients Tab Content */}
-      {activeTab === 'patients' && (
+      {/* Clients Tab Content */}
+      {activeTab === 'clients' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">Patients</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Clients</h2>
             <button
-              onClick={() => setShowAddPatient(true)}
+              onClick={() => setShowAddClient(true)}
               className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Patient
+              Add Client
             </button>
           </div>
           
@@ -1075,39 +1075,39 @@ const InstitutionAdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {patients.map((patient) => (
-                    <tr key={patient.id}>
+                  {clients.map((client) => (
+                    <tr key={client.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 flex-shrink-0">
                             <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                               <span className="text-sm font-medium text-green-700">
-                                {patient.name?.charAt(0) || 'P'}
+                                {client.name?.charAt(0) || 'P'}
                               </span>
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{patient.name || 'Unknown'}</div>
-                            <div className="text-sm text-gray-500">{patient.email || 'No email'}</div>
+                            <div className="text-sm font-medium text-gray-900">{client.name || 'Unknown'}</div>
+                            <div className="text-sm text-gray-500">{client.email || 'No email'}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{patient.age || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{patient.gender || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.age || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.gender || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          patient.status === 'active' 
+                          client.status === 'active' 
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {patient.status || 'active'}
+                          {client.status || 'active'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button 
                           onClick={() => {
-                            setSelectedPatient(patient);
-                            setShowPatientDetails(true);
+                            setSelectedClient(client);
+                            setShowClientDetails(true);
                           }}
                           className="text-blue-600 hover:text-blue-900 inline-flex items-center"
                         >
@@ -1313,7 +1313,7 @@ const InstitutionAdminDashboard = () => {
                       Task Title
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Patient
+                      Client
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Caregiver
@@ -1343,7 +1343,7 @@ const InstitutionAdminDashboard = () => {
                     </tr>
                   ) : (
                     assignments.map((assignment) => {
-                      const patient = patients.find(p => p.id === assignment.patientId);
+                      const client = clients.find(p => p.id === assignment.clientId);
                       const caregiver = caregivers.find(c => c.id === assignment.caregiverId);
                       
                       return (
@@ -1361,7 +1361,7 @@ const InstitutionAdminDashboard = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {patient?.name || 'Unknown Patient'}
+                            {client?.name || 'Unknown Client'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {caregiver?.name || 'Unknown Caregiver'}
@@ -1431,10 +1431,10 @@ const InstitutionAdminDashboard = () => {
       )}
 
       {/* Modals */}
-      {showAddPatient && (
-        <AddPatientModal 
-          onClose={() => setShowAddPatient(false)} 
-          onAdd={handleAddPatient}
+      {showAddClient && (
+        <AddClientModal 
+          onClose={() => setShowAddClient(false)} 
+          onAdd={handleAddClient}
         />
       )}
 
@@ -1449,26 +1449,26 @@ const InstitutionAdminDashboard = () => {
         <AssignmentModal 
           onClose={() => setShowAssignmentModal(false)} 
           onCreate={handleCreateAssignment}
-          patients={patients}
+          clients={clients}
           caregivers={caregivers}
-          selectedPatient={selectedPatientForAssignment}
+          selectedClient={selectedClientForAssignment}
           selectedCaregiver={selectedCaregiverForAssignment}
-          onPatientChange={setSelectedPatientForAssignment}
+          onClientChange={setSelectedClientForAssignment}
           onCaregiverChange={setSelectedCaregiverForAssignment}
           assignmentType={assignmentType}
           onAssignmentTypeChange={setAssignmentType}
         />
       )}
 
-      {showPatientDetails && selectedPatient && (
-        <PatientDetailsModal
-          patient={selectedPatient}
+      {showClientDetails && selectedClient && (
+        <ClientDetailsModal
+          client={selectedClient}
           onClose={() => {
-            setShowPatientDetails(false);
-            setSelectedPatient(null);
+            setShowClientDetails(false);
+            setSelectedClient(null);
           }}
-          onAssignTask={handleAssignTaskToPatient}
-          onDelete={handleDeletePatient}
+          onAssignTask={handleAssignTaskToClient}
+          onDelete={handleDeleteClient}
         />
       )}
 
@@ -1476,7 +1476,7 @@ const InstitutionAdminDashboard = () => {
         <CaregiverDetailsModal
           caregiver={selectedCaregiver}
           assignments={assignments}
-          patients={patients}
+          clients={clients}
           onClose={() => {
             setShowCaregiverDetails(false);
             setSelectedCaregiver(null);
@@ -1491,8 +1491,8 @@ const InstitutionAdminDashboard = () => {
   );
 };
 
-// Add Patient Modal Component
-const AddPatientModal = ({ onClose, onAdd }) => {
+// Add Client Modal Component
+const AddClientModal = ({ onClose, onAdd }) => {
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -1528,7 +1528,7 @@ const AddPatientModal = ({ onClose, onAdd }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-medium text-gray-900">Add New Patient</h3>
+          <h3 className="text-lg font-medium text-gray-900">Add New Client</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -1715,7 +1715,7 @@ const AddPatientModal = ({ onClose, onAdd }) => {
               type="submit"
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              Add Patient
+              Add Client
             </button>
           </div>
         </form>
@@ -2024,11 +2024,11 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
 const AssignmentModal = ({ 
   onClose, 
   onCreate, 
-  patients, 
+  clients, 
   caregivers, 
-  selectedPatient, 
+  selectedClient, 
   selectedCaregiver, 
-  onPatientChange, 
+  onClientChange, 
   onCaregiverChange,
   assignmentType,
   onAssignmentTypeChange
@@ -2064,22 +2064,22 @@ const AssignmentModal = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Patient and Caregiver Selection */}
+          {/* Client and Caregiver Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Patient <span className="text-red-500">*</span>
+                Select Client <span className="text-red-500">*</span>
               </label>
               <select
                 required
-                value={selectedPatient}
-                onChange={(e) => onPatientChange(e.target.value)}
+                value={selectedClient}
+                onChange={(e) => onClientChange(e.target.value)}
                 className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               >
-                <option value="">Choose a patient...</option>
-                {patients.map((patient) => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.name || 'Unknown Patient'}
+                <option value="">Choose a client...</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name || 'Unknown Client'}
                   </option>
                 ))}
               </select>
@@ -2200,7 +2200,7 @@ const AssignmentModal = ({
             </button>
             <button
               type="submit"
-              disabled={!selectedPatient || !selectedCaregiver}
+              disabled={!selectedClient || !selectedCaregiver}
               className="px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create Assignment
@@ -2212,11 +2212,11 @@ const AssignmentModal = ({
   );
 };
 
-// Patient Details Modal Component
-const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
+// Client Details Modal Component
+const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete }) => {
   const [activeTab, setActiveTab] = React.useState('info');
   
-  if (!patient) return null;
+  if (!client) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2225,12 +2225,12 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
           <div className="flex items-center">
             <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center mr-4">
               <span className="text-2xl font-bold text-green-600">
-                {patient.name?.charAt(0) || 'P'}
+                {client.name?.charAt(0) || 'P'}
               </span>
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">{patient.name || 'Unknown Patient'}</h3>
-              <p className="text-green-100 text-sm">{patient.email || 'No email'}</p>
+              <h3 className="text-xl font-bold text-white">{client.name || 'Unknown Client'}</h3>
+              <p className="text-green-100 text-sm">{client.email || 'No email'}</p>
             </div>
           </div>
           <button
@@ -2255,7 +2255,7 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Patient Info
+              Client Info
             </button>
             <button
               onClick={() => setActiveTab('reports')}
@@ -2281,7 +2281,7 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Patient Info Tab */}
+          {/* Client Info Tab */}
           {activeTab === 'info' && (
             <>
           {/* Basic Information */}
@@ -2290,34 +2290,34 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-500">Age</label>
-                <p className="mt-1 text-gray-900">{patient.age || 'N/A'}</p>
+                <p className="mt-1 text-gray-900">{client.age || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-500">Gender</label>
-                <p className="mt-1 text-gray-900">{patient.gender || 'N/A'}</p>
+                <p className="mt-1 text-gray-900">{client.gender || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-500">Phone</label>
-                <p className="mt-1 text-gray-900">{patient.phone || 'N/A'}</p>
+                <p className="mt-1 text-gray-900">{client.phone || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-500">Status</label>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  patient.status === 'active' 
+                  client.status === 'active' 
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {patient.status || 'active'}
+                  {client.status || 'active'}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Address */}
-          {patient.address && (
+          {client.address && (
             <div>
               <label className="block text-sm font-medium text-gray-500">Address</label>
-              <p className="mt-1 text-gray-900">{patient.address}</p>
+              <p className="mt-1 text-gray-900">{client.address}</p>
             </div>
           )}
 
@@ -2325,54 +2325,54 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
           <div>
             <h4 className="text-lg font-semibold text-gray-900 mb-4">Medical Information</h4>
             <div className="space-y-3">
-              {patient.medicalRecordNumber && (
+              {client.medicalRecordNumber && (
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Medical Record Number</label>
-                  <p className="mt-1 text-gray-900">{patient.medicalRecordNumber}</p>
+                  <p className="mt-1 text-gray-900">{client.medicalRecordNumber}</p>
                 </div>
               )}
-              {patient.medicalConditions && (
+              {client.medicalConditions && (
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Medical Conditions</label>
-                  <p className="mt-1 text-gray-900">{patient.medicalConditions}</p>
+                  <p className="mt-1 text-gray-900">{client.medicalConditions}</p>
                 </div>
               )}
-              {patient.allergies && (
+              {client.allergies && (
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Allergies</label>
-                  <p className="mt-1 text-gray-900 text-red-600">{patient.allergies}</p>
+                  <p className="mt-1 text-gray-900 text-red-600">{client.allergies}</p>
                 </div>
               )}
-              {patient.medications && (
+              {client.medications && (
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Current Medications</label>
-                  <p className="mt-1 text-gray-900">{patient.medications}</p>
+                  <p className="mt-1 text-gray-900">{client.medications}</p>
                 </div>
               )}
-              {patient.primaryDoctor && (
+              {client.primaryDoctor && (
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Primary Doctor</label>
-                  <p className="mt-1 text-gray-900">{patient.primaryDoctor}</p>
+                  <p className="mt-1 text-gray-900">{client.primaryDoctor}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Emergency Contact */}
-          {(patient.emergencyContactName || patient.emergencyContactPhone) && (
+          {(client.emergencyContactName || client.emergencyContactPhone) && (
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contact</h4>
               <div className="grid grid-cols-2 gap-4">
-                {patient.emergencyContactName && (
+                {client.emergencyContactName && (
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Name</label>
-                    <p className="mt-1 text-gray-900">{patient.emergencyContactName}</p>
+                    <p className="mt-1 text-gray-900">{client.emergencyContactName}</p>
                   </div>
                 )}
-                {patient.emergencyContactPhone && (
+                {client.emergencyContactPhone && (
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Phone</label>
-                    <p className="mt-1 text-gray-900">{patient.emergencyContactPhone}</p>
+                    <p className="mt-1 text-gray-900">{client.emergencyContactPhone}</p>
                   </div>
                 )}
               </div>
@@ -2380,10 +2380,10 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
           )}
 
           {/* Notes */}
-          {patient.notes && (
+          {client.notes && (
             <div>
               <label className="block text-sm font-medium text-gray-500">Notes</label>
-              <p className="mt-1 text-gray-900 whitespace-pre-wrap">{patient.notes}</p>
+              <p className="mt-1 text-gray-900 whitespace-pre-wrap">{client.notes}</p>
             </div>
           )}
           </>
@@ -2391,22 +2391,22 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
 
           {/* Medical Reports Tab */}
           {activeTab === 'reports' && (
-            <PatientReportsSection patientId={patient.id} />
+            <ClientReportsSection clientId={client.id} />
           )}
 
           {/* Care Logs Tab */}
           {activeTab === 'careLogs' && (
-            <PatientCareLogsSection patientId={patient.id} />
+            <ClientCareLogsSection clientId={client.id} />
           )}
 
           {/* Actions */}
           <div className="flex justify-between items-center pt-6 border-t">
             <button
               type="button"
-              onClick={() => onDelete(patient.id)}
+              onClick={() => onDelete(client.id)}
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700"
             >
-              Delete Patient
+              Delete Client
             </button>
             <div className="flex space-x-3">
               <button
@@ -2418,7 +2418,7 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
               </button>
               <button
                 type="button"
-                onClick={() => onAssignTask(patient)}
+                onClick={() => onAssignTask(client)}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
               >
                 Assign Task
@@ -2432,7 +2432,7 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
 };
 
 // Caregiver Details Modal Component
-const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, assignments = [], patients = [] }) => {
+const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, assignments = [], clients = [] }) => {
   if (!caregiver) return null;
 
   // Filter assignments for this specific caregiver
@@ -2628,13 +2628,13 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                     <h5 className="text-sm font-medium text-gray-700 mb-2">Active Tasks ({activeAssignments.length})</h5>
                     <div className="space-y-2">
                       {activeAssignments.map(assignment => {
-                        const patient = patients.find(p => p.id === assignment.patientId);
+                        const client = clients.find(p => p.id === assignment.clientId);
                         return (
                           <div key={assignment.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <h6 className="font-medium text-gray-900 text-sm">{assignment.title || 'Untitled Task'}</h6>
-                                <p className="text-xs text-gray-600 mt-1">Patient: {patient?.name || 'Unknown Patient'}</p>
+                                <p className="text-xs text-gray-600 mt-1">Client: {client?.name || 'Unknown Client'}</p>
                                 {assignment.description && (
                                   <p className="text-xs text-gray-500 mt-1">{assignment.description}</p>
                                 )}
@@ -2665,13 +2665,13 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                     <h5 className="text-sm font-medium text-gray-700 mb-2">Completed Tasks ({completedAssignments.length})</h5>
                     <div className="space-y-2">
                       {completedAssignments.slice(0, 3).map(assignment => {
-                        const patient = patients.find(p => p.id === assignment.patientId);
+                        const client = clients.find(p => p.id === assignment.clientId);
                         return (
                           <div key={assignment.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <h6 className="font-medium text-gray-900 text-sm">{assignment.title || 'Untitled Task'}</h6>
-                                <p className="text-xs text-gray-600 mt-1">Patient: {patient?.name || 'Unknown Patient'}</p>
+                                <p className="text-xs text-gray-600 mt-1">Client: {client?.name || 'Unknown Client'}</p>
                               </div>
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 completed
@@ -2742,8 +2742,8 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
   );
 };
 
-// Patient Reports Section Component
-const PatientReportsSection = ({ patientId }) => {
+// Client Reports Section Component
+const ClientReportsSection = ({ clientId }) => {
   const [reports, setReports] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [showAddReport, setShowAddReport] = React.useState(false);
@@ -2752,12 +2752,12 @@ const PatientReportsSection = ({ patientId }) => {
 
   React.useEffect(() => {
     loadReports();
-  }, [patientId]);
+  }, [clientId]);
 
   const loadReports = async () => {
     try {
       setLoading(true);
-      const reportsData = await getPatientReports(patientId);
+      const reportsData = await getClientReports(clientId);
       setReports(reportsData);
     } catch (error) {
       console.error('Error loading reports:', error);
@@ -2867,11 +2867,11 @@ const PatientReportsSection = ({ patientId }) => {
 
       {showAddReport && (
         <AddReportModal
-          patientId={patientId}
+          clientId={clientId}
           reportType={reportType}
           onClose={() => setShowAddReport(false)}
           onSubmit={async (reportData) => {
-            await createPatientReport(patientId, reportData);
+            await createClientReport(clientId, reportData);
             setShowAddReport(false);
             await loadReports();
             toast.success('Report added successfully');
@@ -2882,8 +2882,8 @@ const PatientReportsSection = ({ patientId }) => {
   );
 };
 
-// Patient Care Logs Section Component
-const PatientCareLogsSection = ({ patientId }) => {
+// Client Care Logs Section Component
+const ClientCareLogsSection = ({ clientId }) => {
   const [careLogs, setCareLogs] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [showAddLog, setShowAddLog] = React.useState(false);
@@ -2891,12 +2891,12 @@ const PatientCareLogsSection = ({ patientId }) => {
 
   React.useEffect(() => {
     loadCareLogs();
-  }, [patientId]);
+  }, [clientId]);
 
   const loadCareLogs = async () => {
     try {
       setLoading(true);
-      const logsData = await getPatientCareLogs(patientId);
+      const logsData = await getClientCareLogs(clientId);
       setCareLogs(logsData);
     } catch (error) {
       console.error('Error loading care logs:', error);
@@ -2955,10 +2955,10 @@ const PatientCareLogsSection = ({ patientId }) => {
 
       {showAddLog && (
         <AddCareLogModal
-          patientId={patientId}
+          clientId={clientId}
           onClose={() => setShowAddLog(false)}
           onSubmit={async (logData) => {
-            await createPatientCareLog(patientId, logData);
+            await createClientCareLog(clientId, logData);
             setShowAddLog(false);
             await loadCareLogs();
             toast.success('Care log added successfully');
@@ -2970,7 +2970,7 @@ const PatientCareLogsSection = ({ patientId }) => {
 };
 
 // Add Report Modal Component
-const AddReportModal = ({ patientId, reportType, onClose, onSubmit }) => {
+const AddReportModal = ({ clientId, reportType, onClose, onSubmit }) => {
   const { userProfile } = useUser();
   const [formData, setFormData] = React.useState(
     reportType === 'nurse'
@@ -3004,7 +3004,7 @@ const AddReportModal = ({ patientId, reportType, onClose, onSubmit }) => {
           {reportType === 'nurse' ? (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Patient Vitals</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Client Vitals</label>
                 <textarea
                   rows={3}
                   required
@@ -3033,7 +3033,7 @@ const AddReportModal = ({ patientId, reportType, onClose, onSubmit }) => {
                   value={formData.observation}
                   onChange={(e) => setFormData({ ...formData, observation: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Patient's condition, behavior, concerns..."
+                  placeholder="Client's condition, behavior, concerns..."
                 />
               </div>
               <div>
@@ -3078,7 +3078,7 @@ const AddReportModal = ({ patientId, reportType, onClose, onSubmit }) => {
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="Patient instructions..."
+                  placeholder="Client instructions..."
                 />
               </div>
               <div>
@@ -3120,7 +3120,7 @@ const AddReportModal = ({ patientId, reportType, onClose, onSubmit }) => {
 };
 
 // Add Care Log Modal Component
-const AddCareLogModal = ({ patientId, onClose, onSubmit }) => {
+const AddCareLogModal = ({ clientId, onClose, onSubmit }) => {
   const { userProfile } = useUser();
   const [formData, setFormData] = React.useState({
     activityType: '',

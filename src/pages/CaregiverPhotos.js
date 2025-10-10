@@ -26,7 +26,7 @@ import {
 import fileStorageService from '../services/fileStorageService';
 import { useUser } from '../contexts/UserContext';
 import { createCareLog, getCareLogsByCaregiver } from '../api/careLogsAPI';
-import { getPatientsByCaregiver } from '../api/patientsAPI';
+import { getClientsByCaregiver } from '../api/patientsAPI';
 import { toast } from 'react-toastify';
 
 const CaregiverPhotos = () => {
@@ -68,7 +68,7 @@ const CaregiverPhotos = () => {
         const caregiverId = userProfile.id || userProfile.uid;
         const [logs, patients] = await Promise.all([
           getCareLogsByCaregiver(caregiverId),
-          getPatientsByCaregiver(caregiverId).catch(() => [])
+          getClientsByCaregiver(caregiverId).catch(() => [])
         ]);
         setPhotos(logs);
         setAssignedPatients(patients || []);

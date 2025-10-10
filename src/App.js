@@ -28,7 +28,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const CaregiverDashboard = lazy(() => import('./pages/CaregiverDashboard'));
 const PreclinicCaregiverDashboard = lazy(() => import('./pages/PreclinicCaregiverDashboard'));
 const CaregiverSchedule = lazy(() => import('./pages/CaregiverSchedule'));
-const CaregiverPatients = lazy(() => import('./pages/CaregiverPatients'));
+const CaregiverClients = lazy(() => import('./pages/CaregiverPatients'));
 const CaregiverTasks = lazy(() => import('./pages/CaregiverTasks'));
 const CaregiverOnboarding = lazy(() => import('./pages/CaregiverOnboarding'));
 const SuperAdminLicensing = lazy(() => import('./pages/SuperAdminLicensing'));
@@ -53,7 +53,7 @@ import CaregiverLayout from './components/CaregiverLayout';
 const Messages = lazy(() => import('./pages/Messages'));
 const Subscription = lazy(() => import('./pages/Subscription'));
 const Services = lazy(() => import('./pages/Services'));
-const PatientCaregivers = lazy(() => import('./pages/PatientCaregivers'));
+const ClientCaregivers = lazy(() => import('./pages/PatientCaregivers'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 // All onboarding is now integrated into Auth.js
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -69,15 +69,15 @@ const AdminCaregivers = lazy(() => import('./pages/AdminCaregivers'));
 const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
 const AdminCommunication = lazy(() => import('./pages/AdminCommunication'));
 const AdminAuditLogs = lazy(() => import('./pages/AdminAuditLogs'));
-const AdminPatientAssignments = lazy(() => import('./pages/AdminPatientAssignments'));
+const AdminClientAssignments = lazy(() => import('./pages/AdminPatientAssignments'));
 const AdminUserVerification = lazy(() => import('./pages/AdminUserVerification'));
 const SystemStatus = lazy(() => import('./pages/SystemStatus'));
 const MedicalDocuments = lazy(() => import('./pages/MedicalDocuments'));
-const AdminPatientDatabase = lazy(() => import('./pages/AdminPatientDatabase'));
+const AdminClientDatabase = lazy(() => import('./pages/AdminPatientDatabase'));
 const AdminCaregiverManagement = lazy(() => import('./pages/AdminCaregiverManagement'));
 const NewAdminLogin = lazy(() => import('./pages/NewAdminLogin'));
 const NewAdminDashboard = lazy(() => import('./pages/NewAdminDashboard'));
-const AdminPatientFeedback = lazy(() => import('./pages/AdminPatientFeedback'));
+const AdminClientFeedback = lazy(() => import('./pages/AdminPatientFeedback'));
 const ServiceProviderDashboard = lazy(() => import('./pages/ServiceProviderDashboard'));
 const RouteOptimization = lazy(() => import('./pages/RouteOptimization'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
@@ -225,8 +225,8 @@ function App() {
         // Handle navigation commands
         if (params.text) {
           const navText = params.text.toLowerCase();
-          if (navText.includes('patient')) {
-            window.location.href = '/service-provider/patients';
+          if (navText.includes('client')) {
+            window.location.href = '/service-provider/clients';
           } else if (navText.includes('schedule')) {
             window.location.href = '/service-provider/schedule';
           } else if (navText.includes('task')) {
@@ -445,7 +445,7 @@ function App() {
         element={<Navigate to="/institution-caregiver/dashboard" replace />} 
       />
       
-      {/* Protected routes - Dashboard removed (patients don't have accounts) */}
+      {/* Protected routes - Dashboard removed (clients don't have accounts) */}
       <Route 
         path="/medications" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
@@ -503,10 +503,10 @@ function App() {
         <Route index element={<Subscription />} />
       </Route>
       <Route 
-        path="/patient-caregivers" 
+        path="/client-caregivers" 
         element={user ? <Layout /> : <Navigate to="/login" replace />} 
       >
-        <Route index element={<PatientCaregivers />} />
+        <Route index element={<ClientCaregivers />} />
       </Route>
       <Route 
         path="/security" 
@@ -548,7 +548,7 @@ function App() {
         <Route path="care-logs" element={<CaregiverPhotos />} />
         <Route path="photos" element={<CaregiverPhotos />} />
         <Route path="activities" element={<CaregiverPerformance />} />
-        <Route path="medical-records" element={<CaregiverPatients />} />
+        <Route path="medical-records" element={<CaregiverClients />} />
         <Route path="prescriptions" element={<Medications />} />
         <Route path="consultations" element={<Consultation />} />
         <Route path="diagnostics" element={<VitalSigns />} />
@@ -592,10 +592,10 @@ function App() {
         element={<NewAdminDashboard />} 
       />
       
-      {/* Admin Patient Feedback Route */}
+      {/* Admin Client Feedback Route */}
       <Route 
-        path="/admin/patient-feedback" 
-        element={<AdminPatientFeedback />} 
+        path="/admin/client-feedback" 
+        element={<AdminClientFeedback />} 
       />
       
       {/* Admin Root Redirect - always send to admin login to enforce session */}
@@ -634,8 +634,8 @@ function SignInRouteHandler() {
     return <Navigate to="/service-provider" replace />;
   }
   
-  // For other users (patients, elderly), show message that this is for caregivers
-  console.log('✅ Patient/elderly accessing caregiver portal, redirecting to home');
+  // For other users (clients, elderly), show message that this is for caregivers
+  console.log('✅ Client/elderly accessing caregiver portal, redirecting to home');
   return <Navigate to="/" replace />;
 }
 
@@ -669,8 +669,8 @@ function RoleBasedDashboardRoute() {
     return <Navigate to="/service-provider" replace />;
   }
   
-  // Default to patient dashboard for elderly/patient users
-  console.log('✅ Showing patient dashboard for role:', userRole);
+  // Default to client dashboard for elderly/client users
+  console.log('✅ Showing client dashboard for role:', userRole);
   return <Layout />;
 }
 
@@ -703,7 +703,7 @@ function OnboardingGuardedLayout() {
       console.log('🔄 Redirecting CAREGIVER to:', caregiverRoute);
       return <Navigate to={caregiverRoute} replace />;
     }
-    // Redirect patients/elderly to patient onboarding
+    // Redirect clients/elderly to client onboarding
     console.log('🔄 Redirecting PATIENT to onboarding, userType:', userProfile?.userType);
     return <Navigate to="/onboarding/profile" replace />;
   }
