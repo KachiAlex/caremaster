@@ -1,0 +1,368 @@
+extend type Query {
+  """
+  ✨ Look up a single `Appointment` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  appointment(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Appointment_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Appointment_FirstRow
+  ): Appointment @fdc_generated(from: "Appointment", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `CaregiverRelationship` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  caregiverRelationship(
+    """
+    The key used to identify the object.
+    """
+    key: CaregiverRelationship_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: CaregiverRelationship_FirstRow
+  ): CaregiverRelationship @fdc_generated(from: "CaregiverRelationship", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `DoseLog` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  doseLog(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: DoseLog_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: DoseLog_FirstRow
+  ): DoseLog @fdc_generated(from: "DoseLog", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `ElderlyProfile` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  elderlyProfile(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: ElderlyProfile_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: ElderlyProfile_FirstRow
+  ): ElderlyProfile @fdc_generated(from: "ElderlyProfile", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Medication` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  medication(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Medication_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Medication_FirstRow
+  ): Medication @fdc_generated(from: "Medication", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `User` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  user(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+  ): User @fdc_generated(from: "User", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `VitalSign` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  vitalSign(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: VitalSign_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: VitalSign_FirstRow
+  ): VitalSign @fdc_generated(from: "VitalSign", purpose: QUERY_SINGLE)
+  """
+  ✨ List `Appointment` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  appointments(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Appointment_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Appointment_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Appointment_Having
+  ): [Appointment!]! @fdc_generated(from: "Appointment", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `CaregiverRelationship` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  caregiverRelationships(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: CaregiverRelationship_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [CaregiverRelationship_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: CaregiverRelationship_Having
+  ): [CaregiverRelationship!]! @fdc_generated(from: "CaregiverRelationship", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `DoseLog` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  doseLogs(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: DoseLog_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [DoseLog_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: DoseLog_Having
+  ): [DoseLog!]! @fdc_generated(from: "DoseLog", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `ElderlyProfile` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  elderlyProfiles(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: ElderlyProfile_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [ElderlyProfile_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: ElderlyProfile_Having
+  ): [ElderlyProfile!]! @fdc_generated(from: "ElderlyProfile", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Medication` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  medications(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Medication_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Medication_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Medication_Having
+  ): [Medication!]! @fdc_generated(from: "Medication", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `User` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  users(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: User_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [User_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: User_Having
+  ): [User!]! @fdc_generated(from: "User", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `VitalSign` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  vitalSigns(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: VitalSign_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [VitalSign_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: VitalSign_Having
+  ): [VitalSign!]! @fdc_generated(from: "VitalSign", purpose: QUERY_MULTIPLE)
+}

@@ -1,0 +1,2167 @@
+"""
+✨ `Appointment_KeyOutput` returns the primary key fields of table type `Appointment`.
+
+It has the same format as `Appointment_Key`, but is only used as mutation return value.
+"""
+scalar Appointment_KeyOutput
+"""
+✨ `CaregiverRelationship_KeyOutput` returns the primary key fields of table type `CaregiverRelationship`.
+
+It has the same format as `CaregiverRelationship_Key`, but is only used as mutation return value.
+"""
+scalar CaregiverRelationship_KeyOutput
+"""
+✨ `DoseLog_KeyOutput` returns the primary key fields of table type `DoseLog`.
+
+It has the same format as `DoseLog_Key`, but is only used as mutation return value.
+"""
+scalar DoseLog_KeyOutput
+"""
+✨ `ElderlyProfile_KeyOutput` returns the primary key fields of table type `ElderlyProfile`.
+
+It has the same format as `ElderlyProfile_Key`, but is only used as mutation return value.
+"""
+scalar ElderlyProfile_KeyOutput
+"""
+✨ `Medication_KeyOutput` returns the primary key fields of table type `Medication`.
+
+It has the same format as `Medication_Key`, but is only used as mutation return value.
+"""
+scalar Medication_KeyOutput
+"""
+✨ `User_KeyOutput` returns the primary key fields of table type `User`.
+
+It has the same format as `User_Key`, but is only used as mutation return value.
+"""
+scalar User_KeyOutput
+"""
+✨ `VitalSign_KeyOutput` returns the primary key fields of table type `VitalSign`.
+
+It has the same format as `VitalSign_Key`, but is only used as mutation return value.
+"""
+scalar VitalSign_KeyOutput
+"""
+✨ Generated data input type for table 'Appointment'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Appointment_Data {
+  """
+  ✨ Generated from Field `Appointment`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Appointment`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Appointment`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: UUID
+  """
+  ✨ `_expr` server value variant of `elderlyProfileId` (✨ Generated from Field `Appointment`.`elderlyProfileId` of type `UUID!`)
+  """
+  elderlyProfileId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Appointment`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Key
+  """
+  ✨ Generated from Field `Appointment`.`dateTime` of type `Timestamp!`
+  """
+  dateTime: Timestamp
+  """
+  ✨ `_expr` server value variant of `dateTime` (✨ Generated from Field `Appointment`.`dateTime` of type `Timestamp!`)
+  """
+  dateTime_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `dateTime` (✨ Generated from Field `Appointment`.`dateTime` of type `Timestamp!`)
+  """
+  dateTime_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `dateTime` (✨ Generated from Field `Appointment`.`dateTime` of type `Timestamp!`)
+  """
+  dateTime_update: [Timestamp_Update!]
+  """
+  ✨ Generated from Field `Appointment`.`doctorName` of type `String`
+  """
+  doctorName: String
+  """
+  ✨ `_expr` server value variant of `doctorName` (✨ Generated from Field `Appointment`.`doctorName` of type `String`)
+  """
+  doctorName_expr: String_Expr
+  """
+  ✨ Generated from Field `Appointment`.`location` of type `String!`
+  """
+  location: String
+  """
+  ✨ `_expr` server value variant of `location` (✨ Generated from Field `Appointment`.`location` of type `String!`)
+  """
+  location_expr: String_Expr
+  """
+  ✨ Generated from Field `Appointment`.`notes` of type `String`
+  """
+  notes: String
+  """
+  ✨ `_expr` server value variant of `notes` (✨ Generated from Field `Appointment`.`notes` of type `String`)
+  """
+  notes_expr: String_Expr
+  """
+  ✨ Generated from Field `Appointment`.`type` of type `String!`
+  """
+  type: String
+  """
+  ✨ `_expr` server value variant of `type` (✨ Generated from Field `Appointment`.`type` of type `String!`)
+  """
+  type_expr: String_Expr
+}
+"""
+✨ Generated filter input type for table 'Appointment'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Appointment_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Appointment_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Appointment_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Appointment_Filter!]
+  """
+  ✨ Generated from Field `Appointment`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `Appointment`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: UUID_Filter
+  """
+  ✨ Generated from Field `Appointment`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Filter
+  """
+  ✨ Generated from Field `Appointment`.`dateTime` of type `Timestamp!`
+  """
+  dateTime: Timestamp_Filter
+  """
+  ✨ Generated from Field `Appointment`.`doctorName` of type `String`
+  """
+  doctorName: String_Filter
+  """
+  ✨ Generated from Field `Appointment`.`location` of type `String!`
+  """
+  location: String_Filter
+  """
+  ✨ Generated from Field `Appointment`.`notes` of type `String`
+  """
+  notes: String_Filter
+  """
+  ✨ Generated from Field `Appointment`.`type` of type `String!`
+  """
+  type: String_Filter
+}
+"""
+✨ Generated first-row input type for table 'Appointment'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Appointment_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Appointment_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Appointment_Filter
+}
+"""
+✨ Generated having input type for table 'Appointment'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Appointment_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Appointment_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Appointment_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Appointment_Having!]
+  """
+  ✨ Generated from Field `Appointment`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Appointment`.`dateTime_count` of type `Int!`
+  """
+  dateTime_count: Int_Filter
+  """
+  ✨ Generated from Field `Appointment`.`doctorName_count` of type `Int!`
+  """
+  doctorName_count: Int_Filter
+  """
+  ✨ Generated from Field `Appointment`.`elderlyProfileId_count` of type `Int!`
+  """
+  elderlyProfileId_count: Int_Filter
+  """
+  ✨ Generated from Field `Appointment`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `Appointment`.`location_count` of type `Int!`
+  """
+  location_count: Int_Filter
+  """
+  ✨ Generated from Field `Appointment`.`notes_count` of type `Int!`
+  """
+  notes_count: Int_Filter
+  """
+  ✨ Generated from Field `Appointment`.`type_count` of type `Int!`
+  """
+  type_count: Int_Filter
+  """
+  ✨ Generated from Field `Appointment`.`dateTime_min` of type `Timestamp`
+  """
+  dateTime_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Appointment`.`dateTime_max` of type `Timestamp`
+  """
+  dateTime_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'Appointment'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Appointment_Key {
+  """
+  ✨ Generated from Field `Appointment`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Appointment`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'Appointment'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Appointment_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Appointment_Filter
+}
+"""
+✨ Generated order input type for table 'Appointment'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Appointment_Order {
+  """
+  ✨ Generated from Field `Appointment`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Order
+  """
+  ✨ Generated from Field `Appointment`.`dateTime` of type `Timestamp!`
+  """
+  dateTime: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`doctorName` of type `String`
+  """
+  doctorName: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`location` of type `String!`
+  """
+  location: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`notes` of type `String`
+  """
+  notes: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`type` of type `String!`
+  """
+  type: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`dateTime_count` of type `Int!`
+  """
+  dateTime_count: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`doctorName_count` of type `Int!`
+  """
+  doctorName_count: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`elderlyProfileId_count` of type `Int!`
+  """
+  elderlyProfileId_count: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`location_count` of type `Int!`
+  """
+  location_count: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`notes_count` of type `Int!`
+  """
+  notes_count: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`type_count` of type `Int!`
+  """
+  type_count: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`dateTime_min` of type `Timestamp`
+  """
+  dateTime_min: OrderDirection
+  """
+  ✨ Generated from Field `Appointment`.`dateTime_max` of type `Timestamp`
+  """
+  dateTime_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'CaregiverRelationship'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input CaregiverRelationship_Data {
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`caregiverId` of type `UUID!`
+  """
+  caregiverId: UUID
+  """
+  ✨ `_expr` server value variant of `caregiverId` (✨ Generated from Field `CaregiverRelationship`.`caregiverId` of type `UUID!`)
+  """
+  caregiverId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: UUID
+  """
+  ✨ `_expr` server value variant of `elderlyProfileId` (✨ Generated from Field `CaregiverRelationship`.`elderlyProfileId` of type `UUID!`)
+  """
+  elderlyProfileId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`caregiver` of type `User!`
+  """
+  caregiver: User_Key
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Key
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`accessLevel` of type `String`
+  """
+  accessLevel: String
+  """
+  ✨ `_expr` server value variant of `accessLevel` (✨ Generated from Field `CaregiverRelationship`.`accessLevel` of type `String`)
+  """
+  accessLevel_expr: String_Expr
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`establishedAt` of type `Timestamp!`
+  """
+  establishedAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `establishedAt` (✨ Generated from Field `CaregiverRelationship`.`establishedAt` of type `Timestamp!`)
+  """
+  establishedAt_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `establishedAt` (✨ Generated from Field `CaregiverRelationship`.`establishedAt` of type `Timestamp!`)
+  """
+  establishedAt_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `establishedAt` (✨ Generated from Field `CaregiverRelationship`.`establishedAt` of type `Timestamp!`)
+  """
+  establishedAt_update: [Timestamp_Update!]
+}
+"""
+✨ Generated filter input type for table 'CaregiverRelationship'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input CaregiverRelationship_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [CaregiverRelationship_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: CaregiverRelationship_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [CaregiverRelationship_Filter!]
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`caregiverId` of type `UUID!`
+  """
+  caregiverId: UUID_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: UUID_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`caregiver` of type `User!`
+  """
+  caregiver: User_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`accessLevel` of type `String`
+  """
+  accessLevel: String_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`establishedAt` of type `Timestamp!`
+  """
+  establishedAt: Timestamp_Filter
+}
+"""
+✨ Generated first-row input type for table 'CaregiverRelationship'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input CaregiverRelationship_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [CaregiverRelationship_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: CaregiverRelationship_Filter
+}
+"""
+✨ Generated having input type for table 'CaregiverRelationship'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input CaregiverRelationship_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [CaregiverRelationship_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: CaregiverRelationship_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [CaregiverRelationship_Having!]
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`accessLevel_count` of type `Int!`
+  """
+  accessLevel_count: Int_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`caregiverId_count` of type `Int!`
+  """
+  caregiverId_count: Int_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`elderlyProfileId_count` of type `Int!`
+  """
+  elderlyProfileId_count: Int_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`establishedAt_count` of type `Int!`
+  """
+  establishedAt_count: Int_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`establishedAt_min` of type `Timestamp`
+  """
+  establishedAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`establishedAt_max` of type `Timestamp`
+  """
+  establishedAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'CaregiverRelationship'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input CaregiverRelationship_Key {
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`caregiverId` of type `UUID!`
+  """
+  caregiverId: UUID
+  """
+  ✨ `_expr` server value variant of `caregiverId` (✨ Generated from Field `CaregiverRelationship`.`caregiverId` of type `UUID!`)
+  """
+  caregiverId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: UUID
+  """
+  ✨ `_expr` server value variant of `elderlyProfileId` (✨ Generated from Field `CaregiverRelationship`.`elderlyProfileId` of type `UUID!`)
+  """
+  elderlyProfileId_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'CaregiverRelationship'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input CaregiverRelationship_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: CaregiverRelationship_Filter
+}
+"""
+✨ Generated order input type for table 'CaregiverRelationship'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input CaregiverRelationship_Order {
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`caregiverId` of type `UUID!`
+  """
+  caregiverId: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`caregiver` of type `User!`
+  """
+  caregiver: User_Order
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Order
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`accessLevel` of type `String`
+  """
+  accessLevel: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`establishedAt` of type `Timestamp!`
+  """
+  establishedAt: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`accessLevel_count` of type `Int!`
+  """
+  accessLevel_count: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`caregiverId_count` of type `Int!`
+  """
+  caregiverId_count: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`elderlyProfileId_count` of type `Int!`
+  """
+  elderlyProfileId_count: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`establishedAt_count` of type `Int!`
+  """
+  establishedAt_count: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`establishedAt_min` of type `Timestamp`
+  """
+  establishedAt_min: OrderDirection
+  """
+  ✨ Generated from Field `CaregiverRelationship`.`establishedAt_max` of type `Timestamp`
+  """
+  establishedAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'DoseLog'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input DoseLog_Data {
+  """
+  ✨ Generated from Field `DoseLog`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `DoseLog`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+  """
+  ✨ Generated from Field `DoseLog`.`medicationId` of type `UUID!`
+  """
+  medicationId: UUID
+  """
+  ✨ `_expr` server value variant of `medicationId` (✨ Generated from Field `DoseLog`.`medicationId` of type `UUID!`)
+  """
+  medicationId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `DoseLog`.`medication` of type `Medication!`
+  """
+  medication: Medication_Key
+  """
+  ✨ Generated from Field `DoseLog`.`notes` of type `String`
+  """
+  notes: String
+  """
+  ✨ `_expr` server value variant of `notes` (✨ Generated from Field `DoseLog`.`notes` of type `String`)
+  """
+  notes_expr: String_Expr
+  """
+  ✨ Generated from Field `DoseLog`.`status` of type `String!`
+  """
+  status: String
+  """
+  ✨ `_expr` server value variant of `status` (✨ Generated from Field `DoseLog`.`status` of type `String!`)
+  """
+  status_expr: String_Expr
+  """
+  ✨ Generated from Field `DoseLog`.`takenAt` of type `Timestamp!`
+  """
+  takenAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `takenAt` (✨ Generated from Field `DoseLog`.`takenAt` of type `Timestamp!`)
+  """
+  takenAt_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `takenAt` (✨ Generated from Field `DoseLog`.`takenAt` of type `Timestamp!`)
+  """
+  takenAt_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `takenAt` (✨ Generated from Field `DoseLog`.`takenAt` of type `Timestamp!`)
+  """
+  takenAt_update: [Timestamp_Update!]
+}
+"""
+✨ Generated filter input type for table 'DoseLog'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input DoseLog_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [DoseLog_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: DoseLog_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [DoseLog_Filter!]
+  """
+  ✨ Generated from Field `DoseLog`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`medicationId` of type `UUID!`
+  """
+  medicationId: UUID_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`medication` of type `Medication!`
+  """
+  medication: Medication_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`notes` of type `String`
+  """
+  notes: String_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`status` of type `String!`
+  """
+  status: String_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`takenAt` of type `Timestamp!`
+  """
+  takenAt: Timestamp_Filter
+}
+"""
+✨ Generated first-row input type for table 'DoseLog'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input DoseLog_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [DoseLog_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: DoseLog_Filter
+}
+"""
+✨ Generated having input type for table 'DoseLog'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input DoseLog_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [DoseLog_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: DoseLog_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [DoseLog_Having!]
+  """
+  ✨ Generated from Field `DoseLog`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`medicationId_count` of type `Int!`
+  """
+  medicationId_count: Int_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`notes_count` of type `Int!`
+  """
+  notes_count: Int_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`status_count` of type `Int!`
+  """
+  status_count: Int_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`takenAt_count` of type `Int!`
+  """
+  takenAt_count: Int_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`takenAt_min` of type `Timestamp`
+  """
+  takenAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `DoseLog`.`takenAt_max` of type `Timestamp`
+  """
+  takenAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'DoseLog'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input DoseLog_Key {
+  """
+  ✨ Generated from Field `DoseLog`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `DoseLog`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'DoseLog'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input DoseLog_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: DoseLog_Filter
+}
+"""
+✨ Generated order input type for table 'DoseLog'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input DoseLog_Order {
+  """
+  ✨ Generated from Field `DoseLog`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`medicationId` of type `UUID!`
+  """
+  medicationId: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`medication` of type `Medication!`
+  """
+  medication: Medication_Order
+  """
+  ✨ Generated from Field `DoseLog`.`notes` of type `String`
+  """
+  notes: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`status` of type `String!`
+  """
+  status: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`takenAt` of type `Timestamp!`
+  """
+  takenAt: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`medicationId_count` of type `Int!`
+  """
+  medicationId_count: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`notes_count` of type `Int!`
+  """
+  notes_count: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`status_count` of type `Int!`
+  """
+  status_count: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`takenAt_count` of type `Int!`
+  """
+  takenAt_count: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`takenAt_min` of type `Timestamp`
+  """
+  takenAt_min: OrderDirection
+  """
+  ✨ Generated from Field `DoseLog`.`takenAt_max` of type `Timestamp`
+  """
+  takenAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'ElderlyProfile'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input ElderlyProfile_Data {
+  """
+  ✨ Generated from Field `ElderlyProfile`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `ElderlyProfile`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+  """
+  ✨ Generated from Field `ElderlyProfile`.`userId` of type `UUID!`
+  """
+  userId: UUID
+  """
+  ✨ `_expr` server value variant of `userId` (✨ Generated from Field `ElderlyProfile`.`userId` of type `UUID!`)
+  """
+  userId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `ElderlyProfile`.`user` of type `User!`
+  """
+  user: User_Key
+  """
+  ✨ Generated from Field `ElderlyProfile`.`allergies` of type `String`
+  """
+  allergies: String
+  """
+  ✨ `_expr` server value variant of `allergies` (✨ Generated from Field `ElderlyProfile`.`allergies` of type `String`)
+  """
+  allergies_expr: String_Expr
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactName` of type `String!`
+  """
+  emergencyContactName: String
+  """
+  ✨ `_expr` server value variant of `emergencyContactName` (✨ Generated from Field `ElderlyProfile`.`emergencyContactName` of type `String!`)
+  """
+  emergencyContactName_expr: String_Expr
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactPhone` of type `String!`
+  """
+  emergencyContactPhone: String
+  """
+  ✨ `_expr` server value variant of `emergencyContactPhone` (✨ Generated from Field `ElderlyProfile`.`emergencyContactPhone` of type `String!`)
+  """
+  emergencyContactPhone_expr: String_Expr
+  """
+  ✨ Generated from Field `ElderlyProfile`.`medicalConditions` of type `String`
+  """
+  medicalConditions: String
+  """
+  ✨ `_expr` server value variant of `medicalConditions` (✨ Generated from Field `ElderlyProfile`.`medicalConditions` of type `String`)
+  """
+  medicalConditions_expr: String_Expr
+  """
+  ✨ Generated from Field `ElderlyProfile`.`primaryCareDoctor` of type `String`
+  """
+  primaryCareDoctor: String
+  """
+  ✨ `_expr` server value variant of `primaryCareDoctor` (✨ Generated from Field `ElderlyProfile`.`primaryCareDoctor` of type `String`)
+  """
+  primaryCareDoctor_expr: String_Expr
+}
+"""
+✨ Generated filter input type for table 'ElderlyProfile'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ElderlyProfile_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [ElderlyProfile_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: ElderlyProfile_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [ElderlyProfile_Filter!]
+  """
+  ✨ Generated from Field `ElderlyProfile`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`userId` of type `UUID!`
+  """
+  userId: UUID_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`user` of type `User!`
+  """
+  user: User_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`allergies` of type `String`
+  """
+  allergies: String_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactName` of type `String!`
+  """
+  emergencyContactName: String_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactPhone` of type `String!`
+  """
+  emergencyContactPhone: String_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`medicalConditions` of type `String`
+  """
+  medicalConditions: String_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`primaryCareDoctor` of type `String`
+  """
+  primaryCareDoctor: String_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`appointments_on_elderlyProfile` of type `[Appointment!]!`
+  """
+  appointments_on_elderlyProfile: Appointment_ListFilter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`caregiverRelationships_on_elderlyProfile` of type `[CaregiverRelationship!]!`
+  """
+  caregiverRelationships_on_elderlyProfile: CaregiverRelationship_ListFilter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`medications_on_elderlyProfile` of type `[Medication!]!`
+  """
+  medications_on_elderlyProfile: Medication_ListFilter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`vitalSigns_on_elderlyProfile` of type `[VitalSign!]!`
+  """
+  vitalSigns_on_elderlyProfile: VitalSign_ListFilter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`users_via_CaregiverRelationship` of type `[User!]!`
+  """
+  users_via_CaregiverRelationship: User_ListFilter
+}
+"""
+✨ Generated first-row input type for table 'ElderlyProfile'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input ElderlyProfile_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [ElderlyProfile_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: ElderlyProfile_Filter
+}
+"""
+✨ Generated having input type for table 'ElderlyProfile'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ElderlyProfile_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [ElderlyProfile_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: ElderlyProfile_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [ElderlyProfile_Having!]
+  """
+  ✨ Generated from Field `ElderlyProfile`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`allergies_count` of type `Int!`
+  """
+  allergies_count: Int_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactName_count` of type `Int!`
+  """
+  emergencyContactName_count: Int_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactPhone_count` of type `Int!`
+  """
+  emergencyContactPhone_count: Int_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`medicalConditions_count` of type `Int!`
+  """
+  medicalConditions_count: Int_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`primaryCareDoctor_count` of type `Int!`
+  """
+  primaryCareDoctor_count: Int_Filter
+  """
+  ✨ Generated from Field `ElderlyProfile`.`userId_count` of type `Int!`
+  """
+  userId_count: Int_Filter
+}
+"""
+✨ Generated key input type for table 'ElderlyProfile'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input ElderlyProfile_Key {
+  """
+  ✨ Generated from Field `ElderlyProfile`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `ElderlyProfile`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'ElderlyProfile'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input ElderlyProfile_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: ElderlyProfile_Filter
+}
+"""
+✨ Generated order input type for table 'ElderlyProfile'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input ElderlyProfile_Order {
+  """
+  ✨ Generated from Field `ElderlyProfile`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`userId` of type `UUID!`
+  """
+  userId: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`user` of type `User!`
+  """
+  user: User_Order
+  """
+  ✨ Generated from Field `ElderlyProfile`.`allergies` of type `String`
+  """
+  allergies: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactName` of type `String!`
+  """
+  emergencyContactName: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactPhone` of type `String!`
+  """
+  emergencyContactPhone: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`medicalConditions` of type `String`
+  """
+  medicalConditions: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`primaryCareDoctor` of type `String`
+  """
+  primaryCareDoctor: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`allergies_count` of type `Int!`
+  """
+  allergies_count: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactName_count` of type `Int!`
+  """
+  emergencyContactName_count: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`emergencyContactPhone_count` of type `Int!`
+  """
+  emergencyContactPhone_count: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`medicalConditions_count` of type `Int!`
+  """
+  medicalConditions_count: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`primaryCareDoctor_count` of type `Int!`
+  """
+  primaryCareDoctor_count: OrderDirection
+  """
+  ✨ Generated from Field `ElderlyProfile`.`userId_count` of type `Int!`
+  """
+  userId_count: OrderDirection
+}
+"""
+✨ Generated data input type for table 'Medication'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Medication_Data {
+  """
+  ✨ Generated from Field `Medication`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Medication`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Medication`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: UUID
+  """
+  ✨ `_expr` server value variant of `elderlyProfileId` (✨ Generated from Field `Medication`.`elderlyProfileId` of type `UUID!`)
+  """
+  elderlyProfileId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `Medication`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Key
+  """
+  ✨ Generated from Field `Medication`.`dosage` of type `String!`
+  """
+  dosage: String
+  """
+  ✨ `_expr` server value variant of `dosage` (✨ Generated from Field `Medication`.`dosage` of type `String!`)
+  """
+  dosage_expr: String_Expr
+  """
+  ✨ Generated from Field `Medication`.`endDate` of type `Date`
+  """
+  endDate: Date
+  """
+  ✨ `_date` server value variant of `endDate` (✨ Generated from Field `Medication`.`endDate` of type `Date`)
+  """
+  endDate_date: Date_Relative
+  """
+  ✨ `_expr` server value variant of `endDate` (✨ Generated from Field `Medication`.`endDate` of type `Date`)
+  """
+  endDate_expr: Date_Expr
+  """
+  ✨ `_update` server value variant of `endDate` (✨ Generated from Field `Medication`.`endDate` of type `Date`)
+  """
+  endDate_update: [Date_Update!]
+  """
+  ✨ Generated from Field `Medication`.`frequency` of type `String!`
+  """
+  frequency: String
+  """
+  ✨ `_expr` server value variant of `frequency` (✨ Generated from Field `Medication`.`frequency` of type `String!`)
+  """
+  frequency_expr: String_Expr
+  """
+  ✨ Generated from Field `Medication`.`instructions` of type `String`
+  """
+  instructions: String
+  """
+  ✨ `_expr` server value variant of `instructions` (✨ Generated from Field `Medication`.`instructions` of type `String`)
+  """
+  instructions_expr: String_Expr
+  """
+  ✨ Generated from Field `Medication`.`name` of type `String!`
+  """
+  name: String
+  """
+  ✨ `_expr` server value variant of `name` (✨ Generated from Field `Medication`.`name` of type `String!`)
+  """
+  name_expr: String_Expr
+  """
+  ✨ Generated from Field `Medication`.`notes` of type `String`
+  """
+  notes: String
+  """
+  ✨ `_expr` server value variant of `notes` (✨ Generated from Field `Medication`.`notes` of type `String`)
+  """
+  notes_expr: String_Expr
+  """
+  ✨ Generated from Field `Medication`.`startTime` of type `Timestamp!`
+  """
+  startTime: Timestamp
+  """
+  ✨ `_expr` server value variant of `startTime` (✨ Generated from Field `Medication`.`startTime` of type `Timestamp!`)
+  """
+  startTime_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `startTime` (✨ Generated from Field `Medication`.`startTime` of type `Timestamp!`)
+  """
+  startTime_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `startTime` (✨ Generated from Field `Medication`.`startTime` of type `Timestamp!`)
+  """
+  startTime_update: [Timestamp_Update!]
+}
+"""
+✨ Generated filter input type for table 'Medication'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Medication_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Medication_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Medication_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Medication_Filter!]
+  """
+  ✨ Generated from Field `Medication`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `Medication`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: UUID_Filter
+  """
+  ✨ Generated from Field `Medication`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Filter
+  """
+  ✨ Generated from Field `Medication`.`dosage` of type `String!`
+  """
+  dosage: String_Filter
+  """
+  ✨ Generated from Field `Medication`.`endDate` of type `Date`
+  """
+  endDate: Date_Filter
+  """
+  ✨ Generated from Field `Medication`.`frequency` of type `String!`
+  """
+  frequency: String_Filter
+  """
+  ✨ Generated from Field `Medication`.`instructions` of type `String`
+  """
+  instructions: String_Filter
+  """
+  ✨ Generated from Field `Medication`.`name` of type `String!`
+  """
+  name: String_Filter
+  """
+  ✨ Generated from Field `Medication`.`notes` of type `String`
+  """
+  notes: String_Filter
+  """
+  ✨ Generated from Field `Medication`.`startTime` of type `Timestamp!`
+  """
+  startTime: Timestamp_Filter
+  """
+  ✨ Generated from Field `Medication`.`doseLogs_on_medication` of type `[DoseLog!]!`
+  """
+  doseLogs_on_medication: DoseLog_ListFilter
+}
+"""
+✨ Generated first-row input type for table 'Medication'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Medication_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Medication_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Medication_Filter
+}
+"""
+✨ Generated having input type for table 'Medication'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Medication_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Medication_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Medication_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Medication_Having!]
+  """
+  ✨ Generated from Field `Medication`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`dosage_count` of type `Int!`
+  """
+  dosage_count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`elderlyProfileId_count` of type `Int!`
+  """
+  elderlyProfileId_count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`endDate_count` of type `Int!`
+  """
+  endDate_count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`frequency_count` of type `Int!`
+  """
+  frequency_count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`instructions_count` of type `Int!`
+  """
+  instructions_count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`name_count` of type `Int!`
+  """
+  name_count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`notes_count` of type `Int!`
+  """
+  notes_count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`startTime_count` of type `Int!`
+  """
+  startTime_count: Int_Filter
+  """
+  ✨ Generated from Field `Medication`.`endDate_min` of type `Date`
+  """
+  endDate_min: Date_Filter
+  """
+  ✨ Generated from Field `Medication`.`startTime_min` of type `Timestamp`
+  """
+  startTime_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Medication`.`endDate_max` of type `Date`
+  """
+  endDate_max: Date_Filter
+  """
+  ✨ Generated from Field `Medication`.`startTime_max` of type `Timestamp`
+  """
+  startTime_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'Medication'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Medication_Key {
+  """
+  ✨ Generated from Field `Medication`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Medication`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'Medication'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Medication_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Medication_Filter
+}
+"""
+✨ Generated order input type for table 'Medication'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Medication_Order {
+  """
+  ✨ Generated from Field `Medication`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Order
+  """
+  ✨ Generated from Field `Medication`.`dosage` of type `String!`
+  """
+  dosage: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`endDate` of type `Date`
+  """
+  endDate: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`frequency` of type `String!`
+  """
+  frequency: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`instructions` of type `String`
+  """
+  instructions: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`name` of type `String!`
+  """
+  name: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`notes` of type `String`
+  """
+  notes: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`startTime` of type `Timestamp!`
+  """
+  startTime: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`dosage_count` of type `Int!`
+  """
+  dosage_count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`elderlyProfileId_count` of type `Int!`
+  """
+  elderlyProfileId_count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`endDate_count` of type `Int!`
+  """
+  endDate_count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`frequency_count` of type `Int!`
+  """
+  frequency_count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`instructions_count` of type `Int!`
+  """
+  instructions_count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`name_count` of type `Int!`
+  """
+  name_count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`notes_count` of type `Int!`
+  """
+  notes_count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`startTime_count` of type `Int!`
+  """
+  startTime_count: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`endDate_min` of type `Date`
+  """
+  endDate_min: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`startTime_min` of type `Timestamp`
+  """
+  startTime_min: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`endDate_max` of type `Date`
+  """
+  endDate_max: OrderDirection
+  """
+  ✨ Generated from Field `Medication`.`startTime_max` of type `Timestamp`
+  """
+  startTime_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'User'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input User_Data {
+  """
+  ✨ Generated from Field `User`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `User`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+  """
+  ✨ Generated from Field `User`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `User`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `User`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `User`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!]
+  """
+  ✨ Generated from Field `User`.`dateOfBirth` of type `Date`
+  """
+  dateOfBirth: Date
+  """
+  ✨ `_date` server value variant of `dateOfBirth` (✨ Generated from Field `User`.`dateOfBirth` of type `Date`)
+  """
+  dateOfBirth_date: Date_Relative
+  """
+  ✨ `_expr` server value variant of `dateOfBirth` (✨ Generated from Field `User`.`dateOfBirth` of type `Date`)
+  """
+  dateOfBirth_expr: Date_Expr
+  """
+  ✨ `_update` server value variant of `dateOfBirth` (✨ Generated from Field `User`.`dateOfBirth` of type `Date`)
+  """
+  dateOfBirth_update: [Date_Update!]
+  """
+  ✨ Generated from Field `User`.`displayName` of type `String!`
+  """
+  displayName: String
+  """
+  ✨ `_expr` server value variant of `displayName` (✨ Generated from Field `User`.`displayName` of type `String!`)
+  """
+  displayName_expr: String_Expr
+  """
+  ✨ Generated from Field `User`.`email` of type `String`
+  """
+  email: String
+  """
+  ✨ `_expr` server value variant of `email` (✨ Generated from Field `User`.`email` of type `String`)
+  """
+  email_expr: String_Expr
+  """
+  ✨ Generated from Field `User`.`photoUrl` of type `String`
+  """
+  photoUrl: String
+  """
+  ✨ `_expr` server value variant of `photoUrl` (✨ Generated from Field `User`.`photoUrl` of type `String`)
+  """
+  photoUrl_expr: String_Expr
+  """
+  ✨ Generated from Field `User`.`userType` of type `String!`
+  """
+  userType: String
+  """
+  ✨ `_expr` server value variant of `userType` (✨ Generated from Field `User`.`userType` of type `String!`)
+  """
+  userType_expr: String_Expr
+}
+"""
+✨ Generated filter input type for table 'User'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input User_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [User_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: User_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [User_Filter!]
+  """
+  ✨ Generated from Field `User`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`dateOfBirth` of type `Date`
+  """
+  dateOfBirth: Date_Filter
+  """
+  ✨ Generated from Field `User`.`displayName` of type `String!`
+  """
+  displayName: String_Filter
+  """
+  ✨ Generated from Field `User`.`email` of type `String`
+  """
+  email: String_Filter
+  """
+  ✨ Generated from Field `User`.`photoUrl` of type `String`
+  """
+  photoUrl: String_Filter
+  """
+  ✨ Generated from Field `User`.`userType` of type `String!`
+  """
+  userType: String_Filter
+  """
+  ✨ Generated from Field `User`.`caregiverRelationships_on_caregiver` of type `[CaregiverRelationship!]!`
+  """
+  caregiverRelationships_on_caregiver: CaregiverRelationship_ListFilter
+  """
+  ✨ Generated from Field `User`.`elderlyProfiles_on_user` of type `[ElderlyProfile!]!`
+  """
+  elderlyProfiles_on_user: ElderlyProfile_ListFilter
+  """
+  ✨ Generated from Field `User`.`elderlyProfiles_via_CaregiverRelationship` of type `[ElderlyProfile!]!`
+  """
+  elderlyProfiles_via_CaregiverRelationship: ElderlyProfile_ListFilter
+}
+"""
+✨ Generated first-row input type for table 'User'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input User_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [User_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: User_Filter
+}
+"""
+✨ Generated having input type for table 'User'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input User_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [User_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: User_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [User_Having!]
+  """
+  ✨ Generated from Field `User`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`dateOfBirth_count` of type `Int!`
+  """
+  dateOfBirth_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`displayName_count` of type `Int!`
+  """
+  displayName_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`email_count` of type `Int!`
+  """
+  email_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`photoUrl_count` of type `Int!`
+  """
+  photoUrl_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`userType_count` of type `Int!`
+  """
+  userType_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`dateOfBirth_min` of type `Date`
+  """
+  dateOfBirth_min: Date_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`dateOfBirth_max` of type `Date`
+  """
+  dateOfBirth_max: Date_Filter
+}
+"""
+✨ Generated key input type for table 'User'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input User_Key {
+  """
+  ✨ Generated from Field `User`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `User`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'User'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input User_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: User_Filter
+}
+"""
+✨ Generated order input type for table 'User'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input User_Order {
+  """
+  ✨ Generated from Field `User`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `User`.`dateOfBirth` of type `Date`
+  """
+  dateOfBirth: OrderDirection
+  """
+  ✨ Generated from Field `User`.`displayName` of type `String!`
+  """
+  displayName: OrderDirection
+  """
+  ✨ Generated from Field `User`.`email` of type `String`
+  """
+  email: OrderDirection
+  """
+  ✨ Generated from Field `User`.`photoUrl` of type `String`
+  """
+  photoUrl: OrderDirection
+  """
+  ✨ Generated from Field `User`.`userType` of type `String!`
+  """
+  userType: OrderDirection
+  """
+  ✨ Generated from Field `User`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`dateOfBirth_count` of type `Int!`
+  """
+  dateOfBirth_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`displayName_count` of type `Int!`
+  """
+  displayName_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`email_count` of type `Int!`
+  """
+  email_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`photoUrl_count` of type `Int!`
+  """
+  photoUrl_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`userType_count` of type `Int!`
+  """
+  userType_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `User`.`dateOfBirth_min` of type `Date`
+  """
+  dateOfBirth_min: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `User`.`dateOfBirth_max` of type `Date`
+  """
+  dateOfBirth_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'VitalSign'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input VitalSign_Data {
+  """
+  ✨ Generated from Field `VitalSign`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `VitalSign`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+  """
+  ✨ Generated from Field `VitalSign`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: UUID
+  """
+  ✨ `_expr` server value variant of `elderlyProfileId` (✨ Generated from Field `VitalSign`.`elderlyProfileId` of type `UUID!`)
+  """
+  elderlyProfileId_expr: UUID_Expr
+  """
+  ✨ Generated from Field `VitalSign`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Key
+  """
+  ✨ Generated from Field `VitalSign`.`notes` of type `String`
+  """
+  notes: String
+  """
+  ✨ `_expr` server value variant of `notes` (✨ Generated from Field `VitalSign`.`notes` of type `String`)
+  """
+  notes_expr: String_Expr
+  """
+  ✨ Generated from Field `VitalSign`.`recordedAt` of type `Timestamp!`
+  """
+  recordedAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `recordedAt` (✨ Generated from Field `VitalSign`.`recordedAt` of type `Timestamp!`)
+  """
+  recordedAt_expr: Timestamp_Expr
+  """
+  ✨ `_time` server value variant of `recordedAt` (✨ Generated from Field `VitalSign`.`recordedAt` of type `Timestamp!`)
+  """
+  recordedAt_time: Timestamp_Relative
+  """
+  ✨ `_update` server value variant of `recordedAt` (✨ Generated from Field `VitalSign`.`recordedAt` of type `Timestamp!`)
+  """
+  recordedAt_update: [Timestamp_Update!]
+  """
+  ✨ Generated from Field `VitalSign`.`type` of type `String!`
+  """
+  type: String
+  """
+  ✨ `_expr` server value variant of `type` (✨ Generated from Field `VitalSign`.`type` of type `String!`)
+  """
+  type_expr: String_Expr
+  """
+  ✨ Generated from Field `VitalSign`.`unit` of type `String`
+  """
+  unit: String
+  """
+  ✨ `_expr` server value variant of `unit` (✨ Generated from Field `VitalSign`.`unit` of type `String`)
+  """
+  unit_expr: String_Expr
+  """
+  ✨ Generated from Field `VitalSign`.`value` of type `Float!`
+  """
+  value: Float
+  """
+  ✨ `_expr` server value variant of `value` (✨ Generated from Field `VitalSign`.`value` of type `Float!`)
+  """
+  value_expr: Float_Expr
+  """
+  ✨ `_update` server value variant of `value` (✨ Generated from Field `VitalSign`.`value` of type `Float!`)
+  """
+  value_update: [Float_Update!]
+}
+"""
+✨ Generated filter input type for table 'VitalSign'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input VitalSign_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [VitalSign_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: VitalSign_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [VitalSign_Filter!]
+  """
+  ✨ Generated from Field `VitalSign`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: UUID_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`notes` of type `String`
+  """
+  notes: String_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`recordedAt` of type `Timestamp!`
+  """
+  recordedAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`type` of type `String!`
+  """
+  type: String_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`unit` of type `String`
+  """
+  unit: String_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`value` of type `Float!`
+  """
+  value: Float_Filter
+}
+"""
+✨ Generated first-row input type for table 'VitalSign'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input VitalSign_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [VitalSign_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: VitalSign_Filter
+}
+"""
+✨ Generated having input type for table 'VitalSign'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input VitalSign_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [VitalSign_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: VitalSign_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [VitalSign_Having!]
+  """
+  ✨ Generated from Field `VitalSign`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`elderlyProfileId_count` of type `Int!`
+  """
+  elderlyProfileId_count: Int_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`notes_count` of type `Int!`
+  """
+  notes_count: Int_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`recordedAt_count` of type `Int!`
+  """
+  recordedAt_count: Int_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`type_count` of type `Int!`
+  """
+  type_count: Int_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`unit_count` of type `Int!`
+  """
+  unit_count: Int_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`value_count` of type `Int!`
+  """
+  value_count: Int_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`value_sum` of type `Float`
+  """
+  value_sum: Float_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`value_avg` of type `Float`
+  """
+  value_avg: Float_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`recordedAt_min` of type `Timestamp`
+  """
+  recordedAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`value_min` of type `Float`
+  """
+  value_min: Float_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`recordedAt_max` of type `Timestamp`
+  """
+  recordedAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `VitalSign`.`value_max` of type `Float`
+  """
+  value_max: Float_Filter
+}
+"""
+✨ Generated key input type for table 'VitalSign'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input VitalSign_Key {
+  """
+  ✨ Generated from Field `VitalSign`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `VitalSign`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr
+}
+"""
+✨ Generated list filter input type for table 'VitalSign'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input VitalSign_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: VitalSign_Filter
+}
+"""
+✨ Generated order input type for table 'VitalSign'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input VitalSign_Order {
+  """
+  ✨ Generated from Field `VitalSign`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`elderlyProfileId` of type `UUID!`
+  """
+  elderlyProfileId: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`elderlyProfile` of type `ElderlyProfile!`
+  """
+  elderlyProfile: ElderlyProfile_Order
+  """
+  ✨ Generated from Field `VitalSign`.`notes` of type `String`
+  """
+  notes: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`recordedAt` of type `Timestamp!`
+  """
+  recordedAt: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`type` of type `String!`
+  """
+  type: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`unit` of type `String`
+  """
+  unit: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`value` of type `Float!`
+  """
+  value: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`elderlyProfileId_count` of type `Int!`
+  """
+  elderlyProfileId_count: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`notes_count` of type `Int!`
+  """
+  notes_count: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`recordedAt_count` of type `Int!`
+  """
+  recordedAt_count: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`type_count` of type `Int!`
+  """
+  type_count: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`unit_count` of type `Int!`
+  """
+  unit_count: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`value_count` of type `Int!`
+  """
+  value_count: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`value_sum` of type `Float`
+  """
+  value_sum: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`value_avg` of type `Float`
+  """
+  value_avg: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`recordedAt_min` of type `Timestamp`
+  """
+  recordedAt_min: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`value_min` of type `Float`
+  """
+  value_min: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`recordedAt_max` of type `Timestamp`
+  """
+  recordedAt_max: OrderDirection
+  """
+  ✨ Generated from Field `VitalSign`.`value_max` of type `Float`
+  """
+  value_max: OrderDirection
+}

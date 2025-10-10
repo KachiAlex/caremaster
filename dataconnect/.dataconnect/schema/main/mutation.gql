@@ -1,0 +1,776 @@
+extend type Mutation {
+  """
+  ✨ Insert a single `Appointment` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  appointment_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Appointment_Data!
+  ): Appointment_KeyOutput! @fdc_generated(from: "Appointment", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `CaregiverRelationship` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  caregiverRelationship_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: CaregiverRelationship_Data!
+  ): CaregiverRelationship_KeyOutput! @fdc_generated(from: "CaregiverRelationship", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `DoseLog` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  doseLog_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: DoseLog_Data!
+  ): DoseLog_KeyOutput! @fdc_generated(from: "DoseLog", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `ElderlyProfile` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  elderlyProfile_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: ElderlyProfile_Data!
+  ): ElderlyProfile_KeyOutput! @fdc_generated(from: "ElderlyProfile", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Medication` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  medication_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Medication_Data!
+  ): Medication_KeyOutput! @fdc_generated(from: "Medication", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `User` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  user_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: User_Data!
+  ): User_KeyOutput! @fdc_generated(from: "User", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `VitalSign` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  vitalSign_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: VitalSign_Data!
+  ): VitalSign_KeyOutput! @fdc_generated(from: "VitalSign", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert `Appointment` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  appointment_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Appointment_Data!]!
+  ): [Appointment_KeyOutput!]! @fdc_generated(from: "Appointment", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `CaregiverRelationship` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  caregiverRelationship_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [CaregiverRelationship_Data!]!
+  ): [CaregiverRelationship_KeyOutput!]! @fdc_generated(from: "CaregiverRelationship", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `DoseLog` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  doseLog_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [DoseLog_Data!]!
+  ): [DoseLog_KeyOutput!]! @fdc_generated(from: "DoseLog", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `ElderlyProfile` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  elderlyProfile_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [ElderlyProfile_Data!]!
+  ): [ElderlyProfile_KeyOutput!]! @fdc_generated(from: "ElderlyProfile", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Medication` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  medication_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Medication_Data!]!
+  ): [Medication_KeyOutput!]! @fdc_generated(from: "Medication", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `User` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  user_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [User_Data!]!
+  ): [User_KeyOutput!]! @fdc_generated(from: "User", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `VitalSign` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  vitalSign_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [VitalSign_Data!]!
+  ): [VitalSign_KeyOutput!]! @fdc_generated(from: "VitalSign", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert or update a single `Appointment` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Appointment`.
+  """
+  appointment_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Appointment_Data!
+  ): Appointment_KeyOutput! @fdc_generated(from: "Appointment", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `CaregiverRelationship` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `CaregiverRelationship`.
+  """
+  caregiverRelationship_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: CaregiverRelationship_Data!
+  ): CaregiverRelationship_KeyOutput! @fdc_generated(from: "CaregiverRelationship", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `DoseLog` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `DoseLog`.
+  """
+  doseLog_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: DoseLog_Data!
+  ): DoseLog_KeyOutput! @fdc_generated(from: "DoseLog", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `ElderlyProfile` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `ElderlyProfile`.
+  """
+  elderlyProfile_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: ElderlyProfile_Data!
+  ): ElderlyProfile_KeyOutput! @fdc_generated(from: "ElderlyProfile", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Medication` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Medication`.
+  """
+  medication_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Medication_Data!
+  ): Medication_KeyOutput! @fdc_generated(from: "Medication", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `User` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `User`.
+  """
+  user_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: User_Data!
+  ): User_KeyOutput! @fdc_generated(from: "User", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `VitalSign` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `VitalSign`.
+  """
+  vitalSign_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: VitalSign_Data!
+  ): VitalSign_KeyOutput! @fdc_generated(from: "VitalSign", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update `Appointment` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Appointment`.
+  """
+  appointment_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Appointment_Data!]!
+  ): [Appointment_KeyOutput!]! @fdc_generated(from: "Appointment", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `CaregiverRelationship` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `CaregiverRelationship`.
+  """
+  caregiverRelationship_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [CaregiverRelationship_Data!]!
+  ): [CaregiverRelationship_KeyOutput!]! @fdc_generated(from: "CaregiverRelationship", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `DoseLog` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `DoseLog`.
+  """
+  doseLog_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [DoseLog_Data!]!
+  ): [DoseLog_KeyOutput!]! @fdc_generated(from: "DoseLog", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `ElderlyProfile` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `ElderlyProfile`.
+  """
+  elderlyProfile_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [ElderlyProfile_Data!]!
+  ): [ElderlyProfile_KeyOutput!]! @fdc_generated(from: "ElderlyProfile", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Medication` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Medication`.
+  """
+  medication_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Medication_Data!]!
+  ): [Medication_KeyOutput!]! @fdc_generated(from: "Medication", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `User` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `User`.
+  """
+  user_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [User_Data!]!
+  ): [User_KeyOutput!]! @fdc_generated(from: "User", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `VitalSign` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `VitalSign`.
+  """
+  vitalSign_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [VitalSign_Data!]!
+  ): [VitalSign_KeyOutput!]! @fdc_generated(from: "VitalSign", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Update a single `Appointment` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Appointment` or `null` if not found.
+  """
+  appointment_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Appointment_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Appointment_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Appointment_Data!
+  ): Appointment_KeyOutput @fdc_generated(from: "Appointment", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `CaregiverRelationship` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `CaregiverRelationship` or `null` if not found.
+  """
+  caregiverRelationship_update(
+    """
+    The key used to identify the object.
+    """
+    key: CaregiverRelationship_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: CaregiverRelationship_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: CaregiverRelationship_Data!
+  ): CaregiverRelationship_KeyOutput @fdc_generated(from: "CaregiverRelationship", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `DoseLog` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `DoseLog` or `null` if not found.
+  """
+  doseLog_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: DoseLog_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: DoseLog_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: DoseLog_Data!
+  ): DoseLog_KeyOutput @fdc_generated(from: "DoseLog", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `ElderlyProfile` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `ElderlyProfile` or `null` if not found.
+  """
+  elderlyProfile_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: ElderlyProfile_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: ElderlyProfile_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: ElderlyProfile_Data!
+  ): ElderlyProfile_KeyOutput @fdc_generated(from: "ElderlyProfile", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Medication` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Medication` or `null` if not found.
+  """
+  medication_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Medication_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Medication_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Medication_Data!
+  ): Medication_KeyOutput @fdc_generated(from: "Medication", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `User` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `User` or `null` if not found.
+  """
+  user_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: User_Data!
+  ): User_KeyOutput @fdc_generated(from: "User", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `VitalSign` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `VitalSign` or `null` if not found.
+  """
+  vitalSign_update(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: VitalSign_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: VitalSign_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: VitalSign_Data!
+  ): VitalSign_KeyOutput @fdc_generated(from: "VitalSign", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update `Appointment` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  appointment_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Appointment_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Appointment_Data!
+  ): Int! @fdc_generated(from: "Appointment", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `CaregiverRelationship` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  caregiverRelationship_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: CaregiverRelationship_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: CaregiverRelationship_Data!
+  ): Int! @fdc_generated(from: "CaregiverRelationship", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `DoseLog` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  doseLog_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: DoseLog_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: DoseLog_Data!
+  ): Int! @fdc_generated(from: "DoseLog", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `ElderlyProfile` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  elderlyProfile_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: ElderlyProfile_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: ElderlyProfile_Data!
+  ): Int! @fdc_generated(from: "ElderlyProfile", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Medication` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  medication_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Medication_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Medication_Data!
+  ): Int! @fdc_generated(from: "Medication", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `User` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  user_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: User_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: User_Data!
+  ): Int! @fdc_generated(from: "User", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `VitalSign` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  vitalSign_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: VitalSign_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: VitalSign_Data!
+  ): Int! @fdc_generated(from: "VitalSign", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Delete a single `Appointment` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  appointment_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Appointment_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Appointment_FirstRow
+  ): Appointment_KeyOutput @fdc_generated(from: "Appointment", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `CaregiverRelationship` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  caregiverRelationship_delete(
+    """
+    The key used to identify the object.
+    """
+    key: CaregiverRelationship_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: CaregiverRelationship_FirstRow
+  ): CaregiverRelationship_KeyOutput @fdc_generated(from: "CaregiverRelationship", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `DoseLog` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  doseLog_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: DoseLog_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: DoseLog_FirstRow
+  ): DoseLog_KeyOutput @fdc_generated(from: "DoseLog", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `ElderlyProfile` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  elderlyProfile_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: ElderlyProfile_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: ElderlyProfile_FirstRow
+  ): ElderlyProfile_KeyOutput @fdc_generated(from: "ElderlyProfile", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Medication` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  medication_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Medication_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Medication_FirstRow
+  ): Medication_KeyOutput @fdc_generated(from: "Medication", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `User` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  user_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+  ): User_KeyOutput @fdc_generated(from: "User", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `VitalSign` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  vitalSign_delete(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: VitalSign_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: VitalSign_FirstRow
+  ): VitalSign_KeyOutput @fdc_generated(from: "VitalSign", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete `Appointment` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  appointment_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Appointment_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Appointment", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `CaregiverRelationship` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  caregiverRelationship_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: CaregiverRelationship_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "CaregiverRelationship", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `DoseLog` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  doseLog_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: DoseLog_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "DoseLog", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `ElderlyProfile` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  elderlyProfile_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: ElderlyProfile_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "ElderlyProfile", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Medication` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  medication_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Medication_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Medication", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `User` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  user_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: User_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "User", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `VitalSign` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  vitalSign_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: VitalSign_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "VitalSign", purpose: DELETE_MULTIPLE)
+}

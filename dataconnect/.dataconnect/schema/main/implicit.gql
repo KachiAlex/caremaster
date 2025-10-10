@@ -1,0 +1,66 @@
+extend type Appointment {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "Appointment", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Appointment`.`elderlyProfile`. It must match the value of `ElderlyProfile`.`id`. See `@ref` for how to customize it.
+  """
+  elderlyProfileId: UUID! @fdc_generated(from: "Appointment.elderlyProfile", purpose: IMPLICIT_REF_FIELD)
+}
+extend type CaregiverRelationship {
+  """
+  ✨ Implicit foreign key field based on `CaregiverRelationship`.`caregiver`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  caregiverId: UUID! @fdc_generated(from: "CaregiverRelationship.caregiver", purpose: IMPLICIT_REF_FIELD)
+  """
+  ✨ Implicit foreign key field based on `CaregiverRelationship`.`elderlyProfile`. It must match the value of `ElderlyProfile`.`id`. See `@ref` for how to customize it.
+  """
+  elderlyProfileId: UUID! @fdc_generated(from: "CaregiverRelationship.elderlyProfile", purpose: IMPLICIT_REF_FIELD)
+}
+extend type DoseLog {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "DoseLog", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `DoseLog`.`medication`. It must match the value of `Medication`.`id`. See `@ref` for how to customize it.
+  """
+  medicationId: UUID! @fdc_generated(from: "DoseLog.medication", purpose: IMPLICIT_REF_FIELD)
+}
+extend type ElderlyProfile {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "ElderlyProfile", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `ElderlyProfile`.`user`. It must match the value of `User`.`id`. See `@ref` for how to customize it.
+  """
+  userId: UUID! @fdc_generated(from: "ElderlyProfile.user", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Medication {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "Medication", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `Medication`.`elderlyProfile`. It must match the value of `ElderlyProfile`.`id`. See `@ref` for how to customize it.
+  """
+  elderlyProfileId: UUID! @fdc_generated(from: "Medication.elderlyProfile", purpose: IMPLICIT_REF_FIELD)
+}
+extend type User {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "User", purpose: IMPLICIT_KEY_FIELD)
+}
+extend type VitalSign {
+  """
+  ✨ Implicit primary key field. It's a UUID column default to a generated new value. See `@table` for how to customize it.
+  """
+  id: UUID! @default(expr: "uuidV4()") @fdc_generated(from: "VitalSign", purpose: IMPLICIT_KEY_FIELD)
+  """
+  ✨ Implicit foreign key field based on `VitalSign`.`elderlyProfile`. It must match the value of `ElderlyProfile`.`id`. See `@ref` for how to customize it.
+  """
+  elderlyProfileId: UUID! @fdc_generated(from: "VitalSign.elderlyProfile", purpose: IMPLICIT_REF_FIELD)
+}
