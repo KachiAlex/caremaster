@@ -40,10 +40,15 @@ export const uploadCaregiverDocument = async (uid, file, folder = 'documents') =
 export const completeOnboarding = async (uid) => {
   console.log('🎯 Completing onboarding for user:', uid);
   
-  // Update caregivers collection
+  // Get current caregiver data to preserve institutionId
   const caregiverRef = doc(db, 'caregivers', uid);
+  const caregiverSnap = await getDoc(caregiverRef);
+  const caregiverData = caregiverSnap.exists() ? caregiverSnap.data() : {};
+  
+  // Update caregivers collection
   await updateDoc(caregiverRef, { 
-    onboardingComplete: true, 
+    onboardingComplete: true,
+    status: caregiverData.status || 'active', // Set status to active if not already set
     updatedAt: serverTimestamp() 
   });
   console.log('✅ Updated caregivers collection');
@@ -51,13 +56,18 @@ export const completeOnboarding = async (uid) => {
   // Update users collection with proper error handling
   const userRef = doc(db, 'users', uid);
   try {
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.exists() ? userSnap.data() : {};
+    
     await updateDoc(userRef, { 
       onboardingComplete: true, 
       userType: 'caregiver',
       type: 'caregiver', // Also set type field for consistency
+      status: userData.status || caregiverData.status || 'active', // Ensure status is set
+      institutionId: userData.institutionId || caregiverData.institutionId, // Preserve institutionId
       updatedAt: serverTimestamp() 
     });
-    console.log('✅ Updated users collection with userType: caregiver');
+    console.log('✅ Updated users collection with userType: caregiver, status: active');
   } catch (error) {
     console.error('❌ Failed to update users collection:', error);
     throw error; // Re-throw to catch in UI

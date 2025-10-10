@@ -68,13 +68,20 @@ const InstitutionCaregiverGuard = ({ children }) => {
       }
 
       // Check if caregiver is approved/active
-      if (userProfile.status !== 'active' && userProfile.status !== 'pending') {
-        console.log('❌ Caregiver status not active:', userProfile.status);
+      // Allow undefined status (for newly created caregivers) or active/pending status
+      const allowedStatuses = ['active', 'pending', undefined];
+      if (!allowedStatuses.includes(userProfile.status)) {
+        console.log('❌ Caregiver status not allowed:', userProfile.status);
         toast.error(`Your account status is "${userProfile.status}". Contact your institution admin.`);
         signOut(auth).then(() => {
           navigate(`/institution/login?institution=${effectiveInstitutionId}&role=caregiver`, { replace: true });
         });
         return;
+      }
+      
+      // If status is undefined, log a warning
+      if (!userProfile.status) {
+        console.warn('⚠️ Caregiver status is undefined - allowing access but should be set to "active" or "pending"');
       }
     }
   }, [user, userProfile, loading, navigate, institutionId, urlInstitutionId, effectiveInstitutionId]);
