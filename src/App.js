@@ -33,6 +33,8 @@ const CaregiverTasks = lazy(() => import('./pages/CaregiverTasks'));
 const CaregiverOnboarding = lazy(() => import('./pages/CaregiverOnboarding'));
 const SuperAdminLicensing = lazy(() => import('./pages/SuperAdminLicensing'));
 const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
+const SuperAdminSettings = lazy(() => import('./pages/SuperAdminSettings'));
 const InstitutionAdminDashboard = lazy(() => import('./pages/InstitutionAdminDashboard'));
 const InstitutionUserManagement = lazy(() => import('./pages/InstitutionUserManagement'));
 const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
@@ -376,8 +378,23 @@ function App() {
       />
       
       <Route 
-        path="/super-admin" 
+        path="/super-admin/dashboard" 
+        element={<SuperAdminGuard><SuperAdminDashboard /></SuperAdminGuard>} 
+      />
+      
+      <Route 
+        path="/super-admin/licensing" 
         element={<SuperAdminGuard><SuperAdminLicensing /></SuperAdminGuard>} 
+      />
+      
+      <Route 
+        path="/super-admin/settings" 
+        element={<SuperAdminGuard><SuperAdminSettings /></SuperAdminGuard>} 
+      />
+      
+      <Route 
+        path="/super-admin" 
+        element={<SuperAdminGuard><SuperAdminDashboard /></SuperAdminGuard>} 
       />
 
       {/* Institution Onboarding Routes - Public */}

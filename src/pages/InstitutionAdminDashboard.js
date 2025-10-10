@@ -53,16 +53,9 @@ const InstitutionAdminDashboard = () => {
   const urlInstitutionId = searchParams.get('institution');
   const effectiveInstitutionId = urlInstitutionId || institutionId;
   
-  // If no user is logged in, redirect to institution login
-  useEffect(() => {
-    if (!user && effectiveInstitutionId) {
-      console.log('🔄 No user logged in, redirecting to institution login for:', effectiveInstitutionId);
-      navigate(`/institution/login?institution=${effectiveInstitutionId}&returnTo=/institution-admin/dashboard`);
-    } else if (!user) {
-      console.log('❌ No user and no institution ID found');
-      navigate('/');
-    }
-  }, [user, effectiveInstitutionId, navigate]);
+  // No need to check for user here - InstitutionAdminGuard already handles authentication
+  // Removed redundant useEffect that was causing navigation issues
+  
   const [stats, setStats] = useState({
     totalUsers: 0,
     patients: 0,

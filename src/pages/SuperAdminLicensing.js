@@ -420,6 +420,10 @@ const SuperAdminLicensing = () => {
     }
   };
 
+  const handleNavigateToDashboard = () => {
+    navigate('/super-admin/dashboard');
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -428,6 +432,7 @@ const SuperAdminLicensing = () => {
           <p className="text-gray-600 text-sm">Manage institutions, licenses, and administrators</p>
         </div>
         <div className="flex gap-2">
+          <button onClick={handleNavigateToDashboard} className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Dashboard</button>
           <button onClick={() => setShowInstitutionModal(true)} className="px-3 py-2 bg-blue-600 text-white rounded-md">New Institution</button>
           <button onClick={() => setShowLicenseModal(true)} className="px-3 py-2 bg-indigo-600 text-white rounded-md">New License</button>
           <button onClick={() => setShowAdminModal(true)} className="px-3 py-2 bg-teal-600 text-white rounded-md">Assign Admin</button>

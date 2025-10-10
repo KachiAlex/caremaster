@@ -30,7 +30,7 @@ const SuperAdminLogin = () => {
 
       if (hasSuperAdminClaim) {
         toast.success('Welcome, Super Admin!');
-        navigate('/super-admin');
+        navigate('/super-admin/dashboard');
       } else {
         // Try to set super-admin claim if user is an admin
         try {
@@ -41,7 +41,7 @@ const SuperAdminLogin = () => {
           // Refresh token to get updated claims
           await user.getIdToken(true);
           toast.success('Super-admin privileges granted!');
-          navigate('/super-admin');
+          navigate('/super-admin/dashboard');
         } catch (claimError) {
           console.error('Error setting super-admin claim:', claimError);
           toast.error('Access denied. Super-admin privileges required.');
