@@ -23,32 +23,79 @@ const PATIENTS_COLLECTION = 'patients';
 export const getAllPatients = async (institutionId = null) => {
   try {
     const patientsRef = collection(db, PATIENTS_COLLECTION);
-    let q = query(patientsRef, orderBy('createdAt', 'desc'));
+    let q;
     
     // Add institution filtering if provided
     if (institutionId) {
-      q = query(patientsRef, 
-        where('institutionId', '==', institutionId),
-        orderBy('createdAt', 'desc')
-      );
-    }
-    
-    const querySnapshot = await getDocs(q);
-    
-    const patients = [];
-    querySnapshot.forEach((doc) => {
-      const patientData = doc.data();
-      patients.push({
-        id: doc.id,
-        ...patientData,
-        dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
-        createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
-        updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
-        lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+      // Try with orderBy first, fallback to just where if index doesn't exist
+      try {
+        q = query(patientsRef, 
+          where('institutionId', '==', institutionId),
+          orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        
+        const patients = [];
+        querySnapshot.forEach((doc) => {
+          const patientData = doc.data();
+          patients.push({
+            id: doc.id,
+            ...patientData,
+            dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
+            createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
+            updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
+            lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+          });
+        });
+        
+        return patients;
+      } catch (indexError) {
+        console.warn('Firestore index not found, using simpler query:', indexError);
+        // Fallback: query without orderBy, then sort in memory
+        q = query(patientsRef, where('institutionId', '==', institutionId));
+        const querySnapshot = await getDocs(q);
+        
+        const patients = [];
+        querySnapshot.forEach((doc) => {
+          const patientData = doc.data();
+          patients.push({
+            id: doc.id,
+            ...patientData,
+            dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
+            createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
+            updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
+            lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+          });
+        });
+        
+        // Sort in memory by createdAt
+        patients.sort((a, b) => {
+          const aTime = a.createdAt?.getTime?.() || 0;
+          const bTime = b.createdAt?.getTime?.() || 0;
+          return bTime - aTime; // Descending order
+        });
+        
+        return patients;
+      }
+    } else {
+      q = query(patientsRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      
+      const patients = [];
+      querySnapshot.forEach((doc) => {
+        const patientData = doc.data();
+        patients.push({
+          id: doc.id,
+          ...patientData,
+          dateOfBirth: patientData.dateOfBirth?.toDate?.() || patientData.dateOfBirth,
+          createdAt: patientData.createdAt?.toDate?.() || patientData.createdAt,
+          updatedAt: patientData.updatedAt?.toDate?.() || patientData.updatedAt,
+          lastVisit: patientData.lastVisit?.toDate?.() || patientData.lastVisit,
+        });
       });
-    });
-    
-    return patients;
+      
+      return patients;
+    }
   } catch (error) {
     console.error('Error fetching patients:', error);
     throw error;

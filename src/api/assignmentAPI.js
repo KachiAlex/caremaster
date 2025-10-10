@@ -174,6 +174,41 @@ export const assignmentAPI = {
     }
   },
 
+  // Get assignments by institution (institution admin view)
+  getAssignmentsByInstitution: async (institutionId) => {
+    try {
+      const assignmentsQuery = query(
+        collection(db, ASSIGNMENTS_COLLECTION),
+        where('institutionId', '==', institutionId)
+      );
+
+      const querySnapshot = await getDocs(assignmentsQuery);
+      const assignments = [];
+
+      querySnapshot.forEach((doc) => {
+        const assignmentData = doc.data();
+        assignments.push({
+          id: doc.id,
+          ...assignmentData,
+          createdAt: assignmentData.createdAt?.toDate(),
+          updatedAt: assignmentData.updatedAt?.toDate(),
+          startDate: assignmentData.startDate?.toDate(),
+          endDate: assignmentData.endDate?.toDate()
+        });
+      });
+
+      // Sort by createdAt desc on client side
+      return assignments.sort((a, b) => {
+        const aTime = a.createdAt?.getTime?.() ?? 0;
+        const bTime = b.createdAt?.getTime?.() ?? 0;
+        return bTime - aTime;
+      });
+    } catch (error) {
+      logger.error('Error fetching institution assignments', { error, institutionId });
+      throw error;
+    }
+  },
+
   // Update assignment
   updateAssignment: async (assignmentId, updateData) => {
     try {
@@ -187,6 +222,20 @@ export const assignmentAPI = {
       return true;
     } catch (error) {
       logger.error('Error updating assignment', { error, assignmentId, updateData });
+      throw error;
+    }
+  },
+
+  // Delete assignment
+  deleteAssignment: async (assignmentId) => {
+    try {
+      const assignmentRef = doc(db, ASSIGNMENTS_COLLECTION, assignmentId);
+      await deleteDoc(assignmentRef);
+
+      logger.info('Assignment deleted', { assignmentId });
+      return true;
+    } catch (error) {
+      logger.error('Error deleting assignment', { error, assignmentId });
       throw error;
     }
   },

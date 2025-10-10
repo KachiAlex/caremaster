@@ -38,10 +38,31 @@ export const uploadCaregiverDocument = async (uid, file, folder = 'documents') =
 };
 
 export const completeOnboarding = async (uid) => {
+  console.log('🎯 Completing onboarding for user:', uid);
+  
+  // Update caregivers collection
   const caregiverRef = doc(db, 'caregivers', uid);
-  await updateDoc(caregiverRef, { onboardingComplete: true, updatedAt: serverTimestamp() });
+  await updateDoc(caregiverRef, { 
+    onboardingComplete: true, 
+    updatedAt: serverTimestamp() 
+  });
+  console.log('✅ Updated caregivers collection');
+  
+  // Update users collection with proper error handling
   const userRef = doc(db, 'users', uid);
-  try { await updateDoc(userRef, { onboardingComplete: true, userType: 'caregiver', updatedAt: serverTimestamp() }); } catch {}
+  try {
+    await updateDoc(userRef, { 
+      onboardingComplete: true, 
+      userType: 'caregiver',
+      type: 'caregiver', // Also set type field for consistency
+      updatedAt: serverTimestamp() 
+    });
+    console.log('✅ Updated users collection with userType: caregiver');
+  } catch (error) {
+    console.error('❌ Failed to update users collection:', error);
+    throw error; // Re-throw to catch in UI
+  }
+  
   return true;
 };
 

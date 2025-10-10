@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
 import { 
@@ -19,6 +19,7 @@ const InstitutionLogin = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const institutionId = searchParams.get('institution');
+  const roleParam = searchParams.get('role') || 'caregiver';
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -32,7 +33,7 @@ const InstitutionLogin = () => {
     confirmPassword: '',
     displayName: '',
     phone: '',
-    role: 'caregiver'
+    role: roleParam
   });
 
   useEffect(() => {
@@ -69,12 +70,21 @@ const InstitutionLogin = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const routeUserToDashboard = async (user, userRole) => {
+  const routeUserToDashboard = async (user, userData) => {
+    const userRole = userData.type || userData.userType;
+    
     // Route based on user role
     if (userRole === 'admin' || userRole === 'institutionAdmin') {
       navigate('/institution-admin/dashboard');
     } else if (userRole === 'doctor' || userRole === 'nurse' || userRole === 'caregiver') {
-      navigate('/service-provider');
+      // Check if onboarding is complete for caregivers
+      if (!userData.onboardingComplete) {
+        navigate('/institution-caregiver/onboarding');
+      } else {
+        navigate('/institution-caregiver/dashboard');
+      }
+    } else if (userRole === 'pharmacist') {
+      navigate('/institution-pharmacist/dashboard');
     } else {
       navigate('/institution/welcome');
     }
@@ -86,6 +96,103 @@ const InstitutionLogin = () => {
     setError('');
 
     try {
+      // First, try custom authentication for caregivers created by admin
+      console.log('🔍 Attempting custom auth for:', formData.email);
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', formData.email));
+      const querySnapshot = await getDocs(q);
+      
+      console.log('📊 Found', querySnapshot.size, 'user(s) with this email');
+      
+      let customAuthUser = null;
+      querySnapshot.forEach((userDoc) => {
+        const data = userDoc.data();
+        console.log('👤 Checking user:', userDoc.id, {
+          hasPassword: !!data.password,
+          institutionId: data.institutionId,
+          targetInstitution: institutionId,
+          userType: data.userType || data.type
+        });
+        
+        // Check if password matches and belongs to this institution
+        if (data.password === formData.password && data.institutionId === institutionId) {
+          customAuthUser = { uid: userDoc.id, ...data };
+          console.log('✅ Custom auth successful!');
+        } else {
+          console.log('❌ Password or institution mismatch');
+        }
+      });
+      
+      // If custom auth successful, validate role and redirect
+      if (customAuthUser) {
+        const userRole = customAuthUser.type || customAuthUser.userType;
+        
+        // Validate user role matches the portal
+        if (roleParam === 'admin' && userRole !== 'admin' && userRole !== 'institutionAdmin') {
+          toast.error(`This is the Admin Portal. You are registered as ${userRole}. Please use the Caregiver Portal.`);
+          setSubmitting(false);
+          return;
+        }
+        
+        if (roleParam === 'caregiver' && !['caregiver', 'doctor', 'nurse'].includes(userRole)) {
+          toast.error(`This is the Caregiver Portal. You are registered as ${userRole}. Please use the Admin Portal.`);
+          setSubmitting(false);
+          return;
+        }
+        
+        if (roleParam === 'pharmacist' && userRole !== 'pharmacist') {
+          toast.error(`This is the Pharmacist Portal. You are registered as ${userRole}.`);
+          setSubmitting(false);
+          return;
+        }
+        
+        // Try to create Firebase Auth account for this user
+        try {
+          console.log('Creating Firebase Auth account for:', formData.email);
+          const authResult = await createUserWithEmailAndPassword(
+            auth,
+            formData.email,
+            formData.password
+          );
+          
+          console.log('✅ Firebase Auth account created:', authResult.user.uid);
+          
+          // Update user document to new auth UID
+          await setDoc(doc(db, 'users', authResult.user.uid), {
+            ...customAuthUser,
+            uid: authResult.user.uid,
+            password: formData.password, // Keep password for future logins
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+          
+          toast.success('Login successful! Setting up your account...');
+          await routeUserToDashboard(authResult.user, customAuthUser);
+          return;
+        } catch (authError) {
+          console.log('Firebase Auth error:', authError.code);
+          
+          // If account already exists, try to sign in
+          if (authError.code === 'auth/email-already-in-use') {
+            console.log('Account exists, attempting sign in...');
+            try {
+              const userCredential = await signInWithEmailAndPassword(
+                auth,
+                formData.email,
+                formData.password
+              );
+              console.log('✅ Signed in successfully');
+              toast.success('Login successful!');
+              await routeUserToDashboard(userCredential.user, customAuthUser);
+              return;
+            } catch (signInError) {
+              console.error('Sign in failed:', signInError);
+              // Continue to fallback
+            }
+          }
+        }
+      }
+
+      // Standard Firebase Auth login
       const userCredential = await signInWithEmailAndPassword(
         auth,
         formData.email,
@@ -97,6 +204,7 @@ const InstitutionLogin = () => {
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
+        const userRole = userData.type || userData.userType;
         
         // Check if user belongs to this institution
         if (userData.institutionId !== institutionId) {
@@ -106,11 +214,32 @@ const InstitutionLogin = () => {
           return;
         }
 
+        // Validate user role matches the portal they're trying to access
+        if (roleParam === 'admin' && userRole !== 'admin' && userRole !== 'institutionAdmin') {
+          await auth.signOut();
+          toast.error(`You are logged in as ${userRole}, not admin. Please use the correct portal.`);
+          setSubmitting(false);
+          return;
+        }
+        
+        if (roleParam === 'caregiver' && !['caregiver', 'doctor', 'nurse'].includes(userRole)) {
+          await auth.signOut();
+          toast.error(`You are logged in as ${userRole}. Please use the Admin portal or Pharmacist portal.`);
+          setSubmitting(false);
+          return;
+        }
+        
+        if (roleParam === 'pharmacist' && userRole !== 'pharmacist') {
+          await auth.signOut();
+          toast.error(`You are logged in as ${userRole}, not pharmacist. Please use the correct portal.`);
+          setSubmitting(false);
+          return;
+        }
+
         toast.success('Login successful!');
         
         // Route to appropriate dashboard
-        const userRole = userData.type || userData.userType || userData.role;
-        await routeUserToDashboard(userCredential.user, userRole);
+        await routeUserToDashboard(userCredential.user, userData);
       } else {
         await auth.signOut();
         toast.error('User profile not found');
@@ -185,7 +314,7 @@ const InstitutionLogin = () => {
       toast.success('Account created successfully!');
       
       // Route to appropriate dashboard
-      await routeUserToDashboard(userCredential.user, formData.role);
+      await routeUserToDashboard(userCredential.user, userProfile);
     } catch (error) {
       console.error('Sign up error:', error);
       
@@ -253,8 +382,13 @@ const InstitutionLogin = () => {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               {institution?.name}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-1">
               {isSignUp ? 'Create your account' : 'Sign in to your account'}
+            </p>
+            <p className="text-sm font-medium text-blue-600">
+              {roleParam === 'admin' && '🛡️ Admin Portal'}
+              {roleParam === 'caregiver' && '👨‍⚕️ Caregiver Portal (Doctors, Nurses & Caregivers)'}
+              {roleParam === 'pharmacist' && '💊 Pharmacist Portal'}
             </p>
           </div>
 

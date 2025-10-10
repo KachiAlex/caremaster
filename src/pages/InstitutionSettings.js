@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { 
   Settings, 
@@ -15,11 +16,13 @@ import {
   Trash2,
   Plus,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 
 const InstitutionSettings = () => {
   const { userProfile, institutionId } = useUser();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -157,6 +160,13 @@ const InstitutionSettings = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
+          <button
+            onClick={() => navigate(`/onboard?institution=${institutionId}`)}
+            className="flex items-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Portal
+          </button>
           <h1 className="text-3xl font-bold text-gray-900">Institution Settings</h1>
           <p className="text-gray-600 mt-1">
             Manage your institution's information, features, and branding

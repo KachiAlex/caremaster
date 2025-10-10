@@ -351,11 +351,13 @@ const InstitutionAdminDashboard = () => {
       });
       
       // Create user document for login (with email/password stored)
+      // IMPORTANT: Always set userType to 'caregiver' for institution caregivers
       await setDoc(doc(db, 'users', caregiverId), {
         email: caregiverData.email,
         name: caregiverData.name,
         phone: caregiverData.phone || '',
-        userType: caregiverData.userType || 'caregiver',
+        userType: 'caregiver', // Force caregiver type
+        type: 'caregiver', // Also set type field for consistency
         institutionId: instId,
         status: 'pending',
         onboardingComplete: false,

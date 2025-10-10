@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { 
   Users, 
@@ -14,11 +15,13 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 
 const InstitutionUserManagement = () => {
   const { userProfile, institutionId } = useUser();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -137,6 +140,13 @@ const InstitutionUserManagement = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
+          <button
+            onClick={() => navigate(`/onboard?institution=${institutionId}`)}
+            className="flex items-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Portal
+          </button>
           <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600 mt-1">
             Manage caregivers and doctors in your institution

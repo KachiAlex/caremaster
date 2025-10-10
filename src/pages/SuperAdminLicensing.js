@@ -2,7 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins } from '../services/licenseService';
+import { X } from 'lucide-react';
+import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin } from '../services/licenseService';
 
 const Card = ({ title, value, accent = 'bg-blue-100 text-blue-800' }) => (
   <div className={`rounded-xl border border-gray-200 p-5 bg-white`}> 
@@ -382,6 +383,33 @@ const SuperAdminLicensing = () => {
     } finally { setBusy(false); }
   };
 
+  const handleRemoveAdmin = async (adminId, adminEmail) => {
+    if (!confirm(`Are you sure you want to remove ${adminEmail} from this institution?`)) {
+      return;
+    }
+
+    setBusy(true);
+    try {
+      // Call the Cloud Function to actually remove the admin
+      await removeInstitutionAdmin({ 
+        institutionId: selectedInstitutionForAdmin?.id || adminUser.institutionId, 
+        adminId 
+      });
+      
+      // Refresh the admins list from the server
+      if (selectedInstitutionForAdmin) {
+        const updatedAdmins = await getInstitutionAdmins(selectedInstitutionForAdmin.id);
+        setCurrentAdmins(updatedAdmins || []);
+      }
+      
+      setMessage(`Admin ${adminEmail} removed successfully!`);
+    } catch (e) {
+      setMessage(e.message || 'Failed to remove admin');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -715,15 +743,24 @@ const SuperAdminLicensing = () => {
               <div className="space-y-2 max-h-60 overflow-y-auto border rounded p-2">
                 {currentAdmins.map((admin) => (
                   <div key={admin.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium text-gray-900">{admin.displayName || admin.email}</div>
                       <div className="text-sm text-gray-600">{admin.email}</div>
                     </div>
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      admin.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {admin.active ? 'Active' : 'Inactive'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        admin.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {admin.active ? 'Active' : 'Inactive'}
+                      </span>
+                      <button
+                        onClick={() => handleRemoveAdmin(admin.id, admin.email)}
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                        title="Remove admin"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

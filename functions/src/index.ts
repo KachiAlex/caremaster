@@ -6,7 +6,8 @@ import { handleEmergencyAlert, processEmergencyResponse } from './emergencyManag
 import { processAIVoiceCommand, generateHealthRecommendations } from './aiProcessing';
 import { sendNotification, scheduleNotification } from './notificationService';
 import { logAuditEvent, getAuditLogs } from './auditLogging';
-import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins } from './licensing';
+import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin } from './licensing';
+import { createCaregiverWithAuth } from './caregiverManagement';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -49,6 +50,9 @@ export const healthCheck = functions.https.onRequest((req, res) => {
   });
 });
 
+// Caregiver Management Functions
+export const createCaregiverWithAuthFunction = createCaregiverWithAuth;
+
 // Licensing Functions
 export const createInstitutionFunction = createInstitution;
 export const createLicenseFunction = createLicense;
@@ -64,3 +68,4 @@ export const suspendLicenseFunction = suspendLicense;
 export const activateLicenseFunction = activateLicense;
 export const migrateInstitutionLinksFunction = migrateInstitutionLinks;
 export const getInstitutionAdminsFunction = getInstitutionAdmins;
+export const removeInstitutionAdminFunction = removeInstitutionAdmin;

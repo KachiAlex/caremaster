@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import { 
   Building2, 
@@ -82,36 +82,88 @@ const InstitutionLanding = () => {
   }, [institutionId]);
 
   const handleRoleSelect = async (role) => {
-    // If user is already logged in, navigate directly to their dashboard
-    if (user) {
-      try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const userRole = userData.type || userData.userType;
-          
-          // Navigate based on role
-          if (role === 'admin' && (userRole === 'admin' || userData.institutionAdmin)) {
-            navigate('/institution-admin/dashboard');
-          } else if (role === 'doctor' && userRole === 'doctor') {
-            navigate('/service-provider');
-          } else if (role === 'nurse' && userRole === 'nurse') {
-            navigate('/service-provider');
-          } else if (role === 'caregiver' && userRole === 'caregiver') {
-            navigate('/service-provider');
-          } else {
-            // User clicked wrong role, ask them to login with correct role
-            toast.error(`You are logged in as ${userRole}, not ${role}. Please logout and login with the correct role.`);
+    console.log('🔷 Portal selected:', role, '| Current user:', user?.email);
+    
+    // For Institution Admin, always go to admin login first
+    if (role === 'admin') {
+      // If logged in as non-admin, logout first
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const userRole = userData.type || userData.userType;
+            
+            console.log('Current user role:', userRole);
+            
+            if (userRole !== 'admin' && userRole !== 'institutionAdmin') {
+              console.log('❌ Wrong role for Admin Portal - logging out');
+              await signOut(auth);
+              toast.info('Logged out. Please login with admin credentials.');
+            }
           }
-          return;
+        } catch (error) {
+          console.error('Error checking user role:', error);
         }
-      } catch (error) {
-        console.error('Error checking user role:', error);
       }
+      navigate(`/institution/login?institution=${institutionId}&role=admin`);
+      return;
     }
     
-    // Not logged in or error - go to login
-    navigate(`/institution/login?institution=${institutionId}&role=${role}`);
+    // For Pharmacist, always go to pharmacist login first
+    if (role === 'pharmacist') {
+      // If logged in as non-pharmacist, logout first
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const userRole = userData.type || userData.userType;
+            
+            if (userRole !== 'pharmacist') {
+              await signOut(auth);
+              toast.info('Logged out. Please login with pharmacist credentials.');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+        }
+      }
+      navigate(`/institution/login?institution=${institutionId}&role=pharmacist`);
+      return;
+    }
+    
+    // For Caregiver (includes doctors, nurses, and other caregivers)
+    // ALWAYS go to login page first, even if logged in
+    if (role === 'caregiver') {
+      console.log('🟢 Caregiver Portal clicked');
+      
+      // If logged in with wrong role (e.g., admin or pharmacist), logout first
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const userRole = userData.type || userData.userType;
+            
+            console.log('Current user role:', userRole);
+            
+            // If NOT a caregiver/doctor/nurse, logout first
+            if (!['caregiver', 'doctor', 'nurse'].includes(userRole)) {
+              console.log('❌ Wrong role for Caregiver Portal - logging out');
+              await signOut(auth);
+              toast.info(`Logged out from ${userRole} account. Please login with caregiver credentials.`);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+        }
+      }
+      
+      // Always go to login page (even if already logged in as caregiver)
+      console.log('➡️ Navigating to caregiver login');
+      navigate(`/institution/login?institution=${institutionId}&role=caregiver`);
+    }
   };
 
   if (checkingAuth || loading) {
@@ -146,7 +198,7 @@ const InstitutionLanding = () => {
   const accessRoles = [
     {
       icon: Shield,
-      title: 'Institution Admin',
+      title: 'Admin Portal',
       description: 'Full management access',
       role: 'admin',
       color: 'from-blue-500 to-blue-600',
@@ -154,27 +206,19 @@ const InstitutionLanding = () => {
     },
     {
       icon: Users,
-      title: 'Doctor',
-      description: 'Medical staff access',
-      role: 'doctor',
-      color: 'from-purple-500 to-purple-600',
-      hoverColor: 'hover:from-purple-600 hover:to-purple-700'
-    },
-    {
-      icon: Users,
-      title: 'Nurse',
-      description: 'Nursing staff access',
-      role: 'nurse',
+      title: 'Caregiver Portal',
+      description: 'For Doctors, Nurses & Caregivers',
+      role: 'caregiver',
       color: 'from-green-500 to-green-600',
       hoverColor: 'hover:from-green-600 hover:to-green-700'
     },
     {
-      icon: Users,
-      title: 'Caregiver',
-      description: 'Care provider access',
-      role: 'caregiver',
-      color: 'from-orange-500 to-orange-600',
-      hoverColor: 'hover:from-orange-600 hover:to-orange-700'
+      icon: Activity,
+      title: 'Pharmacist Portal',
+      description: 'Pharmacy management access',
+      role: 'pharmacist',
+      color: 'from-purple-500 to-purple-600',
+      hoverColor: 'hover:from-purple-600 hover:to-purple-700'
     }
   ];
 
@@ -230,29 +274,31 @@ const InstitutionLanding = () => {
 
         {/* Access Roles Section */}
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            Select Your Access Level
+          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
+            Select Your Access Portal
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {accessRoles.map((role, index) => (
-              <button
-                key={index}
-                onClick={() => handleRoleSelect(role.role)}
-                className={`group relative bg-gradient-to-br ${role.color} ${role.hoverColor} text-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-200`}
-              >
-                <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="h-16 w-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-30 transition-all">
-                    <role.icon className="h-8 w-8" />
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {accessRoles.map((role, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleRoleSelect(role.role)}
+                  className={`group relative bg-gradient-to-br ${role.color} ${role.hoverColor} text-white rounded-2xl p-10 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-200`}
+                >
+                  <div className="flex flex-col items-center text-center space-y-6">
+                    <div className="h-20 w-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-30 transition-all">
+                      <role.icon className="h-10 w-10" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xl mb-2">{role.title}</h3>
+                      <p className="text-sm text-white text-opacity-90 leading-relaxed">{role.description}</p>
+                    </div>
+                    <ArrowRight className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg mb-1">{role.title}</h3>
-                    <p className="text-sm text-white text-opacity-90">{role.description}</p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="mt-12 text-center">

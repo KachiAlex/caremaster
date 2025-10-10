@@ -38,6 +38,8 @@ const InstitutionUserManagement = lazy(() => import('./pages/InstitutionUserMana
 const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
 const InstitutionLanding = lazy(() => import('./pages/InstitutionLanding'));
 const InstitutionLogin = lazy(() => import('./pages/InstitutionLogin'));
+const InstitutionCaregiverOnboarding = lazy(() => import('./pages/InstitutionCaregiverOnboarding'));
+const InstitutionCaregiverDashboard = lazy(() => import('./pages/InstitutionCaregiverDashboard'));
 const CaregiverMessages = lazy(() => import('./pages/CaregiverMessages'));
 const CaregiverNavigation = lazy(() => import('./pages/CaregiverNavigation'));
 const CaregiverPhotos = lazy(() => import('./pages/CaregiverPhotos'));
@@ -408,6 +410,22 @@ function App() {
       <Route 
         path="/institution-admin" 
         element={<Navigate to="/institution-admin/dashboard" replace />} 
+      />
+
+      {/* Institution Caregiver Routes */}
+      <Route 
+        path="/institution-caregiver/onboarding" 
+        element={user ? <InstitutionCaregiverOnboarding /> : <Navigate to="/institution/login" replace />} 
+      />
+      
+      <Route 
+        path="/institution-caregiver/dashboard" 
+        element={user ? <InstitutionCaregiverDashboard /> : <Navigate to="/institution/login" replace />} 
+      />
+
+      <Route 
+        path="/institution-caregiver" 
+        element={<Navigate to="/institution-caregiver/dashboard" replace />} 
       />
       
       {/* Protected routes - Dashboard removed (patients don't have accounts) */}

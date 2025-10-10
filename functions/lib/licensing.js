@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.migrateInstitutionLinks = exports.getInstitutionAdmins = exports.activateLicense = exports.suspendLicense = exports.updateLicense = exports.deleteInstitution = exports.updateInstitution = exports.getLicenses = exports.getInstitutions = exports.setSuperAdminClaim = exports.getLicenseStatus = exports.assignInstitutionAdmin = exports.createLicense = exports.createInstitution = void 0;
+exports.removeInstitutionAdmin = exports.migrateInstitutionLinks = exports.getInstitutionAdmins = exports.activateLicense = exports.suspendLicense = exports.updateLicense = exports.deleteInstitution = exports.updateInstitution = exports.getLicenses = exports.getInstitutions = exports.setSuperAdminClaim = exports.getLicenseStatus = exports.assignInstitutionAdmin = exports.createLicense = exports.createInstitution = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const getDb = () => admin.firestore();
@@ -43,8 +43,8 @@ exports.createInstitution = functions.https.onCall(async (data, context) => {
     const uniqueSlug = `${slug}-${institutionRef.id.substring(0, 8)}`;
     // Generate institution portal URLs
     const baseURL = 'https://elderx-f5c2b.web.app';
-    const accessLink = `${baseURL}/institution-admin?institution=${institutionRef.id}`;
-    const loginLink = `${baseURL}/admin/login?institution=${institutionRef.id}`;
+    const accessLink = `${baseURL}/onboard?institution=${institutionRef.id}`;
+    const loginLink = `${baseURL}/institution/login?institution=${institutionRef.id}`;
     const institution = {
         name,
         domain: domain || null,
@@ -94,17 +94,33 @@ exports.assignInstitutionAdmin = functions.https.onCall(async (data, context) =>
     if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.superAdmin)) {
         throw new functions.https.HttpsError('permission-denied', 'Only super-admin can assign institution admins');
     }
-    const { institutionId, email, displayName } = data || {};
+    const { institutionId, email, displayName, password } = data || {};
     if (!institutionId || !email) {
         throw new functions.https.HttpsError('invalid-argument', 'institutionId and email are required');
+    }
+    if (password && password.length < 6) {
+        throw new functions.https.HttpsError('invalid-argument', 'Password must be at least 6 characters');
     }
     // Create or find auth user
     let userRecord;
     try {
         userRecord = await admin.auth().getUserByEmail(email);
+        // Update password if provided for existing user
+        if (password) {
+            await admin.auth().updateUser(userRecord.uid, { password });
+        }
     }
     catch (e) {
-        userRecord = await admin.auth().createUser({ email, displayName: displayName || email, emailVerified: true });
+        // Create new user with password if provided
+        const createUserData = {
+            email,
+            displayName: displayName || email,
+            emailVerified: true
+        };
+        if (password) {
+            createUserData.password = password;
+        }
+        userRecord = await admin.auth().createUser(createUserData);
     }
     // Set custom claims to tie user to institution and admin role
     const currentClaims = userRecord.customClaims || {};
@@ -165,22 +181,32 @@ exports.getLicenseStatus = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError('invalid-argument', 'institutionId is required');
     }
     const now = admin.firestore.Timestamp.now();
-    // First try to find licenses by institutionId (more flexible query)
+    // Find licenses by institutionId (simplified query to avoid index requirements)
     const snap = await getDb()
         .collection('licenses')
         .where('institutionId', '==', institutionId)
-        .orderBy('endsAt', 'desc')
-        .limit(1)
         .get();
     if (snap.empty) {
         return { active: false, reason: 'no_license' };
     }
-    const lic = snap.docs[0].data();
+    // Find the most recent license by endsAt date
+    let mostRecentLicense = null;
+    let mostRecentDoc = null;
+    snap.docs.forEach(doc => {
+        const data = doc.data();
+        if (!mostRecentLicense || data.endsAt.toMillis() > mostRecentLicense.endsAt.toMillis()) {
+            mostRecentLicense = data;
+            mostRecentDoc = doc;
+        }
+    });
+    if (!mostRecentLicense || !mostRecentDoc) {
+        return { active: false, reason: 'no_valid_license' };
+    }
     // Check if license is active based on multiple conditions
-    const isActiveStatus = lic.status === 'active' || lic.active === true;
-    const isWithinDateRange = lic.startsAt.toMillis() <= now.toMillis() && lic.endsAt.toMillis() >= now.toMillis();
+    const isActiveStatus = mostRecentLicense.status === 'active' || mostRecentLicense.active === true;
+    const isWithinDateRange = mostRecentLicense.startsAt.toMillis() <= now.toMillis() && mostRecentLicense.endsAt.toMillis() >= now.toMillis();
     const active = isActiveStatus && isWithinDateRange;
-    return { active, license: Object.assign({ id: snap.docs[0].id }, lic) };
+    return { active, license: Object.assign({ id: mostRecentDoc.id }, mostRecentLicense) };
 });
 exports.setSuperAdminClaim = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -237,7 +263,7 @@ exports.getInstitutions = functions.https.onCall(async (data, context) => {
             const data = doc.data();
             const baseURL = 'https://elderx-f5c2b.web.app';
             // Generate access links if missing (for backward compatibility)
-            const accessLink = data.accessLink || `${baseURL}/institution-admin?institution=${doc.id}`;
+            const accessLink = data.accessLink || `${baseURL}/onboard?institution=${doc.id}`;
             const loginLink = data.loginLink || `${baseURL}/institution/login?institution=${doc.id}`;
             const slug = data.slug || `${(_a = data.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${doc.id.substring(0, 8)}`;
             return Object.assign(Object.assign({ id: doc.id }, data), { accessLink,
@@ -422,6 +448,9 @@ exports.migrateInstitutionLinks = functions.https.onCall(async (data, context) =
     if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.superAdmin)) {
         throw new functions.https.HttpsError('permission-denied', 'Only super-admin can migrate data');
     }
+    const { force } = data || {};
+    console.log('🔍 Migration called with data:', JSON.stringify(data));
+    console.log('🔍 Force parameter:', force, typeof force);
     try {
         const baseURL = 'https://elderx-f5c2b.web.app';
         const institutionsSnapshot = await getDb().collection('institutions').get();
@@ -429,12 +458,20 @@ exports.migrateInstitutionLinks = functions.https.onCall(async (data, context) =
         let updatedCount = 0;
         institutionsSnapshot.docs.forEach(doc => {
             var _a;
-            const data = doc.data();
-            // Only update if missing access links
-            if (!data.accessLink || !data.loginLink || !data.slug) {
-                const slug = data.slug || `${(_a = data.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${doc.id.substring(0, 8)}`;
-                const accessLink = data.accessLink || `${baseURL}/institution-admin?institution=${doc.id}`;
-                const loginLink = data.loginLink || `${baseURL}/institution/login?institution=${doc.id}`;
+            const docData = doc.data();
+            console.log('Checking institution:', doc.id, {
+                force,
+                hasAccessLink: !!docData.accessLink,
+                currentAccessLink: docData.accessLink
+            });
+            // Force update all institutions if force=true, otherwise only update missing links
+            const shouldUpdate = force || !docData.accessLink || !docData.loginLink || !docData.slug;
+            console.log('Should update?', shouldUpdate);
+            if (shouldUpdate) {
+                const slug = docData.slug || `${(_a = docData.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${doc.id.substring(0, 8)}`;
+                const accessLink = `${baseURL}/onboard?institution=${doc.id}`;
+                const loginLink = `${baseURL}/institution/login?institution=${doc.id}`;
+                console.log('Updating to:', accessLink);
                 batch.update(doc.ref, {
                     slug,
                     accessLink,
@@ -452,6 +489,61 @@ exports.migrateInstitutionLinks = functions.https.onCall(async (data, context) =
     catch (error) {
         console.error('Error migrating institutions:', error);
         throw new functions.https.HttpsError('internal', 'Failed to migrate institutions');
+    }
+});
+exports.removeInstitutionAdmin = functions.https.onCall(async (data, context) => {
+    var _a, _b;
+    // Check if user is authenticated and is a super admin
+    if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.superAdmin)) {
+        throw new functions.https.HttpsError('permission-denied', 'Super admin privileges required');
+    }
+    const { institutionId, adminId } = data || {};
+    if (!institutionId || !adminId) {
+        throw new functions.https.HttpsError('invalid-argument', 'Institution ID and Admin ID are required');
+    }
+    try {
+        // Get admin user record
+        const adminUserRecord = await admin.auth().getUser(adminId);
+        const adminEmail = adminUserRecord.email;
+        // Remove institution-specific claims from the admin user
+        const currentClaims = adminUserRecord.customClaims || {};
+        const updatedClaims = Object.assign({}, currentClaims);
+        // Remove institution admin claims
+        delete updatedClaims.institutionId;
+        delete updatedClaims.institutionAdmin;
+        // If they only had admin claims for this institution, remove admin claim entirely
+        if (currentClaims.institutionId === institutionId && !currentClaims.superAdmin) {
+            delete updatedClaims.admin;
+        }
+        await admin.auth().setCustomUserClaims(adminId, updatedClaims);
+        // Update user document in Firestore
+        const userDocRef = getDb().collection('users').doc(adminId);
+        const userDoc = await userDocRef.get();
+        if (userDoc.exists) {
+            const updateData = {
+                updatedAt: admin.firestore.Timestamp.now()
+            };
+            // Remove institution-specific fields
+            updateData.institutionId = admin.firestore.FieldValue.delete();
+            updateData.institutionAdmin = admin.firestore.FieldValue.delete();
+            // If they were only an institution admin (not super admin), remove admin fields
+            const userData = userDoc.data();
+            if ((userData === null || userData === void 0 ? void 0 : userData.institutionId) === institutionId && !(userData === null || userData === void 0 ? void 0 : userData.superAdmin)) {
+                updateData.type = 'caregiver'; // Default to caregiver
+                updateData.userType = 'caregiver';
+                updateData.role = 'caregiver';
+            }
+            await userDocRef.update(updateData);
+        }
+        console.log(`Admin ${adminEmail} removed from institution ${institutionId}`);
+        return {
+            success: true,
+            message: `Admin ${adminEmail} removed from institution successfully`
+        };
+    }
+    catch (error) {
+        console.error('Error removing institution admin:', error);
+        throw new functions.https.HttpsError('internal', 'Failed to remove institution admin');
     }
 });
 //# sourceMappingURL=licensing.js.map

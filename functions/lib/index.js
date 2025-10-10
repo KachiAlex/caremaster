@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getInstitutionAdminsFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
+exports.removeInstitutionAdminFunction = exports.getInstitutionAdminsFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.createCaregiverWithAuthFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const userManagement_1 = require("./userManagement");
@@ -33,6 +33,7 @@ const aiProcessing_1 = require("./aiProcessing");
 const notificationService_1 = require("./notificationService");
 const auditLogging_1 = require("./auditLogging");
 const licensing_1 = require("./licensing");
+const caregiverManagement_1 = require("./caregiverManagement");
 // Initialize Firebase Admin
 admin.initializeApp();
 // User Management Functions
@@ -65,6 +66,8 @@ exports.healthCheck = functions.https.onRequest((req, res) => {
         version: '1.0.0'
     });
 });
+// Caregiver Management Functions
+exports.createCaregiverWithAuthFunction = caregiverManagement_1.createCaregiverWithAuth;
 // Licensing Functions
 exports.createInstitutionFunction = licensing_1.createInstitution;
 exports.createLicenseFunction = licensing_1.createLicense;
@@ -80,4 +83,5 @@ exports.suspendLicenseFunction = licensing_1.suspendLicense;
 exports.activateLicenseFunction = licensing_1.activateLicense;
 exports.migrateInstitutionLinksFunction = licensing_1.migrateInstitutionLinks;
 exports.getInstitutionAdminsFunction = licensing_1.getInstitutionAdmins;
+exports.removeInstitutionAdminFunction = licensing_1.removeInstitutionAdmin;
 //# sourceMappingURL=index.js.map

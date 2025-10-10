@@ -92,4 +92,10 @@ export async function getInstitutionAdmins(institutionId) {
   return res.data;
 }
 
+export async function removeInstitutionAdmin(payload) {
+  const functions = getFunctions(getApp(), 'us-central1');
+  const callable = httpsCallable(functions, 'removeInstitutionAdminFunction');
+  const res = await callable(payload);
+  return res.data;
+}
 

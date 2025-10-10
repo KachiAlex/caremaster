@@ -20,6 +20,7 @@ type AssignAdminRequest = {
   institutionId: string;
   email: string;
   displayName?: string;
+  password?: string;
 };
 
 const getDb = () => admin.firestore();
@@ -202,26 +203,38 @@ export const getLicenseStatus = functions.https.onCall(async (data: { institutio
 
   const now = admin.firestore.Timestamp.now();
   
-  // First try to find licenses by institutionId (more flexible query)
+  // Find licenses by institutionId (simplified query to avoid index requirements)
   const snap = await getDb()
     .collection('licenses')
     .where('institutionId', '==', institutionId)
-    .orderBy('endsAt', 'desc')
-    .limit(1)
     .get();
 
   if (snap.empty) {
     return { active: false, reason: 'no_license' };
   }
   
-  const lic = snap.docs[0].data();
+  // Find the most recent license by endsAt date
+  let mostRecentLicense: any = null;
+  let mostRecentDoc: any = null;
+  
+  snap.docs.forEach(doc => {
+    const data = doc.data();
+    if (!mostRecentLicense || data.endsAt.toMillis() > mostRecentLicense.endsAt.toMillis()) {
+      mostRecentLicense = data;
+      mostRecentDoc = doc;
+    }
+  });
+  
+  if (!mostRecentLicense || !mostRecentDoc) {
+    return { active: false, reason: 'no_valid_license' };
+  }
   
   // Check if license is active based on multiple conditions
-  const isActiveStatus = lic.status === 'active' || lic.active === true;
-  const isWithinDateRange = lic.startsAt.toMillis() <= now.toMillis() && lic.endsAt.toMillis() >= now.toMillis();
+  const isActiveStatus = mostRecentLicense.status === 'active' || mostRecentLicense.active === true;
+  const isWithinDateRange = mostRecentLicense.startsAt.toMillis() <= now.toMillis() && mostRecentLicense.endsAt.toMillis() >= now.toMillis();
   const active = isActiveStatus && isWithinDateRange;
   
-  return { active, license: { id: snap.docs[0].id, ...lic } };
+  return { active, license: { id: mostRecentDoc.id, ...mostRecentLicense } };
 });
 
 export const setSuperAdminClaim = functions.https.onCall(async (data: { userId: string }, context) => {
@@ -553,6 +566,74 @@ export const migrateInstitutionLinks = functions.https.onCall(async (data, conte
   } catch (error) {
     console.error('Error migrating institutions:', error);
     throw new functions.https.HttpsError('internal', 'Failed to migrate institutions');
+  }
+});
+
+export const removeInstitutionAdmin = functions.https.onCall(async (data, context) => {
+  // Check if user is authenticated and is a super admin
+  if (!context.auth?.token?.superAdmin) {
+    throw new functions.https.HttpsError('permission-denied', 'Super admin privileges required');
+  }
+
+  const { institutionId, adminId } = data || {};
+
+  if (!institutionId || !adminId) {
+    throw new functions.https.HttpsError('invalid-argument', 'Institution ID and Admin ID are required');
+  }
+
+  try {
+    // Get admin user record
+    const adminUserRecord = await admin.auth().getUser(adminId);
+    const adminEmail = adminUserRecord.email;
+
+    // Remove institution-specific claims from the admin user
+    const currentClaims = (adminUserRecord.customClaims as any) || {};
+    const updatedClaims = { ...currentClaims };
+    
+    // Remove institution admin claims
+    delete updatedClaims.institutionId;
+    delete updatedClaims.institutionAdmin;
+    
+    // If they only had admin claims for this institution, remove admin claim entirely
+    if (currentClaims.institutionId === institutionId && !currentClaims.superAdmin) {
+      delete updatedClaims.admin;
+    }
+
+    await admin.auth().setCustomUserClaims(adminId, updatedClaims);
+
+    // Update user document in Firestore
+    const userDocRef = getDb().collection('users').doc(adminId);
+    const userDoc = await userDocRef.get();
+    
+    if (userDoc.exists) {
+      const updateData: any = {
+        updatedAt: admin.firestore.Timestamp.now()
+      };
+
+      // Remove institution-specific fields
+      updateData.institutionId = admin.firestore.FieldValue.delete();
+      updateData.institutionAdmin = admin.firestore.FieldValue.delete();
+
+      // If they were only an institution admin (not super admin), remove admin fields
+      const userData = userDoc.data();
+      if (userData?.institutionId === institutionId && !userData?.superAdmin) {
+        updateData.type = 'caregiver'; // Default to caregiver
+        updateData.userType = 'caregiver';
+        updateData.role = 'caregiver';
+      }
+
+      await userDocRef.update(updateData);
+    }
+
+    console.log(`Admin ${adminEmail} removed from institution ${institutionId}`);
+    return { 
+      success: true, 
+      message: `Admin ${adminEmail} removed from institution successfully` 
+    };
+
+  } catch (error) {
+    console.error('Error removing institution admin:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to remove institution admin');
   }
 });
 

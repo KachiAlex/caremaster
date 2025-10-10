@@ -41,7 +41,28 @@ export const UserProvider = ({ children }) => {
           if (profile) {
             setUserProfile(profile);
             // Handle both 'patient' and 'elderly' as the same role, also check userType field and role field
-            const roleFromProfile = profile.role || profile.userType || profile.type || 'patient';
+            let roleFromProfile = profile.role || profile.userType || profile.type || 'patient';
+            
+            // SAFEGUARD: If user ID starts with 'caregiver_' but role is not caregiver, fix it
+            if (firebaseUser.uid.startsWith('caregiver_') && roleFromProfile !== 'caregiver') {
+              console.warn('⚠️ User ID indicates caregiver but role is:', roleFromProfile);
+              console.warn('🔧 Auto-correcting to caregiver role');
+              roleFromProfile = 'caregiver';
+              
+              // Update Firestore to fix the issue permanently
+              try {
+                const { doc, updateDoc } = await import('firebase/firestore');
+                const userRef = doc(db, 'users', firebaseUser.uid);
+                await updateDoc(userRef, { 
+                  userType: 'caregiver',
+                  type: 'caregiver'
+                });
+                console.log('✅ Fixed userType in Firestore');
+              } catch (updateError) {
+                console.error('❌ Failed to update userType:', updateError);
+              }
+            }
+            
             setUserRole(roleFromProfile);
             console.log('✅ User role set to:', roleFromProfile);
 
