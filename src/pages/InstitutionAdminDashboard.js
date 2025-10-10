@@ -228,12 +228,17 @@ const InstitutionAdminDashboard = () => {
       console.log('- Caregivers from users collection:', caregiversFromUsers.length);
       console.log('- Total merged caregivers:', allInstitutionCaregivers.length);
       console.log('- Patients:', institutionPatients.length);
+      console.log('- Assignments:', assignmentsData.length);
       
       // Debug: Show raw caregiver data
       console.log('\n🔍 RAW CAREGIVER DATA DEBUG:');
       console.log('Raw caregivers from API:', caregiversData.length, caregiversData);
       console.log('Users with caregiver types:', caregiversFromUsers.length, caregiversFromUsers);
       console.log('Merged caregivers:', allInstitutionCaregivers.length, allInstitutionCaregivers);
+      
+      // Debug: Show assignment data
+      console.log('\n🔍 ASSIGNMENT DATA DEBUG:');
+      console.log('Assignments loaded:', assignmentsData.length, assignmentsData);
 
       // Use real data only - no fallback to demo data
       const realStats = {
