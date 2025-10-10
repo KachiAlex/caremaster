@@ -187,7 +187,18 @@ const InstitutionLogin = () => {
                 formData.email,
                 formData.password
               );
-              console.log('✅ Signed in successfully');
+              console.log('✅ Signed in successfully with UID:', userCredential.user.uid);
+              
+              // IMPORTANT: Copy data from custom auth user to Firebase Auth user document
+              console.log('🔄 Syncing custom auth data to Firebase Auth user document...');
+              await setDoc(doc(db, 'users', userCredential.user.uid), {
+                ...customAuthUser,
+                uid: userCredential.user.uid,
+                password: formData.password,
+                updatedAt: new Date().toISOString()
+              }, { merge: true });
+              console.log('✅ User document synced');
+              
               toast.success('Login successful!');
               await routeUserToDashboard(userCredential.user, customAuthUser);
               return;
