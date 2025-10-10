@@ -40,6 +40,7 @@ import { caregiverAPI } from '../api/caregiverAPI';
 import { getAllPatients, createPatient, updatePatient } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { getPatientReports, createPatientReport, getPatientCareLogs, createPatientCareLog } from '../api/patientReportsAPI';
+import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import { toast } from 'react-toastify';
 
 const InstitutionAdminDashboard = () => {
@@ -405,11 +406,70 @@ const InstitutionAdminDashboard = () => {
         createdAt: new Date().toISOString()
       };
 
-      await assignmentAPI.createAssignment(assignmentData);
+      const createdAssignment = await assignmentAPI.createAssignment(assignmentData);
+      
+      // Get patient and caregiver details for notification
+      const patient = patients.find(p => p.id === selectedPatientForAssignment);
+      const caregiver = caregivers.find(c => c.id === selectedCaregiverForAssignment);
+      
+      // Send notification to caregiver
+      if (caregiver) {
+        try {
+          await createNotification({
+            userId: selectedCaregiverForAssignment,
+            type: NOTIFICATION_TYPES.TASK,
+            priority: formData.priority === 'urgent' ? NOTIFICATION_PRIORITIES.URGENT : 
+                     formData.priority === 'high' ? NOTIFICATION_PRIORITIES.HIGH : 
+                     NOTIFICATION_PRIORITIES.MEDIUM,
+            title: 'New Task Assigned',
+            message: `You have been assigned a new task: "${formData.title}" for patient ${patient?.name || 'Unknown Patient'}`,
+            data: {
+              assignmentId: createdAssignment.id,
+              patientId: selectedPatientForAssignment,
+              patientName: patient?.name,
+              dueDate: formData.dueDate,
+              dueTime: formData.dueTime
+            },
+            actionUrl: '/institution-caregiver/dashboard',
+            read: false
+          });
+          console.log('✅ Notification sent to caregiver:', selectedCaregiverForAssignment);
+        } catch (notifError) {
+          console.error('Failed to send notification to caregiver:', notifError);
+        }
+      }
+      
+      // Send notification to patient
+      if (patient && patient.userId) {
+        try {
+          await createNotification({
+            userId: patient.userId,
+            type: NOTIFICATION_TYPES.TASK,
+            priority: formData.priority === 'urgent' ? NOTIFICATION_PRIORITIES.URGENT : 
+                     formData.priority === 'high' ? NOTIFICATION_PRIORITIES.HIGH : 
+                     NOTIFICATION_PRIORITIES.MEDIUM,
+            title: 'Caregiver Task Created',
+            message: `A care task has been created for you: "${formData.title}". Your caregiver ${caregiver?.name || 'Unknown Caregiver'} will be assisting you.`,
+            data: {
+              assignmentId: createdAssignment.id,
+              caregiverId: selectedCaregiverForAssignment,
+              caregiverName: caregiver?.name,
+              dueDate: formData.dueDate,
+              dueTime: formData.dueTime
+            },
+            actionUrl: '/elderly-dashboard',
+            read: false
+          });
+          console.log('✅ Notification sent to patient:', patient.userId);
+        } catch (notifError) {
+          console.error('Failed to send notification to patient:', notifError);
+        }
+      }
+      
       setShowAssignmentModal(false);
       setSelectedPatientForAssignment('');
       setSelectedCaregiverForAssignment('');
-      toast.success('Assignment created successfully');
+      toast.success('Assignment created and notifications sent successfully');
       await loadDashboardData(); // Refresh data
     } catch (error) {
       console.error('Error creating assignment:', error);
@@ -1371,6 +1431,8 @@ const InstitutionAdminDashboard = () => {
       {showCaregiverDetails && selectedCaregiver && (
         <CaregiverDetailsModal
           caregiver={selectedCaregiver}
+          assignments={assignments}
+          patients={patients}
           onClose={() => {
             setShowCaregiverDetails(false);
             setSelectedCaregiver(null);
@@ -2326,8 +2388,13 @@ const PatientDetailsModal = ({ patient, onClose, onAssignTask, onDelete }) => {
 };
 
 // Caregiver Details Modal Component
-const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask }) => {
+const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, assignments = [], patients = [] }) => {
   if (!caregiver) return null;
+
+  // Filter assignments for this specific caregiver
+  const caregiverAssignments = assignments.filter(a => a.caregiverId === caregiver.id);
+  const activeAssignments = caregiverAssignments.filter(a => a.status !== 'completed' && a.status !== 'cancelled');
+  const completedAssignments = caregiverAssignments.filter(a => a.status === 'completed');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2432,14 +2499,18 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
           {/* Statistics */}
           <div>
             <h4 className="text-lg font-semibold text-gray-900 mb-4">Statistics</h4>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div className="bg-gray-50 p-3 rounded-lg">
-                <label className="block text-sm font-medium text-gray-500">Total Patients</label>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{caregiver.totalPatients || 0}</p>
+                <label className="block text-sm font-medium text-gray-500">Total Assignments</label>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{caregiverAssignments.length}</p>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg">
-                <label className="block text-sm font-medium text-gray-500">Current Patients</label>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{caregiver.currentPatients || 0}</p>
+                <label className="block text-sm font-medium text-gray-500">Active Tasks</label>
+                <p className="mt-1 text-2xl font-bold text-blue-600">{activeAssignments.length}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <label className="block text-sm font-medium text-gray-500">Completed</label>
+                <p className="mt-1 text-2xl font-bold text-green-600">{completedAssignments.length}</p>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg">
                 <label className="block text-sm font-medium text-gray-500">Rating</label>
@@ -2463,6 +2534,81 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
               <p className="mt-1 text-gray-900 whitespace-pre-wrap">{caregiver.notes}</p>
             </div>
           )}
+
+          {/* Assignments */}
+          <div>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Assigned Tasks ({caregiverAssignments.length})</h4>
+            {caregiverAssignments.length === 0 ? (
+              <p className="text-gray-500 text-sm">No tasks assigned yet</p>
+            ) : (
+              <div className="space-y-3">
+                {/* Active Assignments */}
+                {activeAssignments.length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-medium text-gray-700 mb-2">Active Tasks ({activeAssignments.length})</h5>
+                    <div className="space-y-2">
+                      {activeAssignments.map(assignment => {
+                        const patient = patients.find(p => p.id === assignment.patientId);
+                        return (
+                          <div key={assignment.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h6 className="font-medium text-gray-900 text-sm">{assignment.title || 'Untitled Task'}</h6>
+                                <p className="text-xs text-gray-600 mt-1">Patient: {patient?.name || 'Unknown Patient'}</p>
+                                {assignment.description && (
+                                  <p className="text-xs text-gray-500 mt-1">{assignment.description}</p>
+                                )}
+                                {assignment.dueDate && (
+                                  <p className="text-xs text-gray-500 mt-1">Due: {assignment.dueDate}</p>
+                                )}
+                              </div>
+                              <div className="ml-3">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  assignment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  assignment.status === 'in_progress' || assignment.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {assignment.status || 'pending'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Completed Assignments */}
+                {completedAssignments.length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-medium text-gray-700 mb-2">Completed Tasks ({completedAssignments.length})</h5>
+                    <div className="space-y-2">
+                      {completedAssignments.slice(0, 3).map(assignment => {
+                        const patient = patients.find(p => p.id === assignment.patientId);
+                        return (
+                          <div key={assignment.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h6 className="font-medium text-gray-900 text-sm">{assignment.title || 'Untitled Task'}</h6>
+                                <p className="text-xs text-gray-600 mt-1">Patient: {patient?.name || 'Unknown Patient'}</p>
+                              </div>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                completed
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {completedAssignments.length > 3 && (
+                        <p className="text-xs text-gray-500 text-center">+ {completedAssignments.length - 3} more completed</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="flex justify-between items-center pt-6 border-t">
