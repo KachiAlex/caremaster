@@ -63,6 +63,9 @@ const InstitutionAdminDashboard = () => {
     doctors: 0,
     nurses: 0,
     activeAppointments: 0,
+    activeAssignments: 0,
+    pendingAssignments: 0,
+    completedAssignments: 0,
     emergencyAlerts: 0,
     medicationReminders: 0,
     systemHealth: 'Good',
@@ -120,6 +123,9 @@ const InstitutionAdminDashboard = () => {
         doctors: 0,
         nurses: 0,
         activeAppointments: 0,
+        activeAssignments: 0,
+        pendingAssignments: 0,
+        completedAssignments: 0,
         emergencyAlerts: 0,
         medicationReminders: 0,
         systemHealth: 'Good',
@@ -234,6 +240,17 @@ const InstitutionAdminDashboard = () => {
       console.log('\n🔍 ASSIGNMENT DATA DEBUG:');
       console.log('Assignments loaded:', assignmentsData.length, assignmentsData);
 
+      // Calculate assignment statistics
+      const activeAssignmentCount = assignmentsData.filter(a => 
+        a.status !== 'completed' && a.status !== 'cancelled'
+      ).length;
+      const pendingAssignmentCount = assignmentsData.filter(a => 
+        a.status === 'pending'
+      ).length;
+      const completedAssignmentCount = assignmentsData.filter(a => 
+        a.status === 'completed'
+      ).length;
+
       // Use real data only - no fallback to demo data
       const realStats = {
         totalUsers: institutionUsers.length,
@@ -242,6 +259,9 @@ const InstitutionAdminDashboard = () => {
         doctors: allInstitutionCaregivers.filter(c => c.userType === 'doctor' || c.type === 'doctor').length,
         nurses: allInstitutionCaregivers.filter(c => c.userType === 'nurse' || c.type === 'nurse').length,
         activeAppointments: analytics.totalAppointments || 0,
+        activeAssignments: activeAssignmentCount,
+        pendingAssignments: pendingAssignmentCount,
+        completedAssignments: completedAssignmentCount,
         emergencyAlerts: emergencies.length,
         medicationReminders: analytics.medicationCompliance || 0,
         systemHealth: analytics.systemUptime > 95 ? 'Good' : analytics.systemUptime > 90 ? 'Warning' : 'Critical',
@@ -820,6 +840,23 @@ const InstitutionAdminDashboard = () => {
           <div className="mt-4 flex items-center">
             <Clock className="h-4 w-4 text-blue-500 mr-1" />
             <span className="text-sm text-blue-600">Today's schedule</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Active Assignments</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.activeAssignments}</p>
+            </div>
+            <div className="p-3 bg-purple-100 rounded-full">
+              <FileText className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-sm text-gray-600">
+            <span className="text-yellow-600 font-medium">{stats.pendingAssignments} pending</span>
+            <span className="mx-2">•</span>
+            <span className="text-green-600 font-medium">{stats.completedAssignments} completed</span>
           </div>
         </div>
       </div>

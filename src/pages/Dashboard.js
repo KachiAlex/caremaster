@@ -25,6 +25,7 @@ import { getLatestVitalSigns } from '../api/vitalSignsAPI';
 import { getUnreadMessageCount } from '../api/messagesAPI';
 import { medicationAPI } from '../api/medicationAPI';
 import { emergencyAPI } from '../api/emergencyAPI';
+import { assignmentAPI } from '../api/assignmentAPI';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
@@ -39,6 +40,7 @@ const Dashboard = () => {
     latestVitalSigns: null,
     unreadMessages: 0,
     activeMedications: [],
+    caregiverTasks: [],
     loading: true
   });
 
@@ -143,7 +145,7 @@ const Dashboard = () => {
         setDashboardData(prev => ({ ...prev, loading: true }));
         
         // Fetch data in parallel
-        const [appointments, vitalSigns, unreadCount, medications] = await Promise.all([
+        const [appointments, vitalSigns, unreadCount, medications, assignments] = await Promise.all([
           getUpcomingAppointments(user.uid, 'elderly').catch(err => {
             console.warn('Failed to fetch appointments:', err);
             return [];
@@ -159,13 +161,20 @@ const Dashboard = () => {
           medicationAPI.getMedications({ patientId: user.uid, status: 'active' }).catch(err => {
             console.warn('Failed to fetch medications:', err);
             return [];
+          }),
+          assignmentAPI.getAssignmentsByPatient(user.uid).catch(err => {
+            console.warn('Failed to fetch caregiver tasks:', err);
+            return [];
           })
         ]);
+        
+        console.log('📋 Patient assignments loaded:', assignments?.length || 0);
         
         setDashboardData({
           upcomingAppointments: appointments || [],
           latestVitalSigns: vitalSigns,
           unreadMessages: unreadCount || 0,
+          caregiverTasks: assignments || [],
           activeMedications: medications || [],
           loading: false
         });
@@ -377,6 +386,81 @@ const Dashboard = () => {
             <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-300" />
             <p>No upcoming appointments</p>
             <p className="text-sm">Schedule your next visit with a caregiver</p>
+          </div>
+        )}
+      </div>
+
+      {/* Caregiver Tasks & Care Activities */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Care Tasks & Activities</h2>
+        {dashboardData.loading ? (
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+            </div>
+          </div>
+        ) : dashboardData.caregiverTasks.length > 0 ? (
+          <div className="space-y-3">
+            {dashboardData.caregiverTasks.filter(task => task.status !== 'completed' && task.status !== 'cancelled').slice(0, 5).map((task) => (
+              <div key={task.id} className="bg-white border border-l-4 border-l-blue-500 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      <h3 className="font-semibold text-gray-900">{task.title || 'Care Task'}</h3>
+                    </div>
+                    {task.description && (
+                      <p className="text-sm text-gray-600 mb-2">{task.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      {task.caregiverName && (
+                        <span className="text-gray-500">
+                          <User className="h-3 w-3 inline mr-1" />
+                          Assigned to: {task.caregiverName}
+                        </span>
+                      )}
+                      {task.dueDate && (
+                        <span className="text-gray-500">
+                          <Clock className="h-3 w-3 inline mr-1" />
+                          Due: {task.dueDate} {task.dueTime && `at ${task.dueTime}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="ml-4 flex flex-col items-end gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                      task.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                      task.priority === 'normal' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {task.priority || 'Normal'} Priority
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      task.status === 'in_progress' || task.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                      task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {task.status ? task.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {dashboardData.caregiverTasks.filter(t => t.status !== 'completed').length > 5 && (
+              <p className="text-sm text-gray-500 text-center mt-2">
+                + {dashboardData.caregiverTasks.filter(t => t.status !== 'completed').length - 5} more tasks
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 text-center text-gray-500">
+            <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+            <p>No active care tasks</p>
+            <p className="text-sm">Your caregiver will assign tasks as needed</p>
           </div>
         )}
       </div>
