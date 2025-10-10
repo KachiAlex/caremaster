@@ -72,19 +72,26 @@ const InstitutionLogin = () => {
 
   const routeUserToDashboard = async (user, userData) => {
     const userRole = userData.type || userData.userType;
+    const userInstitutionId = userData.institutionId || institutionId;
+    
+    console.log('📍 Routing user to dashboard:', {
+      userRole,
+      institutionId: userInstitutionId,
+      onboardingComplete: userData.onboardingComplete
+    });
     
     // Route based on user role
     if (userRole === 'admin' || userRole === 'institutionAdmin') {
-      navigate('/institution-admin/dashboard');
+      navigate(`/institution-admin/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
     } else if (userRole === 'doctor' || userRole === 'nurse' || userRole === 'caregiver') {
       // Check if onboarding is complete for caregivers
       if (!userData.onboardingComplete) {
-        navigate('/institution-caregiver/onboarding');
+        navigate(`/institution-caregiver/onboarding${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
       } else {
-        navigate('/institution-caregiver/dashboard');
+        navigate(`/institution-caregiver/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
       }
     } else if (userRole === 'pharmacist') {
-      navigate('/institution-pharmacist/dashboard');
+      navigate(`/institution-pharmacist/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
     } else {
       navigate('/institution/welcome');
     }

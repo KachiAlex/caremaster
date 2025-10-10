@@ -1,20 +1,29 @@
 import React, { useEffect } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 
 const InstitutionCaregiverGuard = ({ children }) => {
+  const [searchParams] = useSearchParams();
   const { user, userProfile, loading, institutionId } = useUser();
   const navigate = useNavigate();
+  
+  // Get institution ID from URL params as well
+  const urlInstitutionId = searchParams.get('institution');
+  const effectiveInstitutionId = urlInstitutionId || institutionId || userProfile?.institutionId;
 
   useEffect(() => {
     // If not loading and user profile is available
     if (!loading && userProfile) {
       console.log('🔒 InstitutionCaregiverGuard: Checking access...', {
+        userId: user?.uid,
         userType: userProfile.userType,
-        institutionId: userProfile.institutionId || institutionId,
+        institutionIdFromURL: urlInstitutionId,
+        institutionIdFromContext: institutionId,
+        institutionIdFromProfile: userProfile.institutionId,
+        effectiveInstitutionId,
         onboardingComplete: userProfile.onboardingComplete,
         status: userProfile.status
       });
@@ -29,7 +38,7 @@ const InstitutionCaregiverGuard = ({ children }) => {
         
         // Log out and redirect
         signOut(auth).then(() => {
-          const instId = userProfile.institutionId || institutionId;
+          const instId = effectiveInstitutionId;
           if (instId) {
             navigate(`/institution/login?institution=${instId}&role=caregiver`, { replace: true });
           } else {
@@ -48,9 +57,10 @@ const InstitutionCaregiverGuard = ({ children }) => {
       }
 
       // Check if caregiver is part of an institution
-      if (!institutionId && !userProfile.institutionId) {
-        console.log('❌ No institution assigned');
-        toast.error('No institution assigned to your account');
+      if (!effectiveInstitutionId) {
+        console.log('❌ No institution assigned - Context:', institutionId, 'Profile:', userProfile.institutionId);
+        console.log('⚠️ Full user profile:', userProfile);
+        toast.error('No institution assigned to your account. Please contact support.');
         signOut(auth).then(() => {
           navigate('/onboard', { replace: true });
         });
@@ -62,13 +72,12 @@ const InstitutionCaregiverGuard = ({ children }) => {
         console.log('❌ Caregiver status not active:', userProfile.status);
         toast.error(`Your account status is "${userProfile.status}". Contact your institution admin.`);
         signOut(auth).then(() => {
-          const instId = userProfile.institutionId || institutionId;
-          navigate(`/institution/login?institution=${instId}&role=caregiver`, { replace: true });
+          navigate(`/institution/login?institution=${effectiveInstitutionId}&role=caregiver`, { replace: true });
         });
         return;
       }
     }
-  }, [user, userProfile, loading, navigate, institutionId]);
+  }, [user, userProfile, loading, navigate, institutionId, urlInstitutionId, effectiveInstitutionId]);
 
   // Show loading state
   if (loading) {

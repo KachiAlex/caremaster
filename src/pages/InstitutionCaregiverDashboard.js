@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Calendar, 
   Clock, 
@@ -44,7 +45,19 @@ import NurseReportGenerator from '../components/NurseReportGenerator';
 import NurseMedicationManager from '../components/NurseMedicationManager';
 
 const InstitutionCaregiverDashboard = () => {
+  const [searchParams] = useSearchParams();
   const { user, userProfile, institutionId, institutionData } = useUser();
+  
+  // Get institution ID from URL params or user context
+  const urlInstitutionId = searchParams.get('institution');
+  const effectiveInstitutionId = urlInstitutionId || institutionId || userProfile?.institutionId;
+  
+  console.log('🏥 Institution ID resolution:', {
+    fromURL: urlInstitutionId,
+    fromContext: institutionId,
+    fromProfile: userProfile?.institutionId,
+    effective: effectiveInstitutionId
+  });
   const [caregiver, setCaregiver] = useState(null);
   const [todaySchedule, setTodaySchedule] = useState([]);
   const [recentTasks, setRecentTasks] = useState([]);

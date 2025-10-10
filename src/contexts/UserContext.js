@@ -77,10 +77,18 @@ export const UserProvider = ({ children }) => {
             // Institution and License check
             try {
               const token = await firebaseUser.getIdTokenResult();
-              const tokenInstitutionId = token?.claims?.institutionId || profile?.institutionId;
+              // Use updatedProfile instead of profile to ensure we get the correct institutionId
+              const tokenInstitutionId = token?.claims?.institutionId || updatedProfile?.institutionId;
+              
+              console.log('🏢 Institution ID check:', {
+                fromToken: token?.claims?.institutionId,
+                fromProfile: updatedProfile?.institutionId,
+                final: tokenInstitutionId
+              });
               
               if (tokenInstitutionId) {
                 setInstitutionId(tokenInstitutionId);
+                console.log('✅ Institution ID set to:', tokenInstitutionId);
                 
                 // Fetch license status
                 const { fetchLicenseStatus } = await import('../services/licenseService');
@@ -92,6 +100,7 @@ export const UserProvider = ({ children }) => {
                 // const institution = await getInstitution(tokenInstitutionId);
                 // setInstitutionData(institution);
               } else {
+                console.warn('⚠️ No institution ID found in token or profile');
                 setLicenseActive(true);
                 setInstitutionId(null);
               }

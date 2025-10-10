@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { saveCaregiverProfile, uploadCaregiverDocument, completeOnboarding } from '../api/caregiverOnboardingAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
@@ -7,7 +7,12 @@ import { toast } from 'react-toastify';
 import { Upload, FileText, CheckCircle, AlertCircle, X, File, Shield } from 'lucide-react';
 
 const InstitutionCaregiverOnboarding = () => {
+  const [searchParams] = useSearchParams();
   const { user, userProfile, institutionId, institutionData } = useUser();
+  
+  // Get institution ID from URL params or context
+  const urlInstitutionId = searchParams.get('institution');
+  const effectiveInstitutionId = urlInstitutionId || institutionId || userProfile?.institutionId;
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -74,9 +79,9 @@ const InstitutionCaregiverOnboarding = () => {
   useEffect(() => {
     // Check if already onboarded
     if (userProfile?.onboardingComplete) {
-      navigate('/institution-caregiver/dashboard');
+      navigate(`/institution-caregiver/dashboard${effectiveInstitutionId ? `?institution=${effectiveInstitutionId}` : ''}`);
     }
-  }, [userProfile, navigate]);
+  }, [userProfile, navigate, effectiveInstitutionId]);
 
   const handleProfileChange = (field, value) => {
     setProfile(prev => ({ ...prev, [field]: value }));
@@ -166,7 +171,7 @@ const InstitutionCaregiverOnboarding = () => {
 
       await saveCaregiverProfile(user.uid, {
         ...profile,
-        institutionId: institutionId || userProfile?.institutionId,
+        institutionId: effectiveInstitutionId,
         onboardingStep: 1
       });
       
@@ -227,7 +232,7 @@ const InstitutionCaregiverOnboarding = () => {
       toast.success('Onboarding completed! Redirecting to dashboard...');
       
       setTimeout(() => {
-        navigate('/institution-caregiver/dashboard');
+        navigate(`/institution-caregiver/dashboard${effectiveInstitutionId ? `?institution=${effectiveInstitutionId}` : ''}`);
       }, 1500);
     } catch (error) {
       console.error('Error completing onboarding:', error);
@@ -243,7 +248,7 @@ const InstitutionCaregiverOnboarding = () => {
         {/* Back to Portal Button */}
         <div className="mb-6">
           <button
-            onClick={() => navigate(`/onboard?institution=${institutionId || userProfile?.institutionId}`)}
+            onClick={() => navigate(`/onboard?institution=${effectiveInstitutionId}`)}
             className="flex items-center px-4 py-2 text-sm bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
           >
             <Shield className="h-4 w-4 mr-2" />
