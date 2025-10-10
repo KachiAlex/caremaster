@@ -39,15 +39,22 @@ export const UserProvider = ({ children }) => {
           });
           
           if (profile) {
-            setUserProfile(profile);
             // Handle both 'patient' and 'elderly' as the same role, also check userType field and role field
             let roleFromProfile = profile.role || profile.userType || profile.type || 'patient';
+            let updatedProfile = profile;
             
             // SAFEGUARD: If user ID starts with 'caregiver_' but role is not caregiver, fix it
             if (firebaseUser.uid.startsWith('caregiver_') && roleFromProfile !== 'caregiver') {
               console.warn('⚠️ User ID indicates caregiver but role is:', roleFromProfile);
               console.warn('🔧 Auto-correcting to caregiver role');
               roleFromProfile = 'caregiver';
+              
+              // Update local profile state immediately
+              updatedProfile = {
+                ...profile,
+                userType: 'caregiver',
+                type: 'caregiver'
+              };
               
               // Update Firestore to fix the issue permanently
               try {
@@ -63,6 +70,7 @@ export const UserProvider = ({ children }) => {
               }
             }
             
+            setUserProfile(updatedProfile);
             setUserRole(roleFromProfile);
             console.log('✅ User role set to:', roleFromProfile);
 

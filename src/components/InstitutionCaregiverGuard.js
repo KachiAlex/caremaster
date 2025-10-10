@@ -57,10 +57,18 @@ const InstitutionCaregiverGuard = ({ children }) => {
     return <Navigate to={`/institution/login?institution=${institutionId || userProfile?.institutionId}`} replace />;
   }
 
-  // Redirect if not a caregiver
+  // Redirect if not a caregiver (check both userType and user ID pattern)
   if (userProfile && userProfile.userType !== 'caregiver') {
-    console.log('❌ Not a caregiver - access denied');
-    return <Navigate to="/" replace />;
+    // SAFEGUARD: Allow if user ID starts with 'caregiver_' (institution caregiver)
+    if (!user?.uid?.startsWith('caregiver_')) {
+      console.log('❌ Not a caregiver - access denied', {
+        userType: userProfile.userType,
+        userId: user?.uid
+      });
+      return <Navigate to="/" replace />;
+    } else {
+      console.log('⚠️ User ID indicates caregiver but userType mismatch - allowing access');
+    }
   }
 
   // Redirect if onboarding not complete
