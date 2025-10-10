@@ -43,6 +43,7 @@ import NurseVitalsInput from '../components/NurseVitalsInput';
 import NurseCareLogs from '../components/NurseCareLogs';
 import NurseReportGenerator from '../components/NurseReportGenerator';
 import NurseMedicationManager from '../components/NurseMedicationManager';
+import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -175,6 +176,17 @@ const InstitutionCaregiverDashboard = () => {
       
       try {
         setLoading(true);
+        
+        // Auto-fix profile if institutionId or status is missing
+        if (effectiveInstitutionId && (!userProfile.institutionId || !userProfile.status)) {
+          console.log('🔄 Auto-fixing caregiver profile with missing fields...');
+          await autoFixCurrentUser(user, userProfile, effectiveInstitutionId);
+          // Reload page to get updated profile
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+          return;
+        }
         
         // Load caregiver profile data only if user is a caregiver
         if (userProfile?.userType === 'caregiver') {
@@ -360,7 +372,7 @@ const InstitutionCaregiverDashboard = () => {
       
       return () => unsubscribe();
     }
-  }, [userProfile, user?.uid, selectedPatientId]);
+  }, [userProfile, user?.uid, selectedPatientId, effectiveInstitutionId]);
 
   useEffect(() => {
     // when selectedPatientId changes, refresh selectedPatient from cache/list
