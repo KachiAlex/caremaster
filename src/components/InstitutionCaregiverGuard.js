@@ -52,7 +52,7 @@ const InstitutionCaregiverGuard = ({ children }) => {
       // Check if onboarding is required
       if (!userProfile.onboardingComplete) {
         console.log('⚠️ Onboarding incomplete - redirecting to onboarding');
-        navigate('/institution-caregiver/onboarding');
+        navigate(`/institution-caregiver/onboarding?institution=${effectiveInstitutionId}`);
         return;
       }
 
@@ -98,12 +98,7 @@ const InstitutionCaregiverGuard = ({ children }) => {
     );
   }
 
-  // All checks passed in useEffect - render children if not loading
-  if (!loading && userProfile) {
-    return <>{children}</>;
-  }
-  
-  // Redirect if not authenticated (fallback)
+  // Redirect if not authenticated
   if (!loading && !user) {
     console.log('❌ No user - redirecting to login');
     const instId = institutionId || userProfile?.institutionId;
@@ -111,6 +106,39 @@ const InstitutionCaregiverGuard = ({ children }) => {
       return <Navigate to={`/institution/login?institution=${instId}&role=caregiver`} replace />;
     }
     return <Navigate to="/onboard" replace />;
+  }
+
+  // Block rendering if profile loaded but checks fail
+  if (!loading && userProfile) {
+    // Check if user is actually a caregiver
+    const isCaregiver = userProfile.userType === 'caregiver' || user?.uid?.startsWith('caregiver_');
+    
+    if (!isCaregiver) {
+      // Will be handled by useEffect
+      return null;
+    }
+
+    // CRITICAL: Redirect to onboarding if incomplete
+    if (!userProfile.onboardingComplete) {
+      console.log('🚫 Blocking render - onboarding incomplete');
+      return <Navigate to={`/institution-caregiver/onboarding?institution=${effectiveInstitutionId}`} replace />;
+    }
+
+    // Check if caregiver is part of an institution
+    if (!effectiveInstitutionId) {
+      // Will be handled by useEffect
+      return null;
+    }
+
+    // Check if caregiver is approved/active
+    const allowedStatuses = ['active', 'pending', undefined];
+    if (!allowedStatuses.includes(userProfile.status)) {
+      // Will be handled by useEffect
+      return null;
+    }
+
+    // All checks passed - render children
+    return <>{children}</>;
   }
 
   // Show loading during checks
