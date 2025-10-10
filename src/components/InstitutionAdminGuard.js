@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
@@ -16,7 +16,8 @@ const InstitutionAdminGuard = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         toast.error('Please log in to access the institution admin panel');
-        navigate('/login');
+        navigate('/institution/login', { replace: true });
+        setLoading(false);
         return;
       }
 
@@ -25,7 +26,9 @@ const InstitutionAdminGuard = ({ children }) => {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (!userDoc.exists()) {
           toast.error('User profile not found');
-          navigate('/login');
+          await signOut(auth);
+          navigate('/institution/login', { replace: true });
+          setLoading(false);
           return;
         }
 
@@ -47,17 +50,32 @@ const InstitutionAdminGuard = ({ children }) => {
 
         if (!isInstitutionAdmin) {
           const userType = userProfile?.type || userProfile?.userType || 'unknown';
-          toast.error(`Access denied. You are logged in as '${userType}', but institution admin privileges are required.`);
-          console.error('User is not an institution admin. Current role:', userType);
-          console.log('💡 To access institution admin panel: 1) Log out, 2) Have super-admin create an admin account for you, 3) Log in with that admin account');
-          navigate('/');
+          console.log('⛔ Unauthorized access attempt to Institution Admin portal');
+          console.log(`User role "${userType}" attempted to access Institution Admin portal`);
+          
+          toast.error(`Access denied. You are logged in as '${userType}'. You will be logged out.`);
+          
+          // Log out the user
+          await signOut(auth);
+          
+          // Redirect to institution login with the institutionId if available
+          if (hasInstitutionId) {
+            navigate(`/institution/login?institution=${userProfile.institutionId}`, { replace: true });
+          } else {
+            navigate('/onboard', { replace: true });
+          }
+          
+          toast.info('Please log in with institution admin credentials');
+          setLoading(false);
           return;
         }
 
         if (!hasInstitutionId) {
           toast.error('No institution assigned to your account. Contact super admin.');
           console.error('User has no institutionId assigned');
-          navigate('/');
+          await signOut(auth);
+          navigate('/onboard', { replace: true });
+          setLoading(false);
           return;
         }
 

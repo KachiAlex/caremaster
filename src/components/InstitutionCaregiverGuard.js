@@ -1,6 +1,9 @@
 import React, { useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase/config';
 import { useUser } from '../contexts/UserContext';
+import { toast } from 'react-toastify';
 
 const InstitutionCaregiverGuard = ({ children }) => {
   const { user, userProfile, loading, institutionId } = useUser();
@@ -16,6 +19,27 @@ const InstitutionCaregiverGuard = ({ children }) => {
         status: userProfile.status
       });
 
+      // Check if user is actually a caregiver
+      const isCaregiver = userProfile.userType === 'caregiver' || user?.uid?.startsWith('caregiver_');
+      
+      if (!isCaregiver) {
+        console.log('⛔ Unauthorized access attempt to Institution Caregiver portal');
+        console.log(`User role "${userProfile.userType}" attempted to access Caregiver portal`);
+        toast.error(`Access denied. You are not a caregiver. You will be logged out.`);
+        
+        // Log out and redirect
+        signOut(auth).then(() => {
+          const instId = userProfile.institutionId || institutionId;
+          if (instId) {
+            navigate(`/institution/login?institution=${instId}&role=caregiver`, { replace: true });
+          } else {
+            navigate('/onboard', { replace: true });
+          }
+          toast.info('Please log in with caregiver credentials');
+        });
+        return;
+      }
+
       // Check if onboarding is required
       if (!userProfile.onboardingComplete) {
         console.log('⚠️ Onboarding incomplete - redirecting to onboarding');
@@ -26,14 +50,21 @@ const InstitutionCaregiverGuard = ({ children }) => {
       // Check if caregiver is part of an institution
       if (!institutionId && !userProfile.institutionId) {
         console.log('❌ No institution assigned');
-        navigate('/');
+        toast.error('No institution assigned to your account');
+        signOut(auth).then(() => {
+          navigate('/onboard', { replace: true });
+        });
         return;
       }
 
       // Check if caregiver is approved/active
       if (userProfile.status !== 'active' && userProfile.status !== 'pending') {
         console.log('❌ Caregiver status not active:', userProfile.status);
-        navigate('/');
+        toast.error(`Your account status is "${userProfile.status}". Contact your institution admin.`);
+        signOut(auth).then(() => {
+          const instId = userProfile.institutionId || institutionId;
+          navigate(`/institution/login?institution=${instId}&role=caregiver`, { replace: true });
+        });
         return;
       }
     }
@@ -51,34 +82,23 @@ const InstitutionCaregiverGuard = ({ children }) => {
     );
   }
 
-  // Redirect if not authenticated
-  if (!user) {
+  // All checks passed in useEffect - render children if not loading
+  if (!loading && userProfile) {
+    return <>{children}</>;
+  }
+  
+  // Redirect if not authenticated (fallback)
+  if (!loading && !user) {
     console.log('❌ No user - redirecting to login');
-    return <Navigate to={`/institution/login?institution=${institutionId || userProfile?.institutionId}`} replace />;
-  }
-
-  // Redirect if not a caregiver (check both userType and user ID pattern)
-  if (userProfile && userProfile.userType !== 'caregiver') {
-    // SAFEGUARD: Allow if user ID starts with 'caregiver_' (institution caregiver)
-    if (!user?.uid?.startsWith('caregiver_')) {
-      console.log('❌ Not a caregiver - access denied', {
-        userType: userProfile.userType,
-        userId: user?.uid
-      });
-      return <Navigate to="/" replace />;
-    } else {
-      console.log('⚠️ User ID indicates caregiver but userType mismatch - allowing access');
+    const instId = institutionId || userProfile?.institutionId;
+    if (instId) {
+      return <Navigate to={`/institution/login?institution=${instId}&role=caregiver`} replace />;
     }
+    return <Navigate to="/onboard" replace />;
   }
 
-  // Redirect if onboarding not complete
-  if (userProfile && !userProfile.onboardingComplete) {
-    console.log('⚠️ Onboarding incomplete - redirecting');
-    return <Navigate to="/institution-caregiver/onboarding" replace />;
-  }
-
-  // All checks passed - render children
-  return <>{children}</>;
+  // Show loading during checks
+  return null;
 };
 
 export default InstitutionCaregiverGuard;

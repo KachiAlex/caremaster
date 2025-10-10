@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
@@ -16,6 +16,7 @@ const SuperAdminGuard = ({ children }) => {
         // No user logged in
         toast.error('Please log in to access the super admin panel');
         navigate('/super-admin/login');
+        setLoading(false);
         return;
       }
 
@@ -28,32 +29,33 @@ const SuperAdminGuard = ({ children }) => {
           setIsSuperAdmin(true);
           setLoading(false);
         } else {
-          // User is not super-admin
-          toast.error('Access denied. Super-admin privileges required.');
+          // User is not super-admin - LOG THEM OUT
+          console.log('⛔ Unauthorized access attempt to Super Admin portal');
+          toast.error('Access denied. You will be logged out and redirected to Super Admin login.');
           
-          // Redirect based on user role
+          // Get user role for logging
           const userDoc = await getDoc(doc(db, 'users', user.uid));
-          
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const userRole = userData.userType || userData.type;
-            
-            if (userRole === 'admin') {
-              navigate('/admin/dashboard');
-            } else if (userRole === 'caregiver' || userRole === 'doctor') {
-              navigate('/service-provider');
-            } else {
-              navigate('/');
-            }
-          } else {
-            navigate('/admin/login');
+            console.log(`User role "${userRole}" attempted to access Super Admin portal`);
           }
+          
+          // Log out the user
+          await signOut(auth);
+          
+          // Redirect to super admin login
+          navigate('/super-admin/login', { replace: true });
+          toast.info('Please log in with super-admin credentials');
+          setLoading(false);
           return;
         }
       } catch (error) {
         console.error('Error checking super-admin status:', error);
         toast.error('Error verifying super-admin access');
+        await signOut(auth);
         navigate('/super-admin/login');
+        setLoading(false);
       }
     });
 
