@@ -102,37 +102,34 @@ service cloud.firestore {
       allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
     
-    // Caregivers collection - caregivers can read their own document, admins full access
+    // Caregivers collection - caregivers can read their own document and query by institution, admins full access
     match /caregivers/{caregiverId} {
-      allow read: if isAdmin() || (request.auth != null && request.auth.uid == caregiverId);
+      allow read, list: if isAdmin() || isCaregiver() || (request.auth != null && request.auth.uid == caregiverId);
       allow write: if isAdmin() || (request.auth != null && request.auth.uid == caregiverId);
     }
     
     // Patients collection
     match /patients/{patientId} {
-      // Admin full access. Caregivers/doctors can read patients assigned to them via denormalized fields
-      // Also allow caregivers to read patients if they have tasks assigned to them
-      allow read: if licenseActive() && (isAdmin() || 
-                    (isCaregiver() && isAssignedCaregiverToResource()) || 
-                    (isDoctor() && isAssignedDoctorToResource()) ||
-                    (isCaregiver() && request.auth != null));
+      // Admin full access. Caregivers/doctors can read patients
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
       // Writes restricted to admin
-      allow write: if licenseActive() && isAdmin();
+      allow write: if isAdmin();
     }
     
     // Care tasks assigned to caregivers/doctors
     match /careTasks/{taskId} {
       // Allow read for the assignee whether caregiver or doctor
-      allow read: if licenseActive() && (isAdmin() || (request.auth != null && (isCaregiver() || isDoctor())));
+      // For list queries with caregiverId filter, allow if authenticated caregiver/doctor
+      allow read, list: if isAdmin() || (request.auth != null && (isCaregiver() || isDoctor()));
       // Allow updates by the assignee (caregiver/doctor) for status-only changes
-      allow update: if licenseActive() && (isCaregiver() || isDoctor()) && resource.data.caregiverId == request.auth.uid;
-      allow create, delete: if licenseActive() && isAdmin();
+      allow update: if (isCaregiver() || isDoctor()) && resource.data.caregiverId == request.auth.uid;
+      allow create, delete: if isAdmin();
     }
     
     // Patient-caregiver assignments: caregivers can read their own
     match /patientAssignments/{assignmentId} {
-      allow read: if licenseActive() && (isAdmin() || (request.auth != null && isCaregiver()));
-      allow write: if licenseActive() && isAdmin();
+      allow read, list: if isAdmin() || (request.auth != null && isCaregiver());
+      allow write: if isAdmin();
     }
     
     // Caregiver assignments (alternative collection name)
@@ -147,20 +144,25 @@ service cloud.firestore {
     
     match /vitalSigns/{document=**} {
       // Allow read for assigned caregivers/doctors via patient linkage if denormalized fields exist
-      allow read: if licenseActive() && (isAdmin() || isCaregiver() || isDoctor());
-      allow write: if licenseActive() && isAdmin();
+      allow read: if isAdmin() || isCaregiver() || isDoctor();
+      allow write: if isAdmin();
     }
     
     // Appointments: caregivers/doctors/patients can read their own
     match /appointments/{appointmentId} {
-      allow read: if licenseActive() && (isAdmin() || (
+      // Allow read for assigned users (caregiverId, doctorId, patientId match)
+      // For list queries, allow if authenticated caregiver/doctor/patient
+      allow read, list: if isAdmin() || (
         request.auth != null && (
-          resource.data.caregiverId == request.auth.uid ||
-          resource.data.doctorId == request.auth.uid ||
-          resource.data.patientId == request.auth.uid
+          isCaregiver() || isDoctor() ||
+          (resource.data != null && (
+            resource.data.caregiverId == request.auth.uid ||
+            resource.data.doctorId == request.auth.uid ||
+            resource.data.patientId == request.auth.uid
+          ))
         )
-      ));
-      allow write: if licenseActive() && isAdmin();
+      );
+      allow write: if isAdmin();
     }
     
     // Assignment requests
@@ -270,9 +272,9 @@ service cloud.firestore {
     
     // Care logs collection - caregivers can create logs; authenticated users can read
     match /careLogs/{logId} {
-      allow read: if licenseActive() && request.auth != null;
-      allow create: if licenseActive() && request.auth != null;
-      allow update, delete: if licenseActive() && request.auth != null && (
+      allow read, list: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (
         isAdmin() || request.auth.uid == request.resource.data.caregiverId
       );
     }
@@ -283,17 +285,16 @@ service cloud.firestore {
       // - Admins
       // - Doctors/Caregivers (service providers)
       // - The patient who owns the record (by patientId)
-      allow read: if licenseActive() && request.auth != null && (
+      allow read, list: if request.auth != null && (
         isAdmin() || isDoctor() || isCaregiver() ||
-        (request.resource == null && resource.data.patientId == request.auth.uid) ||
-        (request.resource != null && request.resource.data.patientId == request.auth.uid)
+        (resource.data != null && resource.data.patientId == request.auth.uid)
       );
 
       // Allow creates for admins, doctors, and caregivers
-      allow create: if licenseActive() && request.auth != null && (isAdmin() || isDoctor() || isCaregiver());
+      allow create: if request.auth != null && (isAdmin() || isDoctor() || isCaregiver());
 
       // Allow updates/deletes for admins and doctors
-      allow update, delete: if licenseActive() && request.auth != null && (isAdmin() || isDoctor());
+      allow update, delete: if request.auth != null && (isAdmin() || isDoctor());
     }
 
     // Patient feedback collection - caregivers can read their own feedback; admins manage
