@@ -29,7 +29,13 @@ import {
   Brain,
   FlaskConical,
   Dumbbell,
-  UserCheck
+  UserCheck,
+  Home,
+  Users,
+  CheckSquare,
+  ClipboardList,
+  BarChart3,
+  RefreshCw
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { caregiverAPI } from '../api/caregiverAPI';
@@ -1530,6 +1536,103 @@ const InstitutionCaregiverDashboard = () => {
     );
   };
 
+  // Tasks Tab Renderer
+  const renderTasksTab = () => {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+          <div className="text-center">
+            <CheckSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Tasks Management</h2>
+            <p className="text-gray-600 mb-6">
+              View and manage your assigned care tasks and daily activities.
+            </p>
+            
+            {selectedClient ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-green-900 mb-2">
+                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
+                </h3>
+                <p className="text-green-700">
+                  Your assigned tasks for this client will be displayed here. You can track progress, 
+                  mark tasks as completed, and add notes about your care activities.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <p className="text-gray-600">
+                  Please select a client from the dropdown above to view their assigned tasks.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Care Logs Tab Renderer
+  const renderCareLogsTab = () => {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+          <div className="text-center">
+            <Camera className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Care Logs</h2>
+            <p className="text-gray-600 mb-6">
+              Document and track your care activities with detailed logs and observations.
+            </p>
+            
+            {selectedClient ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
+                </h3>
+                <p className="text-blue-700">
+                  Create detailed care logs for this client including vital signs, medication administration, 
+                  observations, and any important notes about their condition.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <p className="text-gray-600">
+                  Please select a client from the dropdown above to create and view care logs.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Activities Tab Renderer
+  const renderActivitiesTab = () => {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+          <div className="text-center">
+            <BarChart3 className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Activities Dashboard</h2>
+            <p className="text-gray-600 mb-6">
+              Track your daily activities, performance metrics, and care statistics.
+            </p>
+            
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-indigo-900 mb-2">
+                Activity Overview
+              </h3>
+              <p className="text-indigo-700">
+                View your care activities, time spent with patients, completed tasks, 
+                and performance metrics to track your productivity and quality of care.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1545,74 +1648,48 @@ const InstitutionCaregiverDashboard = () => {
       {(isDoctor || isNurse || isNonMedicalCaregiver) && (
         <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg border-r border-gray-200 transition-all duration-300 flex flex-col`}>
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              {!sidebarCollapsed && (
+          <div className="p-6 border-b border-gray-100">
+            {!sidebarCollapsed ? (
+              <div className="flex flex-col items-center space-y-3">
                 <div className="flex items-center space-x-3">
-                  <div className={`p-2 bg-${dashboardConfig.color}-100 rounded-lg`}>
-                    <dashboardConfig.icon className={`h-6 w-6 text-${dashboardConfig.color}-600`} />
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <Heart className="h-6 w-6 text-blue-600" />
                   </div>
-                  <div>
-                    <h1 className="text-lg font-bold text-gray-900">{dashboardConfig.title}</h1>
-                    <p className="text-xs text-gray-600 truncate">
-                      {caregiver?.name || userProfile?.name || 'User'}
-                    </p>
+                  <div className="text-center">
+                    <h1 className="text-lg font-bold text-gray-900">ElderX</h1>
+                    <p className="text-xs text-gray-500">Care Portal</p>
                   </div>
                 </div>
-              )}
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Navigation className={`h-4 w-4 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <Heart className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-1">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'dashboard'
-                  ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <Navigation className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              <Home className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
               {!sidebarCollapsed && 'Dashboard'}
             </button>
             
             <button
-              onClick={() => setActiveTab('clients')}
-              className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'clients'
-                  ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              <User className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Clients'}
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('messages')}
-              className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'messages'
-                  ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              <MessageSquare className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Messages'}
-            </button>
-            
-            <button
               onClick={() => setActiveTab('schedule')}
-              className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'schedule'
-                  ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               <Calendar className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
@@ -1620,84 +1697,114 @@ const InstitutionCaregiverDashboard = () => {
             </button>
             
             <button
-              onClick={() => setActiveTab('reports')}
-              className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'reports'
-                  ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              onClick={() => setActiveTab('messages')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'messages'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <MessageSquare className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Messages'}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'tasks'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <CheckSquare className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Tasks'}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('carelogs')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'carelogs'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Camera className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Care Logs'}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('activities')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'activities'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <BarChart3 className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Activities'}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('clients')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'clients'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Users className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Patients'}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('prescriptions')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'prescriptions'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Pill className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Prescriptions'}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('consultations')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'consultations'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Stethoscope className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Consultations'}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('diagnostics')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'diagnostics'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               <FileText className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Reports'}
+              {!sidebarCollapsed && 'Diagnostics'}
             </button>
-            
-            {/* View-only tabs for non-medical caregivers */}
-            {isNonMedicalCaregiver && (
-              <>
-                <div className="border-t border-gray-200 my-4"></div>
-                <div className={`text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 ${sidebarCollapsed ? 'hidden' : ''}`}>
-                  View Only
-                </div>
-                
-                <button
-                  onClick={() => setActiveTab('prescriptions')}
-                  className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'prescriptions'
-                      ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <Pill className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-                  {!sidebarCollapsed && 'Prescriptions'}
-                </button>
-                
-                <button
-                  onClick={() => setActiveTab('consultations')}
-                  className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'consultations'
-                      ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <Stethoscope className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-                  {!sidebarCollapsed && 'Consultations'}
-                </button>
-                
-                <button
-                  onClick={() => setActiveTab('diagnostics')}
-                  className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'diagnostics'
-                      ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <FlaskConical className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-                  {!sidebarCollapsed && 'Diagnostics'}
-                </button>
-              </>
-            )}
           </nav>
 
           {/* Sidebar Footer */}
-          <div className="p-4 border-t border-gray-200 space-y-2">
-            <button className="w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-              <Bell className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Notifications'}
-            </button>
+          <div className="p-4 border-t border-gray-100">
             <button 
               onClick={() => setShowSettings(!showSettings)}
-              className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                 showSettings 
-                  ? 'bg-blue-100 text-blue-700' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  ? 'bg-blue-50 text-blue-700' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               <Settings className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
               {!sidebarCollapsed && 'Settings'}
-            </button>
-            <button className="w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-              <LogOut className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Logout'}
             </button>
           </div>
         </div>
@@ -1706,52 +1813,71 @@ const InstitutionCaregiverDashboard = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-white shadow-sm border-b border-gray-200 px-8 py-4">
+        <div className="bg-white shadow-sm border-b border-gray-100 px-8 py-6">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 capitalize">
-                {activeTab === 'dashboard' && 'Dashboard'}
-                {activeTab === 'clients' && 'Clients'}
+              <h1 className="text-2xl font-bold text-gray-900">
+                {activeTab === 'dashboard' && 'General Care Dashboard'}
+                {activeTab === 'clients' && 'Patient Management'}
                 {activeTab === 'messages' && 'Messages'}
                 {activeTab === 'schedule' && 'Schedule'}
-                {activeTab === 'reports' && 'Reports'}
+                {activeTab === 'tasks' && 'Tasks'}
+                {activeTab === 'carelogs' && 'Care Logs'}
+                {activeTab === 'activities' && 'Activities'}
                 {activeTab === 'prescriptions' && 'Prescriptions'}
                 {activeTab === 'consultations' && 'Consultations'}
                 {activeTab === 'diagnostics' && 'Diagnostics'}
-              </h2>
-              <p className="text-gray-600 text-sm mt-1">
-                {activeTab === 'dashboard' && 'Overview of your care activities'}
-                {activeTab === 'clients' && 'Manage your assigned clients'}
+              </h1>
+              <p className="text-gray-600 mt-1">
+                {activeTab === 'dashboard' && `Welcome back, ${caregiver?.name || userProfile?.name || 'User'}`}
+                {activeTab === 'clients' && 'Manage your assigned patients'}
                 {activeTab === 'messages' && 'Communicate with team members'}
                 {activeTab === 'schedule' && 'View your upcoming schedule'}
-                {activeTab === 'reports' && 'Generate and view reports'}
-                {activeTab === 'prescriptions' && 'View prescribed medications (Read Only)'}
-                {activeTab === 'consultations' && 'View consultation notes (Read Only)'}
-                {activeTab === 'diagnostics' && 'View diagnostic results (Read Only)'}
+                {activeTab === 'tasks' && 'Manage your care tasks'}
+                {activeTab === 'carelogs' && 'View and manage care logs'}
+                {activeTab === 'activities' && 'Track your activities'}
+                {activeTab === 'prescriptions' && 'View prescribed medications'}
+                {activeTab === 'consultations' && 'View consultation notes'}
+                {activeTab === 'diagnostics' && 'View diagnostic results'}
               </p>
+              {activeTab === 'dashboard' && (
+                <div className="flex items-center mt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {userProfile?.medicalQualification || 'General Medicine'}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex items-center space-x-4">
-              <button
-                onClick={() => window.location.href = `/onboard?institution=${institutionId || userProfile?.institutionId}`}
-                className="flex items-center px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                Back to Portal
+              <button className="flex items-center px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
               </button>
-              <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
-                {profileImage ? (
-                  <img
-                    src={profileImage}
-                    alt="Profile"
-                    className="h-full w-full object-cover"
-                    onLoad={() => console.log('Profile image loaded successfully')}
-                    onError={() => console.log('Profile image failed to load')}
-                  />
-                ) : (
-                  <span className="text-white font-semibold text-sm">
-                    {caregiver?.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                  </span>
-                )}
+              <div className="flex items-center space-x-3">
+                <Bell className="h-5 w-5 text-gray-400" />
+                <div className="flex items-center space-x-2">
+                  <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+                    {profileImage ? (
+                      <img
+                        src={profileImage}
+                        alt="Profile"
+                        className="h-full w-full object-cover"
+                        onLoad={() => console.log('Profile image loaded successfully')}
+                        onError={() => console.log('Profile image failed to load')}
+                      />
+                    ) : (
+                      <span className="text-white font-semibold">
+                        {caregiver?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {caregiver?.name || userProfile?.name || 'User'}
+                    </p>
+                    <p className="text-xs text-gray-500">Caregiver</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1762,6 +1888,68 @@ const InstitutionCaregiverDashboard = () => {
           {renderDoctorClientSelector()}
         </div>
 
+        {/* Summary Cards - Only show on dashboard */}
+        {activeTab === 'dashboard' && (
+          <div className="px-8 pb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Assigned Patients</p>
+                    <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Today's Tasks</p>
+                    <p className="text-2xl font-bold text-gray-900">{recentTasks.length}</p>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <CheckSquare className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
+                    <p className="text-2xl font-bold text-gray-900">{recentTasks.filter(task => task.status !== 'completed').length}</p>
+                  </div>
+                  <div className="p-3 bg-orange-50 rounded-lg">
+                    <Clock className="h-6 w-6 text-orange-600" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Unread Messages</p>
+                    <p className="text-2xl font-bold text-gray-900">0</p>
+                  </div>
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <MessageSquare className="h-6 w-6 text-purple-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-6">
+              <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Weekly Overview
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Main Content */}
         <div className="flex-1 px-8 pb-8 overflow-y-auto">
         {showSettings ? (
@@ -1770,8 +1958,12 @@ const InstitutionCaregiverDashboard = () => {
           renderMessagesTab()
         ) : activeTab === 'schedule' ? (
           renderScheduleTab()
-        ) : activeTab === 'reports' ? (
-          renderReportsTab()
+        ) : activeTab === 'tasks' ? (
+          renderTasksTab()
+        ) : activeTab === 'carelogs' ? (
+          renderCareLogsTab()
+        ) : activeTab === 'activities' ? (
+          renderActivitiesTab()
         ) : activeTab === 'clients' ? (
           renderClientsTab()
         ) : activeTab === 'prescriptions' ? (
