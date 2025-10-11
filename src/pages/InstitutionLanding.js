@@ -12,7 +12,9 @@ import {
   ArrowRight,
   Loader,
   AlertCircle,
-  Activity
+  Activity,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 
 const InstitutionLanding = () => {
@@ -195,6 +197,16 @@ const InstitutionLanding = () => {
     );
   }
 
+  const getPortalUrl = (role) => {
+    return `${window.location.origin}/institution/login?institution=${institutionId}&role=${role}`;
+  };
+
+  const copyPortalLink = (role, title) => {
+    const url = getPortalUrl(role);
+    navigator.clipboard.writeText(url);
+    toast.success(`${title} link copied to clipboard!`);
+  };
+
   const accessRoles = [
     {
       icon: Shield,
@@ -281,28 +293,72 @@ const InstitutionLanding = () => {
           <div className="max-w-5xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {accessRoles.map((role, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleRoleSelect(role.role)}
-                  className={`group relative bg-gradient-to-br ${role.color} ${role.hoverColor} text-white rounded-2xl p-10 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-200`}
-                >
-                  <div className="flex flex-col items-center text-center space-y-6">
-                    <div className="h-20 w-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-30 transition-all">
-                      <role.icon className="h-10 w-10" />
+                <div key={index} className="space-y-3">
+                  {/* Portal Box - Opens in New Tab */}
+                  <a
+                    href={getPortalUrl(role.role)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`group relative bg-gradient-to-br ${role.color} ${role.hoverColor} text-white rounded-2xl p-10 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-200 block`}
+                  >
+                    <div className="flex flex-col items-center text-center space-y-6">
+                      <div className="h-20 w-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-30 transition-all">
+                        <role.icon className="h-10 w-10" />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-center gap-2">
+                          <h3 className="font-bold text-xl">{role.title}</h3>
+                          <ExternalLink className="h-4 w-4" />
+                        </div>
+                        <p className="text-sm text-white text-opacity-90 leading-relaxed mt-2">{role.description}</p>
+                      </div>
+                      <ArrowRight className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <div>
-                      <h3 className="font-bold text-xl mb-2">{role.title}</h3>
-                      <p className="text-sm text-white text-opacity-90 leading-relaxed">{role.description}</p>
+                  </a>
+                  
+                  {/* Copyable Link */}
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 overflow-hidden">
+                        <p className="text-xs text-gray-500 mb-1">Direct Link:</p>
+                        <p className="text-xs font-mono text-gray-700 truncate">
+                          {getPortalUrl(role.role)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => copyPortalLink(role.role, role.title)}
+                        className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Copy link"
+                      >
+                        <Copy className="h-4 w-4 text-gray-600" />
+                      </button>
                     </div>
-                    <ArrowRight className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </div>
 
           <div className="mt-12 text-center">
-            <p className="text-gray-600 mb-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">
+              <h3 className="font-semibold text-blue-900 mb-2">How to Access Your Portal</h3>
+              <ol className="text-sm text-blue-800 text-left space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">1.</span>
+                  <span>Click on your portal box above (opens in new tab)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">2.</span>
+                  <span>Or copy the direct link using the <Copy className="h-3 w-3 inline" /> button</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">3.</span>
+                  <span>Share the link with your team members</span>
+                </li>
+              </ol>
+            </div>
+            
+            <p className="text-gray-600 mt-6">
               Don't have an account? Contact your institution administrator to get access credentials.
             </p>
           </div>
