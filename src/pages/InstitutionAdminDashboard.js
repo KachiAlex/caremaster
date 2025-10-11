@@ -542,10 +542,26 @@ const InstitutionAdminDashboard = () => {
       return;
     }
     try {
-      await caregiverAPI.deleteCaregiver(caregiverId);
-      toast.success('Caregiver deleted successfully');
-      await loadDashboardData();
+      console.log('🗑️ Starting deletion for caregiver:', caregiverId);
+      
+      // Close the modal first
       setShowCaregiverDetails(false);
+      setSelectedCaregiver(null);
+      
+      // Delete the caregiver
+      await caregiverAPI.deleteCaregiver(caregiverId);
+      console.log('✅ Caregiver deleted from database');
+      
+      // Immediately remove from local state
+      setCaregivers(prevCaregivers => prevCaregivers.filter(c => c.id !== caregiverId));
+      console.log('✅ Removed from local state');
+      
+      toast.success('Caregiver deleted successfully');
+      
+      // Reload dashboard data in background to ensure consistency
+      setTimeout(() => {
+        loadDashboardData();
+      }, 500);
     } catch (error) {
       console.error('Error deleting caregiver:', error);
       toast.error('Failed to delete caregiver');
