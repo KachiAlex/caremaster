@@ -249,8 +249,25 @@ export const caregiverAPI = {
   // Delete caregiver
   deleteCaregiver: async (caregiverId) => {
     try {
+      console.log('🗑️ Deleting caregiver:', caregiverId);
+      
+      // Delete from caregivers collection
       const caregiverRef = doc(db, 'caregivers', caregiverId);
       await deleteDoc(caregiverRef);
+      console.log('✅ Deleted from caregivers collection');
+      
+      // Delete from users collection
+      const userRef = doc(db, 'users', caregiverId);
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        await deleteDoc(userRef);
+        console.log('✅ Deleted from users collection');
+      }
+      
+      // Note: Firebase Auth user deletion requires admin SDK (backend function)
+      // For now, we mark the account as deleted in the database
+      // TODO: Implement backend function to delete from Firebase Auth
+      
       return { success: true };
     } catch (error) {
       console.error('Error deleting caregiver:', error);

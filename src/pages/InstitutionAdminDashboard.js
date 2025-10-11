@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useUser } from '../contexts/UserContext';
 import { 
@@ -341,6 +341,28 @@ const InstitutionAdminDashboard = () => {
   const handleAddCaregiver = async (caregiverData) => {
     try {
       const instId = institutionId || userProfile?.institutionId;
+      
+      // Check for duplicate email in users collection
+      const usersRef = collection(db, 'users');
+      const emailQuery = query(usersRef, where('email', '==', caregiverData.email));
+      const emailSnapshot = await getDocs(emailQuery);
+      
+      if (!emailSnapshot.empty) {
+        toast.error('A user with this email already exists. Please use a different email.');
+        return;
+      }
+      
+      // Check for duplicate email in caregivers collection
+      const caregiversRef = collection(db, 'caregivers');
+      const caregiverEmailQuery = query(caregiversRef, where('email', '==', caregiverData.email));
+      const caregiverEmailSnapshot = await getDocs(caregiverEmailQuery);
+      
+      if (!caregiverEmailSnapshot.empty) {
+        toast.error('A caregiver with this email already exists. Please use a different email.');
+        return;
+      }
+      
+      console.log('✅ Email is unique, proceeding with caregiver creation');
       
       // Generate a unique ID for the caregiver
       const caregiverId = `caregiver_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1850,6 +1872,8 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   const caregiverRoles = [
     'Doctor',
@@ -1878,6 +1902,44 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
+    
+    // Reset email exists check when email changes
+    if (name === 'email') {
+      setEmailExists(false);
+    }
+  };
+
+  const checkEmailUniqueness = async (email) => {
+    if (!email || !email.includes('@')) return;
+    
+    setCheckingEmail(true);
+    try {
+      // Check in users collection
+      const usersRef = collection(db, 'users');
+      const emailQuery = query(usersRef, where('email', '==', email));
+      const emailSnapshot = await getDocs(emailQuery);
+      
+      if (!emailSnapshot.empty) {
+        setEmailExists(true);
+        return;
+      }
+      
+      // Check in caregivers collection
+      const caregiversRef = collection(db, 'caregivers');
+      const caregiverEmailQuery = query(caregiversRef, where('email', '==', email));
+      const caregiverEmailSnapshot = await getDocs(caregiverEmailQuery);
+      
+      if (!caregiverEmailSnapshot.empty) {
+        setEmailExists(true);
+        return;
+      }
+      
+      setEmailExists(false);
+    } catch (error) {
+      console.error('Error checking email:', error);
+    } finally {
+      setCheckingEmail(false);
+    }
   };
 
   const handleDayToggle = (day) => {
@@ -1921,14 +1983,38 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Email Address *</label>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={(e) => checkEmailUniqueness(e.target.value)}
+                  className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 ${
+                    emailExists 
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                />
+                {checkingEmail && (
+                  <div className="absolute right-3 top-3">
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                  </div>
+                )}
+              </div>
+              {emailExists && (
+                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  This email is already in use. Please use a different email.
+                </p>
+              )}
+              {!emailExists && formData.email && !checkingEmail && (
+                <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-4 w-4" />
+                  Email is available
+                </p>
+              )}
             </div>
 
             <div>
@@ -2114,9 +2200,14 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={emailExists || checkingEmail}
+              className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                emailExists || checkingEmail
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+              }`}
             >
-              Add Caregiver
+              {checkingEmail ? 'Checking...' : emailExists ? 'Email Already Exists' : 'Add Caregiver'}
             </button>
           </div>
         </form>
