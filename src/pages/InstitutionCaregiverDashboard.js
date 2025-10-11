@@ -1056,6 +1056,308 @@ const InstitutionCaregiverDashboard = () => {
     );
   };
 
+  // Schedule Tab Renderer
+  const renderScheduleTab = () => {
+    const currentShift = {
+      type: 'Day Shift',
+      start: '07:00',
+      end: '19:00',
+      breakTime: '12:00 - 12:30',
+      ratio: `1:${assignedClients.length}`
+    };
+
+    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const today = new Date().getDay();
+    
+    return (
+      <div className="space-y-6">
+        {/* Shift Overview */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Clock className="h-6 w-6 text-blue-600" />
+            Current Shift Overview
+          </h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-1">Shift Type</p>
+              <p className="text-lg font-bold text-gray-900">{currentShift.type}</p>
+            </div>
+            <div className="bg-white rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-1">Hours</p>
+              <p className="text-lg font-bold text-gray-900">{currentShift.start} - {currentShift.end}</p>
+            </div>
+            <div className="bg-white rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-1">Client-Nurse Ratio</p>
+              <p className="text-lg font-bold text-gray-900">{currentShift.ratio}</p>
+            </div>
+            <div className="bg-white rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-1">Break Time</p>
+              <p className="text-lg font-bold text-gray-900">{currentShift.breakTime}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Weekly Schedule Calendar */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Weekly Schedule</h2>
+            <div className="text-sm text-gray-500">Week of {new Date().toLocaleDateString()}</div>
+          </div>
+          
+          <div className="grid grid-cols-7 gap-2">
+            {daysOfWeek.map((day, index) => (
+              <div key={day} className={`text-center p-4 rounded-lg ${index + 1 === today ? 'bg-blue-100 border-2 border-blue-600' : 'bg-gray-50'}`}>
+                <p className="text-sm font-bold text-gray-900">{day}</p>
+                <p className="text-xs text-gray-600 mt-1">{new Date(Date.now() + (index - today + 1) * 86400000).getDate()}</p>
+                {index + 1 === today && (
+                  <div className="mt-2 space-y-1">
+                    <div className="text-xs bg-green-500 text-white rounded px-2 py-1">08:00 Meds</div>
+                    <div className="text-xs bg-blue-500 text-white rounded px-2 py-1">10:00 Vitals</div>
+                    <div className="text-xs bg-purple-500 text-white rounded px-2 py-1">14:00 Care</div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Today's Timeline */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Today's Timeline</h2>
+          
+          <div className="space-y-4">
+            {todaySchedule.length > 0 ? (
+              todaySchedule.map((item, index) => (
+                <div key={item.id} className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-20 text-right">
+                    <p className="text-sm font-bold text-gray-900">
+                      {new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 flex flex-col items-center">
+                    <div className={`h-3 w-3 rounded-full ${item.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                    {index < todaySchedule.length - 1 && <div className="w-0.5 h-12 bg-gray-300"></div>}
+                  </div>
+                  <div className="flex-1 pb-8">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="font-semibold text-gray-900">{item.title}</p>
+                      <p className="text-sm text-gray-600 mt-1">{item.client}</p>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${
+                        item.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                        item.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-400 py-12">
+                <Calendar className="h-12 w-12 mx-auto mb-2" />
+                <p>No scheduled activities for today</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Reports Tab Renderer
+  const renderReportsTab = () => {
+    const [reportType, setReportType] = useState('shift');
+    const [shiftType, setShiftType] = useState('day');
+    
+    return (
+      <div className="space-y-6">
+        {/* Report Type Selector */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Nursing Reports</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setReportType('shift')}
+                className={`px-4 py-2 rounded-lg ${
+                  reportType === 'shift' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                Shift Report
+              </button>
+              <button
+                onClick={() => setReportType('handoff')}
+                className={`px-4 py-2 rounded-lg ${
+                  reportType === 'handoff' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                Handoff Notes
+              </button>
+              <button
+                onClick={() => setReportType('incident')}
+                className={`px-4 py-2 rounded-lg ${
+                  reportType === 'incident' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                Incident Reports
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Shift Report Generator */}
+        {reportType === 'shift' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Shift Report</h3>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Shift</label>
+                <select 
+                  value={shiftType}
+                  onChange={(e) => setShiftType(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="day">Day Shift (07:00 - 19:00)</option>
+                  <option value="night">Night Shift (19:00 - 07:00)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input 
+                  type="date" 
+                  defaultValue={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Shift Summary */}
+            <div className="bg-gray-50 rounded-lg p-6 mb-6">
+              <h4 className="font-semibold text-gray-900 mb-4">Shift Summary</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Client Census</p>
+                  <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Admissions</p>
+                  <p className="text-2xl font-bold text-green-600">0</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Discharges</p>
+                  <p className="text-2xl font-bold text-blue-600">0</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Incidents</p>
+                  <p className="text-2xl font-bold text-red-600">0</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Medications Given</p>
+                  <p className="text-2xl font-bold text-purple-600">{todaySchedule.filter(t => t.type === 'task').length}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Vitals Recorded</p>
+                  <p className="text-2xl font-bold text-orange-600">{assignedClients.length}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Care Activities</p>
+                  <p className="text-2xl font-bold text-teal-600">{recentTasks.length}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Assessments</p>
+                  <p className="text-2xl font-bold text-indigo-600">{assignedClients.length}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => toast.info('Generating shift report...')}
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <FileText className="h-5 w-5" />
+                Generate Full Report
+              </button>
+              <button
+                onClick={() => toast.info('Exporting as PDF...')}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+              >
+                <Eye className="h-5 w-5" />
+                Export PDF
+              </button>
+              <button
+                onClick={() => toast.info('Sending email...')}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+              >
+                <Mail className="h-5 w-5" />
+                Email Report
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Handoff Notes */}
+        {reportType === 'handoff' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Handoff Notes</h3>
+            
+            <div className="space-y-4 mb-6">
+              {assignedClients.map((client) => (
+                <div key={client.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900">{client.name}</h4>
+                    <span className="text-xs text-gray-500">Room {client.room || 'N/A'}</span>
+                  </div>
+                  <textarea
+                    placeholder="Enter handoff notes for this client..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    rows="3"
+                    defaultValue={`Stable condition. Continue current care plan. No significant changes during shift.`}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => toast.success('Handoff notes saved')}
+              className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <CheckCircle className="h-5 w-5" />
+              Save All Handoff Notes
+            </button>
+          </div>
+        )}
+
+        {/* Incident Reports */}
+        {reportType === 'incident' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Incident Reports</h3>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-900">No incidents reported today</p>
+                  <p className="text-xs text-yellow-700 mt-1">All clients are safe. Continue monitoring.</p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => toast.info('Opening incident report form...')}
+              className="w-full px-6 py-3 border-2 border-dashed border-gray-300 text-gray-700 rounded-lg hover:border-red-400 hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus className="h-5 w-5" />
+              Report New Incident
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // View-only tab renderers for non-medical caregivers
   const renderPrescriptionsTab = () => {
     return (
@@ -1311,6 +1613,32 @@ const InstitutionCaregiverDashboard = () => {
                     Messages
                   </div>
                 </button>
+                <button
+                  onClick={() => setActiveTab('schedule')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'schedule'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Schedule
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('reports')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'reports'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Reports
+                  </div>
+                </button>
                 {/* View-only tabs for non-medical caregivers */}
                 {isNonMedicalCaregiver && (
                   <>
@@ -1358,6 +1686,10 @@ const InstitutionCaregiverDashboard = () => {
           <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
         ) : activeTab === 'messages' ? (
           renderMessagesTab()
+        ) : activeTab === 'schedule' ? (
+          renderScheduleTab()
+        ) : activeTab === 'reports' ? (
+          renderReportsTab()
         ) : activeTab === 'clients' ? (
           renderClientsTab()
         ) : activeTab === 'prescriptions' ? (
@@ -1368,6 +1700,57 @@ const InstitutionCaregiverDashboard = () => {
           renderDiagnosticsTab()
         ) : (
           <div className="space-y-6">
+          {/* Morning Briefing for Nurses */}
+          {(userProfile?.medicalQualification?.includes('Nurse') || userProfile?.medicalQualification?.includes('RN')) && (
+            <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl shadow-sm border border-red-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Heart className="h-6 w-6 text-red-600" />
+                  Morning Briefing
+                </h2>
+                <span className="text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-5 w-5 text-blue-600" />
+                    <p className="text-sm font-medium text-gray-600">Client Census</p>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
+                  <p className="text-xs text-gray-500 mt-1">Assigned clients</p>
+                </div>
+                
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                    <p className="text-sm font-medium text-gray-600">Priority Alerts</p>
+                  </div>
+                  <p className="text-2xl font-bold text-yellow-600">0</p>
+                  <p className="text-xs text-gray-500 mt-1">Critical attention needed</p>
+                </div>
+                
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Pill className="h-5 w-5 text-green-600" />
+                    <p className="text-sm font-medium text-gray-600">Medications Due</p>
+                  </div>
+                  <p className="text-2xl font-bold text-green-600">{todaySchedule.length}</p>
+                  <p className="text-xs text-gray-500 mt-1">Scheduled today</p>
+                </div>
+                
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="h-5 w-5 text-purple-600" />
+                    <p className="text-sm font-medium text-gray-600">Assessments</p>
+                  </div>
+                  <p className="text-2xl font-bold text-purple-600">{assignedClients.length}</p>
+                  <p className="text-xs text-gray-500 mt-1">Due today</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Qualification-Specific Quick Actions */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
@@ -1432,6 +1815,73 @@ const InstitutionCaregiverDashboard = () => {
               </div>
             </div>
           </div>
+
+          {/* Priority Alerts Section for Nurses */}
+          {(userProfile?.medicalQualification?.includes('Nurse') || userProfile?.medicalQualification?.includes('RN')) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Priority Alerts */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                  Priority Alerts
+                </h2>
+                
+                <div className="space-y-3">
+                  {assignedClients.length === 0 ? (
+                    <div className="text-center text-gray-400 py-8">
+                      <Shield className="h-12 w-12 mx-auto mb-2" />
+                      <p className="text-sm">No priority alerts</p>
+                      <p className="text-xs mt-1">All clients stable</p>
+                    </div>
+                  ) : (
+                    assignedClients.slice(0, 5).map((client, index) => (
+                      <div key={client.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className={`flex-shrink-0 h-2 w-2 rounded-full mt-2 ${
+                          index === 0 ? 'bg-green-500' : 'bg-gray-300'
+                        }`}></div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{client.name}</p>
+                          <p className="text-xs text-gray-500">All vitals within normal range</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Activities */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-blue-600" />
+                  Recent Activities
+                </h2>
+                
+                <div className="space-y-3">
+                  {recentTasks.length === 0 ? (
+                    <div className="text-center text-gray-400 py-8">
+                      <Clock className="h-12 w-12 mx-auto mb-2" />
+                      <p className="text-sm">No recent activities</p>
+                      <p className="text-xs mt-1">Start documenting care</p>
+                    </div>
+                  ) : (
+                    recentTasks.slice(0, 5).map((task) => (
+                      <div key={task.id} className="flex items-start gap-3">
+                        <div className="flex-shrink-0">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{task.task || task.title}</p>
+                          <p className="text-xs text-gray-500">
+                            {task.clientName} • {task.completedAt ? new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending'}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Today's Schedule */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
