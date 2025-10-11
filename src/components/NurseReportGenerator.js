@@ -22,7 +22,7 @@ import {
 import { toast } from 'react-toastify';
 import { createNurseReport } from '../api/nurseReportsAPI';
 import { getVitalSignsByPatient } from '../api/vitalSignsAPI';
-import { getCareLogsByPatient } from '../api/careLogsAPI';
+import { getCareLogsByClient } from '../api/careLogsAPI';
 
 const NurseReportGenerator = ({ patientId, patientName, nurseId, nurseName, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -165,7 +165,7 @@ const NurseReportGenerator = ({ patientId, patientName, nurseId, nurseName, onSa
       setRecentVitals(vitals.slice(0, 5)); // Last 5 readings
 
       // Load recent care logs
-      const logs = await getCareLogsByPatient(patientId);
+      const logs = await getCareLogsByClient(patientId);
       setRecentCareLogs(logs.slice(0, 3)); // Last 3 logs
     } catch (error) {
       console.error('Error loading recent data:', error);

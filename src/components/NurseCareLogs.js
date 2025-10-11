@@ -15,7 +15,7 @@ import {
   Eye
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { createCareLog, getCareLogsByPatient, updateCareLog, deleteCareLog } from '../api/careLogsAPI';
+import { createCareLog, getCareLogsByClient, updateCareLog, deleteCareLog } from '../api/careLogsAPI';
 import { useUser } from '../contexts/UserContext';
 
 const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onCancel }) => {
@@ -97,7 +97,7 @@ const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onC
   const loadCareLogs = async () => {
     try {
       setLoading(true);
-      const logs = await getCareLogsByPatient(patientId, institutionId);
+      const logs = await getCareLogsByClient(patientId);
       setCareLogs(logs || []);
     } catch (error) {
       console.error('Error loading care logs:', error);

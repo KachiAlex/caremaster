@@ -43,7 +43,9 @@ import NurseVitalsInput from '../components/NurseVitalsInput';
 import NurseCareLogs from '../components/NurseCareLogs';
 import NurseReportGenerator from '../components/NurseReportGenerator';
 import NurseMedicationManager from '../components/NurseMedicationManager';
+import CareLogForm from '../components/CareLogForm';
 import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
+import { careLogsAPI } from '../api/careLogsAPI';
 import { toast } from 'react-toastify';
 
 const InstitutionCaregiverDashboard = () => {
@@ -74,6 +76,7 @@ const InstitutionCaregiverDashboard = () => {
   const [showCareLogsModal, setShowCareLogsModal] = useState(false);
   const [showNurseReportModal, setShowNurseReportModal] = useState(false);
   const [showMedicationModal, setShowMedicationModal] = useState(false);
+  const [showCareLogForm, setShowCareLogForm] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   
   // Messaging states
@@ -436,6 +439,31 @@ const InstitutionCaregiverDashboard = () => {
     window.location.href = `/service-provider/messages`;
   };
 
+  const handleCareLogSave = async (careLogData) => {
+    try {
+      const careLogWithMetadata = {
+        ...careLogData,
+        caregiverId: user?.uid,
+        caregiverName: userProfile?.name || userProfile?.displayName,
+        institutionId: effectiveInstitutionId,
+        timestamp: new Date().toISOString()
+      };
+
+      await careLogsAPI.createCareLog(careLogWithMetadata);
+      toast.success('Care log saved successfully');
+      
+      // Refresh care logs if the modal is open
+      if (showCareLogsModal) {
+        // Trigger a refresh of care logs data
+        setShowCareLogsModal(false);
+        setTimeout(() => setShowCareLogsModal(true), 100);
+      }
+    } catch (error) {
+      console.error('Error saving care log:', error);
+      throw error;
+    }
+  };
+
   const handleClockIn = (scheduleId) => {
     // Handle clock in
     console.log('Clock in for schedule:', scheduleId);
@@ -614,11 +642,18 @@ const InstitutionCaregiverDashboard = () => {
                   Record Vitals
                 </button>
                 <button
+                  onClick={() => setShowCareLogForm(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Care Log
+                </button>
+                <button
                   onClick={() => setShowCareLogsModal(true)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                 >
                   <FileText className="h-4 w-4 mr-2" />
-                  Care Logs
+                  View Logs
                 </button>
               </div>
             )}
@@ -2100,6 +2135,15 @@ const InstitutionCaregiverDashboard = () => {
             // Refresh client data if needed
           }}
           onCancel={() => setShowCareLogsModal(false)}
+        />
+      )}
+
+      {showCareLogForm && selectedClient && (
+        <CareLogForm
+          client={selectedClient}
+          onSave={handleCareLogSave}
+          onClose={() => setShowCareLogForm(false)}
+          isOpen={showCareLogForm}
         />
       )}
 

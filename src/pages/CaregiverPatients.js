@@ -27,7 +27,7 @@ import { getClientsByCaregiver } from '../api/patientsAPI';
 import { getTodaysCareTasks } from '../api/careTasksAPI';
 import { getLatestVitalSigns, getVitalSignsByPatient } from '../api/vitalSignsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
-import { getCareLogsByPatient } from '../api/careLogsAPI';
+import { getCareLogsByClient } from '../api/careLogsAPI';
 import { getNurseReportsByPatient } from '../api/nurseReportsAPI';
 import { toast } from 'react-toastify';
 import { medicationAPI } from '../api/medicationAPI';
@@ -264,7 +264,7 @@ const CaregiverClients = () => {
                     onClick={async () => {
                       setSelectedClient(client);
                       try {
-                        const logs = await getCareLogsByPatient(client.id);
+                        const logs = await getCareLogsByClient(client.id);
                         setClientLogs(logs);
                       } catch(e) {
                         setClientLogs([]);
@@ -323,7 +323,7 @@ const CaregiverClients = () => {
                       e.stopPropagation();
                       try {
                         setSelectedClient(client);
-                        const logs = await getCareLogsByPatient(client.id);
+                        const logs = await getCareLogsByClient(client.id);
                         setClientLogs(logs || []);
                         setShowLogsModal(true);
                       } catch (e) {
@@ -466,7 +466,7 @@ const CaregiverClients = () => {
                         className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
                         onClick={async ()=>{
                           try {
-                            const logs = await getCareLogsByPatient(selectedClient.id);
+                            const logs = await getCareLogsByClient(selectedClient.id);
                             setClientLogs(logs || []);
                             setShowLogsModal(true);
                           } catch (e) {
@@ -483,7 +483,7 @@ const CaregiverClients = () => {
                         onChange={async (e)=>{
                           const v = e.target.value;
                           const start = v ? new Date(v).getTime() : null;
-                          const logs = await getCareLogsByPatient(selectedClient.id);
+                          const logs = await getCareLogsByClient(selectedClient.id);
                           setClientLogs(logs.filter(l=> !start || (l.createdAt?.toDate ? l.createdAt.toDate().getTime()>=start : true)));
                         }}
                         placeholder="Start date"/>
@@ -493,7 +493,7 @@ const CaregiverClients = () => {
                         onChange={async (e)=>{
                           const v = e.target.value;
                           const end = v ? new Date(v).getTime()+86399999 : null;
-                          const logs = await getCareLogsByPatient(selectedClient.id);
+                          const logs = await getCareLogsByClient(selectedClient.id);
                           setClientLogs(logs.filter(l=> !end || (l.createdAt?.toDate ? l.createdAt.toDate().getTime()<=end : true)));
                         }}
                         placeholder="End date"/>
