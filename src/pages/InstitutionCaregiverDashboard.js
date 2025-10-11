@@ -44,6 +44,7 @@ import NurseCareLogs from '../components/NurseCareLogs';
 import NurseReportGenerator from '../components/NurseReportGenerator';
 import NurseMedicationManager from '../components/NurseMedicationManager';
 import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
+import { toast } from 'react-toastify';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -74,6 +75,16 @@ const InstitutionCaregiverDashboard = () => {
   const [showNurseReportModal, setShowNurseReportModal] = useState(false);
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
+  
+  // Messaging states
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isInCall, setIsInCall] = useState(false);
+  const [callType, setCallType] = useState(null); // 'voice' or 'video'
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
 
   // Get qualification-specific dashboard configuration
   const getDashboardConfig = () => {
@@ -747,6 +758,304 @@ const InstitutionCaregiverDashboard = () => {
     );
   };
 
+  // Messaging Tab Renderer
+  const renderMessagesTab = () => {
+    const handleSendMessage = async () => {
+      if (!newMessage.trim() || !selectedConversation) return;
+      
+      // Add message to local state
+      const message = {
+        id: Date.now(),
+        text: newMessage,
+        sender: user?.uid,
+        senderName: userProfile?.name || 'You',
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+      
+      setMessages([...messages, message]);
+      setNewMessage('');
+      
+      // TODO: Send message to backend/Firestore
+      toast.success('Message sent');
+    };
+
+    const startVoiceCall = async () => {
+      if (!selectedConversation) {
+        toast.error('Please select a conversation first');
+        return;
+      }
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        setLocalStream(stream);
+        setCallType('voice');
+        setIsInCall(true);
+        toast.success('Voice call started');
+        
+        // TODO: Initialize WebRTC connection
+      } catch (error) {
+        console.error('Error starting voice call:', error);
+        toast.error('Failed to start voice call. Please check microphone permissions.');
+      }
+    };
+
+    const startVideoCall = async () => {
+      if (!selectedConversation) {
+        toast.error('Please select a conversation first');
+        return;
+      }
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        setLocalStream(stream);
+        setCallType('video');
+        setIsInCall(true);
+        toast.success('Video call started');
+        
+        // TODO: Initialize WebRTC connection
+      } catch (error) {
+        console.error('Error starting video call:', error);
+        toast.error('Failed to start video call. Please check camera and microphone permissions.');
+      }
+    };
+
+    const endCall = () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
+      }
+      if (remoteStream) {
+        remoteStream.getTracks().forEach(track => track.stop());
+        setRemoteStream(null);
+      }
+      setIsInCall(false);
+      setCallType(null);
+      toast.info('Call ended');
+    };
+
+    // Mock conversations for demo
+    const mockConversations = assignedClients.length > 0 ? assignedClients.map(client => ({
+      id: client.id,
+      name: client.name,
+      avatar: client.avatar || null,
+      lastMessage: 'Click to start conversation',
+      timestamp: new Date().toISOString(),
+      unread: 0,
+      type: 'client'
+    })) : [
+      {
+        id: 'admin-1',
+        name: institutionData?.name || 'Institution Admin',
+        avatar: null,
+        lastMessage: 'Welcome to the team!',
+        timestamp: new Date().toISOString(),
+        unread: 1,
+        type: 'admin'
+      }
+    ];
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[calc(100vh-250px)]">
+        <div className="flex h-full">
+          {/* Conversations List */}
+          <div className="w-80 border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+              <p className="text-sm text-gray-500 mt-1">{mockConversations.length} conversations</p>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              {mockConversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  onClick={() => {
+                    setSelectedConversation(conversation);
+                    setMessages([]); // Clear messages for demo
+                  }}
+                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                      {conversation.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-gray-900 truncate">{conversation.name}</h3>
+                        {conversation.unread > 0 && (
+                          <span className="ml-2 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                            {conversation.unread}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 truncate mt-1">{conversation.lastMessage}</p>
+                      <span className="text-xs text-gray-400 mt-1">
+                        {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Chat Area */}
+          {selectedConversation ? (
+            <div className="flex-1 flex flex-col">
+              {/* Chat Header with Call Buttons */}
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                    {selectedConversation.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name}</h3>
+                    <p className="text-xs text-gray-500">
+                      {selectedConversation.type === 'client' ? 'Client' : 'Admin'}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Call Buttons */}
+                <div className="flex items-center gap-2">
+                  {!isInCall && (
+                    <>
+                      <button
+                        onClick={startVoiceCall}
+                        className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                        title="Start Voice Call"
+                      >
+                        <Phone className="h-5 w-5 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={startVideoCall}
+                        className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                        title="Start Video Call"
+                      >
+                        <Camera className="h-5 w-5 text-gray-600" />
+                      </button>
+                    </>
+                  )}
+                  {isInCall && (
+                    <button
+                      onClick={endCall}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                    >
+                      <Phone className="h-4 w-4" />
+                      End Call
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Call Interface (when in call) */}
+              {isInCall && (
+                <div className="p-6 bg-gray-900 flex items-center justify-center" style={{ height: '400px' }}>
+                  <div className="text-center">
+                    {callType === 'video' ? (
+                      <div className="space-y-4">
+                        <Camera className="h-16 w-16 text-white mx-auto" />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
+                            <div className="text-center">
+                              <p className="text-white font-medium">You</p>
+                              <p className="text-gray-400 text-sm">Camera Active</p>
+                            </div>
+                          </div>
+                          <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
+                            <div className="text-center">
+                              <p className="text-white font-medium">{selectedConversation.name}</p>
+                              <p className="text-gray-400 text-sm">Connecting...</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <Phone className="h-16 w-16 text-green-500 mx-auto animate-pulse" />
+                        <p className="text-white text-lg font-medium">Voice Call Active</p>
+                        <p className="text-gray-400">Connected with {selectedConversation.name}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Messages Area */}
+              {!isInCall && (
+                <>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                    {messages.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-gray-400">
+                          <MessageSquare className="h-12 w-12 mx-auto mb-2" />
+                          <p>No messages yet. Start the conversation!</p>
+                        </div>
+                      </div>
+                    ) : (
+                      messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex ${message.sender === user?.uid ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                              message.sender === user?.uid
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white text-gray-900 border border-gray-200'
+                            }`}
+                          >
+                            <p className="text-sm">{message.text}</p>
+                            <p className={`text-xs mt-1 ${
+                              message.sender === user?.uid ? 'text-blue-100' : 'text-gray-400'
+                            }`}>
+                              {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Message Input */}
+                  <div className="p-4 border-t border-gray-200 bg-white">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder="Type a message..."
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!newMessage.trim()}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gray-50">
+              <div className="text-center text-gray-400">
+                <MessageSquare className="h-16 w-16 mx-auto mb-4" />
+                <p className="text-lg font-medium">Select a conversation to start messaging</p>
+                <p className="text-sm mt-2">Or start a voice/video call</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // View-only tab renderers for non-medical caregivers
   const renderPrescriptionsTab = () => {
     return (
@@ -989,6 +1298,19 @@ const InstitutionCaregiverDashboard = () => {
                 >
                   Clients
                 </button>
+                <button
+                  onClick={() => setActiveTab('messages')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'messages'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Messages
+                  </div>
+                </button>
                 {/* View-only tabs for non-medical caregivers */}
                 {isNonMedicalCaregiver && (
                   <>
@@ -1034,6 +1356,8 @@ const InstitutionCaregiverDashboard = () => {
       <div className="w-full p-8 dashboard-full-width">
         {showSettings ? (
           <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
+        ) : activeTab === 'messages' ? (
+          renderMessagesTab()
         ) : activeTab === 'clients' ? (
           renderClientsTab()
         ) : activeTab === 'prescriptions' ? (
