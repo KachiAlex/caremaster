@@ -161,59 +161,68 @@ const InstitutionLogin = () => {
           return;
         }
         
-        // Try to create Firebase Auth account for this user
+        // Try to sign in first (most common case for returning users)
         try {
-          console.log('Creating Firebase Auth account for:', formData.email);
-          const authResult = await createUserWithEmailAndPassword(
+          console.log('Attempting sign in for:', formData.email);
+          const userCredential = await signInWithEmailAndPassword(
             auth,
             formData.email,
             formData.password
           );
+          console.log('✅ Signed in successfully with UID:', userCredential.user.uid);
           
-          console.log('✅ Firebase Auth account created:', authResult.user.uid);
-          
-          // Update user document to new auth UID
-          await setDoc(doc(db, 'users', authResult.user.uid), {
+          // Sync custom auth data to Firebase Auth user document
+          console.log('🔄 Syncing custom auth data to Firebase Auth user document...');
+          await setDoc(doc(db, 'users', userCredential.user.uid), {
             ...customAuthUser,
-            uid: authResult.user.uid,
-            password: formData.password, // Keep password for future logins
+            uid: userCredential.user.uid,
+            password: formData.password,
             updatedAt: new Date().toISOString()
           }, { merge: true });
+          console.log('✅ User document synced');
           
-          toast.success('Login successful! Setting up your account...');
-          await routeUserToDashboard(authResult.user, customAuthUser);
+          toast.success('Login successful!');
+          await routeUserToDashboard(userCredential.user, customAuthUser);
           return;
-        } catch (authError) {
-          console.log('Firebase Auth error:', authError.code);
+        } catch (signInError) {
+          console.log('Sign in error:', signInError.code);
           
-          // If account already exists, try to sign in
-          if (authError.code === 'auth/email-already-in-use') {
-            console.log('Account exists, attempting sign in...');
+          // If user not found in Firebase Auth, create the account (first-time login)
+          if (signInError.code === 'auth/user-not-found') {
+            console.log('User not found in Firebase Auth, creating account...');
             try {
-              const userCredential = await signInWithEmailAndPassword(
+              const authResult = await createUserWithEmailAndPassword(
                 auth,
                 formData.email,
                 formData.password
               );
-              console.log('✅ Signed in successfully with UID:', userCredential.user.uid);
               
-              // IMPORTANT: Copy data from custom auth user to Firebase Auth user document
-              console.log('🔄 Syncing custom auth data to Firebase Auth user document...');
-              await setDoc(doc(db, 'users', userCredential.user.uid), {
+              console.log('✅ Firebase Auth account created:', authResult.user.uid);
+              
+              // Update user document to new auth UID
+              await setDoc(doc(db, 'users', authResult.user.uid), {
                 ...customAuthUser,
-                uid: userCredential.user.uid,
+                uid: authResult.user.uid,
                 password: formData.password,
                 updatedAt: new Date().toISOString()
               }, { merge: true });
-              console.log('✅ User document synced');
               
-              toast.success('Login successful!');
-              await routeUserToDashboard(userCredential.user, customAuthUser);
+              toast.success('Login successful! Setting up your account...');
+              await routeUserToDashboard(authResult.user, customAuthUser);
               return;
-            } catch (signInError) {
-              console.error('Sign in failed:', signInError);
-              // Continue to fallback
+            } catch (createError) {
+              console.error('Failed to create Firebase Auth account:', createError);
+              toast.error('Failed to create account. Please try again.');
+              setSubmitting(false);
+              return;
             }
+          } else if (signInError.code === 'auth/wrong-password') {
+            toast.error('Incorrect password. Please try again.');
+            setSubmitting(false);
+            return;
+          } else {
+            console.error('Sign in failed:', signInError);
+            // Continue to fallback
           }
         }
       }
