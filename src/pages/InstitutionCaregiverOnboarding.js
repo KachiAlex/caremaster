@@ -231,8 +231,9 @@ const InstitutionCaregiverOnboarding = () => {
       
       toast.success('Onboarding completed! Awaiting admin approval...');
       
+      // Use window.location to force a full page reload and refresh UserContext
       setTimeout(() => {
-        navigate(`/institution-caregiver/pending-approval${effectiveInstitutionId ? `?institution=${effectiveInstitutionId}` : ''}`);
+        window.location.href = `/institution-caregiver/pending-approval${effectiveInstitutionId ? `?institution=${effectiveInstitutionId}` : ''}`;
       }, 1500);
     } catch (error) {
       console.error('Error completing onboarding:', error);

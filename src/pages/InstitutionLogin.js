@@ -84,11 +84,19 @@ const InstitutionLogin = () => {
     if (userRole === 'admin' || userRole === 'institutionAdmin') {
       navigate(`/institution-admin/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
     } else if (userRole === 'doctor' || userRole === 'nurse' || userRole === 'caregiver') {
-      // Check if onboarding is complete for caregivers
+      // Check onboarding and approval status for caregivers
       if (!userData.onboardingComplete) {
         navigate(`/institution-caregiver/onboarding${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
-      } else {
+      } else if (userData.status === 'pending' || !userData.status) {
+        // Onboarding complete but awaiting admin approval
+        navigate(`/institution-caregiver/pending-approval${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
+      } else if (userData.status === 'active') {
+        // Approved - go to dashboard
         navigate(`/institution-caregiver/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
+      } else {
+        // Rejected or other status
+        toast.error(`Your account status is "${userData.status}". Please contact your administrator.`);
+        navigate('/institution/login');
       }
     } else if (userRole === 'pharmacist') {
       navigate(`/institution-pharmacist/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
