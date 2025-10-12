@@ -41,6 +41,8 @@ import { getAllClients, createClient, updateClient } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { getClientReports, createClientReport, getClientCareLogs, createClientCareLog } from '../api/patientReportsAPI';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
+import { institutionAPI } from '../api/institutionAPI';
+import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
 import { toast } from 'react-toastify';
 
 const InstitutionAdminDashboard = () => {
@@ -104,12 +106,44 @@ const InstitutionAdminDashboard = () => {
   const [showClientsModal, setShowClientsModal] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [appointmentView, setAppointmentView] = useState('daily'); // daily, weekly, monthly
+  
+  // Institution Link Customization
+  const [showLinkCustomizer, setShowLinkCustomizer] = useState(false);
+  const [institutionData, setInstitutionData] = useState(null);
 
   useEffect(() => {
     if (userProfile && institutionId) {
       loadDashboardData();
+      loadInstitutionData();
     }
   }, [userProfile, institutionId]);
+  
+  // Load institution data
+  const loadInstitutionData = async () => {
+    try {
+      const instId = institutionId || userProfile?.institutionId;
+      if (instId) {
+        const data = await institutionAPI.getInstitution(instId);
+        setInstitutionData(data);
+      }
+    } catch (error) {
+      console.error('Error loading institution data:', error);
+    }
+  };
+  
+  // Handle institution link update
+  const handleInstitutionLinkUpdate = async (updates) => {
+    try {
+      const instId = institutionId || userProfile?.institutionId;
+      await institutionAPI.updateInstitutionLinks(instId, updates);
+      await loadInstitutionData(); // Reload institution data
+      toast.success('Institution links updated successfully!');
+    } catch (error) {
+      console.error('Error updating institution links:', error);
+      toast.error('Failed to update institution links');
+      throw error;
+    }
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -1128,11 +1162,11 @@ const InstitutionAdminDashboard = () => {
             <span className="text-sm font-medium">View Reports</span>
           </button>
           <button 
-            onClick={() => navigate('/institution-admin/settings')}
+            onClick={() => setShowLinkCustomizer(true)}
             className="flex items-center justify-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Settings className="h-5 w-5 text-purple-600 mr-2" />
-            <span className="text-sm font-medium">Settings</span>
+            <span className="text-sm font-medium">Customize Links</span>
           </button>
         </div>
       </div>
@@ -1621,6 +1655,15 @@ const InstitutionAdminDashboard = () => {
           view={appointmentView}
           onViewChange={setAppointmentView}
           onClose={() => setShowAppointmentsModal(false)}
+        />
+      )}
+
+      {/* Institution Link Customizer */}
+      {showLinkCustomizer && institutionData && (
+        <InstitutionLinkCustomizer
+          institution={institutionData}
+          onUpdate={handleInstitutionLinkUpdate}
+          onClose={() => setShowLinkCustomizer(false)}
         />
       )}
     </div>
