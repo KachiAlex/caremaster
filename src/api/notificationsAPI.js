@@ -27,7 +27,13 @@ export const NOTIFICATION_TYPES = {
   EMERGENCY: 'emergency',
   SYSTEM: 'system',
   REMINDER: 'reminder',
-  CAREGIVER_ONBOARDING: 'caregiver_onboarding'
+  CAREGIVER_ONBOARDING: 'caregiver_onboarding',
+  NEW_TASK_ASSIGNED: 'new_task_assigned',
+  TASK_DUE_SOON: 'task_due_soon',
+  APPOINTMENT_REMINDER: 'appointment_reminder',
+  APPOINTMENT_CANCELLED: 'appointment_cancelled',
+  PATIENT_UPDATE: 'patient_update',
+  CARE_LOG_ADDED: 'care_log_added'
 };
 
 // Notification priorities
@@ -456,6 +462,220 @@ export const cleanupOldNotifications = async (daysOld = 30) => {
     return querySnapshot.size;
   } catch (error) {
     console.error('Error cleaning up old notifications:', error);
+    throw error;
+  }
+};
+
+// Real-time subscription for notifications
+export const subscribeToNotifications = (userId, callback, options = {}) => {
+  try {
+    const notificationsRef = collection(db, NOTIFICATIONS_COLLECTION);
+    let q = query(
+      notificationsRef,
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    // Add read status filtering if provided
+    if (options.read !== undefined) {
+      q = query(
+        notificationsRef,
+        where('userId', '==', userId),
+        where('read', '==', options.read),
+        orderBy('createdAt', 'desc')
+      );
+    }
+
+    // Add type filtering if provided
+    if (options.type) {
+      q = query(
+        notificationsRef,
+        where('userId', '==', userId),
+        where('type', '==', options.type),
+        orderBy('createdAt', 'desc')
+      );
+    }
+
+    // Add priority filtering if provided
+    if (options.priority) {
+      q = query(
+        notificationsRef,
+        where('userId', '==', userId),
+        where('priority', '==', options.priority),
+        orderBy('createdAt', 'desc')
+      );
+    }
+
+    // Add limit if provided
+    if (options.limit) {
+      q = query(q, limit(options.limit));
+    }
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const notifications = [];
+      querySnapshot.forEach((doc) => {
+        const notificationData = doc.data();
+        notifications.push({
+          id: doc.id,
+          ...notificationData,
+          createdAt: notificationData.createdAt?.toDate?.() || notificationData.createdAt,
+        });
+      });
+      callback(notifications);
+    }, (error) => {
+      console.error('Error in real-time notification subscription:', error);
+      callback([]);
+    });
+    
+    return unsubscribe;
+  } catch (error) {
+    console.error('Error setting up real-time notification subscription:', error);
+    throw error;
+  }
+};
+
+// Create notification for new task assignment
+export const createTaskAssignmentNotification = async (caregiverId, taskData) => {
+  try {
+    const notificationData = {
+      userId: caregiverId,
+      type: NOTIFICATION_TYPES.NEW_TASK_ASSIGNED,
+      title: 'New Task Assigned',
+      message: `You have been assigned a new task: ${taskData.title || 'Care Task'}`,
+      priority: NOTIFICATION_PRIORITIES.MEDIUM,
+      data: {
+        taskId: taskData.id,
+        patientId: taskData.patientId,
+        scheduledTime: taskData.scheduledTime,
+        type: 'task_assignment'
+      },
+      read: false,
+      createdAt: serverTimestamp(),
+    };
+    
+    return await createNotification(notificationData);
+  } catch (error) {
+    console.error('Error creating task assignment notification:', error);
+    throw error;
+  }
+};
+
+// Create notification for appointment reminder
+export const createAppointmentReminderNotification = async (userId, appointmentData) => {
+  try {
+    const notificationData = {
+      userId: userId,
+      type: NOTIFICATION_TYPES.APPOINTMENT_REMINDER,
+      title: 'Appointment Reminder',
+      message: `You have an appointment scheduled: ${appointmentData.title || 'Medical Appointment'}`,
+      priority: NOTIFICATION_PRIORITIES.MEDIUM,
+      data: {
+        appointmentId: appointmentData.id,
+        patientId: appointmentData.patientId,
+        scheduledTime: appointmentData.scheduledTime,
+        type: 'appointment_reminder'
+      },
+      read: false,
+      createdAt: serverTimestamp(),
+    };
+    
+    return await createNotification(notificationData);
+  } catch (error) {
+    console.error('Error creating appointment reminder notification:', error);
+    throw error;
+  }
+};
+
+// Create notification for task due soon
+export const createTaskDueSoonNotification = async (caregiverId, taskData) => {
+  try {
+    const notificationData = {
+      userId: caregiverId,
+      type: NOTIFICATION_TYPES.TASK_DUE_SOON,
+      title: 'Task Due Soon',
+      message: `Task "${taskData.title || 'Care Task'}" is due soon`,
+      priority: NOTIFICATION_PRIORITIES.HIGH,
+      data: {
+        taskId: taskData.id,
+        patientId: taskData.patientId,
+        scheduledTime: taskData.scheduledTime,
+        type: 'task_due_soon'
+      },
+      read: false,
+      createdAt: serverTimestamp(),
+    };
+    
+    return await createNotification(notificationData);
+  } catch (error) {
+    console.error('Error creating task due soon notification:', error);
+    throw error;
+  }
+};
+
+// Get notification statistics
+export const getNotificationStats = async (userId) => {
+  try {
+    const notificationsRef = collection(db, NOTIFICATIONS_COLLECTION);
+    const q = query(notificationsRef, where('userId', '==', userId));
+    
+    const querySnapshot = await getDocs(q);
+    const notifications = [];
+    
+    querySnapshot.forEach((doc) => {
+      const notificationData = doc.data();
+      notifications.push({
+        id: doc.id,
+        ...notificationData,
+        createdAt: notificationData.createdAt?.toDate?.() || notificationData.createdAt,
+      });
+    });
+    
+    const totalNotifications = notifications.length;
+    const unreadNotifications = notifications.filter(n => !n.read).length;
+    const readNotifications = notifications.filter(n => n.read).length;
+    
+    // Group by type
+    const notificationsByType = {};
+    notifications.forEach(notification => {
+      const type = notification.type || 'unknown';
+      notificationsByType[type] = (notificationsByType[type] || 0) + 1;
+    });
+    
+    // Group by priority
+    const notificationsByPriority = {};
+    notifications.forEach(notification => {
+      const priority = notification.priority || 'medium';
+      notificationsByPriority[priority] = (notificationsByPriority[priority] || 0) + 1;
+    });
+    
+    return {
+      totalNotifications,
+      unreadNotifications,
+      readNotifications,
+      notificationsByType,
+      notificationsByPriority
+    };
+  } catch (error) {
+    console.error('Error fetching notification stats:', error);
+    throw error;
+  }
+};
+
+// Bulk mark notifications as read
+export const bulkMarkNotificationsAsRead = async (notificationIds, userId) => {
+  try {
+    const updatePromises = notificationIds.map(notificationId => {
+      const notificationRef = doc(db, NOTIFICATIONS_COLLECTION, notificationId);
+      return updateDoc(notificationRef, {
+        read: true,
+        readAt: serverTimestamp()
+      });
+    });
+    
+    await Promise.all(updatePromises);
+    return { success: true, updatedCount: notificationIds.length };
+  } catch (error) {
+    console.error('Error bulk marking notifications as read:', error);
     throw error;
   }
 };
