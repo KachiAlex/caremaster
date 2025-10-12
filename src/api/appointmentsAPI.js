@@ -237,7 +237,7 @@ export const completeAppointment = async (appointmentId, notes) => {
 };
 
 // Get today's appointments
-export const getTodaysAppointments = async (userId, userRole) => {
+export const getTodaysAppointments = async (userId, userRole, options = {}) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -259,6 +259,16 @@ export const getTodaysAppointments = async (userId, userRole) => {
       q = query(appointmentsRef, where('patientId', '==', userId));
     } else {
       throw new Error('Invalid user role');
+    }
+
+    // Add status filtering if provided
+    if (options.status) {
+      q = query(q, where('status', '==', options.status));
+    }
+
+    // Add institution filtering if provided
+    if (options.institutionId) {
+      q = query(q, where('institutionId', '==', options.institutionId));
     }
 
     const querySnapshot = await getDocs(q);
@@ -400,4 +410,170 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
     });
     callback(appointments);
   });
+};
+
+// Real-time subscription for appointments
+export const subscribeToAppointments = (userId, userRole, callback, options = {}) => {
+  try {
+    const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+    let q;
+
+    // Use simple queries that don't require complex indexes
+    if (userRole === 'admin') {
+      q = query(appointmentsRef);
+    } else if (userRole === 'doctor') {
+      q = query(appointmentsRef, where('doctorId', '==', userId));
+    } else if (userRole === 'caregiver') {
+      q = query(appointmentsRef, where('caregiverId', '==', userId));
+    } else if (userRole === 'elderly') {
+      q = query(appointmentsRef, where('patientId', '==', userId));
+    } else {
+      throw new Error('Invalid user role');
+    }
+
+    // Add status filtering if provided
+    if (options.status) {
+      q = query(q, where('status', '==', options.status));
+    }
+
+    // Add institution filtering if provided
+    if (options.institutionId) {
+      q = query(q, where('institutionId', '==', options.institutionId));
+    }
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const appointments = [];
+      querySnapshot.forEach((doc) => {
+        const appointmentData = doc.data();
+        appointments.push({
+          id: doc.id,
+          ...appointmentData,
+          scheduledTime: appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime,
+          createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
+          updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
+        });
+      });
+      callback(appointments);
+    }, (error) => {
+      console.error('Error in real-time subscription:', error);
+      callback([]);
+    });
+    
+    return unsubscribe;
+  } catch (error) {
+    console.error('Error setting up real-time subscription:', error);
+    throw error;
+  }
+};
+
+// Get appointment analytics for a user
+export const getAppointmentAnalytics = async (userId, userRole, dateRange = 30) => {
+  try {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - dateRange);
+    
+    const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+    let q;
+
+    // Use simple queries that don't require complex indexes
+    if (userRole === 'admin') {
+      q = query(appointmentsRef);
+    } else if (userRole === 'doctor') {
+      q = query(appointmentsRef, where('doctorId', '==', userId));
+    } else if (userRole === 'caregiver') {
+      q = query(appointmentsRef, where('caregiverId', '==', userId));
+    } else if (userRole === 'elderly') {
+      q = query(appointmentsRef, where('patientId', '==', userId));
+    } else {
+      throw new Error('Invalid user role');
+    }
+
+    const querySnapshot = await getDocs(q);
+    const appointments = [];
+    
+    querySnapshot.forEach((doc) => {
+      const appointmentData = doc.data();
+      const scheduledTime = appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime;
+      
+      // Filter for date range on client side
+      if (scheduledTime && scheduledTime >= startDate && scheduledTime <= endDate) {
+        appointments.push({
+          id: doc.id,
+          ...appointmentData,
+          scheduledTime: scheduledTime,
+          createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
+          updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
+        });
+      }
+    });
+    
+    // Calculate analytics
+    const totalAppointments = appointments.length;
+    const completedAppointments = appointments.filter(apt => apt.status === 'completed').length;
+    const pendingAppointments = appointments.filter(apt => apt.status === 'scheduled').length;
+    const cancelledAppointments = appointments.filter(apt => apt.status === 'cancelled').length;
+    const noShowAppointments = appointments.filter(apt => apt.status === 'no-show').length;
+    
+    const completionRate = totalAppointments > 0 ? (completedAppointments / totalAppointments) * 100 : 0;
+    
+    // Group by date for trend analysis
+    const appointmentsByDate = {};
+    appointments.forEach(appointment => {
+      const date = new Date(appointment.scheduledTime).toISOString().split('T')[0];
+      if (!appointmentsByDate[date]) {
+        appointmentsByDate[date] = { total: 0, completed: 0, pending: 0, cancelled: 0, noShow: 0 };
+      }
+      appointmentsByDate[date].total++;
+      appointmentsByDate[date][appointment.status] = (appointmentsByDate[date][appointment.status] || 0) + 1;
+    });
+    
+    // Group by type
+    const appointmentsByType = {};
+    appointments.forEach(appointment => {
+      const type = appointment.type || 'general';
+      appointmentsByType[type] = (appointmentsByType[type] || 0) + 1;
+    });
+    
+    return {
+      totalAppointments,
+      completedAppointments,
+      pendingAppointments,
+      cancelledAppointments,
+      noShowAppointments,
+      completionRate: Math.round(completionRate * 100) / 100,
+      appointmentsByDate,
+      appointmentsByType,
+      dateRange
+    };
+  } catch (error) {
+    console.error('Error fetching appointment analytics:', error);
+    throw error;
+  }
+};
+
+// Bulk update appointment status
+export const bulkUpdateAppointmentStatus = async (appointmentIds, status, userId) => {
+  try {
+    const updatePromises = appointmentIds.map(appointmentId => {
+      const appointmentRef = doc(db, APPOINTMENTS_COLLECTION, appointmentId);
+      const updateData = {
+        status,
+        updatedAt: serverTimestamp()
+      };
+      
+      // If completing appointment, add completion timestamp
+      if (status === 'completed') {
+        updateData.completedAt = serverTimestamp();
+      }
+      
+      return updateDoc(appointmentRef, updateData);
+    });
+    
+    await Promise.all(updatePromises);
+    return { success: true, updatedCount: appointmentIds.length };
+  } catch (error) {
+    console.error('Error bulk updating appointment status:', error);
+    throw error;
+  }
 };

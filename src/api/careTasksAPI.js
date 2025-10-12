@@ -101,15 +101,44 @@ export const getCareTasksByPatient = async (patientId) => {
   }
 };
 
-// Get care tasks for a caregiver
-export const getCareTasksByCaregiver = async (caregiverId) => {
+// Get care tasks for a caregiver with enhanced filtering
+export const getCareTasksByCaregiver = async (caregiverId, options = {}) => {
   try {
     const tasksRef = collection(db, CARE_TASKS_COLLECTION);
-    const q = query(
+    let q = query(
       tasksRef, 
       where('caregiverId', '==', caregiverId),
       orderBy('scheduledTime', 'asc')
     );
+    
+    // Add status filtering if provided
+    if (options.status) {
+      q = query(
+        tasksRef, 
+        where('caregiverId', '==', caregiverId),
+        where('status', '==', options.status),
+        orderBy('scheduledTime', 'asc')
+      );
+    }
+    
+    // Add date range filtering if provided
+    if (options.startDate && options.endDate) {
+      const startTimestamp = Timestamp.fromDate(new Date(options.startDate));
+      const endTimestamp = Timestamp.fromDate(new Date(options.endDate));
+      q = query(
+        tasksRef, 
+        where('caregiverId', '==', caregiverId),
+        where('scheduledTime', '>=', startTimestamp),
+        where('scheduledTime', '<=', endTimestamp),
+        orderBy('scheduledTime', 'asc')
+      );
+    }
+    
+    // Add limit if provided
+    if (options.limit) {
+      q = query(q, limit(options.limit));
+    }
+    
     const querySnapshot = await getDocs(q);
     
     const tasks = [];
@@ -488,6 +517,150 @@ export const getUpcomingTasks = async (caregiverId) => {
     return tasks;
   } catch (error) {
     console.error('Error fetching upcoming tasks:', error);
+    throw error;
+  }
+};
+
+// Real-time subscription for caregiver tasks
+export const subscribeToCaregiverTasks = (caregiverId, callback, options = {}) => {
+  try {
+    const tasksRef = collection(db, CARE_TASKS_COLLECTION);
+    let q = query(
+      tasksRef, 
+      where('caregiverId', '==', caregiverId),
+      orderBy('scheduledTime', 'asc')
+    );
+    
+    // Add status filtering if provided
+    if (options.status) {
+      q = query(
+        tasksRef, 
+        where('caregiverId', '==', caregiverId),
+        where('status', '==', options.status),
+        orderBy('scheduledTime', 'asc')
+      );
+    }
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const tasks = [];
+      querySnapshot.forEach((doc) => {
+        const taskData = doc.data();
+        tasks.push({
+          id: doc.id,
+          ...taskData,
+          scheduledTime: taskData.scheduledTime?.toDate?.() || taskData.scheduledTime,
+          completedAt: taskData.completedAt?.toDate?.() || taskData.completedAt,
+          createdAt: taskData.createdAt?.toDate?.() || taskData.createdAt,
+          updatedAt: taskData.updatedAt?.toDate?.() || taskData.updatedAt,
+        });
+      });
+      callback(tasks);
+    }, (error) => {
+      console.error('Error in real-time subscription:', error);
+      callback([]);
+    });
+    
+    return unsubscribe;
+  } catch (error) {
+    console.error('Error setting up real-time subscription:', error);
+    throw error;
+  }
+};
+
+// Get task analytics for a caregiver
+export const getCaregiverTaskAnalytics = async (caregiverId, dateRange = 30) => {
+  try {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - dateRange);
+    
+    const tasksRef = collection(db, CARE_TASKS_COLLECTION);
+    const q = query(
+      tasksRef,
+      where('caregiverId', '==', caregiverId),
+      where('scheduledTime', '>=', Timestamp.fromDate(startDate)),
+      where('scheduledTime', '<=', Timestamp.fromDate(endDate)),
+      orderBy('scheduledTime', 'asc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    const tasks = [];
+    querySnapshot.forEach((doc) => {
+      const taskData = doc.data();
+      tasks.push({
+        id: doc.id,
+        ...taskData,
+        scheduledTime: taskData.scheduledTime?.toDate?.() || taskData.scheduledTime,
+        completedAt: taskData.completedAt?.toDate?.() || taskData.completedAt,
+        createdAt: taskData.createdAt?.toDate?.() || taskData.createdAt,
+        updatedAt: taskData.updatedAt?.toDate?.() || taskData.updatedAt,
+      });
+    });
+    
+    // Calculate analytics
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(task => task.status === 'completed').length;
+    const pendingTasks = tasks.filter(task => task.status === 'pending').length;
+    const overdueTasks = tasks.filter(task => {
+      if (task.status === 'completed') return false;
+      return new Date(task.scheduledTime) < new Date();
+    }).length;
+    
+    const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+    
+    // Group by date for trend analysis
+    const tasksByDate = {};
+    tasks.forEach(task => {
+      const date = new Date(task.scheduledTime).toISOString().split('T')[0];
+      if (!tasksByDate[date]) {
+        tasksByDate[date] = { total: 0, completed: 0, pending: 0 };
+      }
+      tasksByDate[date].total++;
+      if (task.status === 'completed') {
+        tasksByDate[date].completed++;
+      } else {
+        tasksByDate[date].pending++;
+      }
+    });
+    
+    return {
+      totalTasks,
+      completedTasks,
+      pendingTasks,
+      overdueTasks,
+      completionRate: Math.round(completionRate * 100) / 100,
+      tasksByDate,
+      dateRange
+    };
+  } catch (error) {
+    console.error('Error fetching task analytics:', error);
+    throw error;
+  }
+};
+
+// Bulk update task status
+export const bulkUpdateTaskStatus = async (taskIds, status, caregiverId) => {
+  try {
+    const updatePromises = taskIds.map(taskId => {
+      const taskRef = doc(db, CARE_TASKS_COLLECTION, taskId);
+      const updateData = {
+        status,
+        updatedAt: serverTimestamp()
+      };
+      
+      // If completing task, add completion timestamp
+      if (status === 'completed') {
+        updateData.completedAt = serverTimestamp();
+      }
+      
+      return updateDoc(taskRef, updateData);
+    });
+    
+    await Promise.all(updatePromises);
+    return { success: true, updatedCount: taskIds.length };
+  } catch (error) {
+    console.error('Error bulk updating task status:', error);
     throw error;
   }
 };
