@@ -116,6 +116,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Clients collection (same as patients)
+    match /clients/{clientId} {
+      // Admin full access. Caregivers/doctors can read clients
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      // Writes restricted to admin
+      allow write: if isAdmin();
+    }
+    
+    // Client assignments
+    match /clientAssignments/{assignmentId} {
+      allow read, list: if isAdmin() || (request.auth != null && isCaregiver());
+      allow write: if isAdmin();
+    }
+    
+    // Medical history
+    match /medicalHistory/{historyId} {
+      allow read: if isAdmin() || isCaregiver() || isDoctor();
+      allow write: if isAdmin() || isDoctor();
+    }
+    
     // Care tasks assigned to caregivers/doctors
     match /careTasks/{taskId} {
       // Allow read for the assignee whether caregiver or doctor
@@ -296,6 +316,27 @@ service cloud.firestore {
       // Allow updates/deletes for admins and doctors
       allow update, delete: if request.auth != null && (isAdmin() || isDoctor());
     }
+    
+    // Medication logs for compliance tracking
+    match /medicationLogs/{logId} {
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      allow create: if isAdmin() || isCaregiver();
+      allow update, delete: if isAdmin();
+    }
+    
+    // Dose logs
+    match /doseLogs/{doseId} {
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      allow create: if isAdmin() || isCaregiver();
+      allow update, delete: if isAdmin() || isCaregiver();
+    }
+    
+    // Side effects reporting
+    match /sideEffects/{effectId} {
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      allow create: if isAdmin() || isCaregiver() || isDoctor();
+      allow update, delete: if isAdmin() || isDoctor();
+    }
 
     // Patient feedback collection - caregivers can read their own feedback; admins manage
     match /patientFeedback/{feedbackId} {
@@ -306,6 +347,38 @@ service cloud.firestore {
 
       // Only admins can create/update/delete patient feedback
       allow create, update, delete: if isAdmin();
+    }
+    
+    // Caregiver performance tracking
+    match /caregiverPerformance/{performanceId} {
+      allow read: if isAdmin() || (request.auth != null && isCaregiver());
+      allow write: if isAdmin();
+    }
+    
+    // Caregiver schedule
+    match /caregiverSchedule/{scheduleId} {
+      allow read: if isAdmin() || (request.auth != null && isCaregiver());
+      allow write: if isAdmin() || (isCaregiver() && resource.data.caregiverId == request.auth.uid);
+    }
+    
+    // Caregiver clock records
+    match /caregiverClockRecords/{recordId} {
+      allow read: if isAdmin() || (request.auth != null && isCaregiver());
+      allow create: if isAdmin() || (isCaregiver() && request.resource.data.caregiverId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+    
+    // Caregiver earnings
+    match /caregiverEarnings/{earningId} {
+      allow read: if isAdmin() || (request.auth != null && isCaregiver() && resource.data.caregiverId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+    
+    // Caregiver activity log
+    match /caregiverActivityLog/{logId} {
+      allow read: if isAdmin() || (request.auth != null && isCaregiver());
+      allow create: if request.auth != null && (isAdmin() || isCaregiver());
+      allow update, delete: if isAdmin();
     }
     
     // Allow admins to read/write any other collections
