@@ -100,6 +100,8 @@ const InstitutionAdminDashboard = () => {
   const [showCaregiverDetails, setShowCaregiverDetails] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedCaregiver, setSelectedCaregiver] = useState(null);
+  const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
 
   // Dashboard Card Modal States
   const [showStaffModal, setShowStaffModal] = useState(false);
@@ -1553,8 +1555,8 @@ const InstitutionAdminDashboard = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
                               onClick={() => {
-                                // Show assignment details
-                                alert(`Instructions: ${assignment.instructions || 'No instructions provided'}`);
+                                setSelectedAssignment(assignment);
+                                setShowAssignmentDetails(true);
                               }}
                               className="text-purple-600 hover:text-purple-900 mr-3 inline-flex items-center"
                             >
@@ -1635,6 +1637,18 @@ const InstitutionAdminDashboard = () => {
           onToggleStatus={handleToggleCaregiverStatus}
           onDelete={handleDeleteCaregiver}
           onAssignTask={handleAssignTaskToCaregiver}
+        />
+      )}
+
+      {showAssignmentDetails && selectedAssignment && (
+        <AssignmentDetailsModal
+          assignment={selectedAssignment}
+          clients={clients}
+          caregivers={caregivers}
+          onClose={() => {
+            setShowAssignmentDetails(false);
+            setSelectedAssignment(null);
+          }}
         />
       )}
 
@@ -3791,6 +3805,150 @@ const AddCareLogModal = ({ clientId, onClose, onSubmit }) => {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// Assignment Details Modal Component
+const AssignmentDetailsModal = ({ assignment, onClose, clients, caregivers }) => {
+  if (!assignment) return null;
+
+  const client = clients.find(p => p.id === assignment.clientId);
+  const caregiver = caregivers.find(c => c.id === assignment.caregiverId);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-purple-500 to-purple-600">
+          <div>
+            <h3 className="text-xl font-bold text-white">{assignment.title || 'Assignment Details'}</h3>
+            <p className="text-purple-100 text-sm mt-1">Task ID: {assignment.id}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:text-gray-200"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Status Badge */}
+          <div className="flex items-center space-x-3">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+              assignment.status === 'completed'
+                ? 'bg-green-100 text-green-800'
+                : assignment.status === 'in_progress' || assignment.status === 'active'
+                ? 'bg-blue-100 text-blue-800'
+                : 'bg-yellow-100 text-yellow-800'
+            }`}>
+              {assignment.status || 'pending'}
+            </span>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+              assignment.priority === 'urgent'
+                ? 'bg-red-100 text-red-800'
+                : assignment.priority === 'high'
+                ? 'bg-orange-100 text-orange-800'
+                : assignment.priority === 'normal'
+                ? 'bg-blue-100 text-blue-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {assignment.priority || 'normal'} priority
+            </span>
+          </div>
+
+          {/* Client & Caregiver Information */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <label className="block text-sm font-medium text-gray-500 mb-2">Client</label>
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                  <span className="text-white font-semibold">
+                    {(assignment.clientName || client?.name || 'U').charAt(0)}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{assignment.clientName || client?.name || 'Unknown Client'}</p>
+                  <p className="text-sm text-gray-500">{assignment.clientEmail || client?.email || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <label className="block text-sm font-medium text-gray-500 mb-2">Assigned To</label>
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center mr-3">
+                  <span className="text-white font-semibold">
+                    {(assignment.caregiverName || caregiver?.name || 'U').charAt(0)}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{assignment.caregiverName || caregiver?.name || 'Unknown Caregiver'}</p>
+                  <p className="text-sm text-gray-500">{assignment.caregiverEmail || caregiver?.email || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          {assignment.description && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <p className="text-gray-900 bg-gray-50 rounded-lg p-4">{assignment.description}</p>
+            </div>
+          )}
+
+          {/* Instructions */}
+          {assignment.instructions && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>
+              <p className="text-gray-900 bg-yellow-50 border border-yellow-200 rounded-lg p-4">{assignment.instructions}</p>
+            </div>
+          )}
+
+          {/* Due Date & Time */}
+          {(assignment.dueDate || assignment.dueTime) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Due Date & Time</label>
+              <div className="flex items-center space-x-4 text-gray-900 bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center">
+                  <Calendar className="h-5 w-5 text-gray-400 mr-2" />
+                  <span>{assignment.dueDate || 'No date set'}</span>
+                </div>
+                {assignment.dueTime && (
+                  <div className="flex items-center">
+                    <Clock className="h-5 w-5 text-gray-400 mr-2" />
+                    <span>{assignment.dueTime}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Assignment Info */}
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+            <div>
+              <label className="block text-sm font-medium text-gray-500">Assigned By</label>
+              <p className="mt-1 text-gray-900">{assignment.assignedByName || 'Admin'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-500">Created Date</label>
+              <p className="mt-1 text-gray-900">
+                {assignment.createdAt ? new Date(assignment.createdAt).toLocaleString() : 'N/A'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
