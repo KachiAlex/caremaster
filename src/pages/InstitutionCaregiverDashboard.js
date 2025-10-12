@@ -1643,7 +1643,7 @@ const InstitutionCaregiverDashboard = () => {
 
   return (
     <InstitutionCaregiverGuard>
-    <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container flex">
+    <div className="w-full h-full bg-gray-50 flex">
       {/* Sidebar */}
       {(isDoctor || isNurse || isNonMedicalCaregiver) && (
         <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg border-r border-gray-200 transition-all duration-300 flex flex-col`}>
@@ -1795,9 +1795,9 @@ const InstitutionCaregiverDashboard = () => {
 
           {/* Sidebar Footer */}
           <div className="p-4 border-t border-gray-100">
-            <button 
+            <button
               onClick={() => setShowSettings(!showSettings)}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-2 ${
                 showSettings 
                   ? 'bg-blue-50 text-blue-700' 
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -1806,12 +1806,30 @@ const InstitutionCaregiverDashboard = () => {
               <Settings className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
               {!sidebarCollapsed && 'Settings'}
             </button>
+            
+            <button
+              onClick={() => {
+                // Import signOut from firebase/auth
+                import('firebase/auth').then(({ signOut, getAuth }) => {
+                  signOut(getAuth()).then(() => {
+                    // Clear user context and redirect to login
+                    window.location.href = '/institution-login';
+                  }).catch((error) => {
+                    console.error('Error signing out:', error);
+                  });
+                });
+              }}
+              className="w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <LogOut className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Logout'}
+            </button>
           </div>
         </div>
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <div className="bg-white shadow-sm border-b border-gray-100 px-8 py-6">
           <div className="flex justify-between items-center">
@@ -1951,7 +1969,7 @@ const InstitutionCaregiverDashboard = () => {
         )}
 
         {/* Main Content */}
-        <div className="flex-1 px-8 pb-8 overflow-y-auto">
+        <div className="flex-1 px-8 pb-8 w-full">
         {showSettings ? (
           <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
         ) : activeTab === 'messages' ? (

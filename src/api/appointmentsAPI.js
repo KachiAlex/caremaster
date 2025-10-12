@@ -412,59 +412,6 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
   });
 };
 
-// Real-time subscription for appointments
-export const subscribeToAppointments = (userId, userRole, callback, options = {}) => {
-  try {
-    const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
-    let q;
-
-    // Use simple queries that don't require complex indexes
-    if (userRole === 'admin') {
-      q = query(appointmentsRef);
-    } else if (userRole === 'doctor') {
-      q = query(appointmentsRef, where('doctorId', '==', userId));
-    } else if (userRole === 'caregiver') {
-      q = query(appointmentsRef, where('caregiverId', '==', userId));
-    } else if (userRole === 'elderly') {
-      q = query(appointmentsRef, where('patientId', '==', userId));
-    } else {
-      throw new Error('Invalid user role');
-    }
-
-    // Add status filtering if provided
-    if (options.status) {
-      q = query(q, where('status', '==', options.status));
-    }
-
-    // Add institution filtering if provided
-    if (options.institutionId) {
-      q = query(q, where('institutionId', '==', options.institutionId));
-    }
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const appointments = [];
-      querySnapshot.forEach((doc) => {
-        const appointmentData = doc.data();
-        appointments.push({
-          id: doc.id,
-          ...appointmentData,
-          scheduledTime: appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime,
-          createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
-          updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
-        });
-      });
-      callback(appointments);
-    }, (error) => {
-      console.error('Error in real-time subscription:', error);
-      callback([]);
-    });
-    
-    return unsubscribe;
-  } catch (error) {
-    console.error('Error setting up real-time subscription:', error);
-    throw error;
-  }
-};
 
 // Get appointment analytics for a user
 export const getAppointmentAnalytics = async (userId, userRole, dateRange = 30) => {

@@ -385,58 +385,7 @@ export const scheduleReminderNotification = async (userId, reminderData) => {
   }
 };
 
-// Get notification statistics
-export const getNotificationStats = async (userId) => {
-  try {
-    const notifications = await getNotificationsByUser(userId);
-    
-    const stats = {
-      total: notifications.length,
-      unread: notifications.filter(n => !n.read).length,
-      byType: {},
-      byPriority: {}
-    };
-    
-    // Count by type
-    Object.values(NOTIFICATION_TYPES).forEach(type => {
-      stats.byType[type] = notifications.filter(n => n.type === type).length;
-    });
-    
-    // Count by priority
-    Object.values(NOTIFICATION_PRIORITIES).forEach(priority => {
-      stats.byPriority[priority] = notifications.filter(n => n.priority === priority).length;
-    });
-    
-    return stats;
-  } catch (error) {
-    console.error('Error getting notification stats:', error);
-    throw error;
-  }
-};
 
-// Real-time listener for notifications
-export const subscribeToNotifications = (userId, callback) => {
-  const notificationsRef = collection(db, NOTIFICATIONS_COLLECTION);
-  const q = query(
-    notificationsRef,
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc'),
-    limit(50)
-  );
-  
-  return onSnapshot(q, (querySnapshot) => {
-    const notifications = [];
-    querySnapshot.forEach((doc) => {
-      const notificationData = doc.data();
-      notifications.push({
-        id: doc.id,
-        ...notificationData,
-        createdAt: notificationData.createdAt?.toDate?.() || notificationData.createdAt,
-      });
-    });
-    callback(notifications);
-  });
-};
 
 // Clean up old notifications
 export const cleanupOldNotifications = async (daysOld = 30) => {
