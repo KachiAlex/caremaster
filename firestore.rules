@@ -349,6 +349,34 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
     
+    // Client reports collection
+    match /clientReports/{reportId} {
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      allow create: if isAdmin() || isCaregiver() || isDoctor();
+      allow update, delete: if isAdmin();
+    }
+    
+    // Client care logs collection
+    match /clientCareLogs/{logId} {
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      allow create: if isAdmin() || isCaregiver();
+      allow update, delete: if isAdmin();
+    }
+    
+    // Patient reports collection (similar to clientReports)
+    match /patientReports/{reportId} {
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      allow create: if isAdmin() || isCaregiver() || isDoctor();
+      allow update, delete: if isAdmin();
+    }
+    
+    // Patient care logs collection (similar to clientCareLogs)
+    match /patientCareLogs/{logId} {
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      allow create: if isAdmin() || isCaregiver();
+      allow update, delete: if isAdmin();
+    }
+    
     // Caregiver performance tracking
     match /caregiverPerformance/{performanceId} {
       allow read: if isAdmin() || (request.auth != null && isCaregiver());
