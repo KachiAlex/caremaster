@@ -464,9 +464,17 @@ const InstitutionAdminDashboard = () => {
   // Assignment Functions
   const handleCreateAssignment = async (formData) => {
     try {
+      // Get client and caregiver details first
+      const client = clients.find(p => p.id === selectedClientForAssignment);
+      const caregiver = caregivers.find(c => c.id === selectedCaregiverForAssignment);
+      
       const assignmentData = {
         clientId: selectedClientForAssignment,
         caregiverId: selectedCaregiverForAssignment,
+        clientName: client?.name || client?.displayName || 'Unknown Client',
+        caregiverName: caregiver?.name || caregiver?.displayName || 'Unknown Caregiver',
+        clientEmail: client?.email || '',
+        caregiverEmail: caregiver?.email || '',
         institutionId: institutionId || userProfile?.institutionId,
         assignedBy: userProfile?.id || user?.uid,
         assignedByName: userProfile?.name || 'Admin',
@@ -482,10 +490,6 @@ const InstitutionAdminDashboard = () => {
       };
 
       const createdAssignment = await assignmentAPI.createAssignment(assignmentData);
-      
-      // Get client and caregiver details for notification
-      const client = clients.find(p => p.id === selectedClientForAssignment);
-      const caregiver = caregivers.find(c => c.id === selectedCaregiverForAssignment);
       
       // Send notification to caregiver
       if (caregiver) {
@@ -1507,10 +1511,10 @@ const InstitutionAdminDashboard = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {client?.name || 'Unknown Client'}
+                            {assignment.clientName || client?.name || 'Unknown Client'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {caregiver?.name || 'Unknown Caregiver'}
+                            {assignment.caregiverName || caregiver?.name || 'Unknown Caregiver'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -3206,7 +3210,7 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <h6 className="font-medium text-gray-900 text-sm">{assignment.title || 'Untitled Task'}</h6>
-                                <p className="text-xs text-gray-600 mt-1">Client: {client?.name || 'Unknown Client'}</p>
+                                <p className="text-xs text-gray-600 mt-1">Client: {assignment.clientName || client?.name || 'Unknown Client'}</p>
                                 {assignment.description && (
                                   <p className="text-xs text-gray-500 mt-1">{assignment.description}</p>
                                 )}
@@ -3243,7 +3247,7 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <h6 className="font-medium text-gray-900 text-sm">{assignment.title || 'Untitled Task'}</h6>
-                                <p className="text-xs text-gray-600 mt-1">Client: {client?.name || 'Unknown Client'}</p>
+                                <p className="text-xs text-gray-600 mt-1">Client: {assignment.clientName || client?.name || 'Unknown Client'}</p>
                               </div>
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 completed
