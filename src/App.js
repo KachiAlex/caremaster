@@ -604,6 +604,54 @@ function App() {
         element={<AdminClientFeedback />} 
       />
       
+      {/* Admin Analytics Route */}
+      <Route 
+        path="/admin/analytics" 
+        element={<AdminAnalytics />} 
+      />
+      
+      {/* Admin Users Route */}
+      <Route 
+        path="/admin/users" 
+        element={<AdminUsers />} 
+      />
+      
+      {/* Admin Caregivers Route */}
+      <Route 
+        path="/admin/caregivers" 
+        element={<AdminCaregivers />} 
+      />
+      
+      {/* Admin Communication Route */}
+      <Route 
+        path="/admin/communication" 
+        element={<AdminCommunication />} 
+      />
+      
+      {/* Admin Audit Logs Route */}
+      <Route 
+        path="/admin/audit-logs" 
+        element={<AdminAuditLogs />} 
+      />
+      
+      {/* Admin Emergency Route */}
+      <Route 
+        path="/admin/emergency" 
+        element={<AdminEmergency />} 
+      />
+      
+      {/* Admin Reports Route */}
+      <Route 
+        path="/admin/reports" 
+        element={<AdminReports />} 
+      />
+      
+      {/* Admin Settings Route */}
+      <Route 
+        path="/admin/settings" 
+        element={<AdminSettings />} 
+      />
+      
       {/* Admin Root Redirect - always send to admin login to enforce session */}
       <Route 
         path="/admin" 
