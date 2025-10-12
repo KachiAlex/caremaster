@@ -21,7 +21,8 @@ import {
   RefreshCw,
   Eye,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Star
 } from 'lucide-react';
 
 const AdminAnalytics = () => {
