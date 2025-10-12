@@ -1973,27 +1973,87 @@ const InstitutionCaregiverDashboard = () => {
         ) : activeTab === 'diagnostics' ? (
           renderDiagnosticsTab()
         ) : (
-          <div className="space-y-6">
-          {/* Morning Briefing for Nurses */}
-          {(userProfile?.medicalQualification?.includes('Nurse') || userProfile?.medicalQualification?.includes('RN')) && (
-            <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl shadow-sm border border-red-100 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <Heart className="h-6 w-6 text-red-600" />
-                  Morning Briefing
-                </h2>
-                <span className="text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          <div className="space-y-8">
+            {/* General Care Provider Dashboard Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">General Care Provider Dashboard</h2>
+                  <p className="text-gray-600">Essential caregiving tools and client management</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Qualification Level</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {userProfile?.medicalQualification?.includes('Doctor') ? 'Advanced' : 
+                     userProfile?.medicalQualification?.includes('Nurse') ? 'Intermediate' : 'Basic'}
+                  </p>
+                </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="h-5 w-5 text-blue-600" />
-                    <p className="text-sm font-medium text-gray-600">Client Census</p>
+              {/* Specializations and Certifications Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Specializations</h3>
+                  <div className="space-y-3">
+                    {userProfile?.specializations?.length > 0 ? (
+                      userProfile.specializations.map((spec, index) => (
+                        <div key={index} className="bg-white rounded-lg p-3 border border-gray-100">
+                          <p className="text-sm font-medium text-gray-900">{spec}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
+                        <p className="text-gray-500 text-sm">No specializations added yet</p>
+                        <button className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
+                          Add Specializations
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
-                  <p className="text-xs text-gray-500 mt-1">Assigned clients</p>
                 </div>
+                
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Certifications</h3>
+                  <div className="space-y-3">
+                    {userProfile?.certifications?.length > 0 ? (
+                      userProfile.certifications.map((cert, index) => (
+                        <div key={index} className="bg-white rounded-lg p-3 border border-gray-100">
+                          <p className="text-sm font-medium text-gray-900">{cert}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
+                        <p className="text-gray-500 text-sm">No certifications added yet</p>
+                        <button className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
+                          Add Certifications
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Morning Briefing for Nurses */}
+            {(userProfile?.medicalQualification?.includes('Nurse') || userProfile?.medicalQualification?.includes('RN')) && (
+              <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl shadow-sm border border-red-100 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <Heart className="h-6 w-6 text-red-600" />
+                    Morning Briefing
+                  </h2>
+                  <span className="text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="h-5 w-5 text-blue-600" />
+                      <p className="text-sm font-medium text-gray-600">Client Census</p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
+                    <p className="text-xs text-gray-500 mt-1">Assigned clients</p>
+                  </div>
                 
                 <div className="bg-white rounded-lg p-4 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
