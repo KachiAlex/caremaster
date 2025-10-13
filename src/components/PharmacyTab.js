@@ -24,6 +24,7 @@ import { toast } from 'react-toastify';
 import { pharmacyAPI } from '../api/pharmacyAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import PharmacyInvoiceGenerator from './PharmacyInvoiceGenerator';
+import { drugInteractionService } from '../services/drugInteractionService';
 
 const PharmacyTab = ({ 
   user, 
@@ -42,6 +43,8 @@ const PharmacyTab = ({
   const [selectedPrescriptions, setSelectedPrescriptions] = useState([]);
   const [pharmacyStats, setPharmacyStats] = useState(null);
   const [editingPrescription, setEditingPrescription] = useState(null);
+  const [safetyCheck, setSafetyCheck] = useState(null);
+  const [showSafetyPanel, setShowSafetyPanel] = useState(false);
 
   // Load pharmacy statistics
   useEffect(() => {
@@ -89,11 +92,35 @@ const PharmacyTab = ({
     try {
       const data = await pharmacyAPI.getPrescriptionsByClient(selectedClientId);
       setPrescriptions(data);
+      
+      // Run safety check when prescriptions are loaded
+      if (data.length > 0 && selectedClient) {
+        runSafetyCheck(data);
+      }
     } catch (error) {
       console.error('Error loading prescriptions:', error);
       toast.error('Failed to load prescriptions');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runSafetyCheck = async (prescriptionsList) => {
+    try {
+      const check = await drugInteractionService.comprehensiveSafetyCheck(
+        prescriptionsList,
+        selectedClient?.allergies,
+        selectedClient?.medicalConditions
+      );
+      setSafetyCheck(check);
+      
+      // Show panel if there are critical alerts
+      if (check.criticalAlerts.length > 0) {
+        setShowSafetyPanel(true);
+        toast.warning(`${check.criticalAlerts.length} critical safety alert(s) detected!`);
+      }
+    } catch (error) {
+      console.error('Error running safety check:', error);
     }
   };
 
@@ -264,6 +291,172 @@ const PharmacyTab = ({
           </div>
         )}
       </div>
+
+      {/* Safety Check Panel */}
+      {selectedClientId && safetyCheck && (
+        <div className={`rounded-2xl shadow-lg border p-6 ${
+          safetyCheck.criticalAlerts.length > 0 
+            ? 'bg-red-50 border-red-200' 
+            : safetyCheck.interactions.hasMajorInteractions
+            ? 'bg-yellow-50 border-yellow-200'
+            : 'bg-green-50 border-green-200'
+        }`}>
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <AlertTriangle className={`h-6 w-6 ${
+                safetyCheck.criticalAlerts.length > 0 
+                  ? 'text-red-600' 
+                  : safetyCheck.interactions.hasMajorInteractions
+                  ? 'text-yellow-600'
+                  : 'text-green-600'
+              }`} />
+              <div>
+                <h3 className={`text-lg font-semibold ${
+                  safetyCheck.criticalAlerts.length > 0 
+                    ? 'text-red-900' 
+                    : safetyCheck.interactions.hasMajorInteractions
+                    ? 'text-yellow-900'
+                    : 'text-green-900'
+                }`}>
+                  Medication Safety Check
+                </h3>
+                <p className={`text-sm ${
+                  safetyCheck.criticalAlerts.length > 0 
+                    ? 'text-red-700' 
+                    : safetyCheck.interactions.hasMajorInteractions
+                    ? 'text-yellow-700'
+                    : 'text-green-700'
+                }`}>
+                  {safetyCheck.isSafe 
+                    ? 'No critical issues detected' 
+                    : `${safetyCheck.criticalAlerts.length} critical alert(s) found`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSafetyPanel(!showSafetyPanel)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-white/50 rounded-lg transition-colors"
+            >
+              {showSafetyPanel ? 'Hide Details' : 'Show Details'}
+            </button>
+          </div>
+
+          {showSafetyPanel && (
+            <div className="space-y-4">
+              {/* Critical Alerts */}
+              {safetyCheck.criticalAlerts.length > 0 && (
+                <div className="bg-white rounded-lg p-4 border-2 border-red-300">
+                  <h4 className="font-semibold text-red-900 mb-3 flex items-center">
+                    <AlertTriangle className="h-5 w-5 mr-2" />
+                    Critical Alerts - DO NOT DISPENSE
+                  </h4>
+                  <div className="space-y-2">
+                    {safetyCheck.criticalAlerts.map((alert, index) => (
+                      <div key={index} className="bg-red-50 rounded p-3 border border-red-200">
+                        <p className="font-medium text-red-900">{alert.message || alert.description}</p>
+                        {alert.recommendation && (
+                          <p className="text-sm text-red-700 mt-1">→ {alert.recommendation}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Drug Interactions */}
+              {safetyCheck.interactions.interactions.length > 0 && (
+                <div className="bg-white rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Drug Interactions ({safetyCheck.interactions.interactions.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {safetyCheck.interactions.interactions.map((interaction, index) => (
+                      <div key={index} className={`rounded p-3 border ${
+                        interaction.severity === 'critical' 
+                          ? 'bg-red-50 border-red-200' 
+                          : interaction.severity === 'major'
+                          ? 'bg-orange-50 border-orange-200'
+                          : 'bg-yellow-50 border-yellow-200'
+                      }`}>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {interaction.drug1} + {interaction.drug2}
+                            </p>
+                            <p className="text-sm text-gray-700 mt-1">{interaction.description}</p>
+                          </div>
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                            interaction.severity === 'critical' 
+                              ? 'bg-red-200 text-red-900' 
+                              : interaction.severity === 'major'
+                              ? 'bg-orange-200 text-orange-900'
+                              : 'bg-yellow-200 text-yellow-900'
+                          }`}>
+                            {interaction.severity.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Allergy Alerts */}
+              {safetyCheck.allergies.some(a => a.hasContraindication) && (
+                <div className="bg-white rounded-lg p-4 border-2 border-red-300">
+                  <h4 className="font-semibold text-red-900 mb-3">Allergy Contraindications</h4>
+                  <div className="space-y-2">
+                    {safetyCheck.allergies
+                      .filter(a => a.hasContraindication)
+                      .flatMap(a => a.alerts)
+                      .map((alert, index) => (
+                        <div key={index} className="bg-red-50 rounded p-3 border border-red-200">
+                          <p className="font-medium text-red-900">{alert.message}</p>
+                          {alert.recommendation && (
+                            <p className="text-sm text-red-700 mt-1">→ {alert.recommendation}</p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Duplicate Therapy */}
+              {safetyCheck.duplicates.length > 0 && (
+                <div className="bg-white rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Duplicate Therapy Detected</h4>
+                  <div className="space-y-2">
+                    {safetyCheck.duplicates.map((dup, index) => (
+                      <div key={index} className="bg-yellow-50 rounded p-3 border border-yellow-200">
+                        <p className="font-medium text-gray-900">{dup.message}</p>
+                        <p className="text-sm text-gray-700 mt-1">
+                          Medications: {dup.medications.join(', ')}
+                        </p>
+                        <p className="text-sm text-yellow-700 mt-1">→ {dup.recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommendations */}
+              {safetyCheck.recommendations && safetyCheck.recommendations.length > 0 && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h4 className="font-semibold text-blue-900 mb-3">Pharmacist Recommendations</h4>
+                  <ul className="space-y-2">
+                    {safetyCheck.recommendations.map((rec, index) => (
+                      <li key={index} className="text-sm text-blue-800 flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Prescriptions List */}
       {selectedClientId && (

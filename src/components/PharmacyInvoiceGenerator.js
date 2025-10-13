@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, 
   Download, 
@@ -9,10 +9,12 @@ import {
   Pill,
   FileText,
   CheckCircle,
-  Printer
+  Printer,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { pharmacyAPI } from '../api/pharmacyAPI';
+import { drugInteractionService } from '../services/drugInteractionService';
 
 const PharmacyInvoiceGenerator = ({ 
   client, 
@@ -41,6 +43,29 @@ const PharmacyInvoiceGenerator = ({
   });
 
   const [saving, setSaving] = useState(false);
+  const [safetyCheck, setSafetyCheck] = useState(null);
+
+  // Run safety check on mount
+  useEffect(() => {
+    const runSafetyCheck = async () => {
+      try {
+        const check = await drugInteractionService.comprehensiveSafetyCheck(
+          prescriptions,
+          client.allergies,
+          client.medicalConditions
+        );
+        setSafetyCheck(check);
+        
+        if (check.criticalAlerts.length > 0) {
+          toast.error(`⚠️ ${check.criticalAlerts.length} critical safety issue(s) detected!`);
+        }
+      } catch (error) {
+        console.error('Error running safety check:', error);
+      }
+    };
+
+    runSafetyCheck();
+  }, [prescriptions, client]);
 
   const calculateSubtotal = () => {
     return invoiceData.items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -174,6 +199,50 @@ const PharmacyInvoiceGenerator = ({
                 </div>
               </div>
             </div>
+
+            {/* Safety Warnings */}
+            {safetyCheck && safetyCheck.criticalAlerts.length > 0 && (
+              <div className="bg-red-100 border-2 border-red-400 rounded-xl p-6 mb-6">
+                <h3 className="font-bold text-red-900 mb-3 flex items-center text-lg">
+                  <AlertTriangle className="h-6 w-6 mr-2" />
+                  ⚠️ CRITICAL SAFETY ALERTS - DO NOT DISPENSE
+                </h3>
+                <div className="space-y-2">
+                  {safetyCheck.criticalAlerts.map((alert, index) => (
+                    <div key={index} className="bg-white rounded p-3 border border-red-300">
+                      <p className="font-semibold text-red-900">{alert.message || alert.description}</p>
+                      {alert.recommendation && (
+                        <p className="text-sm text-red-700 mt-1">→ {alert.recommendation}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 font-semibold text-red-900 bg-red-200 p-3 rounded">
+                  ⚠️ Pharmacist must verify with prescribing doctor before dispensing
+                </p>
+              </div>
+            )}
+
+            {safetyCheck && safetyCheck.interactions.hasMajorInteractions && safetyCheck.criticalAlerts.length === 0 && (
+              <div className="bg-yellow-100 border-2 border-yellow-400 rounded-xl p-6 mb-6">
+                <h3 className="font-bold text-yellow-900 mb-3 flex items-center">
+                  <AlertTriangle className="h-5 w-5 mr-2" />
+                  Major Drug Interactions Detected
+                </h3>
+                <ul className="space-y-1">
+                  {safetyCheck.interactions.interactions
+                    .filter(i => i.severity === 'major')
+                    .map((interaction, index) => (
+                      <li key={index} className="text-sm text-yellow-900">
+                        • {interaction.drug1} + {interaction.drug2}: {interaction.description}
+                      </li>
+                    ))}
+                </ul>
+                <p className="mt-3 font-semibold text-yellow-900">
+                  ⚠️ Counsel patient about potential interactions
+                </p>
+              </div>
+            )}
 
             {/* Medications Table */}
             <div className="mb-6">
