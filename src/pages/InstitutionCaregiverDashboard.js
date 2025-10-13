@@ -52,6 +52,7 @@ import NurseMedicationManager from '../components/NurseMedicationManager';
 import CareLogForm from '../components/CareLogForm';
 import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { careLogsAPI } from '../api/careLogsAPI';
+import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation } from '../api/messagesAPI';
 import { toast } from 'react-toastify';
 
 const InstitutionCaregiverDashboard = () => {
@@ -877,26 +878,86 @@ const InstitutionCaregiverDashboard = () => {
     );
   };
 
+  // Load real conversations
+  const loadConversations = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const userConversations = await getConversationsByUser(user.uid);
+      console.log(`💬 Loaded ${userConversations.length} conversations`);
+      setConversations(userConversations);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+      // Fallback to creating conversations from assigned clients
+      const clientConversations = assignedClients.map(client => ({
+        id: client.id,
+        name: client.name || client.displayName,
+        avatar: client.avatar || null,
+        lastMessage: 'Click to start conversation',
+        timestamp: new Date().toISOString(),
+        unread: 0,
+        type: 'client',
+        participants: [user.uid, client.id]
+      }));
+      setConversations(clientConversations);
+    }
+  };
+
+  // Load messages for selected conversation
+  const loadMessagesForConversation = async (conversationId) => {
+    try {
+      const conversationMessages = await getMessagesByConversation(conversationId);
+      console.log(`💬 Loaded ${conversationMessages.length} messages`);
+      setMessages(conversationMessages);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      setMessages([]);
+    }
+  };
+
   // Messaging Tab Renderer
   const renderMessagesTab = () => {
     const handleSendMessage = async () => {
       if (!newMessage.trim() || !selectedConversation) return;
       
-      // Add message to local state
-      const message = {
-        id: Date.now(),
-        text: newMessage,
-        sender: user?.uid,
-        senderName: userProfile?.name || 'You',
-        timestamp: new Date().toISOString(),
-        read: false
-      };
-      
-      setMessages([...messages, message]);
-      setNewMessage('');
-      
-      // TODO: Send message to backend/Firestore
-      toast.success('Message sent');
+      try {
+        // Get or create conversation
+        let conversationId = selectedConversation.conversationId || selectedConversation.id;
+        
+        // If conversation doesn't exist in Firestore yet, create it
+        if (!selectedConversation.conversationId && selectedConversation.participants) {
+          conversationId = await getOrCreateConversation(selectedConversation.participants, 'care');
+          console.log(`✅ Created new conversation: ${conversationId}`);
+        }
+        
+        // Send message to Firestore
+        await sendMessageAPI(conversationId, user.uid, {
+          text: newMessage,
+          type: 'text',
+          senderName: userProfile?.name || 'Caregiver'
+        });
+        
+        // Add message to local state for immediate display
+        const message = {
+          id: Date.now(),
+          text: newMessage,
+          senderId: user?.uid,
+          senderName: userProfile?.name || 'You',
+          createdAt: new Date(),
+          read: false
+        };
+        
+        setMessages([...messages, message]);
+        setNewMessage('');
+        
+        toast.success('Message sent successfully');
+        
+        // Reload conversations to update last message
+        loadConversations();
+      } catch (error) {
+        console.error('Error sending message:', error);
+        toast.error('Failed to send message');
+      }
     };
 
     const startVoiceCall = async () => {
@@ -953,26 +1014,36 @@ const InstitutionCaregiverDashboard = () => {
       toast.info('Call ended');
     };
 
-    // Mock conversations for demo
-    const mockConversations = assignedClients.length > 0 ? assignedClients.map(client => ({
-      id: client.id,
-      name: client.name,
-      avatar: client.avatar || null,
-      lastMessage: 'Click to start conversation',
-      timestamp: new Date().toISOString(),
-      unread: 0,
-      type: 'client'
-    })) : [
-      {
-        id: 'admin-1',
-        name: institutionData?.name || 'Institution Admin',
-        avatar: null,
-        lastMessage: 'Welcome to the team!',
-        timestamp: new Date().toISOString(),
-        unread: 1,
-        type: 'admin'
+    // Load conversations on mount
+    useEffect(() => {
+      if (user?.uid) {
+        loadConversations();
       }
-    ];
+    }, [user?.uid, assignedClients.length]);
+
+    // Use real conversations or create from assigned clients
+    const displayConversations = conversations.length > 0 ? conversations : 
+      assignedClients.length > 0 ? assignedClients.map(client => ({
+        id: client.id,
+        name: client.name || client.displayName,
+        avatar: client.avatar || null,
+        lastMessage: 'Start a conversation',
+        timestamp: new Date().toISOString(),
+        unread: 0,
+        type: 'client',
+        participants: [user.uid, client.id]
+      })) : [
+        {
+          id: 'admin-1',
+          name: institutionData?.name || 'Institution Admin',
+          avatar: null,
+          lastMessage: 'Welcome to the team!',
+          timestamp: new Date().toISOString(),
+          unread: 0,
+          type: 'admin',
+          participants: [user.uid, 'admin']
+        }
+      ];
 
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[calc(100vh-250px)]">
@@ -981,16 +1052,18 @@ const InstitutionCaregiverDashboard = () => {
           <div className="w-80 border-r border-gray-200 flex flex-col">
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
-              <p className="text-sm text-gray-500 mt-1">{mockConversations.length} conversations</p>
+              <p className="text-sm text-gray-500 mt-1">{displayConversations.length} conversations</p>
             </div>
             
             <div className="flex-1 overflow-y-auto">
-              {mockConversations.map((conversation) => (
+              {displayConversations.map((conversation) => (
                 <div
                   key={conversation.id}
                   onClick={() => {
                     setSelectedConversation(conversation);
-                    setMessages([]); // Clear messages for demo
+                    // Load real messages for this conversation
+                    const convId = conversation.conversationId || conversation.id;
+                    loadMessagesForConversation(convId);
                   }}
                   className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
                     selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''
@@ -1114,27 +1187,35 @@ const InstitutionCaregiverDashboard = () => {
                         </div>
                       </div>
                     ) : (
-                      messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${message.sender === user?.uid ? 'justify-end' : 'justify-start'}`}
-                        >
+                      messages.map((message) => {
+                        const isSentByMe = (message.senderId || message.sender) === user?.uid;
+                        const messageTime = message.createdAt || message.timestamp;
+                        
+                        return (
                           <div
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                              message.sender === user?.uid
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-900 border border-gray-200'
-                            }`}
+                            key={message.id}
+                            className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
                           >
-                            <p className="text-sm">{message.text}</p>
-                            <p className={`text-xs mt-1 ${
-                              message.sender === user?.uid ? 'text-blue-100' : 'text-gray-400'
-                            }`}>
-                              {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                                isSentByMe
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white text-gray-900 border border-gray-200'
+                              }`}
+                            >
+                              {!isSentByMe && message.senderName && (
+                                <p className="text-xs font-semibold mb-1">{message.senderName}</p>
+                              )}
+                              <p className="text-sm">{message.text || message.content}</p>
+                              <p className={`text-xs mt-1 ${
+                                isSentByMe ? 'text-blue-100' : 'text-gray-400'
+                              }`}>
+                                {new Date(messageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
 
