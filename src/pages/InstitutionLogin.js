@@ -130,26 +130,54 @@ const InstitutionLogin = () => {
         });
         
         // Check if password matches and belongs to this institution
-        if (data.password === formData.password && data.institutionId === institutionId) {
+        const passwordMatches = data.password === formData.password;
+        const institutionMatches = data.institutionId === institutionId;
+        
+        console.log('🔐 Password check:', {
+          passwordMatches,
+          institutionMatches,
+          storedPassword: data.password,
+          inputPassword: formData.password,
+          storedInstitutionId: data.institutionId,
+          targetInstitutionId: institutionId
+        });
+        
+        if (passwordMatches && institutionMatches) {
           customAuthUser = { uid: userDoc.id, ...data };
           console.log('✅ Custom auth successful!');
         } else {
-          console.log('❌ Password or institution mismatch');
+          if (!passwordMatches) console.log('❌ Password mismatch');
+          if (!institutionMatches) console.log('❌ Institution mismatch');
         }
       });
       
       // If custom auth successful, validate role and redirect
       if (customAuthUser) {
-        const userRole = customAuthUser.type || customAuthUser.userType;
+        // Check multiple role fields for flexibility
+        const userRole = customAuthUser.role || customAuthUser.type || customAuthUser.userType;
+        const isAdmin = userRole === 'admin' || 
+                       userRole === 'institutionAdmin' || 
+                       customAuthUser.userType === 'admin' || 
+                       customAuthUser.type === 'admin' ||
+                       customAuthUser.isAdmin === true;
+        
+        console.log('🔍 User role check:', { 
+          userRole, 
+          isAdmin,
+          roleField: customAuthUser.role,
+          typeField: customAuthUser.type,
+          userTypeField: customAuthUser.userType,
+          roleParam 
+        });
         
         // Validate user role matches the portal
-        if (roleParam === 'admin' && userRole !== 'admin' && userRole !== 'institutionAdmin') {
+        if (roleParam === 'admin' && !isAdmin) {
           toast.error(`This is the Admin Portal. You are registered as ${userRole}. Please use the Caregiver Portal.`);
           setSubmitting(false);
           return;
         }
         
-        if (roleParam === 'caregiver' && !['caregiver', 'doctor', 'nurse'].includes(userRole)) {
+        if (roleParam === 'caregiver' && !['caregiver', 'doctor', 'nurse'].includes(userRole) && !isAdmin) {
           toast.error(`This is the Caregiver Portal. You are registered as ${userRole}. Please use the Admin Portal.`);
           setSubmitting(false);
           return;
