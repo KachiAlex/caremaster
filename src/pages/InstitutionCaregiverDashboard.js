@@ -87,6 +87,7 @@ const InstitutionCaregiverDashboard = () => {
   const [showNurseReportModal, setShowNurseReportModal] = useState(false);
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [showCareLogForm, setShowCareLogForm] = useState(false);
+  const [clientModalTab, setClientModalTab] = useState('info'); // 'info', 'medical', 'carelog'
   const [profileImage, setProfileImage] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
@@ -2642,16 +2643,66 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               </div>
               <button
-                onClick={() => setSelectedClient(null)}
+                onClick={() => {
+                  setSelectedClient(null);
+                  setClientModalTab('info');
+                }}
                 className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
+            {/* Modal Tabs */}
+            <div className="border-b border-gray-200 bg-gray-50">
+              <div className="flex space-x-8 px-6">
+                <button
+                  onClick={() => setClientModalTab('info')}
+                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                    clientModalTab === 'info'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4" />
+                    <span>Client Info</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setClientModalTab('medical')}
+                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                    clientModalTab === 'medical'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Heart className="h-4 w-4" />
+                    <span>Medical Report</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setClientModalTab('carelog')}
+                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                    clientModalTab === 'carelog'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4" />
+                    <span>Care Log</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             {/* Modal Body */}
-            <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
-              <div className="space-y-6">
+            <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-6">
+              {/* Client Info Tab */}
+              {clientModalTab === 'info' && (
+                <div className="space-y-6">
                 {/* Basic & Contact Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Basic Information */}
@@ -2721,40 +2772,6 @@ const InstitutionCaregiverDashboard = () => {
                   </div>
                 </div>
 
-                {/* Medical Information */}
-                <div className="bg-red-50 rounded-xl border border-red-100 p-6">
-                  <h3 className="text-lg font-semibold text-red-900 mb-4 flex items-center">
-                    <Heart className="h-5 w-5 text-red-600 mr-2" />
-                    Medical Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <span className="text-sm text-gray-600">Medical Conditions:</span>
-                      <p className="text-sm font-medium text-gray-900 mt-1">
-                        {Array.isArray(selectedClient.medicalConditions) 
-                          ? selectedClient.medicalConditions.join(', ') 
-                          : selectedClient.medicalConditions || selectedClient.conditions || 'None recorded'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-600">Allergies:</span>
-                      <p className="text-sm font-medium text-gray-900 mt-1">
-                        {Array.isArray(selectedClient.allergies)
-                          ? selectedClient.allergies.join(', ')
-                          : selectedClient.allergies || selectedClient.allergyInfo || 'None recorded'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-600">Current Medications:</span>
-                      <p className="text-sm font-medium text-gray-900 mt-1">
-                        {Array.isArray(selectedClient.medications)
-                          ? selectedClient.medications.join(', ')
-                          : selectedClient.medications || selectedClient.currentMedications || 'None recorded'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Emergency Contact */}
                 <div className="bg-orange-50 rounded-xl border border-orange-100 p-6">
                   <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center">
@@ -2782,88 +2799,219 @@ const InstitutionCaregiverDashboard = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+              )}
 
-                {/* Care Actions (for Nurses) */}
-                {isNurse && (
-                  <div className="bg-purple-50 rounded-xl border border-purple-100 p-6">
-                    <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
-                      <Activity className="h-5 w-5 text-purple-600 mr-2" />
-                      Quick Actions
+              {/* Medical Report Tab */}
+              {clientModalTab === 'medical' && (
+                <div className="space-y-6">
+                  {/* Medical Conditions */}
+                  <div className="bg-red-50 rounded-xl border border-red-100 p-6">
+                    <h3 className="text-lg font-semibold text-red-900 mb-4 flex items-center">
+                      <Heart className="h-5 w-5 text-red-600 mr-2" />
+                      Medical Conditions
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <button
-                        onClick={() => {
-                          setShowVitalsModal(true);
-                        }}
-                        className="flex flex-col items-center p-4 bg-white border-2 border-red-200 rounded-lg hover:border-red-300 hover:shadow-md transition-all"
-                      >
-                        <Activity className="h-6 w-6 text-red-600 mb-2" />
-                        <span className="text-xs font-medium text-gray-700">Record Vitals</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => {
-                          setShowCareLogForm(true);
-                        }}
-                        className="flex flex-col items-center p-4 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-                      >
-                        <FileText className="h-6 w-6 text-blue-600 mb-2" />
-                        <span className="text-xs font-medium text-gray-700">Add Care Log</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => {
-                          setShowNurseReportModal(true);
-                        }}
-                        className="flex flex-col items-center p-4 bg-white border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all"
-                      >
-                        <FileText className="h-6 w-6 text-orange-600 mb-2" />
-                        <span className="text-xs font-medium text-gray-700">Generate Report</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => {
-                          setShowMedicationModal(true);
-                        }}
-                        className="flex flex-col items-center p-4 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
-                      >
-                        <Pill className="h-6 w-6 text-green-600 mb-2" />
-                        <span className="text-xs font-medium text-gray-700">Medications</span>
-                      </button>
+                    <div className="bg-white rounded-lg p-4">
+                      <p className="text-sm text-gray-900">
+                        {Array.isArray(selectedClient.medicalConditions) 
+                          ? selectedClient.medicalConditions.join(', ') 
+                          : selectedClient.medicalConditions || selectedClient.conditions || 'No medical conditions recorded'}
+                      </p>
                     </div>
                   </div>
-                )}
 
-                {/* Additional Notes */}
-                {selectedClient.notes && (
-                  <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <FileText className="h-5 w-5 text-gray-600 mr-2" />
-                      Additional Notes
+                  {/* Allergies */}
+                  <div className="bg-yellow-50 rounded-xl border border-yellow-100 p-6">
+                    <h3 className="text-lg font-semibold text-yellow-900 mb-4 flex items-center">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
+                      Allergies
                     </h3>
-                    <p className="text-sm text-gray-700">{selectedClient.notes}</p>
+                    <div className="bg-white rounded-lg p-4">
+                      <p className="text-sm text-gray-900">
+                        {Array.isArray(selectedClient.allergies)
+                          ? selectedClient.allergies.join(', ')
+                          : selectedClient.allergies || selectedClient.allergyInfo || 'No allergies recorded'}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Current Medications */}
+                  <div className="bg-green-50 rounded-xl border border-green-100 p-6">
+                    <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center">
+                      <Pill className="h-5 w-5 text-green-600 mr-2" />
+                      Current Medications
+                    </h3>
+                    <div className="bg-white rounded-lg p-4">
+                      <p className="text-sm text-gray-900">
+                        {Array.isArray(selectedClient.medications)
+                          ? selectedClient.medications.join(', ')
+                          : selectedClient.medications || selectedClient.currentMedications || 'No medications recorded'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Additional Medical Notes */}
+                  {selectedClient.notes && (
+                    <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <FileText className="h-5 w-5 text-gray-600 mr-2" />
+                        Additional Medical Notes
+                      </h3>
+                      <div className="bg-white rounded-lg p-4">
+                        <p className="text-sm text-gray-700">{selectedClient.notes}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Medical Actions (for Nurses) */}
+                  {isNurse && (
+                    <div className="bg-purple-50 rounded-xl border border-purple-100 p-6">
+                      <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
+                        <Activity className="h-5 w-5 text-purple-600 mr-2" />
+                        Medical Actions
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <button
+                          onClick={() => {
+                            setShowVitalsModal(true);
+                          }}
+                          className="flex flex-col items-center p-4 bg-white border-2 border-red-200 rounded-lg hover:border-red-300 hover:shadow-md transition-all"
+                        >
+                          <Activity className="h-6 w-6 text-red-600 mb-2" />
+                          <span className="text-xs font-medium text-gray-700">Record Vitals</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setShowMedicationModal(true);
+                          }}
+                          className="flex flex-col items-center p-4 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
+                        >
+                          <Pill className="h-6 w-6 text-green-600 mb-2" />
+                          <span className="text-xs font-medium text-gray-700">Manage Medications</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setShowNurseReportModal(true);
+                          }}
+                          className="flex flex-col items-center p-4 bg-white border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all"
+                        >
+                          <FileText className="h-6 w-6 text-orange-600 mb-2" />
+                          <span className="text-xs font-medium text-gray-700">Medical Report</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Care Log Tab */}
+              {clientModalTab === 'carelog' && (
+                <div className="space-y-6">
+                  {/* Care Log Header */}
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-gray-900">Care Logs & Reports</h3>
+                    {isNurse && (
+                      <button
+                        onClick={() => setShowCareLogForm(true)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Care Log
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Care Log Placeholder */}
+                  <div className="bg-blue-50 rounded-xl border border-blue-100 p-8 text-center">
+                    <FileText className="h-16 w-16 text-blue-300 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Care Logs</h4>
+                    <p className="text-gray-600 mb-4">
+                      View and manage care logs, vital signs, and nurse reports for {selectedClient.name || selectedClient.fullName}
+                    </p>
+                    {isNurse && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                        <button
+                          onClick={() => setShowCareLogForm(true)}
+                          className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                        >
+                          <FileText className="h-8 w-8 text-blue-600 mb-3" />
+                          <span className="text-sm font-medium text-gray-700">Add Care Log</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => setShowVitalsModal(true)}
+                          className="flex flex-col items-center p-6 bg-white border-2 border-red-200 rounded-lg hover:border-red-300 hover:shadow-md transition-all"
+                        >
+                          <Activity className="h-8 w-8 text-red-600 mb-3" />
+                          <span className="text-sm font-medium text-gray-700">Record Vital Signs</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => setShowCareLogsModal(true)}
+                          className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
+                        >
+                          <ClipboardList className="h-8 w-8 text-green-600 mb-3" />
+                          <span className="text-sm font-medium text-gray-700">View All Logs</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent Care Activities */}
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Recent Care Activities</h4>
+                    <div className="space-y-3">
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Activity className="h-5 w-5 text-blue-600" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">Vital Signs Recorded</p>
+                              <p className="text-xs text-gray-500">Last updated: Check care logs for history</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <FileText className="h-5 w-5 text-green-600" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">Care Logs</p>
+                              <p className="text-xs text-gray-500">Click "View All Logs" to see complete history</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
             <div className="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
               <button
-                onClick={() => setSelectedClient(null)}
+                onClick={() => {
+                  setSelectedClient(null);
+                  setClientModalTab('info');
+                }}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
                 Close
               </button>
-              {isNurse && (
+              {isNurse && clientModalTab !== 'carelog' && (
                 <button
                   onClick={() => {
-                    setShowCareLogForm(true);
+                    setClientModalTab('carelog');
                   }}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Care Entry
+                  <FileText className="h-4 w-4 mr-2" />
+                  View Care Logs
                 </button>
               )}
             </div>
