@@ -50,6 +50,13 @@ service cloud.firestore {
               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'admin');
     }
     
+    // Medical reports - Doctor only can create/update
+    match /medicalReports/{reportId} {
+      allow read: if isAdmin() || isDoctor() || isCaregiver();
+      allow create: if isAdmin() || isDoctor();
+      allow update, delete: if isAdmin() || isDoctor();
+    }
+    
     // Nurse reports
     match /nurseReports/{reportId} {
       allow read: if isAdmin() || isDoctor() || isCaregiver();
@@ -57,7 +64,7 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Care plans
+    // Care plans - Doctor only can create/update
     match /carePlans/{planId} {
       allow read: if isAdmin() || isDoctor() || isCaregiver();
       allow create: if isAdmin() || isDoctor();

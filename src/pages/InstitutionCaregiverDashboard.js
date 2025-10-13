@@ -46,6 +46,9 @@ import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
 import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
+import { createMedicalReport } from '../api/medicalReportsAPI';
+import { createCarePlan } from '../api/carePlansAPI';
+import { createCareLog } from '../api/careLogsAPI';
 import InstitutionCaregiverGuard from '../components/InstitutionCaregiverGuard';
 import CaregiverSettings from '../components/CaregiverSettings';
 import NurseVitalsInput from '../components/NurseVitalsInput';
@@ -92,6 +95,27 @@ const InstitutionCaregiverDashboard = () => {
   // Role-specific modals
   const [showMedicalReportModal, setShowMedicalReportModal] = useState(false);
   const [showCarePlanModal, setShowCarePlanModal] = useState(false);
+  
+  // Form data states
+  const [medicalReportData, setMedicalReportData] = useState({
+    reportDate: new Date().toISOString().split('T')[0],
+    diagnosis: '',
+    symptoms: '',
+    treatment: '',
+    prescriptions: '',
+    notes: ''
+  });
+  
+  const [carePlanData, setCarePlanData] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    reviewDate: '',
+    objectives: '',
+    activities: '',
+    medicationSchedule: '',
+    dietary: '',
+    mobility: '',
+    specialInstructions: ''
+  });
   const [profileImage, setProfileImage] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
@@ -2653,7 +2677,8 @@ const InstitutionCaregiverDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Report Date</label>
                   <input
                     type="date"
-                    defaultValue={new Date().toISOString().split('T')[0]}
+                    value={medicalReportData.reportDate}
+                    onChange={(e) => setMedicalReportData({...medicalReportData, reportDate: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -2663,6 +2688,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="Enter medical diagnosis..."
                     rows={3}
+                    value={medicalReportData.diagnosis}
+                    onChange={(e) => setMedicalReportData({...medicalReportData, diagnosis: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2672,6 +2699,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="Describe symptoms and clinical findings..."
                     rows={4}
+                    value={medicalReportData.symptoms}
+                    onChange={(e) => setMedicalReportData({...medicalReportData, symptoms: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2681,6 +2710,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="Recommended treatment plan..."
                     rows={4}
+                    value={medicalReportData.treatment}
+                    onChange={(e) => setMedicalReportData({...medicalReportData, treatment: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2690,6 +2721,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="List medications and dosage instructions..."
                     rows={3}
+                    value={medicalReportData.prescriptions}
+                    onChange={(e) => setMedicalReportData({...medicalReportData, prescriptions: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2699,6 +2732,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="Any additional medical notes or observations..."
                     rows={3}
+                    value={medicalReportData.notes}
+                    onChange={(e) => setMedicalReportData({...medicalReportData, notes: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2713,10 +2748,39 @@ const InstitutionCaregiverDashboard = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // TODO: Save medical report to database
-                  alert('Medical report saved successfully! (Database integration pending)');
-                  setShowMedicalReportModal(false);
+                onClick={async () => {
+                  try {
+                    const reportPayload = {
+                      clientId: selectedClient.id,
+                      clientName: selectedClient.name || selectedClient.fullName,
+                      doctorId: user.uid,
+                      doctorName: userProfile?.name || userProfile?.displayName,
+                      institutionId: effectiveInstitutionId,
+                      reportDate: new Date(medicalReportData.reportDate),
+                      diagnosis: medicalReportData.diagnosis,
+                      symptoms: medicalReportData.symptoms,
+                      treatmentRecommendations: medicalReportData.treatment,
+                      prescriptions: medicalReportData.prescriptions,
+                      additionalNotes: medicalReportData.notes
+                    };
+                    
+                    await createMedicalReport(reportPayload);
+                    alert('Medical report saved successfully!');
+                    
+                    // Reset form
+                    setMedicalReportData({
+                      reportDate: new Date().toISOString().split('T')[0],
+                      diagnosis: '',
+                      symptoms: '',
+                      treatment: '',
+                      prescriptions: '',
+                      notes: ''
+                    });
+                    setShowMedicalReportModal(false);
+                  } catch (error) {
+                    console.error('Error saving medical report:', error);
+                    alert('Failed to save medical report: ' + error.message);
+                  }
                 }}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
               >
@@ -2755,7 +2819,8 @@ const InstitutionCaregiverDashboard = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
                     <input
                       type="date"
-                      defaultValue={new Date().toISOString().split('T')[0]}
+                      value={carePlanData.startDate}
+                      onChange={(e) => setCarePlanData({...carePlanData, startDate: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
                   </div>
@@ -2763,6 +2828,8 @@ const InstitutionCaregiverDashboard = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Review Date</label>
                     <input
                       type="date"
+                      value={carePlanData.reviewDate}
+                      onChange={(e) => setCarePlanData({...carePlanData, reviewDate: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
                   </div>
@@ -2773,6 +2840,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="List primary care objectives and goals..."
                     rows={3}
+                    value={carePlanData.objectives}
+                    onChange={(e) => setCarePlanData({...carePlanData, objectives: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2782,6 +2851,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="Specify daily care routines and activities..."
                     rows={4}
+                    value={carePlanData.activities}
+                    onChange={(e) => setCarePlanData({...carePlanData, activities: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2791,6 +2862,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="Detail medication times and administration instructions..."
                     rows={3}
+                    value={carePlanData.medicationSchedule}
+                    onChange={(e) => setCarePlanData({...carePlanData, medicationSchedule: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2800,6 +2873,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="Specify dietary needs, restrictions, and meal plans..."
                     rows={3}
+                    value={carePlanData.dietary}
+                    onChange={(e) => setCarePlanData({...carePlanData, dietary: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2809,6 +2884,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="Describe mobility assistance needs and exercise recommendations..."
                     rows={3}
+                    value={carePlanData.mobility}
+                    onChange={(e) => setCarePlanData({...carePlanData, mobility: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2818,6 +2895,8 @@ const InstitutionCaregiverDashboard = () => {
                   <textarea
                     placeholder="Any special care instructions or precautions..."
                     rows={3}
+                    value={carePlanData.specialInstructions}
+                    onChange={(e) => setCarePlanData({...carePlanData, specialInstructions: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
@@ -2832,10 +2911,43 @@ const InstitutionCaregiverDashboard = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // TODO: Save care plan to database
-                  alert('Care plan created successfully! (Database integration pending)');
-                  setShowCarePlanModal(false);
+                onClick={async () => {
+                  try {
+                    const planPayload = {
+                      clientId: selectedClient.id,
+                      clientName: selectedClient.name || selectedClient.fullName,
+                      doctorId: user.uid,
+                      doctorName: userProfile?.name || userProfile?.displayName,
+                      institutionId: effectiveInstitutionId,
+                      startDate: new Date(carePlanData.startDate),
+                      reviewDate: carePlanData.reviewDate ? new Date(carePlanData.reviewDate) : null,
+                      careObjectives: carePlanData.objectives,
+                      dailyCareActivities: carePlanData.activities,
+                      medicationSchedule: carePlanData.medicationSchedule,
+                      dietaryRequirements: carePlanData.dietary,
+                      mobilityPlan: carePlanData.mobility,
+                      specialInstructions: carePlanData.specialInstructions
+                    };
+                    
+                    await createCarePlan(planPayload);
+                    alert('Care plan created successfully!');
+                    
+                    // Reset form
+                    setCarePlanData({
+                      startDate: new Date().toISOString().split('T')[0],
+                      reviewDate: '',
+                      objectives: '',
+                      activities: '',
+                      medicationSchedule: '',
+                      dietary: '',
+                      mobility: '',
+                      specialInstructions: ''
+                    });
+                    setShowCarePlanModal(false);
+                  } catch (error) {
+                    console.error('Error creating care plan:', error);
+                    alert('Failed to create care plan: ' + error.message);
+                  }
                 }}
                 className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center"
               >
