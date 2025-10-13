@@ -62,6 +62,7 @@ import { careLogsAPI } from '../api/careLogsAPI';
 import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation } from '../api/messagesAPI';
 import { toast } from 'react-toastify';
+import PharmacyTab from '../components/PharmacyTab';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -1972,6 +1973,18 @@ const InstitutionCaregiverDashboard = () => {
               <FileText className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
               {!sidebarCollapsed && 'Diagnostics'}
             </button>
+            
+            <button
+              onClick={() => setActiveTab('pharmacy')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'pharmacy'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <FlaskConical className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Pharmacy'}
+            </button>
           </nav>
 
           {/* Sidebar Footer */}
@@ -2026,6 +2039,7 @@ const InstitutionCaregiverDashboard = () => {
                 {activeTab === 'prescriptions' && 'Prescriptions'}
                 {activeTab === 'consultations' && 'Consultations'}
                 {activeTab === 'diagnostics' && 'Diagnostics'}
+                {activeTab === 'pharmacy' && 'Pharmacy Management'}
               </h1>
               <p className="text-gray-600 mt-1">
                 {activeTab === 'dashboard' && `Welcome back, ${caregiver?.name || userProfile?.name || 'User'}`}
@@ -2038,6 +2052,7 @@ const InstitutionCaregiverDashboard = () => {
                 {activeTab === 'prescriptions' && 'View prescribed medications'}
                 {activeTab === 'consultations' && 'View consultation notes'}
                 {activeTab === 'diagnostics' && 'View diagnostic results'}
+                {activeTab === 'pharmacy' && 'Manage prescriptions, inventory, and generate invoices'}
               </p>
               {activeTab === 'dashboard' && (
                 <div className="flex items-center mt-2">
@@ -2199,6 +2214,13 @@ const InstitutionCaregiverDashboard = () => {
           renderConsultationsTab()
         ) : activeTab === 'diagnostics' ? (
           renderDiagnosticsTab()
+        ) : activeTab === 'pharmacy' ? (
+          <PharmacyTab
+            user={user}
+            userProfile={userProfile}
+            institutionId={effectiveInstitutionId}
+            assignedClients={assignedClients}
+          />
         ) : (
           <div className="space-y-8">
             {/* General Care Provider Dashboard Section */}
