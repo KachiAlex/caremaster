@@ -11,7 +11,8 @@ import {
   where, 
   orderBy,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  onSnapshot
 } from 'firebase/firestore';
 
 const CARE_PLANS_COLLECTION = 'carePlans';
@@ -192,6 +193,38 @@ export const deleteCarePlan = async (planId) => {
   }
 };
 
+// Real-time subscription to care plans for a client
+export const subscribeToCarePlansByClient = (clientId, callback) => {
+  try {
+    const q = query(
+      collection(db, CARE_PLANS_COLLECTION),
+      where('clientId', '==', clientId),
+      orderBy('startDate', 'desc')
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const plans = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate(),
+        startDate: doc.data().startDate?.toDate ? doc.data().startDate.toDate() : new Date(doc.data().startDate),
+        reviewDate: doc.data().reviewDate?.toDate ? doc.data().reviewDate.toDate() : new Date(doc.data().reviewDate)
+      }));
+      
+      console.log(`🔄 Real-time update: ${plans.length} care plans for client ${clientId}`);
+      callback(plans);
+    }, (error) => {
+      console.error('❌ Error in care plans subscription:', error);
+    });
+    
+    return unsubscribe;
+  } catch (error) {
+    console.error('❌ Error setting up care plans subscription:', error);
+    throw error;
+  }
+};
+
 const carePlansAPI = {
   createCarePlan,
   getCarePlansByClient,
@@ -200,7 +233,8 @@ const carePlansAPI = {
   getCarePlan,
   updateCarePlan,
   archiveCarePlan,
-  deleteCarePlan
+  deleteCarePlan,
+  subscribeToCarePlansByClient
 };
 
 export { carePlansAPI };

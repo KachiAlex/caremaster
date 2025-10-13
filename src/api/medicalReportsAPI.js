@@ -11,7 +11,8 @@ import {
   where, 
   orderBy,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  onSnapshot
 } from 'firebase/firestore';
 
 const MEDICAL_REPORTS_COLLECTION = 'medicalReports';
@@ -140,13 +141,45 @@ export const deleteMedicalReport = async (reportId) => {
   }
 };
 
+// Real-time subscription to medical reports for a client
+export const subscribeToMedicalReportsByClient = (clientId, callback) => {
+  try {
+    const q = query(
+      collection(db, MEDICAL_REPORTS_COLLECTION),
+      where('clientId', '==', clientId),
+      orderBy('reportDate', 'desc')
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const reports = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate(),
+        reportDate: doc.data().reportDate?.toDate ? doc.data().reportDate.toDate() : new Date(doc.data().reportDate)
+      }));
+      
+      console.log(`🔄 Real-time update: ${reports.length} medical reports for client ${clientId}`);
+      callback(reports);
+    }, (error) => {
+      console.error('❌ Error in medical reports subscription:', error);
+    });
+    
+    return unsubscribe;
+  } catch (error) {
+    console.error('❌ Error setting up medical reports subscription:', error);
+    throw error;
+  }
+};
+
 const medicalReportsAPI = {
   createMedicalReport,
   getMedicalReportsByClient,
   getMedicalReportsByDoctor,
   getMedicalReport,
   updateMedicalReport,
-  deleteMedicalReport
+  deleteMedicalReport,
+  subscribeToMedicalReportsByClient
 };
 
 export { medicalReportsAPI };

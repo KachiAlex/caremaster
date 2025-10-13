@@ -12,7 +12,8 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
-  limit
+  limit,
+  onSnapshot
 } from 'firebase/firestore';
 
 const CARE_LOGS_COLLECTION = 'careLogs';
@@ -209,6 +210,39 @@ export const deleteCareLog = async (logId) => {
   }
 };
 
+// Real-time subscription to care logs for a client
+export const subscribeToCareLogsByClient = (clientId, limitCount = 50, callback) => {
+  try {
+    const q = query(
+      collection(db, CARE_LOGS_COLLECTION),
+      where('clientId', '==', clientId),
+      orderBy('logDate', 'desc'),
+      orderBy('logTime', 'desc'),
+      limit(limitCount)
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const logs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate(),
+        logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
+      }));
+      
+      console.log(`🔄 Real-time update: ${logs.length} care logs for client ${clientId}`);
+      callback(logs);
+    }, (error) => {
+      console.error('❌ Error in care logs subscription:', error);
+    });
+    
+    return unsubscribe;
+  } catch (error) {
+    console.error('❌ Error setting up care logs subscription:', error);
+    throw error;
+  }
+};
+
 const careLogsAPI = {
   createCareLog,
   getCareLogsByClient,
@@ -217,7 +251,8 @@ const careLogsAPI = {
   getCareLogsByRole,
   getCareLog,
   updateCareLog,
-  deleteCareLog
+  deleteCareLog,
+  subscribeToCareLogsByClient
 };
 
 export { careLogsAPI };

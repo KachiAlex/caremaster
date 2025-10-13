@@ -38,7 +38,8 @@ import {
   RefreshCw,
   AlertCircle,
   X,
-  Mail
+  Mail,
+  Download
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { caregiverAPI } from '../api/caregiverAPI';
@@ -46,18 +47,19 @@ import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
 import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
-import { createMedicalReport } from '../api/medicalReportsAPI';
-import { createCarePlan } from '../api/carePlansAPI';
-import { createCareLog } from '../api/careLogsAPI';
+import { createMedicalReport, getMedicalReportsByClient, updateMedicalReport, deleteMedicalReport, subscribeToMedicalReportsByClient } from '../api/medicalReportsAPI';
+import { createCarePlan, getCarePlansByClient, updateCarePlan, deleteCarePlan, subscribeToCarePlansByClient } from '../api/carePlansAPI';
+import { createCareLog, getCareLogsByClient, subscribeToCareLogsByClient } from '../api/careLogsAPI';
 import InstitutionCaregiverGuard from '../components/InstitutionCaregiverGuard';
 import CaregiverSettings from '../components/CaregiverSettings';
 import NurseVitalsInput from '../components/NurseVitalsInput';
 import NurseCareLogs from '../components/NurseCareLogs';
 import NurseReportGenerator from '../components/NurseReportGenerator';
 import NurseMedicationManager from '../components/NurseMedicationManager';
-import CareLogForm from '../components/CareLogForm';
+import CareLogFormModal from '../components/CareLogFormModal';
 import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { careLogsAPI } from '../api/careLogsAPI';
+import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation } from '../api/messagesAPI';
 import { toast } from 'react-toastify';
 
@@ -95,6 +97,8 @@ const InstitutionCaregiverDashboard = () => {
   // Role-specific modals
   const [showMedicalReportModal, setShowMedicalReportModal] = useState(false);
   const [showCarePlanModal, setShowCarePlanModal] = useState(false);
+  const [editingReportId, setEditingReportId] = useState(null);
+  const [editingPlanId, setEditingPlanId] = useState(null);
   
   // Form data states
   const [medicalReportData, setMedicalReportData] = useState({
@@ -116,6 +120,12 @@ const InstitutionCaregiverDashboard = () => {
     mobility: '',
     specialInstructions: ''
   });
+  
+  // Data lists for display
+  const [medicalReports, setMedicalReports] = useState([]);
+  const [carePlans, setCarePlans] = useState([]);
+  const [careLogs, setCareLogs] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
@@ -514,6 +524,46 @@ const InstitutionCaregiverDashboard = () => {
     const found = assignedClients.find(p => p.id === selectedClientId);
     if (found) setSelectedClient(found);
   }, [selectedClientId, assignedClients]);
+
+  // Real-time subscription to medical reports, care plans, and care logs
+  useEffect(() => {
+    if (!selectedClient) return;
+    if (clientModalTab !== 'medical' && clientModalTab !== 'carelog') return;
+    
+    setLoadingReports(true);
+    
+    // Set up real-time listeners
+    const unsubscribeReports = subscribeToMedicalReportsByClient(
+      selectedClient.id,
+      (reports) => {
+        setMedicalReports(reports);
+        setLoadingReports(false);
+      }
+    );
+    
+    const unsubscribePlans = subscribeToCarePlansByClient(
+      selectedClient.id,
+      (plans) => {
+        setCarePlans(plans);
+      }
+    );
+    
+    const unsubscribeLogs = subscribeToCareLogsByClient(
+      selectedClient.id,
+      50,
+      (logs) => {
+        setCareLogs(logs);
+      }
+    );
+    
+    // Cleanup subscriptions on unmount or when client/tab changes
+    return () => {
+      unsubscribeReports();
+      unsubscribePlans();
+      unsubscribeLogs();
+      console.log('🔄 Unsubscribed from real-time updates');
+    };
+  }, [selectedClient, clientModalTab]);
 
   // Doctor action guards and navigation helpers
   const requireClient = () => {
@@ -2615,11 +2665,25 @@ const InstitutionCaregiverDashboard = () => {
       )}
 
       {showCareLogForm && selectedClient && (
-        <CareLogForm
+        <CareLogFormModal
           client={selectedClient}
-          onSave={handleCareLogSave}
-          onClose={() => setShowCareLogForm(false)}
-          isOpen={showCareLogForm}
+          caregiver={{ uid: user?.uid, name: userProfile?.name || userProfile?.displayName }}
+          institutionId={effectiveInstitutionId}
+          roleType={isDoctor ? 'doctor' : isNurse ? 'nurse' : 'caregiver'}
+          onSave={async (careLogData) => {
+            try {
+              await createCareLog(careLogData);
+              toast.success('Care log saved successfully');
+              
+              // Real-time listener will auto-update the list
+              
+              setShowCareLogForm(false);
+            } catch (error) {
+              console.error('Error saving care log:', error);
+              toast.error('Failed to save care log: ' + error.message);
+            }
+          }}
+          onCancel={() => setShowCareLogForm(false)}
         />
       )}
 
@@ -2659,12 +2723,17 @@ const InstitutionCaregiverDashboard = () => {
               <div className="flex items-center space-x-3">
                 <Stethoscope className="h-8 w-8 text-white" />
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Medical Report</h2>
+                  <h2 className="text-2xl font-bold text-white">
+                    {editingReportId ? 'Edit Medical Report' : 'New Medical Report'}
+                  </h2>
                   <p className="text-blue-100">For: {selectedClient.name || selectedClient.fullName}</p>
                 </div>
               </div>
               <button
-                onClick={() => setShowMedicalReportModal(false)}
+                onClick={() => {
+                  setShowMedicalReportModal(false);
+                  setEditingReportId(null);
+                }}
                 className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
               >
                 <X className="h-6 w-6" />
@@ -2750,22 +2819,41 @@ const InstitutionCaregiverDashboard = () => {
               <button
                 onClick={async () => {
                   try {
-                    const reportPayload = {
-                      clientId: selectedClient.id,
-                      clientName: selectedClient.name || selectedClient.fullName,
-                      doctorId: user.uid,
-                      doctorName: userProfile?.name || userProfile?.displayName,
-                      institutionId: effectiveInstitutionId,
-                      reportDate: new Date(medicalReportData.reportDate),
-                      diagnosis: medicalReportData.diagnosis,
-                      symptoms: medicalReportData.symptoms,
-                      treatmentRecommendations: medicalReportData.treatment,
-                      prescriptions: medicalReportData.prescriptions,
-                      additionalNotes: medicalReportData.notes
-                    };
-                    
+                    if (editingReportId) {
+                      // Update existing report
+                      const updatePayload = {
+                        reportDate: new Date(medicalReportData.reportDate),
+                        diagnosis: medicalReportData.diagnosis,
+                        symptoms: medicalReportData.symptoms,
+                        treatmentRecommendations: medicalReportData.treatment,
+                        prescriptions: medicalReportData.prescriptions,
+                        additionalNotes: medicalReportData.notes
+                      };
+                      
+                      await updateMedicalReport(editingReportId, updatePayload);
+                      alert('Medical report updated successfully!');
+                      setEditingReportId(null);
+                    } else {
+                      // Create new report
+                      const reportPayload = {
+                        clientId: selectedClient.id,
+                        clientName: selectedClient.name || selectedClient.fullName,
+                        doctorId: user.uid,
+                        doctorName: userProfile?.name || userProfile?.displayName,
+                        institutionId: effectiveInstitutionId,
+                        reportDate: new Date(medicalReportData.reportDate),
+                        diagnosis: medicalReportData.diagnosis,
+                        symptoms: medicalReportData.symptoms,
+                        treatmentRecommendations: medicalReportData.treatment,
+                        prescriptions: medicalReportData.prescriptions,
+                        additionalNotes: medicalReportData.notes
+                      };
+                      
                     await createMedicalReport(reportPayload);
                     alert('Medical report saved successfully!');
+                    }
+                    
+                    // Real-time listener will auto-update the list
                     
                     // Reset form
                     setMedicalReportData({
@@ -2785,7 +2873,7 @@ const InstitutionCaregiverDashboard = () => {
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Save Report
+                {editingReportId ? 'Update Report' : 'Save Report'}
               </button>
             </div>
           </div>
@@ -2800,12 +2888,17 @@ const InstitutionCaregiverDashboard = () => {
               <div className="flex items-center space-x-3">
                 <ClipboardList className="h-8 w-8 text-white" />
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Create Care Plan</h2>
+                  <h2 className="text-2xl font-bold text-white">
+                    {editingPlanId ? 'Edit Care Plan' : 'Create Care Plan'}
+                  </h2>
                   <p className="text-indigo-100">For: {selectedClient.name || selectedClient.fullName}</p>
                 </div>
               </div>
               <button
-                onClick={() => setShowCarePlanModal(false)}
+                onClick={() => {
+                  setShowCarePlanModal(false);
+                  setEditingPlanId(null);
+                }}
                 className="text-white hover:bg-indigo-500 rounded-lg p-2 transition-colors"
               >
                 <X className="h-6 w-6" />
@@ -2913,24 +3006,45 @@ const InstitutionCaregiverDashboard = () => {
               <button
                 onClick={async () => {
                   try {
-                    const planPayload = {
-                      clientId: selectedClient.id,
-                      clientName: selectedClient.name || selectedClient.fullName,
-                      doctorId: user.uid,
-                      doctorName: userProfile?.name || userProfile?.displayName,
-                      institutionId: effectiveInstitutionId,
-                      startDate: new Date(carePlanData.startDate),
-                      reviewDate: carePlanData.reviewDate ? new Date(carePlanData.reviewDate) : null,
-                      careObjectives: carePlanData.objectives,
-                      dailyCareActivities: carePlanData.activities,
-                      medicationSchedule: carePlanData.medicationSchedule,
-                      dietaryRequirements: carePlanData.dietary,
-                      mobilityPlan: carePlanData.mobility,
-                      specialInstructions: carePlanData.specialInstructions
-                    };
+                    if (editingPlanId) {
+                      // Update existing plan
+                      const updatePayload = {
+                        startDate: new Date(carePlanData.startDate),
+                        reviewDate: carePlanData.reviewDate ? new Date(carePlanData.reviewDate) : null,
+                        careObjectives: carePlanData.objectives,
+                        dailyCareActivities: carePlanData.activities,
+                        medicationSchedule: carePlanData.medicationSchedule,
+                        dietaryRequirements: carePlanData.dietary,
+                        mobilityPlan: carePlanData.mobility,
+                        specialInstructions: carePlanData.specialInstructions
+                      };
+                      
+                      await updateCarePlan(editingPlanId, updatePayload);
+                      alert('Care plan updated successfully!');
+                      setEditingPlanId(null);
+                    } else {
+                      // Create new plan
+                      const planPayload = {
+                        clientId: selectedClient.id,
+                        clientName: selectedClient.name || selectedClient.fullName,
+                        doctorId: user.uid,
+                        doctorName: userProfile?.name || userProfile?.displayName,
+                        institutionId: effectiveInstitutionId,
+                        startDate: new Date(carePlanData.startDate),
+                        reviewDate: carePlanData.reviewDate ? new Date(carePlanData.reviewDate) : null,
+                        careObjectives: carePlanData.objectives,
+                        dailyCareActivities: carePlanData.activities,
+                        medicationSchedule: carePlanData.medicationSchedule,
+                        dietaryRequirements: carePlanData.dietary,
+                        mobilityPlan: carePlanData.mobility,
+                        specialInstructions: carePlanData.specialInstructions
+                      };
+                      
+                      await createCarePlan(planPayload);
+                      alert('Care plan created successfully!');
+                    }
                     
-                    await createCarePlan(planPayload);
-                    alert('Care plan created successfully!');
+                    // Real-time listener will auto-update the list
                     
                     // Reset form
                     setCarePlanData({
@@ -2945,14 +3059,14 @@ const InstitutionCaregiverDashboard = () => {
                     });
                     setShowCarePlanModal(false);
                   } catch (error) {
-                    console.error('Error creating care plan:', error);
-                    alert('Failed to create care plan: ' + error.message);
+                    console.error('Error saving care plan:', error);
+                    alert('Failed to save care plan: ' + error.message);
                   }
                 }}
                 className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Create Care Plan
+                {editingPlanId ? 'Update Care Plan' : 'Create Care Plan'}
               </button>
             </div>
           </div>
@@ -3141,62 +3255,348 @@ const InstitutionCaregiverDashboard = () => {
               {/* Medical Report Tab */}
               {clientModalTab === 'medical' && (
                 <div className="space-y-6">
-                  {/* Medical Conditions */}
-                  <div className="bg-red-50 rounded-xl border border-red-100 p-6">
-                    <h3 className="text-lg font-semibold text-red-900 mb-4 flex items-center">
-                      <Heart className="h-5 w-5 text-red-600 mr-2" />
-                      Medical Conditions
-                    </h3>
-                    <div className="bg-white rounded-lg p-4">
-                      <p className="text-sm text-gray-900">
-                        {Array.isArray(selectedClient.medicalConditions) 
-                          ? selectedClient.medicalConditions.join(', ') 
-                          : selectedClient.medicalConditions || selectedClient.conditions || 'No medical conditions recorded'}
-                      </p>
+                  {loadingReports ? (
+                    <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+                      <RefreshCw className="h-12 w-12 text-blue-500 mx-auto mb-4 animate-spin" />
+                      <p className="text-gray-600">Loading medical records...</p>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      {/* Base Medical Information */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Medical Conditions */}
+                        <div className="bg-red-50 rounded-xl border border-red-100 p-4">
+                          <h4 className="text-sm font-semibold text-red-900 mb-2 flex items-center">
+                            <Heart className="h-4 w-4 text-red-600 mr-2" />
+                            Medical Conditions
+                          </h4>
+                          <p className="text-sm text-gray-900">
+                            {Array.isArray(selectedClient.medicalConditions) 
+                              ? selectedClient.medicalConditions.join(', ') 
+                              : selectedClient.medicalConditions || selectedClient.conditions || 'None recorded'}
+                          </p>
+                        </div>
 
-                  {/* Allergies */}
-                  <div className="bg-yellow-50 rounded-xl border border-yellow-100 p-6">
-                    <h3 className="text-lg font-semibold text-yellow-900 mb-4 flex items-center">
-                      <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
-                      Allergies
-                    </h3>
-                    <div className="bg-white rounded-lg p-4">
-                      <p className="text-sm text-gray-900">
-                        {Array.isArray(selectedClient.allergies)
-                          ? selectedClient.allergies.join(', ')
-                          : selectedClient.allergies || selectedClient.allergyInfo || 'No allergies recorded'}
-                      </p>
-                    </div>
-                  </div>
+                        {/* Allergies */}
+                        <div className="bg-yellow-50 rounded-xl border border-yellow-100 p-4">
+                          <h4 className="text-sm font-semibold text-yellow-900 mb-2 flex items-center">
+                            <AlertTriangle className="h-4 w-4 text-yellow-600 mr-2" />
+                            Allergies
+                          </h4>
+                          <p className="text-sm text-gray-900">
+                            {Array.isArray(selectedClient.allergies)
+                              ? selectedClient.allergies.join(', ')
+                              : selectedClient.allergies || selectedClient.allergyInfo || 'None recorded'}
+                          </p>
+                        </div>
 
-                  {/* Current Medications */}
-                  <div className="bg-green-50 rounded-xl border border-green-100 p-6">
-                    <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center">
-                      <Pill className="h-5 w-5 text-green-600 mr-2" />
-                      Current Medications
-                    </h3>
-                    <div className="bg-white rounded-lg p-4">
-                      <p className="text-sm text-gray-900">
-                        {Array.isArray(selectedClient.medications)
-                          ? selectedClient.medications.join(', ')
-                          : selectedClient.medications || selectedClient.currentMedications || 'No medications recorded'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Additional Medical Notes */}
-                  {selectedClient.notes && (
-                    <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <FileText className="h-5 w-5 text-gray-600 mr-2" />
-                        Additional Medical Notes
-                      </h3>
-                      <div className="bg-white rounded-lg p-4">
-                        <p className="text-sm text-gray-700">{selectedClient.notes}</p>
+                        {/* Current Medications */}
+                        <div className="bg-green-50 rounded-xl border border-green-100 p-4">
+                          <h4 className="text-sm font-semibold text-green-900 mb-2 flex items-center">
+                            <Pill className="h-4 w-4 text-green-600 mr-2" />
+                            Current Medications
+                          </h4>
+                          <p className="text-sm text-gray-900">
+                            {Array.isArray(selectedClient.medications)
+                              ? selectedClient.medications.join(', ')
+                              : selectedClient.medications || selectedClient.currentMedications || 'None recorded'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+
+                      {/* Medical Reports List */}
+                      <div className="bg-white rounded-xl border border-gray-100 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <Stethoscope className="h-5 w-5 text-blue-600 mr-2" />
+                            Medical Reports ({medicalReports.length})
+                          </h3>
+                          {isDoctor && (
+                            <button
+                              onClick={() => setShowMedicalReportModal(true)}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              New Report
+                            </button>
+                          )}
+                        </div>
+                        
+                        {medicalReports.length === 0 ? (
+                          <div className="text-center py-8">
+                            <Stethoscope className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-500 text-sm">No medical reports yet</p>
+                            {isDoctor && (
+                              <button
+                                onClick={() => setShowMedicalReportModal(true)}
+                                className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                              >
+                                Create First Report
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {medicalReports.map((report) => (
+                              <div key={report.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-3 mb-2">
+                                      <span className="text-sm font-semibold text-gray-900">
+                                        {report.diagnosis || 'Medical Report'}
+                                      </span>
+                                      <span className="text-xs text-gray-500">
+                                        {report.reportDate instanceof Date 
+                                          ? report.reportDate.toLocaleDateString() 
+                                          : new Date(report.reportDate).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                    {report.symptoms && (
+                                      <p className="text-sm text-gray-600 mb-2">
+                                        <span className="font-medium">Symptoms:</span> {report.symptoms.substring(0, 100)}
+                                        {report.symptoms.length > 100 && '...'}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-gray-500">
+                                      By: {report.doctorName || 'Doctor'} • 
+                                      {report.createdAt instanceof Date 
+                                        ? report.createdAt.toLocaleString() 
+                                        : new Date(report.createdAt).toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => {
+                                        // View full report details
+                                        alert(`Full Report:\n\nDiagnosis: ${report.diagnosis}\n\nSymptoms: ${report.symptoms}\n\nTreatment: ${report.treatmentRecommendations}\n\nPrescriptions: ${report.prescriptions}\n\nNotes: ${report.additionalNotes || 'None'}`);
+                                      }}
+                                      className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center"
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      View
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        try {
+                                          exportMedicalReportToPDF(report, selectedClient, institutionData);
+                                          toast.success('PDF downloaded successfully!');
+                                        } catch (error) {
+                                          console.error('Error exporting PDF:', error);
+                                          toast.error('Failed to export PDF');
+                                        }
+                                      }}
+                                      className="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center"
+                                    >
+                                      <Download className="h-4 w-4 mr-1" />
+                                      PDF
+                                    </button>
+                                    {isDoctor && (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            // Load report data for editing
+                                            setEditingReportId(report.id);
+                                            setMedicalReportData({
+                                              reportDate: report.reportDate instanceof Date 
+                                                ? report.reportDate.toISOString().split('T')[0]
+                                                : new Date(report.reportDate).toISOString().split('T')[0],
+                                              diagnosis: report.diagnosis || '',
+                                              symptoms: report.symptoms || '',
+                                              treatment: report.treatmentRecommendations || '',
+                                              prescriptions: report.prescriptions || '',
+                                              notes: report.additionalNotes || ''
+                                            });
+                                            setShowMedicalReportModal(true);
+                                          }}
+                                          className="px-3 py-1 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors flex items-center"
+                                        >
+                                          <Edit className="h-4 w-4 mr-1" />
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            if (window.confirm('Are you sure you want to delete this medical report?')) {
+                                              try {
+                                                await deleteMedicalReport(report.id);
+                                                // Real-time listener will auto-update the list
+                                                alert('Medical report deleted successfully!');
+                                              } catch (error) {
+                                                console.error('Error deleting report:', error);
+                                                alert('Failed to delete report: ' + error.message);
+                                              }
+                                            }
+                                          }}
+                                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center"
+                                        >
+                                          <X className="h-4 w-4 mr-1" />
+                                          Delete
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Care Plans List */}
+                      <div className="bg-white rounded-xl border border-gray-100 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <ClipboardList className="h-5 w-5 text-indigo-600 mr-2" />
+                            Care Plans ({carePlans.length})
+                          </h3>
+                          {isDoctor && (
+                            <button
+                              onClick={() => setShowCarePlanModal(true)}
+                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-sm"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              New Plan
+                            </button>
+                          )}
+                        </div>
+                        
+                        {carePlans.length === 0 ? (
+                          <div className="text-center py-8">
+                            <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-500 text-sm">No care plans yet</p>
+                            {isDoctor && (
+                              <button
+                                onClick={() => setShowCarePlanModal(true)}
+                                className="mt-3 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                              >
+                                Create First Plan
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {carePlans.map((plan) => (
+                              <div key={plan.id} className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-3 mb-2">
+                                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                        plan.status === 'active' 
+                                          ? 'bg-green-100 text-green-800' 
+                                          : 'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {plan.status || 'Active'}
+                                      </span>
+                                      <span className="text-xs text-gray-500">
+                                        {plan.startDate instanceof Date 
+                                          ? plan.startDate.toLocaleDateString() 
+                                          : new Date(plan.startDate).toLocaleDateString()}
+                                        {plan.reviewDate && ` - ${plan.reviewDate instanceof Date ? plan.reviewDate.toLocaleDateString() : new Date(plan.reviewDate).toLocaleDateString()}`}
+                                      </span>
+                                    </div>
+                                    {plan.careObjectives && (
+                                      <p className="text-sm text-gray-900 mb-2">
+                                        <span className="font-medium">Objectives:</span> {plan.careObjectives.substring(0, 100)}
+                                        {plan.careObjectives.length > 100 && '...'}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-gray-500">
+                                      By: {plan.doctorName || 'Doctor'}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => {
+                                        // View full plan details
+                                        alert(`Care Plan Details:\n\nObjectives: ${plan.careObjectives}\n\nDaily Activities: ${plan.dailyCareActivities}\n\nMedication Schedule: ${plan.medicationSchedule}\n\nDietary: ${plan.dietaryRequirements}\n\nMobility: ${plan.mobilityPlan}\n\nSpecial Instructions: ${plan.specialInstructions || 'None'}`);
+                                      }}
+                                      className="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center"
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      View
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        try {
+                                          exportCarePlanToPDF(plan, selectedClient, institutionData);
+                                          toast.success('Care plan PDF downloaded!');
+                                        } catch (error) {
+                                          console.error('Error exporting care plan PDF:', error);
+                                          toast.error('Failed to export PDF');
+                                        }
+                                      }}
+                                      className="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center"
+                                    >
+                                      <Download className="h-4 w-4 mr-1" />
+                                      PDF
+                                    </button>
+                                    {isDoctor && (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            // Load plan data for editing
+                                            setEditingPlanId(plan.id);
+                                            setCarePlanData({
+                                              startDate: plan.startDate instanceof Date 
+                                                ? plan.startDate.toISOString().split('T')[0]
+                                                : new Date(plan.startDate).toISOString().split('T')[0],
+                                              reviewDate: plan.reviewDate ? (plan.reviewDate instanceof Date 
+                                                ? plan.reviewDate.toISOString().split('T')[0]
+                                                : new Date(plan.reviewDate).toISOString().split('T')[0]) : '',
+                                              objectives: plan.careObjectives || '',
+                                              activities: plan.dailyCareActivities || '',
+                                              medicationSchedule: plan.medicationSchedule || '',
+                                              dietary: plan.dietaryRequirements || '',
+                                              mobility: plan.mobilityPlan || '',
+                                              specialInstructions: plan.specialInstructions || ''
+                                            });
+                                            setShowCarePlanModal(true);
+                                          }}
+                                          className="px-3 py-1 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors flex items-center"
+                                        >
+                                          <Edit className="h-4 w-4 mr-1" />
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            if (window.confirm('Are you sure you want to delete this care plan?')) {
+                                              try {
+                                                await deleteCarePlan(plan.id);
+                                                // Real-time listener will auto-update the list
+                                                alert('Care plan deleted successfully!');
+                                              } catch (error) {
+                                                console.error('Error deleting plan:', error);
+                                                alert('Failed to delete plan: ' + error.message);
+                                              }
+                                            }
+                                          }}
+                                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center"
+                                        >
+                                          <X className="h-4 w-4 mr-1" />
+                                          Delete
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Additional Medical Notes */}
+                      {selectedClient.notes && (
+                        <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <FileText className="h-5 w-5 text-gray-600 mr-2" />
+                            Additional Medical Notes
+                          </h3>
+                          <div className="bg-white rounded-lg p-4">
+                            <p className="text-sm text-gray-700">{selectedClient.notes}</p>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Role-Specific Medical Actions */}
@@ -3410,34 +3810,94 @@ const InstitutionCaregiverDashboard = () => {
                     )}
                   </div>
 
-                  {/* Recent Care Activities */}
-                  <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Recent Care Activities</h4>
-                    <div className="space-y-3">
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <Activity className="h-5 w-5 text-blue-600" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">Vital Signs Recorded</p>
-                              <p className="text-xs text-gray-500">Last updated: Check care logs for history</p>
+                  {/* Care Logs List */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FileText className="h-5 w-5 text-gray-600 mr-2" />
+                      Care Log History ({careLogs.length})
+                    </h4>
+                    
+                    {careLogs.length === 0 ? (
+                      <div className="text-center py-8">
+                        <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 text-sm">No care logs recorded yet</p>
+                        <button
+                          onClick={() => setShowCareLogForm(true)}
+                          className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        >
+                          Add First Care Log
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {careLogs.map((log) => (
+                          <div key={log.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors border border-gray-200">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center space-x-3">
+                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                  log.roleType === 'doctor' ? 'bg-blue-100 text-blue-800' :
+                                  log.roleType === 'nurse' ? 'bg-red-100 text-red-800' :
+                                  'bg-green-100 text-green-800'
+                                }`}>
+                                  {log.roleType?.toUpperCase() || 'CARE'}
+                                </span>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {log.caregiverName || 'Staff Member'}
+                                </span>
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {log.logDate instanceof Date 
+                                  ? log.logDate.toLocaleDateString() 
+                                  : new Date(log.logDate).toLocaleDateString()}
+                                {' at '}{log.logTime}
+                              </span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-xs font-medium text-gray-600">Activity:</span>
+                                <p className="text-sm text-gray-900 mt-1">{log.activity}</p>
+                              </div>
+                              
+                              {log.observations && (
+                                <div>
+                                  <span className="text-xs font-medium text-gray-600">Observations:</span>
+                                  <p className="text-sm text-gray-700 mt-1">{log.observations}</p>
+                                </div>
+                              )}
+                              
+                              {log.vitalSigns && (
+                                <div className="bg-red-50 rounded p-2 mt-2">
+                                  <span className="text-xs font-medium text-red-800">Vital Signs:</span>
+                                  <p className="text-sm text-red-900 mt-1">{log.vitalSigns}</p>
+                                </div>
+                              )}
+                              
+                              {log.medications && (
+                                <div className="bg-green-50 rounded p-2 mt-2">
+                                  <span className="text-xs font-medium text-green-800">Medications:</span>
+                                  <p className="text-sm text-green-900 mt-1">{log.medications}</p>
+                                </div>
+                              )}
+                              
+                              {log.foodIntake && (
+                                <div className="bg-blue-50 rounded p-2 mt-2">
+                                  <span className="text-xs font-medium text-blue-800">Food Intake:</span>
+                                  <p className="text-sm text-blue-900 mt-1">{log.foodIntake}</p>
+                                </div>
+                              )}
+                              
+                              {log.moodBehavior && (
+                                <div className="bg-purple-50 rounded p-2 mt-2">
+                                  <span className="text-xs font-medium text-purple-800">Mood & Behavior:</span>
+                                  <p className="text-sm text-purple-900 mt-1">{log.moodBehavior}</p>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                      
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <FileText className="h-5 w-5 text-green-600" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">Care Logs</p>
-                              <p className="text-xs text-gray-500">Click "View All Logs" to see complete history</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}
