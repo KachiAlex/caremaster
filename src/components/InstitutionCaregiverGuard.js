@@ -77,7 +77,13 @@ const InstitutionCaregiverGuard = ({ children }) => {
       // Check if caregiver is approved/active
       if (userProfile.status !== 'active') {
         console.log('❌ Caregiver status not allowed:', userProfile.status);
-        toast.error(`Your account status is "${userProfile.status}". Contact your institution admin.`);
+        const statusMessage = userProfile.status === 'suspended' 
+          ? 'Your account has been suspended. Please contact your institution administrator.'
+          : userProfile.status === 'rejected'
+          ? 'Your account application was not approved. Please contact your institution administrator.'
+          : `Your account status is "${userProfile.status}". Please contact your institution administrator for assistance.`;
+        
+        toast.error(statusMessage, { autoClose: 8000 });
         signOut(auth).then(() => {
           navigate(`/institution/login?institution=${effectiveInstitutionId}&role=caregiver`, { replace: true });
         });
