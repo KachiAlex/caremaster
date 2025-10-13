@@ -31,7 +31,9 @@ import {
   LogOut,
   X,
   CheckCircle,
-  Trash2
+  Trash2,
+  Award,
+  Building
 } from 'lucide-react';
 import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -882,7 +884,8 @@ const InstitutionAdminDashboard = () => {
               { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
               { id: 'clients', name: 'Clients', icon: Heart },
               { id: 'caregivers', name: 'Caregivers', icon: UserCheck },
-              { id: 'assignments', name: 'Assignments', icon: Users }
+              { id: 'assignments', name: 'Assignments', icon: Users },
+              { id: 'analytics', name: 'Analytics', icon: TrendingUp }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -1577,6 +1580,562 @@ const InstitutionAdminDashboard = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Institution Analytics</h2>
+              <p className="text-gray-600 mt-1">Comprehensive insights for {institutionData?.name || 'your institution'}</p>
+            </div>
+            <button
+              onClick={() => loadDashboardData()}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Data
+            </button>
+          </div>
+
+          {/* Overview Analytics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Total Users</p>
+                  <p className="text-3xl font-bold mt-2">{stats.totalUsers}</p>
+                  <div className="mt-2 flex items-center text-blue-100 text-sm">
+                    <Users className="h-4 w-4 mr-1" />
+                    <span>Active members</span>
+                  </div>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <Users className="h-8 w-8" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-sm font-medium">Caregivers</p>
+                  <p className="text-3xl font-bold mt-2">{stats.caregivers + stats.doctors + stats.nurses}</p>
+                  <div className="mt-2 flex items-center text-green-100 text-sm">
+                    <UserCheck className="h-4 w-4 mr-1" />
+                    <span>{stats.caregivers} active</span>
+                  </div>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <UserCheck className="h-8 w-8" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Clients</p>
+                  <p className="text-3xl font-bold mt-2">{stats.clients}</p>
+                  <div className="mt-2 flex items-center text-purple-100 text-sm">
+                    <Heart className="h-4 w-4 mr-1" />
+                    <span>Under care</span>
+                  </div>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <Heart className="h-8 w-8" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-sm font-medium">Active Tasks</p>
+                  <p className="text-3xl font-bold mt-2">{stats.activeAssignments}</p>
+                  <div className="mt-2 flex items-center text-orange-100 text-sm">
+                    <Activity className="h-4 w-4 mr-1" />
+                    <span>{stats.pendingAssignments} pending</span>
+                  </div>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <Activity className="h-8 w-8" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Analytics Sections */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Staff Distribution */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <UserCheck className="h-5 w-5 mr-2 text-blue-600" />
+                Staff Distribution
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                      {stats.caregivers}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Caregivers</p>
+                      <p className="text-xs text-gray-500">Primary care providers</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-blue-600">
+                    {stats.totalUsers > 0 ? Math.round((stats.caregivers / stats.totalUsers) * 100) : 0}%
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                      {stats.doctors}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Doctors</p>
+                      <p className="text-xs text-gray-500">Medical professionals</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-green-600">
+                    {stats.totalUsers > 0 ? Math.round((stats.doctors / stats.totalUsers) * 100) : 0}%
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                      {stats.nurses}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Nurses</p>
+                      <p className="text-xs text-gray-500">Nursing staff</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-purple-600">
+                    {stats.totalUsers > 0 ? Math.round((stats.nurses / stats.totalUsers) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Assignment Statistics */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Activity className="h-5 w-5 mr-2 text-purple-600" />
+                Assignment Statistics
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Pending Tasks</p>
+                    <p className="text-xs text-gray-500">Awaiting action</p>
+                  </div>
+                  <span className="text-3xl font-bold text-yellow-600">{stats.pendingAssignments}</span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Active Tasks</p>
+                    <p className="text-xs text-gray-500">In progress</p>
+                  </div>
+                  <span className="text-3xl font-bold text-blue-600">{stats.activeAssignments}</span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Completed Tasks</p>
+                    <p className="text-xs text-gray-500">Successfully finished</p>
+                  </div>
+                  <span className="text-3xl font-bold text-green-600">{stats.completedAssignments}</span>
+                </div>
+
+                {/* Completion Rate */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">Completion Rate</span>
+                    <span className="text-sm font-bold text-gray-900">
+                      {(stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments) > 0 
+                        ? Math.round((stats.completedAssignments / (stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments)) * 100) 
+                        : 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${(stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments) > 0 
+                          ? Math.round((stats.completedAssignments / (stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments)) * 100) 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Client Care Overview */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+              <Heart className="h-5 w-5 mr-2 text-pink-600" />
+              Client Care Overview
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center p-6 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-pink-500 rounded-full mb-4">
+                  <Heart className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{clients.length}</p>
+                <p className="text-sm text-gray-600 mt-1">Total Clients</p>
+              </div>
+
+              <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-full mb-4">
+                  <UserCheck className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{caregivers.length}</p>
+                <p className="text-sm text-gray-600 mt-1">Available Caregivers</p>
+              </div>
+
+              <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 rounded-full mb-4">
+                  <Activity className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900">
+                  {caregivers.length > 0 ? (clients.length / caregivers.length).toFixed(1) : 0}
+                </p>
+                <p className="text-sm text-gray-600 mt-1">Clients per Caregiver</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity & Top Performers */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Performing Caregivers */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Award className="h-5 w-5 mr-2 text-yellow-600" />
+                Top Performing Caregivers
+              </h3>
+              <div className="space-y-3">
+                {caregivers
+                  .filter(c => c.status === 'active')
+                  .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+                  .slice(0, 5)
+                  .map((caregiver, index) => {
+                    const caregiverAssignments = assignments.filter(a => a.caregiverId === caregiver.id && a.status === 'completed');
+                    return (
+                      <div key={caregiver.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{caregiver.name}</p>
+                            <p className="text-xs text-gray-500">{caregiver.userType || caregiver.type}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center justify-end mb-1">
+                            <span className="text-yellow-500 mr-1">★</span>
+                            <span className="text-sm font-semibold text-gray-900">{(caregiver.rating || 0).toFixed(1)}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">{caregiverAssignments.length} completed</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                {caregivers.filter(c => c.status === 'active').length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <UserCheck className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>No active caregivers yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Client Status Distribution */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Users className="h-5 w-5 mr-2 text-indigo-600" />
+                Client Status Distribution
+              </h3>
+              <div className="space-y-4">
+                {[
+                  { 
+                    status: 'active', 
+                    label: 'Active Clients', 
+                    count: clients.filter(c => c.status === 'active').length,
+                    color: 'green',
+                    bgColor: 'bg-green-50',
+                    textColor: 'text-green-600'
+                  },
+                  { 
+                    status: 'pending', 
+                    label: 'Pending Setup', 
+                    count: clients.filter(c => c.status === 'pending').length,
+                    color: 'yellow',
+                    bgColor: 'bg-yellow-50',
+                    textColor: 'text-yellow-600'
+                  },
+                  { 
+                    status: 'inactive', 
+                    label: 'Inactive', 
+                    count: clients.filter(c => c.status === 'inactive').length,
+                    color: 'gray',
+                    bgColor: 'bg-gray-50',
+                    textColor: 'text-gray-600'
+                  }
+                ].map((item) => (
+                  <div key={item.status} className={`flex items-center justify-between p-4 ${item.bgColor} rounded-lg`}>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{item.status}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-2xl font-bold ${item.textColor}`}>{item.count}</p>
+                      <p className="text-xs text-gray-500">
+                        {clients.length > 0 ? Math.round((item.count / clients.length) * 100) : 0}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Assignment Performance */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+              <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
+              Assignment Performance Metrics
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600 mb-2">Total Assignments</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments}
+                </p>
+              </div>
+              <div className="text-center p-4 border border-gray-200 rounded-lg bg-yellow-50">
+                <p className="text-sm text-gray-600 mb-2">Pending</p>
+                <p className="text-3xl font-bold text-yellow-600">{stats.pendingAssignments}</p>
+              </div>
+              <div className="text-center p-4 border border-gray-200 rounded-lg bg-blue-50">
+                <p className="text-sm text-gray-600 mb-2">In Progress</p>
+                <p className="text-3xl font-bold text-blue-600">{stats.activeAssignments}</p>
+              </div>
+              <div className="text-center p-4 border border-gray-200 rounded-lg bg-green-50">
+                <p className="text-sm text-gray-600 mb-2">Completed</p>
+                <p className="text-3xl font-bold text-green-600">{stats.completedAssignments}</p>
+              </div>
+            </div>
+
+            {/* Visual Progress Bar */}
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Overall Progress</span>
+                <span className="text-sm text-gray-600">
+                  {stats.completedAssignments} of {stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments} completed
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div className="flex h-full">
+                  {/* Completed */}
+                  <div 
+                    className="bg-gradient-to-r from-green-500 to-green-600 transition-all duration-500"
+                    style={{ 
+                      width: `${(stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments) > 0 
+                        ? (stats.completedAssignments / (stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments)) * 100 
+                        : 0}%` 
+                    }}
+                  ></div>
+                  {/* Active */}
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                    style={{ 
+                      width: `${(stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments) > 0 
+                        ? (stats.activeAssignments / (stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments)) * 100 
+                        : 0}%` 
+                    }}
+                  ></div>
+                  {/* Pending */}
+                  <div 
+                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 transition-all duration-500"
+                    style={{ 
+                      width: `${(stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments) > 0 
+                        ? (stats.pendingAssignments / (stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments)) * 100 
+                        : 0}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-2 text-xs">
+                <span className="flex items-center">
+                  <span className="w-3 h-3 bg-green-500 rounded-full mr-1"></span>
+                  Completed
+                </span>
+                <span className="flex items-center">
+                  <span className="w-3 h-3 bg-blue-500 rounded-full mr-1"></span>
+                  Active
+                </span>
+                <span className="flex items-center">
+                  <span className="w-3 h-3 bg-yellow-500 rounded-full mr-1"></span>
+                  Pending
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-gray-700">Staff Utilization</h4>
+                <Activity className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Assigned Caregivers</span>
+                    <span className="font-semibold text-gray-900">
+                      {caregivers.filter(c => assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{ 
+                        width: `${caregivers.length > 0 
+                          ? (caregivers.filter(c => assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length / caregivers.length) * 100 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Available Caregivers</span>
+                    <span className="font-semibold text-gray-900">
+                      {caregivers.filter(c => !assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{ 
+                        width: `${caregivers.length > 0 
+                          ? (caregivers.filter(c => !assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length / caregivers.length) * 100 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-gray-700">Client Coverage</h4>
+                <Heart className="h-5 w-5 text-pink-500" />
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Clients with Caregivers</span>
+                    <span className="font-semibold text-gray-900">
+                      {clients.filter(c => assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{ 
+                        width: `${clients.length > 0 
+                          ? (clients.filter(c => assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length / clients.length) * 100 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Unassigned Clients</span>
+                    <span className="font-semibold text-gray-900">
+                      {clients.filter(c => !assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-red-500 h-2 rounded-full"
+                      style={{ 
+                        width: `${clients.length > 0 
+                          ? (clients.filter(c => !assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length / clients.length) * 100 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-gray-700">System Health</h4>
+                <Shield className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full ${
+                    stats.systemHealth === 'Good' ? 'bg-green-100' :
+                    stats.systemHealth === 'Warning' ? 'bg-yellow-100' :
+                    'bg-red-100'
+                  } mb-2`}>
+                    <span className={`text-2xl font-bold ${
+                      stats.systemHealth === 'Good' ? 'text-green-600' :
+                      stats.systemHealth === 'Warning' ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {stats.uptime || 99}%
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">{stats.systemHealth || 'Good'}</p>
+                  <p className="text-xs text-gray-500 mt-1">System Status</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Institution Summary */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+            <div className="flex items-center mb-4">
+              <Building className="h-6 w-6 text-blue-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Institution Summary</h3>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Institution Name</p>
+                <p className="text-lg font-bold text-gray-900">{institutionData?.name || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Staff</p>
+                <p className="text-lg font-bold text-gray-900">{stats.caregivers + stats.doctors + stats.nurses}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Clients</p>
+                <p className="text-lg font-bold text-gray-900">{stats.clients}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Active Tasks</p>
+                <p className="text-lg font-bold text-gray-900">{stats.activeAssignments + stats.pendingAssignments}</p>
+              </div>
             </div>
           </div>
         </div>
