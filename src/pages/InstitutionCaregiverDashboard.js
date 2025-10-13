@@ -254,26 +254,36 @@ const InstitutionCaregiverDashboard = () => {
           });
         }
 
-        // If doctor, load assigned clients STRICTLY from admin-created assignments
+        // Load assigned clients from admin-created assignments (for ALL caregivers and doctors)
         const isDoctor = (userProfile.medicalQualification || '').includes('Doctor');
-        if (isDoctor) {
+        const isCaregiver = userProfile.userType === 'caregiver' || userProfile.type === 'caregiver';
+        
+        if (isDoctor || isCaregiver) {
           let clients = [];
           try {
+            // Load assignments for this caregiver/doctor
             const assignments = await assignmentAPI.getAssignmentsByCaregiver(user?.uid);
+            console.log(`📋 Found ${assignments.length} assignments for caregiver ${user?.uid}`);
+            
             const uniqueClientIds = Array.from(new Set(assignments.map(a => a.clientId).filter(Boolean)));
+            console.log(`👥 Fetching ${uniqueClientIds.length} unique clients...`);
+            
             const fetched = await Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)));
             clients = fetched.filter(Boolean);
+            
+            console.log(`✅ Loaded ${clients.length} client details`);
           } catch (error) {
             console.log('No client assignments found - this is normal for new users');
           }
           
-          // Fallback to clients.assignedDoctor only if no assignment docs found
-          if ((!clients || clients.length === 0) && user?.uid) {
+          // For doctors only: Fallback to clients.assignedDoctor field if no assignment docs found
+          if (isDoctor && (!clients || clients.length === 0) && user?.uid) {
             try {
               const alt = await getClientsByDoctor(user.uid, institutionId);
               clients = alt || [];
+              console.log(`📋 Fallback: Loaded ${clients.length} clients from assignedDoctor field`);
             } catch (error) {
-              console.log('No clients assigned to doctor - contact admin for client assignments');
+              console.log('No clients assigned via assignedDoctor field');
             }
           }
           
@@ -366,29 +376,37 @@ const InstitutionCaregiverDashboard = () => {
 
     loadCaregiverData();
     
-    // Set up real-time subscription for assignments (for doctors)
+    // Set up real-time subscription for assignments (for caregivers and doctors)
     const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor');
-    if (isDoctor && user?.uid) {
+    const isCaregiver = userProfile?.userType === 'caregiver' || userProfile?.type === 'caregiver';
+    
+    if ((isDoctor || isCaregiver) && user?.uid) {
       const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
-        console.log(`Real-time update: Found ${assignments.length} client assignments for doctor ${user.uid}`);
+        console.log(`🔄 Real-time update: Found ${assignments.length} total assignments`);
         
-        // Filter assignments for this specific caregiver
+        // Filter assignments for this specific caregiver/doctor
         const caregiverAssignments = assignments.filter(a => a.caregiverId === user.uid);
+        console.log(`📋 ${caregiverAssignments.length} assignments for this caregiver`);
+        
         const uniqueClientIds = Array.from(new Set(caregiverAssignments.map(a => a.clientId).filter(Boolean)));
-        Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)))
-          .then(fetched => {
-            const clients = fetched.filter(Boolean);
-            setAssignedClients(clients);
-            
-            // Auto-select first client if not set
-            if (clients.length > 0 && !selectedClientId) {
-              setSelectedClientId(clients[0].id);
-              setSelectedClient(clients[0]);
-            }
-          })
-          .catch(error => {
-            console.log('Error fetching client details from assignments:', error);
-          });
+        
+        if (uniqueClientIds.length > 0) {
+          Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)))
+            .then(fetched => {
+              const clients = fetched.filter(Boolean);
+              console.log(`✅ Real-time: Loaded ${clients.length} clients`);
+              setAssignedClients(clients);
+              
+              // Auto-select first client if not set
+              if (clients.length > 0 && !selectedClientId) {
+                setSelectedClientId(clients[0].id);
+                setSelectedClient(clients[0]);
+              }
+            })
+            .catch(error => {
+              console.log('Error fetching client details from assignments:', error);
+            });
+        }
       }, user.uid);
       
       return () => unsubscribe();
