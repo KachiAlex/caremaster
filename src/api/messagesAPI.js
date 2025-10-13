@@ -117,14 +117,28 @@ export const getConversationsByUser = async (userId) => {
 };
 
 // Get or create conversation between two users
-export const getOrCreateConversation = async (user1Id, user2Id, conversationType = 'general') => {
+export const getOrCreateConversation = async (user1IdOrArray, user2Id, conversationType = 'general') => {
   try {
+    // Handle both array and separate parameters
+    let user1Id, finalUser2Id, finalConversationType;
+    
+    if (Array.isArray(user1IdOrArray)) {
+      // Called with array of participants
+      [user1Id, finalUser2Id] = user1IdOrArray;
+      finalConversationType = user2Id || 'general'; // user2Id is actually conversationType in this case
+    } else {
+      // Called with separate parameters
+      user1Id = user1IdOrArray;
+      finalUser2Id = user2Id;
+      finalConversationType = conversationType;
+    }
+    
     // Validate input parameters
-    if (!user1Id || !user2Id) {
+    if (!user1Id || !finalUser2Id) {
       throw new Error('Both user1Id and user2Id are required');
     }
     
-    console.log('Getting or creating conversation between:', user1Id, 'and', user2Id);
+    console.log('Getting or creating conversation between:', [user1Id, finalUser2Id], 'and', finalConversationType);
     
     // First, try to find existing conversation
     const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
@@ -137,21 +151,21 @@ export const getOrCreateConversation = async (user1Id, user2Id, conversationType
     
     for (const doc of querySnapshot.docs) {
       const conversationData = doc.data();
-      if (conversationData.participants && conversationData.participants.includes(user2Id)) {
+      if (conversationData.participants && conversationData.participants.includes(finalUser2Id)) {
         console.log('Found existing conversation:', doc.id);
         return { id: doc.id, ...conversationData };
       }
     }
     
     // If no existing conversation, create new one
-    console.log('Creating new conversation between:', user1Id, 'and', user2Id);
-    const conversationId = await createConversation([user1Id, user2Id], conversationType);
+    console.log('Creating new conversation between:', [user1Id, finalUser2Id], 'and', finalConversationType);
+    const conversationId = await createConversation([user1Id, finalUser2Id], finalConversationType);
     
     // Return the conversation object with the ID
     return {
       id: conversationId,
-      participants: [user1Id, user2Id],
-      conversationType,
+      participants: [user1Id, finalUser2Id],
+      conversationType: finalConversationType,
       lastMessage: null,
       lastMessageTime: new Date(),
       createdAt: new Date(),

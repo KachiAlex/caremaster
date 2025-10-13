@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Calendar, 
@@ -139,6 +139,7 @@ const InstitutionCaregiverDashboard = () => {
   const [callType, setCallType] = useState(null); // 'voice' or 'video'
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
+  const [platformUsers, setPlatformUsers] = useState([]); // All users on the platform
 
   // Get qualification-specific dashboard configuration
   const getDashboardConfig = () => {
@@ -902,30 +903,117 @@ const InstitutionCaregiverDashboard = () => {
     );
   };
 
-  // Load real conversations
-  const loadConversations = async () => {
+  // Load all platform users (caregivers and admins)
+  const loadPlatformUsers = useCallback(async () => {
+    if (!effectiveInstitutionId || !user?.uid) return;
+    
+    try {
+      // Load all users from the institution
+      const usersRef = collection(db, 'users');
+      const q = query(
+        usersRef,
+        where('institutionId', '==', effectiveInstitutionId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const users = [];
+      
+      querySnapshot.forEach((doc) => {
+        const userData = doc.data();
+        // Exclude self and include caregivers, admins, doctors
+        if (doc.id !== user.uid && 
+            (userData.userType === 'caregiver' || 
+             userData.userType === 'admin' || 
+             userData.userType === 'doctor' ||
+             userData.userType === 'institutionAdmin')) {
+          users.push({
+            id: doc.id,
+            ...userData,
+            name: userData.name || userData.displayName || userData.email,
+            role: userData.userType || 'User'
+          });
+        }
+      });
+      
+      console.log(`👥 Loaded ${users.length} platform users`);
+      setPlatformUsers(users);
+      return users;
+    } catch (error) {
+      console.error('Error loading platform users:', error);
+      return [];
+    }
+  }, [effectiveInstitutionId, user?.uid]);
+
+  // Load real conversations and merge with platform users
+  const loadConversations = useCallback(async () => {
     if (!user?.uid) return;
     
     try {
-      const userConversations = await getConversationsByUser(user.uid);
-      console.log(`💬 Loaded ${userConversations.length} conversations`);
-      setConversations(userConversations);
+      // Load existing conversations
+      const existingConversations = await getConversationsByUser(user.uid);
+      console.log(`💬 Loaded ${existingConversations.length} conversations`);
+      
+      // Load all platform users
+      const users = await loadPlatformUsers();
+      
+      // Create conversation entries for users who don't have existing conversations
+      const existingUserIds = new Set(
+        existingConversations.flatMap(conv => conv.participants || [])
+      );
+      
+      // Add platform users as potential conversation partners
+      const newUserConversations = users
+        .filter(u => !existingUserIds.has(u.id))
+        .map(u => ({
+          id: `new-${u.id}`,
+          name: u.name,
+          avatar: u.avatar || u.photoURL || null,
+          lastMessage: 'Start a conversation',
+          timestamp: new Date().toISOString(),
+          unread: 0,
+          type: u.role || 'user',
+          participants: [user.uid, u.id],
+          isNew: true,
+          userData: u
+        }));
+      
+      // Merge existing conversations with new user entries
+      const allConversations = [
+        ...existingConversations,
+        ...newUserConversations
+      ];
+      
+      // Add assigned clients if they're not already in the list
+      const allUserIds = new Set(allConversations.flatMap(conv => conv.participants || []));
+      const clientConversations = assignedClients
+        .filter(client => !allUserIds.has(client.id))
+        .map(client => ({
+          id: `client-${client.id}`,
+          name: client.name || client.displayName,
+          avatar: client.avatar || null,
+          lastMessage: 'Start a conversation',
+          timestamp: new Date().toISOString(),
+          unread: 0,
+          type: 'client',
+          participants: [user.uid, client.id],
+          isNew: true
+        }));
+      
+      const finalConversations = [...allConversations, ...clientConversations];
+      setConversations(finalConversations);
+      
     } catch (error) {
       console.error('Error loading conversations:', error);
-      // Fallback to creating conversations from assigned clients
-      const clientConversations = assignedClients.map(client => ({
-        id: client.id,
-        name: client.name || client.displayName,
-        avatar: client.avatar || null,
-        lastMessage: 'Click to start conversation',
-        timestamp: new Date().toISOString(),
-        unread: 0,
-        type: 'client',
-        participants: [user.uid, client.id]
-      }));
-      setConversations(clientConversations);
+      toast.error('Failed to load conversations');
     }
-  };
+  }, [user?.uid, assignedClients, loadPlatformUsers]);
+
+  // Load conversations when user changes (placed after loadConversations definition)
+  useEffect(() => {
+    if (user?.uid) {
+      loadConversations();
+    }
+  }, [user?.uid, loadConversations]);
 
   // Load messages for selected conversation
   const loadMessagesForConversation = async (conversationId) => {
@@ -1037,13 +1125,6 @@ const InstitutionCaregiverDashboard = () => {
       setCallType(null);
       toast.info('Call ended');
     };
-
-    // Load conversations on mount
-    useEffect(() => {
-      if (user?.uid) {
-        loadConversations();
-      }
-    }, [user?.uid, assignedClients.length]);
 
     // Use real conversations or create from assigned clients
     const displayConversations = conversations.length > 0 ? conversations : 
