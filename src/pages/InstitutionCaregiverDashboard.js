@@ -702,7 +702,7 @@ const InstitutionCaregiverDashboard = () => {
             <div className="flex items-center space-x-4">
               <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center">
                 <span className="text-white font-semibold text-xl">
-                  {(selectedClient.name || selectedClient.fullName || 'P').split(' ').map(n => n[0]).join('')}
+                  {(selectedClient.name || selectedClient.fullName || 'P').toString().split(' ').map(n => n[0]).join('')}
                 </span>
               </div>
               <div>
@@ -783,19 +783,25 @@ const InstitutionCaregiverDashboard = () => {
               <div>
                 <span className="text-sm text-gray-500">Medical Conditions:</span>
                 <p className="font-medium text-gray-900">
-                  {selectedClient.medicalConditions?.join(', ') || selectedClient.conditions || 'None recorded'}
+                  {Array.isArray(selectedClient.medicalConditions) 
+                    ? selectedClient.medicalConditions.join(', ') 
+                    : selectedClient.medicalConditions || selectedClient.conditions || 'None recorded'}
                 </p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Allergies:</span>
                 <p className="font-medium text-gray-900">
-                  {selectedClient.allergies?.join(', ') || selectedClient.allergyInfo || 'None recorded'}
+                  {Array.isArray(selectedClient.allergies)
+                    ? selectedClient.allergies.join(', ')
+                    : selectedClient.allergies || selectedClient.allergyInfo || 'None recorded'}
                 </p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Current Medications:</span>
                 <p className="font-medium text-gray-900">
-                  {selectedClient.medications?.join(', ') || selectedClient.currentMedications || 'None recorded'}
+                  {Array.isArray(selectedClient.medications)
+                    ? selectedClient.medications.join(', ')
+                    : selectedClient.medications || selectedClient.currentMedications || 'None recorded'}
                 </p>
               </div>
             </div>
@@ -2043,7 +2049,7 @@ const InstitutionCaregiverDashboard = () => {
                       />
                     ) : (
                       <span className="text-white font-semibold">
-                        {caregiver?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                        {caregiver?.name ? caregiver.name.toString().split(' ').map(n => n[0]).join('') : 'U'}
                       </span>
                     )}
                   </div>
