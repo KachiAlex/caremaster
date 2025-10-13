@@ -35,7 +35,10 @@ import {
   CheckSquare,
   ClipboardList,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  AlertCircle,
+  X,
+  Mail
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { caregiverAPI } from '../api/caregiverAPI';
@@ -679,16 +682,13 @@ const InstitutionCaregiverDashboard = () => {
   };
 
   const renderClientsTab = () => {
-    if (!selectedClient) {
+    if (!assignedClients || assignedClients.length === 0) {
       return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-          <User className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Client Selected</h3>
+          <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Assigned Clients</h3>
           <p className="text-gray-600 mb-4">
-            {isDoctor 
-              ? "Please select a client from the dropdown above to view their information and provide care."
-              : "Please select a client to record vital signs and care logs."
-            }
+            You don't have any clients assigned to you at the moment.
           </p>
         </div>
       );
@@ -696,190 +696,128 @@ const InstitutionCaregiverDashboard = () => {
 
     return (
       <div className="space-y-6">
-        {/* Client Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center">
-                <span className="text-white font-semibold text-xl">
-                  {(selectedClient.name || selectedClient.fullName || 'P').toString().split(' ').map(n => n[0]).join('')}
-                </span>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
-                </h2>
-                <p className="text-gray-600">Client ID: {selectedClient.id}</p>
-                {selectedClient.age && (
-                  <p className="text-sm text-gray-500">Age: {selectedClient.age}</p>
-                )}
-              </div>
-            </div>
-            
-            {/* Nurse-specific actions */}
-            {isNurse && (
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setShowVitalsModal(true)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
-                >
-                  <Activity className="h-4 w-4 mr-2" />
-                  Record Vitals
-                </button>
-                <button
-                  onClick={() => setShowCareLogForm(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Care Log
-                </button>
-                <button
-                  onClick={() => setShowCareLogsModal(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  View Logs
-                </button>
-              </div>
-            )}
+        {/* Clients List */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Age / Gender
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Medical Conditions
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {assignedClients.map((client) => (
+                  <tr key={client.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">
+                            {(client.name || client.fullName || 'C').toString().split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {client.name || client.fullName || 'Unknown Client'}
+                          </div>
+                          <div className="text-sm text-gray-500">ID: {client.id.substring(0, 8)}...</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{client.age || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{client.gender || 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{client.phone || client.phoneNumber || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{client.email || 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {Array.isArray(client.medicalConditions) 
+                          ? client.medicalConditions.slice(0, 2).join(', ') + (client.medicalConditions.length > 2 ? '...' : '')
+                          : client.medicalConditions || client.conditions || 'None'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        client.status === 'Active' || client.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : client.status === 'Critical' || client.status === 'critical'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {client.status || 'Active'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => setSelectedClient(client)}
+                        className="text-blue-600 hover:text-blue-900 flex items-center"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* Client Information Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Basic Information */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <User className="h-5 w-5 text-blue-600 mr-2" />
-              Basic Information
-            </h3>
-            <div className="space-y-3">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm text-gray-500">Name:</span>
-                <p className="font-medium text-gray-900">{selectedClient.name || selectedClient.fullName || 'N/A'}</p>
+                <p className="text-sm font-medium text-blue-600">Total Clients</p>
+                <p className="text-2xl font-bold text-blue-900">{assignedClients.length}</p>
               </div>
-              <div>
-                <span className="text-sm text-gray-500">Age:</span>
-                <p className="font-medium text-gray-900">{selectedClient.age || 'N/A'}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Gender:</span>
-                <p className="font-medium text-gray-900">{selectedClient.gender || 'N/A'}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Phone:</span>
-                <p className="font-medium text-gray-900">{selectedClient.phone || selectedClient.phoneNumber || 'N/A'}</p>
-              </div>
+              <Users className="h-10 w-10 text-blue-600" />
             </div>
           </div>
-
-          {/* Medical Information */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Heart className="h-5 w-5 text-red-600 mr-2" />
-              Medical Information
-            </h3>
-            <div className="space-y-3">
+          
+          <div className="bg-green-50 rounded-xl border border-green-100 p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm text-gray-500">Medical Conditions:</span>
-                <p className="font-medium text-gray-900">
-                  {Array.isArray(selectedClient.medicalConditions) 
-                    ? selectedClient.medicalConditions.join(', ') 
-                    : selectedClient.medicalConditions || selectedClient.conditions || 'None recorded'}
+                <p className="text-sm font-medium text-green-600">Active Clients</p>
+                <p className="text-2xl font-bold text-green-900">
+                  {assignedClients.filter(c => c.status === 'Active' || c.status === 'active' || !c.status).length}
                 </p>
               </div>
-              <div>
-                <span className="text-sm text-gray-500">Allergies:</span>
-                <p className="font-medium text-gray-900">
-                  {Array.isArray(selectedClient.allergies)
-                    ? selectedClient.allergies.join(', ')
-                    : selectedClient.allergies || selectedClient.allergyInfo || 'None recorded'}
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Current Medications:</span>
-                <p className="font-medium text-gray-900">
-                  {Array.isArray(selectedClient.medications)
-                    ? selectedClient.medications.join(', ')
-                    : selectedClient.medications || selectedClient.currentMedications || 'None recorded'}
-                </p>
-              </div>
+              <Activity className="h-10 w-10 text-green-600" />
             </div>
           </div>
-
-          {/* Emergency Contact */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Phone className="h-5 w-5 text-green-600 mr-2" />
-              Emergency Contact
-            </h3>
-            <div className="space-y-3">
+          
+          <div className="bg-red-50 rounded-xl border border-red-100 p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm text-gray-500">Contact Name:</span>
-                <p className="font-medium text-gray-900">
-                  {selectedClient.emergencyContact?.name || selectedClient.emergencyContactName || 'N/A'}
+                <p className="text-sm font-medium text-red-600">Critical Clients</p>
+                <p className="text-2xl font-bold text-red-900">
+                  {assignedClients.filter(c => c.status === 'Critical' || c.status === 'critical').length}
                 </p>
               </div>
-              <div>
-                <span className="text-sm text-gray-500">Contact Phone:</span>
-                <p className="font-medium text-gray-900">
-                  {selectedClient.emergencyContact?.phone || selectedClient.emergencyContactPhone || 'N/A'}
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Relationship:</span>
-                <p className="font-medium text-gray-900">
-                  {selectedClient.emergencyContact?.relationship || selectedClient.emergencyContactRelationship || 'N/A'}
-                </p>
-              </div>
+              <AlertCircle className="h-10 w-10 text-red-600" />
             </div>
           </div>
         </div>
-
-        {/* Nurse-specific Quick Actions */}
-        {isNurse && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Nurse Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <button
-                onClick={() => setShowVitalsModal(true)}
-                className="flex flex-col items-center p-4 border-2 border-red-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
-              >
-                <Activity className="h-8 w-8 text-red-600 mb-2" />
-                <span className="text-sm font-medium text-gray-700">Record Vital Signs</span>
-              </button>
-              
-              <button
-                onClick={() => setShowCareLogsModal(true)}
-                className="flex flex-col items-center p-4 border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
-              >
-                <FileText className="h-8 w-8 text-blue-600 mb-2" />
-                <span className="text-sm font-medium text-gray-700">Add Care Log</span>
-              </button>
-              
-              <button
-                onClick={() => setShowNurseReportModal(true)}
-                className="flex flex-col items-center p-4 border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors"
-              >
-                <FileText className="h-8 w-8 text-orange-600 mb-2" />
-                <span className="text-sm font-medium text-gray-700">Generate Report</span>
-              </button>
-              
-              <button
-                onClick={() => setShowMedicationModal(true)}
-                className="flex flex-col items-center p-4 border-2 border-green-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors"
-              >
-                <Pill className="h-8 w-8 text-green-600 mb-2" />
-                <span className="text-sm font-medium text-gray-700">Medications</span>
-              </button>
-              
-              <button className="flex flex-col items-center p-4 border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors">
-                <Camera className="h-8 w-8 text-purple-600 mb-2" />
-                <span className="text-sm font-medium text-gray-700">Photo Update</span>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -1917,7 +1855,7 @@ const InstitutionCaregiverDashboard = () => {
               }`}
             >
               <Users className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Patients'}
+              {!sidebarCollapsed && 'Clients'}
             </button>
             
             <button
@@ -2000,7 +1938,7 @@ const InstitutionCaregiverDashboard = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 {activeTab === 'dashboard' && 'General Care Dashboard'}
-                {activeTab === 'clients' && 'Patient Management'}
+                {activeTab === 'clients' && 'Client Management'}
                 {activeTab === 'messages' && 'Messages'}
                 {activeTab === 'schedule' && 'Schedule'}
                 {activeTab === 'tasks' && 'Tasks'}
@@ -2012,7 +1950,7 @@ const InstitutionCaregiverDashboard = () => {
               </h1>
               <p className="text-gray-600 mt-1">
                 {activeTab === 'dashboard' && `Welcome back, ${caregiver?.name || userProfile?.name || 'User'}`}
-                {activeTab === 'clients' && 'Manage your assigned patients'}
+                {activeTab === 'clients' && 'Manage your assigned clients'}
                 {activeTab === 'messages' && 'Communicate with team members'}
                 {activeTab === 'schedule' && 'View your upcoming schedule'}
                 {activeTab === 'tasks' && 'Manage your care tasks'}
@@ -2080,7 +2018,7 @@ const InstitutionCaregiverDashboard = () => {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Assigned Patients</p>
+                    <p className="text-sm font-medium text-gray-600">Assigned Clients</p>
                     <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
                     <p className="text-xs text-blue-600 mt-1 flex items-center">
                       <Eye className="h-3 w-3 mr-1" />
@@ -2682,6 +2620,255 @@ const InstitutionCaregiverDashboard = () => {
           }}
           onCancel={() => setShowMedicationModal(false)}
         />
+      )}
+
+      {/* Comprehensive Client Details Modal */}
+      {selectedClient && activeTab === 'clients' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center">
+                  <span className="text-blue-600 font-bold text-xl">
+                    {(selectedClient.name || selectedClient.fullName || 'C').toString().split(' ').map(n => n[0]).join('')}
+                  </span>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
+                  </h2>
+                  <p className="text-blue-100">Client ID: {selectedClient.id.substring(0, 12)}...</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedClient(null)}
+                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+              <div className="space-y-6">
+                {/* Basic & Contact Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Basic Information */}
+                  <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+                    <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                      <User className="h-5 w-5 text-blue-600 mr-2" />
+                      Basic Information
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Full Name:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {selectedClient.name || selectedClient.fullName || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Age:</span>
+                        <span className="text-sm font-medium text-gray-900">{selectedClient.age || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Gender:</span>
+                        <span className="text-sm font-medium text-gray-900">{selectedClient.gender || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Date of Birth:</span>
+                        <span className="text-sm font-medium text-gray-900">{selectedClient.dateOfBirth || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Status:</span>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          selectedClient.status === 'Active' || selectedClient.status === 'active'
+                            ? 'bg-green-100 text-green-800'
+                            : selectedClient.status === 'Critical' || selectedClient.status === 'critical'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {selectedClient.status || 'Active'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Information */}
+                  <div className="bg-green-50 rounded-xl border border-green-100 p-6">
+                    <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center">
+                      <Phone className="h-5 w-5 text-green-600 mr-2" />
+                      Contact Information
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Phone:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {selectedClient.phone || selectedClient.phoneNumber || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Email:</span>
+                        <span className="text-sm font-medium text-gray-900">{selectedClient.email || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Address:</span>
+                        <span className="text-sm font-medium text-gray-900 text-right">
+                          {selectedClient.address || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Medical Information */}
+                <div className="bg-red-50 rounded-xl border border-red-100 p-6">
+                  <h3 className="text-lg font-semibold text-red-900 mb-4 flex items-center">
+                    <Heart className="h-5 w-5 text-red-600 mr-2" />
+                    Medical Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <span className="text-sm text-gray-600">Medical Conditions:</span>
+                      <p className="text-sm font-medium text-gray-900 mt-1">
+                        {Array.isArray(selectedClient.medicalConditions) 
+                          ? selectedClient.medicalConditions.join(', ') 
+                          : selectedClient.medicalConditions || selectedClient.conditions || 'None recorded'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">Allergies:</span>
+                      <p className="text-sm font-medium text-gray-900 mt-1">
+                        {Array.isArray(selectedClient.allergies)
+                          ? selectedClient.allergies.join(', ')
+                          : selectedClient.allergies || selectedClient.allergyInfo || 'None recorded'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">Current Medications:</span>
+                      <p className="text-sm font-medium text-gray-900 mt-1">
+                        {Array.isArray(selectedClient.medications)
+                          ? selectedClient.medications.join(', ')
+                          : selectedClient.medications || selectedClient.currentMedications || 'None recorded'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Emergency Contact */}
+                <div className="bg-orange-50 rounded-xl border border-orange-100 p-6">
+                  <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center">
+                    <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
+                    Emergency Contact
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <span className="text-sm text-gray-600">Contact Name:</span>
+                      <p className="text-sm font-medium text-gray-900 mt-1">
+                        {selectedClient.emergencyContact?.name || selectedClient.emergencyContactName || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">Contact Phone:</span>
+                      <p className="text-sm font-medium text-gray-900 mt-1">
+                        {selectedClient.emergencyContact?.phone || selectedClient.emergencyContactPhone || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">Relationship:</span>
+                      <p className="text-sm font-medium text-gray-900 mt-1">
+                        {selectedClient.emergencyContact?.relationship || selectedClient.emergencyContactRelationship || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Care Actions (for Nurses) */}
+                {isNurse && (
+                  <div className="bg-purple-50 rounded-xl border border-purple-100 p-6">
+                    <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
+                      <Activity className="h-5 w-5 text-purple-600 mr-2" />
+                      Quick Actions
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <button
+                        onClick={() => {
+                          setShowVitalsModal(true);
+                        }}
+                        className="flex flex-col items-center p-4 bg-white border-2 border-red-200 rounded-lg hover:border-red-300 hover:shadow-md transition-all"
+                      >
+                        <Activity className="h-6 w-6 text-red-600 mb-2" />
+                        <span className="text-xs font-medium text-gray-700">Record Vitals</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          setShowCareLogForm(true);
+                        }}
+                        className="flex flex-col items-center p-4 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                      >
+                        <FileText className="h-6 w-6 text-blue-600 mb-2" />
+                        <span className="text-xs font-medium text-gray-700">Add Care Log</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          setShowNurseReportModal(true);
+                        }}
+                        className="flex flex-col items-center p-4 bg-white border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all"
+                      >
+                        <FileText className="h-6 w-6 text-orange-600 mb-2" />
+                        <span className="text-xs font-medium text-gray-700">Generate Report</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          setShowMedicationModal(true);
+                        }}
+                        className="flex flex-col items-center p-4 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
+                      >
+                        <Pill className="h-6 w-6 text-green-600 mb-2" />
+                        <span className="text-xs font-medium text-gray-700">Medications</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Notes */}
+                {selectedClient.notes && (
+                  <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FileText className="h-5 w-5 text-gray-600 mr-2" />
+                      Additional Notes
+                    </h3>
+                    <p className="text-sm text-gray-700">{selectedClient.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+              <button
+                onClick={() => setSelectedClient(null)}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Close
+              </button>
+              {isNurse && (
+                <button
+                  onClick={() => {
+                    setShowCareLogForm(true);
+                  }}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Care Entry
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
         </div>
       </div>
