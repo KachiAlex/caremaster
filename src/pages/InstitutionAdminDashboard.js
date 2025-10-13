@@ -771,7 +771,7 @@ const InstitutionAdminDashboard = () => {
       name: 'View Analytics',
       icon: BarChart3,
       color: 'bg-orange-600 hover:bg-orange-700',
-      action: () => navigate('/admin/analytics')
+      action: () => setActiveTab('analytics')
     }
   ];
 
@@ -1136,7 +1136,7 @@ const InstitutionAdminDashboard = () => {
             <span className="text-sm font-medium">Caregivers</span>
           </button>
           <button 
-            onClick={() => navigate('/admin/analytics')}
+            onClick={() => setActiveTab('analytics')}
             className="flex items-center justify-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <BarChart3 className="h-5 w-5 text-orange-600 mr-2" />
