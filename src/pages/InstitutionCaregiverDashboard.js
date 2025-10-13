@@ -4205,7 +4205,14 @@ const InstitutionCaregiverDashboard = () => {
                     {isNurse && (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                         <button
-                          onClick={() => setShowCareLogForm(true)}
+                          onClick={() => {
+                            console.log('🔘 Write Care Log clicked (Nurse)', { selectedClient });
+                            if (!selectedClient) {
+                              toast.error('Please select a client first');
+                              return;
+                            }
+                            setShowCareLogForm(true);
+                          }}
                           className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
                         >
                           <FileText className="h-8 w-8 text-blue-600 mb-3" />
