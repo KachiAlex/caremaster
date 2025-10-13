@@ -295,13 +295,26 @@ const InstitutionCaregiverDashboard = () => {
           }
         }
         
-        // Load today's schedule (appointments + tasks)
-        const [todaysAppointments, todaysTasks] = await Promise.all([
-          getTodaysAppointments(user?.uid, 'caregiver'),
-          getTodayTasks(user?.uid)
+        // Load today's schedule (appointments + tasks + assignments)
+        const [todaysAppointments, todaysTasks, todaysAssignments] = await Promise.all([
+          getTodaysAppointments(user?.uid, 'caregiver').catch(() => []),
+          getTodayTasks(user?.uid).catch(() => []),
+          assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
         ]);
         
-        // Combine appointments and tasks for today's schedule
+        // Filter assignments for today (by dueDate)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const todaysAdminAssignments = todaysAssignments.filter(assignment => {
+          if (!assignment.dueDate) return false;
+          const dueDate = new Date(assignment.dueDate);
+          return dueDate >= today && dueDate < tomorrow;
+        });
+        
+        // Combine appointments, tasks, and admin-created assignments for today's schedule
         const combinedSchedule = [
           ...todaysAppointments.map(apt => ({
             id: apt.id,
@@ -318,19 +331,65 @@ const InstitutionCaregiverDashboard = () => {
             time: task.scheduledTime,
             client: task.clientName || 'Client',
             status: task.status || 'pending'
+          })),
+          ...todaysAdminAssignments.map(assignment => ({
+            id: assignment.id,
+            type: 'assignment',
+            title: assignment.title || 'Assigned Task',
+            time: assignment.dueTime ? `${assignment.dueDate} ${assignment.dueTime}` : assignment.dueDate,
+            client: assignment.clientName || 'Client',
+            status: assignment.status || 'pending',
+            priority: assignment.priority
           }))
         ];
         
         // Sort by time
         combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
         setTodaySchedule(combinedSchedule);
+        console.log(`📅 Today's schedule: ${combinedSchedule.length} items (${todaysAppointments.length} appointments, ${todaysTasks.length} tasks, ${todaysAdminAssignments.length} assignments)`);
         
-        // Load recent tasks
+        // Load recent tasks from both careTasks AND clientAssignments collections
         let loadedRecentTasks = [];
         if (user?.uid) {
           try {
-            loadedRecentTasks = await getCareTasksByCaregiver(user.uid);
-            setRecentTasks(loadedRecentTasks.slice(0, 5)); // Show only last 5 tasks
+            // Load from careTasks collection (old way)
+            const careTasksData = await getCareTasksByCaregiver(user.uid).catch(() => []);
+            console.log(`📋 Loaded ${careTasksData.length} tasks from careTasks collection`);
+            
+            // Load from clientAssignments collection (admin-created assignments)
+            const assignments = await assignmentAPI.getAssignmentsByCaregiver(user.uid).catch(() => []);
+            console.log(`📋 Loaded ${assignments.length} assignments from clientAssignments collection`);
+            
+            // Convert assignments to task format for display
+            const assignmentTasks = assignments.map(assignment => ({
+              id: assignment.id,
+              task: assignment.title || 'Assigned Task',
+              title: assignment.title || 'Assigned Task',
+              description: assignment.description,
+              clientId: assignment.clientId,
+              clientName: assignment.clientName || 'Client',
+              caregiverId: assignment.caregiverId,
+              status: assignment.status || 'pending',
+              priority: assignment.priority || 'normal',
+              dueDate: assignment.dueDate,
+              dueTime: assignment.dueTime,
+              instructions: assignment.instructions,
+              createdAt: assignment.createdAt,
+              assignmentType: 'clientAssignment' // Mark as admin-created assignment
+            }));
+            
+            // Merge both sources
+            loadedRecentTasks = [...careTasksData, ...assignmentTasks];
+            console.log(`✅ Total tasks (merged): ${loadedRecentTasks.length}`);
+            
+            // Sort by created date (most recent first)
+            loadedRecentTasks.sort((a, b) => {
+              const dateA = new Date(a.createdAt || 0);
+              const dateB = new Date(b.createdAt || 0);
+              return dateB - dateA;
+            });
+            
+            setRecentTasks(loadedRecentTasks); // Show all tasks
           } catch (error) {
             console.log('No recent tasks found - this is normal for new users');
             setRecentTasks([]);
@@ -339,11 +398,11 @@ const InstitutionCaregiverDashboard = () => {
           setRecentTasks([]);
         }
         
-        // Load performance data (placeholder for now)
+        // Load performance data
         setPerformance({
           completedTasks: loadedRecentTasks.filter(task => task.status === 'completed').length,
           totalTasks: loadedRecentTasks.length,
-          rating: 4.8,
+          rating: caregiver?.rating || 4.8,
           hoursWorked: 40
         });
 
