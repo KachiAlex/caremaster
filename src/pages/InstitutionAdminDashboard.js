@@ -440,6 +440,62 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
+  // Pharmacist Management Functions
+  const handleAddPharmacist = async (pharmacistData) => {
+    try {
+      const instId = institutionId || userProfile?.institutionId;
+      
+      // Check for duplicate email in users collection
+      const usersRef = collection(db, 'users');
+      const emailQuery = query(usersRef, where('email', '==', pharmacistData.email));
+      const emailSnapshot = await getDocs(emailQuery);
+      
+      if (!emailSnapshot.empty) {
+        toast.error('A user with this email already exists. Please use a different email.');
+        return;
+      }
+      
+      console.log('✅ Email is unique, proceeding with pharmacist creation');
+      
+      // Generate a unique ID for the pharmacist
+      const pharmacistId = `pharmacist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create user document for login (with email/password stored)
+      await setDoc(doc(db, 'users', pharmacistId), {
+        email: pharmacistData.email,
+        name: pharmacistData.name,
+        phone: pharmacistData.phone || '',
+        userType: 'pharmacist', // Force pharmacist type
+        type: 'pharmacist', // Also set type field for consistency
+        licenseNumber: pharmacistData.licenseNumber,
+        specialization: pharmacistData.specialization || 'General Pharmacy',
+        experience: pharmacistData.experience || 0,
+        qualifications: pharmacistData.qualifications || '',
+        address: pharmacistData.address || '',
+        emergencyContact: pharmacistData.emergencyContact || '',
+        notes: pharmacistData.notes || '',
+        institutionId: instId,
+        status: 'active',
+        onboardingComplete: false,
+        password: pharmacistData.password, // Store for custom auth
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: userProfile?.id || user?.uid
+      });
+      
+      console.log('✅ Pharmacist created with ID:', pharmacistId);
+      
+      setShowAddPharmacist(false);
+      toast.success('Pharmacist added successfully! They can now login with their credentials.');
+      
+      // Reload dashboard data to get the newly created pharmacist
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error adding pharmacist:', error);
+      toast.error(error.message || 'Failed to add pharmacist');
+    }
+  };
+
   // Assignment Functions
   const handleCreateAssignment = async (formData) => {
     try {
@@ -3002,6 +3058,320 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
   );
 };
 
+// Add Pharmacist Modal Component
+const AddPharmacistModal = ({ onClose, onCreate }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+    userType: 'pharmacist',
+    licenseNumber: '',
+    specialization: 'General Pharmacy',
+    experience: '',
+    qualifications: '',
+    address: '',
+    emergencyContact: '',
+    notes: ''
+  });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
+  const pharmacySpecializations = [
+    'General Pharmacy',
+    'Clinical Pharmacy',
+    'Hospital Pharmacy',
+    'Community Pharmacy',
+    'Geriatric Pharmacy',
+    'Oncology Pharmacy',
+    'Pediatric Pharmacy',
+    'Psychiatric Pharmacy'
+  ];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onCreate(formData);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+    
+    // Reset email exists check when email changes
+    if (name === 'email') {
+      setEmailExists(false);
+    }
+  };
+
+  const checkEmailUniqueness = async (email) => {
+    if (!email || !email.includes('@')) return;
+    
+    setCheckingEmail(true);
+    try {
+      // Check in users collection
+      const usersRef = collection(db, 'users');
+      const emailQuery = query(usersRef, where('email', '==', email));
+      const emailSnapshot = await getDocs(emailQuery);
+      
+      if (!emailSnapshot.empty) {
+        setEmailExists(true);
+        return;
+      }
+      
+      setEmailExists(false);
+    } catch (error) {
+      console.error('Error checking email:', error);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-green-600 to-emerald-600">
+          <div className="flex items-center space-x-3">
+            <Pill className="h-8 w-8 text-white" />
+            <div>
+              <h3 className="text-lg font-medium text-white">Add New Pharmacist</h3>
+              <p className="text-sm text-green-100">Onboard a pharmacist to your institution</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-green-500 rounded-lg p-2 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Full Name *</label>
+              <input
+                type="text"
+                name="name"
+                required
+                value={formData.name}
+                onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email Address *</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={(e) => checkEmailUniqueness(e.target.value)}
+                  className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 ${
+                    emailExists 
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                      : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
+                  }`}
+                />
+                {checkingEmail && (
+                  <div className="absolute right-3 top-3">
+                    <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full"></div>
+                  </div>
+                )}
+              </div>
+              {emailExists && (
+                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                  <AlertTriangle className="h-4 w-4" />
+                  This email is already in use. Please use a different email.
+                </p>
+              )}
+              {!emailExists && formData.email && !checkingEmail && (
+                <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-4 w-4" />
+                  Email is available
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Password *</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  minLength={6}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-green-500 focus:border-green-500"
+                  placeholder="Min. 6 characters"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 mt-0.5 text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">License Number *</label>
+              <input
+                type="text"
+                name="licenseNumber"
+                required
+                value={formData.licenseNumber}
+                onChange={handleChange}
+                placeholder="RPh-123456"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Specialization *</label>
+              <select
+                name="specialization"
+                required
+                value={formData.specialization}
+                onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+              >
+                {pharmacySpecializations.map(spec => (
+                  <option key={spec} value={spec}>{spec}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Years of Experience</label>
+              <input
+                type="number"
+                name="experience"
+                min="0"
+                value={formData.experience}
+                onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Qualifications</label>
+            <textarea
+              name="qualifications"
+              rows={3}
+              value={formData.qualifications}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+              placeholder="List educational qualifications, certifications, etc."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Address</label>
+            <textarea
+              name="address"
+              rows={3}
+              value={formData.address}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Emergency Contact</label>
+            <input
+              type="text"
+              name="emergencyContact"
+              value={formData.emergencyContact}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Additional Notes</label>
+            <textarea
+              name="notes"
+              rows={4}
+              value={formData.notes}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+              placeholder="Any additional notes or special instructions..."
+            />
+          </div>
+
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <Pill className="h-5 w-5 text-green-600 mt-0.5 mr-3" />
+              <div className="text-sm text-green-800">
+                <p className="font-medium mb-1">Pharmacist Responsibilities:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Medication dispensing and management</li>
+                  <li>Patient medication counseling</li>
+                  <li>Drug interaction monitoring</li>
+                  <li>Prescription verification and processing</li>
+                  <li>Inventory management and ordering</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-6 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={emailExists || checkingEmail}
+              className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                emailExists || checkingEmail
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+              }`}
+            >
+              {checkingEmail ? 'Checking...' : emailExists ? 'Email Already Exists' : 'Add Pharmacist'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Assignment Modal Component
 const AssignmentModal = ({ 
   onClose, 
@@ -4667,197 +5037,11 @@ const AssignmentDetailsModal = ({ assignment, onClose, clients, caregivers }) =>
         </div>
       </div>
 
-      {/* Add Pharmacist Modal */}
       {showAddPharmacist && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Pill className="h-8 w-8 text-white" />
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Add New Pharmacist</h2>
-                  <p className="text-green-100">Onboard a pharmacist to your institution</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowAddPharmacist(false)}
-                className="text-white hover:bg-green-500 rounded-lg p-2 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
-              <form className="space-y-6" onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                
-                try {
-                  const pharmacistData = {
-                    name: formData.get('name'),
-                    email: formData.get('email'),
-                    phone: formData.get('phone'),
-                    licenseNumber: formData.get('licenseNumber'),
-                    specialization: formData.get('specialization') || 'General Pharmacy',
-                    experience: parseInt(formData.get('experience')) || 0,
-                    userType: 'pharmacist',
-                    type: 'pharmacist',
-                    institutionId: effectiveInstitutionId,
-                    status: 'pending',
-                    createdAt: new Date().toISOString(),
-                    password: formData.get('password') || 'Pharmacist@123' // Default password
-                  };
-
-                  console.log('Creating pharmacist:', pharmacistData);
-                  
-                  await createUser(pharmacistData);
-                  toast.success(`Pharmacist ${pharmacistData.name} has been added successfully!`);
-                  setShowAddPharmacist(false);
-                  
-                  // Reload dashboard data
-                  await loadDashboardData();
-                } catch (error) {
-                  console.error('Error adding pharmacist:', error);
-                  toast.error('Failed to add pharmacist: ' + error.message);
-                }
-              }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      placeholder="Enter full name"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      required
-                      placeholder="pharmacist@example.com"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      required
-                      placeholder="+1 (555) 000-0000"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      License Number *
-                    </label>
-                    <input
-                      type="text"
-                      name="licenseNumber"
-                      required
-                      placeholder="RPh-123456"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Specialization
-                    </label>
-                    <select
-                      name="specialization"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    >
-                      <option value="General Pharmacy">General Pharmacy</option>
-                      <option value="Clinical Pharmacy">Clinical Pharmacy</option>
-                      <option value="Hospital Pharmacy">Hospital Pharmacy</option>
-                      <option value="Community Pharmacy">Community Pharmacy</option>
-                      <option value="Geriatric Pharmacy">Geriatric Pharmacy</option>
-                      <option value="Oncology Pharmacy">Oncology Pharmacy</option>
-                      <option value="Pediatric Pharmacy">Pediatric Pharmacy</option>
-                      <option value="Psychiatric Pharmacy">Psychiatric Pharmacy</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Years of Experience
-                    </label>
-                    <input
-                      type="number"
-                      name="experience"
-                      min="0"
-                      max="50"
-                      defaultValue="0"
-                      placeholder="Years of experience"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Temporary Password
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Leave blank for default: Pharmacist@123"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Default password: Pharmacist@123 (they will be prompted to change it)</p>
-                  </div>
-                </div>
-
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <Pill className="h-5 w-5 text-green-600 mt-0.5 mr-3" />
-                    <div className="text-sm text-green-800">
-                      <p className="font-medium mb-1">Pharmacist Responsibilities:</p>
-                      <ul className="list-disc list-inside space-y-1 text-xs">
-                        <li>Medication dispensing and management</li>
-                        <li>Patient medication counseling</li>
-                        <li>Drug interaction monitoring</li>
-                        <li>Prescription verification and processing</li>
-                        <li>Inventory management and ordering</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4 border-t">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddPharmacist(false)}
-                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Add Pharmacist
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+        <AddPharmacistModal 
+          onClose={() => setShowAddPharmacist(false)} 
+          onCreate={handleAddPharmacist}
+        />
       )}
     </div>
   );

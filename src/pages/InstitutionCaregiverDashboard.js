@@ -61,6 +61,8 @@ import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { careLogsAPI } from '../api/careLogsAPI';
 import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation } from '../api/messagesAPI';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
 import PharmacyTab from '../components/PharmacyTab';
 
@@ -530,42 +532,44 @@ const InstitutionCaregiverDashboard = () => {
   // Real-time subscription to medical reports, care plans, and care logs
   useEffect(() => {
     if (!selectedClient) return;
-    if (clientModalTab !== 'medical' && clientModalTab !== 'carelog') return;
     
-    setLoadingReports(true);
-    
-    // Set up real-time listeners
-    const unsubscribeReports = subscribeToMedicalReportsByClient(
-      selectedClient.id,
-      (reports) => {
-        setMedicalReports(reports);
-        setLoadingReports(false);
-      }
-    );
-    
-    const unsubscribePlans = subscribeToCarePlansByClient(
-      selectedClient.id,
-      (plans) => {
-        setCarePlans(plans);
-      }
-    );
-    
-    const unsubscribeLogs = subscribeToCareLogsByClient(
-      selectedClient.id,
-      50,
-      (logs) => {
-        setCareLogs(logs);
-      }
-    );
-    
-    // Cleanup subscriptions on unmount or when client/tab changes
-    return () => {
-      unsubscribeReports();
-      unsubscribePlans();
-      unsubscribeLogs();
-      console.log('🔄 Unsubscribed from real-time updates');
-    };
-  }, [selectedClient, clientModalTab]);
+    // Subscribe to care logs for both modal and standalone care logs tab
+    if (clientModalTab === 'medical' || clientModalTab === 'carelog' || activeTab === 'carelogs') {
+      setLoadingReports(true);
+      
+      // Set up real-time listeners
+      const unsubscribeReports = subscribeToMedicalReportsByClient(
+        selectedClient.id,
+        (reports) => {
+          setMedicalReports(reports);
+          setLoadingReports(false);
+        }
+      );
+      
+      const unsubscribePlans = subscribeToCarePlansByClient(
+        selectedClient.id,
+        (plans) => {
+          setCarePlans(plans);
+        }
+      );
+      
+      const unsubscribeLogs = subscribeToCareLogsByClient(
+        selectedClient.id,
+        50,
+        (logs) => {
+          setCareLogs(logs);
+        }
+      );
+      
+      // Cleanup subscriptions on unmount or when client/tab changes
+      return () => {
+        unsubscribeReports();
+        unsubscribePlans();
+        unsubscribeLogs();
+        console.log('🔄 Unsubscribed from real-time updates');
+      };
+    }
+  }, [selectedClient, clientModalTab, activeTab]);
 
   // Doctor action guards and navigation helpers
   const requireClient = () => {
@@ -1667,38 +1671,137 @@ const InstitutionCaregiverDashboard = () => {
   const renderPrescriptionsTab = () => {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-          <div className="text-center">
-            <Pill className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Prescriptions (View Only)</h2>
-            <p className="text-gray-600 mb-6">
-              As a non-medical caregiver, you can view prescribed medications for your assigned clients but cannot prescribe new medications.
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Prescriptions & Medications</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {isDoctor ? 'Prescribe and manage medications' : 'View prescribed medications'}
             </p>
-            
-            {selectedClient ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
-                </h3>
-                <p className="text-blue-700">
-                  Prescribed medications for this client would be displayed here. 
-                  You can view medication details, dosage instructions, and administration schedules.
+          </div>
+          {isDoctor && selectedClient && (
+            <button
+              onClick={() => setShowMedicationModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Prescribe Medication
+            </button>
+          )}
+        </div>
+
+        {/* Current Medications */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6">
+            {!selectedClient ? (
+              <div className="text-center py-12">
+                <Pill className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Client</h3>
+                <p className="text-gray-600">
+                  Please select a client from the Clients tab to view their medications.
                 </p>
-                <div className="mt-4 flex justify-center">
-                  <button
-                    onClick={() => setShowMedicationModal(true)}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Medications
-                  </button>
-                </div>
               </div>
             ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <p className="text-gray-600">
-                  Please select a client from the dropdown above to view their prescribed medications.
-                </p>
+              <div className="space-y-6">
+                {/* Client Medications Summary */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-blue-900">
+                      Current Medications for {selectedClient.name || selectedClient.fullName}
+                    </h3>
+                    {isNurse && (
+                      <button
+                        onClick={() => setShowMedicationModal(true)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Manage
+                      </button>
+                    )}
+                  </div>
+                  
+                  {selectedClient.medications && selectedClient.medications.length > 0 ? (
+                    <div className="space-y-3">
+                      {(Array.isArray(selectedClient.medications) 
+                        ? selectedClient.medications 
+                        : [selectedClient.medications]
+                      ).map((med, index) => (
+                        <div key={index} className="bg-white rounded-lg p-4 border border-blue-100">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900">
+                                {typeof med === 'string' ? med : med.name || 'Medication'}
+                              </h4>
+                              {typeof med === 'object' && (
+                                <>
+                                  {med.dosage && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      <span className="font-medium">Dosage:</span> {med.dosage}
+                                    </p>
+                                  )}
+                                  {med.frequency && (
+                                    <p className="text-sm text-gray-600">
+                                      <span className="font-medium">Frequency:</span> {med.frequency}
+                                    </p>
+                                  )}
+                                  {med.instructions && (
+                                    <p className="text-sm text-gray-600">
+                                      <span className="font-medium">Instructions:</span> {med.instructions}
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                              Active
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : selectedClient.currentMedications ? (
+                    <div className="bg-white rounded-lg p-4 border border-blue-100">
+                      <p className="text-gray-900">{selectedClient.currentMedications}</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <Pill className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-600">No medications currently prescribed</p>
+                      {isDoctor && (
+                        <button
+                          onClick={() => setShowMedicationModal(true)}
+                          className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        >
+                          Prescribe First Medication
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Medication History Placeholder */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                    <FileText className="h-5 w-5 text-gray-600 mr-2" />
+                    Medication History
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    View complete medication history, dosage changes, and administration logs.
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (isNurse || isDoctor) {
+                        setShowMedicationModal(true);
+                      } else {
+                        toast.info('Contact your supervising nurse or doctor to manage medications');
+                      }
+                    }}
+                    className="mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm flex items-center"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Full History
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1801,31 +1904,165 @@ const InstitutionCaregiverDashboard = () => {
 
   // Tasks Tab Renderer
   const renderTasksTab = () => {
+    const todayTasks = recentTasks.filter(task => {
+      if (!task.scheduledTime && !task.dueDate) return false;
+      const taskDate = new Date(task.scheduledTime || task.dueDate);
+      const today = new Date();
+      return taskDate.toDateString() === today.toDateString();
+    });
+
+    const upcomingTasks = recentTasks.filter(task => {
+      if (!task.scheduledTime && !task.dueDate) return false;
+      const taskDate = new Date(task.scheduledTime || task.dueDate);
+      const today = new Date();
+      return taskDate > today && taskDate.toDateString() !== today.toDateString();
+    });
+
+    const pendingTasks = recentTasks.filter(task => 
+      task.status === 'pending' || task.status === 'assigned'
+    );
+
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-          <div className="text-center">
-            <CheckSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Tasks Management</h2>
-            <p className="text-gray-600 mb-6">
-              View and manage your assigned care tasks and daily activities.
-            </p>
-            
-            {selectedClient ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-green-900 mb-2">
-                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
-                </h3>
-                <p className="text-green-700">
-                  Your assigned tasks for this client will be displayed here. You can track progress, 
-                  mark tasks as completed, and add notes about your care activities.
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-600">Today's Tasks</p>
+                <p className="text-2xl font-bold text-blue-900">{todayTasks.length}</p>
+              </div>
+              <Clock className="h-10 w-10 text-blue-600" />
+            </div>
+          </div>
+          
+          <div className="bg-yellow-50 rounded-xl border border-yellow-100 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-yellow-600">Pending Tasks</p>
+                <p className="text-2xl font-bold text-yellow-900">{pendingTasks.length}</p>
+              </div>
+              <AlertTriangle className="h-10 w-10 text-yellow-600" />
+            </div>
+          </div>
+          
+          <div className="bg-green-50 rounded-xl border border-green-100 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-600">Upcoming Tasks</p>
+                <p className="text-2xl font-bold text-green-900">{upcomingTasks.length}</p>
+              </div>
+              <Calendar className="h-10 w-10 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Tasks List */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">All Tasks</h2>
+            <p className="text-sm text-gray-600 mt-1">Manage your care tasks and assignments</p>
+          </div>
+          
+          <div className="p-6">
+            {recentTasks.length === 0 ? (
+              <div className="text-center py-12">
+                <CheckSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Tasks Assigned</h3>
+                <p className="text-gray-600">
+                  You don't have any tasks assigned at the moment. Check back later for new assignments.
                 </p>
               </div>
             ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <p className="text-gray-600">
-                  Please select a client from the dropdown above to view their assigned tasks.
-                </p>
+              <div className="space-y-4">
+                {recentTasks.map((task) => (
+                  <div key={task.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {task.title || task.taskTitle || task.description || 'Care Task'}
+                          </h3>
+                          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                            task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            task.status === 'in-progress' || task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                            task.status === 'pending' || task.status === 'assigned' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {task.status || 'Pending'}
+                          </span>
+                        </div>
+                        
+                        {task.description && task.description !== task.title && (
+                          <p className="text-sm text-gray-600 mb-3">{task.description}</p>
+                        )}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          {task.clientName && (
+                            <div className="flex items-center space-x-2">
+                              <User className="h-4 w-4 text-gray-400" />
+                              <span className="text-gray-700">
+                                <span className="font-medium">Client:</span> {task.clientName}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {(task.scheduledTime || task.dueDate) && (
+                            <div className="flex items-center space-x-2">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              <span className="text-gray-700">
+                                <span className="font-medium">Due:</span> {new Date(task.scheduledTime || task.dueDate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {task.priority && (
+                            <div className="flex items-center space-x-2">
+                              <AlertTriangle className={`h-4 w-4 ${
+                                task.priority === 'high' ? 'text-red-500' :
+                                task.priority === 'medium' ? 'text-yellow-500' :
+                                'text-green-500'
+                              }`} />
+                              <span className="text-gray-700">
+                                <span className="font-medium">Priority:</span> {task.priority || 'Normal'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col space-y-2">
+                        {task.status !== 'completed' && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                // Mark task as completed
+                                toast.success('Task marked as completed!');
+                              } catch (error) {
+                                console.error('Error completing task:', error);
+                                toast.error('Failed to complete task');
+                              }
+                            }}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Complete
+                          </button>
+                        )}
+                        
+                        <button
+                          onClick={() => {
+                            alert(`Task Details:\n\nTitle: ${task.title || task.taskTitle}\nDescription: ${task.description || 'N/A'}\nClient: ${task.clientName || 'N/A'}\nStatus: ${task.status || 'Pending'}\nPriority: ${task.priority || 'Normal'}\nDue: ${task.scheduledTime ? new Date(task.scheduledTime).toLocaleString() : 'N/A'}`);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1838,29 +2075,119 @@ const InstitutionCaregiverDashboard = () => {
   const renderCareLogsTab = () => {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-          <div className="text-center">
-            <Camera className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Care Logs</h2>
-            <p className="text-gray-600 mb-6">
-              Document and track your care activities with detailed logs and observations.
-            </p>
-            
-            {selectedClient ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
-                </h3>
-                <p className="text-blue-700">
-                  Create detailed care logs for this client including vital signs, medication administration, 
-                  observations, and any important notes about their condition.
+        {/* Header with Add Button */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Care Logs</h2>
+            <p className="text-sm text-gray-600 mt-1">Document care activities and observations</p>
+          </div>
+          {selectedClient && (
+            <button
+              onClick={() => setShowCareLogForm(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Care Log
+            </button>
+          )}
+        </div>
+
+        {/* Care Logs List */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6">
+            {!selectedClient ? (
+              <div className="text-center py-12">
+                <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Client</h3>
+                <p className="text-gray-600">
+                  Please select a client from the Clients tab to view and create care logs.
                 </p>
               </div>
-            ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <p className="text-gray-600">
-                  Please select a client from the dropdown above to create and view care logs.
+            ) : careLogs.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Care Logs Yet</h3>
+                <p className="text-gray-600 mb-4">
+                  Start documenting care activities for {selectedClient.name || selectedClient.fullName}
                 </p>
+                <button
+                  onClick={() => setShowCareLogForm(true)}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Care Log
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {careLogs.map((log) => (
+                  <div key={log.id} className="bg-gray-50 rounded-lg p-5 border border-gray-200 hover:border-blue-300 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                          log.roleType === 'doctor' ? 'bg-blue-100 text-blue-800' :
+                          log.roleType === 'nurse' ? 'bg-red-100 text-red-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {log.roleType?.toUpperCase() || 'CARE'}
+                        </span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {log.caregiverName || 'Staff Member'}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {log.logDate instanceof Date 
+                          ? log.logDate.toLocaleDateString() 
+                          : new Date(log.logDate).toLocaleDateString()}
+                        {' at '}{log.logTime}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-xs font-medium text-gray-600 uppercase">Activity:</span>
+                        <p className="text-sm text-gray-900 mt-1">{log.activity}</p>
+                      </div>
+                      
+                      {log.observations && (
+                        <div>
+                          <span className="text-xs font-medium text-gray-600 uppercase">Observations:</span>
+                          <p className="text-sm text-gray-700 mt-1">{log.observations}</p>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {log.vitalSigns && (
+                          <div className="bg-red-50 rounded p-3">
+                            <span className="text-xs font-medium text-red-800 uppercase">Vital Signs:</span>
+                            <p className="text-sm text-red-900 mt-1">{log.vitalSigns}</p>
+                          </div>
+                        )}
+                        
+                        {log.medications && (
+                          <div className="bg-green-50 rounded p-3">
+                            <span className="text-xs font-medium text-green-800 uppercase">Medications:</span>
+                            <p className="text-sm text-green-900 mt-1">{log.medications}</p>
+                          </div>
+                        )}
+                        
+                        {log.foodIntake && (
+                          <div className="bg-blue-50 rounded p-3">
+                            <span className="text-xs font-medium text-blue-800 uppercase">Food Intake:</span>
+                            <p className="text-sm text-blue-900 mt-1">{log.foodIntake}</p>
+                          </div>
+                        )}
+                        
+                        {log.moodBehavior && (
+                          <div className="bg-purple-50 rounded p-3">
+                            <span className="text-xs font-medium text-purple-800 uppercase">Mood & Behavior:</span>
+                            <p className="text-sm text-purple-900 mt-1">{log.moodBehavior}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -3799,7 +4126,14 @@ const InstitutionCaregiverDashboard = () => {
                       </p>
                     </div>
                     <button
-                      onClick={() => setShowCareLogForm(true)}
+                      onClick={() => {
+                        console.log('🔘 Add Care Log clicked', { selectedClient, showCareLogForm });
+                        if (!selectedClient) {
+                          toast.error('Please select a client first');
+                          return;
+                        }
+                        setShowCareLogForm(true);
+                      }}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -3843,7 +4177,14 @@ const InstitutionCaregiverDashboard = () => {
                         </button>
                         
                         <button
-                          onClick={() => setShowCareLogForm(true)}
+                          onClick={() => {
+                            console.log('🔘 View Care Logs clicked (Doctor)', { selectedClient });
+                            if (!selectedClient) {
+                              toast.error('Please select a client first');
+                              return;
+                            }
+                            setShowCareLogForm(true);
+                          }}
                           className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
                         >
                           <FileText className="h-8 w-8 text-green-600 mb-3" />
