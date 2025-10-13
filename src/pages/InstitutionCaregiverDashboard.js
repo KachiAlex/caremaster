@@ -2068,11 +2068,18 @@ const InstitutionCaregiverDashboard = () => {
         {activeTab === 'dashboard' && (
           <div className="px-8 pb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div 
+                onClick={() => setActiveTab('clients')}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all transform hover:-translate-y-1"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Assigned Patients</p>
                     <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
+                    <p className="text-xs text-blue-600 mt-1 flex items-center">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Click to view
+                    </p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-lg">
                     <Users className="h-6 w-6 text-blue-600" />
@@ -2080,11 +2087,18 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               </div>
               
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div 
+                onClick={() => setActiveTab('tasks')}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 cursor-pointer hover:shadow-md hover:border-green-200 transition-all transform hover:-translate-y-1"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Today's Tasks</p>
                     <p className="text-2xl font-bold text-gray-900">{recentTasks.length}</p>
+                    <p className="text-xs text-green-600 mt-1 flex items-center">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Click to view
+                    </p>
                   </div>
                   <div className="p-3 bg-green-50 rounded-lg">
                     <CheckSquare className="h-6 w-6 text-green-600" />
@@ -2092,11 +2106,18 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               </div>
               
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div 
+                onClick={() => setActiveTab('tasks')}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all transform hover:-translate-y-1"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
                     <p className="text-2xl font-bold text-gray-900">{recentTasks.filter(task => task.status !== 'completed').length}</p>
+                    <p className="text-xs text-orange-600 mt-1 flex items-center">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Click to view
+                    </p>
                   </div>
                   <div className="p-3 bg-orange-50 rounded-lg">
                     <Clock className="h-6 w-6 text-orange-600" />
@@ -2104,11 +2125,18 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               </div>
               
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div 
+                onClick={() => setActiveTab('messages')}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 cursor-pointer hover:shadow-md hover:border-purple-200 transition-all transform hover:-translate-y-1"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Unread Messages</p>
-                    <p className="text-2xl font-bold text-gray-900">0</p>
+                    <p className="text-2xl font-bold text-gray-900">{conversations.filter(c => c.unread > 0).length}</p>
+                    <p className="text-xs text-purple-600 mt-1 flex items-center">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Click to view
+                    </p>
                   </div>
                   <div className="p-3 bg-purple-50 rounded-lg">
                     <MessageSquare className="h-6 w-6 text-purple-600" />
