@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import sessionManager from '../utils/sessionManager';
 import { 
   Calendar, 
   Clock, 
@@ -71,9 +72,11 @@ import PrescriptionsTabContent from '../components/PrescriptionsTabContent';
 import consultationsAPI, { CONSULTATION_TYPES } from '../api/consultationsAPI';
 import ConsultationModal from '../components/ConsultationModal';
 import ConsultationsTabContent from '../components/ConsultationsTabContent';
+import DiagnosticsTab from '../components/DiagnosticsTab';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { user, userProfile, institutionId, institutionData } = useUser();
   
   // Get institution ID from URL params or user context
@@ -342,6 +345,20 @@ const InstitutionCaregiverDashboard = () => {
       try {
         setLoading(true);
         
+        // Validate tab session for role conflicts
+        const userRole = userProfile.userType || userProfile.type || userProfile.role;
+        const validation = sessionManager.validateTabSession(user, userRole);
+        
+        if (validation.needsInit) {
+          // First load - set tab session
+          sessionManager.setTabSession(userRole, user.uid, effectiveInstitutionId);
+        } else if (!validation.valid) {
+          // Session conflict detected
+          sessionManager.handleSessionConflict(validation, navigate, toast);
+          setLoading(false);
+          return;
+        }
+        
         // Auto-fix profile if institutionId or status is missing
         if (effectiveInstitutionId && (!userProfile.institutionId || !userProfile.status)) {
           console.log('🔄 Auto-fixing caregiver profile with missing fields...');
@@ -602,21 +619,21 @@ const InstitutionCaregiverDashboard = () => {
         const uniqueClientIds = Array.from(new Set(caregiverAssignments.map(a => a.clientId).filter(Boolean)));
         
         if (uniqueClientIds.length > 0) {
-          Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)))
-            .then(fetched => {
-              const clients = fetched.filter(Boolean);
+        Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)))
+          .then(fetched => {
+            const clients = fetched.filter(Boolean);
               console.log(`✅ Real-time: Loaded ${clients.length} clients`);
-              setAssignedClients(clients);
-              
-              // Auto-select first client if not set
-              if (clients.length > 0 && !selectedClientId) {
-                setSelectedClientId(clients[0].id);
-                setSelectedClient(clients[0]);
-              }
-            })
-            .catch(error => {
-              console.log('Error fetching client details from assignments:', error);
-            });
+            setAssignedClients(clients);
+            
+            // Auto-select first client if not set
+            if (clients.length > 0 && !selectedClientId) {
+              setSelectedClientId(clients[0].id);
+              setSelectedClient(clients[0]);
+            }
+          })
+          .catch(error => {
+            console.log('Error fetching client details from assignments:', error);
+          });
         }
       }, user.uid);
       
@@ -929,14 +946,14 @@ const InstitutionCaregiverDashboard = () => {
                         <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
                           <span className="text-white font-semibold text-sm">
                             {(client.name || client.fullName || 'C').toString().split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
+                </span>
+              </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
                             {client.name || client.fullName || 'Unknown Client'}
-                          </div>
+              </div>
                           <div className="text-sm text-gray-500">ID: {client.id.substring(0, 8)}...</div>
-                        </div>
+            </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -966,13 +983,13 @@ const InstitutionCaregiverDashboard = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
+                <button
                         onClick={() => setSelectedClient(client)}
                         className="text-blue-600 hover:text-blue-900 flex items-center"
-                      >
+                >
                         <Eye className="h-4 w-4 mr-1" />
                         View Details
-                      </button>
+                </button>
                     </td>
                   </tr>
                 ))}
@@ -992,7 +1009,7 @@ const InstitutionCaregiverDashboard = () => {
               <Users className="h-10 w-10 text-blue-600" />
             </div>
           </div>
-          
+
           <div className="bg-green-50 rounded-xl border border-green-100 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -1004,7 +1021,7 @@ const InstitutionCaregiverDashboard = () => {
               <Activity className="h-10 w-10 text-green-600" />
             </div>
           </div>
-          
+
           <div className="bg-red-50 rounded-xl border border-red-100 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -1014,10 +1031,10 @@ const InstitutionCaregiverDashboard = () => {
                 </p>
               </div>
               <AlertCircle className="h-10 w-10 text-red-600" />
+              </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
     );
   };
 
@@ -1442,18 +1459,18 @@ const InstitutionCaregiverDashboard = () => {
         });
         
         // Add message to local state for immediate display
-        const message = {
-          id: Date.now(),
-          text: newMessage,
+      const message = {
+        id: Date.now(),
+        text: newMessage,
           senderId: user?.uid,
-          senderName: userProfile?.name || 'You',
+        senderName: userProfile?.name || 'You',
           createdAt: new Date(),
-          read: false
-        };
-        
-        setMessages([...messages, message]);
-        setNewMessage('');
-        
+        read: false
+      };
+      
+      setMessages([...messages, message]);
+      setNewMessage('');
+      
         toast.success('Message sent successfully');
         
         // Reload conversations to update last message
@@ -1521,26 +1538,26 @@ const InstitutionCaregiverDashboard = () => {
     // Use real conversations or create from assigned clients
     const displayConversations = conversations.length > 0 ? conversations : 
       assignedClients.length > 0 ? assignedClients.map(client => ({
-        id: client.id,
+      id: client.id,
         name: client.name || client.displayName,
-        avatar: client.avatar || null,
+      avatar: client.avatar || null,
         lastMessage: 'Start a conversation',
-        timestamp: new Date().toISOString(),
-        unread: 0,
+      timestamp: new Date().toISOString(),
+      unread: 0,
         type: 'client',
         participants: [user.uid, client.id]
-      })) : [
-        {
-          id: 'admin-1',
-          name: institutionData?.name || 'Institution Admin',
-          avatar: null,
-          lastMessage: 'Welcome to the team!',
-          timestamp: new Date().toISOString(),
+    })) : [
+      {
+        id: 'admin-1',
+        name: institutionData?.name || 'Institution Admin',
+        avatar: null,
+        lastMessage: 'Welcome to the team!',
+        timestamp: new Date().toISOString(),
           unread: 0,
           type: 'admin',
           participants: [user.uid, 'admin']
-        }
-      ];
+      }
+    ];
 
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[calc(100vh-250px)]">
@@ -1689,28 +1706,28 @@ const InstitutionCaregiverDashboard = () => {
                         const messageTime = message.createdAt || message.timestamp;
                         
                         return (
-                          <div
-                            key={message.id}
+                        <div
+                          key={message.id}
                             className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        >
+                          <div
+                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                                 isSentByMe
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white text-gray-900 border border-gray-200'
-                              }`}
-                            >
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white text-gray-900 border border-gray-200'
+                            }`}
+                          >
                               {!isSentByMe && message.senderName && (
                                 <p className="text-xs font-semibold mb-1">{message.senderName}</p>
                               )}
                               <p className="text-sm">{message.text || message.content}</p>
-                              <p className={`text-xs mt-1 ${
+                            <p className={`text-xs mt-1 ${
                                 isSentByMe ? 'text-blue-100' : 'text-gray-400'
-                              }`}>
+                            }`}>
                                 {new Date(messageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            </div>
+                            </p>
                           </div>
+                        </div>
                         );
                       })
                     )}
@@ -2159,8 +2176,8 @@ const InstitutionCaregiverDashboard = () => {
   const renderPrescriptionsTabOLD = () => {
     // Pharmacist-specific view
     if (isPharmacist) {
-      return (
-        <div className="space-y-6">
+    return (
+      <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -2173,16 +2190,16 @@ const InstitutionCaregiverDashboard = () => {
               </p>
             </div>
             {selectedClient && pharmacistMedData && Object.keys(pharmacistMedData).length > 0 && (
-              <button
+                  <button
                 onClick={savePharmacistMedicationData}
                 disabled={savingPharmacistData}
                 className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center disabled:opacity-50"
-              >
+                  >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 {savingPharmacistData ? 'Saving...' : 'Save Changes'}
-              </button>
+                  </button>
             )}
-          </div>
+                </div>
 
           {/* Client Selector for Pharmacists */}
           <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
@@ -2220,8 +2237,8 @@ const InstitutionCaregiverDashboard = () => {
               <p className="text-gray-600">
                 Please select a client to view their prescriptions and manage medication availability.
               </p>
-            </div>
-          ) : (
+              </div>
+            ) : (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center">
@@ -2362,16 +2379,16 @@ const InstitutionCaregiverDashboard = () => {
                   <div className="text-center py-12">
                     <Pill className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No Prescriptions</h3>
-                    <p className="text-gray-600">
+                <p className="text-gray-600">
                       This client doesn't have any active prescriptions yet.
-                    </p>
-                  </div>
-                )}
+                </p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      );
+          )}
+      </div>
+    );
     }
 
     // Original doctor/nurse/caregiver view
@@ -2457,12 +2474,12 @@ const InstitutionCaregiverDashboard = () => {
                                   )}
                                 </>
                               )}
-                            </div>
+                  </div>
                             <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
                               Active
                             </span>
-                          </div>
-                        </div>
+                  </div>
+                </div>
                       ))}
                     </div>
                   ) : selectedClient.currentMedications ? (
@@ -2529,50 +2546,28 @@ const InstitutionCaregiverDashboard = () => {
   };
 
   const renderDiagnosticsTab = () => {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+    if (!selectedClient) {
+      return (
+        <div className="flex items-center justify-center p-8">
           <div className="text-center">
             <FlaskConical className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Diagnostics (View Only)</h2>
-            <p className="text-gray-600 mb-6">
-              As a non-medical caregiver, you can view diagnostic results and test reports for your assigned clients but cannot order new diagnostic tests.
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Client</h3>
+            <p className="text-gray-600">
+              Please select a client from the dropdown above to view their diagnostic tests and results.
             </p>
-            
-            {selectedClient ? (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-purple-900 mb-2">
-                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
-                </h3>
-                <p className="text-purple-700">
-                  Diagnostic test results, lab reports, and imaging studies for this client would be displayed here.
-                  You can review these results to understand the client's medical status and any ongoing monitoring requirements.
-                </p>
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="bg-white p-3 rounded border">
-                    <h4 className="font-semibold text-gray-900">Lab Results</h4>
-                    <p className="text-gray-600">Blood tests, urine tests, etc.</p>
-                  </div>
-                  <div className="bg-white p-3 rounded border">
-                    <h4 className="font-semibold text-gray-900">Imaging</h4>
-                    <p className="text-gray-600">X-rays, CT scans, MRIs</p>
-                  </div>
-                  <div className="bg-white p-3 rounded border">
-                    <h4 className="font-semibold text-gray-900">Vital Signs</h4>
-                    <p className="text-gray-600">Recent vital signs history</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <p className="text-gray-600">
-                  Please select a client from the dropdown above to view their diagnostic results.
-                </p>
-              </div>
-            )}
           </div>
         </div>
-      </div>
+      );
+    }
+
+    return (
+      <DiagnosticsTab
+        clientId={selectedClient.id}
+        clientName={selectedClient.name || selectedClient.fullName || 'Unknown Client'}
+        userProfile={userProfile}
+        institutionId={institutionId}
+        onClose={() => {}}
+      />
     );
   };
 
@@ -3371,6 +3366,8 @@ const InstitutionCaregiverDashboard = () => {
             
             <button
               onClick={() => {
+                // Clear tab session
+                sessionManager.clearTabSession();
                 // Import signOut from firebase/auth
                 import('firebase/auth').then(({ signOut, getAuth }) => {
                   signOut(getAuth()).then(() => {

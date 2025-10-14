@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase
 import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
 import authManager from '../utils/authManager';
+import sessionManager from '../utils/sessionManager';
 import { 
   Building2, 
   Mail, 

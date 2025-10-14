@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
+import sessionManager from '../utils/sessionManager';
 import { Pill, LogOut, Building2, Bell } from 'lucide-react';
 import { getAuth, signOut } from 'firebase/auth';
 import { toast } from 'react-toastify';
@@ -27,6 +28,21 @@ const InstitutionPharmacyDashboard = () => {
       return;
     }
 
+    // Validate tab session for role conflicts
+    if (userProfile && user) {
+      const userRole = userProfile.userType || userProfile.type || userProfile.role;
+      const validation = sessionManager.validateTabSession(user, userRole);
+      
+      if (validation.needsInit) {
+        // First load - set tab session
+        sessionManager.setTabSession(userRole, user.uid, institutionId);
+      } else if (!validation.valid) {
+        // Session conflict detected
+        sessionManager.handleSessionConflict(validation, navigate, toast);
+        return;
+      }
+    }
+
     // Load assigned clients
     if (user?.uid && institutionId) {
       loadAssignedClients();
@@ -49,6 +65,7 @@ const InstitutionPharmacyDashboard = () => {
 
   const handleLogout = async () => {
     try {
+      sessionManager.clearTabSession();
       const auth = getAuth();
       await signOut(auth);
       toast.success('Logged out successfully');

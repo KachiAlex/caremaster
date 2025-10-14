@@ -523,6 +523,60 @@ service cloud.firestore {
       );
     }
     
+    // Inventory collection - admins can manage inventory items
+    match /inventory/{itemId} {
+      allow read, list: if request.auth != null && (isAdmin() || isCaregiver() || isDoctor());
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Invoices collection - admins can manage invoices
+    match /invoices/{invoiceId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        resource.data.clientId == request.auth.uid
+      );
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Client supplies tracking
+    match /clientSupplies/{supplyId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        resource.data.clientId == request.auth.uid
+      );
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Diagnostics collection - role-based access
+    match /diagnostics/{diagnosticId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isDoctor() || 
+        isNurse() ||
+        resource.data.clientId == request.auth.uid
+      );
+      allow create: if request.auth != null && (isAdmin() || isDoctor());
+      allow update: if request.auth != null && (
+        isAdmin() || 
+        (isDoctor() && resource.data.orderedBy == request.auth.uid) ||
+        (isNurse() && resource.data.orderedBy == request.auth.uid)
+      );
+      allow delete: if request.auth != null && (isAdmin() || isDoctor());
+    }
+    
+    // Client activities tracking
+    match /clientActivities/{activityId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        resource.data.clientId == request.auth.uid
+      );
+      allow create, update, delete: if request.auth != null && (
+        isAdmin() || isCaregiver() || isDoctor()
+      );
+    }
+    
     // Allow admins to read/write any other collections
     match /{document=**} {
       allow read, write: if isAdmin();

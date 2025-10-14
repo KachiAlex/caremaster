@@ -6,6 +6,7 @@ import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc } fro
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useUser } from '../contexts/UserContext';
 import authManager from '../utils/authManager';
+import sessionManager from '../utils/sessionManager';
 import { 
   Users, 
   Heart, 
@@ -36,7 +37,8 @@ import {
   Award,
   Building,
   Pill,
-  Edit
+  Edit,
+  Package
 } from 'lucide-react';
 import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -48,6 +50,7 @@ import { getClientReports, createClientReport, getClientCareLogs, createClientCa
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import { institutionAPI } from '../api/institutionAPI';
 import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
+import InventoryBillingTab from '../components/InventoryBillingTab';
 import { toast } from 'react-toastify';
 
 const InstitutionAdminDashboard = () => {
@@ -127,6 +130,19 @@ const InstitutionAdminDashboard = () => {
 
   useEffect(() => {
     if (userProfile && institutionId) {
+      // Validate tab session for role conflicts
+      const userRole = userProfile.userType || userProfile.type || userProfile.role;
+      const validation = sessionManager.validateTabSession(user, userRole);
+      
+      if (validation.needsInit) {
+        // First load - set tab session
+        sessionManager.setTabSession(userRole, user.uid, institutionId);
+      } else if (!validation.valid) {
+        // Session conflict detected
+        sessionManager.handleSessionConflict(validation, navigate, toast);
+        return;
+      }
+      
       loadDashboardData();
       loadInstitutionData();
       
@@ -138,7 +154,7 @@ const InstitutionAdminDashboard = () => {
       
       return () => clearTimeout(timeout);
     }
-  }, [userProfile, institutionId]);
+  }, [userProfile, institutionId, user, navigate]);
   
   // Load institution data
   const loadInstitutionData = async () => {
@@ -330,6 +346,7 @@ const InstitutionAdminDashboard = () => {
 
   const handleLogout = async () => {
     try {
+      sessionManager.clearTabSession();
       await authManager.signOutFromRole('admin');
       navigate('/institution/login?institution=' + institutionId);
     } catch (error) {
@@ -995,6 +1012,12 @@ const InstitutionAdminDashboard = () => {
       icon: Users,
       color: 'bg-purple-600 hover:bg-purple-700',
       action: () => setShowAssignmentModal(true)
+    },
+    {
+      name: 'Inventory & Billing',
+      icon: Package,
+      color: 'bg-indigo-600 hover:bg-indigo-700',
+      action: () => setActiveTab('inventory')
     },
     {
       name: 'View Analytics',
@@ -2514,6 +2537,14 @@ const InstitutionAdminDashboard = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Inventory & Billing Tab Content */}
+      {activeTab === 'inventory' && (
+        <InventoryBillingTab 
+          institutionId={effectiveInstitutionId}
+          clients={clients}
+        />
       )}
 
       {/* Modals */}
