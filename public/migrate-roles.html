@@ -196,6 +196,42 @@
         This tool migrates all users to use the standardized "role" field, ensuring consistent role detection across the platform.
       </div>
       
+      <!-- Authentication Section -->
+      <div class="status-card" id="auth-section">
+        <h3>🔐 Authentication</h3>
+        <div id="login-form">
+          <p class="text-sm text-gray-600 mb-3">You must be logged in as an admin to run the migration.</p>
+          <div style="display: flex; gap: 10px; align-items: end;">
+            <div style="flex: 1;">
+              <label style="display: block; font-size: 12px; margin-bottom: 5px; color: #6c757d;">Email</label>
+              <input 
+                type="email" 
+                id="login-email" 
+                placeholder="admin@example.com"
+                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"
+              />
+            </div>
+            <div style="flex: 1;">
+              <label style="display: block; font-size: 12px; margin-bottom: 5px; color: #6c757d;">Password</label>
+              <input 
+                type="password" 
+                id="login-password" 
+                placeholder="••••••••"
+                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"
+              />
+            </div>
+            <button class="btn btn-primary" onclick="handleLogin()">Login</button>
+          </div>
+        </div>
+        <div id="user-info" style="display: none;">
+          <p class="text-sm text-gray-600 mb-2">Logged in as:</p>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong id="current-user-email" style="color: #667eea;"></strong>
+            <button class="btn btn-secondary" onclick="handleLogout()">Logout</button>
+          </div>
+        </div>
+      </div>
+      
       <div class="status-card">
         <h3>📊 Migration Status</h3>
         <div class="status-grid">
@@ -239,6 +275,7 @@
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import { getFirestore, collection, getDocs, doc, updateDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
     // Firebase configuration (same as your app)
@@ -253,7 +290,62 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
+    
+    let currentUser = null;
+    
+    // Monitor auth state
+    auth.onAuthStateChanged((user) => {
+      currentUser = user;
+      updateAuthUI();
+    });
+    
+    function updateAuthUI() {
+      const authSection = document.getElementById('auth-section');
+      const loginForm = document.getElementById('login-form');
+      const userInfo = document.getElementById('user-info');
+      const currentUserEmail = document.getElementById('current-user-email');
+      
+      if (currentUser) {
+        loginForm.style.display = 'none';
+        userInfo.style.display = 'block';
+        currentUserEmail.textContent = currentUser.email;
+      } else {
+        loginForm.style.display = 'block';
+        userInfo.style.display = 'none';
+      }
+    }
+    
+    window.handleLogin = async function() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      
+      if (!email || !password) {
+        log('❌ Please enter email and password', 'error');
+        return;
+      }
+      
+      try {
+        log('🔐 Logging in...', 'info');
+        await signInWithEmailAndPassword(auth, email, password);
+        log('✅ Logged in successfully!', 'success');
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-password').value = '';
+      } catch (error) {
+        log(`❌ Login failed: ${error.message}`, 'error');
+      }
+    };
+    
+    window.handleLogout = async function() {
+      try {
+        await signOut(auth);
+        log('👋 Logged out', 'info');
+        clearLog();
+      } catch (error) {
+        log(`❌ Logout failed: ${error.message}`, 'error');
+      }
+    };
 
     // Role constants
     const ROLES = {
@@ -372,6 +464,12 @@
     };
 
     window.runMigration = async function() {
+      if (!currentUser) {
+        log('❌ You must be logged in to run migration', 'error');
+        alert('⚠️ Please login as an admin first');
+        return;
+      }
+      
       const confirmed = confirm('⚠️ This will update user records. Are you sure?');
       if (!confirmed) return;
       

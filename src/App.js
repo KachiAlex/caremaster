@@ -43,6 +43,7 @@ const InstitutionLogin = lazy(() => import('./pages/InstitutionLogin'));
 const InstitutionCaregiverOnboarding = lazy(() => import('./pages/InstitutionCaregiverOnboarding'));
 const InstitutionCaregiverPendingApproval = lazy(() => import('./pages/InstitutionCaregiverPendingApproval'));
 const InstitutionCaregiverDashboard = lazy(() => import('./pages/InstitutionCaregiverDashboard'));
+const InstitutionPharmacyDashboard = lazy(() => import('./pages/InstitutionPharmacyDashboard'));
 const CaregiverMessages = lazy(() => import('./pages/CaregiverMessages'));
 const CaregiverNavigation = lazy(() => import('./pages/CaregiverNavigation'));
 const CaregiverPhotos = lazy(() => import('./pages/CaregiverPhotos'));
@@ -455,6 +456,12 @@ function App() {
       <Route 
         path="/institution-caregiver" 
         element={<Navigate to="/institution-caregiver/dashboard" replace />} 
+      />
+
+      {/* Pharmacy Dashboard */}
+      <Route 
+        path="/institution-pharmacy/dashboard" 
+        element={user ? <InstitutionPharmacyDashboard /> : <Navigate to="/institution/login" replace />} 
       />
 
       {/* Institution Pharmacist Routes */}
