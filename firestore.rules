@@ -484,6 +484,24 @@ service cloud.firestore {
       );
     }
     
+    // Consultations collection - doctors create, all can read (except private notes)
+    match /consultations/{consultationId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        resource.data.clientId == request.auth.uid
+      );
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        isDoctor()
+      );
+      allow update, delete: if request.auth != null && (
+        isAdmin() || 
+        resource.data.doctorId == request.auth.uid
+      );
+    }
+    
     // Pharmacist medication data - pharmacists can manage their own data
     match /pharmacistMedicationData/{dataId} {
       allow read, list: if request.auth != null && (

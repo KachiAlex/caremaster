@@ -69,6 +69,9 @@ import activitiesAPI, { ACTIVITY_CATEGORIES, COMMON_ACTIVITIES } from '../api/ac
 import prescriptionsAPI from '../api/prescriptionsAPI';
 import PrescriptionModal from '../components/PrescriptionModal';
 import PrescriptionsTabContent from '../components/PrescriptionsTabContent';
+import consultationsAPI, { CONSULTATION_TYPES } from '../api/consultationsAPI';
+import ConsultationModal from '../components/ConsultationModal';
+import ConsultationsTabContent from '../components/ConsultationsTabContent';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -197,6 +200,27 @@ const InstitutionCaregiverDashboard = () => {
         route: 'oral'
       }
     ]
+  });
+  
+  // Consultation states
+  const [consultations, setConsultations] = useState([]);
+  const [showConsultationModal, setShowConsultationModal] = useState(false);
+  const [consultationFormData, setConsultationFormData] = useState({
+    consultationType: CONSULTATION_TYPES.REVIEW,
+    consultationDate: new Date().toISOString().slice(0, 16),
+    chiefComplaint: '',
+    subjective: '',
+    objective: '',
+    assessment: '',
+    plan: '',
+    vitalSigns: {},
+    followUpRequired: false,
+    followUpDate: '',
+    followUpNotes: '',
+    notes: '',
+    privateNotes: '',
+    relatedMedicalReports: [],
+    relatedCareLogs: []
   });
 
   // Get qualification-specific dashboard configuration
@@ -1292,6 +1316,86 @@ const InstitutionCaregiverDashboard = () => {
     } catch (error) {
       console.error('Error updating prescription item:', error);
       toast.error('Failed to update medication');
+    }
+  };
+  
+  // Load consultations for selected client
+  const loadConsultations = async (clientId) => {
+    if (!clientId) return;
+    
+    try {
+      console.log('🩺 Loading consultations for client:', clientId);
+      const data = await consultationsAPI.getConsultationsByClient(clientId);
+      setConsultations(data);
+      console.log('✅ Consultations loaded:', data.length);
+    } catch (error) {
+      console.error('Error loading consultations:', error);
+      toast.error('Failed to load consultations');
+    }
+  };
+  
+  // Load consultations when client selected
+  useEffect(() => {
+    if (selectedClientId && activeTab === 'consultations') {
+      loadConsultations(selectedClientId);
+    }
+  }, [selectedClientId, activeTab]);
+  
+  // Submit consultation
+  const handleSubmitConsultation = async () => {
+    if (!selectedClient || !user?.uid) {
+      toast.error('Please select a client');
+      return;
+    }
+    
+    // Validate required fields
+    if (!consultationFormData.chiefComplaint || !consultationFormData.subjective || 
+        !consultationFormData.objective || !consultationFormData.assessment || 
+        !consultationFormData.plan) {
+      toast.error('Please fill in all SOAP note fields');
+      return;
+    }
+    
+    try {
+      const consultationData = {
+        clientId: selectedClient.id,
+        clientName: selectedClient.name || selectedClient.fullName,
+        doctorId: user.uid,
+        doctorName: userProfile?.name || userProfile?.displayName || user.email,
+        institutionId: effectiveInstitutionId || institutionId,
+        ...consultationFormData
+      };
+      
+      console.log('🩺 Creating consultation:', consultationData);
+      await consultationsAPI.createConsultation(consultationData);
+      
+      toast.success('Consultation note saved successfully!');
+      setShowConsultationModal(false);
+      
+      // Reset form
+      setConsultationFormData({
+        consultationType: CONSULTATION_TYPES.REVIEW,
+        consultationDate: new Date().toISOString().slice(0, 16),
+        chiefComplaint: '',
+        subjective: '',
+        objective: '',
+        assessment: '',
+        plan: '',
+        vitalSigns: {},
+        followUpRequired: false,
+        followUpDate: '',
+        followUpNotes: '',
+        notes: '',
+        privateNotes: '',
+        relatedMedicalReports: [],
+        relatedCareLogs: []
+      });
+      
+      // Reload consultations
+      await loadConsultations(selectedClient.id);
+    } catch (error) {
+      console.error('Error creating consultation:', error);
+      toast.error('Failed to save consultation');
     }
   };
 
@@ -2415,45 +2519,13 @@ const InstitutionCaregiverDashboard = () => {
 
   const renderConsultationsTab = () => {
     return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-          <div className="text-center">
-            <Stethoscope className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Consultations (View Only)</h2>
-            <p className="text-gray-600 mb-6">
-              As a non-medical caregiver, you can view consultation notes and medical reports for your assigned clients but cannot conduct medical consultations.
-            </p>
-            
-            {selectedClient ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-green-900 mb-2">
-                  Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
-                </h3>
-                <p className="text-green-700">
-                  Consultation history, medical reports, and doctor's notes for this client would be displayed here.
-                  You can review these documents to better understand the client's medical condition and care requirements.
-                </p>
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="bg-white p-3 rounded border">
-                    <h4 className="font-semibold text-gray-900">Recent Consultations</h4>
-                    <p className="text-gray-600">View consultation history and notes</p>
-                  </div>
-                  <div className="bg-white p-3 rounded border">
-                    <h4 className="font-semibold text-gray-900">Medical Reports</h4>
-                    <p className="text-gray-600">Review lab results and diagnostic reports</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <p className="text-gray-600">
-                  Please select a client from the dropdown above to view their consultation history.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <ConsultationsTabContent
+        isDoctor={isDoctor}
+        selectedClient={selectedClient}
+        consultations={consultations}
+        onOpenConsultationModal={() => setShowConsultationModal(true)}
+        userProfile={userProfile}
+      />
     );
   };
 
@@ -5399,6 +5471,18 @@ const InstitutionCaregiverDashboard = () => {
         onRemoveMedication={handleRemoveMedication}
         onSubmit={handleSubmitPrescription}
         selectedClient={selectedClient}
+      />
+
+      {/* Consultation Modal */}
+      <ConsultationModal
+        isOpen={showConsultationModal}
+        onClose={() => setShowConsultationModal(false)}
+        consultationFormData={consultationFormData}
+        setConsultationFormData={setConsultationFormData}
+        onSubmit={handleSubmitConsultation}
+        selectedClient={selectedClient}
+        relatedMedicalReports={medicalReports || []}
+        relatedCareLogs={careLogs || []}
       />
         </div>
       </div>
