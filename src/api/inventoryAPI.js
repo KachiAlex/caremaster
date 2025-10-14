@@ -119,11 +119,18 @@ export const inventoryAPI = {
         ? currentStock + quantity 
         : currentStock - quantity;
 
-      await updateDoc(itemRef, {
+      // Build update object conditionally to avoid undefined values
+      const updateData = {
         quantity: Math.max(0, newQuantity),
-        lastRestocked: operation === 'add' ? serverTimestamp() : itemDoc.data().lastRestocked,
         updatedAt: serverTimestamp()
-      });
+      };
+
+      // Only update lastRestocked when adding stock
+      if (operation === 'add') {
+        updateData.lastRestocked = serverTimestamp();
+      }
+
+      await updateDoc(itemRef, updateData);
 
       console.log(`✅ Stock updated for ${itemId}: ${currentStock} → ${newQuantity}`);
       return newQuantity;
