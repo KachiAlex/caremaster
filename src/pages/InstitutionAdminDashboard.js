@@ -1014,7 +1014,7 @@ const InstitutionAdminDashboard = () => {
       const userConversations = await getConversationsByUser(user.uid);
       console.log(`💬 Loaded ${userConversations.length} conversations`);
       
-      // Enrich conversations with participant details
+      // Enrich conversations with participant details and unread counts
       const enrichedConversations = await Promise.all(
         userConversations.map(async (conv) => {
           // Find the other participant (not the current user)
@@ -1024,7 +1024,8 @@ const InstitutionAdminDashboard = () => {
             return {
               ...conv,
               name: 'Unknown User',
-              unread: 0
+              unread: 0,
+              missedCalls: 0
             };
           }
           
@@ -1035,18 +1036,10 @@ const InstitutionAdminDashboard = () => {
           const caregiver = caregivers.find(c => c.id === otherParticipantId || c.userId === otherParticipantId);
           if (caregiver) {
             participantName = caregiver.name || caregiver.fullName;
-            participantType = 'caregiver';
+            participantType = caregiver.role || caregiver.type || caregiver.userType || 'caregiver';
           }
           
           if (!caregiver) {
-            const client = clients.find(c => c.id === otherParticipantId || c.userId === otherParticipantId);
-            if (client) {
-              participantName = client.name || client.fullName;
-              participantType = 'client';
-            }
-          }
-          
-          if (!caregiver && !clients.find(c => c.id === otherParticipantId || c.userId === otherParticipantId)) {
             const pharmacist = pharmacists.find(p => p.id === otherParticipantId || p.userId === otherParticipantId);
             if (pharmacist) {
               participantName = pharmacist.name || pharmacist.fullName;
@@ -1054,11 +1047,24 @@ const InstitutionAdminDashboard = () => {
             }
           }
           
+          // Get unread message count for this conversation
+          let unreadCount = 0;
+          try {
+            const convMessages = await getMessagesByConversation(conv.id);
+            unreadCount = convMessages.filter(m => !m.read && m.senderId !== user.uid).length;
+          } catch (error) {
+            console.error('Error getting unread count:', error);
+          }
+          
+          // Get missed calls count (for future implementation)
+          const missedCalls = 0; // TODO: Implement call tracking
+          
           return {
             ...conv,
             name: participantName,
             type: participantType,
-            unread: 0,
+            unread: unreadCount,
+            missedCalls: missedCalls,
             conversationId: conv.id,
             lastMessage: conv.lastMessage || 'No messages yet',
             timestamp: conv.lastMessageTime || conv.createdAt
@@ -1107,14 +1113,6 @@ const InstitutionAdminDashboard = () => {
           }
           
           if (!caregiver) {
-            const client = clients.find(c => c.id === otherParticipantId || c.userId === otherParticipantId);
-            if (client) {
-              participantName = client.name || client.fullName;
-              participantType = 'client';
-            }
-          }
-          
-          if (!caregiver && !clients.find(c => c.id === otherParticipantId || c.userId === otherParticipantId)) {
             const pharmacist = pharmacists.find(p => p.id === otherParticipantId || p.userId === otherParticipantId);
             if (pharmacist) {
               participantName = pharmacist.name || pharmacist.fullName;
@@ -1140,7 +1138,7 @@ const InstitutionAdminDashboard = () => {
         if (unsubscribe) unsubscribe();
       };
     }
-  }, [activeTab, user?.uid, caregivers, clients, pharmacists]);
+  }, [activeTab, user?.uid, caregivers, pharmacists]);
 
   // Set up real-time listener for messages when a conversation is selected
   useEffect(() => {
@@ -1253,10 +1251,9 @@ const InstitutionAdminDashboard = () => {
       toast.info('Call ended');
     };
 
-    // Combine all users from the platform for display
+    // Combine caregivers and pharmacists for display (excluding clients)
     const allPlatformUsers = [
       ...caregivers.map(c => ({ ...c, userType: 'caregiver' })),
-      ...clients.map(c => ({ ...c, userType: 'client' })),
       ...pharmacists.map(p => ({ ...p, userType: 'pharmacist' }))
     ];
 
@@ -1293,6 +1290,27 @@ const InstitutionAdminDashboard = () => {
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
               <p className="text-sm text-gray-500 mt-1">{displayConversations.length} users available</p>
+              
+              {/* Summary Stats */}
+              {(() => {
+                const totalUnread = displayConversations.reduce((sum, conv) => sum + (conv.unread || 0), 0);
+                const totalMissedCalls = displayConversations.reduce((sum, conv) => sum + (conv.missedCalls || 0), 0);
+                
+                return (totalUnread > 0 || totalMissedCalls > 0) && (
+                  <div className="mt-2 flex items-center gap-2 text-xs">
+                    {totalUnread > 0 && (
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
+                        💬 {totalUnread} unread
+                      </span>
+                    )}
+                    {totalMissedCalls > 0 && (
+                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full font-semibold">
+                        📞 {totalMissedCalls} missed
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               
               {/* Search Input */}
               <input
@@ -1345,11 +1363,18 @@ const InstitutionAdminDashboard = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <h3 className="text-sm font-medium text-gray-900 truncate">{conversation.name || 'Unknown User'}</h3>
-                            {conversation.unread > 0 && (
-                              <span className="bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
-                                {conversation.unread}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {conversation.unread > 0 && (
+                                <span className="bg-blue-600 text-white text-xs rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center font-semibold">
+                                  {conversation.unread}
+                                </span>
+                              )}
+                              {conversation.missedCalls > 0 && (
+                                <span className="bg-red-600 text-white text-xs rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center font-semibold" title="Missed calls">
+                                  📞 {conversation.missedCalls}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
@@ -1360,11 +1385,20 @@ const InstitutionAdminDashboard = () => {
                             )}
                           </div>
                           <p className="text-sm text-gray-500 truncate mt-1">{conversation.lastMessage}</p>
-                          {!conversation.isNew && (
-                            <span className="text-xs text-gray-400 mt-1">
-                              {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
+                          <div className="flex items-center justify-between mt-1">
+                            {!conversation.isNew && (
+                              <span className="text-xs text-gray-400">
+                                {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                            {(conversation.unread > 0 || conversation.missedCalls > 0) && (
+                              <span className="text-xs font-semibold text-blue-600">
+                                {conversation.unread > 0 && `${conversation.unread} new`}
+                                {conversation.unread > 0 && conversation.missedCalls > 0 && ' • '}
+                                {conversation.missedCalls > 0 && `${conversation.missedCalls} missed call${conversation.missedCalls > 1 ? 's' : ''}`}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1395,7 +1429,7 @@ const InstitutionAdminDashboard = () => {
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
                     <p className="text-xs text-gray-500">
-                      {selectedConversation.type === 'caregiver' ? 'Caregiver' : selectedConversation.type === 'client' ? 'Client' : selectedConversation.type === 'pharmacist' ? 'Pharmacist' : 'User'}
+                      {selectedConversation.type === 'caregiver' ? 'Caregiver' : selectedConversation.type === 'pharmacist' ? 'Pharmacist' : selectedConversation.type || 'User'}
                     </p>
                   </div>
                 </div>
