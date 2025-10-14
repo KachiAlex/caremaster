@@ -6,7 +6,6 @@ import { Pill, LogOut, Building2, Bell } from 'lucide-react';
 import { getAuth, signOut } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import PharmacyTab from '../components/PharmacyTab';
-import { assignmentAPI } from '../api/assignmentAPI';
 
 const InstitutionPharmacyDashboard = () => {
   const { user, userProfile, institutionId, institutionData } = useUser();
@@ -52,9 +51,33 @@ const InstitutionPharmacyDashboard = () => {
   const loadAssignedClients = async () => {
     try {
       setLoading(true);
-      const clients = await assignmentAPI.getAssignedClients(user.uid);
+      console.log('🔍 Pharmacy Dashboard - Loading clients for pharmacist UID:', user.uid);
+      console.log('🔍 Pharmacy Dashboard - User profile:', userProfile);
+      
+      // Pharmacist assignments are stored directly in the clients collection
+      // Query clients where assignedPharmacistId matches this pharmacist's UID
+      const { collection: firestoreCollection, query, where, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../firebase/config');
+      
+      const clientsQuery = query(
+        firestoreCollection(db, 'clients'),
+        where('assignedPharmacistId', '==', user.uid),
+        where('institutionId', '==', institutionId)
+      );
+      
+      const querySnapshot = await getDocs(clientsQuery);
+      const clients = [];
+      
+      querySnapshot.forEach((doc) => {
+        clients.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
       setAssignedClients(clients);
       console.log('📋 Loaded assigned clients for pharmacist:', clients.length);
+      console.log('📋 Client details:', clients);
     } catch (error) {
       console.error('Error loading assigned clients:', error);
       toast.error('Failed to load assigned clients');
