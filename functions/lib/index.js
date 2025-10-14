@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeInstitutionAdminFunction = exports.getInstitutionAdminsFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.createCaregiverWithAuthFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
+exports.migrateUserRoles = exports.removeInstitutionAdminFunction = exports.getInstitutionAdminsFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.createCaregiverWithAuthFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const userManagement_1 = require("./userManagement");
@@ -36,6 +36,7 @@ const licensing_1 = require("./licensing");
 const caregiverManagement_1 = require("./caregiverManagement");
 // Initialize Firebase Admin
 admin.initializeApp();
+const db = admin.firestore();
 // User Management Functions
 exports.createUserProfileFunction = functions.auth.user().onCreate(userManagement_1.createUserProfile);
 exports.updateUserProfileFunction = functions.https.onCall(userManagement_1.updateUserProfile);
@@ -84,4 +85,88 @@ exports.activateLicenseFunction = licensing_1.activateLicense;
 exports.migrateInstitutionLinksFunction = licensing_1.migrateInstitutionLinks;
 exports.getInstitutionAdminsFunction = licensing_1.getInstitutionAdmins;
 exports.removeInstitutionAdminFunction = licensing_1.removeInstitutionAdmin;
+// User Role Migration Function
+exports.migrateUserRoles = functions.https.onRequest(async (req, res) => {
+    // Enable CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    if (req.method === 'OPTIONS') {
+        res.set('Access-Control-Allow-Methods', 'GET, POST');
+        res.set('Access-Control-Allow-Headers', 'Content-Type');
+        res.status(204).send('');
+        return;
+    }
+    try {
+        console.log('Starting user role migration...');
+        const usersSnapshot = await db.collection('users').get();
+        const results = {
+            total: usersSnapshot.size,
+            migrated: 0,
+            skipped: 0,
+            errors: 0,
+            details: []
+        };
+        const batch = db.batch();
+        let batchCount = 0;
+        for (const doc of usersSnapshot.docs) {
+            const userData = doc.data();
+            // Skip if already migrated
+            if (userData.roleMigrated) {
+                results.skipped++;
+                continue;
+            }
+            try {
+                // Infer role from existing data
+                let inferredRole = 'caregiver';
+                if (userData.email === 'superadmin@elderx.com') {
+                    inferredRole = 'super-admin';
+                }
+                else if (userData.role) {
+                    inferredRole = userData.role;
+                }
+                else if (userData.userType) {
+                    inferredRole = userData.userType === 'elderly' ? 'elderly' : userData.userType;
+                }
+                else if (userData.type) {
+                    inferredRole = userData.type === 'elderly' ? 'elderly' : userData.type;
+                }
+                else if (userData.medicalQualification) {
+                    const qual = userData.medicalQualification.toLowerCase();
+                    if (qual.includes('doctor') || qual.includes('md'))
+                        inferredRole = 'doctor';
+                    else if (qual.includes('nurse'))
+                        inferredRole = 'nurse';
+                    else if (qual.includes('pharmacist'))
+                        inferredRole = 'pharmacist';
+                }
+                const userRef = db.collection('users').doc(doc.id);
+                batch.update(userRef, {
+                    role: inferredRole,
+                    roleMigrated: true,
+                    roleMigratedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+                results.details.push({
+                    userId: doc.id,
+                    email: userData.email || doc.id,
+                    newRole: inferredRole
+                });
+                results.migrated++;
+                batchCount++;
+            }
+            catch (error) {
+                console.error(`Error migrating user ${doc.id}:`, error);
+                results.errors++;
+            }
+        }
+        if (batchCount > 0) {
+            await batch.commit();
+        }
+        console.log('Migration complete:', results);
+        res.status(200).json(results);
+    }
+    catch (error) {
+        console.error('Migration failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 //# sourceMappingURL=index.js.map

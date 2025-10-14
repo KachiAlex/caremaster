@@ -12,6 +12,8 @@ import { createCaregiverWithAuth } from './caregiverManagement';
 // Initialize Firebase Admin
 admin.initializeApp();
 
+const db = admin.firestore();
+
 // User Management Functions
 export const createUserProfileFunction = functions.auth.user().onCreate(createUserProfile);
 export const updateUserProfileFunction = functions.https.onCall(updateUserProfile);
@@ -69,3 +71,95 @@ export const activateLicenseFunction = activateLicense;
 export const migrateInstitutionLinksFunction = migrateInstitutionLinks;
 export const getInstitutionAdminsFunction = getInstitutionAdmins;
 export const removeInstitutionAdminFunction = removeInstitutionAdmin;
+
+// User Role Migration Function
+export const migrateUserRoles = functions.https.onRequest(async (req, res) => {
+  // Enable CORS
+  res.set('Access-Control-Allow-Origin', '*');
+  
+  if (req.method === 'OPTIONS') {
+    res.set('Access-Control-Allow-Methods', 'GET, POST');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    res.status(204).send('');
+    return;
+  }
+  
+  try {
+    console.log('Starting user role migration...');
+    
+    const usersSnapshot = await db.collection('users').get();
+    
+    const results = {
+      total: usersSnapshot.size,
+      migrated: 0,
+      skipped: 0,
+      errors: 0,
+      details: [] as any[]
+    };
+    
+    const batch = db.batch();
+    let batchCount = 0;
+    
+    for (const doc of usersSnapshot.docs) {
+      const userData = doc.data();
+      
+      // Skip if already migrated
+      if (userData.roleMigrated) {
+        results.skipped++;
+        continue;
+      }
+      
+      try {
+        // Infer role from existing data
+        let inferredRole = 'caregiver';
+        
+        if (userData.email === 'superadmin@elderx.com') {
+          inferredRole = 'super-admin';
+        } else if (userData.role) {
+          inferredRole = userData.role;
+        } else if (userData.userType) {
+          inferredRole = userData.userType === 'elderly' ? 'elderly' : userData.userType;
+        } else if (userData.type) {
+          inferredRole = userData.type === 'elderly' ? 'elderly' : userData.type;
+        } else if (userData.medicalQualification) {
+          const qual = userData.medicalQualification.toLowerCase();
+          if (qual.includes('doctor') || qual.includes('md')) inferredRole = 'doctor';
+          else if (qual.includes('nurse')) inferredRole = 'nurse';
+          else if (qual.includes('pharmacist')) inferredRole = 'pharmacist';
+        }
+        
+        const userRef = db.collection('users').doc(doc.id);
+        batch.update(userRef, {
+          role: inferredRole,
+          roleMigrated: true,
+          roleMigratedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        
+        results.details.push({
+          userId: doc.id,
+          email: userData.email || doc.id,
+          newRole: inferredRole
+        });
+        
+        results.migrated++;
+        batchCount++;
+        
+      } catch (error: any) {
+        console.error(`Error migrating user ${doc.id}:`, error);
+        results.errors++;
+      }
+    }
+    
+    if (batchCount > 0) {
+      await batch.commit();
+    }
+    
+    console.log('Migration complete:', results);
+    res.status(200).json(results);
+    
+  } catch (error: any) {
+    console.error('Migration failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
