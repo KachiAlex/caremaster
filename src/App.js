@@ -429,6 +429,12 @@ function App() {
         path="/institution-admin" 
         element={<Navigate to="/institution-admin/dashboard" replace />} 
       />
+      
+      {/* Legacy dashboard route - redirect to institution-admin */}
+      <Route 
+        path="/dashboard" 
+        element={<Navigate to="/institution-admin/dashboard" replace />} 
+      />
 
       {/* Institution Caregiver Routes */}
       <Route 
@@ -449,6 +455,17 @@ function App() {
       <Route 
         path="/institution-caregiver" 
         element={<Navigate to="/institution-caregiver/dashboard" replace />} 
+      />
+
+      {/* Institution Pharmacist Routes */}
+      <Route 
+        path="/institution-pharmacist/dashboard" 
+        element={user ? <InstitutionCaregiverDashboard /> : <Navigate to="/institution/login" replace />} 
+      />
+
+      <Route 
+        path="/institution-pharmacist" 
+        element={<Navigate to="/institution-pharmacist/dashboard" replace />} 
       />
       
       {/* Protected routes - Dashboard removed (clients don't have accounts) */}

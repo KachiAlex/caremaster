@@ -138,7 +138,7 @@ export const UserProvider = ({ children }) => {
               const newProfile = await getUserById(firebaseUser.uid);
               if (newProfile) {
                 setUserProfile(newProfile);
-                const roleFromProfile = newProfile.userType || newProfile.type || 'caregiver';
+                const roleFromProfile = newProfile.userType || newProfile.type || 'client';
                 setUserRole(roleFromProfile);
                 console.log('✅ New profile loaded:', roleFromProfile);
               }
@@ -146,13 +146,13 @@ export const UserProvider = ({ children }) => {
               console.error('Error creating user profile:', createError);
               // Fallback: set default role without profile
               setUserProfile(null);
-              setUserRole('caregiver'); // Default role
+              setUserRole('client'); // Default to client instead of caregiver
             }
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
           setUserProfile(null);
-          setUserRole('patient'); // Default role for better UX
+          setUserRole(null); // Don't set a default role, let the login flow handle it
         }
       } else {
         setUser(null);

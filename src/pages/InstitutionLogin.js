@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'fire
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
+import authManager from '../utils/authManager';
 import { 
   Building2, 
   Mail, 
@@ -136,10 +137,12 @@ const InstitutionLogin = () => {
         console.log('🔐 Password check:', {
           passwordMatches,
           institutionMatches,
-          storedPassword: data.password,
-          inputPassword: formData.password,
+          storedPassword: data.password ? '***' : 'undefined',
+          inputPassword: formData.password ? '***' : 'undefined',
           storedInstitutionId: data.institutionId,
-          targetInstitutionId: institutionId
+          targetInstitutionId: institutionId,
+          userType: data.userType || data.type,
+          isAdmin: data.userType === 'admin' || data.type === 'admin'
         });
         
         if (passwordMatches && institutionMatches) {
@@ -192,11 +195,14 @@ const InstitutionLogin = () => {
         // Try to sign in first (most common case for returning users)
         try {
           console.log('Attempting sign in for:', formData.email);
-          const userCredential = await signInWithEmailAndPassword(
-            auth,
+          
+          // Use authManager for role-specific sign-in
+          const userCredential = await authManager.signInWithRole(
             formData.email,
-            formData.password
+            formData.password,
+            userRole || roleParam
           );
+          
           console.log('✅ Signed in successfully with UID:', userCredential.user.uid);
           
           // Sync custom auth data to Firebase Auth user document
@@ -219,11 +225,20 @@ const InstitutionLogin = () => {
           if (signInError.code === 'auth/user-not-found') {
             console.log('User not found in Firebase Auth, creating account...');
             try {
+              // Create account with role-specific persistence
               const authResult = await createUserWithEmailAndPassword(
                 auth,
                 formData.email,
                 formData.password
               );
+              
+              // Store the role session
+              authManager.storeRoleSession(userRole || roleParam, {
+                uid: authResult.user.uid,
+                email: authResult.user.email,
+                displayName: authResult.user.displayName,
+                lastSignIn: Date.now()
+              });
               
               console.log('✅ Firebase Auth account created:', authResult.user.uid);
               

@@ -4,6 +4,7 @@ import { httpsCallable, getFunctions } from 'firebase/functions';
 import { auth } from '../firebase/config';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import authManager from '../utils/authManager';
 
 const SuperAdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -20,8 +21,8 @@ const SuperAdminLogin = () => {
 
     setLoading(true);
     try {
-      // Sign in with email and password
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Sign in with email and password using role-specific auth
+      const userCredential = await authManager.signInWithRole(email, password, 'super-admin');
       const user = userCredential.user;
 
       // Check if user has super-admin claim
@@ -45,7 +46,7 @@ const SuperAdminLogin = () => {
         } catch (claimError) {
           console.error('Error setting super-admin claim:', claimError);
           toast.error('Access denied. Super-admin privileges required.');
-          await auth.signOut();
+          await authManager.signOutFromRole('super-admin');
         }
       }
     } catch (error) {

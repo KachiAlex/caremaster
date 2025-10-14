@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import authManager from '../utils/authManager';
 import { 
   Users, 
   Building2, 
@@ -143,7 +144,7 @@ const SuperAdminDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await authManager.signOutFromRole('super-admin');
       navigate('/super-admin/login');
     } catch (error) {
       console.error('Error logging out:', error);

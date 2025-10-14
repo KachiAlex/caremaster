@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
+import { signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { doc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useUser } from '../contexts/UserContext';
+import authManager from '../utils/authManager';
 import { 
   Users, 
   Heart, 
@@ -104,7 +105,9 @@ const InstitutionAdminDashboard = () => {
   // View Details Modal States
   const [showClientDetails, setShowClientDetails] = useState(false);
   const [showCaregiverDetails, setShowCaregiverDetails] = useState(false);
+  const [showPharmacistDetails, setShowPharmacistDetails] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedPharmacist, setSelectedPharmacist] = useState(null);
   const [selectedCaregiver, setSelectedCaregiver] = useState(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
@@ -113,6 +116,8 @@ const InstitutionAdminDashboard = () => {
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [showClientsModal, setShowClientsModal] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
   const [appointmentView, setAppointmentView] = useState('daily'); // daily, weekly, monthly
   
   // Institution Link Customization
@@ -324,7 +329,7 @@ const InstitutionAdminDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await authManager.signOutFromRole('admin');
       navigate('/institution/login?institution=' + institutionId);
     } catch (error) {
       console.error('Logout error:', error);
@@ -361,7 +366,25 @@ const InstitutionAdminDashboard = () => {
     try {
       const instId = institutionId || userProfile?.institutionId;
       
-      // Check for duplicate email in users collection
+      if (!instId) {
+        toast.error('Institution ID is required');
+        return;
+      }
+      
+      console.log('🏥 Creating caregiver for institution:', instId);
+      
+      // Validate required fields
+      if (!caregiverData.email || !caregiverData.password || !caregiverData.name) {
+        toast.error('Email, password, and name are required fields.');
+        return;
+      }
+
+      if (caregiverData.password.length < 6) {
+        toast.error('Password must be at least 6 characters long.');
+        return;
+      }
+      
+      // Check for duplicate email
       const usersRef = collection(db, 'users');
       const emailQuery = query(usersRef, where('email', '==', caregiverData.email));
       const emailSnapshot = await getDocs(emailQuery);
@@ -371,79 +394,188 @@ const InstitutionAdminDashboard = () => {
         return;
       }
       
-      // Check for duplicate email in caregivers collection
-      const caregiversRef = collection(db, 'caregivers');
-      const caregiverEmailQuery = query(caregiversRef, where('email', '==', caregiverData.email));
-      const caregiverEmailSnapshot = await getDocs(caregiverEmailQuery);
+      console.log('✅ Email is unique, creating Firebase Auth account...');
       
-      if (!caregiverEmailSnapshot.empty) {
-        toast.error('A caregiver with this email already exists. Please use a different email.');
+      // Create Firebase Auth account directly
+      let authUser;
+      try {
+        authUser = await createUserWithEmailAndPassword(
+          auth,
+          caregiverData.email,
+          caregiverData.password
+        );
+        console.log('✅ Firebase Auth account created:', authUser.user.uid);
+      } catch (authError) {
+        console.error('❌ Firebase Auth error:', authError);
+        if (authError.code === 'auth/email-already-in-use') {
+          toast.error('A user with this email already exists in Firebase Auth.');
+        } else if (authError.code === 'auth/weak-password') {
+          toast.error('Password is too weak. Please use a stronger password.');
+        } else {
+          toast.error(`Authentication error: ${authError.message}`);
+        }
         return;
       }
       
-      console.log('✅ Email is unique, proceeding with caregiver creation');
+      const caregiverId = authUser.user.uid;
       
-      // Generate a unique ID for the caregiver
-      const caregiverId = `caregiver_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Create caregiver document
-      await setDoc(doc(db, 'caregivers', caregiverId), {
-        ...caregiverData,
-        institutionId: instId,
-        status: 'pending',
-        rating: 0,
-        totalClients: 0,
-        currentClients: 0,
-        performance: {
-          punctuality: 0,
-          clientSatisfaction: 0,
-          taskCompletion: 0,
-          communication: 0,
-          safety: 0
-        },
-        earnings: {
-          thisMonth: 0,
-          lastMonth: 0,
-          total: 0
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-      
-      // Create user document for login (with email/password stored)
-      // IMPORTANT: Always set userType to 'caregiver' for institution caregivers
+      // Create user document in Firestore
       await setDoc(doc(db, 'users', caregiverId), {
         email: caregiverData.email,
         name: caregiverData.name,
+        displayName: caregiverData.name,
         phone: caregiverData.phone || '',
-        userType: 'caregiver', // Force caregiver type
-        type: 'caregiver', // Also set type field for consistency
+        userType: caregiverData.userType || 'caregiver',
+        type: caregiverData.userType || 'caregiver',
+        role: caregiverData.userType || 'caregiver',
         institutionId: instId,
-        status: 'pending',
-        onboardingComplete: false,
-        password: caregiverData.password, // Store for custom auth
+        specialization: caregiverData.specialization || caregiverData.medicalQualification || '',
+        qualifications: caregiverData.qualifications || '',
+        experience: caregiverData.experience || '0',
+        licenseNumber: caregiverData.licenseNumber || '',
+        availableDays: caregiverData.availableDays || [],
+        workingHours: caregiverData.workingHours || '9:00 AM - 5:00 PM',
+        hourlyRate: caregiverData.hourlyRate || '0',
+        address: caregiverData.address || '',
+        emergencyContact: caregiverData.emergencyContact || '',
+        notes: caregiverData.notes || '',
+        status: 'active',
+        onboardingComplete: true,
+        profileComplete: true,
+        assignedClients: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: userProfile?.id || user?.uid
+        createdBy: user?.uid || 'admin'
       });
       
-      console.log('✅ Caregiver created with ID:', caregiverId);
+      console.log('✅ Caregiver document created in Firestore');
+      
+      // Sign out the newly created user and reload
+      await signOut(auth);
+      console.log('✅ Cleaned up auth state');
       
       setShowAddCaregiver(false);
-      toast.success('Caregiver added successfully! They can now login with their credentials.');
+      toast.success(`✅ Caregiver ${caregiverData.name} added successfully! They can now login with their credentials.`);
       
-      // Reload dashboard data to get the newly created caregiver
+      // Reload dashboard data
       await loadDashboardData();
+      
+      // Reload the page to restore admin session
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
     } catch (error) {
-      console.error('Error adding caregiver:', error);
-      toast.error(error.message || 'Failed to add caregiver');
+      console.error('❌ Error adding caregiver:', error);
+      toast.error(error.message || 'Failed to add caregiver. Please try again.');
     }
   };
 
   // Pharmacist Management Functions
-  const handleAddPharmacist = async (pharmacistData) => {
+  const handleAssignPharmacistToClient = async (clientId, pharmacistId) => {
     try {
       const instId = institutionId || userProfile?.institutionId;
+      
+      // Get pharmacist details
+      const pharmacist = pharmacists.find(p => p.id === pharmacistId);
+      if (!pharmacist) {
+        toast.error('Pharmacist not found');
+        return;
+      }
+      
+      // Update client document with assigned pharmacist
+      const clientRef = doc(db, 'clients', clientId);
+      await updateDoc(clientRef, {
+        assignedPharmacistId: pharmacistId,
+        assignedPharmacistName: pharmacist.name,
+        assignedPharmacistEmail: pharmacist.email,
+        assignedPharmacistLicense: pharmacist.licenseNumber,
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Update pharmacist document with assigned client
+      const pharmacistRef = doc(db, 'users', pharmacistId);
+      const pharmacistDoc = await getDoc(pharmacistRef);
+      const currentAssignedClients = pharmacistDoc.data()?.assignedClients || [];
+      
+      if (!currentAssignedClients.includes(clientId)) {
+        await updateDoc(pharmacistRef, {
+          assignedClients: [...currentAssignedClients, clientId],
+          updatedAt: new Date().toISOString()
+        });
+      }
+      
+      toast.success('Pharmacist assigned successfully!');
+      
+      // Reload dashboard data
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error assigning pharmacist:', error);
+      toast.error(error.message || 'Failed to assign pharmacist');
+    }
+  };
+
+  // User Role Management
+  const handleEditUserRole = async (userData) => {
+    console.log('🔧 Updating user role:', userData);
+    
+    try {
+      if (!selectedUserForEdit) {
+        toast.error('No user selected');
+        return;
+      }
+
+      // Update user document in Firestore
+      await updateDoc(doc(db, 'users', selectedUserForEdit.id), {
+        userType: userData.userType,
+        type: userData.userType,
+        role: userData.role || userData.userType,
+        medicalQualification: userData.medicalQualification || '',
+        specialization: userData.specialization || '',
+        status: userData.status,
+        active: userData.active,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user?.uid || userProfile?.id
+      });
+
+      console.log('✅ User role updated successfully');
+      toast.success(`User role updated to ${userData.userType} successfully!`);
+      
+      setShowEditUserModal(false);
+      setSelectedUserForEdit(null);
+      
+      // Reload dashboard data
+      await loadDashboardData();
+    } catch (error) {
+      console.error('❌ Error updating user role:', error);
+      toast.error(error.message || 'Failed to update user role');
+    }
+  };
+
+  const handleAddPharmacist = async (pharmacistData) => {
+    console.log('🔧 handleAddPharmacist called with data:', pharmacistData);
+    
+    try {
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+      
+      if (!instId) {
+        console.error('❌ No institution ID available');
+        toast.error('Institution ID is required. Please ensure you are logged in as an admin.');
+        return;
+      }
+      
+      console.log('🏥 Using institution ID:', instId);
+      
+      // Validate required fields
+      if (!pharmacistData.email || !pharmacistData.password || !pharmacistData.name) {
+        toast.error('Email, password, and name are required fields.');
+        return;
+      }
+
+      if (pharmacistData.password.length < 6) {
+        toast.error('Password must be at least 6 characters long.');
+        return;
+      }
       
       // Check for duplicate email in users collection
       const usersRef = collection(db, 'users');
@@ -455,44 +587,81 @@ const InstitutionAdminDashboard = () => {
         return;
       }
       
-      console.log('✅ Email is unique, proceeding with pharmacist creation');
+      console.log('✅ Email is unique, creating Firebase Auth account...');
       
-      // Generate a unique ID for the pharmacist
-      const pharmacistId = `pharmacist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Create Firebase Auth account directly (no cloud function needed)
+      let authUser;
+      try {
+        authUser = await createUserWithEmailAndPassword(
+          auth,
+          pharmacistData.email,
+          pharmacistData.password
+        );
+        console.log('✅ Firebase Auth account created:', authUser.user.uid);
+      } catch (authError) {
+        console.error('❌ Firebase Auth error:', authError);
+        if (authError.code === 'auth/email-already-in-use') {
+          toast.error('A user with this email already exists in Firebase Auth.');
+        } else if (authError.code === 'auth/weak-password') {
+          toast.error('Password is too weak. Please use a stronger password.');
+        } else {
+          toast.error(`Authentication error: ${authError.message}`);
+        }
+        return;
+      }
       
-      // Create user document for login (with email/password stored)
+      const pharmacistId = authUser.user.uid;
+      
+      // Create user document in Firestore
       await setDoc(doc(db, 'users', pharmacistId), {
         email: pharmacistData.email,
         name: pharmacistData.name,
+        displayName: pharmacistData.name,
         phone: pharmacistData.phone || '',
-        userType: 'pharmacist', // Force pharmacist type
-        type: 'pharmacist', // Also set type field for consistency
-        licenseNumber: pharmacistData.licenseNumber,
+        userType: 'pharmacist',
+        type: 'pharmacist',
+        role: 'pharmacist',
+        institutionId: instId,
+        licenseNumber: pharmacistData.licenseNumber || '',
         specialization: pharmacistData.specialization || 'General Pharmacy',
-        experience: pharmacistData.experience || 0,
         qualifications: pharmacistData.qualifications || '',
+        experience: pharmacistData.experience || 0,
         address: pharmacistData.address || '',
         emergencyContact: pharmacistData.emergencyContact || '',
         notes: pharmacistData.notes || '',
-        institutionId: instId,
         status: 'active',
-        onboardingComplete: false,
-        password: pharmacistData.password, // Store for custom auth
+        onboardingComplete: true,
+        profileComplete: true,
+        assignedClients: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: userProfile?.id || user?.uid
+        createdBy: user?.uid || 'admin'
       });
       
-      console.log('✅ Pharmacist created with ID:', pharmacistId);
+      console.log('✅ Pharmacist document created in Firestore');
+      
+      // Sign out the newly created user (since we created them with createUserWithEmailAndPassword)
+      // This prevents the admin from being logged out
+      await signOut(auth);
+      
+      // Sign the admin back in if they have auth
+      // (This is a workaround - ideally we'd use Admin SDK but that requires cloud function)
+      console.log('✅ Cleaned up auth state');
       
       setShowAddPharmacist(false);
-      toast.success('Pharmacist added successfully! They can now login with their credentials.');
+      toast.success(`✅ Pharmacist ${pharmacistData.name} added successfully! They can now login with their credentials.`);
       
-      // Reload dashboard data to get the newly created pharmacist
+      // Reload dashboard data
       await loadDashboardData();
+      
+      // Reload the page to restore admin session
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
     } catch (error) {
-      console.error('Error adding pharmacist:', error);
-      toast.error(error.message || 'Failed to add pharmacist');
+      console.error('❌ Error adding pharmacist:', error);
+      toast.error(error.message || 'Failed to add pharmacist. Please try again.');
     }
   };
 
@@ -1236,6 +1405,7 @@ const InstitutionAdminDashboard = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pharmacist</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -1260,6 +1430,18 @@ const InstitutionAdminDashboard = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.age || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.gender || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {client.assignedPharmacistId ? (
+                          <div className="flex items-center text-sm">
+                            <Pill className="h-4 w-4 text-green-600 mr-1" />
+                            <span className="text-gray-900">
+                              {client.assignedPharmacistName || pharmacists.find(p => p.id === client.assignedPharmacistId)?.name || 'Assigned'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">Not assigned</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           client.status === 'active' 
@@ -1389,6 +1571,17 @@ const InstitutionAdminDashboard = () => {
                               View
                             </button>
                             
+                            <button 
+                              onClick={() => {
+                                setSelectedUserForEdit(caregiver);
+                                setShowEditUserModal(true);
+                              }}
+                              className="text-purple-600 hover:text-purple-900 inline-flex items-center"
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </button>
+                            
                             {caregiver.status === 'pending' && caregiver.onboardingComplete && (
                               <>
                                 <button 
@@ -1492,6 +1685,10 @@ const InstitutionAdminDashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center gap-2">
                             <button 
+                              onClick={() => {
+                                setSelectedPharmacist(pharmacist);
+                                setShowPharmacistDetails(true);
+                              }}
                               className="text-blue-600 hover:text-blue-900 inline-flex items-center"
                             >
                               <Eye className="h-4 w-4 mr-1" />
@@ -2297,6 +2494,24 @@ const InstitutionAdminDashboard = () => {
         />
       )}
 
+      {showAddPharmacist && (
+        <AddPharmacistModal 
+          onClose={() => setShowAddPharmacist(false)} 
+          onCreate={handleAddPharmacist}
+        />
+      )}
+
+      {showEditUserModal && selectedUserForEdit && (
+        <EditUserRoleModal 
+          user={selectedUserForEdit}
+          onClose={() => {
+            setShowEditUserModal(false);
+            setSelectedUserForEdit(null);
+          }}
+          onSave={handleEditUserRole}
+        />
+      )}
+
       {showAssignmentModal && (
         <AssignmentModal 
           onClose={() => setShowAssignmentModal(false)} 
@@ -2321,6 +2536,8 @@ const InstitutionAdminDashboard = () => {
           }}
           onAssignTask={handleAssignTaskToClient}
           onDelete={handleDeleteClient}
+          pharmacists={pharmacists}
+          onAssignPharmacist={handleAssignPharmacistToClient}
         />
       )}
 
@@ -2337,6 +2554,18 @@ const InstitutionAdminDashboard = () => {
           onToggleStatus={handleToggleCaregiverStatus}
           onDelete={handleDeleteCaregiver}
           onAssignTask={handleAssignTaskToCaregiver}
+        />
+      )}
+
+      {showPharmacistDetails && selectedPharmacist && (
+        <PharmacistDetailsModal
+          pharmacist={selectedPharmacist}
+          clients={clients}
+          onClose={() => {
+            setShowPharmacistDetails(false);
+            setSelectedPharmacist(null);
+          }}
+          onAssignClient={handleAssignPharmacistToClient}
         />
       )}
 
@@ -3193,7 +3422,7 @@ const AddPharmacistModal = ({ onClose, onCreate }) => {
                 onChange={handleChange}
                 className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
               >
-                {pharmacySpecializations.map(spec => (
+                {(pharmacySpecializations || []).map(spec => (
                   <option key={spec} value={spec}>{spec}</option>
                 ))}
               </select>
@@ -3493,10 +3722,19 @@ const AssignmentModal = ({
 };
 
 // Client Details Modal Component
-const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete }) => {
+const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, pharmacists, onAssignPharmacist }) => {
   const [activeTab, setActiveTab] = React.useState('info');
+  const [showPharmacistDropdown, setShowPharmacistDropdown] = React.useState(false);
+  const [selectedPharmacistId, setSelectedPharmacistId] = React.useState(client?.assignedPharmacistId || '');
   
   if (!client) return null;
+
+  const handleAssignPharmacist = async () => {
+    if (selectedPharmacistId && onAssignPharmacist) {
+      await onAssignPharmacist(client.id, selectedPharmacistId);
+      setShowPharmacistDropdown(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -3633,6 +3871,89 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete }) => {
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Primary Doctor</label>
                   <p className="mt-1 text-gray-900">{client.primaryDoctor}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Assigned Pharmacist Section */}
+          <div>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Assigned Pharmacist</h4>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              {client.assignedPharmacistId ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-12 w-12 rounded-full bg-green-500 flex items-center justify-center">
+                      <Pill className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {pharmacists?.find(p => p.id === client.assignedPharmacistId)?.name || 'Unknown Pharmacist'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        License: {pharmacists?.find(p => p.id === client.assignedPharmacistId)?.licenseNumber || 'N/A'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {pharmacists?.find(p => p.id === client.assignedPharmacistId)?.email || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowPharmacistDropdown(true)}
+                    className="px-3 py-1 text-sm text-green-700 hover:text-green-800 hover:bg-green-100 rounded-md transition-colors"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-3">
+                  <Pill className="h-8 w-8 mx-auto text-green-400 mb-2" />
+                  <p className="text-sm text-gray-600 mb-3">No pharmacist assigned</p>
+                  <button
+                    onClick={() => setShowPharmacistDropdown(true)}
+                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Assign Pharmacist
+                  </button>
+                </div>
+              )}
+
+              {/* Pharmacist Assignment Dropdown */}
+              {showPharmacistDropdown && (
+                <div className="mt-4 pt-4 border-t border-green-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Pharmacist
+                  </label>
+                  <select
+                    value={selectedPharmacistId}
+                    onChange={(e) => setSelectedPharmacistId(e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm mb-3"
+                  >
+                    <option value="">-- Select a pharmacist --</option>
+                    {pharmacists?.map((pharmacist) => (
+                      <option key={pharmacist.id} value={pharmacist.id}>
+                        {pharmacist.name} - {pharmacist.licenseNumber} ({pharmacist.specialization || 'General Pharmacy'})
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleAssignPharmacist}
+                      disabled={!selectedPharmacistId}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Assign
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowPharmacistDropdown(false);
+                        setSelectedPharmacistId(client?.assignedPharmacistId || '');
+                      }}
+                      className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -4036,6 +4357,270 @@ const AppointmentsModal = ({ appointments, view, onViewChange, onClose }) => {
 };
 
 // Caregiver Details Modal Component
+// Pharmacist Details Modal Component
+const PharmacistDetailsModal = ({ pharmacist, clients, onClose, onAssignClient }) => {
+  const [activeTab, setActiveTab] = React.useState('info');
+  const [showAssignClient, setShowAssignClient] = React.useState(false);
+  const [selectedClientId, setSelectedClientId] = React.useState('');
+  
+  if (!pharmacist) return null;
+
+  // Get clients assigned to this pharmacist
+  const assignedClients = clients.filter(client => client.assignedPharmacistId === pharmacist.id);
+  const unassignedClients = clients.filter(client => !client.assignedPharmacistId);
+
+  const handleAssign = async () => {
+    if (selectedClientId && onAssignClient) {
+      await onAssignClient(selectedClientId, pharmacist.id);
+      setShowAssignClient(false);
+      setSelectedClientId('');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-green-500 to-green-600">
+          <div className="flex items-center">
+            <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center mr-4">
+              <Pill className="h-8 w-8 text-green-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">{pharmacist.name || 'Unknown Pharmacist'}</h3>
+              <p className="text-green-100 text-sm">{pharmacist.email || 'No email'}</p>
+              <p className="text-green-100 text-xs mt-1">License: {pharmacist.licenseNumber || 'N/A'}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:text-gray-200 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-6" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('info')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'info'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Pharmacist Info
+            </button>
+            <button
+              onClick={() => setActiveTab('clients')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'clients'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Assigned Clients ({assignedClients.length})
+            </button>
+          </nav>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Pharmacist Info Tab */}
+          {activeTab === 'info' && (
+            <>
+              {/* Basic Information */}
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">License Number</label>
+                    <p className="mt-1 text-gray-900">{pharmacist.licenseNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Specialization</label>
+                    <p className="mt-1 text-gray-900">{pharmacist.specialization || 'General Pharmacy'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Experience</label>
+                    <p className="mt-1 text-gray-900">{pharmacist.experience || 0} years</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Status</label>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      pharmacist.status === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {pharmacist.status || 'pending'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Email</label>
+                    <p className="mt-1 text-gray-900">{pharmacist.email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Phone</label>
+                    <p className="mt-1 text-gray-900">{pharmacist.phone || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Qualifications */}
+              {pharmacist.qualifications && (
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Qualifications</h4>
+                  <p className="text-gray-900 whitespace-pre-wrap">{pharmacist.qualifications}</p>
+                </div>
+              )}
+
+              {/* Address */}
+              {pharmacist.address && (
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Address</h4>
+                  <p className="text-gray-900">{pharmacist.address}</p>
+                </div>
+              )}
+
+              {/* Notes */}
+              {pharmacist.notes && (
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Notes</h4>
+                  <p className="text-gray-900 whitespace-pre-wrap">{pharmacist.notes}</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Assigned Clients Tab */}
+          {activeTab === 'clients' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-semibold text-gray-900">Assigned Clients</h4>
+                <button
+                  onClick={() => setShowAssignClient(true)}
+                  className="flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Assign Client
+                </button>
+              </div>
+
+              {/* Assign Client Form */}
+              {showAssignClient && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h5 className="text-sm font-medium text-gray-900 mb-3">Assign New Client</h5>
+                  <select
+                    value={selectedClientId}
+                    onChange={(e) => setSelectedClientId(e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm mb-3"
+                  >
+                    <option value="">-- Select a client --</option>
+                    {unassignedClients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name} - {client.age} years old ({client.gender || 'N/A'})
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleAssign}
+                      disabled={!selectedClientId}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Assign
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAssignClient(false);
+                        setSelectedClientId('');
+                      }}
+                      className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Assigned Clients List */}
+              {assignedClients.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm font-medium">No clients assigned yet</p>
+                  <p className="text-xs mt-1">Click "Assign Client" to assign clients to this pharmacist</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {assignedClients.map((client) => (
+                    <div key={client.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-lg font-semibold text-green-700">
+                              {client.name?.charAt(0) || 'C'}
+                            </span>
+                          </div>
+                          <div>
+                            <h5 className="text-sm font-semibold text-gray-900">{client.name || 'Unknown Client'}</h5>
+                            <p className="text-xs text-gray-500">{client.email || 'No email'}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-500">Age: {client.age || 'N/A'}</span>
+                              <span className="text-xs text-gray-400">•</span>
+                              <span className="text-xs text-gray-500">{client.gender || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Client Medical Info Preview */}
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        {client.medications && (
+                          <div className="mb-2">
+                            <label className="text-xs font-medium text-gray-500">Current Medications</label>
+                            <p className="text-xs text-gray-700 mt-0.5 line-clamp-2">{client.medications}</p>
+                          </div>
+                        )}
+                        {client.allergies && (
+                          <div>
+                            <label className="text-xs font-medium text-red-500">Allergies</label>
+                            <p className="text-xs text-red-600 mt-0.5 line-clamp-2">{client.allergies}</p>
+                          </div>
+                        )}
+                        {!client.medications && !client.allergies && (
+                          <p className="text-xs text-gray-400 italic">No medication or allergy information</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-end space-x-3 pt-6 border-t">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, assignments = [], clients = [] }) => {
   if (!caregiver) return null;
 
@@ -4964,13 +5549,208 @@ const AssignmentDetailsModal = ({ assignment, onClose, clients, caregivers }) =>
           </button>
         </div>
       </div>
+    </div>
+  );
+};
 
-      {showAddPharmacist && (
-        <AddPharmacistModal 
-          onClose={() => setShowAddPharmacist(false)} 
-          onCreate={handleAddPharmacist}
-        />
-      )}
+// Edit User Role Modal Component
+const EditUserRoleModal = ({ user, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    userType: user?.userType || user?.type || '',
+    role: user?.role || user?.userType || '',
+    medicalQualification: user?.medicalQualification || '',
+    specialization: user?.specialization || '',
+    status: user?.status || 'active',
+    active: user?.active !== false
+  });
+
+  const userTypes = [
+    'caregiver',
+    'doctor',
+    'nurse',
+    'pharmacist',
+    'admin',
+    'institutionAdmin'
+  ];
+
+  const medicalQualifications = [
+    'Doctor (MD)',
+    'Registered Nurse (RN)',
+    'Licensed Practical Nurse (LPN)',
+    'Certified Nursing Assistant (CNA)',
+    'Physical Therapist',
+    'Occupational Therapist',
+    'Pharmacist',
+    'Caregiver (Non-Medical)',
+    'Other'
+  ];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold">Edit User Role & Permissions</h3>
+              <p className="text-purple-100 text-sm mt-1">Update user role, qualifications, and status</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white/20 rounded-lg p-2"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* User Info Display */}
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <h4 className="font-semibold text-gray-900 mb-2">User Information</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p><strong>Name:</strong> {user?.name || user?.displayName || 'N/A'}</p>
+              <p><strong>Email:</strong> {user?.email || 'N/A'}</p>
+              <p><strong>Current Role:</strong> {user?.userType || user?.type || 'N/A'}</p>
+            </div>
+          </div>
+
+          {/* User Type/Role Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              User Type/Role *
+            </label>
+            <select
+              value={formData.userType}
+              onChange={(e) => setFormData({ ...formData, userType: e.target.value, role: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              required
+            >
+              <option value="">Select user type</option>
+              {userTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              This determines what permissions and features the user has access to
+            </p>
+          </div>
+
+          {/* Medical Qualification */}
+          {(formData.userType === 'caregiver' || formData.userType === 'doctor' || formData.userType === 'nurse') && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Medical Qualification
+              </label>
+              <select
+                value={formData.medicalQualification}
+                onChange={(e) => setFormData({ ...formData, medicalQualification: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="">Select qualification</option>
+                {medicalQualifications.map((qual) => (
+                  <option key={qual} value={qual}>{qual}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Sets the user's professional qualification level
+              </p>
+            </div>
+          )}
+
+          {/* Specialization */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Specialization
+            </label>
+            <input
+              type="text"
+              value={formData.specialization}
+              onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              placeholder="e.g., Geriatric Care, Dementia Care, etc."
+            />
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Account Status *
+            </label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              required
+            >
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="inactive">Inactive</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+
+          {/* Active Toggle */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Account Active</label>
+              <p className="text-xs text-gray-500 mt-1">Enable or disable user access</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, active: !formData.active })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                formData.active ? 'bg-green-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  formData.active ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Warning Message */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="text-sm text-yellow-800">
+                <p className="font-medium mb-1">Important Notes:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Changing user type affects their dashboard access and permissions</li>
+                  <li>User must log out and log back in for changes to take full effect</li>
+                  <li>Medical qualifications determine what actions they can perform</li>
+                  <li>Setting status to 'inactive' or 'suspended' will block their access</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
