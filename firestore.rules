@@ -139,16 +139,16 @@ service cloud.firestore {
     
     // Patients collection
     match /patients/{patientId} {
-      // Admin full access. Caregivers/doctors can read patients
-      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      // Admin full access. Caregivers/doctors/pharmacists can read patients
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor() || isPharmacist();
       // Writes restricted to admin
       allow write: if isAdmin();
     }
     
     // Clients collection (same as patients)
     match /clients/{clientId} {
-      // Admin full access. Caregivers/doctors can read clients
-      allow read, list: if isAdmin() || isCaregiver() || isDoctor();
+      // Admin full access. Caregivers/doctors/pharmacists can read clients
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor() || isPharmacist();
       // Writes restricted to admin
       allow write: if isAdmin();
     }
