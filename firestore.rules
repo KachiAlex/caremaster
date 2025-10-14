@@ -97,6 +97,14 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse'
       );
     }
+    function isPharmacist() {
+      return request.auth != null && (
+        request.auth.token.pharmacist == true ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'pharmacist' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'pharmacist' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'pharmacist'
+      );
+    }
     
     // Helpers: assignment checks based on denormalized fields on the resource
     function isAssignedCaregiverToResource() {
@@ -147,7 +155,7 @@ service cloud.firestore {
     
     // Client assignments
     match /clientAssignments/{assignmentId} {
-      allow read, list: if isAdmin() || (request.auth != null && isCaregiver());
+      allow read, list: if isAdmin() || (request.auth != null && (isCaregiver() || isPharmacist()));
       allow write: if isAdmin();
     }
     
@@ -584,6 +592,38 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null && (
         isAdmin() || isCaregiver() || isDoctor()
       );
+    }
+    
+    // Pharmacy inventory collection - pharmacists can manage inventory in their institution
+    match /pharmacyInventory/{inventoryId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isPharmacist() ||
+        isDoctor()
+      );
+      allow create, update, delete: if request.auth != null && (
+        isAdmin() || 
+        isPharmacist()
+      );
+    }
+    
+    // Pharmacy invoices collection - pharmacists can manage invoices in their institution
+    match /pharmacyInvoices/{invoiceId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isPharmacist() ||
+        resource.data.clientId == request.auth.uid
+      );
+      allow create, update, delete: if request.auth != null && (
+        isAdmin() || 
+        isPharmacist()
+      );
+    }
+    
+    // Pharmacists collection - pharmacists can read their own data
+    match /pharmacists/{pharmacistId} {
+      allow read, list: if isAdmin() || isPharmacist() || (request.auth != null && request.auth.uid == pharmacistId);
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == pharmacistId);
     }
     
     // Allow admins to read/write any other collections
