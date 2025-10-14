@@ -100,7 +100,7 @@ const InstitutionLogin = () => {
         navigate('/institution/login');
       }
     } else if (userRole === 'pharmacist') {
-      navigate(`/institution-pharmacy/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
+      navigate(`/institution-pharmacist/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
     } else {
       navigate('/institution/welcome');
     }

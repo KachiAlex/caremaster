@@ -35,7 +35,8 @@ import {
   Trash2,
   Award,
   Building,
-  Pill
+  Pill,
+  Edit
 } from 'lucide-react';
 import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
