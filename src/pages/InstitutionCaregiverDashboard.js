@@ -5417,18 +5417,24 @@ const InstitutionCaregiverDashboard = () => {
                         {careLogs.map((log) => (
                           <div key={log.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                             <div className="flex justify-between items-start mb-2">
-                              <div>
+                              <div className="flex-1">
                                 <h5 className="font-medium text-gray-900">{log.activityType || 'Care Activity'}</h5>
-                                <p className="text-xs text-gray-500">
-                                  {new Date(log.timestamp || log.createdAt).toLocaleDateString()} at{' '}
-                                  {new Date(log.timestamp || log.createdAt).toLocaleTimeString()}
-                                </p>
+                                <div className="flex items-center space-x-2 mt-1">
+                                  <span className="text-xs font-medium text-blue-600">
+                                    By: {log.caregiverName || log.createdBy || 'Staff Member'}
+                                  </span>
+                                  <span className="text-xs text-gray-400">•</span>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(log.timestamp || log.createdAt).toLocaleDateString()} at{' '}
+                                    {new Date(log.timestamp || log.createdAt).toLocaleTimeString()}
+                                  </p>
+                                </div>
                               </div>
                               <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
                                 {log.roleType || 'Caregiver'}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600">{log.notes || log.description}</p>
+                            <p className="text-sm text-gray-600 mt-2">{log.notes || log.description}</p>
                           </div>
                         ))}
                       </div>
