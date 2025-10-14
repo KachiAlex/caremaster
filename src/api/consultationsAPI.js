@@ -13,6 +13,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { logClientActivity } from './clientActivitiesAPI';
 
 const CONSULTATIONS_COLLECTION = 'consultations';
 
@@ -78,6 +79,28 @@ export const createConsultation = async (consultationData) => {
 
     const docRef = await addDoc(consultationsRef, newConsultation);
     console.log('✅ Consultation created with ID:', docRef.id);
+    
+    // Log activity to client's activity log
+    try {
+      await logClientActivity({
+        clientId: consultationData.clientId,
+        activityType: 'consultation',
+        performedBy: consultationData.doctorId,
+        performerName: consultationData.doctorName,
+        performerRole: 'doctor',
+        description: `${consultationData.consultationType} consultation - ${consultationData.chiefComplaint}`,
+        details: {
+          consultationId: docRef.id,
+          consultationType: consultationData.consultationType,
+          chiefComplaint: consultationData.chiefComplaint,
+          assessment: consultationData.assessment
+        },
+        institutionId: consultationData.institutionId
+      });
+    } catch (activityError) {
+      console.error('Error logging consultation activity:', activityError);
+      // Don't throw - consultation was created successfully
+    }
     
     return { id: docRef.id, ...newConsultation };
   } catch (error) {

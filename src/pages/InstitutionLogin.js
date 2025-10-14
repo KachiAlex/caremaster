@@ -76,34 +76,65 @@ const InstitutionLogin = () => {
     const userRole = userData.type || userData.userType;
     const userInstitutionId = userData.institutionId || institutionId;
     
-    console.log('📍 Routing user to dashboard:', {
+    console.log('📍 InstitutionLogin - Routing user to dashboard:', {
       userRole,
+      roleParam,
       institutionId: userInstitutionId,
-      onboardingComplete: userData.onboardingComplete
+      onboardingComplete: userData.onboardingComplete,
+      currentUrl: window.location.href
     });
     
-    // Route based on user role
-    if (userRole === 'admin' || userRole === 'institutionAdmin') {
-      navigate(`/institution-admin/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
-    } else if (userRole === 'doctor' || userRole === 'nurse' || userRole === 'caregiver') {
-      // Check onboarding and approval status for caregivers
+    // Route based on the portal they chose (roleParam), not just their user role
+    if (roleParam === 'admin') {
+      // Admin portal - route to admin dashboard
+      const adminUrl = `/institution-admin/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+      console.log('🏢 Admin portal - navigating to:', adminUrl);
+      navigate(adminUrl);
+    } else if (roleParam === 'pharmacist') {
+      // Pharmacist portal - route to pharmacist dashboard
+      const pharmacistUrl = `/institution-pharmacy/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+      console.log('💊 Pharmacist portal - navigating to:', pharmacistUrl);
+      navigate(pharmacistUrl);
+    } else if (roleParam === 'caregiver') {
+      // Caregiver portal - check onboarding and approval status
       if (!userData.onboardingComplete) {
-        navigate(`/institution-caregiver/onboarding${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
+        const onboardingUrl = `/institution-caregiver/onboarding${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+        console.log('👥 Caregiver portal (onboarding) - navigating to:', onboardingUrl);
+        navigate(onboardingUrl);
       } else if (userData.status === 'pending' || !userData.status) {
         // Onboarding complete but awaiting admin approval
-        navigate(`/institution-caregiver/pending-approval${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
+        const pendingUrl = `/institution-caregiver/pending-approval${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+        console.log('👥 Caregiver portal (pending) - navigating to:', pendingUrl);
+        navigate(pendingUrl);
       } else if (userData.status === 'active') {
         // Approved - go to dashboard
-        navigate(`/institution-caregiver/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
+        const dashboardUrl = `/institution-caregiver/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+        console.log('👥 Caregiver portal (active) - navigating to:', dashboardUrl);
+        navigate(dashboardUrl);
       } else {
         // Rejected or other status
         toast.error(`Your account status is "${userData.status}". Please contact your administrator.`);
         navigate('/institution/login');
       }
-    } else if (userRole === 'pharmacist') {
-      navigate(`/institution-pharmacy/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`);
     } else {
-      navigate('/institution/welcome');
+      // Fallback - route based on user role
+      console.log('⚠️ Fallback routing based on user role:', userRole);
+      if (userRole === 'admin' || userRole === 'institutionAdmin') {
+        const fallbackAdminUrl = `/institution-admin/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+        console.log('🏢 Fallback admin - navigating to:', fallbackAdminUrl);
+        navigate(fallbackAdminUrl);
+      } else if (userRole === 'doctor' || userRole === 'nurse' || userRole === 'caregiver') {
+        const fallbackCaregiverUrl = `/institution-caregiver/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+        console.log('👥 Fallback caregiver - navigating to:', fallbackCaregiverUrl);
+        navigate(fallbackCaregiverUrl);
+      } else if (userRole === 'pharmacist') {
+        const fallbackPharmacistUrl = `/institution-pharmacy/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+        console.log('💊 Fallback pharmacist - navigating to:', fallbackPharmacistUrl);
+        navigate(fallbackPharmacistUrl);
+      } else {
+        console.log('❓ Unknown role - navigating to welcome');
+        navigate('/institution/welcome');
+      }
     }
   };
 
@@ -176,9 +207,17 @@ const InstitutionLogin = () => {
         
         // Validate user role matches the portal
         if (roleParam === 'admin' && !isAdmin) {
-          toast.error(`This is the Admin Portal. You are registered as ${userRole}. Please use the Caregiver Portal.`);
-          setSubmitting(false);
-          return;
+          // Check if this is a known admin email that should have admin access
+          const adminEmails = ['admin@bulah.com', 'admin@elderx.com', 'admin2@elderx.com', 'newadmin@elderx.com'];
+          const isKnownAdmin = adminEmails.includes(customAuthUser.email?.toLowerCase());
+          
+          if (!isKnownAdmin) {
+            toast.error(`This is the Admin Portal. You are registered as ${userRole}. Please use the Caregiver Portal.`);
+            setSubmitting(false);
+            return;
+          } else {
+            console.log('🔓 Known admin email detected, allowing admin portal access:', customAuthUser.email);
+          }
         }
         
         if (roleParam === 'caregiver' && !['caregiver', 'doctor', 'nurse'].includes(userRole) && !isAdmin) {
@@ -192,6 +231,8 @@ const InstitutionLogin = () => {
           setSubmitting(false);
           return;
         }
+        
+        console.log('✅ Role validation passed:', { roleParam, userRole, isAdmin });
         
         // Try to sign in first (most common case for returning users)
         try {

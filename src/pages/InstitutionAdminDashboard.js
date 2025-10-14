@@ -38,7 +38,8 @@ import {
   Building,
   Pill,
   Edit,
-  Package
+  Package,
+  Camera
 } from 'lucide-react';
 import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -52,6 +53,7 @@ import { institutionAPI } from '../api/institutionAPI';
 import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
 import InventoryBillingTab from '../components/InventoryBillingTab';
 import { toast } from 'react-toastify';
+import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages } from '../api/messagesAPI';
 
 const InstitutionAdminDashboard = () => {
   const navigate = useNavigate();
@@ -127,6 +129,16 @@ const InstitutionAdminDashboard = () => {
   // Institution Link Customization
   const [showLinkCustomizer, setShowLinkCustomizer] = useState(false);
   const [institutionData, setInstitutionData] = useState(null);
+
+  // Messaging states
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isInCall, setIsInCall] = useState(false);
+  const [callType, setCallType] = useState(null); // 'voice' or 'video'
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
 
   useEffect(() => {
     if (userProfile && institutionId) {
@@ -993,6 +1005,475 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
+  // Messaging Functions
+  const loadConversations = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const userConversations = await getConversationsByUser(user.uid);
+      console.log(`💬 Loaded ${userConversations.length} conversations`);
+      
+      // Enrich conversations with participant details
+      const enrichedConversations = await Promise.all(
+        userConversations.map(async (conv) => {
+          // Find the other participant (not the current user)
+          const otherParticipantId = conv.participants?.find(p => p !== user.uid);
+          
+          if (!otherParticipantId) {
+            return {
+              ...conv,
+              name: 'Unknown User',
+              unread: 0
+            };
+          }
+          
+          // Try to find participant in caregivers, clients, or pharmacists
+          let participantName = 'Unknown User';
+          let participantType = 'user';
+          
+          const caregiver = caregivers.find(c => c.id === otherParticipantId || c.userId === otherParticipantId);
+          if (caregiver) {
+            participantName = caregiver.name || caregiver.fullName;
+            participantType = 'caregiver';
+          }
+          
+          if (!caregiver) {
+            const client = clients.find(c => c.id === otherParticipantId || c.userId === otherParticipantId);
+            if (client) {
+              participantName = client.name || client.fullName;
+              participantType = 'client';
+            }
+          }
+          
+          if (!caregiver && !clients.find(c => c.id === otherParticipantId || c.userId === otherParticipantId)) {
+            const pharmacist = pharmacists.find(p => p.id === otherParticipantId || p.userId === otherParticipantId);
+            if (pharmacist) {
+              participantName = pharmacist.name || pharmacist.fullName;
+              participantType = 'pharmacist';
+            }
+          }
+          
+          return {
+            ...conv,
+            name: participantName,
+            type: participantType,
+            unread: 0,
+            conversationId: conv.id,
+            lastMessage: conv.lastMessage || 'No messages yet',
+            timestamp: conv.lastMessageTime || conv.createdAt
+          };
+        })
+      );
+      
+      setConversations(enrichedConversations);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+      setConversations([]);
+    }
+  };
+
+  const loadMessagesForConversation = async (conversationId) => {
+    try {
+      const conversationMessages = await getMessagesByConversation(conversationId);
+      console.log(`💬 Loaded ${conversationMessages.length} messages`);
+      setMessages(conversationMessages);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      setMessages([]);
+    }
+  };
+
+  // Load conversations when messages tab is active
+  useEffect(() => {
+    if (activeTab === 'messages' && user?.uid && caregivers.length > 0) {
+      loadConversations();
+      
+      // Set up real-time listener for conversations
+      const unsubscribe = subscribeToUserConversations(user.uid, (updatedConversations) => {
+        console.log(`🔄 Real-time update: ${updatedConversations.length} conversations`);
+        
+        // Enrich conversations with participant details
+        const enrichedConversations = updatedConversations.map((conv) => {
+          const otherParticipantId = conv.participants?.find(p => p !== user.uid);
+          
+          let participantName = 'Unknown User';
+          let participantType = 'user';
+          
+          const caregiver = caregivers.find(c => c.id === otherParticipantId || c.userId === otherParticipantId);
+          if (caregiver) {
+            participantName = caregiver.name || caregiver.fullName;
+            participantType = 'caregiver';
+          }
+          
+          if (!caregiver) {
+            const client = clients.find(c => c.id === otherParticipantId || c.userId === otherParticipantId);
+            if (client) {
+              participantName = client.name || client.fullName;
+              participantType = 'client';
+            }
+          }
+          
+          if (!caregiver && !clients.find(c => c.id === otherParticipantId || c.userId === otherParticipantId)) {
+            const pharmacist = pharmacists.find(p => p.id === otherParticipantId || p.userId === otherParticipantId);
+            if (pharmacist) {
+              participantName = pharmacist.name || pharmacist.fullName;
+              participantType = 'pharmacist';
+            }
+          }
+          
+          return {
+            ...conv,
+            name: participantName,
+            type: participantType,
+            unread: 0,
+            conversationId: conv.id,
+            lastMessage: conv.lastMessage || 'No messages yet',
+            timestamp: conv.lastMessageTime || conv.createdAt
+          };
+        });
+        
+        setConversations(enrichedConversations);
+      });
+      
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
+    }
+  }, [activeTab, user?.uid, caregivers, clients, pharmacists]);
+
+  // Set up real-time listener for messages when a conversation is selected
+  useEffect(() => {
+    if (selectedConversation?.conversationId || selectedConversation?.id) {
+      const conversationId = selectedConversation.conversationId || selectedConversation.id;
+      
+      const unsubscribe = subscribeToConversationMessages(conversationId, (updatedMessages) => {
+        console.log(`🔄 Real-time update: ${updatedMessages.length} messages`);
+        setMessages(updatedMessages);
+      });
+      
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
+    }
+  }, [selectedConversation]);
+
+  const renderMessagesTab = () => {
+    const handleSendMessage = async () => {
+      if (!newMessage.trim() || !selectedConversation) return;
+      
+      try {
+        let conversationId = selectedConversation.conversationId || selectedConversation.id;
+        
+        if (!selectedConversation.conversationId && selectedConversation.participants) {
+          const conversationResult = await getOrCreateConversation(selectedConversation.participants, 'admin');
+          conversationId = conversationResult.id || conversationResult;
+          console.log(`✅ Created new conversation: ${conversationId}`);
+        }
+        
+        if (typeof conversationId === 'object' && conversationId.id) {
+          conversationId = conversationId.id;
+        }
+        
+        console.log('📤 Sending message to conversation:', conversationId);
+        
+        await sendMessageAPI(conversationId, user.uid, {
+          text: newMessage,
+          type: 'text',
+          senderName: userProfile?.name || 'Admin'
+        });
+        
+        const message = {
+          id: Date.now(),
+          text: newMessage,
+          senderId: user?.uid,
+          senderName: userProfile?.name || 'You',
+          createdAt: new Date(),
+          read: false
+        };
+        
+        setMessages([...messages, message]);
+        setNewMessage('');
+        
+        toast.success('Message sent successfully');
+        loadConversations();
+      } catch (error) {
+        console.error('Error sending message:', error);
+        toast.error('Failed to send message');
+      }
+    };
+
+    const startVoiceCall = async () => {
+      if (!selectedConversation) {
+        toast.error('Please select a conversation first');
+        return;
+      }
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        setLocalStream(stream);
+        setCallType('voice');
+        setIsInCall(true);
+        toast.success('Voice call started');
+      } catch (error) {
+        console.error('Error starting voice call:', error);
+        toast.error('Failed to start voice call. Please check microphone permissions.');
+      }
+    };
+
+    const startVideoCall = async () => {
+      if (!selectedConversation) {
+        toast.error('Please select a conversation first');
+        return;
+      }
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        setLocalStream(stream);
+        setCallType('video');
+        setIsInCall(true);
+        toast.success('Video call started');
+      } catch (error) {
+        console.error('Error starting video call:', error);
+        toast.error('Failed to start video call. Please check camera and microphone permissions.');
+      }
+    };
+
+    const endCall = () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
+      }
+      if (remoteStream) {
+        remoteStream.getTracks().forEach(track => track.stop());
+        setRemoteStream(null);
+      }
+      setIsInCall(false);
+      setCallType(null);
+      toast.info('Call ended');
+    };
+
+    const displayConversations = conversations.length > 0 ? conversations : 
+      [...caregivers, ...clients, ...pharmacists].slice(0, 10).map(person => ({
+        id: person.id,
+        name: person.name || person.fullName,
+        avatar: person.avatar || null,
+        lastMessage: 'Start a conversation',
+        timestamp: new Date().toISOString(),
+        unread: 0,
+        type: caregivers.includes(person) ? 'caregiver' : clients.includes(person) ? 'client' : 'pharmacist',
+        participants: [user.uid, person.id]
+      }));
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[calc(100vh-250px)]">
+        <div className="flex h-full">
+          {/* Conversations List */}
+          <div className="w-80 border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+              <p className="text-sm text-gray-500 mt-1">{displayConversations.length} conversations</p>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              {displayConversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  onClick={() => {
+                    setSelectedConversation(conversation);
+                    const convId = conversation.conversationId || conversation.id;
+                    loadMessagesForConversation(convId);
+                  }}
+                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                      {(conversation.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-gray-900 truncate">{conversation.name || 'Unknown User'}</h3>
+                        {conversation.unread > 0 && (
+                          <span className="ml-2 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                            {conversation.unread}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 truncate mt-1">{conversation.lastMessage}</p>
+                      <span className="text-xs text-gray-400 mt-1">
+                        {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Chat Area */}
+          {selectedConversation ? (
+            <div className="flex-1 flex flex-col">
+              {/* Chat Header with Call Buttons */}
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                    {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
+                    <p className="text-xs text-gray-500">
+                      {selectedConversation.type === 'caregiver' ? 'Caregiver' : selectedConversation.type === 'client' ? 'Client' : selectedConversation.type === 'pharmacist' ? 'Pharmacist' : 'User'}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Call Buttons */}
+                <div className="flex items-center gap-2">
+                  {!isInCall && (
+                    <>
+                      <button
+                        onClick={startVoiceCall}
+                        className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                        title="Start Voice Call"
+                      >
+                        <Phone className="h-5 w-5 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={startVideoCall}
+                        className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                        title="Start Video Call"
+                      >
+                        <Camera className="h-5 w-5 text-gray-600" />
+                      </button>
+                    </>
+                  )}
+                  {isInCall && (
+                    <button
+                      onClick={endCall}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                    >
+                      <Phone className="h-4 w-4" />
+                      End Call
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Call Interface */}
+              {isInCall && (
+                <div className="p-6 bg-gray-900 flex items-center justify-center" style={{ height: '400px' }}>
+                  <div className="text-center">
+                    {callType === 'video' ? (
+                      <div className="space-y-4">
+                        <Camera className="h-16 w-16 text-white mx-auto" />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
+                            <div className="text-center">
+                              <p className="text-white font-medium">You</p>
+                              <p className="text-gray-400 text-sm">Camera Active</p>
+                            </div>
+                          </div>
+                          <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
+                            <div className="text-center">
+                              <p className="text-white font-medium">{selectedConversation.name}</p>
+                              <p className="text-gray-400 text-sm">Connecting...</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <Phone className="h-16 w-16 text-green-500 mx-auto animate-pulse" />
+                        <p className="text-white text-lg font-medium">Voice Call Active</p>
+                        <p className="text-gray-400">Connected with {selectedConversation.name}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Messages Area */}
+              {!isInCall && (
+                <>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                    {messages.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-gray-400">
+                          <MessageSquare className="h-12 w-12 mx-auto mb-2" />
+                          <p>No messages yet. Start the conversation!</p>
+                        </div>
+                      </div>
+                    ) : (
+                      messages.map((message) => {
+                        const isSentByMe = (message.senderId || message.sender) === user?.uid;
+                        const messageTime = message.createdAt || message.timestamp;
+                        
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                                isSentByMe
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white text-gray-900 border border-gray-200'
+                              }`}
+                            >
+                              {!isSentByMe && message.senderName && (
+                                <p className="text-xs font-semibold mb-1">{message.senderName}</p>
+                              )}
+                              <p className="text-sm">{message.text || message.content}</p>
+                              <p className={`text-xs mt-1 ${
+                                isSentByMe ? 'text-blue-100' : 'text-gray-400'
+                              }`}>
+                                {new Date(messageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Message Input */}
+                  <div className="p-4 border-t border-gray-200 bg-white">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder="Type a message..."
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!newMessage.trim()}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gray-50">
+              <div className="text-center text-gray-400">
+                <MessageSquare className="h-16 w-16 mx-auto mb-4" />
+                <p className="text-lg font-medium">Select a conversation to start messaging</p>
+                <p className="text-sm mt-2">Or start a voice/video call</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Quick action functions
   const quickActions = [
     {
@@ -1138,6 +1619,7 @@ const InstitutionAdminDashboard = () => {
               { id: 'caregivers', name: 'Caregivers', icon: UserCheck },
               { id: 'pharmacists', name: 'Pharmacists', icon: Pill },
               { id: 'assignments', name: 'Assignments', icon: Users },
+              { id: 'messages', name: 'Messages', icon: MessageSquare },
               { id: 'analytics', name: 'Analytics', icon: TrendingUp }
             ].map((tab) => {
               const Icon = tab.icon;
@@ -1980,6 +2462,13 @@ const InstitutionAdminDashboard = () => {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Messages Tab Content */}
+      {activeTab === 'messages' && (
+        <div className="space-y-6">
+          {renderMessagesTab()}
         </div>
       )}
 

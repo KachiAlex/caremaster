@@ -29,21 +29,19 @@ const InstitutionLanding = () => {
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Check authentication status
+  // Check authentication status - but don't interfere with portal selection
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setCheckingAuth(false);
       
-      // If not logged in, redirect to institution login
-      if (!currentUser && institutionId) {
-        navigate(`/institution/login?institution=${institutionId}&returnTo=/onboard`);
-      }
-      // If logged in, we show the access panel (don't auto-redirect)
+      // Don't do anything with the auth state here
+      // Users can access this page regardless of login status
+      // Portal selection will handle appropriate routing
     });
 
     return () => unsubscribe();
-  }, [institutionId, navigate]);
+  }, []);
 
   useEffect(() => {
     const loadInstitutionData = async () => {
@@ -83,90 +81,14 @@ const InstitutionLanding = () => {
     loadInstitutionData();
   }, [institutionId]);
 
-  const handleRoleSelect = async (role) => {
-    console.log('🔷 Portal selected:', role, '| Current user:', user?.email);
+  const handleRoleSelect = (role) => {
+    console.log('🔷 Portal selected:', role, '| Institution:', institutionId);
     
-    // For Institution Admin, always go to admin login first
-    if (role === 'admin') {
-      // If logged in as non-admin, logout first
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const userRole = userData.type || userData.userType;
-            
-            console.log('Current user role:', userRole);
-            
-            if (userRole !== 'admin' && userRole !== 'institutionAdmin') {
-              console.log('❌ Wrong role for Admin Portal - logging out');
-              await signOut(auth);
-              toast.info('Logged out. Please login with admin credentials.');
-            }
-          }
-        } catch (error) {
-          console.error('Error checking user role:', error);
-        }
-      }
-      navigate(`/institution/login?institution=${institutionId}&role=admin`);
-      return;
-    }
-    
-    // For Pharmacist, always go to pharmacist login first
-    if (role === 'pharmacist') {
-      // If logged in as non-pharmacist, logout first
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const userRole = userData.type || userData.userType;
-            
-            if (userRole !== 'pharmacist') {
-              await signOut(auth);
-              toast.info('Logged out. Please login with pharmacist credentials.');
-            }
-          }
-        } catch (error) {
-          console.error('Error checking user role:', error);
-        }
-      }
-      navigate(`/institution/login?institution=${institutionId}&role=pharmacist`);
-      return;
-    }
-    
-    // For Caregiver (includes doctors, nurses, and other caregivers)
-    // ALWAYS go to login page first, even if logged in
-    if (role === 'caregiver') {
-      console.log('🟢 Caregiver Portal clicked');
-      
-      // If logged in with wrong role (e.g., admin or pharmacist), logout first
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const userRole = userData.type || userData.userType;
-            
-            console.log('Current user role:', userRole);
-            
-            // If NOT a caregiver/doctor/nurse, logout first
-            if (!['caregiver', 'doctor', 'nurse'].includes(userRole)) {
-              console.log('❌ Wrong role for Caregiver Portal - logging out');
-              await signOut(auth);
-              toast.info(`Logged out from ${userRole} account. Please login with caregiver credentials.`);
-            }
-          }
-        } catch (error) {
-          console.error('Error checking user role:', error);
-        }
-      }
-      
-      // Always go to login page (even if already logged in as caregiver)
-      console.log('➡️ Navigating to caregiver login');
-      navigate(`/institution/login?institution=${institutionId}&role=caregiver`);
-    }
+    // Simply navigate to the login page with the role parameter
+    // The InstitutionLogin component will handle authentication and routing
+    navigate(`/institution/login?institution=${institutionId}&role=${role}`);
   };
+
 
   if (checkingAuth || loading) {
     return (

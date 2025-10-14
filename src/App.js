@@ -707,12 +707,51 @@ function SignInRouteHandler() {
   
   console.log('🔄 SignInRouteHandler - Checking user role:', {
     userRole,
-    userType: userProfile?.userType
+    userType: userProfile?.userType,
+    currentPath: window.location.pathname
   });
   
-  // Redirect ALL users (caregivers, doctors, and admins) to service provider dashboard
-  // This allows admins to access caregiver functionality when using the caregiver portal
-  if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'admin') {
+  // Check if user came from institution login - if so, let them continue to their intended destination
+  const urlParams = new URLSearchParams(window.location.search);
+  const institutionId = urlParams.get('institution');
+  const roleParam = urlParams.get('role');
+  
+  if (institutionId && roleParam) {
+    console.log('🏢 User came from institution login, routing to appropriate dashboard:', { institutionId, roleParam });
+    
+    if (roleParam === 'admin') {
+      return <Navigate to={`/institution-admin/dashboard?institution=${institutionId}`} replace />;
+    } else if (roleParam === 'pharmacist') {
+      return <Navigate to={`/institution-pharmacy/dashboard?institution=${institutionId}`} replace />;
+    } else if (roleParam === 'caregiver') {
+      return <Navigate to={`/institution-caregiver/dashboard?institution=${institutionId}`} replace />;
+    }
+  }
+  
+  // Check if user has institution ID in their profile - route them to their institution portal
+  if (userProfile?.institutionId) {
+    console.log('🏢 User belongs to institution, routing to institution portal:', userProfile.institutionId);
+    
+    if (userRole === 'admin') {
+      return <Navigate to={`/institution-admin/dashboard?institution=${userProfile.institutionId}`} replace />;
+    } else if (userRole === 'pharmacist') {
+      return <Navigate to={`/institution-pharmacy/dashboard?institution=${userProfile.institutionId}`} replace />;
+    } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
+      return <Navigate to={`/institution-caregiver/dashboard?institution=${userProfile.institutionId}`} replace />;
+    }
+  }
+  
+  // Check for admin session override
+  const hasAdminSession = sessionStorage.getItem('elderx_admin_session') === 'true';
+  
+  // Redirect admins to admin dashboard (standalone admins without institution)
+  if ((userRole === 'admin' || hasAdminSession) && !userProfile?.institutionId) {
+    console.log('🚀 Redirecting admin to /admin');
+    return <Navigate to="/admin" replace />;
+  }
+  
+  // Redirect caregivers and doctors to service provider dashboard (standalone without institution)
+  if ((userRole === 'caregiver' || userRole === 'doctor') && !userProfile?.institutionId) {
     console.log('🚀 Redirecting user to /service-provider (caregiver portal)');
     return <Navigate to="/service-provider" replace />;
   }
@@ -734,20 +773,34 @@ function RoleBasedDashboardRoute() {
   console.log('🔄 RoleBasedDashboardRoute - Checking user role:', {
     userRole,
     userType: userProfile?.userType,
+    institutionId: userProfile?.institutionId,
     redirecting: userRole === 'caregiver' || userRole === 'doctor'
   });
+  
+  // Check if user belongs to an institution - route to institution portal
+  if (userProfile?.institutionId) {
+    console.log('🏢 User belongs to institution, routing to institution portal:', userProfile.institutionId);
+    
+    if (userRole === 'admin') {
+      return <Navigate to={`/institution-admin/dashboard?institution=${userProfile.institutionId}`} replace />;
+    } else if (userRole === 'pharmacist') {
+      return <Navigate to={`/institution-pharmacy/dashboard?institution=${userProfile.institutionId}`} replace />;
+    } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
+      return <Navigate to={`/institution-caregiver/dashboard?institution=${userProfile.institutionId}`} replace />;
+    }
+  }
   
   // Check for admin session override
   const hasAdminSession = sessionStorage.getItem('elderx_admin_session') === 'true';
   
-  // Redirect admins to admin dashboard
-  if (userRole === 'admin' || hasAdminSession) {
+  // Redirect admins to admin dashboard (standalone admins without institution)
+  if ((userRole === 'admin' || hasAdminSession) && !userProfile?.institutionId) {
     console.log('🚀 Redirecting admin to /admin');
     return <Navigate to="/admin" replace />;
   }
   
-  // Redirect caregivers and doctors to service provider dashboard (unless they have admin session)
-  if ((userRole === 'caregiver' || userRole === 'doctor') && !hasAdminSession) {
+  // Redirect caregivers and doctors to service provider dashboard (standalone without institution)
+  if ((userRole === 'caregiver' || userRole === 'doctor') && !hasAdminSession && !userProfile?.institutionId) {
     console.log('🚀 Redirecting service provider to /service-provider');
     return <Navigate to="/service-provider" replace />;
   }

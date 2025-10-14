@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import logger from '../utils/logger';
+import { logClientActivity as logActivity } from './clientActivitiesAPI';
 
 const DIAGNOSTICS_COLLECTION = 'diagnostics';
 const CLIENT_ACTIVITIES_COLLECTION = 'clientActivities';
@@ -38,17 +39,26 @@ export const createDiagnosticTest = async (diagnosticData) => {
     const docRef = await addDoc(collection(db, DIAGNOSTICS_COLLECTION), diagnosticWithTimestamp);
 
     // Log activity to client database
-    await logClientActivity(diagnosticData.clientId, {
-      type: 'diagnostic_test_ordered',
-      description: `Diagnostic test ordered: ${diagnosticData.testType}`,
-      performedBy: diagnosticData.orderedBy,
-      performedByName: diagnosticData.orderedByName,
-      metadata: {
-        diagnosticId: docRef.id,
-        testType: diagnosticData.testType,
-        reason: diagnosticData.reason
-      }
-    });
+    try {
+      await logActivity({
+        clientId: diagnosticData.clientId,
+        activityType: 'diagnostic',
+        performedBy: diagnosticData.orderedBy,
+        performerName: diagnosticData.orderedByName,
+        performerRole: 'doctor',
+        description: `Diagnostic test ordered: ${diagnosticData.testType}`,
+        details: {
+          diagnosticId: docRef.id,
+          testType: diagnosticData.testType,
+          reason: diagnosticData.reason,
+          urgency: diagnosticData.urgency
+        },
+        institutionId: diagnosticData.institutionId
+      });
+    } catch (activityError) {
+      logger.error('Error logging diagnostic activity', { activityError });
+      // Don't throw - diagnostic was created successfully
+    }
 
     logger.info('Diagnostic test created successfully', { id: docRef.id });
     return docRef.id;
@@ -82,17 +92,26 @@ export const uploadDiagnosticResults = async (diagnosticId, resultsData) => {
     const diagnostic = diagnosticDoc.data();
 
     // Log activity to client database
-    await logClientActivity(diagnostic.clientId, {
-      type: 'diagnostic_results_uploaded',
-      description: `Diagnostic results uploaded for: ${diagnostic.testType}`,
-      performedBy: resultsData.uploadedBy,
-      performedByName: resultsData.uploadedByName,
-      metadata: {
-        diagnosticId,
-        testType: diagnostic.testType,
-        documentCount: resultsData.uploadedDocuments?.length || 0
-      }
-    });
+    try {
+      await logActivity({
+        clientId: diagnostic.clientId,
+        activityType: 'diagnostic',
+        performedBy: resultsData.uploadedBy,
+        performerName: resultsData.uploadedByName,
+        performerRole: 'nurse',
+        description: `Diagnostic results uploaded for: ${diagnostic.testType}`,
+        details: {
+          diagnosticId,
+          testType: diagnostic.testType,
+          documentCount: resultsData.uploadedDocuments?.length || 0,
+          hasResults: !!resultsData.results
+        },
+        institutionId: diagnostic.institutionId
+      });
+    } catch (activityError) {
+      logger.error('Error logging results upload activity', { activityError });
+      // Don't throw - results were uploaded successfully
+    }
 
     logger.info('Diagnostic results uploaded successfully', { diagnosticId });
   } catch (error) {
@@ -129,19 +148,28 @@ export const addDoctorNotes = async (diagnosticId, notesData) => {
     const diagnostic = diagnosticDoc.data();
 
     // Log activity to client database
-    await logClientActivity(diagnostic.clientId, {
-      type: 'doctor_notes_added',
-      description: `Doctor notes added for diagnostic: ${diagnostic.testType}`,
-      performedBy: notesData.addedBy,
-      performedByName: notesData.addedByName,
-      metadata: {
-        diagnosticId,
-        testType: diagnostic.testType,
-        hasDiagnosis: !!notesData.diagnosis,
-        hasRecommendations: !!notesData.recommendations,
-        followUpRequired: notesData.followUpRequired
-      }
-    });
+    try {
+      await logActivity({
+        clientId: diagnostic.clientId,
+        activityType: 'diagnostic',
+        performedBy: notesData.addedBy,
+        performerName: notesData.addedByName,
+        performerRole: 'doctor',
+        description: `Doctor notes added for diagnostic: ${diagnostic.testType}${notesData.diagnosis ? ` - Diagnosis: ${notesData.diagnosis}` : ''}`,
+        details: {
+          diagnosticId,
+          testType: diagnostic.testType,
+          hasDiagnosis: !!notesData.diagnosis,
+          diagnosis: notesData.diagnosis,
+          hasRecommendations: !!notesData.recommendations,
+          followUpRequired: notesData.followUpRequired
+        },
+        institutionId: diagnostic.institutionId
+      });
+    } catch (activityError) {
+      logger.error('Error logging doctor notes activity', { activityError });
+      // Don't throw - notes were added successfully
+    }
 
     logger.info('Doctor notes added successfully', { diagnosticId });
   } catch (error) {
@@ -308,26 +336,7 @@ export const getDiagnosticStats = async (institutionId) => {
 };
 
 // Log client activity (internal helper function)
-const logClientActivity = async (clientId, activityData) => {
-  try {
-    const activityWithTimestamp = {
-      ...activityData,
-      timestamp: serverTimestamp(),
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toLocaleTimeString()
-    };
-
-    await addDoc(collection(db, CLIENT_ACTIVITIES_COLLECTION), {
-      clientId,
-      ...activityWithTimestamp
-    });
-
-    logger.info('Client activity logged', { clientId, type: activityData.type });
-  } catch (error) {
-    logger.error('Error logging client activity', { error, clientId, activityData });
-    // Don't throw error here as it's a secondary operation
-  }
-};
+// Activity logging is now handled by centralized clientActivitiesAPI
 
 // Get client activity log
 export const getClientActivities = async (clientId) => {

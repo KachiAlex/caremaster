@@ -789,7 +789,12 @@ const InstitutionCaregiverDashboard = () => {
             <select
               className="mt-1 w-72 max-w-full px-3 py-2 border rounded-md"
               value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
+              onChange={(e) => {
+                const clientId = e.target.value;
+                setSelectedClientId(clientId);
+                const client = assignedClients.find(c => c.id === clientId);
+                setSelectedClient(client || null);
+              }}
             >
               <option value="">Select client...</option>
               {assignedClients.map(p => (
@@ -1289,6 +1294,9 @@ const InstitutionCaregiverDashboard = () => {
       toast.success('Prescription created successfully!');
       setShowPrescriptionModal(false);
       
+      // Reload prescriptions to show the new one
+      await loadPrescriptions(selectedClient.id);
+      
       // Reset form
       setPrescriptionFormData({
         diagnosis: '',
@@ -1305,9 +1313,6 @@ const InstitutionCaregiverDashboard = () => {
           }
         ]
       });
-      
-      // Reload prescriptions
-      await loadPrescriptions(selectedClient.id);
     } catch (error) {
       console.error('Error creating prescription:', error);
       toast.error('Failed to create prescription');
@@ -1388,6 +1393,9 @@ const InstitutionCaregiverDashboard = () => {
       toast.success('Consultation note saved successfully!');
       setShowConsultationModal(false);
       
+      // Reload consultations to show the new one
+      await loadConsultations(selectedClient.id);
+      
       // Reset form
       setConsultationFormData({
         consultationType: CONSULTATION_TYPES.REVIEW,
@@ -1406,9 +1414,6 @@ const InstitutionCaregiverDashboard = () => {
         relatedMedicalReports: [],
         relatedCareLogs: []
       });
-      
-      // Reload consultations
-      await loadConsultations(selectedClient.id);
     } catch (error) {
       console.error('Error creating consultation:', error);
       toast.error('Failed to save consultation');
@@ -3371,8 +3376,8 @@ const InstitutionCaregiverDashboard = () => {
                 // Import signOut from firebase/auth
                 import('firebase/auth').then(({ signOut, getAuth }) => {
                   signOut(getAuth()).then(() => {
-                    // Clear user context and redirect to login
-                    window.location.href = '/institution-login';
+                    // Clear user context and redirect to institution landing
+                    window.location.href = '/institution';
                   }).catch((error) => {
                     console.error('Error signing out:', error);
                   });

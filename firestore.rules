@@ -88,6 +88,14 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor'
       );
     }
+    function isNurse() {
+      return request.auth != null && (
+        request.auth.token.nurse == true ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'nurse' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'nurse' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse'
+      );
+    }
     
     // Helpers: assignment checks based on denormalized fields on the resource
     function isAssignedCaregiverToResource() {

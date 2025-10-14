@@ -14,6 +14,7 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { logClientActivity } from './clientActivitiesAPI';
 
 const PRESCRIPTIONS_COLLECTION = 'prescriptions';
 const PRESCRIPTION_ITEMS_COLLECTION = 'prescriptionItems';
@@ -88,6 +89,29 @@ export const createPrescription = async (prescriptionData) => {
       }
       
       console.log(`✅ Created ${prescriptionData.medications.length} prescription items`);
+    }
+
+    // Log activity to client's activity log
+    try {
+      const medicationNames = prescriptionData.medications?.map(m => m.name).join(', ') || '';
+      await logClientActivity({
+        clientId: prescriptionData.clientId,
+        activityType: 'prescription',
+        performedBy: prescriptionData.doctorId,
+        performerName: prescriptionData.doctorName,
+        performerRole: 'doctor',
+        description: `Prescription written: ${medicationNames}`,
+        details: {
+          prescriptionId: prescriptionId,
+          prescriptionNumber: newPrescription.prescriptionNumber,
+          diagnosis: prescriptionData.diagnosis,
+          medicationCount: prescriptionData.medications?.length || 0
+        },
+        institutionId: prescriptionData.institutionId
+      });
+    } catch (activityError) {
+      console.error('Error logging prescription activity:', activityError);
+      // Don't throw - prescription was created successfully
     }
 
     return { id: prescriptionId, ...newPrescription };
