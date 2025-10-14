@@ -240,15 +240,19 @@ const InstitutionAdminDashboard = () => {
       const institutionCaregivers = instId ? caregiversData.filter(c => c.institutionId === instId) : caregiversData;
       const institutionClients = instId ? clientsData.filter(p => p.institutionId === instId) : clientsData;
 
-      // Merge caregivers from users collection (for those created via Add Caregiver button)
+      // Merge caregivers from users collection (for those created via Add Caregiver button, exclude deleted)
       const caregiversFromUsers = institutionUsers.filter(u => 
-        u.userType === 'caregiver' || u.userType === 'nurse' || u.userType === 'doctor' ||
-        u.type === 'caregiver' || u.type === 'nurse' || u.type === 'doctor'
+        (u.userType === 'caregiver' || u.userType === 'nurse' || u.userType === 'doctor' ||
+        u.type === 'caregiver' || u.type === 'nurse' || u.type === 'doctor') &&
+        u.status !== 'deleted' &&
+        u.active !== false
       );
       
-      // Filter pharmacists from users collection
+      // Filter pharmacists from users collection (exclude deleted)
       const pharmacistsFromUsers = institutionUsers.filter(u => 
-        u.userType === 'pharmacist' || u.type === 'pharmacist'
+        (u.userType === 'pharmacist' || u.type === 'pharmacist') &&
+        u.status !== 'deleted' &&
+        u.active !== false
       );
       
       // Deduplicate caregivers
