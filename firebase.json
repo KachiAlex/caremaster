@@ -20,6 +20,14 @@
     ],
     "rewrites": [
       {
+        "source": "debug-users.html",
+        "destination": "/debug-users.html"
+      },
+      {
+        "source": "fix-pharmacist.html",
+        "destination": "/fix-pharmacist.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

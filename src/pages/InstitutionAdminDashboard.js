@@ -520,13 +520,19 @@ const InstitutionAdminDashboard = () => {
       
       // Update client document with assigned pharmacist
       const clientRef = doc(db, 'clients', clientId);
-      await updateDoc(clientRef, {
+      const updateData = {
         assignedPharmacistId: pharmacistId,
         assignedPharmacistName: pharmacist.name,
         assignedPharmacistEmail: pharmacist.email,
-        assignedPharmacistLicense: pharmacist.licenseNumber,
         updatedAt: new Date().toISOString()
-      });
+      };
+      
+      // Only add license number if it exists
+      if (pharmacist.licenseNumber) {
+        updateData.assignedPharmacistLicense = pharmacist.licenseNumber;
+      }
+      
+      await updateDoc(clientRef, updateData);
       
       // Update pharmacist document with assigned client
       const pharmacistRef = doc(db, 'users', pharmacistId);

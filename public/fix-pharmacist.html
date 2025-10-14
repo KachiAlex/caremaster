@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Pharmacist User Type</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .fix-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; background-color: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Fix Pharmacist User Type</h1>
+    
+    <div class="fix-section">
+        <h3>Problem Identified:</h3>
+        <p><strong>jaypharm@bulah.com</strong> exists but has wrong user type:</p>
+        <ul>
+            <li>❌ Current: userType = "elderly"</li>
+            <li>✅ Should be: userType = "pharmacist"</li>
+            <li>❌ Missing: institutionId = "YlRg0VHMK9BrvPQuYXqm"</li>
+            <li>❌ Missing: status = "active"</li>
+        </ul>
+    </div>
+    
+    <div class="fix-section">
+        <h3>Fix User Type</h3>
+        <button onclick="fixPharmacistUser()">Fix jaypharm@bulah.com → Pharmacist</button>
+        <div id="fixResults"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxH5xQJxQJxQJxQJxQJxQJxQJxQJxQJxQ",
+            authDomain: "elderx-f5c2b.firebaseapp.com",
+            projectId: "elderx-f5c2b",
+            storageBucket: "elderx-f5c2b.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.fixPharmacistUser = async function() {
+            try {
+                const resultsDiv = document.getElementById('fixResults');
+                resultsDiv.innerHTML = '<p>🔧 Updating user type...</p>';
+                
+                const userId = 'Rrd9XfBGcOPKhvaboHvFMbTVXAV2';
+                const userRef = doc(db, 'users', userId);
+                
+                await updateDoc(userRef, {
+                    userType: 'pharmacist',
+                    type: 'pharmacist',
+                    institutionId: 'YlRg0VHMK9BrvPQuYXqm',
+                    status: 'active',
+                    active: true,
+                    name: 'Jay Pharm',
+                    updatedAt: new Date().toISOString()
+                });
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Successfully Updated!</h4>
+                        <p><strong>jaypharm@bulah.com</strong> is now configured as a pharmacist:</p>
+                        <pre>{
+  "userType": "pharmacist",
+  "type": "pharmacist", 
+  "institutionId": "YlRg0VHMK9BrvPQuYXqm",
+  "status": "active",
+  "active": true,
+  "name": "Jay Pharm"
+}</pre>
+                        <p><strong>Next steps:</strong></p>
+                        <ol>
+                            <li>Go back to the admin dashboard</li>
+                            <li>Refresh the page</li>
+                            <li>Check the Pharmacists tab</li>
+                            <li>jaypharm@bulah.com should now appear!</li>
+                        </ol>
+                    </div>
+                `;
+                
+            } catch (error) {
+                document.getElementById('fixResults').innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error</h4>
+                        <p>Failed to update user: ${error.message}</p>
+                        <p>You may need admin permissions to update user data.</p>
+                    </div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>

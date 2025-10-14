@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ElderX User Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🔍 ElderX User Debug Tool</h1>
+    
+    <div class="debug-section">
+        <h3>Search for jaypharm@bulah.com</h3>
+        <button onclick="searchUser()">Search User</button>
+        <div id="searchResults"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>List All Users</h3>
+        <button onclick="listAllUsers()">List All Users</button>
+        <div id="allUsersResults"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>List All Pharmacists</h3>
+        <button onclick="listPharmacists()">List All Pharmacists</button>
+        <div id="pharmacistsResults"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxH5xQJxQJxQJxQJxQJxQJxQJxQJxQJxQ",
+            authDomain: "elderx-f5c2b.firebaseapp.com",
+            projectId: "elderx-f5c2b",
+            storageBucket: "elderx-f5c2b.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.searchUser = async function() {
+            try {
+                const resultsDiv = document.getElementById('searchResults');
+                resultsDiv.innerHTML = '<p>Searching...</p>';
+                
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('email', '==', 'jaypharm@bulah.com'));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    resultsDiv.innerHTML = '<div class="error"><p>❌ User jaypharm@bulah.com not found in database</p></div>';
+                } else {
+                    querySnapshot.forEach((doc) => {
+                        const userData = doc.data();
+                        resultsDiv.innerHTML = `
+                            <div class="success">
+                                <h4>✅ User Found!</h4>
+                                <pre>${JSON.stringify({
+                                    id: doc.id,
+                                    email: userData.email,
+                                    userType: userData.userType,
+                                    type: userData.type,
+                                    institutionId: userData.institutionId,
+                                    status: userData.status,
+                                    active: userData.active,
+                                    name: userData.name || userData.displayName
+                                }, null, 2)}</pre>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (error) {
+                document.getElementById('searchResults').innerHTML = `
+                    <div class="error">
+                        <p>❌ Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+
+        window.listAllUsers = async function() {
+            try {
+                const resultsDiv = document.getElementById('allUsersResults');
+                resultsDiv.innerHTML = '<p>Loading all users...</p>';
+                
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, orderBy('createdAt', 'desc'));
+                const querySnapshot = await getDocs(q);
+                
+                const users = [];
+                querySnapshot.forEach((doc) => {
+                    const userData = doc.data();
+                    users.push({
+                        id: doc.id,
+                        email: userData.email,
+                        userType: userData.userType,
+                        type: userData.type,
+                        institutionId: userData.institutionId,
+                        status: userData.status,
+                        active: userData.active
+                    });
+                });
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        <h4>📊 All Users (${users.length} total)</h4>
+                        <pre>${JSON.stringify(users, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('allUsersResults').innerHTML = `
+                    <div class="error">
+                        <p>❌ Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+
+        window.listPharmacists = async function() {
+            try {
+                const resultsDiv = document.getElementById('pharmacistsResults');
+                resultsDiv.innerHTML = '<p>Loading all pharmacists...</p>';
+                
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, orderBy('createdAt', 'desc'));
+                const querySnapshot = await getDocs(q);
+                
+                const pharmacists = [];
+                querySnapshot.forEach((doc) => {
+                    const userData = doc.data();
+                    if (userData.userType === 'pharmacist' || userData.type === 'pharmacist') {
+                        pharmacists.push({
+                            id: doc.id,
+                            email: userData.email,
+                            userType: userData.userType,
+                            type: userData.type,
+                            institutionId: userData.institutionId,
+                            status: userData.status,
+                            active: userData.active,
+                            name: userData.name || userData.displayName
+                        });
+                    }
+                });
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        <h4>💊 All Pharmacists (${pharmacists.length} total)</h4>
+                        <pre>${JSON.stringify(pharmacists, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('pharmacistsResults').innerHTML = `
+                    <div class="error">
+                        <p>❌ Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>
