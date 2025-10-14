@@ -11,9 +11,10 @@
   "lang": "en",
   "categories": ["healthcare", "medical", "productivity"],
   "icons": [
-    { "src": "/icons/icon-16x16.png?v=2", "sizes": "16x16", "type": "image/png" },
-    { "src": "/icons/icon-32x32.png?v=2", "sizes": "32x32", "type": "image/png" },
-    { "src": "/icons/icon-192x192.png?v=2", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icons/icon-16x16.png?v=3", "sizes": "16x16", "type": "image/png" },
+    { "src": "/icons/icon-32x32.png?v=3", "sizes": "32x32", "type": "image/png" },
+    { "src": "/icons/icon-192x192.png?v=3", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512x512.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "screenshots": [],
   "shortcuts": [
@@ -23,7 +24,7 @@
       "description": "Quick access to messaging",
       "url": "/service-provider/messages",
       "icons": [
-        { "src": "/icons/icon-32x32.png?v=2", "sizes": "32x32", "type": "image/png" }
+        { "src": "/icons/icon-32x32.png?v=3", "sizes": "32x32", "type": "image/png" }
       ]
     },
     {
@@ -32,7 +33,7 @@
       "description": "Quick access to calls",
       "url": "/service-provider/calls",
       "icons": [
-        { "src": "/icons/icon-32x32.png?v=2", "sizes": "32x32", "type": "image/png" }
+        { "src": "/icons/icon-32x32.png?v=3", "sizes": "32x32", "type": "image/png" }
       ]
     },
     {
@@ -41,7 +42,7 @@
       "description": "Quick access to patient management",
       "url": "/service-provider/patients",
       "icons": [
-        { "src": "/icons/icon-32x32.png?v=2", "sizes": "32x32", "type": "image/png" }
+        { "src": "/icons/icon-32x32.png?v=3", "sizes": "32x32", "type": "image/png" }
       ]
     }
   ],
