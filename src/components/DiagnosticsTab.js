@@ -13,7 +13,6 @@ import {
   Plus,
   Download,
   FileImage,
-  FilePdf,
   X
 } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -205,6 +204,54 @@ const DiagnosticsTab = ({
           )}
         </div>
       </div>
+
+      {/* Role-Based Information Banner */}
+      {!isDoctor && !isNurse && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-blue-900 mb-1">📋 View-Only Access</h3>
+              <p className="text-sm text-blue-800">
+                As a non-medical caregiver, you can view diagnostic results and test reports for your assigned clients 
+                but cannot order new diagnostic tests. Diagnostic test results, lab reports, and imaging studies for this 
+                client are displayed below. Review these results to understand the client's medical status and any ongoing 
+                monitoring requirements.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isNurse && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-5 mb-6">
+          <div className="flex items-start space-x-3">
+            <Upload className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-purple-900 mb-1">💉 Nurse Role</h3>
+              <p className="text-sm text-purple-800">
+                You can upload lab results, scan results, and other diagnostic documents for tests ordered by doctors. 
+                Click on any pending test below to upload results and documents.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDoctor && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-5 mb-6">
+          <div className="flex items-start space-x-3">
+            <Stethoscope className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-green-900 mb-1">🩺 Doctor Role</h3>
+              <p className="text-sm text-green-800">
+                You can order diagnostic tests and add clinical notes based on lab results. Review uploaded results 
+                and provide diagnosis, interpretation, and treatment recommendations.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center space-x-4 mb-6">
@@ -538,7 +585,7 @@ const ViewDetailsModal = ({
                   <div className="space-y-2">
                     {diagnostic.uploadedDocuments.map((doc, index) => (
                       <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg">
-                        <FilePdf className="w-4 h-4 text-red-500" />
+                        <FileText className="w-4 h-4 text-red-500" />
                         <span className="text-sm text-gray-900">{doc.name}</span>
                         <button className="text-blue-600 hover:text-blue-800">
                           <Download className="w-4 h-4" />
@@ -700,7 +747,7 @@ const UploadResultsModal = ({ diagnostic, onSubmit, onClose }) => {
                 {formData.uploadedDocuments.map((doc, index) => (
                   <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <FilePdf className="w-4 h-4 text-red-500" />
+                      <File className="w-4 h-4 text-red-500" />
                       <span className="text-sm text-gray-900">{doc.name}</span>
                       <span className="text-xs text-gray-500">
                         ({(doc.size / 1024 / 1024).toFixed(2)} MB)

@@ -14,7 +14,7 @@ import {
   writeBatch,
   FieldValue
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db } from '../firebase/config';
 import logger from '../utils/logger';
 import { logClientActivity as logActivity } from './clientActivitiesAPI';
 
@@ -284,16 +284,25 @@ export const deleteDiagnosticTest = async (diagnosticId) => {
     await deleteDoc(doc(db, DIAGNOSTICS_COLLECTION, diagnosticId));
 
     // Log activity to client database
-    await logClientActivity(diagnostic.clientId, {
-      type: 'diagnostic_test_deleted',
-      description: `Diagnostic test deleted: ${diagnostic.testType}`,
-      performedBy: diagnostic.orderedBy,
-      performedByName: diagnostic.orderedByName,
-      metadata: {
-        diagnosticId,
-        testType: diagnostic.testType
-      }
-    });
+    try {
+      await logActivity({
+        clientId: diagnostic.clientId,
+        activityType: 'diagnostic',
+        performedBy: diagnostic.orderedBy,
+        performerName: diagnostic.orderedByName,
+        performerRole: 'doctor',
+        description: `Diagnostic test deleted: ${diagnostic.testType}`,
+        details: {
+          diagnosticId,
+          testType: diagnostic.testType,
+          action: 'deleted'
+        },
+        institutionId: diagnostic.institutionId
+      });
+    } catch (activityError) {
+      logger.error('Error logging diagnostic deletion activity', { activityError });
+      // Don't throw - deletion was successful
+    }
 
     logger.info('Diagnostic test deleted successfully', { diagnosticId });
   } catch (error) {

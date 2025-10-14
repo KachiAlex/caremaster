@@ -47,7 +47,8 @@ service cloud.firestore {
       return request.auth != null && 
              (request.auth.token.admin == true || 
               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin' ||
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'admin');
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'admin' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
     
     // Medical reports - Doctor only can create/update
