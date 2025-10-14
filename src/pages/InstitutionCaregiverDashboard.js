@@ -376,9 +376,12 @@ const InstitutionCaregiverDashboard = () => {
         }
 
         // Load assigned clients from admin-created assignments (for ALL caregivers, doctors, and pharmacists)
-        const isDoctor = (userProfile.medicalQualification || '').includes('Doctor');
+        const isDoctor = (userProfile.medicalQualification || '').includes('Doctor') || 
+                          userProfile.role === 'doctor' || 
+                          userProfile.userType === 'doctor' || 
+                          userProfile.type === 'doctor';
         const isCaregiver = userProfile.userType === 'caregiver' || userProfile.type === 'caregiver';
-        const isPharmacist = userProfile.userType === 'pharmacist' || userProfile.type === 'pharmacist';
+        const isPharmacist = userProfile.userType === 'pharmacist' || userProfile.type === 'pharmacist' || userProfile.role === 'pharmacist';
         
         if (isDoctor || isCaregiver || isPharmacist) {
           let clients = [];
@@ -558,9 +561,12 @@ const InstitutionCaregiverDashboard = () => {
     loadCaregiverData();
     
     // Set up real-time subscription for assignments (for caregivers, doctors, and pharmacists)
-    const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor');
+    const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor') || 
+                      userProfile?.role === 'doctor' || 
+                      userProfile?.userType === 'doctor' || 
+                      userProfile?.type === 'doctor';
     const isCaregiver = userProfile?.userType === 'caregiver' || userProfile?.type === 'caregiver';
-    const isPharmacist = userProfile?.userType === 'pharmacist' || userProfile?.type === 'pharmacist';
+    const isPharmacist = userProfile?.userType === 'pharmacist' || userProfile?.type === 'pharmacist' || userProfile?.role === 'pharmacist';
     
     if ((isDoctor || isCaregiver || isPharmacist) && user?.uid) {
       const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
@@ -719,9 +725,17 @@ const InstitutionCaregiverDashboard = () => {
   };
 
   // --- Role-specific UI helpers ---
-  const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor');
-  const isNurse = (userProfile?.medicalQualification || '').includes('Nurse');
-  const isPharmacist = userProfile?.userType === 'pharmacist' || userProfile?.type === 'pharmacist';
+  const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor') || 
+                    userProfile?.role === 'doctor' || 
+                    userProfile?.userType === 'doctor' || 
+                    userProfile?.type === 'doctor';
+  const isNurse = (userProfile?.medicalQualification || '').includes('Nurse') || 
+                   userProfile?.role === 'nurse' || 
+                   userProfile?.userType === 'nurse' || 
+                   userProfile?.type === 'nurse';
+  const isPharmacist = userProfile?.userType === 'pharmacist' || 
+                       userProfile?.type === 'pharmacist' || 
+                       userProfile?.role === 'pharmacist';
   const isMedicalProfessional = isDoctor || isNurse;
   const isNonMedicalCaregiver = !isMedicalProfessional && !isPharmacist;
 

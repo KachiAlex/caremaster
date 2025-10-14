@@ -76,14 +76,16 @@ service cloud.firestore {
       return request.auth != null && (
         request.auth.token.caregiver == true ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'caregiver' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'caregiver'
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'caregiver' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'caregiver'
       );
     }
     function isDoctor() {
       return request.auth != null && (
         request.auth.token.doctor == true ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'doctor' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'doctor'
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'doctor' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor'
       );
     }
     
@@ -479,6 +481,24 @@ service cloud.firestore {
       allow delete: if request.auth != null && (
         isAdmin() || 
         isDoctor()
+      );
+    }
+    
+    // Pharmacist medication data - pharmacists can manage their own data
+    match /pharmacistMedicationData/{dataId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isDoctor() ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'pharmacist'
+      );
+      allow create, update: if request.auth != null && (
+        isAdmin() || 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'pharmacist' && 
+         request.resource.data.pharmacistId == request.auth.uid)
+      );
+      allow delete: if request.auth != null && (
+        isAdmin() || 
+        resource.data.pharmacistId == request.auth.uid
       );
     }
     

@@ -10,8 +10,7 @@ import {
   where, 
   orderBy, 
   limit,
-  serverTimestamp,
-  Timestamp
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -202,69 +201,41 @@ export const getActivitiesByClient = async (clientId, limitCount = 50) => {
 // Get activities for today
 export const getTodayActivities = async (caregiverId) => {
   try {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const activitiesRef = collection(db, ACTIVITIES_COLLECTION);
-    const q = query(
-      activitiesRef,
-      where('caregiverId', '==', caregiverId),
-      where('createdAt', '>=', Timestamp.fromDate(startOfDay)),
-      where('createdAt', '<=', Timestamp.fromDate(endOfDay)),
-      orderBy('createdAt', 'desc')
-    );
-
-    const querySnapshot = await getDocs(q);
-    const activities = [];
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      activities.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
-      });
+    // Use simple query first, filter client-side to avoid index requirements
+    const allActivities = await getActivitiesByCaregiver(caregiverId, 200);
+    const today = new Date().toDateString();
+    const todayActivities = allActivities.filter(a => {
+      const activityDate = new Date(a.createdAt).toDateString();
+      return activityDate === today;
     });
-
-    return activities;
+    
+    console.log(`📅 Today's activities: ${todayActivities.length} out of ${allActivities.length} total`);
+    return todayActivities;
   } catch (error) {
     console.error('Error fetching today activities:', error);
-    // Fallback: get all activities and filter client-side
-    const allActivities = await getActivitiesByCaregiver(caregiverId, 100);
-    const today = new Date().toDateString();
-    return allActivities.filter(a => new Date(a.createdAt).toDateString() === today);
+    return [];
   }
 };
 
 // Get activity statistics
 export const getActivityStats = async (caregiverId, startDate, endDate) => {
   try {
-    const activitiesRef = collection(db, ACTIVITIES_COLLECTION);
-    let q;
+    // Fetch all activities for the caregiver, then filter client-side
+    // This avoids complex index requirements while indexes are building
+    const allActivities = await getActivitiesByCaregiver(caregiverId, 500);
     
+    let activities = allActivities;
+    
+    // Filter by date range if provided
     if (startDate && endDate) {
-      q = query(
-        activitiesRef,
-        where('caregiverId', '==', caregiverId),
-        where('createdAt', '>=', Timestamp.fromDate(new Date(startDate))),
-        where('createdAt', '<=', Timestamp.fromDate(new Date(endDate)))
-      );
-    } else {
-      q = query(
-        activitiesRef,
-        where('caregiverId', '==', caregiverId)
-      );
+      const start = new Date(startDate).getTime();
+      const end = new Date(endDate).getTime();
+      
+      activities = allActivities.filter(a => {
+        const activityTime = new Date(a.createdAt).getTime();
+        return activityTime >= start && activityTime <= end;
+      });
     }
-
-    const querySnapshot = await getDocs(q);
-    const activities = [];
-    
-    querySnapshot.forEach((doc) => {
-      activities.push({ id: doc.id, ...doc.data() });
-    });
 
     // Calculate statistics
     const stats = {
@@ -287,6 +258,7 @@ export const getActivityStats = async (caregiverId, startDate, endDate) => {
       stats.averageQuality = ratedActivities.reduce((sum, a) => sum + a.qualityRating, 0) / ratedActivities.length;
     }
 
+    console.log(`📊 Stats calculated: ${activities.length} activities in date range`);
     return stats;
   } catch (error) {
     console.error('Error fetching activity stats:', error);
