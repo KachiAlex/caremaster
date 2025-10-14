@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ElderX - Quick Migration</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 20px;
+    }
+    .btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    .btn:hover {
+      background: #5568d3;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .log {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+    .success { color: #4ec9b0; }
+    .error { color: #f48771; }
+    .info { color: #9cdcfe; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔄 Quick Migration Tool</h1>
+    <p>This tool will migrate all users to use the standardized "role" field.</p>
+    
+    <div style="margin: 20px 0;">
+      <button class="btn" onclick="runMigration()" id="migrate-btn">
+        ▶️ Run Migration (No Login Required)
+      </button>
+      <button class="btn" onclick="checkStatus()">
+        🔍 Check Status
+      </button>
+    </div>
+    
+    <div class="log" id="log"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, getDocs, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCduLdivizija_H97E6H89_w2cGCMdQKvJRhg",
+      authDomain: "elderx-f5c2b.firebaseapp.com",
+      projectId: "elderx-f5c2b",
+      storageBucket: "elderx-f5c2b.firebasestorage.app",
+      messagingSenderId: "651818750609",
+      appId: "1:651818750609:web:20aa5e0c53a7ffac0b1a05",
+      measurementId: "G-18GBV8HJZL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const ROLES = {
+      SUPER_ADMIN: 'super-admin',
+      ADMIN: 'admin',
+      DOCTOR: 'doctor',
+      NURSE: 'nurse',
+      PHARMACIST: 'pharmacist',
+      CAREGIVER: 'caregiver',
+      CLIENT: 'client',
+      ELDERLY: 'elderly'
+    };
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+
+    function inferRole(userData) {
+      // Check for superadmin first
+      if (userData.email === 'superadmin@elderx.com') return 'super-admin';
+      
+      // Priority 1: Explicit role field
+      if (userData.role) return userData.role;
+      
+      // Priority 2: userType
+      if (userData.userType) {
+        if (userData.userType === 'elderly') return ROLES.ELDERLY;
+        return userData.userType;
+      }
+      
+      // Priority 3: type
+      if (userData.type) {
+        if (userData.type === 'elderly') return ROLES.ELDERLY;
+        return userData.type;
+      }
+      
+      // Priority 4: Infer from medicalQualification
+      if (userData.medicalQualification) {
+        const qual = userData.medicalQualification.toLowerCase();
+        if (qual.includes('doctor') || qual.includes('md')) return ROLES.DOCTOR;
+        if (qual.includes('nurse') || qual.includes('rn') || qual.includes('lpn')) return ROLES.NURSE;
+        if (qual.includes('pharmacist')) return ROLES.PHARMACIST;
+      }
+      
+      // Default based on context
+      if (userData.assignedCaregiver || userData.assignedDoctor) return ROLES.ELDERLY;
+      
+      return ROLES.CAREGIVER;
+    }
+
+    window.checkStatus = async function() {
+      try {
+        clearLog();
+        log('🔍 Checking migration status...', 'info');
+        
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        let total = 0;
+        let migrated = 0;
+        
+        usersSnapshot.forEach(doc => {
+          total++;
+          if (doc.data().roleMigrated) migrated++;
+        });
+        
+        log(`✅ Total users: ${total}`, 'info');
+        log(`✅ Migrated: ${migrated}`, 'success');
+        log(`⏳ Pending: ${total - migrated}`, 'info');
+        log(`📊 Progress: ${Math.round((migrated/total)*100)}%`, 'info');
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.runMigration = async function() {
+      if (!confirm('⚠️ This will update all user records. Continue?')) return;
+      
+      try {
+        clearLog();
+        document.getElementById('migrate-btn').disabled = true;
+        
+        log('🚀 Starting migration...', 'info');
+        
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        log(`📊 Found ${usersSnapshot.size} users`, 'info');
+        
+        let migrated = 0;
+        let skipped = 0;
+        let errors = 0;
+        
+        for (const docSnap of usersSnapshot.docs) {
+          const userData = docSnap.data();
+          
+          if (userData.roleMigrated) {
+            skipped++;
+            continue;
+          }
+          
+          try {
+            const inferredRole = inferRole(userData);
+            
+            await updateDoc(doc(db, 'users', docSnap.id), {
+              role: inferredRole,
+              roleMigrated: true,
+              roleMigratedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+            
+            log(`✅ ${userData.email || userData.name || docSnap.id} → ${inferredRole}`, 'success');
+            migrated++;
+          } catch (error) {
+            log(`❌ Failed: ${userData.email || docSnap.id} - ${error.message}`, 'error');
+            errors++;
+          }
+        }
+        
+        log('\n═══════════════════════════', 'info');
+        log(`✅ Migration Complete!`, 'success');
+        log(`Total: ${usersSnapshot.size}`, 'info');
+        log(`Migrated: ${migrated}`, 'success');
+        log(`Skipped: ${skipped}`, 'info');
+        log(`Errors: ${errors}`, errors > 0 ? 'error' : 'info');
+        log('═══════════════════════════', 'info');
+        
+        document.getElementById('migrate-btn').disabled = false;
+        
+      } catch (error) {
+        log(`❌ Migration failed: ${error.message}`, 'error');
+        document.getElementById('migrate-btn').disabled = false;
+      }
+    };
+  </script>
+</body>
+</html>
+

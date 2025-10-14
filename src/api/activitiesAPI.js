@@ -140,11 +140,11 @@ export const logActivity = async (activityData) => {
 export const getActivitiesByCaregiver = async (caregiverId, limitCount = 50) => {
   try {
     const activitiesRef = collection(db, ACTIVITIES_COLLECTION);
+    // Use simple query without orderBy to avoid index requirement
+    // We'll sort client-side instead
     const q = query(
       activitiesRef,
-      where('caregiverId', '==', caregiverId),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
+      where('caregiverId', '==', caregiverId)
     );
 
     const querySnapshot = await getDocs(q);
@@ -161,7 +161,18 @@ export const getActivitiesByCaregiver = async (caregiverId, limitCount = 50) => 
       });
     });
 
-    return activities;
+    // Sort client-side by createdAt descending
+    activities.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
+
+    // Apply limit client-side
+    const limitedActivities = activities.slice(0, limitCount);
+    
+    console.log(`📊 Loaded ${limitedActivities.length} activities (sorted client-side)`);
+    return limitedActivities;
   } catch (error) {
     console.error('Error fetching activities:', error);
     return [];
@@ -172,11 +183,10 @@ export const getActivitiesByCaregiver = async (caregiverId, limitCount = 50) => 
 export const getActivitiesByClient = async (clientId, limitCount = 50) => {
   try {
     const activitiesRef = collection(db, ACTIVITIES_COLLECTION);
+    // Use simple query without orderBy to avoid index requirement
     const q = query(
       activitiesRef,
-      where('clientId', '==', clientId),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
+      where('clientId', '==', clientId)
     );
 
     const querySnapshot = await getDocs(q);
@@ -191,7 +201,15 @@ export const getActivitiesByClient = async (clientId, limitCount = 50) => {
       });
     });
 
-    return activities;
+    // Sort client-side by createdAt descending
+    activities.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA;
+    });
+
+    // Apply limit client-side
+    return activities.slice(0, limitCount);
   } catch (error) {
     console.error('Error fetching activities by client:', error);
     return [];
