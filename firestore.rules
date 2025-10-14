@@ -333,9 +333,10 @@ service cloud.firestore {
       // Allow reads for:
       // - Admins
       // - Doctors/Caregivers (service providers)
+      // - Pharmacists (for pharmacy management)
       // - The patient who owns the record (by patientId)
       allow read, list: if request.auth != null && (
-        isAdmin() || isDoctor() || isCaregiver() ||
+        isAdmin() || isDoctor() || isCaregiver() || isPharmacist() ||
         (resource.data != null && resource.data.patientId == request.auth.uid)
       );
 
