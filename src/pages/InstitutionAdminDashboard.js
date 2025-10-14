@@ -135,6 +135,7 @@ const InstitutionAdminDashboard = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [messageSearchTerm, setMessageSearchTerm] = useState('');
   const [isInCall, setIsInCall] = useState(false);
   const [callType, setCallType] = useState(null); // 'voice' or 'video'
   const [localStream, setLocalStream] = useState(null);
@@ -1252,17 +1253,37 @@ const InstitutionAdminDashboard = () => {
       toast.info('Call ended');
     };
 
-    const displayConversations = conversations.length > 0 ? conversations : 
-      [...caregivers, ...clients, ...pharmacists].slice(0, 10).map(person => ({
+    // Combine all users from the platform for display
+    const allPlatformUsers = [
+      ...caregivers.map(c => ({ ...c, userType: 'caregiver' })),
+      ...clients.map(c => ({ ...c, userType: 'client' })),
+      ...pharmacists.map(p => ({ ...p, userType: 'pharmacist' }))
+    ];
+
+    // Create conversation list combining existing conversations with all platform users
+    const displayConversations = allPlatformUsers.map(person => {
+      // Check if there's an existing conversation with this user
+      const existingConv = conversations.find(conv => 
+        conv.participants?.includes(person.id) || conv.participants?.includes(person.userId)
+      );
+
+      if (existingConv) {
+        return existingConv;
+      }
+
+      // Create a potential conversation entry
+      return {
         id: person.id,
-        name: person.name || person.fullName,
+        name: person.name || person.fullName || person.email || 'Unknown User',
         avatar: person.avatar || null,
         lastMessage: 'Start a conversation',
         timestamp: new Date().toISOString(),
         unread: 0,
-        type: caregivers.includes(person) ? 'caregiver' : clients.includes(person) ? 'client' : 'pharmacist',
-        participants: [user.uid, person.id]
-      }));
+        type: person.userType,
+        participants: [user.uid, person.id],
+        isNew: true
+      };
+    });
 
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[calc(100vh-250px)]">
@@ -1271,43 +1292,94 @@ const InstitutionAdminDashboard = () => {
           <div className="w-80 border-r border-gray-200 flex flex-col">
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
-              <p className="text-sm text-gray-500 mt-1">{displayConversations.length} conversations</p>
+              <p className="text-sm text-gray-500 mt-1">{displayConversations.length} users available</p>
+              
+              {/* Search Input */}
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={messageSearchTerm || ''}
+                onChange={(e) => setMessageSearchTerm(e.target.value)}
+                className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
             
             <div className="flex-1 overflow-y-auto">
-              {displayConversations.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  onClick={() => {
-                    setSelectedConversation(conversation);
-                    const convId = conversation.conversationId || conversation.id;
-                    loadMessagesForConversation(convId);
-                  }}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                      {(conversation.name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-gray-900 truncate">{conversation.name || 'Unknown User'}</h3>
-                        {conversation.unread > 0 && (
-                          <span className="ml-2 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                            {conversation.unread}
-                          </span>
-                        )}
+              {displayConversations
+                .filter(conv => 
+                  !messageSearchTerm || 
+                  (conv.name || '').toLowerCase().includes(messageSearchTerm.toLowerCase()) ||
+                  (conv.type || '').toLowerCase().includes(messageSearchTerm.toLowerCase())
+                )
+                .map((conversation) => {
+                  const roleBadgeConfig = {
+                    caregiver: { bg: 'bg-green-100', text: 'text-green-800', label: 'Caregiver' },
+                    doctor: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Doctor' },
+                    nurse: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Nurse' },
+                    pharmacist: { bg: 'bg-indigo-100', text: 'text-indigo-800', label: 'Pharmacist' },
+                    client: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Client' },
+                    admin: { bg: 'bg-red-100', text: 'text-red-800', label: 'Admin' }
+                  };
+                  const badge = roleBadgeConfig[conversation.type] || roleBadgeConfig.client;
+
+                  return (
+                    <div
+                      key={conversation.id}
+                      onClick={() => {
+                        setSelectedConversation(conversation);
+                        const convId = conversation.conversationId || conversation.id;
+                        if (!conversation.isNew) {
+                          loadMessagesForConversation(convId);
+                        } else {
+                          setMessages([]);
+                        }
+                      }}
+                      className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                          {(conversation.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-sm font-medium text-gray-900 truncate">{conversation.name || 'Unknown User'}</h3>
+                            {conversation.unread > 0 && (
+                              <span className="bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
+                                {conversation.unread}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
+                              {badge.label}
+                            </span>
+                            {conversation.isNew && (
+                              <span className="text-xs text-gray-400 italic">New chat</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500 truncate mt-1">{conversation.lastMessage}</p>
+                          {!conversation.isNew && (
+                            <span className="text-xs text-gray-400 mt-1">
+                              {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-500 truncate mt-1">{conversation.lastMessage}</p>
-                      <span className="text-xs text-gray-400 mt-1">
-                        {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
                     </div>
-                  </div>
+                  );
+                })}
+              {displayConversations.filter(conv => 
+                !messageSearchTerm || 
+                (conv.name || '').toLowerCase().includes(messageSearchTerm.toLowerCase()) ||
+                (conv.type || '').toLowerCase().includes(messageSearchTerm.toLowerCase())
+              ).length === 0 && (
+                <div className="p-8 text-center text-gray-500">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p>No users found</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
