@@ -445,6 +445,63 @@ export const assignmentAPI = {
       logger.error('Error setting up client assignment subscription', { error, clientId });
       throw error;
     }
+  },
+
+  // Get assigned clients for a caregiver/pharmacist
+  getAssignedClients: async (caregiverId) => {
+    try {
+      logger.info('Fetching assigned clients', { caregiverId });
+
+      // Query assignments for this caregiver
+      const assignmentsQuery = query(
+        collection(db, ASSIGNMENTS_COLLECTION),
+        where('caregiverId', '==', caregiverId),
+        where('status', '==', 'active')
+      );
+
+      const assignmentsSnapshot = await getDocs(assignmentsQuery);
+      
+      if (assignmentsSnapshot.empty) {
+        logger.info('No assignments found for caregiver', { caregiverId });
+        return [];
+      }
+
+      // Get all unique client IDs
+      const clientIds = new Set();
+      assignmentsSnapshot.forEach((doc) => {
+        const assignment = doc.data();
+        if (assignment.clientId) {
+          clientIds.add(assignment.clientId);
+        }
+      });
+
+      // Fetch client details
+      const clients = [];
+      for (const clientId of clientIds) {
+        try {
+          const clientDoc = await getDoc(doc(db, 'clients', clientId));
+          if (clientDoc.exists()) {
+            clients.push({
+              id: clientDoc.id,
+              ...clientDoc.data()
+            });
+          }
+        } catch (error) {
+          logger.warn('Error fetching client details', { clientId, error });
+        }
+      }
+
+      logger.info('Fetched assigned clients', { 
+        caregiverId, 
+        assignmentCount: assignmentsSnapshot.size,
+        clientCount: clients.length 
+      });
+
+      return clients;
+    } catch (error) {
+      logger.error('Error fetching assigned clients', { error, caregiverId });
+      throw error;
+    }
   }
 };
 

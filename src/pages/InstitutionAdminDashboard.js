@@ -666,6 +666,34 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
+  // Delete pharmacist
+  const handleDeletePharmacist = async (pharmacist) => {
+    if (!window.confirm(`Are you sure you want to delete pharmacist ${pharmacist.name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      console.log('🗑️ Deleting pharmacist:', pharmacist.id);
+      
+      // Delete from Firestore
+      const userRef = doc(db, 'users', pharmacist.id);
+      await updateDoc(userRef, {
+        status: 'deleted',
+        active: false,
+        deletedAt: new Date().toISOString(),
+        deletedBy: user?.uid
+      });
+      
+      toast.success(`Pharmacist ${pharmacist.name} has been deleted successfully`);
+      
+      // Reload dashboard data
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error deleting pharmacist:', error);
+      toast.error('Failed to delete pharmacist');
+    }
+  };
+
   // Assignment Functions
   const handleCreateAssignment = async (formData) => {
     try {
@@ -1714,6 +1742,14 @@ const InstitutionAdminDashboard = () => {
                                 </button>
                               </>
                             )}
+                            
+                            <button 
+                              onClick={() => handleDeletePharmacist(pharmacist)}
+                              className="text-red-600 hover:text-red-900 inline-flex items-center px-2 py-1 hover:bg-red-50 rounded"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>

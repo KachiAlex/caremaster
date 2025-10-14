@@ -14,7 +14,8 @@ const InstitutionPharmacyDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   // Check if user is a pharmacist
-  const isPharmacist = userProfile?.userType === 'pharmacist' || 
+  const isPharmacist = userProfile?.role === 'pharmacist' ||
+                       userProfile?.userType === 'pharmacist' || 
                        userProfile?.type === 'pharmacist' ||
                        userProfile?.medicalQualification === 'pharmacist';
 
