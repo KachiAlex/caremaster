@@ -98,6 +98,23 @@ const PharmacyTab = ({
       setPrescriptions(data);
       console.log('✅ Pharmacy - Prescriptions loaded:', data.length);
       
+      // Debug: Log prescription details
+      data.forEach((prescription, index) => {
+        console.log(`🔍 Prescription ${index + 1}:`, {
+          id: prescription.id,
+          prescriptionNumber: prescription.prescriptionNumber,
+          diagnosis: prescription.diagnosis,
+          medicationsCount: prescription.medications?.length || 0,
+          medications: prescription.medications?.map(med => ({
+            medicationName: med.medicationName,
+            dosage: med.dosage,
+            frequency: med.frequency,
+            duration: med.duration,
+            quantity: med.quantity
+          }))
+        });
+      });
+      
       // Run safety check when prescriptions are loaded
       if (data.length > 0 && selectedClient) {
         runSafetyCheck(data);
@@ -112,8 +129,26 @@ const PharmacyTab = ({
 
   const runSafetyCheck = async (prescriptionsList) => {
     try {
+      // Transform prescription data to match drug interaction service format
+      const medications = prescriptionsList.flatMap(prescription => 
+        prescription.medications?.map(med => ({
+          name: med.medicationName, // Transform medicationName to name
+          dosage: med.dosage,
+          frequency: med.frequency,
+          duration: med.duration,
+          quantity: med.quantity,
+          instructions: med.instructions,
+          route: med.route,
+          // Include prescription context
+          prescriptionId: prescription.id,
+          prescriptionNumber: prescription.prescriptionNumber
+        })) || []
+      );
+
+      console.log('🔍 Safety check - Transformed medications:', medications);
+
       const check = await drugInteractionService.comprehensiveSafetyCheck(
-        prescriptionsList,
+        medications,
         selectedClient?.allergies,
         selectedClient?.medicalConditions
       );
