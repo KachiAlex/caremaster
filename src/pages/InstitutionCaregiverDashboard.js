@@ -2054,40 +2054,101 @@ const InstitutionCaregiverDashboard = () => {
 
         {/* Today's Timeline */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Today's Timeline</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Today's Timeline</h2>
+            <div className="text-sm text-gray-500">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            </div>
+          </div>
           
           <div className="space-y-4">
             {todaySchedule.length > 0 ? (
-              todaySchedule.map((item, index) => (
-                <div key={item.id} className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-20 text-right">
-                    <p className="text-sm font-bold text-gray-900">
-                      {new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 flex flex-col items-center">
-                    <div className={`h-3 w-3 rounded-full ${item.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                    {index < todaySchedule.length - 1 && <div className="w-0.5 h-12 bg-gray-300"></div>}
-                  </div>
-                  <div className="flex-1 pb-8">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="font-semibold text-gray-900">{item.title}</p>
-                      <p className="text-sm text-gray-600 mt-1">{item.client}</p>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${
-                        item.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                        item.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {item.status}
-                      </span>
+              todaySchedule.map((item, index) => {
+                const itemTime = item.time ? new Date(item.time) : null;
+                const isValidTime = itemTime && !isNaN(itemTime.getTime());
+                
+                return (
+                  <div key={item.id} className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-24 text-right">
+                      <p className="text-lg font-bold text-gray-900">
+                        {isValidTime ? itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No time'}
+                      </p>
+                      {isValidTime && (
+                        <p className="text-xs text-gray-500">
+                          {itemTime.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 flex flex-col items-center">
+                      <div className={`h-4 w-4 rounded-full border-2 ${
+                        item.status === 'completed' ? 'bg-green-500 border-green-600' : 
+                        item.status === 'in_progress' ? 'bg-blue-500 border-blue-600' :
+                        'bg-white border-gray-400'
+                      }`}></div>
+                      {index < todaySchedule.length - 1 && <div className="w-0.5 flex-1 min-h-[60px] bg-gray-300"></div>}
+                    </div>
+                    <div className="flex-1 pb-6">
+                      <div className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-semibold text-gray-900">{item.title}</p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              <User className="h-3 w-3 inline mr-1" />
+                              {item.client || 'Client'}
+                            </p>
+                          </div>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                            item.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                            item.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                            item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {item.status || 'pending'}
+                          </span>
+                        </div>
+                        
+                        {/* Task Type Badge */}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                            item.type === 'appointment' ? 'bg-blue-50 text-blue-700' :
+                            item.type === 'task' ? 'bg-purple-50 text-purple-700' :
+                            'bg-indigo-50 text-indigo-700'
+                          }`}>
+                            {item.type === 'appointment' && <Calendar className="h-3 w-3 mr-1" />}
+                            {item.type === 'task' && <Activity className="h-3 w-3 mr-1" />}
+                            {item.type === 'assignment' && <FileText className="h-3 w-3 mr-1" />}
+                            {item.type || 'Task'}
+                          </span>
+                          
+                          {item.priority && (
+                            <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                              item.priority === 'urgent' ? 'bg-red-50 text-red-700' :
+                              item.priority === 'high' ? 'bg-orange-50 text-orange-700' :
+                              item.priority === 'medium' ? 'bg-yellow-50 text-yellow-700' :
+                              'bg-gray-50 text-gray-700'
+                            }`}>
+                              {item.priority === 'urgent' && '🚨 '}
+                              {item.priority}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Additional Details */}
+                        {item.description && (
+                          <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center text-gray-400 py-12">
                 <Calendar className="h-12 w-12 mx-auto mb-2" />
-                <p>No scheduled activities for today</p>
+                <p className="text-lg font-medium">No scheduled activities for today</p>
+                <p className="text-sm mt-1">Tasks and appointments will appear here</p>
               </div>
             )}
           </div>

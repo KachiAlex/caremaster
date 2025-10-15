@@ -53,6 +53,7 @@ import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notifi
 import { institutionAPI } from '../api/institutionAPI';
 import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
 import InventoryBillingTab from '../components/InventoryBillingTab';
+import CallInterface from '../components/CallInterface';
 import { toast } from 'react-toastify';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages } from '../api/messagesAPI';
 import CallService from '../services/callService';
@@ -1540,32 +1541,37 @@ const InstitutionAdminDashboard = () => {
       }
     };
 
-    const endCall = async () => {
+    const handleEndCall = async () => {
       if (activeCall) {
         try {
           const duration = elapsedSeconds || 0;
           await callService.endCall(activeCall.callId, duration);
+          
+          // Clean up WebRTC
+          if (webrtc) {
+            webrtc.endCall();
+          }
+          
+          // Clean up streams
+          if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+          }
+          
+          // Clean up signaling listener
+          if (activeCall.unsubscribeSignaling) {
+            activeCall.unsubscribeSignaling();
+          }
+          
+          setActiveCall(null);
+          setLocalStream(null);
+          setRemoteStream(null);
+          setIsInCall(false);
           console.log('✅ Call ended through service');
+          toast.info('Call ended');
         } catch (error) {
           console.error('Error ending call:', error);
         }
       }
-      
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        setLocalStream(null);
-      }
-      if (remoteStream) {
-        remoteStream.getTracks().forEach(track => track.stop());
-        setRemoteStream(null);
-      }
-      setIsInCall(false);
-      setCallType(null);
-      setActiveCall(null);
-      if (timerRef.current) clearInterval(timerRef.current);
-      setElapsedSeconds(0);
-      setCallStartAt(null);
-      toast.info('Call ended');
     };
 
     // Combine caregivers and pharmacists for display (excluding clients)
@@ -3709,6 +3715,25 @@ const InstitutionAdminDashboard = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Active Call Interface */}
+      {activeCall && (
+        <CallInterface
+          isOpen={!!activeCall}
+          onClose={handleEndCall}
+          callType={activeCall.callType}
+          participantInfo={{
+            id: activeCall.participantId,
+            name: activeCall.participantName,
+            role: 'caregiver'
+          }}
+          isIncoming={false}
+          externalWebrtcService={webrtc}
+          externalCallState={callConnectionState}
+          localStream={localStream}
+          remoteStream={remoteStream}
+        />
       )}
     </div>
   );

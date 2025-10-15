@@ -246,6 +246,12 @@ class WebRTCService {
   // Handle ICE candidate
   async handleIceCandidate(candidate) {
     try {
+      // Skip null candidates or end-of-candidates signals
+      if (!candidate || !candidate.candidate) {
+        console.log('⏭️ Skipping null/end-of-candidates signal');
+        return true;
+      }
+      
       // If candidate is already an RTCIceCandidate object, use it directly
       // If it's a plain object from Firestore, create RTCIceCandidate from it
       let iceCandidate = candidate;
@@ -265,7 +271,8 @@ class WebRTCService {
       return true;
     } catch (error) {
       console.error('Error handling ICE candidate:', error);
-      throw error;
+      // Don't throw - some ICE candidates may fail, but connection can still work
+      return false;
     }
   }
 
