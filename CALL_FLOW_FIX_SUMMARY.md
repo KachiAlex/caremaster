@@ -139,8 +139,16 @@ The video/voice call flow from Admin to Doctor was not working despite showing s
 ## Files Modified
 1. `src/pages/InstitutionAdminDashboard.js`
 2. `src/pages/ServiceProviderDashboard.js`
-3. `src/api/consultationsAPI.js` (pre-existing changes)
-4. `src/api/diagnosticsAPI.js` (pre-existing changes)
+3. `src/pages/InstitutionCaregiverDashboard.js` (doctors in institution portal)
+4. `src/api/consultationsAPI.js` (pre-existing changes)
+5. `src/api/diagnosticsAPI.js` (pre-existing changes)
+
+## Update: Multiple Doctor Dashboards
+After initial implementation, we discovered doctors can access the system through two different dashboards:
+- `ServiceProviderDashboard.js` - Standalone service provider portal
+- `InstitutionCaregiverDashboard.js` - Institution-based portal (what most doctors use)
+
+The call listener functionality has been added to **both** dashboards to ensure all doctors can receive calls regardless of which portal they're using.
 
 ## Date
 October 15, 2025
