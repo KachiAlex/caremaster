@@ -504,58 +504,65 @@ const InstitutionCaregiverDashboard = () => {
           }
         }
         
-        // Load today's schedule (appointments + tasks + assignments)
-        const [todaysAppointments, todaysTasks, todaysAssignments] = await Promise.all([
+        // Load schedule for the entire week (appointments + tasks + assignments)
+        const [allAppointments, allTasks, allAssignments] = await Promise.all([
           getTodaysAppointments(user?.uid, 'caregiver').catch(() => []),
           getTodayTasks(user?.uid).catch(() => []),
           assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
         ]);
         
-        // Filter assignments for today (by dueDate)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        const todaysAdminAssignments = todaysAssignments.filter(assignment => {
-          if (!assignment.dueDate) return false;
-          const dueDate = new Date(assignment.dueDate);
-          return dueDate >= today && dueDate < tomorrow;
+        console.log('📊 Schedule data loaded:', {
+          appointments: allAppointments,
+          tasks: allTasks,
+          assignments: allAssignments
         });
         
-        // Combine appointments, tasks, and admin-created assignments for today's schedule
+        // Don't filter by today - keep all assignments for the week view
+        // Assignments already have dueDate and dueTime set by admin
+        const allAdminAssignments = allAssignments;
+        
+        console.log('📅 All assignments (unfiltered):', allAdminAssignments);
+        
+        // Combine appointments, tasks, and admin-created assignments for the full schedule
         const combinedSchedule = [
-          ...todaysAppointments.map(apt => ({
+          ...allAppointments.map(apt => ({
             id: apt.id,
             type: 'appointment',
             title: apt.title || 'Appointment',
             time: apt.scheduledTime,
             client: apt.clientName || 'Client',
-            status: apt.status || 'scheduled'
+            status: apt.status || 'scheduled',
+            description: apt.description
           })),
-          ...todaysTasks.map(task => ({
+          ...allTasks.map(task => ({
             id: task.id,
             type: 'task',
             title: task.title,
             time: task.scheduledTime,
             client: task.clientName || 'Client',
-            status: task.status || 'pending'
+            status: task.status || 'pending',
+            description: task.description
           })),
-          ...todaysAdminAssignments.map(assignment => ({
+          ...allAdminAssignments.map(assignment => ({
             id: assignment.id,
             type: 'assignment',
             title: assignment.title || 'Assigned Task',
             time: assignment.dueTime ? `${assignment.dueDate} ${assignment.dueTime}` : assignment.dueDate,
             client: assignment.clientName || 'Client',
             status: assignment.status || 'pending',
-            priority: assignment.priority
+            priority: assignment.priority,
+            description: assignment.description,
+            instructions: assignment.instructions
           }))
         ];
         
         // Sort by time
         combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
+        
+        console.log('📅 Combined schedule (full week):', combinedSchedule);
+        
         setTodaySchedule(combinedSchedule);
-        console.log(`📅 Today's schedule: ${combinedSchedule.length} items (${todaysAppointments.length} appointments, ${todaysTasks.length} tasks, ${todaysAdminAssignments.length} assignments)`);
+        console.log(`📅 Full schedule loaded: ${combinedSchedule.length} items (${allAppointments.length} appointments, ${allTasks.length} tasks, ${allAdminAssignments.length} assignments)`);
         
         // Load recent tasks from both careTasks AND clientAssignments collections
         let loadedRecentTasks = [];
@@ -1988,6 +1995,8 @@ const InstitutionCaregiverDashboard = () => {
 
   // Schedule Tab Renderer
   const renderScheduleTab = () => {
+    const [selectedDate, setSelectedDate] = React.useState(new Date());
+    
     const currentShift = {
       type: 'Day Shift',
       start: '07:00',
@@ -1998,6 +2007,22 @@ const InstitutionCaregiverDashboard = () => {
 
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const today = new Date().getDay();
+    
+    // Get tasks for the selected date
+    const getTasksForDate = (date) => {
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
+      
+      return todaySchedule.filter(item => {
+        if (!item.time) return false;
+        const itemDate = new Date(item.time);
+        return itemDate >= dayStart && itemDate <= dayEnd;
+      });
+    };
+    
+    const selectedDayTasks = getTasksForDate(selectedDate);
     
     return (
       <div className="space-y-6">
@@ -2036,34 +2061,77 @@ const InstitutionCaregiverDashboard = () => {
           </div>
           
           <div className="grid grid-cols-7 gap-2">
-            {daysOfWeek.map((day, index) => (
-              <div key={day} className={`text-center p-4 rounded-lg ${index + 1 === today ? 'bg-blue-100 border-2 border-blue-600' : 'bg-gray-50'}`}>
-                <p className="text-sm font-bold text-gray-900">{day}</p>
-                <p className="text-xs text-gray-600 mt-1">{new Date(Date.now() + (index - today + 1) * 86400000).getDate()}</p>
-                {index + 1 === today && (
-                  <div className="mt-2 space-y-1">
-                    <div className="text-xs bg-green-500 text-white rounded px-2 py-1">08:00 Meds</div>
-                    <div className="text-xs bg-blue-500 text-white rounded px-2 py-1">10:00 Vitals</div>
-                    <div className="text-xs bg-purple-500 text-white rounded px-2 py-1">14:00 Care</div>
-                  </div>
-                )}
-              </div>
-            ))}
+            {daysOfWeek.map((day, index) => {
+              const dayDate = new Date(Date.now() + (index - today + 1) * 86400000);
+              const dayStart = new Date(dayDate);
+              dayStart.setHours(0, 0, 0, 0);
+              const dayEnd = new Date(dayDate);
+              dayEnd.setHours(23, 59, 59, 999);
+              
+              // Filter schedule items for this day
+              const dayItems = getTasksForDate(dayDate);
+              
+              // Check if this day is selected
+              const isSelected = selectedDate.toDateString() === dayDate.toDateString();
+              const isToday = index + 1 === today;
+              
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDate(dayDate)}
+                  className={`text-center p-4 rounded-lg transition-all cursor-pointer hover:shadow-md ${
+                    isSelected ? 'bg-indigo-100 border-2 border-indigo-600 ring-2 ring-indigo-300' :
+                    isToday ? 'bg-blue-100 border-2 border-blue-600' : 
+                    'bg-gray-50 hover:bg-gray-100'
+                  }`}
+                >
+                  <p className="text-sm font-bold text-gray-900">{day}</p>
+                  <p className="text-xs text-gray-600 mt-1">{dayDate.getDate()}</p>
+                  {dayItems.length > 0 ? (
+                    <div className="mt-2 space-y-1">
+                      {dayItems.slice(0, 3).map((item, idx) => {
+                        const itemTime = new Date(item.time);
+                        return (
+                          <div 
+                            key={idx}
+                            className={`text-xs text-white rounded px-2 py-1 truncate ${
+                              item.type === 'appointment' ? 'bg-blue-500' :
+                              item.type === 'task' ? 'bg-green-500' :
+                              'bg-purple-500'
+                            }`}
+                            title={item.title}
+                          >
+                            {itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} {item.title.substring(0, 10)}
+                          </div>
+                        );
+                      })}
+                      {dayItems.length > 3 && (
+                        <div className="text-xs text-gray-600">+{dayItems.length - 3} more</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-xs text-gray-400">No tasks</div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Today's Timeline */}
+        {/* Selected Day's Timeline */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Today's Timeline</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              {selectedDate.toDateString() === new Date().toDateString() ? "Today's Timeline" : "Schedule Timeline"}
+            </h2>
             <div className="text-sm text-gray-500">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
           
           <div className="space-y-4">
-            {todaySchedule.length > 0 ? (
-              todaySchedule.map((item, index) => {
+            {selectedDayTasks.length > 0 ? (
+              selectedDayTasks.map((item, index) => {
                 const itemTime = item.time ? new Date(item.time) : null;
                 const isValidTime = itemTime && !isNaN(itemTime.getTime());
                 
@@ -2147,7 +2215,12 @@ const InstitutionCaregiverDashboard = () => {
             ) : (
               <div className="text-center text-gray-400 py-12">
                 <Calendar className="h-12 w-12 mx-auto mb-2" />
-                <p className="text-lg font-medium">No scheduled activities for today</p>
+                <p className="text-lg font-medium">
+                  {selectedDate.toDateString() === new Date().toDateString() 
+                    ? "No scheduled activities for today" 
+                    : `No scheduled activities for ${selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
+                  }
+                </p>
                 <p className="text-sm mt-1">Tasks and appointments will appear here</p>
               </div>
             )}

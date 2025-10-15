@@ -1,8 +1,8 @@
 // ElderX Service Worker for PWA functionality
-const CACHE_NAME = 'elderx-v1.0.4';
-const STATIC_CACHE = 'elderx-static-v5';
-const DYNAMIC_CACHE = 'elderx-dynamic-v5';
-const API_CACHE = 'elderx-api-v5';
+const CACHE_NAME = 'elderx-v1.0.5';
+const STATIC_CACHE = 'elderx-static-v6';
+const DYNAMIC_CACHE = 'elderx-dynamic-v6';
+const API_CACHE = 'elderx-api-v6';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
