@@ -464,8 +464,8 @@ service cloud.firestore {
         isAdmin() || 
         isCaregiver() || 
         isDoctor() ||
-        resource.data.clientId == request.auth.uid ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'pharmacist'
+        isPharmacist() ||
+        resource.data.clientId == request.auth.uid
       );
       allow create: if request.auth != null && (
         isAdmin() || 
@@ -474,7 +474,7 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         isAdmin() || 
         isDoctor() ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'pharmacist'
+        isPharmacist()
       );
       allow delete: if request.auth != null && (
         isAdmin() || 
@@ -488,7 +488,7 @@ service cloud.firestore {
         isAdmin() || 
         isCaregiver() || 
         isDoctor() ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'pharmacist'
+        isPharmacist()
       );
       allow create: if request.auth != null && (
         isAdmin() || 
@@ -497,7 +497,7 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         isAdmin() || 
         isDoctor() ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'pharmacist'
+        isPharmacist()
       );
       allow delete: if request.auth != null && (
         isAdmin() || 
