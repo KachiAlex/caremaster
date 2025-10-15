@@ -1964,6 +1964,21 @@ const InstitutionAdminDashboard = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Notification Bell */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative flex items-center px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
+
           <button
             onClick={() => navigate(`/onboard?institution=${effectiveInstitutionId}`)}
             className="flex items-center px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
@@ -3563,6 +3578,107 @@ const InstitutionAdminDashboard = () => {
           onUpdate={handleInstitutionLinkUpdate}
           onClose={() => setShowLinkCustomizer(false)}
         />
+      )}
+
+      {/* Notifications Dropdown */}
+      {showNotifications && (
+        <div className="fixed top-20 right-4 w-96 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 max-h-[600px] overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-indigo-50">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-indigo-600" />
+              <h3 className="font-semibold text-gray-900">Notifications</h3>
+              {unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  Mark all read
+                </button>
+              )}
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="p-8 text-center">
+                <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No notifications yet</p>
+                <p className="text-sm text-gray-400 mt-1">You'll be notified of important updates here</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`p-4 cursor-pointer transition-colors ${
+                      notification.read
+                        ? 'bg-white hover:bg-gray-50'
+                        : 'bg-blue-50 hover:bg-blue-100'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-full ${
+                        notification.priority === 'high' || notification.priority === 'urgent'
+                          ? 'bg-red-100'
+                          : notification.priority === 'medium'
+                          ? 'bg-yellow-100'
+                          : 'bg-blue-100'
+                      }`}>
+                        {notification.type === 'pharmacist_prescription_update' ? (
+                          <Pill className={`h-4 w-4 ${
+                            notification.priority === 'high' ? 'text-red-600' : 'text-blue-600'
+                          }`} />
+                        ) : notification.type === 'doctor_consultation' ? (
+                          <FileText className="h-4 w-4 text-blue-600" />
+                        ) : notification.type === 'diagnostic_test_ordered' || notification.type === 'diagnostic_results_uploaded' ? (
+                          <Activity className="h-4 w-4 text-yellow-600" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-gray-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <p className="font-medium text-gray-900 text-sm">
+                            {notification.title}
+                          </p>
+                          {!notification.read && (
+                            <div className="h-2 w-2 bg-blue-600 rounded-full flex-shrink-0 mt-1"></div>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                          {notification.message}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Clock className="h-3 w-3 text-gray-400" />
+                          <p className="text-xs text-gray-400">
+                            {notification.createdAt?.toDate ? 
+                              notification.createdAt.toDate().toLocaleString() : 
+                              new Date(notification.createdAt).toLocaleString()
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
