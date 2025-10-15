@@ -10,7 +10,7 @@ const STATIC_ASSETS = [
   '/',
   '/offline.html',
   '/manifest.json',
-  '/icons/icon-192.png'
+  '/icons/icon-192x192.png'
 ];
 
 // API endpoints to cache

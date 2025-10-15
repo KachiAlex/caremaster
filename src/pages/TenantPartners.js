@@ -58,16 +58,18 @@ const TenantPartners = () => {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    // For now, we’ll list a few institutions by reading slugs/domains example.
-    // In a full implementation, we’d query the institutions collection (requires read security rules).
-    // Here we show placeholders and rely on admin-prepared links when clicked.
     (async () => {
       try {
-        // Placeholder sample partners; swap for a query if allowed.
-        const base = window.location.origin;
-        setPartners([
-          { id: 'YlRg0VHMK9BrvPQuYXqm', name: 'Bulah Health Care', city: 'Lagos', logo: null },
-        ]);
+        const { collection, getDocs, query, orderBy, limit } = await import('firebase/firestore');
+        const { db } = await import('../firebase/config');
+        const ref = collection(db, 'institutions');
+        const q = query(ref, orderBy('name', 'asc'), limit(50));
+        const snap = await getDocs(q);
+        const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setPartners(rows);
+      } catch (e) {
+        console.warn('Could not load institutions; falling back to sample');
+        setPartners([{ id: 'YlRg0VHMK9BrvPQuYXqm', name: 'Bulah Health Care' }]);
       } finally {
         setLoading(false);
       }
@@ -75,8 +77,7 @@ const TenantPartners = () => {
   }, []);
 
   const goToPortals = (id) => {
-    // Show portal choices; for now navigate to admin; the portal switcher also exists in dashboards.
-    navigate(`/tenant/${id}`);
+    navigate(`/institution?institution=${encodeURIComponent(id)}`);
   };
 
   return (
