@@ -261,10 +261,21 @@ class WebRTCService {
     }
 
     try {
+      // Serialize RTCIceCandidate if present
+      let serializedData = data;
+      if (type === 'ice-candidate' && data.candidate) {
+        serializedData = {
+          candidate: data.candidate.candidate,
+          sdpMLineIndex: data.candidate.sdpMLineIndex,
+          sdpMid: data.candidate.sdpMid,
+          usernameFragment: data.candidate.usernameFragment
+        };
+      }
+      
       await addDoc(collection(db, 'signaling'), {
         callId: this.callId,
         type: type,
-        data: data,
+        data: serializedData,
         from: this.getCurrentUserId(),
         timestamp: serverTimestamp()
       });

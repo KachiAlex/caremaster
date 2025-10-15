@@ -627,6 +627,16 @@ service cloud.firestore {
       allow write: if isAdmin() || (request.auth != null && request.auth.uid == pharmacistId);
     }
     
+    // Signaling collection - for WebRTC call signaling
+    match /signaling/{signalingId} {
+      // Allow authenticated users to read signaling messages for their calls
+      allow read, list: if request.auth != null;
+      // Allow authenticated users to create signaling messages for their calls
+      allow create: if request.auth != null;
+      // Allow users to delete their own signaling messages (cleanup)
+      allow delete: if request.auth != null && resource.data.from == request.auth.uid;
+    }
+    
     // Client activities collection - comprehensive logging
     match /clientActivities/{activityId} {
       allow read, list: if request.auth != null && (

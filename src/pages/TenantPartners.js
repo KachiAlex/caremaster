@@ -123,9 +123,9 @@ const TenantPartners = () => {
                 <div className="text-sm text-gray-600 flex-1">
                   Secure, role-based portals:
                   <div className="mt-2 space-x-2">
-                    <button onClick={()=>navigate(`/institution-admin/dashboard?institution=${encodeURIComponent(p.id)}`)} className="px-2 py-1 rounded bg-purple-50 text-purple-700 hover:bg-purple-100 inline-flex items-center text-xs"><Shield className="h-3 w-3 mr-1"/> Admin</button>
-                    <button onClick={()=>navigate(`/institution-caregiver/dashboard?institution=${encodeURIComponent(p.id)}`)} className="px-2 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100 inline-flex items-center text-xs"><Stethoscope className="h-3 w-3 mr-1"/> Caregiver</button>
-                    <button onClick={()=>navigate(`/institution-caregiver/dashboard?institution=${encodeURIComponent(p.id)}#pharmacy`)} className="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 inline-flex items-center text-xs"><Pill className="h-3 w-3 mr-1"/> Pharmacist</button>
+                    <a href={`${window.location.origin}/institution-admin/dashboard?institution=${encodeURIComponent(p.id)}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded bg-purple-50 text-purple-700 hover:bg-purple-100 inline-flex items-center text-xs"><Shield className="h-3 w-3 mr-1"/> Admin</a>
+                    <a href={`${window.location.origin}/institution-caregiver/dashboard?institution=${encodeURIComponent(p.id)}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100 inline-flex items-center text-xs"><Stethoscope className="h-3 w-3 mr-1"/> Caregiver</a>
+                    <a href={`${window.location.origin}/institution-caregiver/dashboard?institution=${encodeURIComponent(p.id)}#pharmacy`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 inline-flex items-center text-xs"><Pill className="h-3 w-3 mr-1"/> Pharmacist</a>
                   </div>
                 </div>
                 <div className="pt-4">
