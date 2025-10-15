@@ -16,12 +16,14 @@ const PrescriptionsTabContent = ({
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending Verification' },
-      verified: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Verified' },
+      active: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Active' },
       dispensed: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Dispensed' },
-      completed: { bg: 'bg-green-100', text: 'text-green-800', label: 'Completed' }
+      completed: { bg: 'bg-green-100', text: 'text-green-800', label: 'Completed' },
+      // Legacy status support
+      pending: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Active' },
+      verified: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Active' }
     };
-    const config = statusConfig[status] || statusConfig.pending;
+    const config = statusConfig[status] || statusConfig.active;
     return (
       <span className={`px-3 py-1 ${config.bg} ${config.text} rounded-full text-xs font-semibold`}>
         {config.label}

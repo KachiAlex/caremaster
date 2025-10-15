@@ -37,11 +37,9 @@ export const createPrescription = async (prescriptionData) => {
       prescriptionDate: prescriptionData.prescriptionDate || new Date().toISOString(),
       diagnosis: prescriptionData.diagnosis || '',
       notes: prescriptionData.notes || '',
-      status: 'pending', // pending, verified, dispensed, completed
+      status: 'active', // active, dispensed, completed
       totalItems: prescriptionData.medications?.length || 0,
       totalCost: 0, // To be updated by pharmacist
-      verifiedBy: null,
-      verifiedAt: null,
       dispensedBy: null,
       dispensedAt: null,
       createdAt: serverTimestamp(),
@@ -183,14 +181,14 @@ export const getPrescriptionItems = async (prescriptionId) => {
   }
 };
 
-// Get prescriptions for pharmacist (pending verification)
+// Get active prescriptions for pharmacist
 export const getPendingPrescriptions = async (institutionId) => {
   try {
     const prescriptionsRef = collection(db, PRESCRIPTIONS_COLLECTION);
     const q = query(
       prescriptionsRef,
       where('institutionId', '==', institutionId),
-      where('status', 'in', ['pending', 'verified']),
+      where('status', 'in', ['active', 'dispensed']),
       orderBy('createdAt', 'desc')
     );
 

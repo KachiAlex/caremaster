@@ -32,6 +32,10 @@
         "destination": "/update-jaypharm.html"
       },
       {
+        "source": "check-assignments.html",
+        "destination": "/check-assignments.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
