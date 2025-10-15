@@ -25,8 +25,10 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
   const [loading, setLoading] = useState(true);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showInvoiceViewModal, setShowInvoiceViewModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [viewingInvoice, setViewingInvoice] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Item form data
@@ -179,6 +181,174 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
       console.error('Error updating invoice status:', error);
       toast.error('Failed to update invoice status');
     }
+  };
+
+  const handleViewInvoice = (invoice) => {
+    setViewingInvoice(invoice);
+    setShowInvoiceViewModal(true);
+  };
+
+  const handleDownloadInvoice = async (invoice) => {
+    try {
+      // Create a printable HTML version
+      const printWindow = window.open('', '_blank');
+      const invoiceHTML = generateInvoiceHTML(invoice);
+      
+      printWindow.document.write(invoiceHTML);
+      printWindow.document.close();
+      
+      // Trigger print dialog which allows saving as PDF
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+      
+      toast.success('Invoice opened for download');
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast.error('Failed to download invoice');
+    }
+  };
+
+  const generateInvoiceHTML = (invoice) => {
+    const formatCurrency = (amount) => `₦${amount?.toLocaleString() || '0'}`;
+    const formatDate = (date) => {
+      if (!date) return 'N/A';
+      const d = date.toDate ? date.toDate() : new Date(date);
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    };
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Invoice ${invoice.invoiceNumber}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+            .invoice { max-width: 800px; margin: 0 auto; }
+            .header { background: #2563eb; color: white; padding: 30px; margin-bottom: 30px; }
+            .header h1 { font-size: 32px; margin-bottom: 10px; }
+            .header p { opacity: 0.9; }
+            .invoice-info { display: flex; justify-between; margin-bottom: 30px; }
+            .invoice-info div { flex: 1; }
+            .invoice-info h3 { font-size: 14px; color: #666; margin-bottom: 10px; text-transform: uppercase; }
+            .invoice-info p { margin: 5px 0; }
+            .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+            .items-table th { background: #f3f4f6; padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; }
+            .items-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+            .totals { margin-left: auto; width: 300px; margin-top: 20px; }
+            .totals tr td { padding: 8px 12px; }
+            .totals tr:last-child { font-weight: bold; font-size: 18px; border-top: 2px solid #333; }
+            .status { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+            .status.paid { background: #d1fae5; color: #065f46; }
+            .status.pending { background: #fef3c7; color: #92400e; }
+            .status.cancelled { background: #fee2e2; color: #991b1b; }
+            .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #666; font-size: 12px; }
+            @media print { body { padding: 20px; } }
+          </style>
+        </head>
+        <body>
+          <div class="invoice">
+            <div class="header">
+              <h1>ElderX Healthcare</h1>
+              <p>Professional Healthcare Services & Elderly Care</p>
+              <p style="margin-top: 15px; font-size: 14px;">📍 Lagos, Nigeria | 📞 +234 800 ELDERX | ✉️ billing@elderx.com</p>
+            </div>
+
+            <div style="text-align: right; margin-bottom: 20px;">
+              <h2 style="font-size: 24px; color: #2563eb;">INVOICE</h2>
+              <p style="font-size: 18px; font-weight: 600;">#${invoice.invoiceNumber}</p>
+              <span class="status ${invoice.status}">${invoice.status.toUpperCase()}</span>
+            </div>
+
+            <div class="invoice-info">
+              <div>
+                <h3>Bill To:</h3>
+                <p><strong>${invoice.clientName || 'Client Name'}</strong></p>
+                <p>${invoice.clientEmail || ''}</p>
+                <p>${invoice.clientPhone || ''}</p>
+              </div>
+              <div>
+                <h3>Invoice Details:</h3>
+                <p><strong>Date:</strong> ${formatDate(invoice.createdAt)}</p>
+                <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
+                <p><strong>Payment Terms:</strong> ${invoice.paymentTerms || 'Net 30'}</p>
+              </div>
+            </div>
+
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th style="text-align: center;">Quantity</th>
+                  <th style="text-align: right;">Unit Price</th>
+                  <th style="text-align: right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${invoice.items?.map(item => `
+                  <tr>
+                    <td>
+                      <strong>${item.name}</strong>
+                      ${item.description ? `<br><small style="color: #666;">${item.description}</small>` : ''}
+                    </td>
+                    <td style="text-align: center;">${item.quantity} ${item.unit || ''}</td>
+                    <td style="text-align: right;">${formatCurrency(item.unitPrice)}</td>
+                    <td style="text-align: right;">${formatCurrency(item.totalPrice)}</td>
+                  </tr>
+                `).join('') || '<tr><td colspan="4">No items</td></tr>'}
+              </tbody>
+            </table>
+
+            <table class="totals">
+              <tr>
+                <td>Subtotal:</td>
+                <td style="text-align: right;">${formatCurrency(invoice.subtotal)}</td>
+              </tr>
+              ${invoice.taxAmount > 0 ? `
+              <tr>
+                <td>Tax (7.5%):</td>
+                <td style="text-align: right;">${formatCurrency(invoice.taxAmount)}</td>
+              </tr>
+              ` : ''}
+              ${invoice.discount > 0 ? `
+              <tr>
+                <td>Discount:</td>
+                <td style="text-align: right;">-${formatCurrency(invoice.discount)}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td>Total Amount:</td>
+                <td style="text-align: right;">${formatCurrency(invoice.totalAmount)}</td>
+              </tr>
+            </table>
+
+            ${invoice.notes ? `
+            <div style="margin-top: 30px; padding: 15px; background: #f9fafb; border-left: 4px solid #2563eb;">
+              <h3 style="font-size: 14px; margin-bottom: 10px;">Notes:</h3>
+              <p style="color: #666;">${invoice.notes}</p>
+            </div>
+            ` : ''}
+
+            ${invoice.status === 'paid' && invoice.paymentDetails ? `
+            <div style="margin-top: 20px; padding: 15px; background: #d1fae5; border-left: 4px solid #059669;">
+              <h3 style="font-size: 14px; margin-bottom: 10px; color: #065f46;">Payment Information:</h3>
+              <p style="color: #065f46;"><strong>Method:</strong> ${invoice.paymentDetails.method || 'N/A'}</p>
+              <p style="color: #065f46;"><strong>Reference:</strong> ${invoice.paymentDetails.reference || 'N/A'}</p>
+              <p style="color: #065f46;"><strong>Date:</strong> ${formatDate(invoice.paymentDetails.date)}</p>
+            </div>
+            ` : ''}
+
+            <div class="footer">
+              <p>Thank you for your business!</p>
+              <p style="margin-top: 10px;">For inquiries, please contact billing@elderx.com or call +234 800 ELDERX</p>
+              <p style="margin-top: 5px;">© ${new Date().getFullYear()} ElderX Healthcare. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
   };
 
   const addItemToInvoice = (item) => {
@@ -562,10 +732,18 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                               <CheckCircle className="h-4 w-4" />
                             </button>
                           )}
-                          <button className="text-blue-600 hover:text-blue-900 mr-3">
+                          <button 
+                            onClick={() => handleViewInvoice(invoice)}
+                            className="text-blue-600 hover:text-blue-900 mr-3"
+                            title="View Invoice"
+                          >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button className="text-gray-600 hover:text-gray-900">
+                          <button 
+                            onClick={() => handleDownloadInvoice(invoice)}
+                            className="text-gray-600 hover:text-gray-900"
+                            title="Download/Print Invoice"
+                          >
                             <Download className="h-4 w-4" />
                           </button>
                         </td>
@@ -947,6 +1125,167 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice View Modal */}
+      {showInvoiceViewModal && viewingInvoice && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Invoice #{viewingInvoice.invoiceNumber}
+                </h3>
+                <button
+                  onClick={() => setShowInvoiceViewModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Invoice Header */}
+              <div className="bg-blue-600 text-white p-6 rounded-lg mb-6">
+                <h1 className="text-3xl font-bold">ElderX Healthcare</h1>
+                <p className="text-blue-100 mt-2">Professional Healthcare Services & Elderly Care</p>
+                <div className="mt-4 text-sm">
+                  <p>📍 Lagos, Nigeria</p>
+                  <p>📞 +234 800 ELDERX (353379)</p>
+                  <p>✉️ billing@elderx.com</p>
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <div className="mb-6">
+                {viewingInvoice.status === 'paid' && (
+                  <span className="px-4 py-2 text-sm font-semibold bg-green-100 text-green-800 rounded-full flex items-center w-fit">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    PAID
+                  </span>
+                )}
+                {viewingInvoice.status === 'pending' && (
+                  <span className="px-4 py-2 text-sm font-semibold bg-yellow-100 text-yellow-800 rounded-full flex items-center w-fit">
+                    <Clock className="h-4 w-4 mr-2" />
+                    PENDING
+                  </span>
+                )}
+                {viewingInvoice.status === 'cancelled' && (
+                  <span className="px-4 py-2 text-sm font-semibold bg-red-100 text-red-800 rounded-full flex items-center w-fit">
+                    <XCircle className="h-4 w-4 mr-2" />
+                    CANCELLED
+                  </span>
+                )}
+              </div>
+
+              {/* Client and Invoice Info */}
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 mb-2 uppercase">Bill To</h4>
+                  <p className="font-semibold text-gray-900">{viewingInvoice.clientName}</p>
+                  <p className="text-gray-600">{viewingInvoice.clientEmail}</p>
+                  <p className="text-gray-600">{viewingInvoice.clientPhone}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 mb-2 uppercase">Invoice Details</h4>
+                  <p className="text-gray-900"><strong>Date:</strong> {viewingInvoice.createdAt?.toLocaleDateString()}</p>
+                  <p className="text-gray-900"><strong>Due Date:</strong> {viewingInvoice.dueDate?.toLocaleDateString()}</p>
+                  <p className="text-gray-900"><strong>Terms:</strong> {viewingInvoice.paymentTerms || 'Net 30'}</p>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-gray-500 mb-3 uppercase">Items</h4>
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Qty</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Unit Price</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {viewingInvoice.items?.map((item, index) => (
+                      <tr key={index}>
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-gray-900">{item.name}</p>
+                          {item.description && (
+                            <p className="text-sm text-gray-500">{item.description}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center text-gray-900">{item.quantity} {item.unit}</td>
+                        <td className="px-4 py-3 text-right text-gray-900">₦{item.unitPrice?.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right font-medium text-gray-900">₦{item.totalPrice?.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals */}
+              <div className="flex justify-end mb-6">
+                <div className="w-80">
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium text-gray-900">₦{viewingInvoice.subtotal?.toLocaleString()}</span>
+                  </div>
+                  {viewingInvoice.taxAmount > 0 && (
+                    <div className="flex justify-between py-2 border-b border-gray-200">
+                      <span className="text-gray-600">Tax (7.5%):</span>
+                      <span className="font-medium text-gray-900">₦{viewingInvoice.taxAmount?.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {viewingInvoice.discount > 0 && (
+                    <div className="flex justify-between py-2 border-b border-gray-200">
+                      <span className="text-gray-600">Discount:</span>
+                      <span className="font-medium text-red-600">-₦{viewingInvoice.discount?.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-3 border-t-2 border-gray-300">
+                    <span className="text-lg font-bold text-gray-900">Total Amount:</span>
+                    <span className="text-lg font-bold text-gray-900">₦{viewingInvoice.totalAmount?.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {viewingInvoice.notes && (
+                <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-600 rounded">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes:</h4>
+                  <p className="text-gray-600">{viewingInvoice.notes}</p>
+                </div>
+              )}
+
+              {/* Payment Info */}
+              {viewingInvoice.status === 'paid' && viewingInvoice.paymentDetails && (
+                <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-600 rounded">
+                  <h4 className="text-sm font-semibold text-green-800 mb-2">Payment Information:</h4>
+                  <p className="text-green-700"><strong>Method:</strong> {viewingInvoice.paymentDetails.method}</p>
+                  <p className="text-green-700"><strong>Reference:</strong> {viewingInvoice.paymentDetails.reference}</p>
+                  <p className="text-green-700"><strong>Date:</strong> {viewingInvoice.paymentDetails.date?.toLocaleDateString()}</p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <button
+                  onClick={() => setShowInvoiceViewModal(false)}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => handleDownloadInvoice(viewingInvoice)}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download/Print
+                </button>
+              </div>
             </div>
           </div>
         </div>
