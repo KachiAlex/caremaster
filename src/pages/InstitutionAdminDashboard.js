@@ -39,7 +39,8 @@ import {
   Pill,
   Edit,
   Package,
-  Camera
+  Camera,
+  Bell
 } from 'lucide-react';
 import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -48,7 +49,7 @@ import { caregiverAPI } from '../api/caregiverAPI';
 import { getAllClients, createClient, updateClient } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { getClientReports, createClientReport, getClientCareLogs, createClientCareLog } from '../api/patientReportsAPI';
-import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
+import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notificationsAPI } from '../api/notificationsAPI';
 import { institutionAPI } from '../api/institutionAPI';
 import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
 import InventoryBillingTab from '../components/InventoryBillingTab';
@@ -143,6 +144,14 @@ const InstitutionAdminDashboard = () => {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
+  const [callStartAt, setCallStartAt] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = React.useRef(null);
+  
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
   
   // Initialize call service
   const callService = new CallService();
@@ -153,9 +162,20 @@ const InstitutionAdminDashboard = () => {
     webrtc.setCallbacks({
       onLocalStream: (stream) => setLocalStream(stream),
       onRemoteStream: (stream) => setRemoteStream(stream),
-      onCallStateChange: (state) => console.log('WebRTC state:', state)
+      onCallStateChange: (state) => {
+        console.log('WebRTC state:', state);
+        if (state === 'connected' && !callStartAt) {
+          const start = new Date();
+          setCallStartAt(start);
+          if (timerRef.current) clearInterval(timerRef.current);
+          timerRef.current = setInterval(() => {
+            setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+          }, 1000);
+        }
+      }
     });
-  }, [webrtc]);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [webrtc, callStartAt]);
 
   useEffect(() => {
     if (userProfile && institutionId) {
@@ -1203,6 +1223,46 @@ const InstitutionAdminDashboard = () => {
     }
   }, [selectedConversation]);
 
+  // Load and subscribe to notifications
+  useEffect(() => {
+    if (user?.uid) {
+      // Subscribe to real-time notifications
+      const unsubscribe = notificationsAPI.subscribeToNotifications(user.uid, (updatedNotifications) => {
+        console.log(`🔔 Notifications updated: ${updatedNotifications.length} total`);
+        setNotifications(updatedNotifications);
+        const unread = updatedNotifications.filter(n => !n.read).length;
+        setUnreadCount(unread);
+      });
+
+      // Initial load of unread count
+      notificationsAPI.getUnreadCount(user.uid).then(count => {
+        setUnreadCount(count);
+      });
+
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
+    }
+  }, [user?.uid]);
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.read) {
+      await notificationsAPI.markAsRead(notification.id);
+    }
+    // Navigate to relevant section if actionUrl exists
+    if (notification.data?.actionUrl) {
+      navigate(notification.data.actionUrl);
+    }
+    setShowNotifications(false);
+  };
+
+  const handleMarkAllRead = async () => {
+    if (user?.uid) {
+      await notificationsAPI.markAllAsRead(user.uid);
+      toast.success('All notifications marked as read');
+    }
+  };
+
   const renderMessagesTab = () => {
     const handleSendMessage = async () => {
       if (!newMessage.trim() || !selectedConversation) return;
@@ -1454,7 +1514,8 @@ const InstitutionAdminDashboard = () => {
     const endCall = async () => {
       if (activeCall) {
         try {
-          await callService.endCall(activeCall.callId);
+          const duration = elapsedSeconds || 0;
+          await callService.endCall(activeCall.callId, duration);
           console.log('✅ Call ended through service');
         } catch (error) {
           console.error('Error ending call:', error);
@@ -1472,6 +1533,9 @@ const InstitutionAdminDashboard = () => {
       setIsInCall(false);
       setCallType(null);
       setActiveCall(null);
+      if (timerRef.current) clearInterval(timerRef.current);
+      setElapsedSeconds(0);
+      setCallStartAt(null);
       toast.info('Call ended');
     };
 

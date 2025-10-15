@@ -175,14 +175,28 @@ const InstitutionCaregiverDashboard = () => {
   const [activeCall, setActiveCall] = useState(null);
   const [callService] = useState(() => new CallService());
   const [webrtc] = useState(() => new WebRTCService());
+  const [callStartAt, setCallStartAt] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = React.useRef(null);
 
   useEffect(() => {
     webrtc.setCallbacks({
       onLocalStream: (stream) => setLocalStream(stream),
       onRemoteStream: (stream) => setRemoteStream(stream),
-      onCallStateChange: (state) => console.log('WebRTC state:', state)
+      onCallStateChange: (state) => {
+        console.log('WebRTC state:', state);
+        if (state === 'connected' && !callStartAt) {
+          const start = new Date();
+          setCallStartAt(start);
+          if (timerRef.current) clearInterval(timerRef.current);
+          timerRef.current = setInterval(() => {
+            setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+          }, 1000);
+        }
+      }
     });
-  }, [webrtc]);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [webrtc, callStartAt]);
   
   // Activities states
   const [activities, setActivities] = useState([]);
@@ -799,13 +813,17 @@ const InstitutionCaregiverDashboard = () => {
     if (!activeCall) return;
     
     try {
-      await callService.endCall(activeCall.callId);
+      const duration = elapsedSeconds || 0;
+      await callService.endCall(activeCall.callId, duration);
       setActiveCall(null);
       console.log('✅ Call ended');
       toast.info('Call ended');
     } catch (error) {
       console.error('Error ending call:', error);
     }
+    if (timerRef.current) clearInterval(timerRef.current);
+    setElapsedSeconds(0);
+    setCallStartAt(null);
   };
 
   // Inline call logs for caregiver/doctor view
