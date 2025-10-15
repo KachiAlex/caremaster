@@ -394,11 +394,6 @@ function App() {
       />
       
       <Route 
-        path="/institution" 
-        element={<InstitutionLanding />} 
-      />
-      
-      <Route 
         path="/institution/login" 
         element={<InstitutionLogin />} 
       />
