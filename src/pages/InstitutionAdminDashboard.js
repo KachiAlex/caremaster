@@ -153,6 +153,7 @@ const InstitutionAdminDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [callConnectionState, setCallConnectionState] = useState('connecting'); // Track WebRTC connection state
   
   // Initialize call service
   const callService = new CallService();
@@ -164,14 +165,21 @@ const InstitutionAdminDashboard = () => {
       onLocalStream: (stream) => setLocalStream(stream),
       onRemoteStream: (stream) => setRemoteStream(stream),
       onCallStateChange: (state) => {
-        console.log('WebRTC state:', state);
-        if (state === 'connected' && !callStartAt) {
-          const start = new Date();
-          setCallStartAt(start);
-          if (timerRef.current) clearInterval(timerRef.current);
-          timerRef.current = setInterval(() => {
-            setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
-          }, 1000);
+        console.log('📡 Admin WebRTC connection state:', state);
+        setCallConnectionState(state);
+        
+        if (state === 'connected') {
+          console.log('✅ Admin call connected successfully!');
+          if (!callStartAt) {
+            const start = new Date();
+            setCallStartAt(start);
+            if (timerRef.current) clearInterval(timerRef.current);
+            timerRef.current = setInterval(() => {
+              setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+            }, 1000);
+          }
+        } else if (state === 'failed' || state === 'disconnected') {
+          console.log('❌ Admin call connection failed or disconnected');
         }
       }
     });
@@ -1380,15 +1388,35 @@ const InstitutionAdminDashboard = () => {
 
         if (result.success) {
           // Get local media stream
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        setLocalStream(stream);
-        setCallType('voice');
-        setIsInCall(true);
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          setLocalStream(stream);
+          setCallType('voice');
+          setIsInCall(true);
+          
+          // Initialize WebRTC and create offer
+          console.log('🔧 Initializing WebRTC for admin...');
+          await webrtc.initialize();
+          const offer = await webrtc.makeCall(result.callId, 'voice');
+          console.log('📤 Created offer, sending to recipient...');
+          
+          // Listen for signaling messages from recipient
+          const unsubscribeSignaling = webrtc.listenForSignaling(result.callId, async (msg) => {
+            console.log('📨 Received signaling message:', msg.type);
+            if (msg.type === 'answer') {
+              console.log('✅ Received answer from recipient');
+              await webrtc.handleAnswer(msg.data.answer);
+            } else if (msg.type === 'ice-candidate') {
+              console.log('🧊 Received ICE candidate');
+              await webrtc.handleIceCandidate(msg.data);
+            }
+          });
+          
           setActiveCall({
             callId: result.callId,
             participantId: recipientId,
             participantName: selectedConversation.name || 'User',
-            callType: 'voice'
+            callType: 'voice',
+            unsubscribeSignaling
           });
           toast.success(`Voice call initiated with ${selectedConversation.name || 'User'}`);
         } else {
