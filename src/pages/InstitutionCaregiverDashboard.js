@@ -2010,13 +2010,17 @@ const InstitutionCaregiverDashboard = () => {
     
     // Get tasks for the selected date
     const getTasksForDate = (date) => {
+      if (!todaySchedule || !Array.isArray(todaySchedule)) {
+        return [];
+      }
+      
       const dayStart = new Date(date);
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(date);
       dayEnd.setHours(23, 59, 59, 999);
       
       return todaySchedule.filter(item => {
-        if (!item.time) return false;
+        if (!item || !item.time) return false;
         const itemDate = new Date(item.time);
         return itemDate >= dayStart && itemDate <= dayEnd;
       });
