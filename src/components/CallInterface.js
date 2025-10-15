@@ -39,20 +39,22 @@ const CallInterface = ({
   onCallAccepted,
   onCallRejected,
   externalWebrtcService = null, // Optional: use parent's WebRTC service
-  externalCallState = null // Optional: use parent's call state
+  externalCallState = null, // Optional: use parent's call state
+  localStream: externalLocalStream = null, // Optional: use parent's local stream
+  remoteStream: externalRemoteStream = null // Optional: use parent's remote stream
 }) => {
   const [callState, setCallState] = useState(externalCallState || (isIncoming ? 'ringing' : 'connecting')); // connecting, ringing, connected, ended
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(callType === 'video');
-  const [isSpeakerEnabled, setIsSpeakerEnabled] = useState(false);
+  const [isSpeakerEnabled, setIsSpeakerEnabled] = useState(true); // Enable speaker by default for audio
   const [callDuration, setCallDuration] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [connectionQuality, setConnectionQuality] = useState('good');
   const [networkStats, setNetworkStats] = useState({});
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [webrtcService, setWebrtcService] = useState(null);
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
+  const [localStream, setLocalStream] = useState(externalLocalStream);
+  const [remoteStream, setRemoteStream] = useState(externalRemoteStream);
   
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -66,6 +68,48 @@ const CallInterface = ({
       setCallState(externalCallState);
     }
   }, [externalCallState]);
+
+  // Update streams when external streams change
+  useEffect(() => {
+    if (externalLocalStream) {
+      setLocalStream(externalLocalStream);
+    }
+  }, [externalLocalStream]);
+
+  useEffect(() => {
+    if (externalRemoteStream) {
+      setRemoteStream(externalRemoteStream);
+    }
+  }, [externalRemoteStream]);
+
+  // Connect remote stream to audio/video elements
+  useEffect(() => {
+    if (remoteStream) {
+      console.log('🔊 Connecting remote stream to audio/video elements');
+      
+      // For voice calls, connect to audio element
+      if (audioRef.current && callType === 'voice') {
+        audioRef.current.srcObject = remoteStream;
+        audioRef.current.play().catch(err => console.error('Audio playback error:', err));
+        console.log('✅ Remote audio connected');
+      }
+      
+      // For video calls, connect to video element
+      if (remoteVideoRef.current && callType === 'video') {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(err => console.error('Video playback error:', err));
+        console.log('✅ Remote video connected');
+      }
+    }
+  }, [remoteStream, callType]);
+
+  // Connect local stream to video elements
+  useEffect(() => {
+    if (localStream && localVideoRef.current && callType === 'video') {
+      localVideoRef.current.srcObject = localStream;
+      console.log('✅ Local video connected');
+    }
+  }, [localStream, callType]);
 
   // Initialize WebRTC service
   useEffect(() => {

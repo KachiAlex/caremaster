@@ -246,7 +246,22 @@ class WebRTCService {
   // Handle ICE candidate
   async handleIceCandidate(candidate) {
     try {
-      await this.peerConnection.addIceCandidate(candidate);
+      // If candidate is already an RTCIceCandidate object, use it directly
+      // If it's a plain object from Firestore, create RTCIceCandidate from it
+      let iceCandidate = candidate;
+      
+      if (candidate && !(candidate instanceof RTCIceCandidate)) {
+        // Reconstruct RTCIceCandidateInit from serialized data
+        iceCandidate = new RTCIceCandidate({
+          candidate: candidate.candidate,
+          sdpMLineIndex: candidate.sdpMLineIndex,
+          sdpMid: candidate.sdpMid,
+          usernameFragment: candidate.usernameFragment
+        });
+      }
+      
+      await this.peerConnection.addIceCandidate(iceCandidate);
+      console.log('✅ ICE candidate added successfully');
       return true;
     } catch (error) {
       console.error('Error handling ICE candidate:', error);

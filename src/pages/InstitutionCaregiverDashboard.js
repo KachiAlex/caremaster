@@ -5740,6 +5740,8 @@ const InstitutionCaregiverDashboard = () => {
           isIncoming={false}
           externalWebrtcService={webrtc}
           externalCallState={callConnectionState}
+          localStream={localStream}
+          remoteStream={remoteStream}
         />
       )}
         </div>
