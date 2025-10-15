@@ -18,6 +18,7 @@ import InstitutionAdminGuard from './components/InstitutionAdminGuard';
 import ServiceProviderLayout from './components/ServiceProviderLayout';
 const Landing = lazy(() => import('./pages/Landing'));
 const ChooseInstitution = lazy(() => import('./pages/ChooseInstitution'));
+const TenantPartners = lazy(() => import('./pages/TenantPartners'));
 const Auth = lazy(() => import('./pages/Auth'));
 // Admin routes deprecated
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -605,6 +606,9 @@ function App() {
         element={<NewAdminLogin />} 
       />
       
+      {/* Tenant Partners marketing/entry page */}
+      <Route path="/institution" element={<TenantPartners />} />
+
       {/* Institution chooser for multi-institution users */}
       <Route path="/choose-institution" element={<ChooseInstitution />} />
 
