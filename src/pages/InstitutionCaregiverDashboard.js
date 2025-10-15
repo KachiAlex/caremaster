@@ -708,42 +708,43 @@ const InstitutionCaregiverDashboard = () => {
     if (!selectedClient) return;
     
     // Subscribe to care logs for both modal and standalone care logs tab
-    if (clientModalTab === 'medical' || clientModalTab === 'carelog' || activeTab === 'carelogs') {
-    setLoadingReports(true);
-    
-    // Set up real-time listeners
-    const unsubscribeReports = subscribeToMedicalReportsByClient(
-      selectedClient.id,
-      (reports) => {
-        setMedicalReports(reports);
-        setLoadingReports(false);
-      }
-    );
-    
-    const unsubscribePlans = subscribeToCarePlansByClient(
-      selectedClient.id,
-      (plans) => {
-        setCarePlans(plans);
-      }
-    );
-    
-    const unsubscribeLogs = subscribeToCareLogsByClient(
-      selectedClient.id,
-      50,
-      (logs) => {
-        setCareLogs(logs);
-      }
-    );
-    
-    // Cleanup subscriptions on unmount or when client/tab changes
-    return () => {
-      unsubscribeReports();
-      unsubscribePlans();
-      unsubscribeLogs();
-      console.log('🔄 Unsubscribed from real-time updates');
-    };
+    // Load reports and plans immediately when a client is selected (for buttons to appear)
+    if (selectedClient && selectedClient.id) {
+      setLoadingReports(true);
+      
+      // Set up real-time listeners
+      const unsubscribeReports = subscribeToMedicalReportsByClient(
+        selectedClient.id,
+        (reports) => {
+          setMedicalReports(reports);
+          setLoadingReports(false);
+        }
+      );
+      
+      const unsubscribePlans = subscribeToCarePlansByClient(
+        selectedClient.id,
+        (plans) => {
+          setCarePlans(plans);
+        }
+      );
+      
+      const unsubscribeLogs = subscribeToCareLogsByClient(
+        selectedClient.id,
+        50,
+        (logs) => {
+          setCareLogs(logs);
+        }
+      );
+      
+      // Cleanup subscriptions on unmount or when client changes
+      return () => {
+        unsubscribeReports();
+        unsubscribePlans();
+        unsubscribeLogs();
+        console.log('🔄 Unsubscribed from real-time updates');
+      };
     }
-  }, [selectedClient, clientModalTab, activeTab]);
+  }, [selectedClient]);
 
   // Set up incoming call listener
   useEffect(() => {
