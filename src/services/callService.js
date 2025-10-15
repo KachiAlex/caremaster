@@ -94,7 +94,25 @@ class CallService {
         answeredAt: serverTimestamp()
       });
 
-      // Send answer notification
+      // Update the original incoming call notification to answered
+      const notificationsQuery = query(
+        collection(db, 'callNotifications'),
+        where('callId', '==', callId),
+        where('userId', '==', recipientId),
+        where('status', '==', 'incoming')
+      );
+      
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const updatePromises = notificationsSnapshot.docs.map(doc => 
+        updateDoc(doc.ref, {
+          status: 'answered',
+          updatedAt: serverTimestamp()
+        })
+      );
+      await Promise.all(updatePromises);
+      console.log(`✅ Updated ${notificationsSnapshot.size} call notifications to answered`);
+
+      // Send answer notification to caller
       await this.sendCallNotification(callDoc.data().callerId, {
         callId,
         recipientId,
@@ -127,7 +145,25 @@ class CallService {
         endedAt: serverTimestamp()
       });
 
-      // Send rejection notification
+      // Update the original incoming call notification to rejected
+      const notificationsQuery = query(
+        collection(db, 'callNotifications'),
+        where('callId', '==', callId),
+        where('userId', '==', recipientId),
+        where('status', '==', 'incoming')
+      );
+      
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const updatePromises = notificationsSnapshot.docs.map(doc => 
+        updateDoc(doc.ref, {
+          status: 'rejected',
+          updatedAt: serverTimestamp()
+        })
+      );
+      await Promise.all(updatePromises);
+      console.log(`✅ Updated ${notificationsSnapshot.size} call notifications to rejected`);
+
+      // Send rejection notification to caller
       await this.sendCallNotification(callDoc.data().callerId, {
         callId,
         recipientId,
@@ -155,11 +191,30 @@ class CallService {
       }
 
       const callDoc = snapshot.docs[0];
+      const callData = callDoc.data();
+      
       await updateDoc(callDoc.ref, {
         status: 'ended',
         endedAt: serverTimestamp(),
         duration: duration
       });
+
+      // Update all call notifications for this call to ended
+      const notificationsQuery = query(
+        collection(db, 'callNotifications'),
+        where('callId', '==', callId),
+        where('status', '==', 'incoming')
+      );
+      
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const updatePromises = notificationsSnapshot.docs.map(doc => 
+        updateDoc(doc.ref, {
+          status: 'ended',
+          updatedAt: serverTimestamp()
+        })
+      );
+      await Promise.all(updatePromises);
+      console.log(`✅ Updated ${notificationsSnapshot.size} call notifications to ended`);
 
       // Clean up active call
       if (this.activeCall && this.activeCall.callId === callId) {
@@ -209,8 +264,26 @@ class CallService {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const notification = change.doc.data();
+          
+          // Only show incoming calls that are:
+          // 1. Status is 'incoming'
+          // 2. Created within the last 2 minutes (to avoid showing old calls on refresh)
           if (notification.status === 'incoming') {
-            onIncomingCall(notification);
+            const notificationTime = notification.timestamp?.toDate?.() || new Date(notification.timestamp);
+            const now = new Date();
+            const timeDiff = (now - notificationTime) / 1000; // seconds
+            
+            // Only show if call is less than 2 minutes old
+            if (timeDiff < 120) {
+              console.log('📞 Valid incoming call (age:', Math.floor(timeDiff), 'seconds)');
+              onIncomingCall(notification);
+            } else {
+              console.log('⏰ Ignoring old call notification (age:', Math.floor(timeDiff), 'seconds)');
+              // Clean up old notification
+              this.updateCallNotificationStatus(change.doc.id, 'expired').catch(err => {
+                console.error('Failed to clean up old notification:', err);
+              });
+            }
           }
         }
       });
@@ -226,6 +299,21 @@ class CallService {
     if (unsubscribe) {
       unsubscribe();
       this.callListeners.delete(userId);
+    }
+  }
+
+  // Update call notification status
+  async updateCallNotificationStatus(notificationId, status) {
+    try {
+      const notificationRef = doc(db, 'callNotifications', notificationId);
+      await updateDoc(notificationRef, {
+        status: status,
+        updatedAt: serverTimestamp()
+      });
+      console.log(`✅ Call notification ${notificationId} updated to ${status}`);
+    } catch (error) {
+      console.error('Error updating call notification status:', error);
+      throw error;
     }
   }
 
