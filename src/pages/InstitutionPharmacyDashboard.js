@@ -54,26 +54,9 @@ const InstitutionPharmacyDashboard = () => {
       console.log('🔍 Pharmacy Dashboard - Loading clients for pharmacist UID:', user.uid);
       console.log('🔍 Pharmacy Dashboard - User profile:', userProfile);
       
-      // Pharmacist assignments are stored directly in the clients collection
-      // Query clients where assignedPharmacistId matches this pharmacist's UID
-      const { collection: firestoreCollection, query, where, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../firebase/config');
-      
-      const clientsQuery = query(
-        firestoreCollection(db, 'clients'),
-        where('assignedPharmacistId', '==', user.uid),
-        where('institutionId', '==', institutionId)
-      );
-      
-      const querySnapshot = await getDocs(clientsQuery);
-      const clients = [];
-      
-      querySnapshot.forEach((doc) => {
-        clients.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
+      // Use the assignment API to get assigned clients (same as caregiver dashboard)
+      const { assignmentAPI } = await import('../api/assignmentAPI');
+      const clients = await assignmentAPI.getAssignedClients(user.uid);
       
       setAssignedClients(clients);
       console.log('📋 Loaded assigned clients for pharmacist:', clients.length);

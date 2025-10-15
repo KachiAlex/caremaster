@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { pharmacyAPI } from '../api/pharmacyAPI';
+import prescriptionsAPI from '../api/prescriptionsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import PharmacyInvoiceGenerator from './PharmacyInvoiceGenerator';
 import { drugInteractionService } from '../services/drugInteractionService';
@@ -88,10 +89,14 @@ const PharmacyTab = ({
   };
 
   const loadPrescriptions = async () => {
+    if (!selectedClientId) return;
+    
     setLoading(true);
     try {
-      const data = await pharmacyAPI.getPrescriptionsByClient(selectedClientId);
+      console.log('💊 Pharmacy - Loading prescriptions for client:', selectedClientId);
+      const data = await prescriptionsAPI.getPrescriptionsByClient(selectedClientId);
       setPrescriptions(data);
+      console.log('✅ Pharmacy - Prescriptions loaded:', data.length);
       
       // Run safety check when prescriptions are loaded
       if (data.length > 0 && selectedClient) {
