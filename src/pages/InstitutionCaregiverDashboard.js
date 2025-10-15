@@ -353,6 +353,9 @@ const InstitutionCaregiverDashboard = () => {
         if (validation.needsInit) {
           // First load - set tab session
           sessionManager.setTabSession(userRole, user.uid, effectiveInstitutionId);
+        } else if (validation.needsUpdate) {
+          // Role equivalents detected - update session
+          sessionManager.setTabSession(validation.newRole, user.uid, effectiveInstitutionId);
         } else if (!validation.valid) {
           // Session conflict detected
           sessionManager.handleSessionConflict(validation, navigate, toast);
@@ -1219,6 +1222,13 @@ const InstitutionCaregiverDashboard = () => {
       const data = await prescriptionsAPI.getPrescriptionsByClient(clientId);
       setPrescriptions(data);
       console.log('✅ Prescriptions loaded:', data.length);
+      console.log('🔍 Prescription details:', data.map(p => ({
+        id: p.id,
+        prescriptionNumber: p.prescriptionNumber,
+        diagnosis: p.diagnosis,
+        medicationsCount: p.medications?.length || 0,
+        medications: p.medications
+      })));
     } catch (error) {
       console.error('Error loading prescriptions:', error);
       toast.error('Failed to load prescriptions');

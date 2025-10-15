@@ -61,7 +61,7 @@ export const validateTabSession = (currentUser, currentUserRole) => {
     return { valid: false, reason: 'logged_out' };
   }
   
-  // User ID mismatch - different user logged in
+  // User ID mismatch - different user logged in (this is a real conflict)
   if (currentUser.uid !== tabSession.userId) {
     console.log(`⚠️ User mismatch: expected ${tabSession.userId}, got ${currentUser.uid}`);
     return { 
@@ -72,9 +72,30 @@ export const validateTabSession = (currentUser, currentUserRole) => {
     };
   }
   
-  // Role mismatch - same user but different role
+  // For role mismatch, be more lenient - allow same user with different role interpretations
+  // This happens when userType, type, and role fields are inconsistent
   if (currentUserRole && currentUserRole !== tabSession.role) {
     console.log(`⚠️ Role mismatch: expected ${tabSession.role}, got ${currentUserRole}`);
+    
+    // Check if this is just a role interpretation difference (same user, different field)
+    const roleEquivalents = {
+      'caregiver': ['caregiver', 'nurse', 'doctor'],
+      'nurse': ['caregiver', 'nurse'],
+      'doctor': ['caregiver', 'doctor'],
+      'pharmacist': ['pharmacist'],
+      'admin': ['admin', 'institutionAdmin'],
+      'institutionAdmin': ['admin', 'institutionAdmin']
+    };
+    
+    const currentRoleEquivalents = roleEquivalents[currentUserRole] || [currentUserRole];
+    const expectedRoleEquivalents = roleEquivalents[tabSession.role] || [tabSession.role];
+    
+    // If roles are equivalent, update the session instead of treating as conflict
+    if (currentRoleEquivalents.some(role => expectedRoleEquivalents.includes(role))) {
+      console.log('🔄 Role equivalents detected - updating session');
+      return { valid: true, needsUpdate: true, newRole: currentUserRole };
+    }
+    
     return { 
       valid: false, 
       reason: 'role_mismatch',
@@ -117,26 +138,36 @@ export const getRoleDashboardPath = (role, institutionId = null) => {
 export const handleSessionConflict = (validation, navigate, toast) => {
   if (validation.valid) return true;
   
-  clearTabSession();
+  console.log('🚨 Session conflict detected:', validation);
   
   switch (validation.reason) {
     case 'logged_out':
+      console.log('🔄 User logged out - clearing session');
+      clearTabSession();
       toast.warning('Session expired. Please log in again.');
       navigate('/institution/login');
       break;
       
     case 'user_mismatch':
-      toast.error('⚠️ Multi-Tab Conflict: Different user logged in another tab. This tab has been reset.');
-      setTimeout(() => navigate('/institution/login'), 2000);
+      console.log('🔄 Different user in another tab - clearing session');
+      clearTabSession();
+      toast.error('⚠️ Different user logged in another tab. This tab has been reset.');
+      setTimeout(() => navigate('/institution/login'), 1500);
       break;
       
     case 'role_mismatch':
-      toast.warning(`⚠️ Multi-Tab Conflict: You logged in as ${validation.currentRole} in another tab. Redirecting to correct dashboard...`);
-      const correctPath = getRoleDashboardPath(validation.currentRole, validation.institutionId);
-      setTimeout(() => navigate(correctPath), 2000);
+      console.log('🔄 Role mismatch - redirecting to correct dashboard');
+      clearTabSession();
+      toast.warning(`⚠️ You logged in as ${validation.currentRole} in another tab. Redirecting...`);
+      const correctPath = getRoleDashboardPath(validation.currentRole);
+      setTimeout(() => {
+        navigate(correctPath);
+      }, 1500);
       break;
       
     default:
+      console.log('🔄 Unknown session conflict - clearing session');
+      clearTabSession();
       toast.error('Session conflict detected. Please log in again.');
       navigate('/institution/login');
   }
@@ -156,13 +187,52 @@ export const navigateToRoleDashboard = (role, userId, institutionId, navigate) =
   navigate(path);
 };
 
+/**
+ * Check if session validation should be bypassed (for development or recovery)
+ */
+export const shouldBypassSessionValidation = () => {
+  // Check for bypass flag in sessionStorage (for development)
+  const bypassFlag = sessionStorage.getItem('elderx_bypass_session_validation');
+  return bypassFlag === 'true';
+};
+
+/**
+ * Set session validation bypass (for development)
+ */
+export const setSessionValidationBypass = (bypass = true) => {
+  if (bypass) {
+    sessionStorage.setItem('elderx_bypass_session_validation', 'true');
+    console.log('🔧 Session validation bypass enabled');
+  } else {
+    sessionStorage.removeItem('elderx_bypass_session_validation');
+    console.log('🔧 Session validation bypass disabled');
+  }
+};
+
+/**
+ * Enhanced session validation with bypass option
+ */
+export const validateTabSessionEnhanced = (currentUser, currentUserRole) => {
+  // Check if validation should be bypassed
+  if (shouldBypassSessionValidation()) {
+    console.log('🔧 Session validation bypassed');
+    return { valid: true, bypassed: true };
+  }
+  
+  // Run normal validation
+  return validateTabSession(currentUser, currentUserRole);
+};
+
 export default {
   setTabSession,
   getTabSession,
   clearTabSession,
   validateTabSession,
+  validateTabSessionEnhanced,
   getRoleDashboardPath,
   handleSessionConflict,
-  navigateToRoleDashboard
+  navigateToRoleDashboard,
+  shouldBypassSessionValidation,
+  setSessionValidationBypass
 };
 

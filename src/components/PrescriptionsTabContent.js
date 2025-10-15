@@ -15,6 +15,13 @@ const PrescriptionsTabContent = ({
   const [expandedPrescription, setExpandedPrescription] = useState(null);
   const [itemUpdates, setItemUpdates] = useState({});
 
+  // Debug logging
+  console.log('🔍 PrescriptionsTabContent Debug:', {
+    selectedClient: selectedClient?.name || selectedClient?.fullName,
+    prescriptionsCount: prescriptions?.length || 0,
+    prescriptions: prescriptions
+  });
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       active: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Active' },
@@ -199,11 +206,20 @@ const PrescriptionsTabContent = ({
                 {/* Prescription Details */}
                 {expandedPrescription === prescription.id && (
                   <div className="p-6 space-y-4">
+                    {/* Debug info */}
+                    {console.log('🔍 Expanded prescription debug:', {
+                      prescriptionId: prescription.id,
+                      diagnosis: prescription.diagnosis,
+                      medicationsCount: prescription.medications?.length || 0,
+                      medications: prescription.medications,
+                      notes: prescription.notes
+                    })}
+                    
                     {/* Medications */}
                     <div>
                       <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center">
                         <Package className="h-5 w-5 text-indigo-600 mr-2" />
-                        Prescribed Medications
+                        Prescribed Medications ({prescription.medications?.length || 0})
                       </h4>
                       <div className="space-y-4">
                         {prescription.medications && prescription.medications.length > 0 ? (

@@ -18,28 +18,32 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "rewrites": [
-      {
-        "source": "debug-users.html",
-        "destination": "/debug-users.html"
-      },
-      {
-        "source": "fix-pharmacist.html",
-        "destination": "/fix-pharmacist.html"
-      },
-      {
-        "source": "update-jaypharm.html",
-        "destination": "/update-jaypharm.html"
-      },
-      {
-        "source": "check-assignments.html",
-        "destination": "/check-assignments.html"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ],
+        "rewrites": [
+          {
+            "source": "debug-users.html",
+            "destination": "/debug-users.html"
+          },
+          {
+            "source": "fix-pharmacist.html",
+            "destination": "/fix-pharmacist.html"
+          },
+          {
+            "source": "update-jaypharm.html",
+            "destination": "/update-jaypharm.html"
+          },
+          {
+            "source": "check-assignments.html",
+            "destination": "/check-assignments.html"
+          },
+          {
+            "source": "session-debug.html",
+            "destination": "/session-debug.html"
+          },
+          {
+            "source": "**",
+            "destination": "/index.html"
+          }
+        ],
     "headers": [
       {
         "source": "**/*.@(html)",
