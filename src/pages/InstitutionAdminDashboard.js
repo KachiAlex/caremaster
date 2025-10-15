@@ -54,6 +54,7 @@ import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
 import InventoryBillingTab from '../components/InventoryBillingTab';
 import { toast } from 'react-toastify';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages } from '../api/messagesAPI';
+import CallService from '../services/callService';
 
 const InstitutionAdminDashboard = () => {
   const navigate = useNavigate();
@@ -140,6 +141,10 @@ const InstitutionAdminDashboard = () => {
   const [callType, setCallType] = useState(null); // 'voice' or 'video'
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
+  const [activeCall, setActiveCall] = useState(null);
+  
+  // Initialize call service
+  const callService = new CallService();
 
   useEffect(() => {
     if (userProfile && institutionId) {
@@ -1238,12 +1243,49 @@ const InstitutionAdminDashboard = () => {
         return;
       }
       
+      if (!userProfile || (!userProfile.id && !userProfile.uid)) {
+        toast.error('User profile not available');
+        return;
+      }
+      
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        setLocalStream(stream);
-        setCallType('voice');
-        setIsInCall(true);
-        toast.success('Voice call started');
+        // Get the recipient ID from the conversation
+        const userId = userProfile.id || userProfile.uid || user.uid;
+        const recipientId = selectedConversation.participants?.find(p => p !== userId) 
+          || selectedConversation.id 
+          || selectedConversation.userId;
+        
+        if (!recipientId) {
+          toast.error('Could not identify recipient');
+          console.error('Conversation data:', selectedConversation);
+          return;
+        }
+        
+        console.log('🎤 Initiating voice call:', { callerId: userId, recipientId });
+        
+        // Initiate call through call service
+        const result = await callService.initiateCall(
+          userId,
+          recipientId,
+          'voice'
+        );
+
+        if (result.success) {
+          // Get local media stream
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          setLocalStream(stream);
+          setCallType('voice');
+          setIsInCall(true);
+          setActiveCall({
+            callId: result.callId,
+            participantId: recipientId,
+            participantName: selectedConversation.name || 'User',
+            callType: 'voice'
+          });
+          toast.success(`Voice call initiated with ${selectedConversation.name || 'User'}`);
+        } else {
+          toast.error('Failed to initiate voice call');
+        }
       } catch (error) {
         console.error('Error starting voice call:', error);
         toast.error('Failed to start voice call. Please check microphone permissions.');
@@ -1256,19 +1298,65 @@ const InstitutionAdminDashboard = () => {
         return;
       }
       
+      if (!userProfile || (!userProfile.id && !userProfile.uid)) {
+        toast.error('User profile not available');
+        return;
+      }
+      
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        setLocalStream(stream);
-        setCallType('video');
-        setIsInCall(true);
-        toast.success('Video call started');
+        // Get the recipient ID from the conversation
+        const userId = userProfile.id || userProfile.uid || user.uid;
+        const recipientId = selectedConversation.participants?.find(p => p !== userId) 
+          || selectedConversation.id 
+          || selectedConversation.userId;
+        
+        if (!recipientId) {
+          toast.error('Could not identify recipient');
+          console.error('Conversation data:', selectedConversation);
+          return;
+        }
+        
+        console.log('📹 Initiating video call:', { callerId: userId, recipientId });
+        
+        // Initiate call through call service
+        const result = await callService.initiateCall(
+          userId,
+          recipientId,
+          'video'
+        );
+
+        if (result.success) {
+          // Get local media stream
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+          setLocalStream(stream);
+          setCallType('video');
+          setIsInCall(true);
+          setActiveCall({
+            callId: result.callId,
+            participantId: recipientId,
+            participantName: selectedConversation.name || 'User',
+            callType: 'video'
+          });
+          toast.success(`Video call initiated with ${selectedConversation.name || 'User'}`);
+        } else {
+          toast.error('Failed to initiate video call');
+        }
       } catch (error) {
         console.error('Error starting video call:', error);
         toast.error('Failed to start video call. Please check camera and microphone permissions.');
       }
     };
 
-    const endCall = () => {
+    const endCall = async () => {
+      if (activeCall) {
+        try {
+          await callService.endCall(activeCall.callId);
+          console.log('✅ Call ended through service');
+        } catch (error) {
+          console.error('Error ending call:', error);
+        }
+      }
+      
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         setLocalStream(null);
@@ -1279,6 +1367,7 @@ const InstitutionAdminDashboard = () => {
       }
       setIsInCall(false);
       setCallType(null);
+      setActiveCall(null);
       toast.info('Call ended');
     };
 
