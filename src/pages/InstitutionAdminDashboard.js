@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc, addDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useUser } from '../contexts/UserContext';
 import authManager from '../utils/authManager';
@@ -545,6 +545,27 @@ const InstitutionAdminDashboard = () => {
           updatedAt: new Date().toISOString()
         });
       }
+      
+      // Create assignment record in clientAssignments collection
+      const assignmentData = {
+        clientId: clientId,
+        caregiverId: pharmacistId, // Using caregiverId field for consistency with existing API
+        assignedBy: user?.uid,
+        assignedAt: new Date(),
+        status: 'active',
+        type: 'pharmacist',
+        institutionId: instId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      console.log('🔍 Admin - Creating assignment record:', assignmentData);
+      console.log('🔍 Admin - Client ID:', clientId);
+      console.log('🔍 Admin - Pharmacist ID (caregiverId):', pharmacistId);
+      console.log('🔍 Admin - Institution ID:', instId);
+      
+      const assignmentRef = await addDoc(collection(db, 'clientAssignments'), assignmentData);
+      console.log('✅ Admin - Assignment created with ID:', assignmentRef.id);
       
       toast.success('Pharmacist assigned successfully!');
       

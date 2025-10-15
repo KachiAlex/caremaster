@@ -28,6 +28,10 @@
         "destination": "/fix-pharmacist.html"
       },
       {
+        "source": "update-jaypharm.html",
+        "destination": "/update-jaypharm.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

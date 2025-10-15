@@ -451,6 +451,8 @@ export const assignmentAPI = {
   getAssignedClients: async (caregiverId) => {
     try {
       logger.info('Fetching assigned clients', { caregiverId });
+      console.log('🔍 assignmentAPI - Searching for assignments with caregiverId:', caregiverId);
+      console.log('🔍 assignmentAPI - Collection:', ASSIGNMENTS_COLLECTION);
 
       // Query assignments for this caregiver
       const assignmentsQuery = query(
@@ -461,8 +463,14 @@ export const assignmentAPI = {
 
       const assignmentsSnapshot = await getDocs(assignmentsQuery);
       
+      console.log('🔍 assignmentAPI - Found assignments:', assignmentsSnapshot.size);
+      assignmentsSnapshot.forEach((doc) => {
+        console.log('🔍 assignmentAPI - Assignment:', doc.id, doc.data());
+      });
+      
       if (assignmentsSnapshot.empty) {
         logger.info('No assignments found for caregiver', { caregiverId });
+        console.log('⚠️ assignmentAPI - No assignments found for caregiverId:', caregiverId);
         return [];
       }
 
