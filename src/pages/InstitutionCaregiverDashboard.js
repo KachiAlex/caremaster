@@ -4189,7 +4189,7 @@ const InstitutionCaregiverDashboard = () => {
             </div>
             <div className="p-8">
               <div className="space-y-6">
-                {todaySchedule.map((schedule) => (
+                {(todaySchedule && Array.isArray(todaySchedule) ? todaySchedule : []).map((schedule) => (
                   <div key={schedule.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -4209,17 +4209,19 @@ const InstitutionCaregiverDashboard = () => {
                             <span className="font-medium">{schedule.address}</span>
                           </div>
                         </div>
-                        <div className="mb-4">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Tasks:</h4>
-                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {schedule.tasks.map((task, index) => (
-                              <li key={index} className="flex items-center text-sm text-gray-600">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                                {task}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                        {schedule.tasks && Array.isArray(schedule.tasks) && schedule.tasks.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Tasks:</h4>
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {schedule.tasks.map((task, index) => (
+                                <li key={index} className="flex items-center text-sm text-gray-600">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                                  {task}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                         {schedule.notes && (
                           <div className="mb-4">
                             <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes:</h4>
