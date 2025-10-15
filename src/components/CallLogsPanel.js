@@ -62,8 +62,11 @@ const CallLogsPanel = ({ userId }) => {
                   <div className="text-xs text-gray-500">{c.status} • {c.direction}</div>
                 </div>
               </div>
-              <div className="text-xs text-gray-500">
-                {c.createdAt?.toDate?.()?.toLocaleString?.() || ''}
+              <div className="text-right text-xs text-gray-500">
+                <div>{c.createdAt?.toDate?.()?.toLocaleString?.() || ''}</div>
+                {typeof c.duration === 'number' && (
+                  <div className="mt-1 text-gray-400">Duration: {Math.floor(c.duration/60)}m {c.duration%60}s</div>
+                )}
               </div>
             </li>)
           )}
