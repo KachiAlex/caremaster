@@ -129,23 +129,51 @@ const PharmacyTab = ({
 
   const runSafetyCheck = async (prescriptionsList) => {
     try {
+      console.log('🔍 Safety check - Input prescriptions:', prescriptionsList);
+      
       // Transform prescription data to match drug interaction service format
-      const medications = prescriptionsList.flatMap(prescription => 
-        prescription.medications?.map(med => ({
-          name: med.medicationName, // Transform medicationName to name
-          dosage: med.dosage,
-          frequency: med.frequency,
-          duration: med.duration,
-          quantity: med.quantity,
-          instructions: med.instructions,
-          route: med.route,
-          // Include prescription context
-          prescriptionId: prescription.id,
-          prescriptionNumber: prescription.prescriptionNumber
-        })) || []
-      );
+      const medications = prescriptionsList.flatMap(prescription => {
+        console.log('🔍 Processing prescription:', prescription.id, 'medications:', prescription.medications);
+        
+        if (!prescription.medications || !Array.isArray(prescription.medications)) {
+          console.warn('⚠️ No medications array found for prescription:', prescription.id);
+          return [];
+        }
+        
+        return prescription.medications
+          .filter(med => med && med.medicationName) // Filter out invalid entries
+          .map(med => {
+            console.log('🔍 Transforming medication:', {
+              original: med,
+              transformed: {
+                name: med.medicationName,
+                dosage: med.dosage,
+                frequency: med.frequency
+              }
+            });
+            
+            return {
+              name: med.medicationName, // Transform medicationName to name
+              dosage: med.dosage,
+              frequency: med.frequency,
+              duration: med.duration,
+              quantity: med.quantity,
+              instructions: med.instructions,
+              route: med.route,
+              // Include prescription context
+              prescriptionId: prescription.id,
+              prescriptionNumber: prescription.prescriptionNumber
+            };
+          });
+      });
 
       console.log('🔍 Safety check - Transformed medications:', medications);
+      
+      // Only run safety check if we have valid medications
+      if (medications.length === 0) {
+        console.warn('⚠️ No valid medications found for safety check');
+        return;
+      }
 
       const check = await drugInteractionService.comprehensiveSafetyCheck(
         medications,
@@ -160,7 +188,11 @@ const PharmacyTab = ({
         toast.warning(`${check.criticalAlerts.length} critical safety alert(s) detected!`);
       }
     } catch (error) {
-      console.error('Error running safety check:', error);
+      console.error('❌ Error running safety check:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
     }
   };
 
