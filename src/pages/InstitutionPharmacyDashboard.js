@@ -54,12 +54,37 @@ const InstitutionPharmacyDashboard = () => {
       console.log('🔍 Pharmacy Dashboard - Loading clients for pharmacist UID:', user.uid);
       console.log('🔍 Pharmacy Dashboard - User profile:', userProfile);
       
-      // Use the assignment API to get assigned clients (same as caregiver dashboard)
+      // First try the assignment API (new method)
       const { assignmentAPI } = await import('../api/assignmentAPI');
-      const clients = await assignmentAPI.getAssignedClients(user.uid);
+      let clients = await assignmentAPI.getAssignedClients(user.uid);
+      console.log('📋 Assignment API returned clients:', clients.length);
+      
+      // If no clients found, try the old method (direct client assignment)
+      if (clients.length === 0) {
+        console.log('🔄 No clients from assignment API, trying direct client assignment...');
+        const { collection: firestoreCollection, query, where, getDocs } = await import('firebase/firestore');
+        const { db } = await import('../firebase/config');
+        
+        const clientsQuery = query(
+          firestoreCollection(db, 'clients'),
+          where('assignedPharmacistId', '==', user.uid),
+          where('institutionId', '==', institutionId)
+        );
+        
+        const querySnapshot = await getDocs(clientsQuery);
+        clients = [];
+        
+        querySnapshot.forEach((doc) => {
+          clients.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        console.log('📋 Direct assignment method returned clients:', clients.length);
+      }
       
       setAssignedClients(clients);
-      console.log('📋 Loaded assigned clients for pharmacist:', clients.length);
+      console.log('📋 Final loaded assigned clients for pharmacist:', clients.length);
       console.log('📋 Client details:', clients);
     } catch (error) {
       console.error('Error loading assigned clients:', error);
