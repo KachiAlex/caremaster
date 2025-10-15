@@ -162,6 +162,7 @@ const InstitutionCaregiverDashboard = () => {
   
   // Messaging states
   const [conversations, setConversations] = useState([]);
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState(new Date());
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -1995,8 +1996,6 @@ const InstitutionCaregiverDashboard = () => {
 
   // Schedule Tab Renderer
   const renderScheduleTab = () => {
-    const [selectedDate, setSelectedDate] = React.useState(new Date());
-    
     const currentShift = {
       type: 'Day Shift',
       start: '07:00',
@@ -2026,7 +2025,7 @@ const InstitutionCaregiverDashboard = () => {
       });
     };
     
-    const selectedDayTasks = getTasksForDate(selectedDate);
+    const selectedDayTasks = getTasksForDate(selectedScheduleDate);
     
     return (
       <div className="space-y-6">
@@ -2076,13 +2075,13 @@ const InstitutionCaregiverDashboard = () => {
               const dayItems = getTasksForDate(dayDate);
               
               // Check if this day is selected
-              const isSelected = selectedDate.toDateString() === dayDate.toDateString();
+              const isSelected = selectedScheduleDate.toDateString() === dayDate.toDateString();
               const isToday = index + 1 === today;
               
               return (
                 <button
                   key={day}
-                  onClick={() => setSelectedDate(dayDate)}
+                  onClick={() => setSelectedScheduleDate(dayDate)}
                   className={`text-center p-4 rounded-lg transition-all cursor-pointer hover:shadow-md ${
                     isSelected ? 'bg-indigo-100 border-2 border-indigo-600 ring-2 ring-indigo-300' :
                     isToday ? 'bg-blue-100 border-2 border-blue-600' : 
@@ -2126,10 +2125,10 @@ const InstitutionCaregiverDashboard = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">
-              {selectedDate.toDateString() === new Date().toDateString() ? "Today's Timeline" : "Schedule Timeline"}
+              {selectedScheduleDate.toDateString() === new Date().toDateString() ? "Today's Timeline" : "Schedule Timeline"}
             </h2>
             <div className="text-sm text-gray-500">
-              {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              {selectedScheduleDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
           
@@ -2220,9 +2219,9 @@ const InstitutionCaregiverDashboard = () => {
               <div className="text-center text-gray-400 py-12">
                 <Calendar className="h-12 w-12 mx-auto mb-2" />
                 <p className="text-lg font-medium">
-                  {selectedDate.toDateString() === new Date().toDateString() 
+                  {selectedScheduleDate.toDateString() === new Date().toDateString() 
                     ? "No scheduled activities for today" 
-                    : `No scheduled activities for ${selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
+                    : `No scheduled activities for ${selectedScheduleDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
                   }
                 </p>
                 <p className="text-sm mt-1">Tasks and appointments will appear here</p>
