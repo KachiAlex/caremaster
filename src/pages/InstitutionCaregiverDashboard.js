@@ -174,6 +174,7 @@ const InstitutionCaregiverDashboard = () => {
   // Call-related states
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
+  const [callConnectionState, setCallConnectionState] = useState('connecting'); // Track WebRTC connection state
   const [callService] = useState(() => new CallService());
   const [webrtc] = useState(() => new WebRTCService());
   const [callStartAt, setCallStartAt] = useState(null);
@@ -185,14 +186,21 @@ const InstitutionCaregiverDashboard = () => {
       onLocalStream: (stream) => setLocalStream(stream),
       onRemoteStream: (stream) => setRemoteStream(stream),
       onCallStateChange: (state) => {
-        console.log('WebRTC state:', state);
-        if (state === 'connected' && !callStartAt) {
-          const start = new Date();
-          setCallStartAt(start);
-          if (timerRef.current) clearInterval(timerRef.current);
-          timerRef.current = setInterval(() => {
-            setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
-          }, 1000);
+        console.log('📡 WebRTC connection state:', state);
+        setCallConnectionState(state);
+        
+        if (state === 'connected') {
+          console.log('✅ Call connected successfully!');
+          if (!callStartAt) {
+            const start = new Date();
+            setCallStartAt(start);
+            if (timerRef.current) clearInterval(timerRef.current);
+            timerRef.current = setInterval(() => {
+              setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+            }, 1000);
+          }
+        } else if (state === 'failed' || state === 'disconnected') {
+          console.log('❌ Call connection failed or disconnected');
         }
       }
     });
@@ -5713,6 +5721,8 @@ const InstitutionCaregiverDashboard = () => {
           isIncoming={true}
           onCallAccepted={handleAcceptCall}
           onCallRejected={handleRejectCall}
+          externalWebrtcService={webrtc}
+          externalCallState={callConnectionState}
         />
       )}
       
@@ -5728,6 +5738,8 @@ const InstitutionCaregiverDashboard = () => {
             role: 'admin'
           }}
           isIncoming={false}
+          externalWebrtcService={webrtc}
+          externalCallState={callConnectionState}
         />
       )}
         </div>

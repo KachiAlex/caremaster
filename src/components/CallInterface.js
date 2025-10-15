@@ -37,9 +37,11 @@ const CallInterface = ({
   participantInfo = null,
   isIncoming = false,
   onCallAccepted,
-  onCallRejected 
+  onCallRejected,
+  externalWebrtcService = null, // Optional: use parent's WebRTC service
+  externalCallState = null // Optional: use parent's call state
 }) => {
-  const [callState, setCallState] = useState('connecting'); // connecting, ringing, connected, ended
+  const [callState, setCallState] = useState(externalCallState || (isIncoming ? 'ringing' : 'connecting')); // connecting, ringing, connected, ended
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(callType === 'video');
   const [isSpeakerEnabled, setIsSpeakerEnabled] = useState(false);
@@ -56,6 +58,14 @@ const CallInterface = ({
   const remoteVideoRef = useRef(null);
   const audioRef = useRef(null);
   const callDurationInterval = useRef(null);
+
+  // Update call state when external state changes
+  useEffect(() => {
+    if (externalCallState && externalCallState !== callState) {
+      console.log('📡 Updating call state from external:', externalCallState);
+      setCallState(externalCallState);
+    }
+  }, [externalCallState]);
 
   // Initialize WebRTC service
   useEffect(() => {
@@ -96,7 +106,18 @@ const CallInterface = ({
           }, 2000);
         },
         onCallStateChange: (state) => {
+          console.log('📡 WebRTC connection state changed:', state);
           setConnectionQuality(state === 'connected' ? 'good' : 'poor');
+          
+          // Update call state based on WebRTC connection state
+          if (state === 'connected') {
+            setCallState('connected');
+            startCallTimer();
+            toast.success('Call connected!');
+          } else if (state === 'failed' || state === 'disconnected' || state === 'closed') {
+            setCallState('ended');
+            toast.error('Call disconnected');
+          }
         },
         onStatsUpdate: (stats) => {
           setNetworkStats(stats);
