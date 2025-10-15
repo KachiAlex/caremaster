@@ -1319,10 +1319,10 @@ const InstitutionAdminDashboard = () => {
 
         if (result.success) {
           // Get local media stream
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          setLocalStream(stream);
-          setCallType('voice');
-          setIsInCall(true);
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        setLocalStream(stream);
+        setCallType('voice');
+        setIsInCall(true);
           setActiveCall({
             callId: result.callId,
             participantId: recipientId,
@@ -1337,6 +1337,17 @@ const InstitutionAdminDashboard = () => {
         console.error('Error starting voice call:', error);
         toast.error('Failed to start voice call. Please check microphone permissions.');
       }
+    };
+
+    const renderCallLogs = () => {
+      const uid = user?.uid || userProfile?.uid || userProfile?.id;
+      if (!uid) return null;
+      const CallLogsPanel = require('../components/CallLogsPanel').default;
+      return (
+        <div className="mt-4">
+          <CallLogsPanel userId={uid} />
+        </div>
+      );
     };
 
     const startVideoCall = async () => {
@@ -1422,8 +1433,8 @@ const InstitutionAdminDashboard = () => {
               // Unexpected for initiator, ignore
             }
           });
-          setCallType('video');
-          setIsInCall(true);
+        setCallType('video');
+        setIsInCall(true);
           setActiveCall({
             callId: result.callId,
             participantId: recipientId,

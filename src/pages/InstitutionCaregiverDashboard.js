@@ -808,6 +808,18 @@ const InstitutionCaregiverDashboard = () => {
     }
   };
 
+  // Inline call logs for caregiver/doctor view
+  const renderCallLogs = () => {
+    const uid = user?.uid || userProfile?.uid || userProfile?.id;
+    if (!uid) return null;
+    const CallLogsPanel = require('../components/CallLogsPanel').default;
+    return (
+      <div className="mt-6">
+        <CallLogsPanel userId={uid} />
+      </div>
+    );
+  };
+
   // Doctor action guards and navigation helpers
   const requireClient = () => {
     if (!selectedClientId) {

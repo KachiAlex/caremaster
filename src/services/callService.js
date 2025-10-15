@@ -305,6 +305,46 @@ class CallService {
     }
   }
 
+  // Get calls for a user with filter: 'all' | 'missed' | 'received' | 'outgoing'
+  async getUserCalls(userId, filter = 'all', limitCount = 50) {
+    try {
+      // Fetch both directions
+      const outgoingQuery = query(
+        collection(db, 'calls'),
+        where('callerId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
+      const incomingQuery = query(
+        collection(db, 'calls'),
+        where('recipientId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
+
+      const [outgoingSnapshot, incomingSnapshot] = await Promise.all([
+        getDocs(outgoingQuery),
+        getDocs(incomingQuery)
+      ]);
+
+      const outgoing = outgoingSnapshot.docs.map(doc => ({ id: doc.id, direction: 'outgoing', ...doc.data() }));
+      const incoming = incomingSnapshot.docs.map(doc => ({ id: doc.id, direction: 'incoming', ...doc.data() }));
+
+      let combined = [...outgoing, ...incoming].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+
+      if (filter === 'missed') {
+        combined = combined.filter(c => (c.direction === 'incoming') && (c.status === 'initiating' || c.status === 'rejected'));
+      } else if (filter === 'received') {
+        combined = combined.filter(c => (c.direction === 'incoming') && c.status === 'answered');
+      } else if (filter === 'outgoing') {
+        combined = combined.filter(c => c.direction === 'outgoing');
+      }
+
+      return combined.slice(0, limitCount);
+    } catch (error) {
+      console.error('Error getting user calls:', error);
+      return [];
+    }
+  }
+
   // Get call statistics
   async getCallStats(userId, days = 30) {
     try {
