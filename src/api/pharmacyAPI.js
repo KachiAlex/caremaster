@@ -20,18 +20,14 @@ export const pharmacyAPI = {
   // Get prescriptions assigned to pharmacy for a specific client
   getPrescriptionsByClient: async (clientId, filters = {}) => {
     try {
+      // Simple query without orderBy to avoid composite index requirement
       let prescriptionsQuery = query(
         collection(db, 'medications'),
-        where('patientId', '==', clientId),
-        orderBy('createdAt', 'desc')
+        where('patientId', '==', clientId)
       );
 
       if (filters.status) {
         prescriptionsQuery = query(prescriptionsQuery, where('pharmacyStatus', '==', filters.status));
-      }
-
-      if (filters.limit) {
-        prescriptionsQuery = query(prescriptionsQuery, limit(filters.limit));
       }
 
       const snapshot = await getDocs(prescriptionsQuery);
@@ -55,6 +51,18 @@ export const pharmacyAPI = {
           }
         });
       });
+
+      // Sort client-side by createdAt descending
+      prescriptions.sort((a, b) => {
+        const aTime = a.createdAt?.getTime?.() ?? 0;
+        const bTime = b.createdAt?.getTime?.() ?? 0;
+        return bTime - aTime;
+      });
+
+      // Apply limit client-side if specified
+      if (filters.limit) {
+        return prescriptions.slice(0, filters.limit);
+      }
 
       return prescriptions;
     } catch (error) {
@@ -187,10 +195,10 @@ export const pharmacyAPI = {
   // Get invoices for a client
   getInvoicesByClient: async (clientId) => {
     try {
+      // Simple query without orderBy to avoid composite index requirement
       const invoicesQuery = query(
         collection(db, 'pharmacyInvoices'),
-        where('clientId', '==', clientId),
-        orderBy('createdAt', 'desc')
+        where('clientId', '==', clientId)
       );
 
       const snapshot = await getDocs(invoicesQuery);
@@ -205,6 +213,13 @@ export const pharmacyAPI = {
           createdAt: data.createdAt?.toDate(),
           updatedAt: data.updatedAt?.toDate()
         });
+      });
+
+      // Sort client-side by createdAt descending
+      invoices.sort((a, b) => {
+        const aTime = a.createdAt?.getTime?.() ?? 0;
+        const bTime = b.createdAt?.getTime?.() ?? 0;
+        return bTime - aTime;
       });
 
       return invoices;
@@ -380,10 +395,10 @@ export const pharmacyAPI = {
 
   // Subscribe to prescriptions in real-time
   subscribeToPrescriptions: (clientId, callback) => {
+    // Simple query without orderBy to avoid composite index requirement
     const prescriptionsQuery = query(
       collection(db, 'medications'),
-      where('patientId', '==', clientId),
-      orderBy('createdAt', 'desc')
+      where('patientId', '==', clientId)
     );
 
     return onSnapshot(prescriptionsQuery, (snapshot) => {
@@ -406,6 +421,14 @@ export const pharmacyAPI = {
           }
         });
       });
+      
+      // Sort client-side by createdAt descending
+      prescriptions.sort((a, b) => {
+        const aTime = a.createdAt?.getTime?.() ?? 0;
+        const bTime = b.createdAt?.getTime?.() ?? 0;
+        return bTime - aTime;
+      });
+      
       callback(prescriptions);
     });
   },
