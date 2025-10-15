@@ -75,6 +75,7 @@ import ConsultationsTabContent from '../components/ConsultationsTabContent';
 import DiagnosticsTab from '../components/DiagnosticsTab';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
+import WebRTCService from '../services/webrtcService';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -173,6 +174,15 @@ const InstitutionCaregiverDashboard = () => {
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
   const [callService] = useState(() => new CallService());
+  const [webrtc] = useState(() => new WebRTCService());
+
+  useEffect(() => {
+    webrtc.setCallbacks({
+      onLocalStream: (stream) => setLocalStream(stream),
+      onRemoteStream: (stream) => setRemoteStream(stream),
+      onCallStateChange: (state) => console.log('WebRTC state:', state)
+    });
+  }, [webrtc]);
   
   // Activities states
   const [activities, setActivities] = useState([]);
@@ -740,7 +750,19 @@ const InstitutionCaregiverDashboard = () => {
     try {
       const userId = userProfile.id || userProfile.uid || user?.uid;
       await callService.answerCall(incomingCall.callId, userId);
-      
+      // Initialize WebRTC and answer
+      await webrtc.initialize();
+      await webrtc.answerCall(incomingCall.callId, incomingCall.callType);
+      // Listen for signaling for this call
+      const unsubscribeSignaling = webrtc.listenForSignaling(incomingCall.callId, async (msg) => {
+        if (msg.type === 'offer') {
+          await webrtc.handleOffer(msg.data.offer, incomingCall.callType);
+        } else if (msg.type === 'ice-candidate') {
+          await webrtc.handleIceCandidate(msg.data.candidate);
+        }
+      });
+      // Store unsubscribe if needed later (omitted for brevity)
+
       setActiveCall({
         callId: incomingCall.callId,
         participantId: incomingCall.callerId,

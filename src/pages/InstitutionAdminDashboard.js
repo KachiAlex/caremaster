@@ -55,6 +55,7 @@ import InventoryBillingTab from '../components/InventoryBillingTab';
 import { toast } from 'react-toastify';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages } from '../api/messagesAPI';
 import CallService from '../services/callService';
+import WebRTCService from '../services/webrtcService';
 
 const InstitutionAdminDashboard = () => {
   const navigate = useNavigate();
@@ -145,6 +146,16 @@ const InstitutionAdminDashboard = () => {
   
   // Initialize call service
   const callService = new CallService();
+  const [webrtc] = useState(() => new WebRTCService());
+
+  // Wire WebRTC callbacks
+  useEffect(() => {
+    webrtc.setCallbacks({
+      onLocalStream: (stream) => setLocalStream(stream),
+      onRemoteStream: (stream) => setRemoteStream(stream),
+      onCallStateChange: (state) => console.log('WebRTC state:', state)
+    });
+  }, [webrtc]);
 
   useEffect(() => {
     if (userProfile && institutionId) {
@@ -1398,9 +1409,19 @@ const InstitutionAdminDashboard = () => {
         );
 
         if (result.success) {
-          // Get local media stream
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-          setLocalStream(stream);
+          // Start WebRTC and signaling
+          await webrtc.initialize();
+          await webrtc.startCall(result.callId, recipientId, 'video');
+          // Begin listening for signaling messages for this call
+          webrtc.listenForSignaling(result.callId, async (msg) => {
+            if (msg.type === 'answer') {
+              await webrtc.handleAnswer(msg.data.answer);
+            } else if (msg.type === 'ice-candidate') {
+              await webrtc.handleIceCandidate(msg.data.candidate);
+            } else if (msg.type === 'offer') {
+              // Unexpected for initiator, ignore
+            }
+          });
           setCallType('video');
           setIsInCall(true);
           setActiveCall({
