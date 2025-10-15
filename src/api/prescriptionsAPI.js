@@ -119,6 +119,102 @@ export const createPrescription = async (prescriptionData) => {
   }
 };
 
+// Update prescription
+export const updatePrescription = async (prescriptionId, prescriptionData) => {
+  try {
+    const prescriptionRef = doc(db, PRESCRIPTIONS_COLLECTION, prescriptionId);
+    const prescriptionDoc = await getDoc(prescriptionRef);
+    
+    if (!prescriptionDoc.exists()) {
+      throw new Error('Prescription not found');
+    }
+
+    const existingData = prescriptionDoc.data();
+
+    // Update main prescription document
+    await updateDoc(prescriptionRef, {
+      diagnosis: prescriptionData.diagnosis,
+      notes: prescriptionData.notes,
+      totalItems: prescriptionData.medications?.length || 0,
+      updatedAt: serverTimestamp()
+    });
+
+    // Delete existing medication items
+    const existingItemsQuery = query(
+      collection(db, PRESCRIPTION_ITEMS_COLLECTION),
+      where('prescriptionId', '==', prescriptionId)
+    );
+    const existingItemsSnapshot = await getDocs(existingItemsQuery);
+    
+    const deletePromises = existingItemsSnapshot.docs.map(doc => 
+      deleteDoc(doc.ref)
+    );
+    await Promise.all(deletePromises);
+
+    // Create new medication items
+    if (prescriptionData.medications && prescriptionData.medications.length > 0) {
+      const itemsRef = collection(db, PRESCRIPTION_ITEMS_COLLECTION);
+      const prescriptionNumber = existingData.prescriptionNumber;
+      
+      for (let i = 0; i < prescriptionData.medications.length; i++) {
+        const medication = prescriptionData.medications[i];
+        await addDoc(itemsRef, {
+          prescriptionId: prescriptionId,
+          prescriptionNumber: prescriptionNumber,
+          itemNumber: i + 1,
+          medicationName: medication.name,
+          dosage: medication.dosage,
+          frequency: medication.frequency,
+          duration: medication.duration,
+          quantity: medication.quantity,
+          instructions: medication.instructions || '',
+          route: medication.route || 'oral',
+          
+          // Pharmacist fields
+          isAvailable: null,
+          availabilityCheckedBy: null,
+          availabilityCheckedAt: null,
+          unitPrice: null,
+          totalPrice: null,
+          alternativeSuggestion: '',
+          pharmacistNotes: '',
+          
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+    }
+
+    // Log activity to client's activity log
+    try {
+      const medicationNames = prescriptionData.medications?.map(m => m.name).join(', ') || '';
+      await logClientActivity({
+        clientId: prescriptionData.clientId,
+        activityType: 'prescription',
+        performedBy: prescriptionData.doctorId,
+        performerName: prescriptionData.doctorName,
+        performerRole: 'doctor',
+        description: `Prescription updated: ${medicationNames}`,
+        details: {
+          prescriptionId: prescriptionId,
+          prescriptionNumber: existingData.prescriptionNumber,
+          diagnosis: prescriptionData.diagnosis,
+          medicationCount: prescriptionData.medications?.length || 0
+        },
+        institutionId: prescriptionData.institutionId
+      });
+    } catch (activityError) {
+      console.error('Error logging prescription update activity:', activityError);
+    }
+
+    console.log('✅ Prescription updated:', prescriptionId);
+    return { id: prescriptionId, ...existingData, ...prescriptionData };
+  } catch (error) {
+    console.error('Error updating prescription:', error);
+    throw error;
+  }
+};
+
 // Get prescriptions by client
 export const getPrescriptionsByClient = async (clientId) => {
   try {
@@ -325,6 +421,7 @@ export const deletePrescription = async (prescriptionId) => {
 
 export default {
   createPrescription,
+  updatePrescription,
   getPrescriptionsByClient,
   getPrescriptionItems,
   getPendingPrescriptions,

@@ -188,6 +188,7 @@ const InstitutionCaregiverDashboard = () => {
   // Prescription states
   const [prescriptions, setPrescriptions] = useState([]);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+  const [editingPrescriptionId, setEditingPrescriptionId] = useState(null);
   const [prescriptionFormData, setPrescriptionFormData] = useState({
     diagnosis: '',
     notes: '',
@@ -1288,13 +1289,22 @@ const InstitutionCaregiverDashboard = () => {
         prescriptionDate: new Date().toISOString()
       };
       
-      console.log('💊 Creating prescription:', prescriptionData);
-      await prescriptionsAPI.createPrescription(prescriptionData);
+      if (editingPrescriptionId) {
+        // Update existing prescription
+        console.log('✏️ Updating prescription:', editingPrescriptionId, prescriptionData);
+        await prescriptionsAPI.updatePrescription(editingPrescriptionId, prescriptionData);
+        toast.success('Prescription updated successfully!');
+      } else {
+        // Create new prescription
+        console.log('💊 Creating prescription:', prescriptionData);
+        await prescriptionsAPI.createPrescription(prescriptionData);
+        toast.success('Prescription created successfully!');
+      }
       
-      toast.success('Prescription created successfully!');
       setShowPrescriptionModal(false);
+      setEditingPrescriptionId(null);
       
-      // Reload prescriptions to show the new one
+      // Reload prescriptions to show the changes
       await loadPrescriptions(selectedClient.id);
       
       // Reset form
@@ -1314,9 +1324,38 @@ const InstitutionCaregiverDashboard = () => {
         ]
       });
     } catch (error) {
-      console.error('Error creating prescription:', error);
-      toast.error('Failed to create prescription');
+      console.error('Error saving prescription:', error);
+      toast.error(`Failed to ${editingPrescriptionId ? 'update' : 'create'} prescription`);
     }
+  };
+  
+  // Edit prescription handler
+  const handleEditPrescription = (prescription) => {
+    setEditingPrescriptionId(prescription.id);
+    setPrescriptionFormData({
+      diagnosis: prescription.diagnosis || '',
+      notes: prescription.notes || '',
+      medications: prescription.medications && prescription.medications.length > 0
+        ? prescription.medications.map(med => ({
+            name: med.medicationName || '',
+            dosage: med.dosage || '',
+            frequency: med.frequency || '',
+            duration: med.duration || '',
+            quantity: med.quantity || '',
+            instructions: med.instructions || '',
+            route: med.route || 'oral'
+          }))
+        : [{
+            name: '',
+            dosage: '',
+            frequency: '',
+            duration: '',
+            quantity: '',
+            instructions: '',
+            route: 'oral'
+          }]
+    });
+    setShowPrescriptionModal(true);
   };
   
   // Update prescription item (pharmacist)
@@ -2171,6 +2210,7 @@ const InstitutionCaregiverDashboard = () => {
         selectedClient={selectedClient}
         prescriptions={prescriptions}
         onOpenPrescriptionModal={() => setShowPrescriptionModal(true)}
+        onEditPrescription={handleEditPrescription}
         onUpdatePrescriptionItem={handleUpdatePrescriptionItem}
         userProfile={userProfile}
       />
@@ -5450,13 +5490,32 @@ const InstitutionCaregiverDashboard = () => {
       {/* Prescription Modal */}
       <PrescriptionModal
         isOpen={showPrescriptionModal}
-        onClose={() => setShowPrescriptionModal(false)}
+        onClose={() => {
+          setShowPrescriptionModal(false);
+          setEditingPrescriptionId(null);
+          setPrescriptionFormData({
+            diagnosis: '',
+            notes: '',
+            medications: [
+              {
+                name: '',
+                dosage: '',
+                frequency: '',
+                duration: '',
+                quantity: '',
+                instructions: '',
+                route: 'oral'
+              }
+            ]
+          });
+        }}
         prescriptionFormData={prescriptionFormData}
         setPrescriptionFormData={setPrescriptionFormData}
         onAddMedication={handleAddMedication}
         onRemoveMedication={handleRemoveMedication}
         onSubmit={handleSubmitPrescription}
         selectedClient={selectedClient}
+        isEditing={!!editingPrescriptionId}
       />
 
       {/* Consultation Modal */}

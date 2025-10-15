@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pill, User, Clock, CheckCircle, XCircle, Eye, DollarSign, Package, AlertCircle, FileText } from 'lucide-react';
+import { Pill, User, Clock, CheckCircle, XCircle, Eye, DollarSign, Package, AlertCircle, FileText, Edit } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const PrescriptionsTabContent = ({
@@ -9,6 +9,7 @@ const PrescriptionsTabContent = ({
   prescriptions,
   onOpenPrescriptionModal,
   onUpdatePrescriptionItem,
+  onEditPrescription,
   userProfile
 }) => {
   const [expandedPrescription, setExpandedPrescription] = useState(null);
@@ -166,15 +167,26 @@ const PrescriptionsTabContent = ({
                         </span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setExpandedPrescription(
-                        expandedPrescription === prescription.id ? null : prescription.id
+                    <div className="flex items-center space-x-2">
+                      {isDoctor && prescription.doctorId === userProfile?.userId && (
+                        <button
+                          onClick={() => onEditPrescription && onEditPrescription(prescription)}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-sm font-medium"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </button>
                       )}
-                      className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center text-sm font-medium"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      {expandedPrescription === prescription.id ? 'Collapse' : 'View Details'}
-                    </button>
+                      <button
+                        onClick={() => setExpandedPrescription(
+                          expandedPrescription === prescription.id ? null : prescription.id
+                        )}
+                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center text-sm font-medium"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        {expandedPrescription === prescription.id ? 'Collapse' : 'View Details'}
+                      </button>
+                    </div>
                   </div>
                   {prescription.diagnosis && (
                     <div className="mt-3 pt-3 border-t border-gray-200">
