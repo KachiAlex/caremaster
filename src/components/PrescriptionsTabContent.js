@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Pill, User, Clock, CheckCircle, XCircle, Eye, DollarSign, Package, AlertCircle, FileText, Edit } from 'lucide-react';
+import { Pill, User, Clock, CheckCircle, XCircle, Eye, DollarSign, Package, AlertCircle, FileText, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import prescriptionsAPI from '../api/prescriptionsAPI';
 
 const PrescriptionsTabContent = ({
   isDoctor,
@@ -10,10 +11,12 @@ const PrescriptionsTabContent = ({
   onOpenPrescriptionModal,
   onUpdatePrescriptionItem,
   onEditPrescription,
+  onDeletePrescription,
   userProfile
 }) => {
   const [expandedPrescription, setExpandedPrescription] = useState(null);
   const [itemUpdates, setItemUpdates] = useState({});
+  const [deletingPrescription, setDeletingPrescription] = useState(null);
 
   // Debug logging
   console.log('🔍 PrescriptionsTabContent Debug:', {
@@ -21,6 +24,29 @@ const PrescriptionsTabContent = ({
     prescriptionsCount: prescriptions?.length || 0,
     prescriptions: prescriptions
   });
+
+  // Handle prescription deletion
+  const handleDeletePrescription = async (prescriptionId) => {
+    if (!confirm('Are you sure you want to delete this prescription? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingPrescription(prescriptionId);
+      await prescriptionsAPI.deletePrescription(prescriptionId);
+      toast.success('Prescription deleted successfully');
+      
+      // Call the parent handler to refresh the list
+      if (onDeletePrescription) {
+        onDeletePrescription(prescriptionId);
+      }
+    } catch (error) {
+      console.error('Error deleting prescription:', error);
+      toast.error('Failed to delete prescription');
+    } finally {
+      setDeletingPrescription(null);
+    }
+  };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -176,13 +202,23 @@ const PrescriptionsTabContent = ({
                     </div>
                     <div className="flex items-center space-x-2">
                       {isDoctor && prescription.doctorId === userProfile?.userId && (
-                        <button
-                          onClick={() => onEditPrescription && onEditPrescription(prescription)}
-                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-sm font-medium"
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </button>
+                        <>
+                          <button
+                            onClick={() => onEditPrescription && onEditPrescription(prescription)}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-sm font-medium"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeletePrescription(prescription.id)}
+                            disabled={deletingPrescription === prescription.id}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center text-sm font-medium"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {deletingPrescription === prescription.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() => setExpandedPrescription(

@@ -1368,6 +1368,18 @@ const InstitutionCaregiverDashboard = () => {
     setShowPrescriptionModal(true);
   };
   
+  // Handle prescription deletion
+  const handleDeletePrescription = async (prescriptionId) => {
+    try {
+      // Reload prescriptions after deletion
+      if (selectedClient) {
+        await loadPrescriptions(selectedClient.id);
+      }
+    } catch (error) {
+      console.error('Error reloading prescriptions after deletion:', error);
+    }
+  };
+  
   // Update prescription item (pharmacist)
   const handleUpdatePrescriptionItem = async (itemId, updates) => {
     try {
@@ -2221,6 +2233,7 @@ const InstitutionCaregiverDashboard = () => {
         prescriptions={prescriptions}
         onOpenPrescriptionModal={() => setShowPrescriptionModal(true)}
         onEditPrescription={handleEditPrescription}
+        onDeletePrescription={handleDeletePrescription}
         onUpdatePrescriptionItem={handleUpdatePrescriptionItem}
         userProfile={userProfile}
       />

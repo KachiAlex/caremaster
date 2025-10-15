@@ -80,6 +80,21 @@
       "density": "SPARSE_ALL"
     },
     {
+      "collectionGroup": "prescriptionItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "prescriptionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "itemNumber",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
       "collectionGroup": "careLogs",
       "queryScope": "COLLECTION",
       "fields": [
