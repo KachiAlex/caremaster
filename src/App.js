@@ -18,7 +18,7 @@ import InstitutionAdminGuard from './components/InstitutionAdminGuard';
 import ServiceProviderLayout from './components/ServiceProviderLayout';
 const Landing = lazy(() => import('./pages/Landing'));
 const Auth = lazy(() => import('./pages/Auth'));
-const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+// Admin routes deprecated
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Medications = lazy(() => import('./pages/Medications'));
 const VitalSigns = lazy(() => import('./pages/VitalSigns'));
@@ -58,21 +58,7 @@ const Services = lazy(() => import('./pages/Services'));
 const ClientCaregivers = lazy(() => import('./pages/PatientCaregivers'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 // All onboarding is now integrated into Auth.js
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const AdminUsers = lazy(() => import('./pages/AdminUsers'));
-const AdminReports = lazy(() => import('./pages/AdminReports'));
-const AdminAppointments = lazy(() => import('./pages/AdminAppointments'));
-const AdminSettings = lazy(() => import('./pages/AdminSettings'));
-const AdminEmergency = lazy(() => import('./pages/AdminEmergency'));
-const AdminEmergencyProtocols = lazy(() => import('./pages/AdminEmergencyProtocols'));
-const AdminMedications = lazy(() => import('./pages/AdminMedications'));
-const AdminMedicationAnalytics = lazy(() => import('./pages/AdminMedicationAnalytics'));
-const AdminCaregivers = lazy(() => import('./pages/AdminCaregivers'));
-const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
-const AdminCommunication = lazy(() => import('./pages/AdminCommunication'));
-const AdminAuditLogs = lazy(() => import('./pages/AdminAuditLogs'));
-const AdminClientAssignments = lazy(() => import('./pages/AdminPatientAssignments'));
-const AdminUserVerification = lazy(() => import('./pages/AdminUserVerification'));
+// Deprecated admin pages removed from bundle
 const SystemStatus = lazy(() => import('./pages/SystemStatus'));
 const MedicalDocuments = lazy(() => import('./pages/MedicalDocuments'));
 const AdminClientDatabase = lazy(() => import('./pages/AdminPatientDatabase'));
@@ -609,11 +595,8 @@ function App() {
         element={user ? <CaregiverOnboarding /> : <Navigate to="/caregiver/login" replace />} 
       />
       
-      {/* Admin Login Route */}
-      <Route 
-        path="/admin/login" 
-        element={<NewAdminLogin />} 
-      />
+      {/* Admin routes deprecated: redirect to institution landing */}
+      <Route path="/admin/*" element={<Navigate to="/institution-admin/dashboard" replace />} />
       
       {/* Alternative Admin Login Route */}
       <Route 
@@ -621,71 +604,7 @@ function App() {
         element={<NewAdminLogin />} 
       />
       
-      {/* Admin Dashboard Route */}
-      <Route 
-        path="/admin/dashboard" 
-        element={<NewAdminDashboard />} 
-      />
-      
-      {/* Admin Client Feedback Route */}
-      <Route 
-        path="/admin/client-feedback" 
-        element={<AdminClientFeedback />} 
-      />
-      
-      {/* Admin Analytics Route */}
-      <Route 
-        path="/admin/analytics" 
-        element={<AdminAnalytics />} 
-      />
-      
-      {/* Admin Users Route */}
-      <Route 
-        path="/admin/users" 
-        element={<AdminUsers />} 
-      />
-      
-      {/* Admin Caregivers Route */}
-      <Route 
-        path="/admin/caregivers" 
-        element={<AdminCaregivers />} 
-      />
-      
-      {/* Admin Communication Route */}
-      <Route 
-        path="/admin/communication" 
-        element={<AdminCommunication />} 
-      />
-      
-      {/* Admin Audit Logs Route */}
-      <Route 
-        path="/admin/audit-logs" 
-        element={<AdminAuditLogs />} 
-      />
-      
-      {/* Admin Emergency Route */}
-      <Route 
-        path="/admin/emergency" 
-        element={<AdminEmergency />} 
-      />
-      
-      {/* Admin Reports Route */}
-      <Route 
-        path="/admin/reports" 
-        element={<AdminReports />} 
-      />
-      
-      {/* Admin Settings Route */}
-      <Route 
-        path="/admin/settings" 
-        element={<AdminSettings />} 
-      />
-      
-      {/* Admin Root Redirect - always send to admin login to enforce session */}
-      <Route 
-        path="/admin" 
-        element={<Navigate to="/admin/login" replace />} 
-      />
+      {/* Legacy admin pages are redirected above */}
       
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
