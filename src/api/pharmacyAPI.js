@@ -126,6 +126,10 @@ export const pharmacyAPI = {
       console.log('🔍 pharmacyAPI - Updating prescription:', prescriptionId, 'with data:', pharmacyData);
       const prescriptionRef = doc(db, 'prescriptions', prescriptionId);
       
+      // Get current prescription data for activity logging
+      const prescriptionDoc = await getDoc(prescriptionRef);
+      const currentData = prescriptionDoc.data();
+      
       const updateData = {
         pharmacyData: {
           available: pharmacyData.available,
@@ -141,6 +145,44 @@ export const pharmacyAPI = {
       };
 
       await updateDoc(prescriptionRef, updateData);
+      
+      // Log activity to client's database
+      await logPharmacistActivity({
+        clientId: currentData.clientId,
+        prescriptionId: prescriptionId,
+        pharmacistId: pharmacyData.pharmacistId,
+        pharmacistName: pharmacyData.pharmacistName,
+        activityType: 'prescription_update',
+        description: `Prescription ${currentData.prescriptionNumber} updated by pharmacist`,
+        details: {
+          prescriptionNumber: currentData.prescriptionNumber,
+          diagnosis: currentData.diagnosis,
+          availability: pharmacyData.available,
+          price: pharmacyData.price,
+          stockQuantity: pharmacyData.stockQuantity,
+          status: pharmacyData.status,
+          notes: pharmacyData.notes,
+          medications: currentData.medications?.map(med => med.medicationName).join(', ') || 'Unknown'
+        }
+      });
+      
+      // Send notification to admin
+      await sendAdminNotification({
+        type: 'pharmacist_prescription_update',
+        title: 'Prescription Updated by Pharmacist',
+        message: `Pharmacist ${pharmacyData.pharmacistName} updated prescription ${currentData.prescriptionNumber} for client ${currentData.clientName || 'Unknown'}`,
+        priority: 'medium',
+        data: {
+          clientId: currentData.clientId,
+          prescriptionId: prescriptionId,
+          pharmacistId: pharmacyData.pharmacistId,
+          pharmacistName: pharmacyData.pharmacistName,
+          prescriptionNumber: currentData.prescriptionNumber,
+          availability: pharmacyData.available,
+          price: pharmacyData.price
+        }
+      });
+      
       return { success: true, id: prescriptionId };
     } catch (error) {
       console.error('Error updating prescription pharmacy data:', error);
@@ -511,6 +553,68 @@ export const pharmacyAPI = {
       console.error('Error fetching pharmacy stats:', error);
       throw error;
     }
+  }
+};
+
+// Helper function to log pharmacist activities to client database
+const logPharmacistActivity = async (activityData) => {
+  try {
+    const activityRecord = {
+      ...activityData,
+      timestamp: serverTimestamp(),
+      createdAt: new Date().toISOString(),
+      performerRole: 'pharmacist',
+      institutionId: activityData.institutionId || null
+    };
+
+    await addDoc(collection(db, 'clientActivities'), activityRecord);
+    console.log('✅ Pharmacist activity logged:', activityData.activityType);
+  } catch (error) {
+    console.error('❌ Error logging pharmacist activity:', error);
+    // Don't throw error to avoid breaking the main operation
+  }
+};
+
+// Helper function to send admin notifications
+const sendAdminNotification = async (notificationData) => {
+  try {
+    // Get all admins for the institution
+    const adminsQuery = query(
+      collection(db, 'users'),
+      where('userType', '==', 'admin'),
+      where('institutionId', '==', notificationData.data?.institutionId || null)
+    );
+    
+    const adminsSnapshot = await getDocs(adminsQuery);
+    
+    // Send notification to each admin
+    const notificationPromises = adminsSnapshot.docs.map(async (adminDoc) => {
+      const adminId = adminDoc.id;
+      const adminData = adminDoc.data();
+      
+      const notification = {
+        userId: adminId,
+        userEmail: adminData.email,
+        userType: 'admin',
+        type: notificationData.type,
+        title: notificationData.title,
+        message: notificationData.message,
+        priority: notificationData.priority || 'medium',
+        data: notificationData.data || {},
+        read: false,
+        createdAt: serverTimestamp(),
+        timestamp: new Date().toISOString(),
+        source: 'pharmacy_system'
+      };
+
+      return addDoc(collection(db, 'notifications'), notification);
+    });
+
+    await Promise.all(notificationPromises);
+    console.log('✅ Admin notifications sent:', adminsSnapshot.size, 'admins notified');
+  } catch (error) {
+    console.error('❌ Error sending admin notifications:', error);
+    // Don't throw error to avoid breaking the main operation
   }
 };
 

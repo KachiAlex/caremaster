@@ -627,6 +627,46 @@ service cloud.firestore {
       allow write: if isAdmin() || (request.auth != null && request.auth.uid == pharmacistId);
     }
     
+    // Client activities collection - comprehensive logging
+    match /clientActivities/{activityId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        isPharmacist() ||
+        isNurse() ||
+        resource.data.clientId == request.auth.uid
+      );
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        isPharmacist() ||
+        isNurse()
+      );
+      allow update, delete: if request.auth != null && isAdmin();
+    }
+    
+    // Notifications collection - system notifications
+    match /notifications/{notificationId} {
+      allow read, list: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        isPharmacist() ||
+        isNurse()
+      );
+      allow update: if request.auth != null && (
+        resource.data.userId == request.auth.uid || // User can mark as read
+        isAdmin() // Admin can manage all notifications
+      );
+      allow delete: if request.auth != null && isAdmin();
+    }
+
     // Allow admins to read/write any other collections
     match /{document=**} {
       allow read, write: if isAdmin();
