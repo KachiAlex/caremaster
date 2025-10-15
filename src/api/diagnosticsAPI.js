@@ -17,6 +17,7 @@ import {
 import { db } from '../firebase/config';
 import logger from '../utils/logger';
 import { logClientActivity as logActivity } from './clientActivitiesAPI';
+import { notificationsAPI } from './notificationsAPI';
 
 const DIAGNOSTICS_COLLECTION = 'diagnostics';
 const CLIENT_ACTIVITIES_COLLECTION = 'clientActivities';
@@ -57,6 +58,30 @@ export const createDiagnosticTest = async (diagnosticData) => {
       });
     } catch (activityError) {
       logger.error('Error logging diagnostic activity', { activityError });
+      // Don't throw - diagnostic was created successfully
+    }
+    
+    // Send notification to admin
+    try {
+      await sendAdminNotification({
+        type: 'diagnostic_test_ordered',
+        title: 'New Diagnostic Test Ordered',
+        message: `Dr. ${diagnosticData.orderedByName} ordered ${diagnosticData.testType} for ${diagnosticData.clientName}`,
+        priority: diagnosticData.urgency === 'urgent' ? 'high' : 'medium',
+        data: {
+          clientId: diagnosticData.clientId,
+          clientName: diagnosticData.clientName,
+          diagnosticId: docRef.id,
+          testType: diagnosticData.testType,
+          orderedBy: diagnosticData.orderedBy,
+          orderedByName: diagnosticData.orderedByName,
+          urgency: diagnosticData.urgency,
+          institutionId: diagnosticData.institutionId
+        },
+        institutionId: diagnosticData.institutionId
+      });
+    } catch (notificationError) {
+      logger.error('Error sending admin notification', { notificationError });
       // Don't throw - diagnostic was created successfully
     }
 
@@ -110,6 +135,30 @@ export const uploadDiagnosticResults = async (diagnosticId, resultsData) => {
       });
     } catch (activityError) {
       logger.error('Error logging results upload activity', { activityError });
+      // Don't throw - results were uploaded successfully
+    }
+    
+    // Send notification to admin
+    try {
+      await sendAdminNotification({
+        type: 'diagnostic_results_uploaded',
+        title: 'Diagnostic Results Uploaded',
+        message: `Nurse ${resultsData.uploadedByName} uploaded ${diagnostic.testType} results for ${diagnostic.clientName}`,
+        priority: 'medium',
+        data: {
+          clientId: diagnostic.clientId,
+          clientName: diagnostic.clientName,
+          diagnosticId,
+          testType: diagnostic.testType,
+          uploadedBy: resultsData.uploadedBy,
+          uploadedByName: resultsData.uploadedByName,
+          documentCount: resultsData.uploadedDocuments?.length || 0,
+          institutionId: diagnostic.institutionId
+        },
+        institutionId: diagnostic.institutionId
+      });
+    } catch (notificationError) {
+      logger.error('Error sending admin notification', { notificationError });
       // Don't throw - results were uploaded successfully
     }
 
@@ -393,4 +442,42 @@ export const subscribeToClientActivities = (clientId, callback) => {
   }, (error) => {
     logger.error('Error in activities subscription', { error, clientId });
   });
+};
+
+// Helper function to send admin notifications
+const sendAdminNotification = async (notificationData) => {
+  try {
+    // Get all admins for the institution
+    const adminsQuery = query(
+      collection(db, 'users'),
+      where('userType', '==', 'admin'),
+      where('institutionId', '==', notificationData.institutionId || null)
+    );
+    
+    const adminsSnapshot = await getDocs(adminsQuery);
+    
+    // Send notification to each admin
+    const notificationPromises = adminsSnapshot.docs.map(async (adminDoc) => {
+      const adminId = adminDoc.id;
+      const adminData = adminDoc.data();
+      
+      return await notificationsAPI.createNotification({
+        userId: adminId,
+        userEmail: adminData.email,
+        userType: 'admin',
+        type: notificationData.type,
+        title: notificationData.title,
+        message: notificationData.message,
+        priority: notificationData.priority || 'medium',
+        data: notificationData.data || {},
+        source: 'diagnostics_system'
+      });
+    });
+
+    await Promise.all(notificationPromises);
+    logger.info('Admin notifications sent', { count: adminsSnapshot.size });
+  } catch (error) {
+    logger.error('Error sending admin notifications', { error });
+    // Don't throw error to avoid breaking the main operation
+  }
 };

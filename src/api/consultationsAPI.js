@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { logClientActivity } from './clientActivitiesAPI';
+import { notificationsAPI } from './notificationsAPI';
 
 const CONSULTATIONS_COLLECTION = 'consultations';
 
@@ -99,6 +100,30 @@ export const createConsultation = async (consultationData) => {
       });
     } catch (activityError) {
       console.error('Error logging consultation activity:', activityError);
+      // Don't throw - consultation was created successfully
+    }
+    
+    // Send notification to admin
+    try {
+      await sendAdminNotification({
+        type: 'doctor_consultation',
+        title: 'New Consultation Recorded',
+        message: `Dr. ${consultationData.doctorName} completed a ${consultationData.consultationType} consultation for ${consultationData.clientName}`,
+        priority: consultationData.consultationType === CONSULTATION_TYPES.EMERGENCY ? 'high' : 'medium',
+        data: {
+          clientId: consultationData.clientId,
+          clientName: consultationData.clientName,
+          consultationId: docRef.id,
+          doctorId: consultationData.doctorId,
+          doctorName: consultationData.doctorName,
+          consultationType: consultationData.consultationType,
+          chiefComplaint: consultationData.chiefComplaint,
+          institutionId: consultationData.institutionId
+        },
+        institutionId: consultationData.institutionId
+      });
+    } catch (notificationError) {
+      console.error('Error sending admin notification:', notificationError);
       // Don't throw - consultation was created successfully
     }
     
@@ -293,6 +318,44 @@ export const getConsultationStats = async (doctorId, startDate, endDate) => {
       followUpRequired: 0,
       averageConsultationsPerDay: 0
     };
+  }
+};
+
+// Helper function to send admin notifications
+const sendAdminNotification = async (notificationData) => {
+  try {
+    // Get all admins for the institution
+    const adminsQuery = query(
+      collection(db, 'users'),
+      where('userType', '==', 'admin'),
+      where('institutionId', '==', notificationData.institutionId || null)
+    );
+    
+    const adminsSnapshot = await getDocs(adminsQuery);
+    
+    // Send notification to each admin
+    const notificationPromises = adminsSnapshot.docs.map(async (adminDoc) => {
+      const adminId = adminDoc.id;
+      const adminData = adminDoc.data();
+      
+      return await notificationsAPI.createNotification({
+        userId: adminId,
+        userEmail: adminData.email,
+        userType: 'admin',
+        type: notificationData.type,
+        title: notificationData.title,
+        message: notificationData.message,
+        priority: notificationData.priority || 'medium',
+        data: notificationData.data || {},
+        source: 'consultation_system'
+      });
+    });
+
+    await Promise.all(notificationPromises);
+    console.log('✅ Admin notifications sent:', adminsSnapshot.size, 'admins notified');
+  } catch (error) {
+    console.error('❌ Error sending admin notifications:', error);
+    // Don't throw error to avoid breaking the main operation
   }
 };
 
