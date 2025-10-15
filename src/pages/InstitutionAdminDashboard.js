@@ -1396,8 +1396,8 @@ const InstitutionAdminDashboard = () => {
           // Initialize WebRTC and create offer
           console.log('🔧 Initializing WebRTC for admin...');
           await webrtc.initialize();
-          const offer = await webrtc.makeCall(result.callId, 'voice');
-          console.log('📤 Created offer, sending to recipient...');
+          await webrtc.startCall(result.callId, recipientId, 'voice');
+          console.log('📤 Created offer and sent to recipient...');
           
           // Listen for signaling messages from recipient
           const unsubscribeSignaling = webrtc.listenForSignaling(result.callId, async (msg) => {
