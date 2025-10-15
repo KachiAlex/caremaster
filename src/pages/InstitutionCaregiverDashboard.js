@@ -73,6 +73,8 @@ import consultationsAPI, { CONSULTATION_TYPES } from '../api/consultationsAPI';
 import ConsultationModal from '../components/ConsultationModal';
 import ConsultationsTabContent from '../components/ConsultationsTabContent';
 import DiagnosticsTab from '../components/DiagnosticsTab';
+import CallService from '../services/callService';
+import CallInterface from '../components/CallInterface';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -166,6 +168,11 @@ const InstitutionCaregiverDashboard = () => {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [platformUsers, setPlatformUsers] = useState([]); // All users on the platform
+  
+  // Call-related states
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [activeCall, setActiveCall] = useState(null);
+  const [callService] = useState(() => new CallService());
   
   // Activities states
   const [activities, setActivities] = useState([]);
@@ -696,6 +703,88 @@ const InstitutionCaregiverDashboard = () => {
     };
     }
   }, [selectedClient, clientModalTab, activeTab]);
+
+  // Set up incoming call listener
+  useEffect(() => {
+    if (!userProfile || (!userProfile.id && !userProfile.uid)) {
+      return;
+    }
+    
+    const userId = userProfile.id || userProfile.uid || user?.uid;
+    console.log('🎧 Setting up call listener for user:', userId, 'role:', userProfile.userType);
+    
+    const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {
+      console.log('📞 Incoming call notification:', callNotification);
+      
+      if (callNotification.status === 'incoming') {
+        setIncomingCall({
+          callId: callNotification.callId,
+          callerId: callNotification.callerId,
+          callType: callNotification.callType,
+          timestamp: callNotification.timestamp
+        });
+        toast.info(`Incoming ${callNotification.callType} call...`);
+      }
+    });
+    
+    return () => {
+      console.log('🔌 Cleaning up call listener');
+      if (unsubscribe) unsubscribe();
+    };
+  }, [userProfile, user, callService]);
+
+  // Handle incoming call acceptance
+  const handleAcceptCall = async () => {
+    if (!incomingCall) return;
+    
+    try {
+      const userId = userProfile.id || userProfile.uid || user?.uid;
+      await callService.answerCall(incomingCall.callId, userId);
+      
+      setActiveCall({
+        callId: incomingCall.callId,
+        participantId: incomingCall.callerId,
+        participantName: 'Admin',
+        callType: incomingCall.callType
+      });
+      setIncomingCall(null);
+      console.log('✅ Call accepted');
+      toast.success('Call accepted');
+    } catch (error) {
+      console.error('Error accepting call:', error);
+      toast.error('Failed to accept call');
+    }
+  };
+
+  // Handle incoming call rejection
+  const handleRejectCall = async () => {
+    if (!incomingCall) return;
+    
+    try {
+      const userId = userProfile.id || userProfile.uid || user?.uid;
+      await callService.rejectCall(incomingCall.callId, userId);
+      setIncomingCall(null);
+      console.log('❌ Call rejected');
+      toast.info('Call rejected');
+    } catch (error) {
+      console.error('Error rejecting call:', error);
+      toast.error('Failed to reject call');
+    }
+  };
+
+  // Handle active call end
+  const handleEndCall = async () => {
+    if (!activeCall) return;
+    
+    try {
+      await callService.endCall(activeCall.callId);
+      setActiveCall(null);
+      console.log('✅ Call ended');
+      toast.info('Call ended');
+    } catch (error) {
+      console.error('Error ending call:', error);
+    }
+  };
 
   // Doctor action guards and navigation helpers
   const requireClient = () => {
@@ -5552,6 +5641,38 @@ const InstitutionCaregiverDashboard = () => {
         relatedMedicalReports={medicalReports || []}
         relatedCareLogs={careLogs || []}
       />
+      
+      {/* Incoming Call Interface */}
+      {incomingCall && (
+        <CallInterface
+          isOpen={!!incomingCall}
+          onClose={handleRejectCall}
+          callType={incomingCall.callType}
+          participantInfo={{
+            id: incomingCall.callerId,
+            name: 'Admin',
+            role: 'admin'
+          }}
+          isIncoming={true}
+          onCallAccepted={handleAcceptCall}
+          onCallRejected={handleRejectCall}
+        />
+      )}
+      
+      {/* Active Call Interface */}
+      {activeCall && (
+        <CallInterface
+          isOpen={!!activeCall}
+          onClose={handleEndCall}
+          callType={activeCall.callType}
+          participantInfo={{
+            id: activeCall.participantId,
+            name: activeCall.participantName,
+            role: 'admin'
+          }}
+          isIncoming={false}
+        />
+      )}
         </div>
       </div>
     </InstitutionCaregiverGuard>
