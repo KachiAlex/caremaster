@@ -720,12 +720,32 @@ const PrescriptionRow = ({
           />
         </td>
         <td className="px-6 py-4">
-          <div className="font-medium text-gray-900">{prescription.name}</div>
-          <div className="text-sm text-gray-500">{prescription.instructions}</div>
+          <div className="font-medium text-gray-900">
+            {prescription.medications && prescription.medications.length > 0 
+              ? prescription.medications.map(med => med.medicationName).join(', ')
+              : 'No medication name'
+            }
+          </div>
+          <div className="text-sm text-gray-500">
+            {prescription.medications && prescription.medications.length > 0 
+              ? prescription.medications[0].instructions || 'No instructions'
+              : 'No instructions'
+            }
+          </div>
         </td>
         <td className="px-6 py-4">
-          <div className="text-sm text-gray-900">{prescription.dosage}</div>
-          <div className="text-sm text-gray-500">{prescription.frequency}</div>
+          <div className="text-sm text-gray-900">
+            {prescription.medications && prescription.medications.length > 0 
+              ? prescription.medications[0].dosage || 'No dosage'
+              : 'No dosage'
+            }
+          </div>
+          <div className="text-sm text-gray-500">
+            {prescription.medications && prescription.medications.length > 0 
+              ? prescription.medications[0].frequency || 'No frequency'
+              : 'No frequency'
+            }
+          </div>
         </td>
         <td className="px-6 py-4">
           <div className="text-sm text-gray-900">{prescription.prescribedBy || 'Doctor'}</div>
@@ -822,12 +842,32 @@ const PrescriptionRow = ({
         />
       </td>
       <td className="px-6 py-4">
-        <div className="font-medium text-gray-900">{prescription.name}</div>
-        <div className="text-sm text-gray-500">{prescription.instructions}</div>
+        <div className="font-medium text-gray-900">
+          {prescription.medications && prescription.medications.length > 0 
+            ? prescription.medications.map(med => med.medicationName).join(', ')
+            : 'No medication name'
+          }
+        </div>
+        <div className="text-sm text-gray-500">
+          {prescription.medications && prescription.medications.length > 0 
+            ? prescription.medications[0].instructions || 'No instructions'
+            : 'No instructions'
+          }
+        </div>
       </td>
       <td className="px-6 py-4">
-        <div className="text-sm text-gray-900">{prescription.dosage}</div>
-        <div className="text-sm text-gray-500">{prescription.frequency}</div>
+        <div className="text-sm text-gray-900">
+          {prescription.medications && prescription.medications.length > 0 
+            ? prescription.medications[0].dosage || 'No dosage'
+            : 'No dosage'
+          }
+        </div>
+        <div className="text-sm text-gray-500">
+          {prescription.medications && prescription.medications.length > 0 
+            ? prescription.medications[0].frequency || 'No frequency'
+            : 'No frequency'
+          }
+        </div>
       </td>
       <td className="px-6 py-4">
         <div className="text-sm text-gray-900">{prescription.prescribedBy || 'Doctor'}</div>
