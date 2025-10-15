@@ -1251,17 +1251,53 @@ const InstitutionAdminDashboard = () => {
       try {
         // Get the recipient ID from the conversation
         const userId = userProfile.id || userProfile.uid || user.uid;
-        const recipientId = selectedConversation.participants?.find(p => p !== userId) 
-          || selectedConversation.id 
-          || selectedConversation.userId;
+        
+        // Debug: Log full conversation details
+        console.log('🔍 Selected conversation:', {
+          conversation: selectedConversation,
+          participants: selectedConversation.participants,
+          userId: selectedConversation.userId,
+          id: selectedConversation.id,
+          currentUserId: userId
+        });
+        
+        // Find recipient from participants array
+        let recipientId = null;
+        if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
+          recipientId = selectedConversation.participants.find(p => p !== userId);
+          console.log('✅ Found recipient in participants:', recipientId);
+        }
+        
+        // Fallback to userId field
+        if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
+          recipientId = selectedConversation.userId;
+          console.log('✅ Found recipient in userId field:', recipientId);
+        }
+        
+        // Fallback to id field (only if it's not a conversation ID format)
+        if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_') && selectedConversation.id !== userId) {
+          recipientId = selectedConversation.id;
+          console.log('✅ Found recipient in id field:', recipientId);
+        }
         
         if (!recipientId) {
-          toast.error('Could not identify recipient');
-          console.error('Conversation data:', selectedConversation);
+          toast.error('Could not identify recipient. Please check conversation data.');
+          console.error('❌ Conversation data:', selectedConversation);
           return;
         }
         
-        console.log('🎤 Initiating voice call:', { callerId: userId, recipientId });
+        // Prevent calling yourself
+        if (recipientId === userId) {
+          toast.error('Cannot call yourself');
+          console.error('❌ Attempted to call self:', { userId, recipientId });
+          return;
+        }
+        
+        console.log('🎤 Initiating voice call:', { 
+          callerId: userId, 
+          recipientId,
+          recipientName: selectedConversation.name 
+        });
         
         // Initiate call through call service
         const result = await callService.initiateCall(
@@ -1306,17 +1342,53 @@ const InstitutionAdminDashboard = () => {
       try {
         // Get the recipient ID from the conversation
         const userId = userProfile.id || userProfile.uid || user.uid;
-        const recipientId = selectedConversation.participants?.find(p => p !== userId) 
-          || selectedConversation.id 
-          || selectedConversation.userId;
+        
+        // Debug: Log full conversation details
+        console.log('🔍 Selected conversation:', {
+          conversation: selectedConversation,
+          participants: selectedConversation.participants,
+          userId: selectedConversation.userId,
+          id: selectedConversation.id,
+          currentUserId: userId
+        });
+        
+        // Find recipient from participants array
+        let recipientId = null;
+        if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
+          recipientId = selectedConversation.participants.find(p => p !== userId);
+          console.log('✅ Found recipient in participants:', recipientId);
+        }
+        
+        // Fallback to userId field
+        if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
+          recipientId = selectedConversation.userId;
+          console.log('✅ Found recipient in userId field:', recipientId);
+        }
+        
+        // Fallback to id field (only if it's not a conversation ID format)
+        if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_') && selectedConversation.id !== userId) {
+          recipientId = selectedConversation.id;
+          console.log('✅ Found recipient in id field:', recipientId);
+        }
         
         if (!recipientId) {
-          toast.error('Could not identify recipient');
-          console.error('Conversation data:', selectedConversation);
+          toast.error('Could not identify recipient. Please check conversation data.');
+          console.error('❌ Conversation data:', selectedConversation);
           return;
         }
         
-        console.log('📹 Initiating video call:', { callerId: userId, recipientId });
+        // Prevent calling yourself
+        if (recipientId === userId) {
+          toast.error('Cannot call yourself');
+          console.error('❌ Attempted to call self:', { userId, recipientId });
+          return;
+        }
+        
+        console.log('📹 Initiating video call:', { 
+          callerId: userId, 
+          recipientId,
+          recipientName: selectedConversation.name 
+        });
         
         // Initiate call through call service
         const result = await callService.initiateCall(

@@ -27,6 +27,17 @@ class CallService {
   // Initiate a call
   async initiateCall(callerId, recipientId, callType = 'video') {
     try {
+      console.log('🔥 CallService.initiateCall called:', { callerId, recipientId, callType });
+      
+      // Validation
+      if (!callerId || !recipientId) {
+        throw new Error('Caller ID and Recipient ID are required');
+      }
+      
+      if (callerId === recipientId) {
+        throw new Error('Cannot call yourself');
+      }
+      
       const callId = this.generateCallId();
       const callData = {
         callId,
@@ -41,21 +52,25 @@ class CallService {
       };
 
       // Create call document
+      console.log('📄 Creating call document in Firestore...');
       const callDoc = await addDoc(collection(db, 'calls'), callData);
+      console.log('✅ Call document created:', callDoc.id);
 
       // Send call notification
+      console.log('🔔 Sending call notification to recipient:', recipientId);
       await this.sendCallNotification(recipientId, {
         callId,
         callerId,
         callType,
         status: 'incoming'
       });
+      console.log('✅ Call notification sent successfully');
 
       this.activeCall = { ...callData, id: callDoc.id };
 
       return { success: true, callId, callData: this.activeCall };
     } catch (error) {
-      console.error('Error initiating call:', error);
+      console.error('❌ Error initiating call:', error);
       return { success: false, error: error.message };
     }
   }
@@ -161,14 +176,24 @@ class CallService {
   // Send call notification
   async sendCallNotification(userId, notificationData) {
     try {
+      console.log('📨 sendCallNotification called:', { userId, notificationData });
+      
       // Only send to callNotifications collection for now to avoid permission issues
-      await addDoc(collection(db, 'callNotifications'), {
+      const notificationDoc = await addDoc(collection(db, 'callNotifications'), {
         userId,
         ...notificationData,
         timestamp: serverTimestamp()
       });
+      
+      console.log('✅ Notification document created:', {
+        notificationId: notificationDoc.id,
+        userId,
+        callId: notificationData.callId,
+        status: notificationData.status
+      });
     } catch (error) {
-      console.error('Error sending call notification:', error);
+      console.error('❌ Error sending call notification:', error);
+      throw error; // Re-throw to let caller know it failed
     }
   }
 
