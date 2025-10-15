@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase/config';
 import { db } from './firebase/config';
@@ -601,8 +601,8 @@ function App() {
         element={<NewAdminLogin />} 
       />
       
-      {/* Tenant Partners marketing/entry page */}
-      <Route path="/institution" element={<TenantPartners />} />
+      {/* Institution entry: partners page OR specific institution landing when ?institution= is present */}
+      <Route path="/institution" element={<InstitutionEntry />} />
 
       {/* Institution chooser for multi-institution users */}
       <Route path="/choose-institution" element={<ChooseInstitution />} />
@@ -616,6 +616,12 @@ function App() {
       </UserProvider>
     </ErrorBoundary>
   );
+}
+
+function InstitutionEntry() {
+  const [params] = useSearchParams();
+  const id = params.get('institution');
+  return id ? <InstitutionLanding /> : <TenantPartners />;
 }
 
 // Sign-in route handler - focuses on caregiver/service provider access
