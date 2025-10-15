@@ -17,6 +17,7 @@ import InstitutionAdminGuard from './components/InstitutionAdminGuard';
 // Old admin components removed - using new admin system
 import ServiceProviderLayout from './components/ServiceProviderLayout';
 const Landing = lazy(() => import('./pages/Landing'));
+const ChooseInstitution = lazy(() => import('./pages/ChooseInstitution'));
 const Auth = lazy(() => import('./pages/Auth'));
 // Admin routes deprecated
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -604,6 +605,9 @@ function App() {
         element={<NewAdminLogin />} 
       />
       
+      {/* Institution chooser for multi-institution users */}
+      <Route path="/choose-institution" element={<ChooseInstitution />} />
+
       {/* Legacy admin pages are redirected above */}
       
       {/* Catch all route */}

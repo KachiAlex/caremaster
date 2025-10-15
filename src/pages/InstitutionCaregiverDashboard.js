@@ -75,6 +75,7 @@ import ConsultationsTabContent from '../components/ConsultationsTabContent';
 import DiagnosticsTab from '../components/DiagnosticsTab';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
+import PortalSwitcher from '../components/PortalSwitcher';
 import WebRTCService from '../services/webrtcService';
 
 const InstitutionCaregiverDashboard = () => {
@@ -3766,6 +3767,10 @@ const InstitutionCaregiverDashboard = () => {
 
         {/* Main Content */}
         <div className="flex-1 px-8 pb-8 w-full">
+          {/* Top right portal switcher */}
+          <div className="w-full flex justify-end pt-4 pb-2">
+            <PortalSwitcher />
+          </div>
         {showSettings ? (
           <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
         ) : activeTab === 'messages' ? (

@@ -57,6 +57,7 @@ import { toast } from 'react-toastify';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages } from '../api/messagesAPI';
 import CallService from '../services/callService';
 import WebRTCService from '../services/webrtcService';
+import PortalSwitcher from '../components/PortalSwitcher';
 
 const InstitutionAdminDashboard = () => {
   const navigate = useNavigate();
@@ -2259,6 +2260,7 @@ const InstitutionAdminDashboard = () => {
             )}
           </div>
         </div>
+        <PortalSwitcher />
       </div>
 
       {/* Quick Actions Grid */}
