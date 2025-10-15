@@ -40,6 +40,10 @@
             "destination": "/session-debug.html"
           },
           {
+            "source": "debug-pharmacist-role.html",
+            "destination": "/debug-pharmacist-role.html"
+          },
+          {
             "source": "**",
             "destination": "/index.html"
           }

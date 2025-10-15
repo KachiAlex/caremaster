@@ -123,7 +123,8 @@ export const pharmacyAPI = {
   // Update prescription pharmacy information
   updatePrescriptionPharmacy: async (prescriptionId, pharmacyData) => {
     try {
-      const prescriptionRef = doc(db, 'medications', prescriptionId);
+      console.log('🔍 pharmacyAPI - Updating prescription:', prescriptionId, 'with data:', pharmacyData);
+      const prescriptionRef = doc(db, 'prescriptions', prescriptionId);
       
       const updateData = {
         pharmacyData: {
