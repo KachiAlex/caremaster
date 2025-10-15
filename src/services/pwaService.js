@@ -30,6 +30,11 @@ class PWAService {
       try {
         this.swRegistration = await navigator.serviceWorker.register('/sw.js');
         console.log('Service Worker registered successfully:', this.swRegistration);
+        // Force update check and auto-reload when controller changes
+        try { this.swRegistration.update && this.swRegistration.update(); } catch {}
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
         
         // Handle service worker updates
         this.swRegistration.addEventListener('updatefound', () => {
