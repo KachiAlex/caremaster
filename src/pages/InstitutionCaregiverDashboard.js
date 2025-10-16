@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import sessionManager from '../utils/sessionManager';
+import { useResponsive } from '../hooks';
 import { 
   Calendar, 
   Clock, 
@@ -86,6 +87,7 @@ const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, userProfile, institutionId, institutionData } = useUser();
+  const { isMobile, isTablet } = useResponsive();
   
   // Get institution ID from URL params or user context
   const urlInstitutionId = searchParams.get('institution');
@@ -3674,23 +3676,78 @@ const InstitutionCaregiverDashboard = () => {
 
   return (
     <InstitutionCaregiverGuard>
-    <div className="w-full h-full bg-gray-50 flex">
+    <div className="w-full h-full bg-gray-50 flex flex-col lg:flex-row">
+      {/* Mobile Header/Top Bar */}
+      {isMobile && (
+        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm safe-area-top">
+          <div className="flex items-center justify-between px-3 py-3">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 rounded-lg hover:bg-gray-100 touch-manipulation"
+                aria-label="Toggle menu"
+              >
+                <Menu className="h-6 w-6 text-gray-600" />
+              </button>
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-blue-50 rounded-lg">
+                  <Heart className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-base font-bold text-gray-900">ElderX</h1>
+                  <p className="text-xs text-gray-500">{dashboardConfig.title}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-gray-600" />
+              <button onClick={() => navigate('/settings')} className="p-2 rounded-lg hover:bg-gray-100 touch-manipulation">
+                <Settings className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sidebar Overlay for Mobile */}
+      {isMobile && !sidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 animate-fade-in lg:hidden"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
+
       {/* Sidebar */}
       {(isDoctor || isNurse || isNonMedicalCaregiver) && (
-        <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg border-r border-gray-200 transition-all duration-300 flex flex-col`}>
+        <div className={`
+          ${isMobile 
+            ? `fixed inset-y-0 left-0 z-50 w-full max-w-xs transform transition-transform duration-300 ${sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'}`
+            : `${sidebarCollapsed ? 'w-16' : 'w-64'} transition-all duration-300`
+          }
+          bg-white shadow-lg border-r border-gray-200 flex flex-col safe-area-inset
+        `}>
           {/* Sidebar Header */}
-          <div className="p-6 border-b border-gray-100">
-            {!sidebarCollapsed ? (
-              <div className="flex flex-col items-center space-y-3">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <Heart className="h-6 w-6 text-blue-600" />
+          <div className="p-4 md:p-6 border-b border-gray-100 shrink-0">
+            {!sidebarCollapsed || isMobile ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 bg-blue-50 rounded-lg shrink-0">
+                    <Heart className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
                   </div>
-                  <div className="text-center">
-                    <h1 className="text-lg font-bold text-gray-900">ElderX</h1>
-                    <p className="text-xs text-gray-500">Care Portal</p>
+                  <div className="min-w-0">
+                    <h1 className="text-base md:text-lg font-bold text-gray-900 truncate">ElderX</h1>
+                    <p className="text-xs text-gray-500 truncate">Care Portal</p>
                   </div>
                 </div>
+                {isMobile && (
+                  <button
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="p-2 rounded-lg hover:bg-gray-100 touch-manipulation shrink-0"
+                    aria-label="Close menu"
+                  >
+                    <X className="h-6 w-6 text-gray-600" />
+                  </button>
+                )}
               </div>
             ) : (
               <div className="flex justify-center">
@@ -3702,17 +3759,20 @@ const InstitutionCaregiverDashboard = () => {
           </div>
 
           {/* Sidebar Navigation */}
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 p-3 md:p-4 space-y-1 overflow-y-auto smooth-scroll">
             <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+              onClick={() => {
+                setActiveTab('dashboard');
+                if (isMobile) setSidebarCollapsed(true);
+              }}
+              className={`w-full flex items-center px-3 md:px-4 py-3 rounded-lg text-sm font-medium transition-colors touch-feedback ${
                 activeTab === 'dashboard'
                   ? 'bg-blue-50 text-blue-700'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <Home className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Dashboard'}
+              <Home className={`h-5 w-5 shrink-0 ${sidebarCollapsed && !isMobile ? 'mx-auto' : 'mr-3'}`} />
+              {(!sidebarCollapsed || isMobile) && <span className="truncate">Dashboard</span>}
             </button>
             
             <button
