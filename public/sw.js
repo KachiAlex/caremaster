@@ -1,8 +1,8 @@
 // ElderX Service Worker for PWA functionality
-const CACHE_NAME = 'elderx-v1.0.5';
-const STATIC_CACHE = 'elderx-static-v6';
-const DYNAMIC_CACHE = 'elderx-dynamic-v6';
-const API_CACHE = 'elderx-api-v6';
+const CACHE_NAME = 'elderx-v1.0.6';
+const STATIC_CACHE = 'elderx-static-v7';
+const DYNAMIC_CACHE = 'elderx-dynamic-v7';
+const API_CACHE = 'elderx-api-v7';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
@@ -23,21 +23,42 @@ const API_ENDPOINTS = [
   '/api/notifications'
 ];
 
+// Helper function to safely cache a URL
+async function safeCacheAdd(cache, url) {
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      cache: 'no-cache',
+      credentials: 'same-origin'
+    });
+    
+    if (response.ok) {
+      await cache.put(url, response);
+      console.log('✓ Cached:', url);
+      return true;
+    } else {
+      console.warn('⚠ Failed to cache (non-OK response):', url, response.status);
+      return false;
+    }
+  } catch (err) {
+    console.warn('⚠ Failed to cache (fetch error):', url, err.message);
+    return false;
+  }
+}
+
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   console.log('Service Worker installing...');
   event.waitUntil(
     Promise.all([
       caches.open(STATIC_CACHE).then(async (cache) => {
-        console.log('Caching static assets (safe mode)...');
+        console.log('Caching static assets...');
         // Add assets one by one so a single failure doesn't reject the entire install
-        for (const url of STATIC_ASSETS) {
-          try {
-            await cache.add(url);
-          } catch (err) {
-            console.warn('Failed to precache asset:', url, err);
-          }
-        }
+        const results = await Promise.all(
+          STATIC_ASSETS.map(url => safeCacheAdd(cache, url))
+        );
+        const successCount = results.filter(Boolean).length;
+        console.log(`✓ Cached ${successCount}/${STATIC_ASSETS.length} static assets`);
         return cache;
       }),
       caches.open(API_CACHE).then((cache) => {
@@ -45,7 +66,7 @@ self.addEventListener('install', (event) => {
         return cache;
       })
     ]).then(() => {
-      console.log('Service Worker installed successfully');
+      console.log('✓ Service Worker installed successfully');
       return self.skipWaiting();
     })
   );
