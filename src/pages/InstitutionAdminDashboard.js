@@ -2066,7 +2066,7 @@ const InstitutionAdminDashboard = () => {
               <DashboardSwitcher 
                 userRoles={userRoles} 
                 currentDashboard="admin" 
-                institutionId={institutionIdFromURL}
+                institutionId={effectiveInstitutionId}
               />
             )}
           </div>
@@ -3102,7 +3102,7 @@ const InstitutionAdminDashboard = () => {
       {/* User Management Tab */}
       {activeTab === 'users' && (
         <div className="space-y-6">
-          <UserManagement institutionId={institutionIdFromURL} />
+          <UserManagement institutionId={effectiveInstitutionId} />
         </div>
       )}
 
