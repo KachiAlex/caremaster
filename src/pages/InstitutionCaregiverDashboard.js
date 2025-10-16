@@ -4638,7 +4638,7 @@ const InstitutionCaregiverDashboard = () => {
 
       {/* Doctor: Medical Report Modal */}
       {showMedicalReportModal && selectedClient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -4803,7 +4803,7 @@ const InstitutionCaregiverDashboard = () => {
 
       {/* Doctor: Care Plan Modal */}
       {showCarePlanModal && selectedClient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
