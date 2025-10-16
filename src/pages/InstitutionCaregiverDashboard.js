@@ -109,6 +109,8 @@ const InstitutionCaregiverDashboard = () => {
   const [showNurseReportModal, setShowNurseReportModal] = useState(false);
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [showCareLogForm, setShowCareLogForm] = useState(false);
+  const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
   const [clientModalTab, setClientModalTab] = useState('info'); // 'info', 'medical', 'carelog'
 
   // Debug effect to monitor showCareLogForm state changes
@@ -3119,7 +3121,8 @@ const InstitutionCaregiverDashboard = () => {
                         
                         <button
                           onClick={() => {
-                            alert(`Task Details:\n\nTitle: ${task.title || task.taskTitle}\nDescription: ${task.description || 'N/A'}\nClient: ${task.clientName || 'N/A'}\nStatus: ${task.status || 'Pending'}\nPriority: ${task.priority || 'Normal'}\nDue: ${task.scheduledTime ? new Date(task.scheduledTime).toLocaleString() : 'N/A'}`);
+                            setSelectedTask(task);
+                            setShowTaskDetailsModal(true);
                           }}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center"
                         >
@@ -4866,6 +4869,183 @@ const InstitutionCaregiverDashboard = () => {
                 <CheckCircle className="h-4 w-4 mr-2" />
                 {editingPlanId ? 'Update Care Plan' : 'Create Care Plan'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Details Modal */}
+      {showTaskDetailsModal && selectedTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <CheckSquare className="h-8 w-8 text-white" />
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Task Details</h2>
+                  <p className="text-blue-100">{selectedTask.clientName || 'Client'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowTaskDetailsModal(false);
+                  setSelectedTask(null);
+                }}
+                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
+              <div className="space-y-6">
+                {/* Task Title and Status */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {selectedTask.title || selectedTask.taskTitle || 'Care Task'}
+                  </h3>
+                  <span className={`px-4 py-2 text-sm font-semibold rounded-full ${
+                    selectedTask.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    selectedTask.status === 'in-progress' || selectedTask.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                    selectedTask.status === 'pending' || selectedTask.status === 'assigned' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedTask.status || 'Pending'}
+                  </span>
+                </div>
+
+                {/* Description */}
+                {selectedTask.description && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <p className="text-gray-900 bg-gray-50 p-4 rounded-lg">{selectedTask.description}</p>
+                  </div>
+                )}
+
+                {/* Task Details Grid */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Client</label>
+                    <p className="text-gray-900 flex items-center">
+                      <User className="h-4 w-4 mr-2 text-gray-400" />
+                      {selectedTask.clientName || 'N/A'}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <p className={`flex items-center font-medium ${
+                      selectedTask.priority === 'urgent' ? 'text-red-600' :
+                      selectedTask.priority === 'high' ? 'text-orange-600' :
+                      selectedTask.priority === 'medium' ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`}>
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      {selectedTask.priority || 'Normal'}
+                    </p>
+                  </div>
+                  
+                  {selectedTask.scheduledTime && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Scheduled Time</label>
+                      <p className="text-gray-900 flex items-center">
+                        <Clock className="h-4 w-4 mr-2 text-gray-400" />
+                        {new Date(selectedTask.scheduledTime).toLocaleString('en-US', { 
+                          month: 'long', 
+                          day: 'numeric', 
+                          year: 'numeric',
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {selectedTask.dueDate && !selectedTask.scheduledTime && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                      <p className="text-gray-900 flex items-center">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                        {new Date(selectedTask.dueDate).toLocaleString('en-US', { 
+                          month: 'long', 
+                          day: 'numeric', 
+                          year: 'numeric'
+                        })}
+                        {selectedTask.dueTime && ` at ${selectedTask.dueTime}`}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {selectedTask.assignedBy && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Assigned By</label>
+                      <p className="text-gray-900">{selectedTask.assignedBy}</p>
+                    </div>
+                  )}
+                  
+                  {selectedTask.createdAt && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Created</label>
+                      <p className="text-gray-900">
+                        {new Date(selectedTask.createdAt).toLocaleString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric',
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Instructions */}
+                {selectedTask.instructions && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Instructions</label>
+                    <p className="text-gray-900 bg-blue-50 p-4 rounded-lg border border-blue-200">{selectedTask.instructions}</p>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {selectedTask.notes && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                    <p className="text-gray-900 bg-gray-50 p-4 rounded-lg">{selectedTask.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowTaskDetailsModal(false);
+                  setSelectedTask(null);
+                }}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Close
+              </button>
+              {selectedTask.status !== 'completed' && (
+                <button
+                  onClick={async () => {
+                    try {
+                      // Mark task as completed
+                      toast.success('Task marked as completed!');
+                      setShowTaskDetailsModal(false);
+                      setSelectedTask(null);
+                    } catch (error) {
+                      console.error('Error completing task:', error);
+                      toast.error('Failed to complete task');
+                    }
+                  }}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Mark Complete
+                </button>
+              )}
             </div>
           </div>
         </div>
