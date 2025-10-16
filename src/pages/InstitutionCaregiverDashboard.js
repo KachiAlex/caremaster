@@ -910,35 +910,62 @@ const InstitutionCaregiverDashboard = () => {
   };
 
   const handleNewConsultation = () => {
-    if (!requireClient()) return;
-    window.location.href = `/service-provider/consultations/new?clientId=${encodeURIComponent(selectedClientId)}`;
+    if (!selectedClient) {
+      toast.warning('Please select a client first');
+      return;
+    }
+    setShowConsultationModal(true);
   };
 
   const handleWritePrescription = () => {
-    if (!requireClient()) return;
-    window.location.href = `/service-provider/prescriptions/new?clientId=${encodeURIComponent(selectedClientId)}`;
+    if (!selectedClient) {
+      toast.warning('Please select a client first');
+      return;
+    }
+    setShowPrescriptionModal(true);
   };
 
   const handleCreateCarePlan = () => {
-    if (!requireClient()) return;
-    window.location.href = `/service-provider/care-plans/new?clientId=${encodeURIComponent(selectedClientId)}`;
+    if (!selectedClient) {
+      toast.warning('Please select a client first');
+      return;
+    }
+    setShowCarePlanModal(true);
   };
 
   const handleVideoConsultation = async () => {
-    if (!requireClient()) return;
-    // Try to find nurse assigned to this client
-    let nurseId = '';
-    try {
-      const assignments = await assignmentAPI.getAssignmentsByClient(selectedClientId);
-      const nurseAssignment = assignments.find(a => {
-        const role = (a.caregiverRole || a.role || '').toLowerCase();
-        const mq = (a.caregiverMedicalQualification || '').toLowerCase();
-        return role.includes('nurse') || mq.includes('nurse');
-      });
-      nurseId = nurseAssignment?.caregiverId || '';
-    } catch {}
-    const query = new URLSearchParams({ clientId: selectedClientId, nurseId }).toString();
-    window.location.href = `/service-provider/messages`;
+    if (!selectedClient) {
+      toast.warning('Please select a client first');
+      return;
+    }
+    
+    // Check if there's already a conversation with this client
+    const existingConversation = conversations.find(conv => 
+      conv.participants?.includes(selectedClient.id) || 
+      conv.participants?.includes(selectedClient.userId)
+    );
+    
+    if (existingConversation) {
+      setSelectedConversation(existingConversation);
+      setActiveTab('messages');
+      
+      // Initiate video call
+      const recipientId = selectedClient.userId || selectedClient.id;
+      const callData = {
+        callerId: user?.uid,
+        callerName: userProfile?.name || userProfile?.displayName || 'Doctor',
+        recipientId: recipientId,
+        recipientName: selectedClient.name || selectedClient.fullName || 'Client',
+        callType: 'video',
+        institutionId: effectiveInstitutionId
+      };
+      
+      await initiateCall(callData);
+      toast.success('Video call initiated');
+    } else {
+      toast.info('Starting video consultation - Please create a conversation first');
+      setActiveTab('messages');
+    }
   };
 
   const handleCareLogSave = async (careLogData) => {
@@ -4439,26 +4466,100 @@ const InstitutionCaregiverDashboard = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="px-8 py-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
+                <p className="text-sm text-gray-500 mt-1">Common actions for your role</p>
               </div>
               <div className="p-8">
-                <div className="grid grid-cols-2 gap-4">
-                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <MessageSquare className="h-8 w-8 text-blue-600 mb-3" />
-                    <span className="text-sm font-semibold text-gray-900">Messages</span>
-                  </button>
-                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <Camera className="h-8 w-8 text-green-600 mb-3" />
-                    <span className="text-sm font-semibold text-gray-900">Photo Update</span>
-                  </button>
-                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <FileText className="h-8 w-8 text-purple-600 mb-3" />
-                    <span className="text-sm font-semibold text-gray-900">Add Note</span>
-                  </button>
-                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <Navigation className="h-8 w-8 text-orange-600 mb-3" />
-                    <span className="text-sm font-semibold text-gray-900">Navigation</span>
-                  </button>
-                </div>
+                {isDoctor ? (
+                  // Doctor Quick Actions
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={handleNewConsultation}
+                      disabled={!selectedClient}
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Stethoscope className="h-8 w-8 text-blue-600 mb-3" />
+                      <span className="text-sm font-semibold text-gray-900">New Consultation</span>
+                      <span className="text-xs text-gray-500 mt-1">Record patient visit</span>
+                    </button>
+                    <button 
+                      onClick={handleWritePrescription}
+                      disabled={!selectedClient}
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Pill className="h-8 w-8 text-indigo-600 mb-3" />
+                      <span className="text-sm font-semibold text-gray-900">Write Prescription</span>
+                      <span className="text-xs text-gray-500 mt-1">Prescribe medication</span>
+                    </button>
+                    <button 
+                      onClick={handleCreateCarePlan}
+                      disabled={!selectedClient}
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ClipboardList className="h-8 w-8 text-emerald-600 mb-3" />
+                      <span className="text-sm font-semibold text-gray-900">Create Care Plan</span>
+                      <span className="text-xs text-gray-500 mt-1">Plan treatment</span>
+                    </button>
+                    <button 
+                      onClick={handleVideoConsultation}
+                      disabled={!selectedClient}
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Camera className="h-8 w-8 text-purple-600 mb-3" />
+                      <span className="text-sm font-semibold text-gray-900">Video Consultation</span>
+                      <span className="text-xs text-gray-500 mt-1">Start video call</span>
+                    </button>
+                  </div>
+                ) : (
+                  // Nurse/Caregiver Quick Actions
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => setActiveTab('messages')}
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all"
+                    >
+                      <MessageSquare className="h-8 w-8 text-blue-600 mb-3" />
+                      <span className="text-sm font-semibold text-gray-900">Messages</span>
+                      <span className="text-xs text-gray-500 mt-1">Chat with team</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (!selectedClient) {
+                          toast.warning('Please select a client first');
+                          return;
+                        }
+                        setShowNurseReportModal(true);
+                      }}
+                      disabled={!selectedClient}
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-green-50 hover:border-green-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <FileText className="h-8 w-8 text-green-600 mb-3" />
+                      <span className="text-sm font-semibold text-gray-900">Nurse Report</span>
+                      <span className="text-xs text-gray-500 mt-1">Record vitals</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (!selectedClient) {
+                          toast.warning('Please select a client first');
+                          return;
+                        }
+                        setShowCareLogsModal(true);
+                      }}
+                      disabled={!selectedClient}
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Heart className="h-8 w-8 text-purple-600 mb-3" />
+                      <span className="text-sm font-semibold text-gray-900">Care Log</span>
+                      <span className="text-xs text-gray-500 mt-1">Log care activity</span>
+                    </button>
+                    <button 
+                      onClick={() => setActiveTab('schedule')}
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-orange-50 hover:border-orange-300 hover:shadow-md transition-all"
+                    >
+                      <Calendar className="h-8 w-8 text-orange-600 mb-3" />
+                      <span className="text-sm font-semibold text-gray-900">Schedule</span>
+                      <span className="text-xs text-gray-500 mt-1">View tasks</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
