@@ -73,6 +73,7 @@ import consultationsAPI, { CONSULTATION_TYPES } from '../api/consultationsAPI';
 import ConsultationModal from '../components/ConsultationModal';
 import ConsultationsTabContent from '../components/ConsultationsTabContent';
 import DiagnosticsTab from '../components/DiagnosticsTab';
+import { getClientDiagnostics } from '../api/diagnosticsAPI';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
 import PortalSwitcher from '../components/PortalSwitcher';
@@ -157,6 +158,9 @@ const InstitutionCaregiverDashboard = () => {
   const [carePlans, setCarePlans] = useState([]);
   const [careLogs, setCareLogs] = useState([]);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [clientPrescriptions, setClientPrescriptions] = useState([]);
+  const [clientConsultations, setClientConsultations] = useState([]);
+  const [clientDiagnostics, setClientDiagnostics] = useState([]);
   const [profileImage, setProfileImage] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
@@ -707,8 +711,7 @@ const InstitutionCaregiverDashboard = () => {
   useEffect(() => {
     if (!selectedClient) return;
     
-    // Subscribe to care logs for both modal and standalone care logs tab
-    // Load reports and plans immediately when a client is selected (for buttons to appear)
+    // Load medical data immediately when a client is selected
     if (selectedClient && selectedClient.id) {
       setLoadingReports(true);
       
@@ -717,7 +720,6 @@ const InstitutionCaregiverDashboard = () => {
         selectedClient.id,
         (reports) => {
           setMedicalReports(reports);
-          setLoadingReports(false);
         }
       );
       
@@ -735,6 +737,33 @@ const InstitutionCaregiverDashboard = () => {
           setCareLogs(logs);
         }
       );
+      
+      // Load prescriptions, consultations, and diagnostics for Medical Reports section
+      const loadMedicalData = async () => {
+        try {
+          const [prescriptions, consultations, diagnostics] = await Promise.all([
+            prescriptionsAPI.getPrescriptionsByClient(selectedClient.id).catch(() => []),
+            consultationsAPI.getConsultationsByClient(selectedClient.id).catch(() => []),
+            getClientDiagnostics(selectedClient.id).catch(() => [])
+          ]);
+          
+          setClientPrescriptions(prescriptions);
+          setClientConsultations(consultations);
+          setClientDiagnostics(diagnostics);
+          setLoadingReports(false);
+          
+          console.log('📊 Loaded medical data:', {
+            prescriptions: prescriptions.length,
+            consultations: consultations.length,
+            diagnostics: diagnostics.length
+          });
+        } catch (error) {
+          console.error('Error loading medical data:', error);
+          setLoadingReports(false);
+        }
+      };
+      
+      loadMedicalData();
       
       // Cleanup subscriptions on unmount or when client changes
       return () => {
@@ -4636,171 +4665,6 @@ const InstitutionCaregiverDashboard = () => {
         />
       )}
 
-      {/* Doctor: Medical Report Modal */}
-      {showMedicalReportModal && selectedClient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Stethoscope className="h-8 w-8 text-white" />
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
-                    {editingReportId ? 'Edit Medical Report' : 'New Medical Report'}
-                  </h2>
-                  <p className="text-blue-100">For: {selectedClient.name || selectedClient.fullName}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setShowMedicalReportModal(false);
-                  setEditingReportId(null);
-                }}
-                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Report Date</label>
-                  <input
-                    type="date"
-                    value={medicalReportData.reportDate}
-                    onChange={(e) => setMedicalReportData({...medicalReportData, reportDate: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Diagnosis</label>
-                  <textarea
-                    placeholder="Enter medical diagnosis..."
-                    rows={3}
-                    value={medicalReportData.diagnosis}
-                    onChange={(e) => setMedicalReportData({...medicalReportData, diagnosis: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Symptoms Observed</label>
-                  <textarea
-                    placeholder="Describe symptoms and clinical findings..."
-                    rows={4}
-                    value={medicalReportData.symptoms}
-                    onChange={(e) => setMedicalReportData({...medicalReportData, symptoms: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Treatment Recommendations</label>
-                  <textarea
-                    placeholder="Recommended treatment plan..."
-                    rows={4}
-                    value={medicalReportData.treatment}
-                    onChange={(e) => setMedicalReportData({...medicalReportData, treatment: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Prescriptions</label>
-                  <textarea
-                    placeholder="List medications and dosage instructions..."
-                    rows={3}
-                    value={medicalReportData.prescriptions}
-                    onChange={(e) => setMedicalReportData({...medicalReportData, prescriptions: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
-                  <textarea
-                    placeholder="Any additional medical notes or observations..."
-                    rows={3}
-                    value={medicalReportData.notes}
-                    onChange={(e) => setMedicalReportData({...medicalReportData, notes: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
-              <button
-                onClick={() => setShowMedicalReportModal(false)}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    if (editingReportId) {
-                      // Update existing report
-                      const updatePayload = {
-                        reportDate: new Date(medicalReportData.reportDate),
-                        diagnosis: medicalReportData.diagnosis,
-                        symptoms: medicalReportData.symptoms,
-                        treatmentRecommendations: medicalReportData.treatment,
-                        prescriptions: medicalReportData.prescriptions,
-                        additionalNotes: medicalReportData.notes
-                      };
-                      
-                      await updateMedicalReport(editingReportId, updatePayload);
-                      alert('Medical report updated successfully!');
-                      setEditingReportId(null);
-                    } else {
-                      // Create new report
-                      const reportPayload = {
-                        clientId: selectedClient.id,
-                        clientName: selectedClient.name || selectedClient.fullName,
-                        doctorId: user.uid,
-                        doctorName: userProfile?.name || userProfile?.displayName,
-                        institutionId: effectiveInstitutionId,
-                        reportDate: new Date(medicalReportData.reportDate),
-                        diagnosis: medicalReportData.diagnosis,
-                        symptoms: medicalReportData.symptoms,
-                        treatmentRecommendations: medicalReportData.treatment,
-                        prescriptions: medicalReportData.prescriptions,
-                        additionalNotes: medicalReportData.notes
-                      };
-                      
-                    await createMedicalReport(reportPayload);
-                    alert('Medical report saved successfully!');
-                    }
-                    
-                    // Real-time listener will auto-update the list
-                    
-                    // Reset form
-                    setMedicalReportData({
-                      reportDate: new Date().toISOString().split('T')[0],
-                      diagnosis: '',
-                      symptoms: '',
-                      treatment: '',
-                      prescriptions: '',
-                      notes: ''
-                    });
-                    setShowMedicalReportModal(false);
-                  } catch (error) {
-                    console.error('Error saving medical report:', error);
-                    alert('Failed to save medical report: ' + error.message);
-                  }
-                }}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                {editingReportId ? 'Update Report' : 'Save Report'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Doctor: Care Plan Modal */}
       {showCarePlanModal && selectedClient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
@@ -5225,139 +5089,129 @@ const InstitutionCaregiverDashboard = () => {
                         </div>
                       </div>
 
-                      {/* Medical Reports List */}
+                      {/* Medical Records (Prescriptions, Consultations, Diagnostics) */}
                       <div className="bg-white rounded-xl border border-gray-100 p-6">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                             <Stethoscope className="h-5 w-5 text-blue-600 mr-2" />
-                            Medical Reports ({medicalReports.length})
+                            Medical Records
                           </h3>
-                          {isDoctor && (
-                            <button
-                              onClick={() => setShowMedicalReportModal(true)}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm"
-                            >
-                              <Plus className="h-4 w-4 mr-2" />
-                              New Report
-                            </button>
-                          )}
                         </div>
                         
-                        {medicalReports.length === 0 ? (
+                        {loadingReports ? (
                           <div className="text-center py-8">
-                            <Stethoscope className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-gray-500 text-sm">No medical reports yet</p>
-                            {isDoctor && (
-                              <button
-                                onClick={() => setShowMedicalReportModal(true)}
-                                className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                              >
-                                Create First Report
-                              </button>
-                            )}
+                            <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
+                            <p className="text-gray-500 text-sm mt-2">Loading medical records...</p>
                           </div>
                         ) : (
-                          <div className="space-y-3">
-                            {medicalReports.map((report) => (
-                              <div key={report.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center space-x-3 mb-2">
-                                      <span className="text-sm font-semibold text-gray-900">
-                                        {report.diagnosis || 'Medical Report'}
-                                      </span>
-                                      <span className="text-xs text-gray-500">
-                                        {report.reportDate instanceof Date 
-                                          ? report.reportDate.toLocaleDateString() 
-                                          : new Date(report.reportDate).toLocaleDateString()}
-                                      </span>
-                                    </div>
-                                    {report.symptoms && (
-                                      <p className="text-sm text-gray-600 mb-2">
-                                        <span className="font-medium">Symptoms:</span> {report.symptoms.substring(0, 100)}
-                                        {report.symptoms.length > 100 && '...'}
-                                      </p>
-                                    )}
-                                    <p className="text-xs text-gray-500">
-                                      By: {report.doctorName || 'Doctor'} • 
-                                      {report.createdAt instanceof Date 
-                                        ? report.createdAt.toLocaleString() 
-                                        : new Date(report.createdAt).toLocaleString()}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <button
-                                      onClick={() => {
-                                        // View full report details
-                                        alert(`Full Report:\n\nDiagnosis: ${report.diagnosis}\n\nSymptoms: ${report.symptoms}\n\nTreatment: ${report.treatmentRecommendations}\n\nPrescriptions: ${report.prescriptions}\n\nNotes: ${report.additionalNotes || 'None'}`);
-                                      }}
-                                      className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center"
-                                    >
-                                      <Eye className="h-4 w-4 mr-1" />
-                                      View
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        try {
-                                          exportMedicalReportToPDF(report, selectedClient, institutionData);
-                                          toast.success('PDF downloaded successfully!');
-                                        } catch (error) {
-                                          console.error('Error exporting PDF:', error);
-                                          toast.error('Failed to export PDF');
-                                        }
-                                      }}
-                                      className="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center"
-                                    >
-                                      <Download className="h-4 w-4 mr-1" />
-                                      PDF
-                                    </button>
-                                    {isDoctor && (
-                                      <>
-                                        <button
-                                          onClick={() => {
-                                            // Load report data for editing
-                                            setEditingReportId(report.id);
-                                            setMedicalReportData({
-                                              reportDate: report.reportDate instanceof Date 
-                                                ? report.reportDate.toISOString().split('T')[0]
-                                                : new Date(report.reportDate).toISOString().split('T')[0],
-                                              diagnosis: report.diagnosis || '',
-                                              symptoms: report.symptoms || '',
-                                              treatment: report.treatmentRecommendations || '',
-                                              prescriptions: report.prescriptions || '',
-                                              notes: report.additionalNotes || ''
-                                            });
-                                            setShowMedicalReportModal(true);
-                                          }}
-                                          className="px-3 py-1 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors flex items-center"
-                                        >
-                                          <Edit className="h-4 w-4 mr-1" />
-                                          Edit
-                                        </button>
-                                        <button
-                                          onClick={async () => {
-                                            if (window.confirm('Are you sure you want to delete this medical report?')) {
-                                              try {
-                                                await deleteMedicalReport(report.id);
-                                                // Real-time listener will auto-update the list
-                                                alert('Medical report deleted successfully!');
-                                              } catch (error) {
-                                                console.error('Error deleting report:', error);
-                                                alert('Failed to delete report: ' + error.message);
-                                              }
+                          <div className="space-y-4">
+                            {/* Prescriptions */}
+                            {clientPrescriptions.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                                  <Pill className="h-4 w-4 text-purple-600 mr-2" />
+                                  Prescriptions ({clientPrescriptions.length})
+                                </h4>
+                                <div className="space-y-2">
+                                  {clientPrescriptions.map((prescription) => (
+                                    <div key={prescription.id} className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-semibold text-gray-900">
+                                            {prescription.diagnosis || 'Prescription'}
+                                          </p>
+                                          <p className="text-xs text-gray-600 mt-1">
+                                            {prescription.medications && prescription.medications.length > 0 
+                                              ? prescription.medications.map(med => med.medicationName).join(', ')
+                                              : 'No medications listed'
                                             }
-                                          }}
-                                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center"
-                                        >
-                                          <X className="h-4 w-4 mr-1" />
-                                          Delete
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {prescription.createdAt instanceof Date 
+                                              ? prescription.createdAt.toLocaleDateString() 
+                                              : new Date(prescription.createdAt).toLocaleDateString()}
+                                            {prescription.doctorName && ` • By: ${prescription.doctorName}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
-                            ))}
+                            )}
+                            
+                            {/* Consultations */}
+                            {clientConsultations.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                                  <MessageSquare className="h-4 w-4 text-blue-600 mr-2" />
+                                  Consultations ({clientConsultations.length})
+                                </h4>
+                                <div className="space-y-2">
+                                  {clientConsultations.map((consultation) => (
+                                    <div key={consultation.id} className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-semibold text-gray-900">
+                                            {consultation.consultationType || 'Consultation'}
+                                          </p>
+                                          <p className="text-xs text-gray-600 mt-1">
+                                            {consultation.chiefComplaint || consultation.notes || 'No details'}
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {consultation.consultationDate instanceof Date 
+                                              ? consultation.consultationDate.toLocaleDateString() 
+                                              : new Date(consultation.consultationDate).toLocaleDateString()}
+                                            {consultation.doctorName && ` • By: ${consultation.doctorName}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Diagnostics */}
+                            {clientDiagnostics.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                                  <Activity className="h-4 w-4 text-green-600 mr-2" />
+                                  Diagnostic Tests ({clientDiagnostics.length})
+                                </h4>
+                                <div className="space-y-2">
+                                  {clientDiagnostics.map((diagnostic) => (
+                                    <div key={diagnostic.id} className="bg-green-50 rounded-lg p-3 border border-green-100">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-semibold text-gray-900">
+                                            {diagnostic.testName || diagnostic.testType || 'Diagnostic Test'}
+                                          </p>
+                                          <p className="text-xs text-gray-600 mt-1">
+                                            Status: {diagnostic.status || 'Pending'}
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {diagnostic.orderDate instanceof Date 
+                                              ? diagnostic.orderDate.toLocaleDateString() 
+                                              : new Date(diagnostic.orderDate || diagnostic.createdAt).toLocaleDateString()}
+                                            {diagnostic.doctorName && ` • Ordered by: ${diagnostic.doctorName}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* No records message */}
+                            {clientPrescriptions.length === 0 && clientConsultations.length === 0 && clientDiagnostics.length === 0 && (
+                              <div className="text-center py-8">
+                                <Stethoscope className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                                <p className="text-gray-500 text-sm">No medical records yet</p>
+                                <p className="text-gray-400 text-xs mt-1">Prescriptions, consultations, and diagnostic tests will appear here</p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
