@@ -757,6 +757,10 @@ const InstitutionCaregiverDashboard = () => {
             consultations: consultations.length,
             diagnostics: diagnostics.length
           });
+          
+          console.log('📋 Prescriptions data:', prescriptions);
+          console.log('💬 Consultations data:', consultations);
+          console.log('🔬 Diagnostics data:', diagnostics);
         } catch (error) {
           console.error('Error loading medical data:', error);
           setLoadingReports(false);
