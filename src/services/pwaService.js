@@ -196,9 +196,26 @@ class PWAService {
         max-width: 300px;
         animation: slideInRight 0.3s ease-out;
       ">
-        <h4 style="margin: 0 0 8px 0; color: #1f2937; font-size: 14px; font-weight: 600;">
-          Update Available
-        </h4>
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+          <h4 style="margin: 0; color: #1f2937; font-size: 14px; font-weight: 600;">
+            Update Available
+          </h4>
+          <button id="close-update" style="
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 0;
+            margin: -2px -2px 0 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          " title="Close">✕</button>
+        </div>
         <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 12px; line-height: 1.4;">
           A new version of ElderX is available. Refresh to update.
         </p>
@@ -238,12 +255,16 @@ class PWAService {
       updateNotification.remove();
     });
     
-    // Auto-hide after 15 seconds
+    document.getElementById('close-update').addEventListener('click', () => {
+      updateNotification.remove();
+    });
+    
+    // Auto-hide after 30 seconds (increased from 15)
     setTimeout(() => {
       if (updateNotification.parentNode) {
         updateNotification.remove();
       }
-    }, 15000);
+    }, 30000);
   }
 
   // Update App
