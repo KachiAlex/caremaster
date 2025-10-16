@@ -199,38 +199,21 @@ const UserCreationForm = ({ onClose, userRole = 'elderly' }) => {
 
     setLoading(true);
     try {
-      // Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        formData.email, 
-        formData.password
-      );
-      
-      const user = userCredential.user;
-
-      // Update Firebase Auth profile
-      await updateProfile(user, {
-        displayName: `${formData.firstName} ${formData.lastName}`
-      });
-
-      // Create user document in Firestore
+      // Prepare user data with role-specific fields
       const userData = {
-        id: user.uid,
+        // Basic info
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
+        password: formData.password,
         phone: formData.phone,
-        dateOfBirth: new Date(formData.dateOfBirth),
+        dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth) : null,
         gender: formData.gender,
         address: formData.address,
         city: formData.city,
         state: formData.state,
         zipCode: formData.zipCode,
-        role: formData.role,
-        status: 'active',
-        profilePicture: null,
-        joinDate: new Date(),
-        lastActive: new Date(),
+        userType: userRole, // This will be processed by the helper
         
         // Role-specific data
         ...(userRole === 'elderly' && {
@@ -242,21 +225,31 @@ const UserCreationForm = ({ onClose, userRole = 'elderly' }) => {
         }),
         
         ...(userRole === 'caregiver' && {
+          medicalQualification: formData.qualifications, // This helps determine if nurse/doctor
           qualifications: formData.qualifications,
           certifications: formData.certifications,
           experience: formData.experience,
-          hourlyRate: parseFloat(formData.hourlyRate),
+          hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : 0,
           availability: formData.availability,
           services: formData.services,
           languages: formData.languages
         }),
         
         ...(userRole === 'doctor' && {
+          medicalQualification: formData.specialty || 'Doctor',
           medicalLicense: formData.medicalLicense,
           specialty: formData.specialty,
           hospitalAffiliation: formData.hospitalAffiliation,
           education: formData.education,
-          yearsOfExperience: parseInt(formData.yearsOfExperience)
+          yearsOfExperience: formData.yearsOfExperience ? parseInt(formData.yearsOfExperience) : 0
+        }),
+        
+        ...(userRole === 'nurse' && {
+          medicalQualification: 'Registered Nurse',
+          medicalLicense: formData.medicalLicense,
+          specialty: formData.specialty,
+          certifications: formData.certifications,
+          yearsOfExperience: formData.yearsOfExperience ? parseInt(formData.yearsOfExperience) : 0
         }),
         
         ...(userRole === 'admin' && {
@@ -266,14 +259,41 @@ const UserCreationForm = ({ onClose, userRole = 'elderly' }) => {
         })
       };
 
-      await setDoc(doc(db, 'users', user.uid), userData);
+      // Use the standardized user creation helper
+      const result = await createCompleteUserAccount(userData, {
+        institutionId: formData.institutionId || null,
+        createdBy: null, // Will be set if admin is creating
+        accountType: 'admin_created',
+        onboardingComplete: true
+      });
 
-      toast.success(`${userRole.charAt(0).toUpperCase() + userRole.slice(1)} user created successfully!`);
+      if (result.temporaryPassword) {
+        toast.success(
+          `User created successfully!\n\nEmail: ${result.email}\nTemporary Password: ${result.temporaryPassword}\n\nPlease share these credentials securely.`,
+          { autoClose: 10000 }
+        );
+      } else {
+        toast.success(`${userRole.charAt(0).toUpperCase() + userRole.slice(1)} user created successfully!`);
+      }
+      
       onClose();
       
     } catch (error) {
       console.error('Error creating user:', error);
-      toast.error(`Failed to create user: ${error.message}`);
+      
+      // Provide better error messages
+      let errorMessage = 'Failed to create user';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak (minimum 6 characters)';
+      } else if (error.message) {
+        errorMessage += ': ' + error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

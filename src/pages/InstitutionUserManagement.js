@@ -18,6 +18,10 @@ import {
   AlertCircle,
   ArrowLeft
 } from 'lucide-react';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { toast } from 'react-toastify';
+import InstitutionUserCreationModal from '../components/InstitutionUserCreationModal';
 
 const InstitutionUserManagement = () => {
   const { userProfile, institutionId } = useUser();
@@ -27,62 +31,46 @@ const InstitutionUserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteForm, setInviteForm] = useState({
-    email: '',
-    role: 'caregiver',
-    firstName: '',
-    lastName: ''
-  });
 
-  // Mock data - replace with actual API calls
+  // Load institution users from Firestore
   useEffect(() => {
     const fetchUsers = async () => {
-      // TODO: Replace with actual institution-specific API calls
-      const mockUsers = [
-        {
-          id: '1',
-          email: 'nurse.smith@hospital.com',
-          firstName: 'Sarah',
-          lastName: 'Smith',
-          role: 'caregiver',
-          status: 'active',
-          joinDate: '2024-01-15',
-          lastActive: '2024-01-20',
-          specialization: 'Nurse',
-          phone: '+1 (555) 123-4567'
-        },
-        {
-          id: '2',
-          email: 'dr.johnson@hospital.com',
-          firstName: 'Michael',
-          lastName: 'Johnson',
-          role: 'doctor',
-          status: 'active',
-          joinDate: '2024-01-10',
-          lastActive: '2024-01-20',
-          specialization: 'Geriatric Medicine',
-          phone: '+1 (555) 234-5678'
-        },
-        {
-          id: '3',
-          email: 'caregiver.wilson@hospital.com',
-          firstName: 'Lisa',
-          lastName: 'Wilson',
-          role: 'caregiver',
-          status: 'pending',
-          joinDate: '2024-01-18',
-          lastActive: null,
-          specialization: 'Personal Care',
-          phone: '+1 (555) 345-6789'
-        }
-      ];
-      
-      setUsers(mockUsers);
-      setLoading(false);
+      if (!institutionId) {
+        console.warn('No institution ID provided');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        // Query users belonging to this institution
+        const usersRef = collection(db, 'users');
+        const q = query(
+          usersRef,
+          where('institutionId', '==', institutionId)
+        );
+        
+        const snapshot = await getDocs(q);
+        const institutionUsers = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          // Normalize role field for filtering
+          role: doc.data().userType || doc.data().type || doc.data().role || 'unknown'
+        }));
+        
+        console.log(`✅ Loaded ${institutionUsers.length} users for institution:`, institutionId);
+        setUsers(institutionUsers);
+      } catch (error) {
+        console.error('Error loading institution users:', error);
+        toast.error('Failed to load users');
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchUsers();
-  }, []);
+  }, [institutionId]);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -91,22 +79,39 @@ const InstitutionUserManagement = () => {
     return matchesSearch && matchesRole;
   });
 
-  const handleInviteUser = async (e) => {
-    e.preventDefault();
-    // TODO: Implement invite user API call
-    console.log('Inviting user:', inviteForm);
+  const handleUserCreated = (result) => {
+    console.log('✅ New user created:', result);
     
-    // Mock success
-    setShowInviteModal(false);
-    setInviteForm({ email: '', role: 'caregiver', firstName: '', lastName: '' });
+    // Reload users to show the new one
+    const fetchUsers = async () => {
+      if (!institutionId) return;
+      
+      try {
+        const usersRef = collection(db, 'users');
+        const q = query(
+          usersRef,
+          where('institutionId', '==', institutionId)
+        );
+        
+        const snapshot = await getDocs(q);
+        const institutionUsers = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          role: doc.data().userType || doc.data().type || doc.data().role || 'unknown'
+        }));
+        
+        setUsers(institutionUsers);
+      } catch (error) {
+        console.error('Error reloading users:', error);
+      }
+    };
     
-    // Show success message
-    alert('Invitation sent successfully!');
+    fetchUsers();
   };
 
   const handleUserAction = (action, userId) => {
     console.log(`${action} user:`, userId);
-    // TODO: Implement user actions
+    toast.info(`${action} user action - Coming soon!`);
   };
 
   const getStatusColor = (status) => {
@@ -124,6 +129,38 @@ const InstitutionUserManagement = () => {
       case 'pending': return <AlertCircle className="h-4 w-4" />;
       case 'inactive': return <XCircle className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    
+    try {
+      // Handle Firestore Timestamp
+      if (date.toDate && typeof date.toDate === 'function') {
+        return date.toDate().toLocaleDateString();
+      }
+      
+      // Handle Date object
+      if (date instanceof Date) {
+        return date.toLocaleDateString();
+      }
+      
+      // Handle timestamp number
+      if (typeof date === 'number') {
+        return new Date(date).toLocaleDateString();
+      }
+      
+      // Handle string date
+      if (typeof date === 'string') {
+        const parsedDate = new Date(date);
+        return !isNaN(parsedDate.getTime()) ? parsedDate.toLocaleDateString() : 'N/A';
+      }
+      
+      return 'N/A';
+    } catch (error) {
+      console.warn('Error formatting date:', error);
+      return 'N/A';
     }
   };
 
@@ -263,14 +300,14 @@ const InstitutionUserManagement = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                      {new Date(user.joinDate).toLocaleDateString()}
+                      {formatDate(user.joinDate || user.createdAt)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {user.lastActive ? (
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                        {new Date(user.lastActive).toLocaleDateString()}
+                        {formatDate(user.lastActive)}
                       </div>
                     ) : (
                       <span className="text-gray-400">Never</span>
@@ -299,84 +336,14 @@ const InstitutionUserManagement = () => {
         </div>
       </div>
 
-      {/* Invite User Modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Invite New User</h2>
-            <form onSubmit={handleInviteUser}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={inviteForm.email}
-                    onChange={(e) => setInviteForm({...inviteForm, email: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={inviteForm.firstName}
-                      onChange={(e) => setInviteForm({...inviteForm, firstName: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={inviteForm.lastName}
-                      onChange={(e) => setInviteForm({...inviteForm, lastName: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role
-                  </label>
-                  <select
-                    value={inviteForm.role}
-                    onChange={(e) => setInviteForm({...inviteForm, role: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="caregiver">Caregiver</option>
-                    <option value="doctor">Doctor</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Send Invitation
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Institution User Creation Modal */}
+      <InstitutionUserCreationModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        institutionId={institutionId}
+        createdBy={userProfile?.id}
+        onUserCreated={handleUserCreated}
+      />
     </div>
   );
 };
