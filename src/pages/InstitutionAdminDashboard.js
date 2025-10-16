@@ -40,7 +40,8 @@ import {
   Edit,
   Package,
   Camera,
-  Bell
+  Bell,
+  ClipboardCheck
 } from 'lucide-react';
 import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -59,6 +60,7 @@ import { getConversationsByUser, getMessagesByConversation, sendMessage as sendM
 import CallService from '../services/callService';
 import WebRTCService from '../services/webrtcService';
 import PortalSwitcher from '../components/PortalSwitcher';
+import { getAllDiagnostics, updateDiagnosticTest } from '../api/diagnosticsAPI';
 
 const InstitutionAdminDashboard = () => {
   const navigate = useNavigate();
@@ -104,6 +106,7 @@ const InstitutionAdminDashboard = () => {
   const [caregivers, setCaregivers] = useState([]);
   const [pharmacists, setPharmacists] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [pendingDiagnostics, setPendingDiagnostics] = useState([]);
   const [showAddClient, setShowAddClient] = useState(false);
   const [showAddCaregiver, setShowAddCaregiver] = useState(false);
   const [showAddPharmacist, setShowAddPharmacist] = useState(false);
@@ -253,11 +256,12 @@ const InstitutionAdminDashboard = () => {
       setLoading(true);
       
       // Load all data in parallel but optimized for speed
-      const [caregiversData, clientsData, assignmentsData, users] = await Promise.all([
+      const [caregiversData, clientsData, assignmentsData, users, diagnosticsData] = await Promise.all([
         caregiverAPI.getCaregivers({ institutionId: instId, limit: 50 }).catch(() => []),
         getAllClients(instId).catch(() => []),
         assignmentAPI.getAssignmentsByInstitution(instId).catch(() => []),
-        getAllUsers().catch(() => [])
+        getAllUsers().catch(() => []),
+        getAllDiagnostics(instId).catch(() => [])
       ]);
 
       // Load non-critical data in background (don't block UI)
@@ -343,6 +347,11 @@ const InstitutionAdminDashboard = () => {
       
       // Update state with pharmacists
       setPharmacists(allInstitutionPharmacists);
+      
+      // Filter pending diagnostics
+      const pending = diagnosticsData.filter(d => d.status === 'pending' || d.status === 'ordered');
+      setPendingDiagnostics(pending);
+      console.log('🔬 Pending diagnostics:', pending.length);
 
       // Calculate assignment statistics (optimized)
       const activeAssignmentCount = assignmentsData.filter(a => 
@@ -1033,6 +1042,77 @@ const InstitutionAdminDashboard = () => {
     } catch (error) {
       console.error('Error rejecting caregiver:', error);
       toast.error('Failed to reject caregiver');
+    }
+  };
+
+  const handleApproveDiagnostic = async (diagnostic) => {
+    if (!window.confirm(`Approve diagnostic test: ${diagnostic.testName || diagnostic.testType}?`)) {
+      return;
+    }
+    try {
+      await updateDiagnosticTest(diagnostic.id, { 
+        status: 'approved',
+        approvedAt: new Date().toISOString(),
+        approvedBy: user?.uid || userProfile?.id
+      });
+      
+      // Send notification to the doctor who ordered it
+      if (diagnostic.doctorId) {
+        await createNotification({
+          userId: diagnostic.doctorId,
+          type: NOTIFICATION_TYPES.SYSTEM,
+          priority: NOTIFICATION_PRIORITIES.MEDIUM,
+          title: 'Diagnostic Test Approved',
+          message: `Your diagnostic test request for ${diagnostic.clientName} has been approved.`,
+          data: {
+            action: 'diagnostic_approved',
+            diagnosticId: diagnostic.id,
+            clientId: diagnostic.clientId
+          }
+        });
+      }
+      
+      toast.success('Diagnostic test approved successfully');
+      await loadDashboardData(); // Reload to update the status
+    } catch (error) {
+      console.error('Error approving diagnostic:', error);
+      toast.error('Failed to approve diagnostic test');
+    }
+  };
+
+  const handleRejectDiagnostic = async (diagnostic) => {
+    const reason = window.prompt(`Please provide a reason for rejecting this diagnostic test request:`);
+    if (!reason) return;
+    
+    try {
+      await updateDiagnosticTest(diagnostic.id, { 
+        status: 'rejected',
+        rejectedAt: new Date().toISOString(),
+        rejectedBy: user?.uid || userProfile?.id,
+        rejectionReason: reason
+      });
+      
+      // Send notification to the doctor who ordered it
+      if (diagnostic.doctorId) {
+        await createNotification({
+          userId: diagnostic.doctorId,
+          type: NOTIFICATION_TYPES.SYSTEM,
+          priority: NOTIFICATION_PRIORITIES.HIGH,
+          title: 'Diagnostic Test Not Approved',
+          message: `Your diagnostic test request was not approved. Reason: ${reason}`,
+          data: {
+            action: 'diagnostic_rejected',
+            diagnosticId: diagnostic.id,
+            reason: reason
+          }
+        });
+      }
+      
+      toast.success('Diagnostic test request has been rejected');
+      await loadDashboardData(); // Reload to update the status
+    } catch (error) {
+      console.error('Error rejecting diagnostic:', error);
+      toast.error('Failed to reject diagnostic test');
     }
   };
 
@@ -2063,6 +2143,7 @@ const InstitutionAdminDashboard = () => {
               { id: 'caregivers', name: 'Caregivers', icon: UserCheck },
               { id: 'pharmacists', name: 'Pharmacists', icon: Pill },
               { id: 'assignments', name: 'Assignments', icon: Users },
+              { id: 'approvals', name: 'Pending Approvals', icon: ClipboardCheck },
               { id: 'messages', name: 'Messages', icon: MessageSquare },
               { id: 'analytics', name: 'Analytics', icon: TrendingUp }
             ].map((tab) => {
@@ -2906,6 +2987,102 @@ const InstitutionAdminDashboard = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Approvals Tab */}
+      {activeTab === 'approvals' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Pending Approvals</h2>
+              <p className="text-gray-600 mt-1">Review and approve pending diagnostic test requests</p>
+            </div>
+          </div>
+
+          {/* Pending Diagnostics */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Activity className="h-5 w-5 text-green-600 mr-2" />
+                Diagnostic Test Requests ({pendingDiagnostics.length})
+              </h3>
+            </div>
+            
+            {pendingDiagnostics.length === 0 ? (
+              <div className="p-12 text-center">
+                <CheckCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No pending diagnostic approvals</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {pendingDiagnostics.map((diagnostic) => (
+                  <div key={diagnostic.id} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            {diagnostic.testName || diagnostic.testType || 'Diagnostic Test'}
+                          </h4>
+                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+                            Pending Approval
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                          <div>
+                            <p className="text-gray-500">Client</p>
+                            <p className="font-medium text-gray-900">{diagnostic.clientName || 'Unknown'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Ordered By</p>
+                            <p className="font-medium text-gray-900">{diagnostic.doctorName || 'Unknown Doctor'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Order Date</p>
+                            <p className="font-medium text-gray-900">
+                              {diagnostic.orderDate instanceof Date 
+                                ? diagnostic.orderDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                : new Date(diagnostic.orderDate || diagnostic.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Test Type</p>
+                            <p className="font-medium text-gray-900">{diagnostic.testType || 'General'}</p>
+                          </div>
+                        </div>
+                        
+                        {diagnostic.testReason && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Reason:</span> {diagnostic.testReason}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={() => handleApproveDiagnostic(diagnostic)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectDiagnostic(diagnostic)}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
