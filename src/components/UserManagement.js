@@ -326,7 +326,33 @@ const UserManagement = ({ institutionId }) => {
                     <td className="px-4 py-4">
                       <div className="flex items-center text-sm text-gray-500">
                         <Calendar className="h-3 w-3 mr-1" />
-                        {user.joinDate?.toLocaleDateString() || user.createdAt?.toLocaleDateString() || 'N/A'}
+                        {(() => {
+                          const date = user.joinDate || user.createdAt;
+                          if (!date) return 'N/A';
+                          
+                          // Handle Firestore Timestamp
+                          if (date.toDate && typeof date.toDate === 'function') {
+                            return date.toDate().toLocaleDateString();
+                          }
+                          
+                          // Handle Date object
+                          if (date instanceof Date) {
+                            return date.toLocaleDateString();
+                          }
+                          
+                          // Handle timestamp number
+                          if (typeof date === 'number') {
+                            return new Date(date).toLocaleDateString();
+                          }
+                          
+                          // Handle string date
+                          if (typeof date === 'string') {
+                            const parsedDate = new Date(date);
+                            return !isNaN(parsedDate.getTime()) ? parsedDate.toLocaleDateString() : 'N/A';
+                          }
+                          
+                          return 'N/A';
+                        })()}
                       </div>
                     </td>
                     <td className="px-4 py-4">
