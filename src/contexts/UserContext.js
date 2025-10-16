@@ -18,6 +18,7 @@ export const UserProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
+  const [userRoles, setUserRoles] = useState([]);
   const [licenseActive, setLicenseActive] = useState(true);
   const [institutionId, setInstitutionId] = useState(null);
   const [institutionData, setInstitutionData] = useState(null);
@@ -40,8 +41,25 @@ export const UserProvider = ({ children }) => {
           
           if (profile) {
             // Handle both 'patient' and 'elderly' as the same role, also check userType field and role field
-            let roleFromProfile = profile.role || profile.userType || profile.type || 'patient';
-            let updatedProfile = profile;
+            // Support multiple roles
+            let roleFromProfile;
+            let userRoles = [];
+            
+            if (Array.isArray(profile.roles) && profile.roles.length > 0) {
+              // User has multiple roles
+              userRoles = profile.roles;
+              roleFromProfile = profile.roles[0]; // Primary role
+            } else {
+              // Single role (backward compatibility)
+              roleFromProfile = profile.role || profile.userType || profile.type || 'patient';
+              userRoles = [roleFromProfile];
+            }
+            
+            let updatedProfile = {
+              ...profile,
+              roles: userRoles,
+              userType: roleFromProfile // Keep for backward compatibility
+            };
             
             // SAFEGUARD: If user ID starts with 'caregiver_' but role is not caregiver, fix it
             if (firebaseUser.uid.startsWith('caregiver_') && roleFromProfile !== 'caregiver') {
@@ -72,7 +90,9 @@ export const UserProvider = ({ children }) => {
             
             setUserProfile(updatedProfile);
             setUserRole(roleFromProfile);
+            setUserRoles(userRoles);
             console.log('✅ User role set to:', roleFromProfile);
+            console.log('✅ User roles:', userRoles);
 
             // Institution and License check
             try {
@@ -158,6 +178,7 @@ export const UserProvider = ({ children }) => {
         setUser(null);
         setUserProfile(null);
         setUserRole(null);
+        setUserRoles([]);
         setLicenseActive(true);
         setInstitutionId(null);
         setInstitutionData(null);
@@ -295,6 +316,7 @@ export const UserProvider = ({ children }) => {
     user,
     userProfile,
     userRole,
+    userRoles,
     loading,
     isOnboardingIncomplete,
     getCaregiverOnboardingRoute,
@@ -304,6 +326,7 @@ export const UserProvider = ({ children }) => {
     isElderly,
     isAdmin,
     updateUserProfile: setUserProfile,
+    updateUserRoles: setUserRoles,
     licenseActive,
     institutionId,
     institutionData,

@@ -60,6 +60,7 @@ import NurseCareLogs from '../components/NurseCareLogs';
 import NurseReportGenerator from '../components/NurseReportGenerator';
 import NurseMedicationManager from '../components/NurseMedicationManager';
 import CareLogFormModal from '../components/CareLogFormModal';
+import DashboardSwitcher from '../components/DashboardSwitcher';
 import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { careLogsAPI } from '../api/careLogsAPI';
 import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
@@ -86,7 +87,7 @@ import WebRTCService from '../services/webrtcService';
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, userProfile, institutionId, institutionData } = useUser();
+  const { user, userProfile, institutionId, institutionData, userRoles } = useUser();
   const { isMobile, isTablet } = useResponsive();
   
   // Get institution ID from URL params or user context
@@ -3960,6 +3961,13 @@ const InstitutionCaregiverDashboard = () => {
               )}
             </div>
             <div className="flex items-center space-x-4">
+              {userRoles && userRoles.length > 1 && (
+                <DashboardSwitcher 
+                  userRoles={userRoles} 
+                  currentDashboard={userProfile?.medicalQualification?.toLowerCase() || userProfile?.userType || 'caregiver'} 
+                  institutionId={effectiveInstitutionId}
+                />
+              )}
               <button className="flex items-center px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh

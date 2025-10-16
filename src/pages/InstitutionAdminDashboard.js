@@ -55,6 +55,8 @@ import { institutionAPI } from '../api/institutionAPI';
 import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
 import InventoryBillingTab from '../components/InventoryBillingTab';
 import CallInterface from '../components/CallInterface';
+import UserManagement from '../components/UserManagement';
+import DashboardSwitcher from '../components/DashboardSwitcher';
 import { toast } from 'react-toastify';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages } from '../api/messagesAPI';
 import CallService from '../services/callService';
@@ -65,7 +67,7 @@ import { getAllDiagnostics, updateDiagnosticTest } from '../api/diagnosticsAPI';
 const InstitutionAdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, userProfile, institutionId } = useUser();
+  const { user, userProfile, institutionId, userRoles } = useUser();
   const functions = getFunctions();
   
   // Get institution ID from URL params or user context
@@ -2057,8 +2059,17 @@ const InstitutionAdminDashboard = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Institution Dashboard</h1>
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">Institution Dashboard</h1>
+            {userRoles && userRoles.length > 1 && (
+              <DashboardSwitcher 
+                userRoles={userRoles} 
+                currentDashboard="admin" 
+                institutionId={institutionIdFromURL}
+              />
+            )}
+          </div>
           <p className="text-gray-600">Welcome back, {userProfile?.displayName || user?.email}</p>
           <div className="flex items-center gap-4 mt-2">
             <div className="flex items-center">
@@ -2143,6 +2154,7 @@ const InstitutionAdminDashboard = () => {
               { id: 'caregivers', name: 'Caregivers', icon: UserCheck },
               { id: 'pharmacists', name: 'Pharmacists', icon: Pill },
               { id: 'assignments', name: 'Assignments', icon: Users },
+              { id: 'users', name: 'User Management', icon: Shield },
               { id: 'approvals', name: 'Pending Approvals', icon: ClipboardCheck },
               { id: 'messages', name: 'Messages', icon: MessageSquare },
               { id: 'analytics', name: 'Analytics', icon: TrendingUp }
@@ -3084,6 +3096,13 @@ const InstitutionAdminDashboard = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* User Management Tab */}
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          <UserManagement institutionId={institutionIdFromURL} />
         </div>
       )}
 
