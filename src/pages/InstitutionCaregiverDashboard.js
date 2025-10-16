@@ -3924,11 +3924,11 @@ const InstitutionCaregiverDashboard = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div className="bg-white shadow-sm border-b border-gray-100 px-8 py-6">
+        {/* Header - Hidden on mobile (we have mobile header at top) */}
+        <div className="hidden md:block bg-white shadow-sm border-b border-gray-100 px-4 sm:px-6 md:px-8 py-4 md:py-6">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
                 {activeTab === 'dashboard' && 'General Care Dashboard'}
                 {activeTab === 'clients' && 'Client Management'}
                 {activeTab === 'messages' && 'Messages'}
@@ -3940,7 +3940,7 @@ const InstitutionCaregiverDashboard = () => {
                 {activeTab === 'consultations' && 'Consultations'}
                 {activeTab === 'diagnostics' && 'Diagnostics'}
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-sm md:text-base text-gray-600 mt-1 truncate">
                 {activeTab === 'dashboard' && `Welcome back, ${caregiver?.name || userProfile?.name || 'User'}`}
                 {activeTab === 'clients' && 'Manage your assigned clients'}
                 {activeTab === 'messages' && 'Communicate with team members'}
@@ -3960,22 +3960,24 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               )}
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-2 md:gap-4 shrink-0">
               {userRoles && userRoles.length > 1 && (
-                <DashboardSwitcher 
-                  userRoles={userRoles} 
-                  currentDashboard={userProfile?.medicalQualification?.toLowerCase() || userProfile?.userType || 'caregiver'} 
-                  institutionId={effectiveInstitutionId}
-                />
+                <div className="hidden lg:block">
+                  <DashboardSwitcher 
+                    userRoles={userRoles} 
+                    currentDashboard={userProfile?.medicalQualification?.toLowerCase() || userProfile?.userType || 'caregiver'} 
+                    institutionId={effectiveInstitutionId}
+                  />
+                </div>
               )}
-              <button className="flex items-center px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              <button className="hidden md:flex items-center px-3 md:px-4 py-2 text-xs md:text-sm text-gray-600 hover:text-gray-900 transition-colors touch-manipulation">
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                <span className="hidden lg:inline">Refresh</span>
               </button>
-              <div className="flex items-center space-x-3">
-                <Bell className="h-5 w-5 text-gray-400" />
-                <div className="flex items-center space-x-2">
-                  <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+              <div className="flex items-center gap-2 md:gap-3">
+                <Bell className="h-5 w-5 text-gray-400 cursor-pointer hover:text-gray-600" />
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden shrink-0">
                     {profileImage ? (
                       <img
                         src={profileImage}
@@ -3990,8 +3992,8 @@ const InstitutionCaregiverDashboard = () => {
                       </span>
                     )}
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
+                  <div className="hidden md:block text-right min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
                       {caregiver?.name || userProfile?.name || 'User'}
                     </p>
                     <p className="text-xs text-gray-500">Caregiver</p>
@@ -4003,105 +4005,120 @@ const InstitutionCaregiverDashboard = () => {
         </div>
 
         {/* Doctor Client Selector (if doctor) */}
-        <div className="p-8 pt-6">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-3 sm:pt-4 md:pt-6">
           {renderDoctorClientSelector()}
         </div>
 
         {/* Summary Cards - Only show on dashboard */}
         {activeTab === 'dashboard' && (
-          <div className="px-8 pb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="px-3 sm:px-4 md:px-6 lg:px-8 pb-4 md:pb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
               <div 
-                onClick={() => setActiveTab('clients')}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all transform hover:-translate-y-1"
+                onClick={() => {
+                  setActiveTab('clients');
+                  if (isMobile) setSidebarCollapsed(true);
+                }}
+                className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all active:scale-95 touch-manipulation"
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Assigned Clients</p>
-                    <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Assigned Clients</p>
+                    <p className="text-xl md:text-2xl font-bold text-gray-900">{assignedClients.length}</p>
                     <p className="text-xs text-blue-600 mt-1 flex items-center">
                       <Eye className="h-3 w-3 mr-1" />
-                      Click to view
+                      <span className="truncate">Click to view</span>
                     </p>
                   </div>
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <Users className="h-6 w-6 text-blue-600" />
+                  <div className="p-2 md:p-3 bg-blue-50 rounded-lg shrink-0 ml-2">
+                    <Users className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
                   </div>
                 </div>
               </div>
               
               <div 
-                onClick={() => setActiveTab('tasks')}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 cursor-pointer hover:shadow-md hover:border-green-200 transition-all transform hover:-translate-y-1"
+                onClick={() => {
+                  setActiveTab('tasks');
+                  if (isMobile) setSidebarCollapsed(true);
+                }}
+                className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-green-200 transition-all active:scale-95 touch-manipulation"
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Today's Tasks</p>
-                    <p className="text-2xl font-bold text-gray-900">{recentTasks.length}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Today's Tasks</p>
+                    <p className="text-xl md:text-2xl font-bold text-gray-900">{recentTasks.length}</p>
                     <p className="text-xs text-green-600 mt-1 flex items-center">
                       <Eye className="h-3 w-3 mr-1" />
-                      Click to view
+                      <span className="truncate">Click to view</span>
                     </p>
                   </div>
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <CheckSquare className="h-6 w-6 text-green-600" />
+                  <div className="p-2 md:p-3 bg-green-50 rounded-lg shrink-0 ml-2">
+                    <CheckSquare className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
                   </div>
                 </div>
               </div>
               
               <div 
-                onClick={() => setActiveTab('tasks')}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all transform hover:-translate-y-1"
+                onClick={() => {
+                  setActiveTab('tasks');
+                  if (isMobile) setSidebarCollapsed(true);
+                }}
+                className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all active:scale-95 touch-manipulation"
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
-                    <p className="text-2xl font-bold text-gray-900">{recentTasks.filter(task => task.status !== 'completed').length}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Pending Tasks</p>
+                    <p className="text-xl md:text-2xl font-bold text-gray-900">{recentTasks.filter(task => task.status !== 'completed').length}</p>
                     <p className="text-xs text-orange-600 mt-1 flex items-center">
                       <Eye className="h-3 w-3 mr-1" />
-                      Click to view
+                      <span className="truncate">Click to view</span>
                     </p>
                   </div>
-                  <div className="p-3 bg-orange-50 rounded-lg">
-                    <Clock className="h-6 w-6 text-orange-600" />
+                  <div className="p-2 md:p-3 bg-orange-50 rounded-lg shrink-0 ml-2">
+                    <Clock className="h-5 w-5 md:h-6 md:w-6 text-orange-600" />
                   </div>
                 </div>
               </div>
               
               <div 
-                onClick={() => setActiveTab('messages')}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 cursor-pointer hover:shadow-md hover:border-purple-200 transition-all transform hover:-translate-y-1"
+                onClick={() => {
+                  setActiveTab('messages');
+                  if (isMobile) setSidebarCollapsed(true);
+                }}
+                className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-purple-200 transition-all active:scale-95 touch-manipulation"
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Unread Messages</p>
-                    <p className="text-2xl font-bold text-gray-900">{conversations.filter(c => c.unread > 0).length}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Unread Messages</p>
+                    <p className="text-xl md:text-2xl font-bold text-gray-900">{conversations.filter(c => c.unread > 0).length}</p>
                     <p className="text-xs text-purple-600 mt-1 flex items-center">
                       <Eye className="h-3 w-3 mr-1" />
-                      Click to view
+                      <span className="truncate">Click to view</span>
                     </p>
                   </div>
-                  <div className="p-3 bg-purple-50 rounded-lg">
-                    <MessageSquare className="h-6 w-6 text-purple-600" />
+                  <div className="p-2 md:p-3 bg-purple-50 rounded-lg shrink-0 ml-2">
+                    <MessageSquare className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="flex justify-end mt-6">
-              <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <div className="flex justify-end mt-4 md:mt-6">
+              <button className="flex items-center px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base touch-manipulation">
                 <BarChart3 className="h-4 w-4 mr-2" />
-                Weekly Overview
+                <span className="hidden sm:inline">Weekly Overview</span>
+                <span className="sm:hidden">Overview</span>
               </button>
             </div>
           </div>
         )}
 
         {/* Main Content */}
-        <div className="flex-1 px-8 pb-8 w-full">
+        <div className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 pb-4 md:pb-8 w-full safe-area-bottom">
           {/* Top right portal switcher */}
-          <div className="w-full flex justify-end pt-4 pb-2">
-            <PortalSwitcher />
+          <div className="w-full flex justify-end pt-2 md:pt-4 pb-2">
+            <div className="scale-90 md:scale-100">
+              <PortalSwitcher />
+            </div>
           </div>
         {showSettings ? (
           <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
@@ -4124,17 +4141,17 @@ const InstitutionCaregiverDashboard = () => {
         ) : activeTab === 'diagnostics' ? (
           renderDiagnosticsTab()
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-4 md:space-y-6 lg:space-y-8">
             {/* General Care Provider Dashboard Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">General Care Provider Dashboard</h2>
-                  <p className="text-gray-600">Essential caregiving tools and client management</p>
+            <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
+              <div className="flex flex-col sm:flex-row items-start justify-between mb-4 md:mb-6 gap-4">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2">General Care Provider Dashboard</h2>
+                  <p className="text-sm md:text-base text-gray-600">Essential caregiving tools and client management</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-600 mb-1">Qualification Level</p>
-                  <p className="text-lg font-bold text-gray-900">
+                <div className="bg-gray-50 rounded-lg p-3 md:p-4 shrink-0 w-full sm:w-auto">
+                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Qualification Level</p>
+                  <p className="text-base md:text-lg font-bold text-gray-900">
                     {userProfile?.medicalQualification?.includes('Doctor') ? 'Advanced' : 
                      userProfile?.medicalQualification?.includes('Nurse') ? 'Intermediate' : 'Basic'}
                   </p>
@@ -4142,9 +4159,9 @@ const InstitutionCaregiverDashboard = () => {
               </div>
               
               {/* Specializations and Certifications Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Specializations</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                <div className="bg-gray-50 rounded-lg md:rounded-xl border border-gray-100 p-4 md:p-6">
+                  <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Your Specializations</h3>
                   <div className="space-y-3">
                     {userProfile?.specializations?.length > 0 ? (
                       userProfile.specializations.map((spec, index) => (
@@ -4163,8 +4180,8 @@ const InstitutionCaregiverDashboard = () => {
                   </div>
                 </div>
                 
-                <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Certifications</h3>
+                <div className="bg-gray-50 rounded-lg md:rounded-xl border border-gray-100 p-4 md:p-6">
+                  <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Certifications</h3>
                   <div className="space-y-3">
                     {userProfile?.certifications?.length > 0 ? (
                       userProfile.certifications.map((cert, index) => (
@@ -4187,16 +4204,16 @@ const InstitutionCaregiverDashboard = () => {
 
             {/* Morning Briefing for Nurses */}
             {(userProfile?.medicalQualification?.includes('Nurse') || userProfile?.medicalQualification?.includes('RN')) && (
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl shadow-sm border border-red-100 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <Heart className="h-6 w-6 text-red-600" />
+              <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-lg md:rounded-xl shadow-sm border border-red-100 p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
+                  <h2 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <Heart className="h-5 w-5 md:h-6 md:w-6 text-red-600" />
                     Morning Briefing
                   </h2>
-                  <span className="text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  <span className="text-xs md:text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                   <div className="bg-white rounded-lg p-4 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                       <User className="h-5 w-5 text-blue-600" />
@@ -4237,9 +4254,9 @@ const InstitutionCaregiverDashboard = () => {
           )}
           
           {/* Qualification-Specific Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4 truncate">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {dashboardConfig.quickActions.map((action, index) => (
                 <a
                   key={index}
@@ -4254,8 +4271,8 @@ const InstitutionCaregiverDashboard = () => {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+            <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Today's Visits</p>
