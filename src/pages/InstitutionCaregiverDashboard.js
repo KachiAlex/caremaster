@@ -40,7 +40,8 @@ import {
   AlertCircle,
   X,
   Mail,
-  Download
+  Download,
+  Receipt
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { caregiverAPI } from '../api/caregiverAPI';
@@ -68,6 +69,7 @@ import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
 import activitiesAPI, { ACTIVITY_CATEGORIES, COMMON_ACTIVITIES } from '../api/activitiesAPI';
 import prescriptionsAPI from '../api/prescriptionsAPI';
+import pharmacyAPI from '../api/pharmacyAPI';
 import PrescriptionModal from '../components/PrescriptionModal';
 import PrescriptionsTabContent from '../components/PrescriptionsTabContent';
 import consultationsAPI, { CONSULTATION_TYPES } from '../api/consultationsAPI';
@@ -164,6 +166,7 @@ const InstitutionCaregiverDashboard = () => {
   const [clientPrescriptions, setClientPrescriptions] = useState([]);
   const [clientConsultations, setClientConsultations] = useState([]);
   const [clientDiagnostics, setClientDiagnostics] = useState([]);
+  const [clientInvoices, setClientInvoices] = useState([]);
   const [expandedRecords, setExpandedRecords] = useState({});
   const [profileImage, setProfileImage] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -742,29 +745,33 @@ const InstitutionCaregiverDashboard = () => {
         }
       );
       
-      // Load prescriptions, consultations, and diagnostics for Medical Reports section
+      // Load prescriptions, consultations, diagnostics, and invoices for Medical Reports section
       const loadMedicalData = async () => {
         try {
-          const [prescriptions, consultations, diagnostics] = await Promise.all([
+          const [prescriptions, consultations, diagnostics, invoices] = await Promise.all([
             prescriptionsAPI.getPrescriptionsByClient(selectedClient.id).catch(() => []),
             consultationsAPI.getConsultationsByClient(selectedClient.id).catch(() => []),
-            getClientDiagnostics(selectedClient.id).catch(() => [])
+            getClientDiagnostics(selectedClient.id).catch(() => []),
+            pharmacyAPI.getClientInvoices(selectedClient.id).catch(() => [])
           ]);
           
           setClientPrescriptions(prescriptions);
           setClientConsultations(consultations);
           setClientDiagnostics(diagnostics);
+          setClientInvoices(invoices);
           setLoadingReports(false);
           
           console.log('📊 Loaded medical data:', {
             prescriptions: prescriptions.length,
             consultations: consultations.length,
-            diagnostics: diagnostics.length
+            diagnostics: diagnostics.length,
+            invoices: invoices.length
           });
           
           console.log('📋 Prescriptions data:', prescriptions);
           console.log('💬 Consultations data:', consultations);
           console.log('🔬 Diagnostics data:', diagnostics);
+          console.log('🧾 Invoices data:', invoices);
         } catch (error) {
           console.error('Error loading medical data:', error);
           setLoadingReports(false);
@@ -5574,12 +5581,120 @@ const InstitutionCaregiverDashboard = () => {
                               </div>
                             )}
                             
+                            {/* Pharmacy Invoices */}
+                            {clientInvoices.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center border-b pb-2">
+                                  <Receipt className="h-4 w-4 text-amber-600 mr-2" />
+                                  Pharmacy Invoices ({clientInvoices.length})
+                                </h4>
+                                <div className="space-y-2">
+                                  {clientInvoices.map((invoice) => (
+                                    <div key={invoice.id} className="border border-gray-200 rounded-lg hover:border-amber-300 transition-colors">
+                                      <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(invoice.id)}>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
+                                            <p className="text-sm font-medium text-gray-900">
+                                              Invoice #{invoice.invoiceNumber || invoice.id.substring(0, 8).toUpperCase()}
+                                            </p>
+                                            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                                              invoice.status === 'paid' ? 'bg-green-100 text-green-700' :
+                                              invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                              'bg-gray-100 text-gray-700'
+                                            }`}>
+                                              {invoice.status || 'Pending'}
+                                            </span>
+                                          </div>
+                                          <p className="text-xs text-gray-500 ml-4 mt-1">
+                                            {invoice.createdAt instanceof Date 
+                                              ? invoice.createdAt.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                              : new Date(invoice.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            {invoice.pharmacistName && ` • By: ${invoice.pharmacistName}`}
+                                            {invoice.total && ` • Total: ₦${invoice.total.toLocaleString()}`}
+                                          </p>
+                                        </div>
+                                        <button className="px-3 py-1 text-xs bg-amber-100 text-amber-700 rounded hover:bg-amber-200 transition-colors">
+                                          {expandedRecords[invoice.id] ? 'Hide' : 'View Details'}
+                                        </button>
+                                      </div>
+                                      {expandedRecords[invoice.id] && (
+                                        <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-amber-50">
+                                          <div className="space-y-3 text-sm">
+                                            {/* Invoice Items */}
+                                            {invoice.items && invoice.items.length > 0 && (
+                                              <div>
+                                                <p className="font-medium text-gray-700 mb-2">Items:</p>
+                                                <div className="space-y-2">
+                                                  {invoice.items.map((item, idx) => (
+                                                    <div key={idx} className="flex justify-between items-center bg-white p-2 rounded">
+                                                      <div className="flex-1">
+                                                        <p className="text-gray-900 font-medium">{item.name || item.medicationName}</p>
+                                                        <p className="text-gray-600 text-xs">
+                                                          {item.dosage} - Qty: {item.quantity}
+                                                        </p>
+                                                      </div>
+                                                      <p className="text-gray-900 font-semibold">₦{item.price?.toLocaleString() || '0'}</p>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                            
+                                            {/* Totals */}
+                                            <div className="border-t pt-3 space-y-1">
+                                              <div className="flex justify-between text-gray-700">
+                                                <span>Subtotal:</span>
+                                                <span>₦{invoice.subtotal?.toLocaleString() || '0'}</span>
+                                              </div>
+                                              {invoice.tax > 0 && (
+                                                <div className="flex justify-between text-gray-700">
+                                                  <span>Tax:</span>
+                                                  <span>₦{invoice.tax?.toLocaleString() || '0'}</span>
+                                                </div>
+                                              )}
+                                              {invoice.discount > 0 && (
+                                                <div className="flex justify-between text-green-700">
+                                                  <span>Discount:</span>
+                                                  <span>-₦{invoice.discount?.toLocaleString() || '0'}</span>
+                                                </div>
+                                              )}
+                                              <div className="flex justify-between font-bold text-gray-900 pt-2 border-t">
+                                                <span>Total:</span>
+                                                <span>₦{invoice.total?.toLocaleString() || '0'}</span>
+                                              </div>
+                                            </div>
+                                            
+                                            {/* Notes */}
+                                            {invoice.notes && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Notes:</p>
+                                                <p className="text-gray-600 ml-4">{invoice.notes}</p>
+                                              </div>
+                                            )}
+                                            
+                                            {/* Payment Info */}
+                                            {invoice.paymentMethod && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Payment Method:</p>
+                                                <p className="text-gray-600 ml-4">{invoice.paymentMethod}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
                             {/* No records message */}
-                            {clientPrescriptions.length === 0 && clientConsultations.length === 0 && clientDiagnostics.length === 0 && (
+                            {clientPrescriptions.length === 0 && clientConsultations.length === 0 && clientDiagnostics.length === 0 && clientInvoices.length === 0 && (
                               <div className="text-center py-8">
                                 <Stethoscope className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                                 <p className="text-gray-500 text-sm">No medical records yet</p>
-                                <p className="text-gray-400 text-xs mt-1">Prescriptions, consultations, and diagnostic tests will appear here</p>
+                                <p className="text-gray-400 text-xs mt-1">Prescriptions, consultations, diagnostic tests, and invoices will appear here</p>
                               </div>
                             )}
                           </div>
