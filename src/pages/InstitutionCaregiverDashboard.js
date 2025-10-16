@@ -161,6 +161,7 @@ const InstitutionCaregiverDashboard = () => {
   const [clientPrescriptions, setClientPrescriptions] = useState([]);
   const [clientConsultations, setClientConsultations] = useState([]);
   const [clientDiagnostics, setClientDiagnostics] = useState([]);
+  const [expandedRecords, setExpandedRecords] = useState({});
   const [profileImage, setProfileImage] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
@@ -974,6 +975,14 @@ const InstitutionCaregiverDashboard = () => {
                        userProfile?.role === 'pharmacist';
   const isMedicalProfessional = isDoctor || isNurse;
   const isNonMedicalCaregiver = !isMedicalProfessional && !isPharmacist;
+
+  // Toggle expand/collapse for medical records
+  const toggleRecordDetails = (recordId) => {
+    setExpandedRecords(prev => ({
+      ...prev,
+      [recordId]: !prev[recordId]
+    }));
+  };
 
   const renderDoctorClientSelector = () => {
     if (!isDoctor) return null;
@@ -5117,56 +5126,53 @@ const InstitutionCaregiverDashboard = () => {
                                   Prescriptions ({clientPrescriptions.length})
                                 </h4>
                                 <div className="space-y-2">
-                                  {clientPrescriptions.map((prescription) => {
-                                    const [showDetails, setShowDetails] = React.useState(false);
-                                    return (
-                                      <div key={prescription.id} className="border border-gray-200 rounded-lg hover:border-purple-300 transition-colors">
-                                        <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => setShowDetails(!showDetails)}>
-                                          <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                                              <p className="text-sm font-medium text-gray-900">
-                                                {prescription.diagnosis || 'Prescription'}
-                                              </p>
-                                            </div>
-                                            <p className="text-xs text-gray-500 ml-4 mt-1">
-                                              {prescription.createdAt instanceof Date 
-                                                ? prescription.createdAt.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                                : new Date(prescription.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                              {prescription.doctorName && ` • By: ${prescription.doctorName}`}
+                                  {clientPrescriptions.map((prescription) => (
+                                    <div key={prescription.id} className="border border-gray-200 rounded-lg hover:border-purple-300 transition-colors">
+                                      <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(prescription.id)}>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                                            <p className="text-sm font-medium text-gray-900">
+                                              {prescription.diagnosis || 'Prescription'}
                                             </p>
                                           </div>
-                                          <button className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors">
-                                            {showDetails ? 'Hide' : 'View Details'}
-                                          </button>
+                                          <p className="text-xs text-gray-500 ml-4 mt-1">
+                                            {prescription.createdAt instanceof Date 
+                                              ? prescription.createdAt.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                              : new Date(prescription.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            {prescription.doctorName && ` • By: ${prescription.doctorName}`}
+                                          </p>
                                         </div>
-                                        {showDetails && (
-                                          <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-purple-50">
-                                            <div className="space-y-2 text-sm">
-                                              {prescription.medications && prescription.medications.length > 0 && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Medications:</p>
-                                                  <ul className="ml-4 mt-1 space-y-1">
-                                                    {prescription.medications.map((med, idx) => (
-                                                      <li key={idx} className="text-gray-600">
-                                                        • {med.medicationName} - {med.dosage} ({med.frequency})
-                                                      </li>
-                                                    ))}
-                                                  </ul>
-                                                </div>
-                                              )}
-                                              {prescription.instructions && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Instructions:</p>
-                                                  <p className="text-gray-600 ml-4">{prescription.instructions}</p>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        )}
+                                        <button className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors">
+                                          {expandedRecords[prescription.id] ? 'Hide' : 'View Details'}
+                                        </button>
                                       </div>
-                                    );
-                                  })}
+                                      {expandedRecords[prescription.id] && (
+                                        <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-purple-50">
+                                          <div className="space-y-2 text-sm">
+                                            {prescription.medications && prescription.medications.length > 0 && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Medications:</p>
+                                                <ul className="ml-4 mt-1 space-y-1">
+                                                  {prescription.medications.map((med, idx) => (
+                                                    <li key={idx} className="text-gray-600">
+                                                      • {med.medicationName} - {med.dosage} ({med.frequency})
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            )}
+                                            {prescription.instructions && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Instructions:</p>
+                                                <p className="text-gray-600 ml-4">{prescription.instructions}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
@@ -5179,72 +5185,69 @@ const InstitutionCaregiverDashboard = () => {
                                   Consultations ({clientConsultations.length})
                                 </h4>
                                 <div className="space-y-2">
-                                  {clientConsultations.map((consultation) => {
-                                    const [showDetails, setShowDetails] = React.useState(false);
-                                    return (
-                                      <div key={consultation.id} className="border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                                        <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => setShowDetails(!showDetails)}>
-                                          <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                                              <p className="text-sm font-medium text-gray-900">
-                                                {consultation.consultationType || 'Consultation'}
-                                              </p>
-                                            </div>
-                                            <p className="text-xs text-gray-500 ml-4 mt-1">
-                                              {consultation.consultationDate instanceof Date 
-                                                ? consultation.consultationDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                                : new Date(consultation.consultationDate).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                              {consultation.doctorName && ` • By: ${consultation.doctorName}`}
+                                  {clientConsultations.map((consultation) => (
+                                    <div key={consultation.id} className="border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                                      <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(consultation.id)}>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                            <p className="text-sm font-medium text-gray-900">
+                                              {consultation.consultationType || 'Consultation'}
                                             </p>
                                           </div>
-                                          <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors">
-                                            {showDetails ? 'Hide' : 'View Details'}
-                                          </button>
+                                          <p className="text-xs text-gray-500 ml-4 mt-1">
+                                            {consultation.consultationDate instanceof Date 
+                                              ? consultation.consultationDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                              : new Date(consultation.consultationDate).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            {consultation.doctorName && ` • By: ${consultation.doctorName}`}
+                                          </p>
                                         </div>
-                                        {showDetails && (
-                                          <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-blue-50">
-                                            <div className="space-y-2 text-sm">
-                                              {consultation.chiefComplaint && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Chief Complaint:</p>
-                                                  <p className="text-gray-600 ml-4">{consultation.chiefComplaint}</p>
-                                                </div>
-                                              )}
-                                              {consultation.diagnosis && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Diagnosis:</p>
-                                                  <p className="text-gray-600 ml-4">{consultation.diagnosis}</p>
-                                                </div>
-                                              )}
-                                              {consultation.treatmentPlan && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Treatment Plan:</p>
-                                                  <p className="text-gray-600 ml-4">{consultation.treatmentPlan}</p>
-                                                </div>
-                                              )}
-                                              {consultation.notes && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Notes:</p>
-                                                  <p className="text-gray-600 ml-4">{consultation.notes}</p>
-                                                </div>
-                                              )}
-                                              {consultation.followUpDate && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Follow-up Date:</p>
-                                                  <p className="text-gray-600 ml-4">
-                                                    {consultation.followUpDate instanceof Date 
-                                                      ? consultation.followUpDate.toLocaleDateString() 
-                                                      : new Date(consultation.followUpDate).toLocaleDateString()}
-                                                  </p>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        )}
+                                        <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors">
+                                          {expandedRecords[consultation.id] ? 'Hide' : 'View Details'}
+                                        </button>
                                       </div>
-                                    );
-                                  })}
+                                      {expandedRecords[consultation.id] && (
+                                        <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-blue-50">
+                                          <div className="space-y-2 text-sm">
+                                            {consultation.chiefComplaint && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Chief Complaint:</p>
+                                                <p className="text-gray-600 ml-4">{consultation.chiefComplaint}</p>
+                                              </div>
+                                            )}
+                                            {consultation.diagnosis && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Diagnosis:</p>
+                                                <p className="text-gray-600 ml-4">{consultation.diagnosis}</p>
+                                              </div>
+                                            )}
+                                            {consultation.treatmentPlan && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Treatment Plan:</p>
+                                                <p className="text-gray-600 ml-4">{consultation.treatmentPlan}</p>
+                                              </div>
+                                            )}
+                                            {consultation.notes && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Notes:</p>
+                                                <p className="text-gray-600 ml-4">{consultation.notes}</p>
+                                              </div>
+                                            )}
+                                            {consultation.followUpDate && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Follow-up Date:</p>
+                                                <p className="text-gray-600 ml-4">
+                                                  {consultation.followUpDate instanceof Date 
+                                                    ? consultation.followUpDate.toLocaleDateString() 
+                                                    : new Date(consultation.followUpDate).toLocaleDateString()}
+                                                </p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
@@ -5257,69 +5260,66 @@ const InstitutionCaregiverDashboard = () => {
                                   Diagnostic Tests ({clientDiagnostics.length})
                                 </h4>
                                 <div className="space-y-2">
-                                  {clientDiagnostics.map((diagnostic) => {
-                                    const [showDetails, setShowDetails] = React.useState(false);
-                                    return (
-                                      <div key={diagnostic.id} className="border border-gray-200 rounded-lg hover:border-green-300 transition-colors">
-                                        <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => setShowDetails(!showDetails)}>
-                                          <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                                              <p className="text-sm font-medium text-gray-900">
-                                                {diagnostic.testName || diagnostic.testType || 'Diagnostic Test'}
-                                              </p>
-                                              <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                                                diagnostic.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                                diagnostic.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-gray-100 text-gray-700'
-                                              }`}>
-                                                {diagnostic.status || 'Pending'}
-                                              </span>
-                                            </div>
-                                            <p className="text-xs text-gray-500 ml-4 mt-1">
-                                              {diagnostic.orderDate instanceof Date 
-                                                ? diagnostic.orderDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                                : new Date(diagnostic.orderDate || diagnostic.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                              {diagnostic.doctorName && ` • Ordered by: ${diagnostic.doctorName}`}
+                                  {clientDiagnostics.map((diagnostic) => (
+                                    <div key={diagnostic.id} className="border border-gray-200 rounded-lg hover:border-green-300 transition-colors">
+                                      <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(diagnostic.id)}>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                            <p className="text-sm font-medium text-gray-900">
+                                              {diagnostic.testName || diagnostic.testType || 'Diagnostic Test'}
                                             </p>
+                                            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                                              diagnostic.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                              diagnostic.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                              'bg-gray-100 text-gray-700'
+                                            }`}>
+                                              {diagnostic.status || 'Pending'}
+                                            </span>
                                           </div>
-                                          <button className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors">
-                                            {showDetails ? 'Hide' : 'View Details'}
-                                          </button>
+                                          <p className="text-xs text-gray-500 ml-4 mt-1">
+                                            {diagnostic.orderDate instanceof Date 
+                                              ? diagnostic.orderDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                              : new Date(diagnostic.orderDate || diagnostic.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            {diagnostic.doctorName && ` • Ordered by: ${diagnostic.doctorName}`}
+                                          </p>
                                         </div>
-                                        {showDetails && (
-                                          <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-green-50">
-                                            <div className="space-y-2 text-sm">
-                                              {diagnostic.testReason && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Reason:</p>
-                                                  <p className="text-gray-600 ml-4">{diagnostic.testReason}</p>
-                                                </div>
-                                              )}
-                                              {diagnostic.results && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Results:</p>
-                                                  <p className="text-gray-600 ml-4">{diagnostic.results}</p>
-                                                </div>
-                                              )}
-                                              {diagnostic.notes && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Notes:</p>
-                                                  <p className="text-gray-600 ml-4">{diagnostic.notes}</p>
-                                                </div>
-                                              )}
-                                              {diagnostic.labName && (
-                                                <div>
-                                                  <p className="font-medium text-gray-700">Laboratory:</p>
-                                                  <p className="text-gray-600 ml-4">{diagnostic.labName}</p>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        )}
+                                        <button className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors">
+                                          {expandedRecords[diagnostic.id] ? 'Hide' : 'View Details'}
+                                        </button>
                                       </div>
-                                    );
-                                  })}
+                                      {expandedRecords[diagnostic.id] && (
+                                        <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-green-50">
+                                          <div className="space-y-2 text-sm">
+                                            {diagnostic.testReason && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Reason:</p>
+                                                <p className="text-gray-600 ml-4">{diagnostic.testReason}</p>
+                                              </div>
+                                            )}
+                                            {diagnostic.results && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Results:</p>
+                                                <p className="text-gray-600 ml-4">{diagnostic.results}</p>
+                                              </div>
+                                            )}
+                                            {diagnostic.notes && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Notes:</p>
+                                                <p className="text-gray-600 ml-4">{diagnostic.notes}</p>
+                                              </div>
+                                            )}
+                                            {diagnostic.labName && (
+                                              <div>
+                                                <p className="font-medium text-gray-700">Laboratory:</p>
+                                                <p className="text-gray-600 ml-4">{diagnostic.labName}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
