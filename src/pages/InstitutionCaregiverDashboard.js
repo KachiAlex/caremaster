@@ -63,6 +63,7 @@ import { careLogsAPI } from '../api/careLogsAPI';
 import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation } from '../api/messagesAPI';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
 import activitiesAPI, { ACTIVITY_CATEGORIES, COMMON_ACTIVITIES } from '../api/activitiesAPI';
@@ -984,6 +985,44 @@ const InstitutionCaregiverDashboard = () => {
       ...prev,
       [recordId]: !prev[recordId]
     }));
+  };
+
+  // Helper function to send notifications
+  const sendNotificationToUsers = async (userIds, notificationData) => {
+    try {
+      const promises = userIds.map(userId => 
+        notificationsAPI.createNotification({
+          userId,
+          ...notificationData,
+          institutionId: effectiveInstitutionId
+        })
+      );
+      await Promise.all(promises);
+      console.log(`✅ Sent ${userIds.length} notifications`);
+    } catch (error) {
+      console.error('Error sending notifications:', error);
+    }
+  };
+
+  // Helper function to notify admin of activities
+  const notifyAdmin = async (notificationData) => {
+    try {
+      // Find all admins in the institution
+      const usersRef = collection(db, 'users');
+      const adminQuery = query(
+        usersRef,
+        where('userType', '==', 'admin'),
+        where('institutionId', '==', effectiveInstitutionId)
+      );
+      const adminSnapshot = await getDocs(adminQuery);
+      const adminIds = adminSnapshot.docs.map(doc => doc.id);
+      
+      if (adminIds.length > 0) {
+        await sendNotificationToUsers(adminIds, notificationData);
+      }
+    } catch (error) {
+      console.error('Error notifying admin:', error);
+    }
   };
 
   const renderDoctorClientSelector = () => {
@@ -4842,6 +4881,21 @@ const InstitutionCaregiverDashboard = () => {
                       };
                       
                       await createCarePlan(planPayload);
+                      
+                      // Notify admin
+                      await notifyAdmin({
+                        type: NOTIFICATION_TYPES.SYSTEM,
+                        priority: NOTIFICATION_PRIORITIES.MEDIUM,
+                        title: editingPlanId ? 'Care Plan Updated' : 'New Care Plan Created',
+                        message: `${userProfile?.name || 'A doctor'} ${editingPlanId ? 'updated' : 'created'} a care plan for ${selectedClient.name || selectedClient.fullName}`,
+                        data: {
+                          planId: editingPlanId || 'new',
+                          clientId: selectedClient.id,
+                          doctorId: user.uid,
+                          action: editingPlanId ? 'care_plan_updated' : 'care_plan_created'
+                        }
+                      });
+                      
                       alert('Care plan created successfully!');
                     }
                     
@@ -5032,6 +5086,22 @@ const InstitutionCaregiverDashboard = () => {
                   onClick={async () => {
                     try {
                       // Mark task as completed
+                      // TODO: Add actual API call to update task status
+                      
+                      // Notify admin
+                      await notifyAdmin({
+                        type: NOTIFICATION_TYPES.TASK,
+                        priority: NOTIFICATION_PRIORITIES.MEDIUM,
+                        title: 'Task Completed',
+                        message: `${userProfile?.name || 'A caregiver'} completed task: ${selectedTask.title || 'Care Task'} for ${selectedTask.clientName}`,
+                        data: {
+                          taskId: selectedTask.id,
+                          clientId: selectedTask.clientId,
+                          caregiverId: user?.uid,
+                          action: 'task_completed'
+                        }
+                      });
+                      
                       toast.success('Task marked as completed!');
                       setShowTaskDetailsModal(false);
                       setSelectedTask(null);
