@@ -21,11 +21,12 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
   const [errors, setErrors] = useState({});
 
   const userTypes = [
-    { value: 'caregiver', label: 'Caregiver (Non-Medical)', medicalQualification: 'Caregiver (Non-Medical)' },
-    { value: 'nurse', label: 'Nurse (RN/LPN)', medicalQualification: 'Registered Nurse' },
-    { value: 'doctor', label: 'Doctor/Physician', medicalQualification: 'Doctor' },
-    { value: 'pharmacist', label: 'Pharmacist', medicalQualification: 'Pharmacist' },
-    { value: 'admin', label: 'Administrator', medicalQualification: '' }
+    { value: 'caregiver', label: 'Caregiver (Non-Medical)', medicalQualification: 'Caregiver (Non-Medical)', tier: null },
+    { value: 'nurse', label: 'Nurse (RN/LPN)', medicalQualification: 'Registered Nurse', tier: null },
+    { value: 'doctor', label: 'Doctor/Physician', medicalQualification: 'Doctor', tier: null },
+    { value: 'pharmacist', label: 'Pharmacist', medicalQualification: 'Pharmacist', tier: null },
+    { value: 'secondary-admin', label: 'Administrator (Secondary)', medicalQualification: '', tier: 'secondary' },
+    { value: 'primary-admin', label: 'Administrator (Primary)', medicalQualification: '', tier: 'primary' }
   ];
 
   const validate = () => {
@@ -365,10 +366,18 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
           </div>
 
           {/* Info Box */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className={`border rounded-lg p-4 ${
+            formData.userType === 'primary-admin' 
+              ? 'bg-red-50 border-red-200' 
+              : 'bg-blue-50 border-blue-200'
+          }`}>
             <div className="flex">
-              <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mr-3 mt-0.5" />
-              <div className="text-sm text-blue-800">
+              <AlertCircle className={`h-5 w-5 shrink-0 mr-3 mt-0.5 ${
+                formData.userType === 'primary-admin' ? 'text-red-600' : 'text-blue-600'
+              }`} />
+              <div className={`text-sm ${
+                formData.userType === 'primary-admin' ? 'text-red-800' : 'text-blue-800'
+              }`}>
                 <p className="font-medium mb-1">User will be created with:</p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
                   <li>Access to the institution dashboard</li>
@@ -376,6 +385,12 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
                   <li>Status: Active</li>
                   {formData.useTemporaryPassword && (
                     <li>Temporary password (must be changed on first login)</li>
+                  )}
+                  {formData.userType === 'primary-admin' && (
+                    <li className="font-bold text-red-900">⚠️ Primary admin - Cannot be deleted by other admins</li>
+                  )}
+                  {formData.userType === 'secondary-admin' && (
+                    <li>Secondary admin - Full access except deleting primary admin</li>
                   )}
                 </ul>
               </div>

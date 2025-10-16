@@ -110,8 +110,23 @@ const InstitutionUserManagement = () => {
   };
 
   const handleUserAction = (action, userId) => {
-    console.log(`${action} user:`, userId);
-    toast.info(`${action} user action - Coming soon!`);
+    const user = users.find(u => u.id === userId);
+    
+    if (action === 'remove' || action === 'delete') {
+      // Prevent deleting primary admin
+      if (user?.isPrimaryAdmin || user?.adminTier === 'primary' || user?.roles?.includes('primary-admin') || user?.cannotBeDeleted) {
+        toast.error('❌ Primary administrators cannot be deleted for security reasons');
+        return;
+      }
+      
+      if (window.confirm(`Are you sure you want to delete ${user?.firstName} ${user?.lastName}? This action cannot be undone.`)) {
+        toast.info('Delete user functionality - Coming soon!');
+      }
+    } else if (action === 'edit') {
+      toast.info('Edit user functionality - Coming soon!');
+    } else {
+      toast.info(`${action} user action - Coming soon!`);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -221,7 +236,10 @@ const InstitutionUserManagement = () => {
             >
               <option value="all">All Roles</option>
               <option value="caregiver">Caregivers</option>
+              <option value="nurse">Nurses</option>
               <option value="doctor">Doctors</option>
+              <option value="pharmacist">Pharmacists</option>
+              <option value="admin">Administrators</option>
             </select>
           </div>
         </div>
@@ -282,11 +300,24 @@ const InstitutionUserManagement = () => {
                     <div className="flex items-center">
                       <Shield className="h-4 w-4 text-gray-400 mr-2" />
                       <div>
-                        <div className="text-sm font-medium text-gray-900 capitalize">
-                          {user.role}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900 capitalize">
+                            {user.role}
+                          </span>
+                          {/* Admin tier badge */}
+                          {user.adminTier === 'primary' && (
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-red-100 text-red-700 border border-red-300">
+                              🔒 PRIMARY
+                            </span>
+                          )}
+                          {user.adminTier === 'secondary' && (
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-yellow-100 text-yellow-700 border border-yellow-300">
+                              👤 SECONDARY
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {user.specialization}
+                          {user.specialization || user.medicalQualification}
                         </div>
                       </div>
                     </div>
@@ -317,13 +348,24 @@ const InstitutionUserManagement = () => {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleUserAction('edit', user.id)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit user"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleUserAction('remove', user.id)}
-                        className="text-red-600 hover:text-red-900"
+                        disabled={user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin') || user.cannotBeDeleted}
+                        className={`p-2 rounded-lg transition-colors ${
+                          user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin') || user.cannotBeDeleted
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-red-600 hover:bg-red-50'
+                        }`}
+                        title={
+                          user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')
+                            ? '🔒 Primary admin cannot be deleted'
+                            : 'Delete user'
+                        }
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

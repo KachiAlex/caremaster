@@ -142,6 +142,12 @@ const UserManagement = ({ institutionId }) => {
   };
 
   const handleToggleStatus = async (user) => {
+    // Prevent suspending primary admin
+    if (user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')) {
+      toast.error('❌ Primary administrators cannot be suspended');
+      return;
+    }
+
     const newStatus = user.status === 'active' ? 'suspended' : 'active';
     
     try {
@@ -159,6 +165,15 @@ const UserManagement = ({ institutionId }) => {
   };
 
   const handleDeleteUser = async (userId) => {
+    // Find the user to check if they're primary admin
+    const user = users.find(u => u.id === userId);
+    
+    // Prevent deleting primary admin
+    if (user?.isPrimaryAdmin || user?.adminTier === 'primary' || user?.roles?.includes('primary-admin') || user?.cannotBeDeleted) {
+      toast.error('❌ Primary administrators cannot be deleted for security reasons');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       return;
     }
@@ -312,6 +327,16 @@ const UserManagement = ({ institutionId }) => {
                             {getRoleLabel(role)}
                           </span>
                         ))}
+                        {/* Admin tier badge */}
+                        {user.adminTier && (
+                          <span className={`px-2 py-1 text-xs font-bold rounded-full flex items-center gap-1 ${
+                            user.adminTier === 'primary' 
+                              ? 'bg-red-100 text-red-700 border border-red-300' 
+                              : 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                          }`}>
+                            {user.adminTier === 'primary' ? '🔒 PRIMARY' : '👤 SECONDARY'}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -366,19 +391,35 @@ const UserManagement = ({ institutionId }) => {
                         </button>
                         <button
                           onClick={() => handleToggleStatus(user)}
-                          className={`p-2 ${
-                            user.status === 'active' 
-                              ? 'text-red-600 hover:bg-red-50' 
-                              : 'text-green-600 hover:bg-green-50'
-                          } rounded-lg transition-colors`}
-                          title={user.status === 'active' ? 'Suspend user' : 'Activate user'}
+                          disabled={user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')}
+                          className={`p-2 rounded-lg transition-colors ${
+                            user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : user.status === 'active' 
+                                ? 'text-red-600 hover:bg-red-50' 
+                                : 'text-green-600 hover:bg-green-50'
+                          }`}
+                          title={
+                            user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')
+                              ? 'Primary admin cannot be suspended'
+                              : user.status === 'active' ? 'Suspend user' : 'Activate user'
+                          }
                         >
                           {user.status === 'active' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                         </button>
                         <button
                           onClick={() => handleDeleteUser(user.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete user"
+                          disabled={user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin') || user.cannotBeDeleted}
+                          className={`p-2 rounded-lg transition-colors ${
+                            user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin') || user.cannotBeDeleted
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-red-600 hover:bg-red-50'
+                          }`}
+                          title={
+                            user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')
+                              ? '🔒 Primary admin cannot be deleted'
+                              : 'Delete user'
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

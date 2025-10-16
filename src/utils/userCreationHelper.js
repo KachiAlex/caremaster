@@ -38,7 +38,23 @@ const USER_TYPE_MAPPINGS = {
     userType: 'admin',
     type: 'admin',
     roles: ['admin'],
-    defaultStatus: 'active'
+    defaultStatus: 'active',
+    adminTier: 'secondary' // Default to secondary admin
+  },
+  'primary-admin': {
+    userType: 'admin',
+    type: 'admin',
+    roles: ['admin', 'primary-admin'],
+    defaultStatus: 'active',
+    adminTier: 'primary',
+    cannotBeDeleted: true
+  },
+  'secondary-admin': {
+    userType: 'admin',
+    type: 'admin',
+    roles: ['admin', 'secondary-admin'],
+    defaultStatus: 'active',
+    adminTier: 'secondary'
   },
   client: {
     userType: 'client',
@@ -109,6 +125,13 @@ export function createStandardizedUserData(userData, options = {}) {
     type: typeMapping.type,
     role: typeMapping.userType, // Legacy support
     roles: [...typeMapping.roles], // Array of roles
+    
+    // Admin tier (if applicable)
+    ...(typeMapping.adminTier && { 
+      adminTier: typeMapping.adminTier,
+      isPrimaryAdmin: typeMapping.adminTier === 'primary',
+      cannotBeDeleted: typeMapping.cannotBeDeleted || false
+    }),
     
     // Status
     status: typeMapping.defaultStatus,
