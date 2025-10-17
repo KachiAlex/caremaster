@@ -936,6 +936,53 @@ const InstitutionCaregiverDashboard = () => {
     setShowCarePlanModal(true);
   };
 
+  const initiateCall = async (callData) => {
+    try {
+      const callService = new CallService();
+      const result = await callService.initiateCall(callData);
+      
+      if (result?.callId) {
+        // Initialize WebRTC
+        const webrtcService = new WebRTCService(
+          callData.callerId,
+          callData.recipientId,
+          result.callId,
+          result.signalingRef
+        );
+        
+        await webrtcService.init();
+        setWebrtc(webrtcService);
+        setIsInCall(true);
+        setCurrentCallId(result.callId);
+        
+        // Set up WebRTC callbacks
+        webrtcService.setCallbacks({
+          onCallStateChange: (state) => {
+            console.log('📡 Call state changed:', state);
+            setCallConnectionState(state);
+            if (state === 'connected') {
+              console.log('✅ Call connected!');
+            }
+          },
+          onLocalStream: (stream) => {
+            console.log('📹 Local stream received');
+            setLocalStream(stream);
+          },
+          onRemoteStream: (stream) => {
+            console.log('📺 Remote stream received');
+            setRemoteStream(stream);
+          }
+        });
+        
+        return result;
+      }
+    } catch (error) {
+      console.error('Error initiating call:', error);
+      toast.error('Failed to initiate call');
+      throw error;
+    }
+  };
+
   const handleVideoConsultation = async () => {
     if (!selectedClient) {
       toast.warning('Please select a client first');

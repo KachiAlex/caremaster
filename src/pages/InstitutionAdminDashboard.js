@@ -1369,7 +1369,7 @@ const InstitutionAdminDashboard = () => {
     
     try {
       // Get the recipient ID from the conversation
-      const userId = userProfile.id || userProfile.uid || user.uid;
+      const userId = user?.uid || userProfile?.userId;
       
       // Debug: Log full conversation details
       console.log('🔍 Selected conversation:', {
@@ -1462,7 +1462,7 @@ const InstitutionAdminDashboard = () => {
     }
     
     try {
-      const userId = userProfile?.id || userProfile?.uid || user.uid;
+      const userId = user?.uid || userProfile?.userId;
       
       // Find recipient ID
       let recipientId = null;
