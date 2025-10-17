@@ -1355,6 +1355,208 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
+  // Call functions - moved to component level to be accessible by CallInterface
+  const startVoiceCall = async () => {
+    if (!selectedConversation) {
+      toast.error('Please select a conversation first');
+      return;
+    }
+    
+    if (!userProfile || (!userProfile.id && !userProfile.uid)) {
+      toast.error('User profile not available');
+      return;
+    }
+    
+    try {
+      // Get the recipient ID from the conversation
+      const userId = userProfile.id || userProfile.uid || user.uid;
+      
+      // Debug: Log full conversation details
+      console.log('🔍 Selected conversation:', {
+        conversation: selectedConversation,
+        participants: selectedConversation.participants,
+        userId: selectedConversation.userId,
+        id: selectedConversation.id,
+        currentUserId: userId
+      });
+      
+      // Find recipient from participants array
+      let recipientId = null;
+      if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
+        recipientId = selectedConversation.participants.find(p => p !== userId);
+        console.log('✅ Found recipient in participants:', recipientId);
+      }
+      
+      // Fallback to userId field
+      if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
+        recipientId = selectedConversation.userId;
+        console.log('✅ Found recipient in userId field:', recipientId);
+      }
+      
+      // Fallback to id field (only if it's not a conversation ID format)
+      if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_') && selectedConversation.id !== userId) {
+        recipientId = selectedConversation.id;
+        console.log('✅ Found recipient in id field:', recipientId);
+      }
+      
+      if (!recipientId) {
+        toast.error('Could not identify recipient. Please check conversation data.');
+        console.error('❌ Conversation data:', selectedConversation);
+        return;
+      }
+      
+      console.log('🎤 Initiating voice call:', {
+        callerId: userId,
+        recipientId,
+        recipientName: selectedConversation.name
+      });
+      
+      // Initiate call through service
+      const result = await callService.initiateCall({
+        callerId: userId,
+        recipientId,
+        callType: 'voice',
+        callerName: userProfile?.name || 'Admin',
+        recipientName: selectedConversation.name || 'User'
+      });
+      
+      console.log('🔧 Initializing WebRTC for admin...');
+      
+      // Initialize WebRTC if not already initialized
+      if (!webrtc && result?.callId) {
+        const service = new WebRTCService(
+          userId,
+          recipientId,
+          result.callId,
+          result.signalingRef
+        );
+        
+        await service.init();
+        setWebrtc(service);
+        
+        const offer = await service.createOffer();
+        console.log('📤 Created offer and sent to recipient...');
+      }
+      
+      if (result && result.callId) {
+        setActiveCall({
+          callId: result.callId,
+          participantId: recipientId,
+          participantName: selectedConversation.name || 'User',
+          callType: 'voice'
+        });
+        toast.success(`Voice call initiated with ${selectedConversation.name || 'User'}`);
+      } else {
+        toast.error('Failed to initiate voice call');
+      }
+    } catch (error) {
+      console.error('Error starting voice call:', error);
+      toast.error('Failed to start voice call. Please check microphone permissions.');
+    }
+  };
+
+  const startVideoCall = async () => {
+    if (!selectedConversation) {
+      toast.error('Please select a conversation first');
+      return;
+    }
+    
+    try {
+      const userId = userProfile?.id || userProfile?.uid || user.uid;
+      
+      // Find recipient ID
+      let recipientId = null;
+      if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
+        recipientId = selectedConversation.participants.find(p => p !== userId);
+      }
+      
+      if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
+        recipientId = selectedConversation.userId;
+      }
+      
+      if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_')) {
+        recipientId = selectedConversation.id;
+      }
+      
+      if (!recipientId) {
+        toast.error('Could not identify recipient');
+        return;
+      }
+      
+      // Initiate video call
+      const result = await callService.initiateCall({
+        callerId: userId,
+        recipientId,
+        callType: 'video',
+        callerName: userProfile?.name || 'Admin',
+        recipientName: selectedConversation.name || 'User'
+      });
+      
+      // Initialize WebRTC
+      if (!webrtc && result?.callId) {
+        const service = new WebRTCService(
+          userId,
+          recipientId,
+          result.callId,
+          result.signalingRef
+        );
+        
+        await service.init();
+        setWebrtc(service);
+        
+        const offer = await service.createOffer();
+      }
+      
+      if (result && result.callId) {
+        setActiveCall({
+          callId: result.callId,
+          participantId: recipientId,
+          participantName: selectedConversation.name || 'User',
+          callType: 'video'
+        });
+        toast.success(`Video call initiated with ${selectedConversation.name || 'User'}`);
+      } else {
+        toast.error('Failed to initiate video call');
+      }
+    } catch (error) {
+      console.error('Error starting video call:', error);
+      toast.error('Failed to start video call. Please check camera and microphone permissions.');
+    }
+  };
+
+  const handleEndCall = async () => {
+    if (activeCall) {
+      try {
+        const duration = elapsedSeconds || 0;
+        await callService.endCall(activeCall.callId, duration);
+        
+        // Clean up WebRTC
+        if (webrtc) {
+          webrtc.endCall();
+        }
+        
+        // Clean up streams
+        if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Clean up signaling listener
+        if (activeCall.unsubscribeSignaling) {
+          activeCall.unsubscribeSignaling();
+        }
+        
+        setActiveCall(null);
+        setLocalStream(null);
+        setRemoteStream(null);
+        setIsInCall(false);
+        console.log('✅ Call ended through service');
+        toast.info('Call ended');
+      } catch (error) {
+        console.error('Error ending call:', error);
+      }
+    }
+  };
+
   const renderMessagesTab = () => {
     const handleSendMessage = async () => {
       if (!newMessage.trim() || !selectedConversation) return;
@@ -1400,117 +1602,6 @@ const InstitutionAdminDashboard = () => {
       }
     };
 
-    const startVoiceCall = async () => {
-      if (!selectedConversation) {
-        toast.error('Please select a conversation first');
-        return;
-      }
-      
-      if (!userProfile || (!userProfile.id && !userProfile.uid)) {
-        toast.error('User profile not available');
-        return;
-      }
-      
-      try {
-        // Get the recipient ID from the conversation
-        const userId = userProfile.id || userProfile.uid || user.uid;
-        
-        // Debug: Log full conversation details
-        console.log('🔍 Selected conversation:', {
-          conversation: selectedConversation,
-          participants: selectedConversation.participants,
-          userId: selectedConversation.userId,
-          id: selectedConversation.id,
-          currentUserId: userId
-        });
-        
-        // Find recipient from participants array
-        let recipientId = null;
-        if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
-          recipientId = selectedConversation.participants.find(p => p !== userId);
-          console.log('✅ Found recipient in participants:', recipientId);
-        }
-        
-        // Fallback to userId field
-        if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
-          recipientId = selectedConversation.userId;
-          console.log('✅ Found recipient in userId field:', recipientId);
-        }
-        
-        // Fallback to id field (only if it's not a conversation ID format)
-        if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_') && selectedConversation.id !== userId) {
-          recipientId = selectedConversation.id;
-          console.log('✅ Found recipient in id field:', recipientId);
-        }
-        
-        if (!recipientId) {
-          toast.error('Could not identify recipient. Please check conversation data.');
-          console.error('❌ Conversation data:', selectedConversation);
-          return;
-        }
-        
-        // Prevent calling yourself
-        if (recipientId === userId) {
-          toast.error('Cannot call yourself');
-          console.error('❌ Attempted to call self:', { userId, recipientId });
-          return;
-        }
-        
-        console.log('🎤 Initiating voice call:', { 
-          callerId: userId, 
-          recipientId,
-          recipientName: selectedConversation.name 
-        });
-        
-        // Initiate call through call service
-        const result = await callService.initiateCall(
-          userId,
-          recipientId,
-          'voice'
-        );
-
-        if (result.success) {
-          // Get local media stream
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          setLocalStream(stream);
-          setCallType('voice');
-          setIsInCall(true);
-          
-          // Initialize WebRTC and create offer
-          console.log('🔧 Initializing WebRTC for admin...');
-          await webrtc.initialize();
-          await webrtc.startCall(result.callId, recipientId, 'voice');
-          console.log('📤 Created offer and sent to recipient...');
-          
-          // Listen for signaling messages from recipient
-          const unsubscribeSignaling = webrtc.listenForSignaling(result.callId, async (msg) => {
-            console.log('📨 Received signaling message:', msg.type);
-            if (msg.type === 'answer') {
-              console.log('✅ Received answer from recipient');
-              await webrtc.handleAnswer(msg.data.answer);
-            } else if (msg.type === 'ice-candidate') {
-              console.log('🧊 Received ICE candidate');
-              await webrtc.handleIceCandidate(msg.data);
-            }
-          });
-          
-          setActiveCall({
-            callId: result.callId,
-            participantId: recipientId,
-            participantName: selectedConversation.name || 'User',
-            callType: 'voice',
-            unsubscribeSignaling
-          });
-          toast.success(`Voice call initiated with ${selectedConversation.name || 'User'}`);
-        } else {
-          toast.error('Failed to initiate voice call');
-        }
-      } catch (error) {
-        console.error('Error starting voice call:', error);
-        toast.error('Failed to start voice call. Please check microphone permissions.');
-      }
-    };
-
     const renderCallLogs = () => {
       const uid = user?.uid || userProfile?.uid || userProfile?.id;
       if (!uid) return null;
@@ -1520,140 +1611,6 @@ const InstitutionAdminDashboard = () => {
           <CallLogsPanel userId={uid} />
         </div>
       );
-    };
-
-    const startVideoCall = async () => {
-      if (!selectedConversation) {
-        toast.error('Please select a conversation first');
-        return;
-      }
-      
-      if (!userProfile || (!userProfile.id && !userProfile.uid)) {
-        toast.error('User profile not available');
-        return;
-      }
-      
-      try {
-        // Get the recipient ID from the conversation
-        const userId = userProfile.id || userProfile.uid || user.uid;
-        
-        // Debug: Log full conversation details
-        console.log('🔍 Selected conversation:', {
-          conversation: selectedConversation,
-          participants: selectedConversation.participants,
-          userId: selectedConversation.userId,
-          id: selectedConversation.id,
-          currentUserId: userId
-        });
-        
-        // Find recipient from participants array
-        let recipientId = null;
-        if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
-          recipientId = selectedConversation.participants.find(p => p !== userId);
-          console.log('✅ Found recipient in participants:', recipientId);
-        }
-        
-        // Fallback to userId field
-        if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
-          recipientId = selectedConversation.userId;
-          console.log('✅ Found recipient in userId field:', recipientId);
-        }
-        
-        // Fallback to id field (only if it's not a conversation ID format)
-        if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_') && selectedConversation.id !== userId) {
-          recipientId = selectedConversation.id;
-          console.log('✅ Found recipient in id field:', recipientId);
-        }
-        
-        if (!recipientId) {
-          toast.error('Could not identify recipient. Please check conversation data.');
-          console.error('❌ Conversation data:', selectedConversation);
-          return;
-        }
-        
-        // Prevent calling yourself
-        if (recipientId === userId) {
-          toast.error('Cannot call yourself');
-          console.error('❌ Attempted to call self:', { userId, recipientId });
-          return;
-        }
-        
-        console.log('📹 Initiating video call:', { 
-          callerId: userId, 
-          recipientId,
-          recipientName: selectedConversation.name 
-        });
-        
-        // Initiate call through call service
-        const result = await callService.initiateCall(
-          userId,
-          recipientId,
-          'video'
-        );
-
-        if (result.success) {
-          // Start WebRTC and signaling
-          await webrtc.initialize();
-          await webrtc.startCall(result.callId, recipientId, 'video');
-          // Begin listening for signaling messages for this call
-          webrtc.listenForSignaling(result.callId, async (msg) => {
-            if (msg.type === 'answer') {
-              await webrtc.handleAnswer(msg.data.answer);
-            } else if (msg.type === 'ice-candidate') {
-              await webrtc.handleIceCandidate(msg.data.candidate);
-            } else if (msg.type === 'offer') {
-              // Unexpected for initiator, ignore
-            }
-          });
-        setCallType('video');
-        setIsInCall(true);
-          setActiveCall({
-            callId: result.callId,
-            participantId: recipientId,
-            participantName: selectedConversation.name || 'User',
-            callType: 'video'
-          });
-          toast.success(`Video call initiated with ${selectedConversation.name || 'User'}`);
-        } else {
-          toast.error('Failed to initiate video call');
-        }
-      } catch (error) {
-        console.error('Error starting video call:', error);
-        toast.error('Failed to start video call. Please check camera and microphone permissions.');
-      }
-    };
-
-    const handleEndCall = async () => {
-      if (activeCall) {
-        try {
-          const duration = elapsedSeconds || 0;
-          await callService.endCall(activeCall.callId, duration);
-          
-          // Clean up WebRTC
-          if (webrtc) {
-            webrtc.endCall();
-          }
-          
-          // Clean up streams
-          if (localStream) {
-            localStream.getTracks().forEach(track => track.stop());
-          }
-          
-          // Clean up signaling listener
-          if (activeCall.unsubscribeSignaling) {
-            activeCall.unsubscribeSignaling();
-          }
-          
-          setActiveCall(null);
-          setLocalStream(null);
-          setRemoteStream(null);
-          setIsInCall(false);
-          console.log('✅ Call ended through service');
-          toast.info('Call ended');
-        } catch (error) {
-          console.error('Error ending call:', error);
-        }
-      }
     };
 
     // Combine caregivers and pharmacists for display (excluding clients)
