@@ -3889,6 +3889,8 @@ const InstitutionAdminDashboard = () => {
           remoteStream={remoteStream}
         />
       )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -7026,10 +7028,6 @@ const EditUserRoleModal = ({ user, onClose, onSave }) => {
             </button>
           </div>
         </form>
-      </div>
-    </div>
-
-        </div>
       </div>
     </div>
   );
