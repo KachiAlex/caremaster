@@ -28,13 +28,15 @@ const InstitutionCaregiverGuard = ({ children }) => {
         status: userProfile.status
       });
 
-      // Check if user is actually a caregiver
-      const isCaregiver = userProfile.userType === 'caregiver' || user?.uid?.startsWith('caregiver_');
+      // Check if user is actually a caregiver, doctor, nurse, or has caregiver-related roles
+      const userRoles = Array.isArray(userProfile.roles) ? userProfile.roles : [userProfile.userType];
+      const allowedRoles = ['caregiver', 'doctor', 'nurse'];
+      const hasAllowedRole = userRoles.some(role => allowedRoles.includes(role)) || user?.uid?.startsWith('caregiver_');
       
-      if (!isCaregiver) {
+      if (!hasAllowedRole) {
         console.log('⛔ Unauthorized access attempt to Institution Caregiver portal');
-        console.log(`User role "${userProfile.userType}" attempted to access Caregiver portal`);
-        toast.error(`Access denied. You are not a caregiver. You will be logged out.`);
+        console.log(`User roles "${userRoles.join(', ')}" attempted to access Caregiver portal`);
+        toast.error(`Access denied. You need caregiver, doctor, or nurse privileges. You will be logged out.`);
         
         // Log out and redirect
         signOut(auth).then(() => {
@@ -116,10 +118,12 @@ const InstitutionCaregiverGuard = ({ children }) => {
 
   // Block rendering if profile loaded but checks fail
   if (!loading && userProfile) {
-    // Check if user is actually a caregiver
-    const isCaregiver = userProfile.userType === 'caregiver' || user?.uid?.startsWith('caregiver_');
+    // Check if user is actually a caregiver, doctor, nurse, or has caregiver-related roles
+    const userRoles = Array.isArray(userProfile.roles) ? userProfile.roles : [userProfile.userType];
+    const allowedRoles = ['caregiver', 'doctor', 'nurse'];
+    const hasAllowedRole = userRoles.some(role => allowedRoles.includes(role)) || user?.uid?.startsWith('caregiver_');
     
-    if (!isCaregiver) {
+    if (!hasAllowedRole) {
       // Will be handled by useEffect
       return null;
     }
