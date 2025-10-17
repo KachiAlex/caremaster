@@ -13,6 +13,7 @@ import {
   Calendar, 
   Activity, 
   AlertTriangle, 
+  AlertCircle,
   TrendingUp,
   UserCheck,
   Clock,
