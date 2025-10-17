@@ -2013,128 +2013,129 @@ const InstitutionAdminDashboard = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Institution Dashboard</h1>
-            {userRoles && userRoles.length > 1 && (
-              <DashboardSwitcher 
-                userRoles={userRoles} 
-                currentDashboard="admin" 
-                institutionId={effectiveInstitutionId}
-              />
-            )}
-          </div>
-          <p className="text-gray-600">Welcome back, {userProfile?.displayName || user?.email}</p>
-          <div className="flex items-center gap-4 mt-2">
-            <div className="flex items-center">
-              <Shield className="h-4 w-4 text-green-600 mr-1" />
-              <span className="text-sm text-green-600 font-medium">License Active</span>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Vertical Sidebar */}
+      <div className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <Shield className="h-6 w-6 text-blue-600" />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-bold text-gray-900 truncate">Admin Dashboard</h2>
+              <p className="text-xs text-gray-500 truncate">{institutionData?.name || 'Institution'}</p>
             </div>
-            {institutionId && (
-              <div className="flex items-center">
-                <span className="text-xs text-gray-500">ID:</span>
-                <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded ml-1">
-                  {institutionId.slice(0, 8)}...
-                </span>
-              </div>
-            )}
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Notification Bell */}
-          <div className="relative">
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative flex items-center px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-          </div>
 
-          <button
-            onClick={() => navigate(`/onboard?institution=${effectiveInstitutionId}`)}
-            className="flex items-center px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            <Shield className="h-4 w-4 mr-2" />
-            Back to Portal
-          </button>
-          <button
-            onClick={refreshData}
-            disabled={refreshing}
-            className="flex items-center px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-          <button 
-            onClick={() => navigate('/admin/client-database')}
-            className="flex items-center px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Client
-          </button>
-          <button 
-            onClick={() => navigate('/admin/caregiver-management')}
-            className="flex items-center px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            <UserCheck className="h-4 w-4 mr-2" />
-            Add Caregiver
-          </button>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          {[
+            { id: 'dashboard', name: 'Dashboard', icon: BarChart3, color: 'blue' },
+            { id: 'clients', name: 'Clients', icon: Heart, color: 'green' },
+            { id: 'caregivers', name: 'Caregivers', icon: UserCheck, color: 'purple' },
+            { id: 'pharmacists', name: 'Pharmacists', icon: Pill, color: 'indigo' },
+            { id: 'assignments', name: 'Assignments', icon: Users, color: 'orange' },
+            { id: 'users', name: 'User Management', icon: Shield, color: 'red' },
+            { id: 'approvals', name: 'Pending Approvals', icon: ClipboardCheck, color: 'yellow' },
+            { id: 'messages', name: 'Messages', icon: MessageSquare, color: 'cyan' },
+            { id: 'analytics', name: 'Analytics', icon: TrendingUp, color: 'pink' }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === tab.id
+                    ? `bg-${tab.color}-50 text-${tab.color}-700 border-l-4 border-${tab.color}-500`
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <Icon className="h-5 w-5 mr-3 shrink-0" />
+                <span className="truncate">{tab.name}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-gray-200 space-y-2">
           <button
             onClick={handleLogout}
-            className="flex items-center px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="w-full flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >
-            <LogOut className="h-4 w-4 mr-2" />
+            <LogOut className="h-5 w-5 mr-3" />
             Logout
           </button>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6">
-            {[
-              { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
-              { id: 'clients', name: 'Clients', icon: Heart },
-              { id: 'caregivers', name: 'Caregivers', icon: UserCheck },
-              { id: 'pharmacists', name: 'Pharmacists', icon: Pill },
-              { id: 'assignments', name: 'Assignments', icon: Users },
-              { id: 'users', name: 'User Management', icon: Shield },
-              { id: 'approvals', name: 'Pending Approvals', icon: ClipboardCheck },
-              { id: 'messages', name: 'Messages', icon: MessageSquare },
-              { id: 'analytics', name: 'Analytics', icon: TrendingUp }
-            ].map((tab) => {
-              const Icon = tab.icon;
-              return (
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header */}
+        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-gray-900 truncate">
+                {activeTab === 'dashboard' && 'Dashboard Overview'}
+                {activeTab === 'clients' && 'Client Management'}
+                {activeTab === 'caregivers' && 'Caregiver Management'}
+                {activeTab === 'pharmacists' && 'Pharmacist Management'}
+                {activeTab === 'assignments' && 'Assignment Management'}
+                {activeTab === 'users' && 'User Management'}
+                {activeTab === 'approvals' && 'Pending Approvals'}
+                {activeTab === 'messages' && 'Messages'}
+                {activeTab === 'analytics' && 'Analytics & Reports'}
+              </h1>
+              <p className="text-sm text-gray-600">Welcome, {userProfile?.displayName || user?.email}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {userRoles && userRoles.length > 1 && (
+                <DashboardSwitcher 
+                  userRoles={userRoles} 
+                  currentDashboard="admin" 
+                  institutionId={effectiveInstitutionId}
+                />
+              )}
+              <div className="flex items-center gap-2">
+                {/* Notification Bell */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative flex items-center justify-center p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                  onClick={refreshData}
+                  disabled={refreshing}
+                  className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  title="Refresh data"
                 >
-                  <Icon className="h-4 w-4 mr-2" />
-                  {tab.name}
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 </button>
-              );
-            })}
-          </nav>
+                
+                <button
+                  onClick={() => navigate(`/onboard?institution=${effectiveInstitutionId}`)}
+                  className="flex items-center px-3 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  title="Back to Portal"
+                >
+                  <Shield className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
       {/* Quick Actions */}
       {activeTab === 'dashboard' && (
@@ -7025,6 +7026,10 @@ const EditUserRoleModal = ({ user, onClose, onSave }) => {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+        </div>
       </div>
     </div>
   );
