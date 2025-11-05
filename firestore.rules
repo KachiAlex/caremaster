@@ -676,6 +676,48 @@ service cloud.firestore {
       );
       allow delete: if request.auth != null && isAdmin();
     }
+    
+    // ADL Logs - Activities of Daily Living logging
+    match /adlLogs/{logId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        isNurse() ||
+        resource.data.clientId == request.auth.uid
+      );
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        isNurse()
+      );
+      allow update, delete: if request.auth != null && (
+        isAdmin() || 
+        resource.data.caregiverId == request.auth.uid
+      );
+    }
+    
+    // Schedules collection - For scheduling module
+    match /schedules/{scheduleId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        isNurse()
+      );
+      allow create, update, delete: if request.auth != null && isAdmin();
+    }
+    
+    // Support Tickets - Help & support system
+    match /supportTickets/{ticketId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        resource.data.userId == request.auth.uid
+      );
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && isAdmin();
+    }
 
     // Allow admins to read/write any other collections
     match /{document=**} {

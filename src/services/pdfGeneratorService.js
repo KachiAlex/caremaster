@@ -139,7 +139,7 @@ class PDFGeneratorService {
    * Generate invoice PDF
    */
   async generateInvoicePDF(invoiceData) {
-    const filename = `ElderX_Invoice_${invoiceData.invoiceNumber}.pdf`;
+    const filename = `Care Master_Invoice_${invoiceData.invoiceNumber}.pdf`;
     return this.generatePDF('invoice-template', filename);
   }
 
@@ -147,7 +147,7 @@ class PDFGeneratorService {
    * Generate prescription PDF
    */
   async generatePrescriptionPDF(prescriptionData) {
-    const filename = `ElderX_Prescription_${prescriptionData.prescriptionNumber}.pdf`;
+    const filename = `Care Master_Prescription_${prescriptionData.prescriptionNumber}.pdf`;
     return this.generatePDF('prescription-template', filename);
   }
 

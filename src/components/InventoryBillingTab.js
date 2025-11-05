@@ -251,9 +251,9 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
         <body>
           <div class="invoice">
             <div class="header">
-              <h1>ElderX Healthcare</h1>
+              <h1>Care Master Healthcare</h1>
               <p>Professional Healthcare Services & Elderly Care</p>
-              <p style="margin-top: 15px; font-size: 14px;">📍 Lagos, Nigeria | 📞 +234 800 ELDERX | ✉️ billing@elderx.com</p>
+              <p style="margin-top: 15px; font-size: 14px;">📍 Lagos, Nigeria | 📞 +234 800 Care Master | ✉️ billing@Care Master.com</p>
             </div>
 
             <div style="text-align: right; margin-bottom: 20px;">
@@ -342,8 +342,8 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
 
             <div class="footer">
               <p>Thank you for your business!</p>
-              <p style="margin-top: 10px;">For inquiries, please contact billing@elderx.com or call +234 800 ELDERX</p>
-              <p style="margin-top: 5px;">© ${new Date().getFullYear()} ElderX Healthcare. All rights reserved.</p>
+              <p style="margin-top: 10px;">For inquiries, please contact billing@Care Master.com or call +234 800 Care Master</p>
+              <p style="margin-top: 5px;">© ${new Date().getFullYear()} Care Master Healthcare. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -1149,12 +1149,12 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
 
               {/* Invoice Header */}
               <div className="bg-blue-600 text-white p-6 rounded-lg mb-6">
-                <h1 className="text-3xl font-bold">ElderX Healthcare</h1>
+                <h1 className="text-3xl font-bold">Care Master Healthcare</h1>
                 <p className="text-blue-100 mt-2">Professional Healthcare Services & Elderly Care</p>
                 <div className="mt-4 text-sm">
                   <p>📍 Lagos, Nigeria</p>
-                  <p>📞 +234 800 ELDERX (353379)</p>
-                  <p>✉️ billing@elderx.com</p>
+                  <p>📞 +234 800 Care Master (353379)</p>
+                  <p>✉️ billing@Care Master.com</p>
                 </div>
               </div>
 

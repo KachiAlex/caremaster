@@ -1,4 +1,4 @@
-// Voice Command Service for ElderX
+// Voice Command Service for Care Master
 class VoiceCommandService {
   constructor() {
     this.recognition = null;

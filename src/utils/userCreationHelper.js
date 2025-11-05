@@ -230,7 +230,7 @@ export async function createCompleteUserAccount(userData, options = {}) {
 export function generateTemporaryPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
   const specialChars = '!@#$%&*';
-  let password = 'ElderX';
+  let password = 'Care Master';
   
   // Add 6 random characters
   for (let i = 0; i < 6; i++) {

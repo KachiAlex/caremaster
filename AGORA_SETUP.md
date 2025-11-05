@@ -1,4 +1,4 @@
-# Agora RTC Setup Guide for ElderX
+# Agora RTC Setup Guide for Care Master
 
 ## 🎥 Video Calling Configuration
 
@@ -11,7 +11,7 @@ The `CAN_NOT_GET_GATEWAY_SERVER: dynamic key or token timeout` error has been fi
 
 ### **1. Agora Console Setup**
 1. Visit [Agora Console](https://console.agora.io/)
-2. Create a new project or use existing: `ElderX Healthcare`
+2. Create a new project or use existing: `Care Master Healthcare`
 3. Get your **App ID**: `43c43dc3e6a44a99b2b75a4997e3b1a4`
 4. Enable **App Certificate** for production security
 
@@ -21,7 +21,7 @@ Create a `.env` file in your project root:
 ```env
 # Agora Configuration
 REACT_APP_AGORA_APP_ID=43c43dc3e6a44a99b2b75a4997e3b1a4
-REACT_APP_AGORA_CHANNEL=elderx_production
+REACT_APP_AGORA_CHANNEL=Care Master_production
 REACT_APP_AGORA_TOKEN_ENDPOINT=https://your-backend.com/api/agora/token
 
 # Environment
@@ -146,4 +146,4 @@ The **Agora RTC token timeout error** has been completely resolved:
 - 🧪 **Working development mode** with null tokens
 - 🚀 **Production-ready token management** system
 
-Video consultations in ElderX now work reliably! 🎥✨
+Video consultations in Care Master now work reliably! 🎥✨

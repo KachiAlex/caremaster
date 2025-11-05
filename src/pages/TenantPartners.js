@@ -89,7 +89,7 @@ const TenantPartners = () => {
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Welcome, Tenant Partners</h1>
           <p className="text-gray-600 mt-2 max-w-2xl mx-auto">
-            ElderX helps healthcare institutions deliver modern, connected elder-care. Manage staff, coordinate care, communicate in real time, and streamline pharmacy workflows—all in one secure platform.
+            Care Master helps healthcare institutions deliver modern, connected elder-care. Manage staff, coordinate care, communicate in real time, and streamline pharmacy workflows—all in one secure platform.
           </p>
           <div className="mt-4 inline-flex items-center text-blue-700 bg-blue-50 px-3 py-1 rounded-full text-sm">
             <Info className="h-4 w-4 mr-1"/> Multi-institution support. Role-based portals for Admin, Caregivers, and Pharmacists.

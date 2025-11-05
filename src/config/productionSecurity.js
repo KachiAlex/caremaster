@@ -168,9 +168,9 @@ export const PRODUCTION_SECURITY_CONFIG = {
     enabled: true,
     responseTime: 15, // minutes
     escalationLevels: [
-      { level: 1, time: 15, contacts: ['security@elderx.com'] },
-      { level: 2, time: 30, contacts: ['cto@elderx.com', 'security@elderx.com'] },
-      { level: 3, time: 60, contacts: ['ceo@elderx.com', 'cto@elderx.com', 'security@elderx.com'] }
+      { level: 1, time: 15, contacts: ['security@Care Master.com'] },
+      { level: 2, time: 30, contacts: ['cto@Care Master.com', 'security@Care Master.com'] },
+      { level: 3, time: 60, contacts: ['ceo@Care Master.com', 'cto@Care Master.com', 'security@Care Master.com'] }
     ],
     notificationChannels: ['email', 'sms', 'slack'],
     documentationRequired: true

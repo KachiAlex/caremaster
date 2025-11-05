@@ -1,8 +1,8 @@
-# 🔐 ElderX Super Admin Setup Guide
+# 🔐 Care Master Super Admin Setup Guide
 
 ## Overview
 
-The Super Admin role is the highest level of access in the ElderX platform. Super Admins have complete control over:
+The Super Admin role is the highest level of access in the Care Master platform. Super Admins have complete control over:
 - **Institution Management**: Create, edit, and delete healthcare institutions
 - **License Management**: Issue, suspend, and manage licenses for institutions
 - **Admin Assignment**: Assign institution administrators
@@ -40,7 +40,7 @@ The Super Admin role is the highest level of access in the ElderX platform. Supe
 1. Go to [Firebase Console](https://console.firebase.google.com/project/elderx-f5c2b/authentication/users)
 2. Click **"Add User"**
 3. Create account with:
-   - **Email**: `superadmin@elderx.com`
+   - **Email**: `superadmin@Care Master.com`
    - **Password**: `SuperAdmin2024!` (change after first login)
 
 #### Step 2: Set User Type in Firestore
@@ -55,7 +55,7 @@ The Super Admin role is the highest level of access in the ElderX platform. Supe
      "role": "super-admin",
      "isSuperAdmin": true,
      "isAdmin": true,
-     "displayName": "ElderX Super Administrator",
+     "displayName": "Care Master Super Administrator",
      "permissions": ["all"],
      "active": true
    }
@@ -174,7 +174,7 @@ http://localhost:3000/super-admin/login
 
 ### Test Accounts (For Development Only)
 ```
-Email: superadmin@elderx.com
+Email: superadmin@Care Master.com
 Password: SuperAdmin2024!
 ```
 

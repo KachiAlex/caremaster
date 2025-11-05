@@ -1,5 +1,5 @@
 {
-  "name": "elderx",
+  "name": "care-master",
   "version": "1.0.0",
   "private": true,
   "description": "",
@@ -105,3 +105,4 @@
     "firebase-admin": "^13.5.0"
   }
 }
+

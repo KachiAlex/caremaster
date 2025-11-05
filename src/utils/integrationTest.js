@@ -13,7 +13,7 @@ import { emergencyAPI } from '../api/emergencyAPI';
 import logger from './logger';
 
 export const runIntegrationTests = async () => {
-  console.log('🚀 Starting ElderX Integration Tests...\n');
+  console.log('🚀 Starting Care Master Integration Tests...\n');
   
   const results = {
     authentication: false,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import errorHandler from '../utils/errorHandler';
+import { handleChunkLoadError } from '../utils/chunkLoadErrorHandler';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -19,6 +20,15 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    // Check if this is a chunk load error and handle it
+    const isHandled = handleChunkLoadError(error, errorInfo);
+    
+    if (isHandled) {
+      // Chunk load error is being handled - show loading state
+      console.log('⏳ Chunk load error is being handled...');
+      return;
+    }
+
     // Log the error
     const errorData = {
       message: error.message,

@@ -115,7 +115,7 @@ const Landing = () => {
       name: "Satisfied Client",
       location: "Lagos, Nigeria",
       rating: 5,
-      text: "ElderCare Nigeria has been a blessing for my family. The caregivers are professional and caring, and the 24/7 support gives us peace of mind.",
+      text: "Care Master Nigeria has been a blessing for my family. The caregivers are professional and caring, and the 24/7 support gives us peace of mind.",
       photo: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2",
       age: "72 years old"
     },
@@ -139,7 +139,7 @@ const Landing = () => {
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
                 <Heart className="h-8 w-8 text-teal-500 mr-2" />
-                <h1 className="text-2xl font-bold text-gray-900">ElderCare Nigeria</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Care Master Nigeria</h1>
               </div>
               <p className="ml-4 text-sm text-gray-600 hidden sm:block">Professional Home Healthcare</p>
             </div>
@@ -180,7 +180,7 @@ const Landing = () => {
               Quality <span className="text-teal-300">Healthcare</span> At Your <span className="text-green-300">Doorstep</span>
             </h1>
             <p className="mt-6 text-lg text-blue-100 max-w-xl mx-auto lg:mx-0">
-              ElderCare Nigeria provides compassionate and professional home healthcare services, ensuring comfort and well-being for your loved ones.
+              Care Master Nigeria provides compassionate and professional home healthcare services, ensuring comfort and well-being for your loved ones.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link
@@ -191,11 +191,11 @@ const Landing = () => {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
               <a
-                href="tel:0800-ELDERCARE"
+                href="tel:0800-Care Master"
                 className="inline-flex items-center justify-center px-6 py-3 border border-white/30 text-base font-medium rounded-md text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors"
               >
                 <Phone className="mr-2 h-5 w-5" />
-                Call: 0800-ELDERCARE
+                Call: 0800-Care Master
               </a>
             </div>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 text-blue-100">
@@ -256,7 +256,7 @@ const Landing = () => {
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose ElderCare Nigeria?</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose Care Master Nigeria?</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               We provide comprehensive healthcare solutions designed specifically for Nigerian families
             </p>
@@ -309,7 +309,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Real Stories from Our Community</h2>
-            <p className="text-lg text-gray-600">See how ElderCare Nigeria is making a difference in the lives of African families</p>
+            <p className="text-lg text-gray-600">See how Care Master Nigeria is making a difference in the lives of African families</p>
           </div>
           
           {/* Image Gallery */}
@@ -408,7 +408,7 @@ const Landing = () => {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">See ElderCare Nigeria in Action</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">See Care Master Nigeria in Action</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               Watch real stories from African families who have experienced the difference our care makes
             </p>
@@ -488,7 +488,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of Nigerian families who trust ElderCare Nigeria for their healthcare needs
+            Join thousands of Nigerian families who trust Care Master Nigeria for their healthcare needs
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -516,17 +516,17 @@ const Landing = () => {
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center mb-4">
                 <Heart className="h-8 w-8 text-teal-500 mr-2" />
-                <h3 className="text-xl font-bold text-gray-900">ElderCare Nigeria</h3>
+                <h3 className="text-xl font-bold text-gray-900">Care Master Nigeria</h3>
               </div>
               <p className="text-gray-600 mb-4">
                 Professional home healthcare services for Nigerian families. 
                 Compassionate care, advanced technology, and 24/7 support.
               </p>
               <div className="flex space-x-4">
-                <a href="tel:0800-ELDERCARE" className="text-blue-600 hover:text-blue-800">
+                <a href="tel:0800-Care Master" className="text-blue-600 hover:text-blue-800">
                   <Phone className="h-5 w-5" />
                 </a>
-                <a href="mailto:info@eldercare.ng" className="text-blue-600 hover:text-blue-800">
+                <a href="mailto:info@Care Master.ng" className="text-blue-600 hover:text-blue-800">
                   <MessageCircle className="h-5 w-5" />
                 </a>
               </div>
@@ -552,7 +552,7 @@ const Landing = () => {
           </div>
           <div className="border-t border-gray-200 mt-8 pt-8 text-center">
             <p className="text-gray-500 text-sm">
-              &copy; 2024 ElderCare Nigeria. All rights reserved.
+              &copy; 2024 Care Master Nigeria. All rights reserved.
             </p>
             <p className="text-gray-500 text-sm mt-2">
               Made by <a href="https://mgx.dev" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">MGX</a>

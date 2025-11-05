@@ -1,5 +1,5 @@
 // Script to create an admin user
-// Run this in your browser console on the ElderX website
+// Run this in your browser console on the Care Master website
 
 async function createAdminUser() {
   try {

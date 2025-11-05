@@ -1,4 +1,4 @@
-# ElderX Portal Routing Guide
+# Care Master Portal Routing Guide
 
 ## 🏠 Landing Page Routes
 

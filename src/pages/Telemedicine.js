@@ -1010,11 +1010,11 @@ const Telemedicine = () => {
           doctorInfo={{
             name: selectedAppointmentForDocs.doctorName || 'Healthcare Provider',
             specialty: selectedAppointmentForDocs.doctorSpecialty || 'General Practice',
-            email: 'doctor@elderx.com',
-            phone: '+234 800 ELDERX',
+            email: 'doctor@Care Master.com',
+            phone: '+234 800 Care Master',
             licenseNumber: 'MD-2024-001',
             qualifications: ['MBBS', 'MD'],
-            hospital: 'ElderX Telemedicine Platform'
+            hospital: 'Care Master Telemedicine Platform'
           }}
           onClose={() => setShowDocuments(false)}
         />

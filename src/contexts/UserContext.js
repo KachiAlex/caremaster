@@ -193,6 +193,20 @@ export const UserProvider = ({ children }) => {
     return userRole === 'doctor' || userRole === 'caregiver';
   };
 
+  const refreshUserProfile = async () => {
+    if (user) {
+      try {
+        const profile = await getUserById(user.uid);
+        setUserProfile(profile);
+        console.log('✅ User profile refreshed');
+        return profile;
+      } catch (error) {
+        console.error('Error refreshing user profile:', error);
+        throw error;
+      }
+    }
+  };
+
   const isDoctor = () => {
     return userRole === 'doctor';
   };
@@ -327,6 +341,7 @@ export const UserProvider = ({ children }) => {
     isAdmin,
     updateUserProfile: setUserProfile,
     updateUserRoles: setUserRoles,
+    refreshUserProfile,
     licenseActive,
     institutionId,
     institutionData,

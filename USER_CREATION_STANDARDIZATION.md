@@ -131,7 +131,7 @@ Every user created through the admin system has:
   onboardingComplete: true,
   
   // Temporary password (if generated)
-  temporaryPassword: 'ElderX7a2b!',
+  temporaryPassword: 'Care Master7a2b!',
   mustChangePassword: true
 }
 ```
@@ -224,7 +224,7 @@ License Number: RN123456
   createdBy: 'admin_uid',
   accountType: 'institution_created',
   onboardingComplete: true,
-  temporaryPassword: 'ElderX7a2bK#',
+  temporaryPassword: 'Care Master7a2bK#',
   mustChangePassword: true,
   createdAt: serverTimestamp(),
   joinDate: serverTimestamp(),

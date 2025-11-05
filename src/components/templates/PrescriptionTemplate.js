@@ -56,13 +56,13 @@ const PrescriptionTemplate = ({
       <div className="bg-green-600 text-white p-6">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold">ElderX Healthcare</h1>
+            <h1 className="text-3xl font-bold">Care Master Healthcare</h1>
             <p className="text-green-100 mt-2">Professional Medical Prescription</p>
             <div className="mt-4 text-sm">
               <p>📍 Lagos, Nigeria</p>
-              <p>📞 +234 800 ELDERX (353379)</p>
-              <p>✉️ prescriptions@elderx.com</p>
-              <p>🌐 www.elderx.com</p>
+              <p>📞 +234 800 Care Master (353379)</p>
+              <p>✉️ prescriptions@Care Master.com</p>
+              <p>🌐 www.Care Master.com</p>
             </div>
           </div>
           <div className="text-right">
@@ -95,7 +95,7 @@ const PrescriptionTemplate = ({
             <div>
               <p className="text-gray-600">📧 {doctorInfo.email}</p>
               <p className="text-gray-600">📞 {doctorInfo.phone}</p>
-              <p className="text-gray-600">🏥 {doctorInfo.hospital || 'ElderX Telemedicine'}</p>
+              <p className="text-gray-600">🏥 {doctorInfo.hospital || 'Care Master Telemedicine'}</p>
               <p className="text-sm text-gray-500 mt-2">
                 Medical License: {doctorInfo.licenseNumber}
               </p>
@@ -277,7 +277,7 @@ const PrescriptionTemplate = ({
                 🚨 Call Emergency: 199 or 112
               </p>
               <p className="text-red-700">
-                📞 ElderX 24/7 Hotline: +234 800 ELDERX
+                📞 Care Master 24/7 Hotline: +234 800 Care Master
               </p>
               <p className="text-sm text-gray-600 mt-2">
                 {emergencyInstructions || "Seek immediate medical attention for any severe adverse reactions."}
@@ -311,16 +311,16 @@ const PrescriptionTemplate = ({
       <div className="bg-gray-100 p-6">
         <div className="text-center text-sm text-gray-600">
           <p className="mb-2">
-            <strong>ElderX Healthcare Services</strong> - Digital Health Platform
+            <strong>Care Master Healthcare Services</strong> - Digital Health Platform
           </p>
           <p className="mb-2">
             This prescription is generated electronically and is valid for medical use.
             Please present this document to your pharmacist.
           </p>
           <div className="mt-4 flex justify-center space-x-4">
-            <span>📞 +234 800 ELDERX</span>
-            <span>✉️ prescriptions@elderx.com</span>
-            <span>🌐 www.elderx.com</span>
+            <span>📞 +234 800 Care Master</span>
+            <span>✉️ prescriptions@Care Master.com</span>
+            <span>🌐 www.Care Master.com</span>
           </div>
           <p className="text-xs text-gray-500 mt-4">
             ⚠️ Important: Do not share this prescription with others. 

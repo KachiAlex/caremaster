@@ -55,7 +55,7 @@ const CaregiverSettings = ({ onProfileImageUpdate }) => {
             profile: {
               firstName: 'Sarah',
               lastName: 'Johnson',
-              email: user?.email || 'sarah.johnson@elderx.com',
+              email: user?.email || 'sarah.johnson@Care Master.com',
               phone: '+234 805 123 4567',
               profileImage: null,
               dateOfBirth: '1985-03-15',

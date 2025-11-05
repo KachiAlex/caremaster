@@ -1,7 +1,7 @@
-# 🔒 ElderX Security Documentation
+# 🔒 Care Master Security Documentation
 
 ## Overview
-This document outlines the comprehensive security measures implemented in the ElderX application to protect sensitive health data and ensure user privacy.
+This document outlines the comprehensive security measures implemented in the Care Master application to protect sensitive health data and ensure user privacy.
 
 ## 🛡️ Security Features
 
@@ -176,13 +176,13 @@ openssl rand -base64 64
 ## 📞 Security Contacts
 
 ### Security Team
-- **Security Lead**: security@elderx.com
-- **Incident Response**: incident@elderx.com
-- **Vulnerability Reports**: security-reports@elderx.com
+- **Security Lead**: security@Care Master.com
+- **Incident Response**: incident@Care Master.com
+- **Vulnerability Reports**: security-reports@Care Master.com
 
 ### Emergency Contacts
 - **24/7 Security Hotline**: +1-XXX-XXX-XXXX
-- **Emergency Email**: emergency@elderx.com
+- **Emergency Email**: emergency@Care Master.com
 
 ## 📚 Additional Resources
 

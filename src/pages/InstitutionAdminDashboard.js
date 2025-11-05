@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { signOut, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc, addDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -9,6 +9,7 @@ import authManager from '../utils/authManager';
 import sessionManager from '../utils/sessionManager';
 import { 
   Users, 
+  User,
   Heart, 
   Calendar, 
   Activity, 
@@ -42,7 +43,8 @@ import {
   Package,
   Camera,
   Bell,
-  ClipboardCheck
+  ClipboardCheck,
+  HelpCircle
 } from 'lucide-react';
 import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -51,6 +53,7 @@ import { caregiverAPI } from '../api/caregiverAPI';
 import { getAllClients, createClient, updateClient } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { getClientReports, createClientReport, getClientCareLogs, createClientCareLog } from '../api/patientReportsAPI';
+import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notificationsAPI } from '../api/notificationsAPI';
 import { institutionAPI } from '../api/institutionAPI';
 import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
@@ -58,6 +61,15 @@ import InventoryBillingTab from '../components/InventoryBillingTab';
 import CallInterface from '../components/CallInterface';
 import UserManagement from '../components/UserManagement';
 import DashboardSwitcher from '../components/DashboardSwitcher';
+import AdminRoleAssignment from '../components/AdminRoleAssignment';
+import ArchivedClients from '../components/ArchivedClients';
+import InactiveCaregiversReport from '../components/InactiveCaregiversReport';
+import SchedulingModule from '../components/SchedulingModule';
+import ClientActivityTimeline from '../components/ClientActivityTimeline';
+import CaregiverWageManagement from '../components/CaregiverWageManagement';
+import UserProfileSettings from '../components/UserProfileSettings';
+import InstitutionSettings from '../components/InstitutionSettings';
+import HelpSupport from '../components/HelpSupport';
 import { toast } from 'react-toastify';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages } from '../api/messagesAPI';
 import CallService from '../services/callService';
@@ -112,6 +124,7 @@ const InstitutionAdminDashboard = () => {
   const [pendingDiagnostics, setPendingDiagnostics] = useState([]);
   const [showAddClient, setShowAddClient] = useState(false);
   const [showAddCaregiver, setShowAddCaregiver] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showAddPharmacist, setShowAddPharmacist] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [assignmentType, setAssignmentType] = useState('client-to-caregiver');
@@ -911,12 +924,35 @@ const InstitutionAdminDashboard = () => {
   // Caregiver Action Handlers
   const handleResetPassword = async (caregiverId) => {
     try {
-      // TODO: Implement password reset via Firebase Auth
-      toast.info('Password reset email sent to caregiver');
-      console.log('Reset password for caregiver:', caregiverId);
+      // Get caregiver/user email
+      const userDoc = await getDoc(doc(db, 'users', caregiverId));
+      if (!userDoc.exists()) {
+        toast.error('User not found');
+        return;
+      }
+
+      const userData = userDoc.data();
+      const userEmail = userData.email;
+
+      if (!userEmail) {
+        toast.error('User email not found');
+        return;
+      }
+
+      // Send password reset email via Firebase Auth
+      await sendPasswordResetEmail(auth, userEmail);
+      
+      toast.success(`Password reset email sent to ${userEmail}`);
+      console.log('Password reset email sent to:', userEmail);
     } catch (error) {
       console.error('Error resetting password:', error);
-      toast.error('Failed to reset password');
+      if (error.code === 'auth/user-not-found') {
+        toast.error('User not found in Firebase Auth');
+      } else if (error.code === 'auth/invalid-email') {
+        toast.error('Invalid email address');
+      } else {
+        toast.error('Failed to send password reset email');
+      }
     }
   };
 
@@ -1126,8 +1162,8 @@ const InstitutionAdminDashboard = () => {
   };
 
   // Client Action Handlers
-  const handleDeleteClient = async (clientId) => {
-    if (!window.confirm('Are you sure you want to delete this client? This will archive their data.')) {
+  const handleArchiveClient = async (clientId) => {
+    if (!window.confirm('Are you sure you want to archive this client? You can restore them later from the Archived Clients section.')) {
       return;
     }
     try {
@@ -2033,13 +2069,20 @@ const InstitutionAdminDashboard = () => {
           {[
             { id: 'dashboard', name: 'Dashboard', icon: BarChart3, color: 'blue' },
             { id: 'clients', name: 'Clients', icon: Heart, color: 'green' },
+            { id: 'archived-clients', name: 'Archived Clients', icon: Package, color: 'yellow' },
             { id: 'caregivers', name: 'Caregivers', icon: UserCheck, color: 'purple' },
+            { id: 'inactive-caregivers', name: 'Inactive Caregivers', icon: UserCheck, color: 'red' },
             { id: 'pharmacists', name: 'Pharmacists', icon: Pill, color: 'indigo' },
             { id: 'assignments', name: 'Assignments', icon: Users, color: 'orange' },
+            { id: 'scheduling', name: 'Scheduling', icon: Calendar, color: 'blue' },
+            { id: 'wages', name: 'Wage Management', icon: DollarSign, color: 'green' },
             { id: 'users', name: 'User Management', icon: Shield, color: 'red' },
+            { id: 'admin-roles', name: 'Admin Roles', icon: Shield, color: 'red' },
             { id: 'approvals', name: 'Pending Approvals', icon: ClipboardCheck, color: 'yellow' },
             { id: 'messages', name: 'Messages', icon: MessageSquare, color: 'cyan' },
-            { id: 'analytics', name: 'Analytics', icon: TrendingUp, color: 'pink' }
+            { id: 'analytics', name: 'Analytics', icon: TrendingUp, color: 'pink' },
+            { id: 'settings', name: 'Settings', icon: Settings, color: 'gray' },
+            { id: 'help', name: 'Help & Support', icon: HelpCircle, color: 'blue' }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -2080,15 +2123,22 @@ const InstitutionAdminDashboard = () => {
               <h1 className="text-xl font-bold text-gray-900 truncate">
                 {activeTab === 'dashboard' && 'Dashboard Overview'}
                 {activeTab === 'clients' && 'Client Management'}
+                {activeTab === 'archived-clients' && 'Archived Clients'}
                 {activeTab === 'caregivers' && 'Caregiver Management'}
+                {activeTab === 'inactive-caregivers' && 'Inactive Caregivers Report'}
                 {activeTab === 'pharmacists' && 'Pharmacist Management'}
                 {activeTab === 'assignments' && 'Assignment Management'}
+                {activeTab === 'scheduling' && 'Scheduling Management'}
+                {activeTab === 'wages' && 'Wage Management & Payroll'}
                 {activeTab === 'users' && 'User Management'}
+                {activeTab === 'admin-roles' && 'Admin Role Assignment'}
                 {activeTab === 'approvals' && 'Pending Approvals'}
                 {activeTab === 'messages' && 'Messages'}
                 {activeTab === 'analytics' && 'Analytics & Reports'}
+                {activeTab === 'settings' && 'Institution Settings'}
+                {activeTab === 'help' && 'Help & Support'}
               </h1>
-              <p className="text-sm text-gray-600">Welcome, {userProfile?.displayName || user?.email}</p>
+              <p className="text-sm text-gray-600">Welcome, {userProfile?.name || userProfile?.fullName || userProfile?.displayName || user?.displayName || user?.email}</p>
             </div>
             <div className="flex items-center gap-3">
               {userRoles && userRoles.length > 1 && (
@@ -2113,6 +2163,14 @@ const InstitutionAdminDashboard = () => {
                     )}
                   </button>
                 </div>
+
+                <button
+                  onClick={() => setShowProfileSettings(true)}
+                  className="flex items-center px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  title="Profile Settings"
+                >
+                  <User className="h-4 w-4" />
+                </button>
 
                 <button
                   onClick={refreshData}
@@ -2503,6 +2561,13 @@ const InstitutionAdminDashboard = () => {
         </div>
       )}
 
+      {/* Archived Clients Tab Content */}
+      {activeTab === 'archived-clients' && (
+        <div className="space-y-6">
+          <ArchivedClients institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
       {/* Caregivers Tab Content */}
       {activeTab === 'caregivers' && (
         <div className="space-y-6">
@@ -2545,17 +2610,15 @@ const InstitutionAdminDashboard = () => {
                       <tr key={caregiver.id}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="h-10 w-10 flex-shrink-0">
-                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                <span className="text-sm font-medium text-blue-700">
-                                  {caregiver.name?.charAt(0) || 'C'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{caregiver.name || 'Unknown'}</div>
-                              <div className="text-sm text-gray-500">{caregiver.email || 'No email'}</div>
-                            </div>
+                            <UserNameWithAvatar
+                              userId={caregiver.id}
+                              userName={caregiver.name || 'Unknown'}
+                              userType={caregiver.userType || 'caregiver'}
+                              profilePictureUrl={caregiver.profilePictureUrl}
+                              size="medium"
+                              className="mr-4"
+                            />
+                            <div className="text-sm text-gray-500">{caregiver.email || 'No email'}</div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{caregiver.userType || caregiver.type || 'Caregiver'}</td>
@@ -2640,6 +2703,13 @@ const InstitutionAdminDashboard = () => {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Inactive Caregivers Report Tab Content */}
+      {activeTab === 'inactive-caregivers' && (
+        <div className="space-y-6">
+          <InactiveCaregiversReport institutionId={effectiveInstitutionId} />
         </div>
       )}
 
@@ -2962,6 +3032,34 @@ const InstitutionAdminDashboard = () => {
         </div>
       )}
 
+      {/* Scheduling Tab Content */}
+      {activeTab === 'scheduling' && (
+        <div className="space-y-6">
+          <SchedulingModule institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+      {/* Wage Management Tab Content */}
+      {activeTab === 'wages' && (
+        <div className="space-y-6">
+          <CaregiverWageManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+      {/* Settings Tab Content */}
+      {activeTab === 'settings' && (
+        <div className="space-y-6">
+          <InstitutionSettings institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+      {/* Help & Support Tab Content */}
+      {activeTab === 'help' && (
+        <div className="space-y-6">
+          <HelpSupport userRole={userProfile?.userType || userProfile?.type || 'admin'} />
+        </div>
+      )}
+
       {/* Pending Approvals Tab */}
       {activeTab === 'approvals' && (
         <div className="space-y-6">
@@ -3062,6 +3160,13 @@ const InstitutionAdminDashboard = () => {
       {activeTab === 'users' && (
         <div className="space-y-6">
           <UserManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+      {/* Admin Role Assignment Tab */}
+      {activeTab === 'admin-roles' && (
+        <div className="space-y-6">
+          <AdminRoleAssignment institutionId={effectiveInstitutionId} />
         </div>
       )}
 
@@ -3692,7 +3797,7 @@ const InstitutionAdminDashboard = () => {
             setSelectedClient(null);
           }}
           onAssignTask={handleAssignTaskToClient}
-          onDelete={handleDeleteClient}
+          onDelete={handleArchiveClient}
           pharmacists={pharmacists}
           onAssignPharmacist={handleAssignPharmacistToClient}
         />
@@ -3711,6 +3816,13 @@ const InstitutionAdminDashboard = () => {
           onToggleStatus={handleToggleCaregiverStatus}
           onDelete={handleDeleteCaregiver}
           onAssignTask={handleAssignTaskToCaregiver}
+        />
+      )}
+
+      {showProfileSettings && (
+        <UserProfileSettings
+          userId={user?.uid}
+          onClose={() => setShowProfileSettings(false)}
         />
       )}
 
@@ -4378,15 +4490,32 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Hourly Rate</label>
-              <input
-                type="number"
+              <select
                 name="hourlyRate"
-                min="0"
-                step="0.01"
                 value={formData.hourlyRate}
                 onChange={handleChange}
                 className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+              >
+                <option value="">Select hourly rate</option>
+                <option value="15">$15/hour</option>
+                <option value="20">$20/hour</option>
+                <option value="25">$25/hour</option>
+                <option value="30">$30/hour</option>
+                <option value="35">$35/hour</option>
+                <option value="40">$40/hour</option>
+                <option value="45">$45/hour</option>
+                <option value="50">$50/hour</option>
+                <option value="60">$60/hour</option>
+                <option value="70">$70/hour</option>
+                <option value="80">$80/hour</option>
+                <option value="90">$90/hour</option>
+                <option value="100">$100/hour</option>
+                <option value="125">$125/hour</option>
+                <option value="150">$150/hour</option>
+                <option value="200">$200/hour</option>
+                <option value="250">$250/hour</option>
+                <option value="300">$300/hour</option>
+              </select>
             </div>
 
             <div>
@@ -4826,6 +4955,11 @@ const AssignmentModal = ({
     description: '',
     instructions: '',
     priority: 'normal',
+    scheduleDate: '',
+    startTime: '',
+    endTime: '',
+    comments: '',
+    activityReport: '',
     dueDate: '',
     dueTime: ''
   });
@@ -4940,11 +5074,11 @@ const AssignmentModal = ({
             </p>
           </div>
 
-          {/* Priority and Due Date */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Priority */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Priority <span className="text-red-500">*</span></label>
               <select
+              required
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                 className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
@@ -4956,8 +5090,101 @@ const AssignmentModal = ({
               </select>
             </div>
 
+          {/* Schedule Section */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+            <h4 className="text-sm font-semibold text-blue-900 flex items-center">
+              <Calendar className="h-4 w-4 mr-2" />
+              Schedule Details
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.scheduleDate}
+                  onChange={(e) => setFormData({ ...formData, scheduleDate: e.target.value })}
+                  className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Start Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={formData.startTime}
+                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                  className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  End Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={formData.endTime}
+                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                  className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600">
+              Specify the exact date and time window for this care assignment
+            </p>
+          </div>
+
+          {/* Comments Section (Required) */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Comments <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              rows={3}
+              required
+              value={formData.comments}
+              onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
+              className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              placeholder="Add any special notes, requirements, or considerations for this assignment..."
+            />
+            <p className="mt-1 text-xs text-red-600">
+              ⚠️ Comments are required before saving this schedule
+            </p>
+          </div>
+
+          {/* Activity Report Section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Activity Report Template
+            </label>
+            <textarea
+              rows={4}
+              value={formData.activityReport}
+              onChange={(e) => setFormData({ ...formData, activityReport: e.target.value })}
+              className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              placeholder="Define what activities should be reported after completing this assignment (e.g., vital signs taken, medications administered, meals provided, mobility assistance, etc.)"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Optional: Specify what the caregiver should report after completing this task
+            </p>
+          </div>
+
+          {/* Legacy Due Date fields (for backwards compatibility) */}
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Additional Deadline (Optional)</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-2">Due Date</label>
               <input
                 type="date"
                 value={formData.dueDate}
@@ -4967,7 +5194,7 @@ const AssignmentModal = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Due Time</label>
+                <label className="block text-sm font-medium text-gray-500 mb-2">Due Time</label>
               <input
                 type="time"
                 value={formData.dueTime}
@@ -4975,6 +5202,10 @@ const AssignmentModal = ({
                 className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Set a final deadline if different from the schedule date/time
+            </p>
           </div>
 
           {/* Action Buttons */}
@@ -5073,6 +5304,16 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, pharmacis
               }`}
             >
               Care Logs
+            </button>
+            <button
+              onClick={() => setActiveTab('timeline')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'timeline'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Activity Timeline
             </button>
           </nav>
         </div>
@@ -5279,14 +5520,24 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, pharmacis
             <ClientCareLogsSection clientId={client.id} />
           )}
 
+          {/* Activity Timeline Tab */}
+          {activeTab === 'timeline' && (
+            <ClientActivityTimeline 
+              clientId={client.id} 
+              clientName={client.name} 
+              userRole={userProfile?.userType || userProfile?.type}
+            />
+          )}
+
           {/* Actions */}
           <div className="flex justify-between items-center pt-6 border-t">
             <button
               type="button"
               onClick={() => onDelete(client.id)}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700"
+              className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-md hover:bg-yellow-700 flex items-center"
             >
-              Delete Client
+              <Package className="h-4 w-4 mr-2" />
+              Archive Client
             </button>
             <div className="flex space-x-3">
               <button
@@ -6353,8 +6604,10 @@ const ClientReportsSection = ({ clientId }) => {
 // Client Care Logs Section Component
 const ClientCareLogsSection = ({ clientId }) => {
   const [careLogs, setCareLogs] = React.useState([]);
+  const [adlLogs, setAdlLogs] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [showAddLog, setShowAddLog] = React.useState(false);
+  const [activeLogTab, setActiveLogTab] = React.useState('all'); // all, care, adl
   const { user, userProfile } = useUser();
 
   React.useEffect(() => {
@@ -6364,8 +6617,30 @@ const ClientCareLogsSection = ({ clientId }) => {
   const loadCareLogs = async () => {
     try {
       setLoading(true);
+      
+      // Load regular care logs
       const logsData = await getClientCareLogs(clientId);
       setCareLogs(logsData);
+      
+      // Load ADL logs
+      try {
+        const adlLogsQuery = query(
+          collection(db, 'adlLogs'),
+          where('clientId', '==', clientId),
+          orderBy('timestamp', 'desc')
+        );
+        const adlLogsSnapshot = await getDocs(adlLogsQuery);
+        const adlLogsData = adlLogsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          type: 'adl' // Mark as ADL log
+        }));
+        setAdlLogs(adlLogsData);
+      } catch (adlError) {
+        console.error('Error loading ADL logs:', adlError);
+        // Don't fail the whole component if ADL logs fail
+        setAdlLogs([]);
+      }
     } catch (error) {
       console.error('Error loading care logs:', error);
     } finally {
@@ -6377,10 +6652,39 @@ const ClientCareLogsSection = ({ clientId }) => {
     return <div className="text-center py-8">Loading care logs...</div>;
   }
 
+  // Combine and filter logs based on active tab
+  const getFilteredLogs = () => {
+    let allLogs = [];
+    
+    if (activeLogTab === 'all' || activeLogTab === 'care') {
+      allLogs = [...allLogs, ...careLogs.map(log => ({ ...log, type: 'care' }))];
+    }
+    
+    if (activeLogTab === 'all' || activeLogTab === 'adl') {
+      allLogs = [...allLogs, ...adlLogs];
+    }
+    
+    // Sort by timestamp (most recent first)
+    return allLogs.sort((a, b) => {
+      const dateA = new Date(a.timestamp || a.createdAt || 0);
+      const dateB = new Date(b.timestamp || b.createdAt || 0);
+      return dateB - dateA;
+    });
+  };
+
+  const filteredLogs = getFilteredLogs();
+  const totalLogs = careLogs.length + adlLogs.length;
+
   return (
     <div className="space-y-6">
+      {/* Header with stats */}
       <div className="flex justify-between items-center">
+        <div>
         <h3 className="text-lg font-semibold text-gray-900">Care Activity Logs</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            {totalLogs} total logs ({careLogs.length} care logs, {adlLogs.length} ADL activities)
+          </p>
+        </div>
         <button
           onClick={() => setShowAddLog(true)}
           className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
@@ -6389,33 +6693,155 @@ const ClientCareLogsSection = ({ clientId }) => {
         </button>
       </div>
 
-      {careLogs.length === 0 ? (
+      {/* Filter Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveLogTab('all')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeLogTab === 'all'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            All Logs ({totalLogs})
+          </button>
+          <button
+            onClick={() => setActiveLogTab('care')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeLogTab === 'care'
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Care Logs ({careLogs.length})
+          </button>
+          <button
+            onClick={() => setActiveLogTab('adl')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeLogTab === 'adl'
+                ? 'border-purple-500 text-purple-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            ADL Activities ({adlLogs.length})
+          </button>
+        </nav>
+      </div>
+
+      {/* Logs List */}
+      {filteredLogs.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">No care logs yet</p>
+          <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">No {activeLogTab === 'all' ? '' : activeLogTab} logs yet</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {careLogs.map((log) => (
-            <div key={log.id} className="border-l-4 border-green-500 bg-white shadow-sm rounded-r-lg p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="font-medium text-gray-900">{log.activityType || 'Care Activity'}</p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(log.timestamp).toLocaleString()} • {log.caregiverName || 'Unknown Caregiver'}
-                  </p>
+          {filteredLogs.map((log) => (
+            <div 
+              key={log.id} 
+              className={`border-l-4 ${
+                log.type === 'adl' 
+                  ? 'border-purple-500' 
+                  : 'border-green-500'
+              } bg-white shadow-sm rounded-r-lg p-4 hover:shadow-md transition-shadow`}
+            >
+              {/* Header Section */}
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold text-gray-900 text-base">
+                      {log.type === 'adl' ? log.activityName : (log.activityType || 'Care Activity')}
+                    </p>
+                    {log.type === 'adl' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                        <Activity className="h-3 w-3 mr-1" />
+                        ADL
+                      </span>
+                    )}
                 </div>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  
+                  {/* Detailed timestamp and caregiver info */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                      {new Date(log.timestamp || log.createdAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                    <span className="text-gray-400">•</span>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <User className="h-4 w-4 mr-1 text-gray-400" />
+                      <span className="font-medium">{log.caregiverName || 'Unknown Caregiver'}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Status Badge */}
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
                   log.status === 'completed'
                     ? 'bg-green-100 text-green-800'
-                    : 'bg-yellow-100 text-yellow-800'
+                    : log.status === 'skipped'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : log.status === 'issue'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {log.status || 'completed'}
+                  {log.status === 'completed' && '✓ '}
+                  {log.status === 'skipped' && '⊘ '}
+                  {log.status === 'issue' && '⚠ '}
+                  {log.status?.toUpperCase() || 'COMPLETED'}
                 </span>
               </div>
+              
+              {/* Description/Notes Section */}
+              {(log.description || log.notes) && (
+                <div className="bg-gray-50 rounded-md p-3 mt-2">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Notes:</p>
               <p className="text-gray-700 text-sm">{log.description || log.notes}</p>
-              {log.duration && (
-                <p className="text-xs text-gray-500 mt-2">Duration: {log.duration}</p>
+                </div>
               )}
+              
+              {/* Details Grid */}
+              <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                {/* ADL Category */}
+                {log.type === 'adl' && log.activityCategory && (
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-500 mr-2">Category:</span>
+                    <span className="text-gray-700 bg-purple-50 px-2 py-1 rounded">
+                      {log.activityCategory}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Duration */}
+              {log.duration && (
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-500 mr-2">Duration:</span>
+                    <span className="text-gray-700">{log.duration}</span>
+                  </div>
+                )}
+                
+                {/* Caregiver ID (for reference) */}
+                {log.caregiverId && (
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-500 mr-2">Caregiver ID:</span>
+                    <span className="text-gray-700 font-mono text-xs">{log.caregiverId.substring(0, 8)}...</span>
+                  </div>
+                )}
+                
+                {/* Activity ID (for ADL logs) */}
+                {log.type === 'adl' && log.activityId && (
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-500 mr-2">Activity:</span>
+                    <span className="text-gray-700">{log.activityId}</span>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>

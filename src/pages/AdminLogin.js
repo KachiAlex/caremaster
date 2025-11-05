@@ -26,8 +26,8 @@ const AdminLogin = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
       // Set temporary admin session flag
-      sessionStorage.setItem('elderx_admin_session', 'true');
-      sessionStorage.setItem('elderx_admin_user', userCredential.user.uid);
+      sessionStorage.setItem('Care Master_admin_session', 'true');
+      sessionStorage.setItem('Care Master_admin_user', userCredential.user.uid);
       
       toast.success('Admin login successful - Redirecting to admin dashboard');
       
@@ -94,7 +94,7 @@ const AdminLogin = () => {
                 autoComplete="email"
                 required
                 className="form-input"
-                placeholder="admin@elderx.com"
+                placeholder="admin@Care Master.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

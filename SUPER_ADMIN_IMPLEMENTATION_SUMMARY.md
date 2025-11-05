@@ -234,7 +234,7 @@ Just login at `/super-admin/login` and you'll see the new dashboard!
 - **Responsive**: Works on desktop, tablet, and mobile
 - **Intuitive**: Clear navigation and actions
 - **Informative**: Real-time data and helpful alerts
-- **Consistent**: Matches ElderX design system
+- **Consistent**: Matches Care Master design system
 
 ### Color Coding
 - 🔴 **Red**: Super admin branding, critical actions

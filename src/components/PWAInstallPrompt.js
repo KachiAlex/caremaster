@@ -71,7 +71,7 @@ const PWAInstallPrompt = () => {
               <Download className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 text-sm">Install ElderX</h3>
+              <h3 className="font-semibold text-gray-900 text-sm">Install Care Master</h3>
               <p className="text-xs text-gray-500">Get the full app experience</p>
             </div>
           </div>

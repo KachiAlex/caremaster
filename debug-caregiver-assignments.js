@@ -17,13 +17,13 @@ async function debugCaregiverAssignments() {
   try {
     console.log('=== Debugging Caregiver Assignments ===\n');
     
-    // 1. Find dresther@elderx.com user
+    // 1. Find dresther@Care Master.com user
     const usersSnapshot = await db.collection('users')
-      .where('email', '==', 'dresther@elderx.com')
+      .where('email', '==', 'dresther@Care Master.com')
       .get();
     
     if (usersSnapshot.empty) {
-      console.log('❌ User dresther@elderx.com not found in users collection');
+      console.log('❌ User dresther@Care Master.com not found in users collection');
       return;
     }
     

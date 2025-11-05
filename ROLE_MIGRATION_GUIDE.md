@@ -1,8 +1,8 @@
-# ElderX Role Standardization & Migration Guide
+# Care Master Role Standardization & Migration Guide
 
 ## 📋 Overview
 
-This guide explains how to standardize user roles across the ElderX platform and migrate existing users to the new role system.
+This guide explains how to standardize user roles across the Care Master platform and migrate existing users to the new role system.
 
 ## 🎯 Goals
 

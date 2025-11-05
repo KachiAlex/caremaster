@@ -110,7 +110,7 @@ class Logger {
   // Persist log to localStorage
   persistLog(logEntry) {
     try {
-      const existingLogs = JSON.parse(localStorage.getItem('elderx_logs') || '[]');
+      const existingLogs = JSON.parse(localStorage.getItem('Care Master_logs') || '[]');
       existingLogs.push(logEntry);
       
       // Keep only recent logs
@@ -118,7 +118,7 @@ class Logger {
         existingLogs.splice(0, existingLogs.length - this.maxLogSize);
       }
       
-      localStorage.setItem('elderx_logs', JSON.stringify(existingLogs));
+      localStorage.setItem('Care Master_logs', JSON.stringify(existingLogs));
     } catch (e) {
       console.warn('Could not persist log to localStorage:', e);
     }
@@ -145,7 +145,7 @@ class Logger {
   getCurrentUserId() {
     try {
       // This would get the current user ID from your auth context
-      const user = JSON.parse(localStorage.getItem('elderx_user') || '{}');
+      const user = JSON.parse(localStorage.getItem('Care Master_user') || '{}');
       return user.uid || 'anonymous';
     } catch (e) {
       return 'anonymous';
@@ -166,7 +166,7 @@ class Logger {
   // Clear logs
   clearLogs() {
     this.logs = [];
-    localStorage.removeItem('elderx_logs');
+    localStorage.removeItem('Care Master_logs');
   }
 
   // Performance logging

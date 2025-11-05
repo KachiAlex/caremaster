@@ -308,7 +308,7 @@ function generateInvoiceEmailTemplate(invoice) {
     </div>
 
     <div class="footer">
-      <p>ElderX Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>For questions, contact your pharmacist</p>
     </div>
   </div>
@@ -363,7 +363,7 @@ function generatePrescriptionReadyTemplate(clientName, prescriptions, pharmacyIn
     </div>
 
     <div class="footer">
-      <p>ElderX Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>Questions? Contact us at ${pharmacyInfo.phone || 'your pharmacy'}</p>
     </div>
   </div>
@@ -414,7 +414,7 @@ function generateRefillReminderTemplate(medicationName, daysRemaining) {
     </div>
 
     <div class="footer">
-      <p>ElderX Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>Keeping you healthy, one prescription at a time</p>
     </div>
   </div>
@@ -470,7 +470,7 @@ function generateSafetyAlertTemplate(alertDetails) {
     </div>
 
     <div class="footer">
-      <p>ElderX Pharmacy Safety System</p>
+      <p>Care Master Pharmacy Safety System</p>
       <p>Patient Safety First</p>
     </div>
   </div>
@@ -522,7 +522,7 @@ function generatePaymentConfirmationTemplate(invoice, payment) {
     </div>
 
     <div class="footer">
-      <p>ElderX Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>Receipt will be sent separately</p>
     </div>
   </div>
@@ -580,7 +580,7 @@ function generateCounselingReminderTemplate(appointmentTime, pharmacistName) {
     </div>
 
     <div class="footer">
-      <p>ElderX Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>Your health is our priority</p>
     </div>
   </div>
@@ -638,7 +638,7 @@ function generateLowStockAlertTemplate(lowStockItems) {
     </div>
 
     <div class="footer">
-      <p>ElderX Pharmacy Inventory System</p>
+      <p>Care Master Pharmacy Inventory System</p>
       <p>Automated Daily Alert</p>
     </div>
   </div>

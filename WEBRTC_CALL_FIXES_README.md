@@ -6,7 +6,7 @@ The following fixes have been made to the code but need to be built and deployed
 
 ### **Step 1: Build the Project**
 ```bash
-cd C:\elderx
+cd C:\Care Master
 npm run build
 ```
 
@@ -175,7 +175,7 @@ All critical WebRTC call issues have been identified and fixed in the code:
 
 **Commands:**
 ```bash
-cd C:\elderx
+cd C:\Care Master
 npm run build
 firebase deploy --only hosting
 ```

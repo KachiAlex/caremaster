@@ -1,4 +1,4 @@
-# 🔐 ElderX Super Admin System
+# 🔐 Care Master Super Admin System
 
 ## 📋 Table of Contents
 1. [Overview](#overview)
@@ -14,7 +14,7 @@
 
 ## 🎯 Overview
 
-The Super Admin system is the highest level of access in ElderX, designed for platform administrators who manage multiple healthcare institutions. Super Admins have complete control over:
+The Super Admin system is the highest level of access in Care Master, designed for platform administrators who manage multiple healthcare institutions. Super Admins have complete control over:
 
 - **Institution Management**: Create, configure, and manage healthcare institutions
 - **License Management**: Issue, renew, and suspend institutional licenses  
@@ -403,7 +403,7 @@ console.log(claims); // Should show { superAdmin: true, admin: true }
 Enable verbose logging:
 ```javascript
 // In browser console
-localStorage.setItem('debug', 'elderx:*');
+localStorage.setItem('debug', 'Care Master:*');
 location.reload();
 ```
 

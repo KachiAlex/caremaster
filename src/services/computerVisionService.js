@@ -1,4 +1,4 @@
-// Computer Vision AI Service for ElderX
+// Computer Vision AI Service for Care Master
 import aiService from './aiService';
 
 class ComputerVisionService {

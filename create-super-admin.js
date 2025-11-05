@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * ElderX Super Admin Account Creator
+ * Care Master Super Admin Account Creator
  * 
  * This script creates or promotes a user to Super Admin status.
  * Super Admins have full system access to manage institutions, licenses, and all platform features.
@@ -33,7 +33,7 @@ function question(query) {
 }
 
 async function createSuperAdmin() {
-  console.log('\n🔐 ElderX Super Admin Account Creator\n');
+  console.log('\n🔐 Care Master Super Admin Account Creator\n');
   console.log('═'.repeat(60));
   console.log('This tool will create or promote a user to Super Admin status.');
   console.log('Super Admins have full system access.\n');
@@ -213,9 +213,9 @@ if (batchMode) {
   // Example batch configuration
   const admins = [
     {
-      email: 'superadmin@elderx.com',
+      email: 'superadmin@Care Master.com',
       password: 'SuperAdmin2024!',
-      displayName: 'ElderX Super Administrator'
+      displayName: 'Care Master Super Administrator'
     }
     // Add more admins here as needed
   ];

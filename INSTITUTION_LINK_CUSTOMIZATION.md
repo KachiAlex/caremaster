@@ -7,7 +7,7 @@ The institution link customization feature allows institution administrators to 
 
 ### 1. **Custom URL Slug**
 Create memorable, branded URLs using custom slugs:
-- **Format**: `elderx.com/institution/your-company`
+- **Format**: `Care Master.com/institution/your-company`
 - **Benefits**: 
   - Professional appearance
   - Easy to remember and share

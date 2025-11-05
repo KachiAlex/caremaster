@@ -42,9 +42,11 @@ import {
   X,
   Mail,
   Download,
-  Receipt
+  Receipt,
+  HelpCircle
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { caregiverAPI } from '../api/caregiverAPI';
 import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
@@ -83,6 +85,9 @@ import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
 import PortalSwitcher from '../components/PortalSwitcher';
 import WebRTCService from '../services/webrtcService';
+import AdlLogger from '../components/AdlLogger';
+import UserProfileSettings from '../components/UserProfileSettings';
+import HelpSupport from '../components/HelpSupport';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -110,6 +115,7 @@ const InstitutionCaregiverDashboard = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showVitalsModal, setShowVitalsModal] = useState(false);
   const [showCareLogsModal, setShowCareLogsModal] = useState(false);
   const [showNurseReportModal, setShowNurseReportModal] = useState(false);
@@ -511,11 +517,13 @@ const InstitutionCaregiverDashboard = () => {
             }
           }
           
-          setAssignedClients(clients);
+          // Exclude archived clients from visible list
+          const visibleClients = (clients || []).filter(c => (c?.status || '').toLowerCase() !== 'archived');
+          setAssignedClients(visibleClients);
           // Auto-select first client if not set
-          if (clients.length > 0 && !selectedClientId) {
-            setSelectedClientId(clients[0].id);
-            setSelectedClient(clients[0]);
+          if (visibleClients.length > 0 && !selectedClientId) {
+            setSelectedClientId(visibleClients[0].id);
+            setSelectedClient(visibleClients[0]);
           }
         }
         
@@ -688,13 +696,15 @@ const InstitutionCaregiverDashboard = () => {
         Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)))
           .then(fetched => {
             const clients = fetched.filter(Boolean);
-              console.log(`✅ Real-time: Loaded ${clients.length} clients`);
-            setAssignedClients(clients);
+            console.log(`✅ Real-time: Loaded ${clients.length} clients`);
+            // Exclude archived clients from visible list in real-time updates
+            const visibleClients = clients.filter(c => (c?.status || '').toLowerCase() !== 'archived');
+            setAssignedClients(visibleClients);
             
             // Auto-select first client if not set
-            if (clients.length > 0 && !selectedClientId) {
-              setSelectedClientId(clients[0].id);
-              setSelectedClient(clients[0]);
+            if (visibleClients.length > 0 && !selectedClientId) {
+              setSelectedClientId(visibleClients[0].id);
+              setSelectedClient(visibleClients[0]);
             }
           })
           .catch(error => {
@@ -755,7 +765,7 @@ const InstitutionCaregiverDashboard = () => {
             prescriptionsAPI.getPrescriptionsByClient(selectedClient.id).catch(() => []),
             consultationsAPI.getConsultationsByClient(selectedClient.id).catch(() => []),
             getClientDiagnostics(selectedClient.id).catch(() => []),
-            pharmacyAPI.getClientInvoices(selectedClient.id).catch(() => [])
+            pharmacyAPI.getInvoicesByClient(selectedClient.id).catch(() => [])
           ]);
           
           setClientPrescriptions(prescriptions);
@@ -1278,17 +1288,15 @@ const InstitutionCaregiverDashboard = () => {
                   <tr key={client.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
-                          <span className="text-white font-semibold text-sm">
-                            {(client.name || client.fullName || 'C').toString().split(' ').map(n => n[0]).join('')}
-                </span>
-              </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {client.name || client.fullName || 'Unknown Client'}
-              </div>
-                          <div className="text-sm text-gray-500">ID: {client.id.substring(0, 8)}...</div>
-            </div>
+                        <UserNameWithAvatar
+                          userId={client.id}
+                          userName={client.name || client.fullName || 'Unknown Client'}
+                          userType="client"
+                          profilePictureUrl={client.profilePictureUrl}
+                          size="medium"
+                          className="mr-4"
+                        />
+                        <div className="text-sm text-gray-500">ID: {client.id.substring(0, 8)}...</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -3516,200 +3524,45 @@ const InstitutionCaregiverDashboard = () => {
 
   // Activities Tab Renderer
   const renderActivitiesTab = () => {
-    const totalHoursToday = todayActivities.reduce((sum, a) => sum + (a.duration || 0), 0) / 60;
-    const totalHoursWeek = (activityStats?.totalDuration || 0) / 60;
+    console.log('🎯 ADL Logger - Activities tab rendering', { 
+      selectedClientId, 
+      selectedClient: selectedClient?.name || selectedClient?.fullName,
+      activeTab 
+    });
+    
+    // Check if a client is selected
+    if (!selectedClientId || !selectedClient) {
+    return (
+      <div className="space-y-6">
+            <div className="text-center py-12">
+              <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Client First</h3>
+            <p className="text-gray-600 mb-4">Please go to the Clients tab and select a client to log activities for them.</p>
+              <button
+              onClick={() => setActiveTab('clients')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+              Go to Clients Tab
+              </button>
+            </div>
+                      </div>
+      );
+    }
 
     return (
       <div className="space-y-6">
-        {/* Header with Quick Log Button */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Activities Dashboard</h2>
-            <p className="text-gray-600 text-sm mt-1">Track your care activities and performance</p>
-          </div>
-          <button
-            onClick={() => {
-              if (!selectedClientId) {
-                toast.error('Please select a client first from the Clients tab');
-                return;
-              }
-              setActivityFormData({ ...activityFormData, clientId: selectedClientId });
-              setShowActivityModal(true);
-            }}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Log Activity
-          </button>
-        </div>
-
-        {/* Performance Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Today's Activities</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{todayActivities.length}</p>
-            </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Activity className="h-6 w-6 text-blue-600" />
-          </div>
-        </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Hours Today</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{totalHoursToday.toFixed(1)}h</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Clock className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">This Week</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{activityStats?.totalActivities || 0}</p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <BarChart3 className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Hours</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{totalHoursWeek.toFixed(1)}h</p>
-              </div>
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Activity Buttons */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Log Activity</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {Object.entries(ACTIVITY_CATEGORIES).slice(0, 8).map(([key, category]) => {
-              const commonActivities = COMMON_ACTIVITIES[category] || [];
-              const firstActivity = commonActivities[0] || category;
-              
-              return (
-                <button
-                  key={key}
-                  onClick={() => handleQuickLogActivity(category, firstActivity)}
-                  className="flex flex-col items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all"
-                  title={`Log ${firstActivity}`}
-                >
-                  <div className="p-2 bg-gray-100 rounded-lg mb-2">
-                    {key === 'PERSONAL_CARE' && <User className="h-5 w-5 text-gray-600" />}
-                    {key === 'MEDICAL_CARE' && <Heart className="h-5 w-5 text-red-600" />}
-                    {key === 'MOBILITY' && <Activity className="h-5 w-5 text-blue-600" />}
-                    {key === 'NUTRITION' && <Pill className="h-5 w-5 text-green-600" />}
-                    {key === 'SOCIAL' && <MessageSquare className="h-5 w-5 text-purple-600" />}
-                    {key === 'HOUSEKEEPING' && <Home className="h-5 w-5 text-orange-600" />}
-                    {key === 'MEDICATION' && <Pill className="h-5 w-5 text-pink-600" />}
-                    {key === 'VITAL_SIGNS' && <Activity className="h-5 w-5 text-teal-600" />}
-                  </div>
-                  <span className="text-xs font-medium text-gray-700 text-center">{category}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Activity Timeline */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Activities</h3>
-            <button
-              onClick={() => loadActivities()}
-              className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
-            >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Refresh
-            </button>
-          </div>
-
-          {activities.length === 0 ? (
-            <div className="text-center py-12">
-              <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-gray-900 mb-2">No Activities Yet</h4>
-              <p className="text-gray-600 mb-4">Start logging your care activities to track your work</p>
-              <button
-                onClick={() => setShowActivityModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Log Your First Activity
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-[500px] overflow-y-auto">
-              {activities.map((activity) => (
-                <div key={activity.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                          {activity.category}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(activity.createdAt).toLocaleDateString()} at {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <h4 className="font-semibold text-gray-900">{activity.activityType}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-                      {activity.notes && (
-                        <p className="text-xs text-gray-500 mt-1 italic">Note: {activity.notes}</p>
-                      )}
-                      <div className="flex items-center gap-4 mt-2">
-                        <span className="text-xs text-gray-600">
-                          <Clock className="h-3 w-3 inline mr-1" />
-                          {activity.duration} min
-                        </span>
-                        <span className="text-xs text-gray-600">
-                          <User className="h-3 w-3 inline mr-1" />
-                          {activity.clientName}
-                        </span>
-                        {activity.qualityRating && (
-                          <span className="text-xs text-yellow-600">
-                            <Star className="h-3 w-3 inline mr-1 fill-yellow-400" />
-                            {activity.qualityRating}/5
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Activity Breakdown by Category */}
-        {activityStats && activityStats.totalActivities > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">This Week's Activity Breakdown</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {Object.entries(activityStats.byCategory || {}).map(([category, count]) => (
-                count > 0 && (
-                  <div key={category} className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600">{category}</p>
-                    <p className="text-2xl font-bold text-gray-900">{count}</p>
-                  </div>
-                )
-              ))}
-            </div>
-          </div>
-        )}
+        {/* ADL Logger Component */}
+        <AdlLogger 
+          clientId={selectedClientId}
+          clientName={selectedClient.name || selectedClient.fullName}
+          onActivityLogged={(log) => {
+            console.log('Activity logged:', log);
+            toast.success(`Activity logged for ${log.clientName}`);
+            
+            // Optional: Refresh any related data or update stats
+            // loadActivities(); // if you want to refresh the old activities
+          }}
+        />
       </div>
     );
   };
@@ -3742,7 +3595,7 @@ const InstitutionCaregiverDashboard = () => {
                   <Heart className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <h1 className="text-base font-bold text-gray-900">ElderX</h1>
+                  <h1 className="text-base font-bold text-gray-900">Care Master</h1>
                   <p className="text-xs text-gray-500">{dashboardConfig.title}</p>
                 </div>
               </div>
@@ -3783,7 +3636,7 @@ const InstitutionCaregiverDashboard = () => {
                     <Heart className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="text-base md:text-lg font-bold text-gray-900 truncate">ElderX</h1>
+                    <h1 className="text-base md:text-lg font-bold text-gray-900 truncate">Care Master</h1>
                     <p className="text-xs text-gray-500 truncate">Care Portal</p>
                   </div>
                 </div>
@@ -3872,15 +3725,19 @@ const InstitutionCaregiverDashboard = () => {
             </button>
             
             <button
-              onClick={() => setActiveTab('activities')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+              onClick={() => {
+                console.log('🎯 Activities tab button clicked!');
+                setActiveTab('activities');
+                if (isMobile) setSidebarCollapsed(true);
+              }}
+              className={`w-full flex items-center px-3 md:px-4 py-3 rounded-lg text-sm font-medium transition-colors touch-feedback ${
                 activeTab === 'activities'
                   ? 'bg-blue-50 text-blue-700'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <BarChart3 className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Activities'}
+              <Activity className={`h-5 w-5 shrink-0 ${sidebarCollapsed && !isMobile ? 'mx-auto' : 'mr-3'}`} />
+              {(!sidebarCollapsed || isMobile) && <span className="truncate">Activities</span>}
             </button>
             
             <button
@@ -3929,6 +3786,18 @@ const InstitutionCaregiverDashboard = () => {
             >
               <FileText className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
               {!sidebarCollapsed && 'Diagnostics'}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('help')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'help'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <HelpCircle className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Help & Support'}
             </button>
           </nav>
 
@@ -3986,6 +3855,7 @@ const InstitutionCaregiverDashboard = () => {
                 {activeTab === 'prescriptions' && 'Prescriptions'}
                 {activeTab === 'consultations' && 'Consultations'}
                 {activeTab === 'diagnostics' && 'Diagnostics'}
+                {activeTab === 'help' && 'Help & Support'}
               </h1>
               <p className="text-sm md:text-base text-gray-600 mt-1 truncate">
                 {activeTab === 'dashboard' && `Welcome back, ${caregiver?.name || userProfile?.name || 'User'}`}
@@ -4017,6 +3887,14 @@ const InstitutionCaregiverDashboard = () => {
                   />
                 </div>
               )}
+              <button 
+                onClick={() => setShowProfileSettings(true)}
+                className="flex items-center px-3 md:px-4 py-2 text-xs md:text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors touch-manipulation"
+                title="Profile Settings"
+              >
+                <User className="h-4 w-4 mr-2" />
+                <span className="hidden lg:inline">Profile</span>
+              </button>
               <button className="hidden md:flex items-center px-3 md:px-4 py-2 text-xs md:text-sm text-gray-600 hover:text-gray-900 transition-colors touch-manipulation">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 <span className="hidden lg:inline">Refresh</span>
@@ -4187,6 +4065,8 @@ const InstitutionCaregiverDashboard = () => {
           renderConsultationsTab()
         ) : activeTab === 'diagnostics' ? (
           renderDiagnosticsTab()
+        ) : activeTab === 'help' ? (
+          <HelpSupport userRole={userProfile?.userType || userProfile?.type || 'caregiver'} />
         ) : (
           <div className="space-y-4 md:space-y-6 lg:space-y-8">
             {/* General Care Provider Dashboard Section */}
@@ -6454,6 +6334,14 @@ const InstitutionCaregiverDashboard = () => {
           externalCallState={callConnectionState}
           localStream={localStream}
           remoteStream={remoteStream}
+        />
+      )}
+
+      {/* Profile Settings Modal */}
+      {showProfileSettings && (
+        <UserProfileSettings
+          userId={user?.uid}
+          onClose={() => setShowProfileSettings(false)}
         />
       )}
         </div>

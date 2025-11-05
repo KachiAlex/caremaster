@@ -1,4 +1,4 @@
-# ElderX Performance Optimization Plan
+# Care Master Performance Optimization Plan
 
 ## Current Issues
 - Some pages take too long to load

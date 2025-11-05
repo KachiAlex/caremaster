@@ -1,8 +1,8 @@
-// ElderX Service Worker for PWA functionality
-const CACHE_NAME = 'elderx-v1.0.6';
-const STATIC_CACHE = 'elderx-static-v7';
-const DYNAMIC_CACHE = 'elderx-dynamic-v7';
-const API_CACHE = 'elderx-api-v7';
+// Care Master Service Worker for PWA functionality
+const CACHE_NAME = 'Care Master-v1.0.6';
+const STATIC_CACHE = 'Care Master-static-v7';
+const DYNAMIC_CACHE = 'Care Master-dynamic-v7';
+const API_CACHE = 'Care Master-api-v7';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
@@ -248,7 +248,7 @@ async function queueRequestForRetry(request) {
 // Store queued request in IndexedDB
 async function storeQueuedRequest(requestData) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('elderx-offline-queue', 1);
+    const request = indexedDB.open('Care Master-offline-queue', 1);
     
     request.onerror = () => reject(request.error);
     
@@ -337,7 +337,7 @@ async function processQueuedRequests() {
 // Get queued requests from IndexedDB
 async function getQueuedRequests() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('elderx-offline-queue', 1);
+    const request = indexedDB.open('Care Master-offline-queue', 1);
     
     request.onerror = () => reject(request.error);
     
@@ -356,7 +356,7 @@ async function getQueuedRequests() {
 // Remove queued request from IndexedDB
 async function removeQueuedRequest(timestamp) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('elderx-offline-queue', 1);
+    const request = indexedDB.open('Care Master-offline-queue', 1);
     
     request.onerror = () => reject(request.error);
     
@@ -377,7 +377,7 @@ self.addEventListener('push', (event) => {
   console.log('Push notification received:', event);
   
   const options = {
-    body: event.data ? event.data.text() : 'New notification from ElderX',
+    body: event.data ? event.data.text() : 'New notification from Care Master',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',
     vibrate: [100, 50, 100],
@@ -388,7 +388,7 @@ self.addEventListener('push', (event) => {
     actions: [
       {
         action: 'open',
-        title: 'Open ElderX',
+        title: 'Open Care Master',
         icon: '/icons/icon-192x192.png'
       },
       {
@@ -402,7 +402,7 @@ self.addEventListener('push', (event) => {
   };
   
   event.waitUntil(
-    self.registration.showNotification('ElderX', options)
+    self.registration.showNotification('Care Master', options)
   );
 });
 
@@ -441,4 +441,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('ElderX Service Worker loaded successfully');
+console.log('Care Master Service Worker loaded successfully');

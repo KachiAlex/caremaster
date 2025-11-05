@@ -117,7 +117,7 @@ exports.migrateUserRoles = functions.https.onRequest(async (req, res) => {
             try {
                 // Infer role from existing data
                 let inferredRole = 'caregiver';
-                if (userData.email === 'superadmin@elderx.com') {
+                if (userData.email === 'superadmin@Care Master.com') {
                     inferredRole = 'super-admin';
                 }
                 else if (userData.role) {

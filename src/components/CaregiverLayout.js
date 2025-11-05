@@ -79,7 +79,7 @@ const CaregiverLayout = () => {
                   <Heart className="h-8 w-8 text-green-600" />
                 </div>
                 <div className="ml-3">
-                  <h1 className="text-xl font-bold text-gray-900">ElderX Caregiver</h1>
+                  <h1 className="text-xl font-bold text-gray-900">Care Master Caregiver</h1>
                 </div>
               </div>
             </div>
@@ -119,7 +119,7 @@ const CaregiverLayout = () => {
                     <Heart className="h-8 w-8 text-green-600" />
                   </div>
                   <div className="ml-3">
-                    <h1 className="text-xl font-bold text-gray-900">ElderX Caregiver</h1>
+                    <h1 className="text-xl font-bold text-gray-900">Care Master Caregiver</h1>
                   </div>
                 </div>
               </div>

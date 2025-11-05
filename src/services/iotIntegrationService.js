@@ -1,4 +1,4 @@
-// IoT Integration Service for ElderX
+// IoT Integration Service for Care Master
 import aiService from './aiService';
 
 class IoTIntegrationService {
@@ -99,10 +99,10 @@ class IoTIntegrationService {
         connected: true,
         broker: this.config.mqttBroker,
         topics: [
-          'elderx/devices/+',
-          'elderx/sensors/+',
-          'elderx/medical/+',
-          'elderx/wearables/+'
+          'Care Master/devices/+',
+          'Care Master/sensors/+',
+          'Care Master/medical/+',
+          'Care Master/wearables/+'
         ]
       };
 
@@ -221,7 +221,7 @@ class IoTIntegrationService {
       device.status = 'connected';
       device.connection = {
         broker: this.config.mqttBroker,
-        topic: `elderx/devices/${device.id}`,
+        topic: `Care Master/devices/${device.id}`,
         qos: 1
       };
 

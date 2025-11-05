@@ -300,7 +300,7 @@ class SecurityMonitoringService {
         events.splice(0, events.length - 1000);
       }
       
-      localStorage.setItem('elderx_security_events', JSON.stringify(events));
+      localStorage.setItem('Care Master_security_events', JSON.stringify(events));
     } catch (error) {
       logger.error('Failed to store security event', { error: error.message });
     }
@@ -309,7 +309,7 @@ class SecurityMonitoringService {
   // Get stored events
   getStoredEvents() {
     try {
-      const stored = localStorage.getItem('elderx_security_events');
+      const stored = localStorage.getItem('Care Master_security_events');
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       logger.error('Failed to get stored events', { error: error.message });
@@ -439,11 +439,11 @@ class SecurityMonitoringService {
   }
 
   getSessionId() {
-    return sessionStorage.getItem('elderx_session_id') || 'unknown';
+    return sessionStorage.getItem('Care Master_session_id') || 'unknown';
   }
 
   getLastActivityTime() {
-    return parseInt(localStorage.getItem('elderx_last_activity') || Date.now());
+    return parseInt(localStorage.getItem('Care Master_last_activity') || Date.now());
   }
 
   isServiceRunning(service) {

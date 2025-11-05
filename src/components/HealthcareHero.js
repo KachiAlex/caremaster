@@ -33,7 +33,7 @@ const HealthcareHero = () => {
             Your Health, Our Priority
           </h1>
           <p className="mt-6 max-w-3xl mx-auto text-lg text-gray-600">
-            ElderX provides comprehensive healthcare management for seniors, 
+            Care Master provides comprehensive healthcare management for seniors, 
             connecting you with caregivers and healthcare providers for better health outcomes.
           </p>
           <div className="mt-8 space-y-4">

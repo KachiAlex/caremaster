@@ -269,7 +269,7 @@ const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
                     Custom URL Slug
                   </h4>
                   <p className="text-sm text-gray-600 mt-1">
-                    Create a memorable URL like: elderx.com/institution/your-company
+                    Create a memorable URL like: Care Master.com/institution/your-company
                   </p>
                 </div>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -323,7 +323,7 @@ const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
                     Custom Domain
                   </h4>
                   <p className="text-sm text-gray-600 mt-1">
-                    Use your own domain like: your-company.elderx.com or yourcompany.com
+                    Use your own domain like: your-company.Care Master.com or yourcompany.com
                   </p>
                 </div>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
@@ -340,7 +340,7 @@ const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
                     type="text"
                     value={customDomain}
                     onChange={(e) => handleDomainChange(e.target.value)}
-                    placeholder="your-company.elderx.com or yourcompany.com"
+                    placeholder="your-company.Care Master.com or yourcompany.com"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {validationErrors.domain && (

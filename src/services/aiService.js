@@ -1,4 +1,4 @@
-// AI Service for ElderX - Advanced AI Integration
+// AI Service for Care Master - Advanced AI Integration
 class AIService {
   constructor() {
     this.isInitialized = false;
@@ -125,7 +125,7 @@ class AIService {
           messages: [
             {
               role: 'system',
-              content: `You are an AI assistant for ElderX, a healthcare management platform for elderly care. 
+              content: `You are an AI assistant for Care Master, a healthcare management platform for elderly care. 
               You help caregivers, doctors, and patients with healthcare tasks, scheduling, medication management, 
               and emergency situations. Be professional, caring, and helpful. Current context: ${JSON.stringify(context)}`
             },

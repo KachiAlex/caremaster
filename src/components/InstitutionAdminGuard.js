@@ -37,7 +37,9 @@ const InstitutionAdminGuard = ({ children }) => {
 
         // Check if user has institution admin role (support multi-role)
         const userRoles = Array.isArray(userProfile?.roles) ? userProfile.roles : [userProfile?.userType || userProfile?.type];
-        const isInstitutionAdmin = userRoles.includes('admin') || userProfile?.institutionAdmin === true;
+        const isInstitutionAdmin = userRoles.includes('admin') || 
+                                   userProfile?.institutionAdmin === true ||
+                                   userProfile?.adminRoleAssigned === true;
         const hasInstitutionId = userProfile?.institutionId;
 
         console.log('🔒 InstitutionAdminGuard check:', {

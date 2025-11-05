@@ -10,7 +10,7 @@ const HealthcareFooter = () => {
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center mb-4">
               <Heart className="h-8 w-8 text-blue-400 mr-3" />
-              <h3 className="text-xl font-bold text-white">ElderX</h3>
+              <h3 className="text-xl font-bold text-white">Care Master</h3>
             </div>
             <p className="text-gray-300 mb-4">
               Empowering seniors with comprehensive healthcare management tools. 
@@ -53,7 +53,7 @@ const HealthcareFooter = () => {
               </li>
               <li className="flex items-center">
                 <Mail className="h-5 w-5 text-gray-400 mr-3" />
-                <span className="text-base text-gray-300">support@elderx.com</span>
+                <span className="text-base text-gray-300">support@Care Master.com</span>
               </li>
               <li className="flex items-center">
                 <MapPin className="h-5 w-5 text-gray-400 mr-3" />
@@ -65,7 +65,7 @@ const HealthcareFooter = () => {
 
         <div className="mt-8 border-t border-gray-800 pt-8">
           <p className="text-base text-gray-400 text-center">
-            &copy; 2024 ElderX. All rights reserved. | Privacy Policy | Terms of Service
+            &copy; 2024 Care Master. All rights reserved. | Privacy Policy | Terms of Service
           </p>
         </div>
       </div>

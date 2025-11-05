@@ -1,8 +1,8 @@
-# Create Admin Account for ElderX
+# Create Admin Account for Care Master
 
 ## 🔐 Admin Login Details
 
-Currently, there is **no default admin account** set up in the ElderX system. You need to create one.
+Currently, there is **no default admin account** set up in the Care Master system. You need to create one.
 
 ---
 
@@ -12,8 +12,8 @@ Currently, there is **no default admin account** set up in the ElderX system. Yo
 1. Go to [Firebase Console](https://console.firebase.google.com/project/elderx-f5c2b/authentication/users)
 2. Click **"Add User"**
 3. Create admin account:
-   - **Email:** `admin@elderx.com`
-   - **Password:** `AdminElderX2024!`
+   - **Email:** `admin@Care Master.com`
+   - **Password:** `AdminCare Master2024!`
 
 ### **Step 2: Set Admin Role in Firestore**
 1. Go to [Firestore Database](https://console.firebase.google.com/project/elderx-f5c2b/firestore/data)
@@ -25,7 +25,7 @@ Currently, there is **no default admin account** set up in the ElderX system. Yo
      "userType": "admin",
      "type": "admin",
      "role": "admin",
-     "displayName": "ElderX Administrator",
+     "displayName": "Care Master Administrator",
      "isAdmin": true,
      "permissions": ["all"]
    }
@@ -50,8 +50,8 @@ I can create a simple admin account creation function:
 
 ### **Recommended Admin Credentials:**
 ```
-Email: admin@elderx.com
-Password: AdminElderX2024!
+Email: admin@Care Master.com
+Password: AdminCare Master2024!
 ```
 
 ### **To Create This Account:**
@@ -69,7 +69,7 @@ Password: AdminElderX2024!
 
 ### **After Creating Real Admin:**
 - **Visit:** https://elderx-f5c2b.web.app/admin/login
-- **Login with:** `admin@elderx.com` / `AdminElderX2024!`
+- **Login with:** `admin@Care Master.com` / `AdminCare Master2024!`
 - **Result:** Full admin access without warnings
 
 ---

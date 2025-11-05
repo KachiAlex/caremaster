@@ -1,7 +1,7 @@
 # Universal Call Functionality Implementation
 
 ## Overview
-Successfully implemented incoming and outgoing call functionality across **ALL user dashboards** in the ElderX platform. Every user type can now receive calls from other users, establishing a comprehensive communication system.
+Successfully implemented incoming and outgoing call functionality across **ALL user dashboards** in the Care Master platform. Every user type can now receive calls from other users, establishing a comprehensive communication system.
 
 ## Dashboards Updated (6 Major Dashboards)
 

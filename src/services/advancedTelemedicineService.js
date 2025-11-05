@@ -20,7 +20,7 @@ class AdvancedTelemedicineService {
     // Advanced configuration
     this.config = {
       appId: process.env.REACT_APP_AGORA_APP_ID,
-      channel: 'elderx_advanced',
+      channel: 'Care Master_advanced',
       token: null,
       uid: null,
       mode: 'rtc',

@@ -1,4 +1,4 @@
-// Run this script in your BROWSER CONSOLE while on the ElderX site
+// Run this script in your BROWSER CONSOLE while on the Care Master site
 // This will create the user for chinyere@bulah.com
 
 (async function createUser() {

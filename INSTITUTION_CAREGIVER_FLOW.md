@@ -1,7 +1,7 @@
 # Institution Caregiver Flow - Implementation Guide
 
 ## Overview
-This document outlines the complete implementation of the institution caregiver onboarding and dashboard system for ElderX.
+This document outlines the complete implementation of the institution caregiver onboarding and dashboard system for Care Master.
 
 ## Architecture
 
@@ -47,7 +47,7 @@ Features:
 - Auto-redirect to dashboard upon completion
 
 #### B. **InstitutionCaregiverDashboard** (`src/pages/InstitutionCaregiverDashboard.js`)
-Full-featured caregiver dashboard copied from the main ElderX caregiver dashboard with:
+Full-featured caregiver dashboard copied from the main Care Master caregiver dashboard with:
 - Patient management
 - Task scheduling
 - Appointments

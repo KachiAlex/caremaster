@@ -60,14 +60,9 @@ const Services = lazy(() => import('./pages/Services'));
 const ClientCaregivers = lazy(() => import('./pages/PatientCaregivers'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 // All onboarding is now integrated into Auth.js
-// Deprecated admin pages removed from bundle
+// Standalone admin pages removed - Institution Admin is the primary admin interface
 const SystemStatus = lazy(() => import('./pages/SystemStatus'));
 const MedicalDocuments = lazy(() => import('./pages/MedicalDocuments'));
-const AdminClientDatabase = lazy(() => import('./pages/AdminPatientDatabase'));
-const AdminCaregiverManagement = lazy(() => import('./pages/AdminCaregiverManagement'));
-const NewAdminLogin = lazy(() => import('./pages/NewAdminLogin'));
-const NewAdminDashboard = lazy(() => import('./pages/NewAdminDashboard'));
-const AdminClientFeedback = lazy(() => import('./pages/AdminPatientFeedback'));
 const ServiceProviderDashboard = lazy(() => import('./pages/ServiceProviderDashboard'));
 const RouteOptimization = lazy(() => import('./pages/RouteOptimization'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
@@ -592,14 +587,8 @@ function App() {
         element={user ? <CaregiverOnboarding /> : <Navigate to="/caregiver/login" replace />} 
       />
       
-      {/* Admin routes deprecated: redirect to institution landing */}
+      {/* Admin routes deprecated: redirect to institution admin */}
       <Route path="/admin/*" element={<Navigate to="/institution-admin/dashboard" replace />} />
-      
-      {/* Alternative Admin Login Route */}
-      <Route 
-        path="/new-admin-login" 
-        element={<NewAdminLogin />} 
-      />
       
       {/* Institution entry: partners page OR specific institution landing when ?institution= is present */}
       <Route path="/institution" element={<InstitutionEntry />} />
@@ -670,7 +659,7 @@ function SignInRouteHandler() {
   }
   
   // Check for admin session override
-  const hasAdminSession = sessionStorage.getItem('elderx_admin_session') === 'true';
+  const hasAdminSession = sessionStorage.getItem('Care Master_admin_session') === 'true';
   
   // Redirect admins to admin dashboard (standalone admins without institution)
   if ((userRole === 'admin' || hasAdminSession) && !userProfile?.institutionId) {
@@ -719,7 +708,7 @@ function RoleBasedDashboardRoute() {
   }
   
   // Check for admin session override
-  const hasAdminSession = sessionStorage.getItem('elderx_admin_session') === 'true';
+  const hasAdminSession = sessionStorage.getItem('Care Master_admin_session') === 'true';
   
   // Redirect admins to admin dashboard (standalone admins without institution)
   if ((userRole === 'admin' || hasAdminSession) && !userProfile?.institutionId) {

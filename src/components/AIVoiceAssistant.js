@@ -51,7 +51,7 @@ const AIVoiceAssistant = ({ isOpen, onClose, onCommand }) => {
   const getWelcomeMessage = () => {
     const messages = {
       general: {
-        text: "Hello! I'm your AI assistant for ElderX. I can help you with calls, messages, scheduling, patient care, and more. How can I assist you today?",
+        text: "Hello! I'm your AI assistant for Care Master. I can help you with calls, messages, scheduling, patient care, and more. How can I assist you today?",
         suggestions: [
           "Make a call to John Smith",
           "Check my schedule for today",

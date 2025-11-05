@@ -6,7 +6,7 @@
 1. Go to: https://console.firebase.google.com/project/elderx-f5c2b/authentication/users
 2. Click **"Add User"** button
 3. Enter:
-   - **Email**: `superadmin@elderx.com` (or your preferred email)
+   - **Email**: `superadmin@Care Master.com` (or your preferred email)
    - **Password**: `SuperAdmin2024!` (change this after first login)
 4. Click **"Add User"**
 5. **COPY THE USER ID (UID)** - You'll need this for the next steps
@@ -21,7 +21,7 @@
 | Field | Type | Value |
 |-------|------|-------|
 | `id` | string | (paste the UID again) |
-| `email` | string | `superadmin@elderx.com` |
+| `email` | string | `superadmin@Care Master.com` |
 | `displayName` | string | `Super Administrator` |
 | `userType` | string | `admin` |
 | `type` | string | `admin` |
@@ -74,7 +74,7 @@ node create-super-admin.js
 ### Step 4: Login and Test
 1. Go to: https://elderx-f5c2b.web.app/super-admin/login
 2. Login with:
-   - Email: `superadmin@elderx.com`
+   - Email: `superadmin@Care Master.com`
    - Password: `SuperAdmin2024!`
 3. You should be redirected to `/super-admin/dashboard`
 4. ✅ Success!
@@ -86,7 +86,7 @@ node create-super-admin.js
 **Login URL**: `https://elderx-f5c2b.web.app/super-admin/login`
 
 **Default Credentials** (if you followed the example above):
-- Email: `superadmin@elderx.com`
+- Email: `superadmin@Care Master.com`
 - Password: `SuperAdmin2024!`
 
 **⚠️ IMPORTANT**: Change your password after first login!

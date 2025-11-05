@@ -1,4 +1,4 @@
-// Haptic Feedback Service for ElderX
+// Haptic Feedback Service for Care Master
 class HapticService {
   constructor() {
     this.isSupported = 'vibrate' in navigator;

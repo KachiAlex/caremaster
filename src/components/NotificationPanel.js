@@ -9,6 +9,7 @@ import {
   getUnreadNotificationCount
 } from '../api/notificationsAPI';
 import { toast } from 'react-toastify';
+import UserNameWithAvatar from './UserNameWithAvatar';
 
 const NotificationPanel = ({ userId }) => {
   const navigate = useNavigate();
@@ -187,9 +188,18 @@ const NotificationPanel = ({ userId }) => {
                             {notification.message}
                           </p>
                           {notification.metadata?.patientName && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Patient: {notification.metadata.patientName}
-                            </p>
+                            <div className="flex items-center mt-1">
+                              <span className="text-xs text-gray-500 mr-2">Patient:</span>
+                              <UserNameWithAvatar
+                                userId={notification.metadata.patientId}
+                                userName={notification.metadata.patientName}
+                                userType="client"
+                                profilePictureUrl={notification.metadata.patientProfilePicture}
+                                size="small"
+                                showName={true}
+                                nameClassName="text-xs text-gray-500"
+                              />
+                            </div>
                           )}
                           <p className="text-xs text-gray-400 mt-2">
                             {formatTime(notification.createdAt)}

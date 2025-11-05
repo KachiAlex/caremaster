@@ -1,7 +1,7 @@
 # Pharmacy Management System
 
 ## Overview
-The Pharmacy Management System is an integrated module within the ElderX institution dashboard that allows pharmacists to manage prescriptions, track inventory, generate invoices, and maintain medication dispensing records.
+The Pharmacy Management System is an integrated module within the Care Master institution dashboard that allows pharmacists to manage prescriptions, track inventory, generate invoices, and maintain medication dispensing records.
 
 ## Features
 
@@ -325,7 +325,7 @@ match /medications/{medicationId} {
 10. **Analytics Dashboard** - Advanced reporting and insights
 
 ### Integration Points:
-- **Wallet System** - Direct payment through ElderX wallet
+- **Wallet System** - Direct payment through Care Master wallet
 - **Messaging** - Chat with doctors for prescription clarification
 - **Notifications** - Alert clients when prescriptions are ready
 - **Care Logs** - Auto-log medication dispensing in care records

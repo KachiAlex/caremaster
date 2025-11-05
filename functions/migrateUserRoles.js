@@ -26,7 +26,7 @@ const ROLES = {
 
 function inferRole(userData) {
   // Check for superadmin first
-  if (userData.email === 'superadmin@elderx.com') return 'super-admin';
+  if (userData.email === 'superadmin@Care Master.com') return 'super-admin';
   
   // Priority 1: Explicit role field
   if (userData.role) return userData.role;

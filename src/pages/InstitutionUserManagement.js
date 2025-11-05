@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
+import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { 
   Users, 
   UserPlus, 
@@ -276,15 +277,15 @@ const InstitutionUserManagement = () => {
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-blue-600 font-medium">
-                          {user.firstName[0]}{user.lastName[0]}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
-                        </div>
+                      <UserNameWithAvatar
+                        userId={user.id}
+                        userName={`${user.firstName} ${user.lastName}`}
+                        userType={user.role || 'user'}
+                        profilePictureUrl={user.profilePictureUrl}
+                        size="medium"
+                        className="mr-4"
+                      />
+                      <div>
                         <div className="text-sm text-gray-500 flex items-center">
                           <Mail className="h-3 w-3 mr-1" />
                           {user.email}

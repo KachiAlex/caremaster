@@ -1,6 +1,6 @@
 {
-  "name": "ElderX - Elderly Care Platform",
-  "short_name": "ElderX",
+  "name": "Care Master",
+  "short_name": "Care Master",
   "description": "Comprehensive platform for elderly care management with real-time communication",
   "start_url": "/",
   "display": "standalone",
@@ -19,8 +19,8 @@
   "screenshots": [],
   "shortcuts": [
     {
-      "name": "Messages",
-      "short_name": "Messages",
+      "name": "Care Master",
+      "short_name": "Care Master",
       "description": "Quick access to messaging",
       "url": "/service-provider/messages",
       "icons": [
@@ -28,8 +28,8 @@
       ]
     },
     {
-      "name": "Calls",
-      "short_name": "Calls",
+      "name": "Care Master",
+      "short_name": "Care Master",
       "description": "Quick access to calls",
       "url": "/service-provider/calls",
       "icons": [
@@ -37,8 +37,8 @@
       ]
     },
     {
-      "name": "Patients",
-      "short_name": "Patients",
+      "name": "Care Master",
+      "short_name": "Care Master",
       "description": "Quick access to patient management",
       "url": "/service-provider/patients",
       "icons": [

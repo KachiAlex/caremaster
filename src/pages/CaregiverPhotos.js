@@ -25,6 +25,7 @@ import {
 
 import fileStorageService from '../services/fileStorageService';
 import { useUser } from '../contexts/UserContext';
+import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { createCareLog, getCareLogsByCaregiver } from '../api/careLogsAPI';
 import { getClientsByCaregiver } from '../api/patientsAPI';
 import { toast } from 'react-toastify';
@@ -399,18 +400,16 @@ const CaregiverPhotos = () => {
                     {/* Patient Info */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-8 w-8">
-                          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User className="h-4 w-4 text-blue-600" />
-                          </div>
-                        </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {photo.patientName || 'Unknown Patient'}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {photo.location || 'No location'}
-                          </div>
+                        <UserNameWithAvatar
+                          userId={photo.patientId}
+                          userName={photo.patientName || 'Unknown Patient'}
+                          userType="client"
+                          profilePictureUrl={photo.patientProfilePicture}
+                          size="small"
+                          className="mr-3"
+                        />
+                        <div className="text-sm text-gray-500">
+                          {photo.location || 'No location'}
                         </div>
                       </div>
                     </td>

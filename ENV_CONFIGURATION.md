@@ -1,4 +1,4 @@
-# ElderX Environment Configuration Setup
+# Care Master Environment Configuration Setup
 
 ## 🔧 Required Environment Variables
 
@@ -6,10 +6,10 @@ To fix the **encryption key warning** and improve security, you need to create o
 
 ### **Step 1: Create `.env.local` File**
 
-Create a file named `.env.local` in your project root (`c:\elderx\.env.local`) with the following content:
+Create a file named `.env.local` in your project root (`c:\Care Master\.env.local`) with the following content:
 
 ```env
-# ElderX Environment Configuration
+# Care Master Environment Configuration
 # Generated: October 9, 2025
 
 # Firebase Configuration (Production)
@@ -22,10 +22,10 @@ REACT_APP_FIREBASE_APP_ID=1:987610993096:web:97c82732772d1223d3f0fd
 
 # Security Configuration
 # Strong encryption key (32+ characters with uppercase, lowercase, numbers, special chars)
-REACT_APP_ENCRYPTION_KEY=ElderX2024!SecureKey#Healthcare$HIPAA%Compliant&2025
+REACT_APP_ENCRYPTION_KEY=Care Master2024!SecureKey#Healthcare$HIPAA%Compliant&2025
 
 # JWT Secret for token generation
-REACT_APP_JWT_SECRET=ElderX_JWT_Secret_2024!Healthcare#Secure$Token%Generation
+REACT_APP_JWT_SECRET=Care Master_JWT_Secret_2024!Healthcare#Secure$Token%Generation
 
 # Session Configuration
 REACT_APP_SESSION_TIMEOUT=3600
@@ -53,7 +53,7 @@ The encryption key MUST meet these requirements:
 - ✅ **At least one number (0-9)**
 - ✅ **At least one special character (!@#$%^&*...)**
 
-The provided key meets all these requirements: `ElderX2024!SecureKey#Healthcare$HIPAA%Compliant&2025`
+The provided key meets all these requirements: `Care Master2024!SecureKey#Healthcare$HIPAA%Compliant&2025`
 
 ### **Step 3: Restart Development Server**
 

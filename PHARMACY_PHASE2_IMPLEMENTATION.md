@@ -351,7 +351,7 @@ await pharmacyNotificationService.sendPrescriptionReadyEmail(
   selectedClient.email,
   selectedClient.name,
   [prescription],
-  { name: 'ElderX Pharmacy', address: institutionData.address }
+  { name: 'Care Master Pharmacy', address: institutionData.address }
 );
 ```
 

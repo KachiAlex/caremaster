@@ -2,7 +2,7 @@
 
 ## Overview
 
-The ElderX platform has a comprehensive role-based documentation system for caregivers, nurses, and doctors to document client care.
+The Care Master platform has a comprehensive role-based documentation system for caregivers, nurses, and doctors to document client care.
 
 ---
 

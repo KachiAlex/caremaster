@@ -1,7 +1,7 @@
 # Mobile Responsiveness Improvements
 
 ## Overview
-Comprehensive mobile responsiveness enhancements have been implemented across the ElderX application to provide an optimal experience on all devices.
+Comprehensive mobile responsiveness enhancements have been implemented across the Care Master application to provide an optimal experience on all devices.
 
 ## What Was Implemented
 

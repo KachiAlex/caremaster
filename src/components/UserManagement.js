@@ -16,10 +16,18 @@ import {
   Phone,
   Calendar,
   MapPin,
-  Briefcase
+  Briefcase,
+  UserPlus,
+  Heart,
+  Save,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-import { getAllUsers, updateUser, deleteUser } from '../api/usersAPI';
+import { getAllUsers, updateUser, deleteUser, createUser } from '../api/usersAPI';
 import { toast } from 'react-toastify';
+import UserDataFixer from './UserDataFixer';
+import ProfilePicture from './ProfilePicture';
+import UserNameWithAvatar from './UserNameWithAvatar';
 
 const UserManagement = ({ institutionId }) => {
   const [users, setUsers] = useState([]);
@@ -31,6 +39,31 @@ const UserManagement = ({ institutionId }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingRoles, setEditingRoles] = useState([]);
+  const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [showAddCaregiverModal, setShowAddCaregiverModal] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    address: '',
+    emergencyContact: '',
+    emergencyPhone: '',
+    medicalConditions: '',
+    medications: '',
+    allergies: '',
+    careLevel: 'basic',
+    hourlyRate: '',
+    monthlyRate: '',
+    specializations: '',
+    experience: '',
+    certifications: '',
+    availability: 'full-time',
+    profilePictureUrl: ''
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const availableRoles = [
     { value: 'admin', label: 'Administrator', color: 'red', icon: Shield },
@@ -198,6 +231,140 @@ const UserManagement = ({ institutionId }) => {
     return roleConfig?.label || role;
   };
 
+  const handleInputChange = (field, value) => {
+    setNewUserForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const resetForm = () => {
+    setNewUserForm({
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+      address: '',
+      emergencyContact: '',
+      emergencyPhone: '',
+      medicalConditions: '',
+      medications: '',
+      allergies: '',
+      careLevel: 'basic',
+      hourlyRate: '',
+      monthlyRate: '',
+      specializations: '',
+      experience: '',
+      certifications: '',
+      availability: 'full-time',
+      profilePictureUrl: ''
+    });
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  const validateForm = (userType) => {
+    const { name, email, phone, password, confirmPassword } = newUserForm;
+
+    if (!name.trim()) {
+      toast.error('Name is required');
+      return false;
+    }
+
+    if (!email.trim()) {
+      toast.error('Email is required');
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+
+    if (!phone.trim()) {
+      toast.error('Phone number is required');
+      return false;
+    }
+
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return false;
+    }
+
+    if (userType === 'caregiver') {
+      const { hourlyRate, monthlyRate } = newUserForm;
+      if (!hourlyRate && !monthlyRate) {
+        toast.error('Please set either hourly rate or monthly rate for caregiver');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleCreateUser = async (userType) => {
+    if (!validateForm(userType)) return;
+
+    try {
+      // Generate a unique ID for the user
+      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const userData = {
+        id: userId,
+        name: newUserForm.name.trim(),
+        email: newUserForm.email.trim().toLowerCase(),
+        phone: newUserForm.phone.trim(),
+        roles: [userType],
+        userType: userType,
+        status: 'active',
+        institutionId: institutionId,
+        profilePictureUrl: newUserForm.profilePictureUrl || '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Add role-specific data
+      if (userType === 'client') {
+        userData.clientData = {
+          address: newUserForm.address.trim(),
+          emergencyContact: newUserForm.emergencyContact.trim(),
+          emergencyPhone: newUserForm.emergencyPhone.trim(),
+          medicalConditions: newUserForm.medicalConditions.trim(),
+          medications: newUserForm.medications.trim(),
+          allergies: newUserForm.allergies.trim(),
+          careLevel: newUserForm.careLevel
+        };
+      } else if (userType === 'caregiver') {
+        userData.caregiverData = {
+          hourlyRate: newUserForm.hourlyRate ? parseFloat(newUserForm.hourlyRate) : null,
+          monthlyRate: newUserForm.monthlyRate ? parseFloat(newUserForm.monthlyRate) : null,
+          specializations: newUserForm.specializations.trim(),
+          experience: newUserForm.experience.trim(),
+          certifications: newUserForm.certifications.trim(),
+          availability: newUserForm.availability
+        };
+      }
+
+      // Create the user in Firestore
+      await createUser(userData);
+      
+      toast.success(`${userType === 'client' ? 'Client' : 'Caregiver'} created successfully!`);
+      resetForm();
+      setShowAddClientModal(false);
+      setShowAddCaregiverModal(false);
+      loadUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error(`Failed to create ${userType}: ${error.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -207,19 +374,47 @@ const UserManagement = ({ institutionId }) => {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Users className="h-7 w-7 text-blue-600 mr-3" />
-            User Management
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage users and assign roles ({filteredUsers.length} users)
-          </p>
+    <div className="space-y-6">
+      {/* User Data Fixer Tool */}
+      <UserDataFixer institutionId={institutionId} />
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              <Users className="h-7 w-7 text-blue-600 mr-3" />
+              User Management
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Manage users and assign roles ({filteredUsers.length} users)
+            </p>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                resetForm();
+                setShowAddClientModal(true);
+              }}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+            >
+              <Heart className="h-4 w-4 mr-2" />
+              Add Client
+            </button>
+            <button
+              onClick={() => {
+                resetForm();
+                setShowAddCaregiverModal(true);
+              }}
+              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Caregiver
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -296,11 +491,15 @@ const UserManagement = ({ institutionId }) => {
                   <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-4">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                          {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-semibold text-gray-900">{user.name || 'Unknown User'}</p>
+                        <UserNameWithAvatar
+                          userId={user.id}
+                          userName={user.name || 'Unknown User'}
+                          userType={userRoles[0] || user.userType || 'user'}
+                          profilePictureUrl={user.profilePictureUrl}
+                          size="small"
+                          className="mr-3"
+                        />
+                        <div className="ml-2">
                           <p className="text-xs text-gray-500">{user.id.substring(0, 8)}</p>
                         </div>
                       </div>
@@ -458,7 +657,17 @@ const UserManagement = ({ institutionId }) => {
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
               <div className="mb-6">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">User Information</h4>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center">
+                    <UserNameWithAvatar
+                      userId={selectedUser.id}
+                      userName={selectedUser.name || 'Unknown User'}
+                      userType={selectedUser.userType || 'user'}
+                      profilePictureUrl={selectedUser.profilePictureUrl}
+                      size="medium"
+                      className="mb-2"
+                    />
+                  </div>
                   <div className="flex items-center text-sm">
                     <Mail className="h-4 w-4 text-gray-400 mr-2" />
                     <span className="text-gray-700">{selectedUser.email}</span>
@@ -537,6 +746,466 @@ const UserManagement = ({ institutionId }) => {
           </div>
         </div>
       )}
+
+      {/* Add Client Modal */}
+      {showAddClientModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Heart className="h-6 w-6 text-white" />
+                <div>
+                  <h3 className="text-xl font-bold text-white">Add New Client</h3>
+                  <p className="text-green-100 text-sm">Create a new client profile</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddClientModal(false)}
+                className="text-white hover:bg-green-500 rounded-lg p-2 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Profile Picture Section */}
+                <div className="md:col-span-2 flex items-center space-x-6 mb-4 p-4 bg-gray-50 rounded-lg">
+                  <ProfilePicture
+                    userId="temp_client"
+                    userType="client"
+                    currentImageUrl={newUserForm.profilePictureUrl}
+                    userName={newUserForm.name || 'New Client'}
+                    onImageChange={(url) => handleInputChange('profilePictureUrl', url)}
+                    onImageRemove={() => handleInputChange('profilePictureUrl', '')}
+                    size="large"
+                    editable={true}
+                    showUploadButton={true}
+                  />
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-1">Profile Picture</h4>
+                    <p className="text-xs text-gray-500 mb-2">Upload a profile picture for the client</p>
+                    <div className="text-xs text-gray-400">
+                      <p>• Supported formats: JPEG, PNG, WebP</p>
+                      <p>• Maximum size: 5MB</p>
+                      <p>• Recommended: 400x400 pixels</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Basic Information */}
+                <div className="md:col-span-2">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Basic Information</h4>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    value={newUserForm.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Enter full name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    value={newUserForm.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Enter email address"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                  <input
+                    type="tel"
+                    value={newUserForm.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Care Level</label>
+                  <select
+                    value={newUserForm.careLevel}
+                    onChange={(e) => handleInputChange('careLevel', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="basic">Basic Care</option>
+                    <option value="intermediate">Intermediate Care</option>
+                    <option value="advanced">Advanced Care</option>
+                    <option value="specialized">Specialized Care</option>
+                  </select>
+                </div>
+
+                {/* Password Fields */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newUserForm.password}
+                      onChange={(e) => handleInputChange('password', e.target.value)}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="Enter password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password *</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={newUserForm.confirmPassword}
+                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="Confirm password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Medical Information */}
+                <div className="md:col-span-2">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Medical Information</h4>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <input
+                    type="text"
+                    value={newUserForm.address}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Enter address"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                  <input
+                    type="text"
+                    value={newUserForm.emergencyContact}
+                    onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Emergency contact name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
+                  <input
+                    type="tel"
+                    value={newUserForm.emergencyPhone}
+                    onChange={(e) => handleInputChange('emergencyPhone', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Emergency contact phone"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Medical Conditions</label>
+                  <textarea
+                    value={newUserForm.medicalConditions}
+                    onChange={(e) => handleInputChange('medicalConditions', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="List medical conditions"
+                    rows="2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Medications</label>
+                  <textarea
+                    value={newUserForm.medications}
+                    onChange={(e) => handleInputChange('medications', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="List current medications"
+                    rows="2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
+                  <textarea
+                    value={newUserForm.allergies}
+                    onChange={(e) => handleInputChange('allergies', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="List known allergies"
+                    rows="2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end space-x-3">
+              <button
+                onClick={() => setShowAddClientModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleCreateUser('client')}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Create Client
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Caregiver Modal */}
+      {showAddCaregiverModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <UserPlus className="h-6 w-6 text-white" />
+                <div>
+                  <h3 className="text-xl font-bold text-white">Add New Caregiver</h3>
+                  <p className="text-purple-100 text-sm">Create a new caregiver profile</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddCaregiverModal(false)}
+                className="text-white hover:bg-purple-500 rounded-lg p-2 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Profile Picture Section */}
+                <div className="md:col-span-2 flex items-center space-x-6 mb-4 p-4 bg-gray-50 rounded-lg">
+                  <ProfilePicture
+                    userId="temp_caregiver"
+                    userType="caregiver"
+                    currentImageUrl={newUserForm.profilePictureUrl}
+                    userName={newUserForm.name || 'New Caregiver'}
+                    onImageChange={(url) => handleInputChange('profilePictureUrl', url)}
+                    onImageRemove={() => handleInputChange('profilePictureUrl', '')}
+                    size="large"
+                    editable={true}
+                    showUploadButton={true}
+                  />
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-1">Profile Picture</h4>
+                    <p className="text-xs text-gray-500 mb-2">Upload a profile picture for the caregiver</p>
+                    <div className="text-xs text-gray-400">
+                      <p>• Supported formats: JPEG, PNG, WebP</p>
+                      <p>• Maximum size: 5MB</p>
+                      <p>• Recommended: 400x400 pixels</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Basic Information */}
+                <div className="md:col-span-2">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Basic Information</h4>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    value={newUserForm.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter full name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    value={newUserForm.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter email address"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                  <input
+                    type="tel"
+                    value={newUserForm.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+                  <select
+                    value={newUserForm.availability}
+                    onChange={(e) => handleInputChange('availability', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="full-time">Full Time</option>
+                    <option value="part-time">Part Time</option>
+                    <option value="contract">Contract</option>
+                    <option value="on-call">On Call</option>
+                  </select>
+                </div>
+
+                {/* Password Fields */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newUserForm.password}
+                      onChange={(e) => handleInputChange('password', e.target.value)}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password *</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={newUserForm.confirmPassword}
+                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Confirm password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Professional Information */}
+                <div className="md:col-span-2">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Professional Information</h4>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newUserForm.hourlyRate}
+                    onChange={(e) => handleInputChange('hourlyRate', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter hourly rate"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Rate ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newUserForm.monthlyRate}
+                    onChange={(e) => handleInputChange('monthlyRate', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter monthly rate"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Specializations</label>
+                  <textarea
+                    value={newUserForm.specializations}
+                    onChange={(e) => handleInputChange('specializations', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="List specializations (e.g., dementia care, mobility assistance)"
+                    rows="2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Experience</label>
+                  <textarea
+                    value={newUserForm.experience}
+                    onChange={(e) => handleInputChange('experience', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Describe relevant experience"
+                    rows="2"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Certifications</label>
+                  <textarea
+                    value={newUserForm.certifications}
+                    onChange={(e) => handleInputChange('certifications', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="List certifications and licenses"
+                    rows="2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end space-x-3">
+              <button
+                onClick={() => setShowAddCaregiverModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleCreateUser('caregiver')}
+                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Create Caregiver
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 };
