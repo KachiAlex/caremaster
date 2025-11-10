@@ -139,7 +139,7 @@ const Landing = () => {
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
                 <Heart className="h-8 w-8 text-teal-500 mr-2" />
-                <h1 className="text-2xl font-bold text-gray-900">Care Master Nigeria</h1>
+                <h1 className="text-2xl font-black text-gray-900">Care Master Nigeria</h1>
               </div>
               <p className="ml-4 text-sm text-gray-600 hidden sm:block">Professional Home Healthcare</p>
             </div>
@@ -256,7 +256,7 @@ const Landing = () => {
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose Care Master Nigeria?</h2>
+            <h2 className="text-3xl font-black text-gray-900 mb-4">Why Choose Care Master Nigeria?</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               We provide comprehensive healthcare solutions designed specifically for Nigerian families
             </p>
@@ -408,7 +408,7 @@ const Landing = () => {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">See Care Master Nigeria in Action</h2>
+            <h2 className="text-3xl font-black text-gray-900 mb-4">See Care Master Nigeria in Action</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               Watch real stories from African families who have experienced the difference our care makes
             </p>
@@ -516,7 +516,7 @@ const Landing = () => {
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center mb-4">
                 <Heart className="h-8 w-8 text-teal-500 mr-2" />
-                <h3 className="text-xl font-bold text-gray-900">Care Master Nigeria</h3>
+                <h3 className="text-xl font-black text-gray-900">Care Master Nigeria</h3>
               </div>
               <p className="text-gray-600 mb-4">
                 Professional home healthcare services for Nigerian families. 

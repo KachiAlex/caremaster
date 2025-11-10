@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUserProfile = exports.updateUserProfile = exports.createUserProfile = void 0;
+exports.deleteUser = exports.deleteUserProfile = exports.updateUserProfile = exports.createUserProfile = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const getDb = () => admin.firestore();
@@ -155,4 +155,37 @@ const deleteUserProfile = async (user) => {
     }
 };
 exports.deleteUserProfile = deleteUserProfile;
+// Delete user (Auth + Firestore) - Callable function
+exports.deleteUser = functions.https.onCall(async (data, context) => {
+    // Check authentication
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    // Check if user is admin
+    const callerToken = context.auth.token;
+    if (!callerToken.admin && !callerToken.institutionId) {
+        throw new functions.https.HttpsError('permission-denied', 'Only admins can delete users');
+    }
+    const { userId } = data;
+    if (!userId) {
+        throw new functions.https.HttpsError('invalid-argument', 'userId is required');
+    }
+    try {
+        // Delete from Firestore
+        await getDb().collection('users').doc(userId).delete();
+        // Delete from Auth
+        await admin.auth().deleteUser(userId);
+        console.log(`User ${userId} deleted from both Auth and Firestore`);
+        return { success: true, message: 'User deleted successfully' };
+    }
+    catch (error) {
+        console.error('Error deleting user:', error);
+        // If Auth user doesn't exist, that's okay - just delete from Firestore
+        if (error.code === 'auth/user-not-found') {
+            console.log(`Auth user ${userId} not found, but Firestore document was deleted`);
+            return { success: true, message: 'User document deleted (Auth user not found)' };
+        }
+        throw new functions.https.HttpsError('internal', `Failed to delete user: ${error.message}`);
+    }
+});
 //# sourceMappingURL=userManagement.js.map

@@ -1,13 +1,13 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { createUserProfile, updateUserProfile, deleteUserProfile } from './userManagement';
+import { createUserProfile, updateUserProfile, deleteUserProfile, deleteUser } from './userManagement';
 import { sendMedicationReminder, processMedicationLog } from './medicationManagement';
 import { handleEmergencyAlert, processEmergencyResponse } from './emergencyManagement';
 import { processAIVoiceCommand, generateHealthRecommendations } from './aiProcessing';
 import { sendNotification, scheduleNotification } from './notificationService';
 import { logAuditEvent, getAuditLogs } from './auditLogging';
 import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin } from './licensing';
-import { createCaregiverWithAuth } from './caregiverManagement';
+import { createCaregiverWithAuth, resetCaregiverPassword } from './caregiverManagement';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -18,6 +18,7 @@ const db = admin.firestore();
 export const createUserProfileFunction = functions.auth.user().onCreate(createUserProfile);
 export const updateUserProfileFunction = functions.https.onCall(updateUserProfile);
 export const deleteUserProfileFunction = functions.auth.user().onDelete(deleteUserProfile);
+export const deleteUserFunction = deleteUser;
 
 // Medication Management Functions
 export const medicationReminderScheduler = functions.pubsub
@@ -54,6 +55,7 @@ export const healthCheck = functions.https.onRequest((req, res) => {
 
 // Caregiver Management Functions
 export const createCaregiverWithAuthFunction = createCaregiverWithAuth;
+export const resetCaregiverPasswordFunction = resetCaregiverPassword;
 
 // Licensing Functions
 export const createInstitutionFunction = createInstitution;

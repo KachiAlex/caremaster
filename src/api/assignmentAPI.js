@@ -96,8 +96,12 @@ export const assignmentAPI = {
       });
 
       // Filter and sort client-side
+      // Include active, pending, and in_progress assignments (exclude completed and cancelled)
       return assignments
-        .filter((a) => (a.status ?? 'active') === 'active')
+        .filter((a) => {
+          const status = a.status ?? 'active';
+          return status !== 'completed' && status !== 'cancelled' && status !== 'archived';
+        })
         .sort((a, b) => {
           const aTime = a.createdAt?.getTime?.() ?? 0;
           const bTime = b.createdAt?.getTime?.() ?? 0;

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import authManager from '../utils/authManager';
 import sessionManager from '../utils/sessionManager';
@@ -14,13 +15,17 @@ import {
   Phone,
   Loader,
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  XCircle
 } from 'lucide-react';
+import authSecurityService from '../services/authSecurityService';
 
 const InstitutionLogin = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { userProfile } = useUser();
   const institutionId = searchParams.get('institution');
+  const effectiveInstitutionId = institutionId || userProfile?.institutionId;
   const roleParam = searchParams.get('role') || 'caregiver';
   
   const [loading, setLoading] = useState(true);
@@ -28,6 +33,9 @@ const InstitutionLogin = () => {
   const [institution, setInstitution] = useState(null);
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -40,14 +48,14 @@ const InstitutionLogin = () => {
 
   useEffect(() => {
     const loadInstitution = async () => {
-      if (!institutionId) {
+      if (!effectiveInstitutionId) {
         setError('No institution ID provided');
         setLoading(false);
         return;
       }
 
       try {
-        const institutionDoc = await getDoc(doc(db, 'institutions', institutionId));
+        const institutionDoc = await getDoc(doc(db, 'institutions', effectiveInstitutionId));
         
         if (!institutionDoc.exists()) {
           setError('Institution not found');
@@ -65,7 +73,7 @@ const InstitutionLogin = () => {
     };
 
     loadInstitution();
-  }, [institutionId]);
+  }, [effectiveInstitutionId]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -74,7 +82,7 @@ const InstitutionLogin = () => {
 
   const routeUserToDashboard = async (user, userData) => {
     const userRole = userData.type || userData.userType;
-    const userInstitutionId = userData.institutionId || institutionId;
+    const userInstitutionId = userData.institutionId || effectiveInstitutionId;
     
     console.log('📍 InstitutionLogin - Routing user to dashboard:', {
       userRole,
@@ -667,7 +675,10 @@ const InstitutionLogin = () => {
           {!isSignUp && (
             <div className="mt-4 text-center">
               <button
-                onClick={() => toast.info('Please contact your administrator for password reset')}
+                onClick={() => {
+                  setResetEmail(formData.email || '');
+                  setShowResetModal(true);
+                }}
                 className="text-sm text-gray-600 hover:text-gray-900"
               >
                 Forgot password?
@@ -676,6 +687,93 @@ const InstitutionLogin = () => {
           )}
         </div>
       </div>
+
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Reset your password</h3>
+                <p className="text-sm text-blue-100">Enter your email to receive a password reset link.</p>
+              </div>
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Close reset password modal"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (!resetEmail) {
+                  toast.error('Please enter your email address');
+                  return;
+                }
+
+                setResettingPassword(true);
+                try {
+                  await authSecurityService.securePasswordReset(resetEmail.trim());
+                  toast.success('Password reset email sent successfully. Please check your inbox.');
+                  setShowResetModal(false);
+                } catch (resetError) {
+                  console.error('Password reset failed:', resetError);
+                  const message = resetError?.code === 'auth/user-not-found'
+                    ? 'No account found with that email address.'
+                    : resetError?.message || 'Failed to send password reset email. Please try again.';
+                  toast.error(message);
+                } finally {
+                  setResettingPassword(false);
+                }
+              }}
+              className="px-6 py-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your account email"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowResetModal(false)}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resettingPassword}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                >
+                  {resettingPassword ? (
+                    <>
+                      <Loader className="animate-spin h-4 w-4 mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send reset link'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

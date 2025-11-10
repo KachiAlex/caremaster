@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { useUser } from '../contexts/UserContext';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import { 
@@ -20,7 +21,9 @@ import {
 const InstitutionLanding = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { userProfile } = useUser();
   const institutionId = searchParams.get('institution');
+  const effectiveInstitutionId = institutionId || userProfile?.institutionId;
   
   const [loading, setLoading] = useState(true);
   const [institution, setInstitution] = useState(null);
@@ -45,7 +48,7 @@ const InstitutionLanding = () => {
 
   useEffect(() => {
     const loadInstitutionData = async () => {
-      if (!institutionId) {
+      if (!effectiveInstitutionId) {
         setError('No institution ID provided');
         setLoading(false);
         return;
@@ -53,7 +56,7 @@ const InstitutionLanding = () => {
 
       try {
         // Fetch institution data
-        const institutionDoc = await getDoc(doc(db, 'institutions', institutionId));
+        const institutionDoc = await getDoc(doc(db, 'institutions', effectiveInstitutionId));
         
         if (!institutionDoc.exists()) {
           setError('Institution not found');
@@ -65,7 +68,7 @@ const InstitutionLanding = () => {
         setInstitution({ id: institutionDoc.id, ...institutionData });
 
         // Fetch license data
-        const licensesSnapshot = await getDoc(doc(db, 'licenses', institutionId));
+        const licensesSnapshot = await getDoc(doc(db, 'licenses', effectiveInstitutionId));
         if (licensesSnapshot.exists()) {
           setLicense(licensesSnapshot.data());
         }
@@ -79,14 +82,14 @@ const InstitutionLanding = () => {
     };
 
     loadInstitutionData();
-  }, [institutionId]);
+  }, [effectiveInstitutionId]);
 
   const handleRoleSelect = (role) => {
-    console.log('🔷 Portal selected:', role, '| Institution:', institutionId);
+    console.log('🔷 Portal selected:', role, '| Institution:', effectiveInstitutionId);
     
     // Simply navigate to the login page with the role parameter
     // The InstitutionLogin component will handle authentication and routing
-    navigate(`/institution/login?institution=${institutionId}&role=${role}`);
+    navigate(`/institution/login?institution=${effectiveInstitutionId}&role=${role}`);
   };
 
 
@@ -120,7 +123,7 @@ const InstitutionLanding = () => {
   }
 
   const getPortalUrl = (role) => {
-    return `${window.location.origin}/institution/login?institution=${institutionId}&role=${role}`;
+    return `${window.location.origin}/institution/login?institution=${effectiveInstitutionId}&role=${role}`;
   };
 
   const copyPortalLink = (role, title) => {

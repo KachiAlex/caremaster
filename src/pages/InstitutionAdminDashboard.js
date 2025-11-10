@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc, addDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -44,7 +44,10 @@ import {
   Camera,
   Bell,
   ClipboardCheck,
-  HelpCircle
+  HelpCircle,
+  RotateCcw,
+  Loader,
+  XCircle
 } from 'lucide-react';
 import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -63,6 +66,7 @@ import UserManagement from '../components/UserManagement';
 import DashboardSwitcher from '../components/DashboardSwitcher';
 import AdminRoleAssignment from '../components/AdminRoleAssignment';
 import ArchivedClients from '../components/ArchivedClients';
+import CleanupOrphanedUsers from '../components/CleanupOrphanedUsers';
 import InactiveCaregiversReport from '../components/InactiveCaregiversReport';
 import SchedulingModule from '../components/SchedulingModule';
 import ClientActivityTimeline from '../components/ClientActivityTimeline';
@@ -76,16 +80,19 @@ import CallService from '../services/callService';
 import WebRTCService from '../services/webrtcService';
 import PortalSwitcher from '../components/PortalSwitcher';
 import { getAllDiagnostics, updateDiagnosticTest } from '../api/diagnosticsAPI';
+import { trackAdminEvent } from '../services/analyticsService';
 
 const InstitutionAdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, userProfile, institutionId, userRoles } = useUser();
+  const { user, userProfile, institutionId, userRoles, loading: userLoading } = useUser();
   const functions = getFunctions();
   
   // Get institution ID from URL params or user context
   const urlInstitutionId = searchParams.get('institution');
-  const effectiveInstitutionId = urlInstitutionId || institutionId;
+  // Fallback to context/profile institutionId when URL param is missing or context not yet populated
+  // Priority: URL param > context institutionId > userProfile institutionId
+  const effectiveInstitutionId = urlInstitutionId || institutionId || userProfile?.institutionId;
   
   // No need to check for user here - InstitutionAdminGuard already handles authentication
   // Removed redundant useEffect that was causing navigation issues
@@ -131,6 +138,10 @@ const InstitutionAdminDashboard = () => {
   const [selectedClientForAssignment, setSelectedClientForAssignment] = useState('');
   const [selectedCaregiverForAssignment, setSelectedCaregiverForAssignment] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showCaregiverPasswordModal, setShowCaregiverPasswordModal] = useState(false);
+  const [caregiverPasswordForm, setCaregiverPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [resettingCaregiverPassword, setResettingCaregiverPassword] = useState(false);
+  const [caregiverForPasswordReset, setCaregiverForPasswordReset] = useState(null);
   
   // View Details Modal States
   const [showClientDetails, setShowClientDetails] = useState(false);
@@ -237,7 +248,8 @@ const InstitutionAdminDashboard = () => {
   // Load institution data
   const loadInstitutionData = async () => {
     try {
-      const instId = institutionId || userProfile?.institutionId;
+      // Use effectiveInstitutionId which includes URL parameter
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
       if (instId) {
         const data = await institutionAPI.getInstitution(instId);
         setInstitutionData(data);
@@ -250,7 +262,8 @@ const InstitutionAdminDashboard = () => {
   // Handle institution link update
   const handleInstitutionLinkUpdate = async (updates) => {
     try {
-      const instId = institutionId || userProfile?.institutionId;
+      // Use effectiveInstitutionId which includes URL parameter
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
       await institutionAPI.updateInstitutionLinks(instId, updates);
       await loadInstitutionData(); // Reload institution data
       toast.success('Institution links updated successfully!');
@@ -263,8 +276,8 @@ const InstitutionAdminDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      // Get institutionId from userProfile or context
-      const instId = institutionId || userProfile?.institutionId;
+      // Use effectiveInstitutionId which includes URL parameter
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
       
       console.log('📊 Loading institution dashboard for:', instId);
       
@@ -304,7 +317,9 @@ const InstitutionAdminDashboard = () => {
       // Filter by institution (most data is already filtered server-side)
       const institutionUsers = instId ? users.filter(u => u.institutionId === instId) : users;
       const institutionCaregivers = instId ? caregiversData.filter(c => c.institutionId === instId) : caregiversData;
-      const institutionClients = instId ? clientsData.filter(p => p.institutionId === instId) : clientsData;
+      // Filter out archived clients from main clients list (they appear in Archived Clients tab)
+      const institutionClients = (instId ? clientsData.filter(p => p.institutionId === instId) : clientsData)
+        .filter(p => p.status !== 'archived');
 
       // Merge caregivers from users collection (for those created via Add Caregiver button, exclude deleted)
       const caregiversFromUsers = institutionUsers.filter(u => 
@@ -446,7 +461,8 @@ const InstitutionAdminDashboard = () => {
   // Client Management Functions
   const handleAddClient = async (clientData) => {
     try {
-      const instId = institutionId || userProfile?.institutionId;
+      // Use effectiveInstitutionId which includes URL parameter
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
       const newClient = {
         ...clientData,
         institutionId: instId,
@@ -470,14 +486,45 @@ const InstitutionAdminDashboard = () => {
   // Caregiver Management Functions
   const handleAddCaregiver = async (caregiverData) => {
     try {
-      const instId = institutionId || userProfile?.institutionId;
+      // Always use the admin's institutionId from their profile - this is the most reliable source
+      // Priority: userProfile.institutionId > effectiveInstitutionId > institutionId from context
+      const instId = userProfile?.institutionId || effectiveInstitutionId || institutionId;
+      
+      // Enhanced debugging
+      console.log('🔍 Institution ID Debug (handleAddCaregiver):', {
+        effectiveInstitutionId,
+        institutionId,
+        userProfileInstitutionId: userProfile?.institutionId,
+        urlInstitutionId,
+        userProfile: userProfile ? { id: userProfile.id, email: userProfile.email, userType: userProfile.userType, institutionId: userProfile.institutionId } : null,
+        user: user ? { uid: user.uid, email: user.email } : null,
+        finalInstId: instId,
+        userLoading
+      });
       
       if (!instId) {
-        toast.error('Institution ID is required');
+        // If user profile is still loading, wait a bit and retry
+        if (userLoading) {
+          toast.info('Loading your profile... Please wait a moment and try again.');
+          console.warn('⚠️ User profile still loading, institutionId not available yet');
+          return;
+        }
+        
+        toast.error('Institution ID is required. Please ensure you are logged in and have an institution assigned. Check the browser console for details.');
+        console.error('❌ Missing institution ID. Available data:', {
+          effectiveInstitutionId,
+          institutionId,
+          userProfileInstitutionId: userProfile?.institutionId,
+          urlInstitutionId,
+          userProfile,
+          user,
+          userLoading,
+          searchParams: Object.fromEntries(searchParams.entries())
+        });
         return;
       }
       
-      console.log('🏥 Creating caregiver for institution:', instId);
+      console.log('✅ Creating caregiver for institution:', instId);
       
       // Validate required fields
       if (!caregiverData.email || !caregiverData.password || !caregiverData.name) {
@@ -500,87 +547,142 @@ const InstitutionAdminDashboard = () => {
         return;
       }
       
-      console.log('✅ Email is unique, creating Firebase Auth account...');
+      console.log('✅ Email is unique, creating caregiver via Cloud Function...');
       
-      // Create Firebase Auth account directly
-      let authUser;
+      // Use Cloud Function to create caregiver (doesn't affect admin session)
+      let caregiverId;
       try {
-        authUser = await createUserWithEmailAndPassword(
-          auth,
-          caregiverData.email,
-          caregiverData.password
-        );
-        console.log('✅ Firebase Auth account created:', authUser.user.uid);
-      } catch (authError) {
-        console.error('❌ Firebase Auth error:', authError);
-        if (authError.code === 'auth/email-already-in-use') {
-          toast.error('A user with this email already exists in Firebase Auth.');
-        } else if (authError.code === 'auth/weak-password') {
-          toast.error('Password is too weak. Please use a stronger password.');
-        } else {
-          toast.error(`Authentication error: ${authError.message}`);
+        const createCaregiverFunction = httpsCallable(functions, 'createCaregiverWithAuthFunction');
+        const result = await createCaregiverFunction({
+          email: caregiverData.email,
+          password: caregiverData.password,
+          name: caregiverData.name,
+          phone: caregiverData.phone || '',
+          institutionId: instId,
+          userType: caregiverData.userType || 'caregiver',
+          specialization: caregiverData.specialization || caregiverData.medicalQualification || '',
+          qualifications: caregiverData.qualifications || '',
+          experience: caregiverData.experience || '0',
+          availableDays: caregiverData.availableDays || [],
+          workingHours: Array.isArray(caregiverData.workingHours) 
+            ? caregiverData.workingHours 
+            : (caregiverData.workingHours ? [caregiverData.workingHours] : ['9:00 AM - 5:00 PM']),
+          hourlyRate: caregiverData.rateType === 'per_hour' 
+            ? (caregiverData.rate || caregiverData.hourlyRate || '0')
+            : (caregiverData.hourlyRate || '0'),
+          address: caregiverData.address || '',
+          emergencyContact: caregiverData.emergencyContact || '',
+          notes: caregiverData.notes || ''
+        });
+        
+        caregiverId = result.data.caregiverId || result.data.userId;
+        console.log('✅ Caregiver created via Cloud Function:', caregiverId, 'Full result:', result.data);
+        
+        if (!caregiverId) {
+          console.error('❌ Cloud Function did not return caregiverId');
+          toast.error('Failed to create caregiver: No user ID returned from server.');
+          return;
         }
-        return;
+      } catch (cloudFunctionError) {
+        console.error('❌ Cloud Function error:', cloudFunctionError);
+        
+        // Cloud Function is required - no fallback to avoid signing out admin
+        if (cloudFunctionError.code === 'functions/not-found' || cloudFunctionError.code === 'functions/unavailable') {
+          console.error('❌ Cloud Function not available:', cloudFunctionError);
+          toast.error('Cloud Function not deployed. Please deploy Firebase Functions or contact your administrator.');
+          console.error('To deploy functions, run: firebase deploy --only functions');
+          return;
+        } else {
+          // Other Cloud Function errors
+          if (cloudFunctionError.message?.includes('email-already-exists') || cloudFunctionError.code === 'already-exists') {
+            toast.error('A user with this email already exists.');
+          } else {
+            toast.error(`Failed to create caregiver: ${cloudFunctionError.message || 'Unknown error'}`);
+          }
+          return;
+        }
       }
       
-      const caregiverId = authUser.user.uid;
-      
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', caregiverId), {
-        email: caregiverData.email,
-        name: caregiverData.name,
-        displayName: caregiverData.name,
-        phone: caregiverData.phone || '',
-        userType: caregiverData.userType || 'caregiver',
-        type: caregiverData.userType || 'caregiver',
-        role: caregiverData.userType || 'caregiver',
-        institutionId: instId,
-        specialization: caregiverData.specialization || caregiverData.medicalQualification || '',
-        qualifications: caregiverData.qualifications || '',
-        experience: caregiverData.experience || '0',
-        licenseNumber: caregiverData.licenseNumber || '',
-        availableDays: caregiverData.availableDays || [],
-        workingHours: caregiverData.workingHours || '9:00 AM - 5:00 PM',
-        hourlyRate: caregiverData.hourlyRate || '0',
-        address: caregiverData.address || '',
-        emergencyContact: caregiverData.emergencyContact || '',
-        notes: caregiverData.notes || '',
-        status: 'active',
-        onboardingComplete: true,
-        profileComplete: true,
-        assignedClients: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: user?.uid || 'admin'
-      });
-      
-      console.log('✅ Caregiver document created in Firestore');
-      
-      // Sign out the newly created user and reload
-      await signOut(auth);
-      console.log('✅ Cleaned up auth state');
+      // Update user document in Firestore with additional fields (Cloud Function already created basic document)
+      try {
+        // Use updateDoc with merge since the document already exists
+        await updateDoc(doc(db, 'users', caregiverId), {
+          email: caregiverData.email,
+          name: caregiverData.name,
+          displayName: caregiverData.name,
+          phone: caregiverData.phone || '',
+          userType: caregiverData.userType || 'caregiver',
+          type: caregiverData.userType || 'caregiver',
+          role: caregiverData.userType || 'caregiver',
+          institutionId: instId,
+          specialization: caregiverData.specialization || caregiverData.medicalQualification || '',
+          qualifications: caregiverData.qualifications || '',
+          experience: caregiverData.experience || '0',
+          licenseNumber: caregiverData.licenseNumber || '',
+          availableDays: caregiverData.availableDays || [],
+          workingHours: Array.isArray(caregiverData.workingHours) 
+            ? caregiverData.workingHours 
+            : (caregiverData.workingHours ? [caregiverData.workingHours] : ['9:00 AM - 5:00 PM']),
+          rateType: caregiverData.rateType || 'per_hour',
+          rate: caregiverData.rate || (caregiverData.hourlyRate || '0'),
+          currency: caregiverData.currency || 'USD',
+          hourlyRate: caregiverData.rateType === 'per_hour' 
+            ? (caregiverData.rate || caregiverData.hourlyRate || '0')
+            : (caregiverData.hourlyRate || '0'),
+          address: caregiverData.address || '',
+          emergencyContact: caregiverData.emergencyContact || '',
+          notes: caregiverData.notes || '',
+          status: 'active',
+          onboardingComplete: true,
+          profileComplete: true,
+          assignedClients: [],
+          updatedAt: new Date().toISOString(),
+          createdBy: user?.uid || 'admin'
+        });
+        
+        console.log('✅ Caregiver document updated with additional fields in Firestore');
+      } catch (firestoreError) {
+        console.error('❌ Error updating Firestore document:', firestoreError);
+        // Don't throw - the Cloud Function already created the basic document
+        toast.warning('Caregiver created but some additional fields may not have been saved.');
+      }
       
       setShowAddCaregiver(false);
+      
+      // Clear saved form data on successful creation
+      try {
+        localStorage.removeItem('caregiverFormDraft');
+        console.log('🗑️ Cleared saved form data after successful creation');
+      } catch (clearError) {
+        console.error('Error clearing saved form data:', clearError);
+      }
+      
       toast.success(`✅ Caregiver ${caregiverData.name} added successfully! They can now login with their credentials.`);
       
-      // Reload dashboard data
-      await loadDashboardData();
+      await trackAdminEvent('caregiver_created', {
+        caregiverId,
+        institutionId: instId,
+        createdBy: user?.uid || null,
+        caregiverEmail: caregiverData.email,
+        caregiverName: caregiverData.name,
+        rateType: caregiverData.rateType || 'per_hour'
+      });
       
-      // Reload the page to restore admin session
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      // Reload dashboard data (no need to reload page - admin session is preserved)
+      await loadDashboardData();
       
     } catch (error) {
       console.error('❌ Error adding caregiver:', error);
       toast.error(error.message || 'Failed to add caregiver. Please try again.');
+      // Don't clear saved data on error - user can retry with the same data
     }
   };
 
   // Pharmacist Management Functions
   const handleAssignPharmacistToClient = async (clientId, pharmacistId) => {
     try {
-      const instId = institutionId || userProfile?.institutionId;
+      // Use effectiveInstitutionId which includes URL parameter
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
       
       // Get pharmacist details
       const pharmacist = pharmacists.find(p => p.id === pharmacistId);
@@ -639,6 +741,12 @@ const InstitutionAdminDashboard = () => {
       console.log('✅ Admin - Assignment created with ID:', assignmentRef.id);
       
       toast.success('Pharmacist assigned successfully!');
+      await trackAdminEvent('pharmacist_assigned_to_client', {
+        clientId,
+        pharmacistId,
+        institutionId: instId,
+        assignedBy: user?.uid || userProfile?.id || 'admin'
+      });
       
       // Reload dashboard data
       await loadDashboardData();
@@ -833,9 +941,21 @@ const InstitutionAdminDashboard = () => {
       const client = clients.find(p => p.id === selectedClientForAssignment);
       const caregiver = caregivers.find(c => c.id === selectedCaregiverForAssignment);
       
+      // Use Firebase Auth UID (userId/uid) if available, otherwise fall back to id
+      // This ensures tasks are queryable by the caregiver using their user.uid
+      const caregiverUserId = caregiver?.uid || caregiver?.userId || caregiver?.id || selectedCaregiverForAssignment;
+      
+      console.log('🔍 Creating assignment:', {
+        caregiverId: selectedCaregiverForAssignment,
+        caregiverUserId,
+        caregiverUid: caregiver?.uid,
+        caregiverUserIdField: caregiver?.userId,
+        caregiverIdField: caregiver?.id
+      });
+      
       const assignmentData = {
         clientId: selectedClientForAssignment,
-        caregiverId: selectedCaregiverForAssignment,
+        caregiverId: caregiverUserId, // Use Firebase Auth UID for querying
         clientName: client?.name || client?.displayName || 'Unknown Client',
         caregiverName: caregiver?.name || caregiver?.displayName || 'Unknown Caregiver',
         clientEmail: client?.email || '',
@@ -856,11 +976,49 @@ const InstitutionAdminDashboard = () => {
 
       const createdAssignment = await assignmentAPI.createAssignment(assignmentData);
       
+      // Also create a task in the careTasks collection for better visibility
+      // This ensures tasks show up in both assignment queries and task queries
+      try {
+        const { createCareTask } = await import('../api/careTasksAPI');
+        const { Timestamp } = await import('firebase/firestore');
+        
+        // Parse dueDate and dueTime to create scheduledTime
+        let scheduledTime = new Date();
+        if (formData.dueDate) {
+          scheduledTime = new Date(formData.dueDate);
+          if (formData.dueTime) {
+            const [hours, minutes] = formData.dueTime.split(':');
+            scheduledTime.setHours(parseInt(hours) || 9, parseInt(minutes) || 0, 0, 0);
+          } else {
+            scheduledTime.setHours(9, 0, 0, 0); // Default to 9 AM
+          }
+        }
+        
+        await createCareTask({
+          caregiverId: caregiverUserId, // Use Firebase Auth UID
+          patientId: selectedClientForAssignment,
+          clientId: selectedClientForAssignment,
+          title: formData.title,
+          description: formData.description || formData.instructions,
+          type: 'care',
+          priority: formData.priority || 'normal',
+          status: 'pending',
+          scheduledTime: Timestamp.fromDate(scheduledTime),
+          instructions: formData.instructions,
+          assignmentId: createdAssignment.id, // Link to the assignment
+          institutionId: institutionId || userProfile?.institutionId
+        });
+        console.log('✅ Created corresponding task in careTasks collection');
+      } catch (taskError) {
+        console.warn('⚠️ Failed to create task in careTasks collection (assignment still created):', taskError);
+        // Don't fail the whole operation if task creation fails
+      }
+      
       // Send notification to caregiver
       if (caregiver) {
         try {
           await createNotification({
-            userId: selectedCaregiverForAssignment,
+            userId: caregiverUserId, // Use Firebase Auth UID for notifications
             type: NOTIFICATION_TYPES.TASK,
             priority: formData.priority === 'urgent' ? NOTIFICATION_PRIORITIES.URGENT : 
                      formData.priority === 'high' ? NOTIFICATION_PRIORITIES.HIGH : 
@@ -914,6 +1072,17 @@ const InstitutionAdminDashboard = () => {
       setSelectedClientForAssignment('');
       setSelectedCaregiverForAssignment('');
       toast.success('Assignment created and notifications sent successfully');
+      
+      await trackAdminEvent('assignment_created', {
+        assignmentId: createdAssignment.id,
+        caregiverId: caregiverUserId,
+        clientId: selectedClientForAssignment,
+        institutionId: effectiveInstitutionId || institutionId || userProfile?.institutionId,
+        priority: formData.priority || 'normal',
+        dueDate: formData.dueDate || null,
+        dueTime: formData.dueTime || null
+      });
+      
       await loadDashboardData(); // Refresh data
     } catch (error) {
       console.error('Error creating assignment:', error);
@@ -922,37 +1091,60 @@ const InstitutionAdminDashboard = () => {
   };
 
   // Caregiver Action Handlers
-  const handleResetPassword = async (caregiverId) => {
+  const handleResetPassword = (caregiverId) => {
+    const caregiver = caregivers.find(c => c.id === caregiverId);
+    if (!caregiver) {
+      toast.error('Caregiver not found');
+      return;
+    }
+
+    setCaregiverForPasswordReset(caregiver);
+    setCaregiverPasswordForm({ newPassword: '', confirmPassword: '' });
+    setShowCaregiverPasswordModal(true);
+  };
+
+  const handleSubmitCaregiverPasswordReset = async (event) => {
+    event.preventDefault();
+    if (!caregiverForPasswordReset) {
+      toast.error('No caregiver selected');
+      return;
+    }
+
+    const { newPassword, confirmPassword } = caregiverPasswordForm;
+
+    if (!newPassword || !confirmPassword) {
+      toast.error('Please enter and confirm the new password');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
     try {
-      // Get caregiver/user email
-      const userDoc = await getDoc(doc(db, 'users', caregiverId));
-      if (!userDoc.exists()) {
-        toast.error('User not found');
-        return;
-      }
+      setResettingCaregiverPassword(true);
+      const resetPasswordFn = httpsCallable(functions, 'resetCaregiverPasswordFunction');
+      await resetPasswordFn({
+        caregiverId: caregiverForPasswordReset.id,
+        newPassword: newPassword
+      });
 
-      const userData = userDoc.data();
-      const userEmail = userData.email;
-
-      if (!userEmail) {
-        toast.error('User email not found');
-        return;
-      }
-
-      // Send password reset email via Firebase Auth
-      await sendPasswordResetEmail(auth, userEmail);
-      
-      toast.success(`Password reset email sent to ${userEmail}`);
-      console.log('Password reset email sent to:', userEmail);
+      toast.success(`Password updated for ${caregiverForPasswordReset.name || 'caregiver'}`);
+      setShowCaregiverPasswordModal(false);
+      setCaregiverForPasswordReset(null);
+      setCaregiverPasswordForm({ newPassword: '', confirmPassword: '' });
     } catch (error) {
-      console.error('Error resetting password:', error);
-      if (error.code === 'auth/user-not-found') {
-        toast.error('User not found in Firebase Auth');
-      } else if (error.code === 'auth/invalid-email') {
-        toast.error('Invalid email address');
-      } else {
-        toast.error('Failed to send password reset email');
-      }
+      console.error('Failed to reset caregiver password:', error);
+      const message = error?.message || 'Failed to reset caregiver password';
+      toast.error(message);
+    } finally {
+      setResettingCaregiverPassword(false);
     }
   };
 
@@ -1089,6 +1281,7 @@ const InstitutionAdminDashboard = () => {
       return;
     }
     try {
+      const instId = diagnostic.institutionId || effectiveInstitutionId || institutionId || userProfile?.institutionId;
       await updateDiagnosticTest(diagnostic.id, { 
         status: 'approved',
         approvedAt: new Date().toISOString(),
@@ -1112,6 +1305,12 @@ const InstitutionAdminDashboard = () => {
       }
       
       toast.success('Diagnostic test approved successfully');
+      await trackAdminEvent('diagnostic_approved', {
+        diagnosticId: diagnostic.id,
+        clientId: diagnostic.clientId || null,
+        institutionId: instId,
+        approvedBy: user?.uid || userProfile?.id || 'admin'
+      });
       await loadDashboardData(); // Reload to update the status
     } catch (error) {
       console.error('Error approving diagnostic:', error);
@@ -1124,6 +1323,7 @@ const InstitutionAdminDashboard = () => {
     if (!reason) return;
     
     try {
+      const instId = diagnostic.institutionId || effectiveInstitutionId || institutionId || userProfile?.institutionId;
       await updateDiagnosticTest(diagnostic.id, { 
         status: 'rejected',
         rejectedAt: new Date().toISOString(),
@@ -1148,6 +1348,12 @@ const InstitutionAdminDashboard = () => {
       }
       
       toast.success('Diagnostic test request has been rejected');
+      await trackAdminEvent('diagnostic_rejected', {
+        diagnosticId: diagnostic.id,
+        clientId: diagnostic.clientId || null,
+        institutionId: instId,
+        rejectedBy: user?.uid || userProfile?.id || 'admin'
+      });
       await loadDashboardData(); // Reload to update the status
     } catch (error) {
       console.error('Error rejecting diagnostic:', error);
@@ -1167,17 +1373,49 @@ const InstitutionAdminDashboard = () => {
       return;
     }
     try {
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+      const archivedBy = user?.uid || userProfile?.id || 'admin';
       await updateClient(clientId, { 
         status: 'archived',
         archivedAt: new Date().toISOString(),
-        archivedBy: user?.uid || userProfile?.id || 'admin'
+        archivedBy
       });
       toast.success('Client archived successfully');
+      await trackAdminEvent('client_archived', {
+        clientId,
+        institutionId: instId,
+        archivedBy
+      });
       await loadDashboardData();
       setShowClientDetails(false);
     } catch (error) {
       console.error('Error archiving client:', error);
       toast.error('Failed to archive client');
+    }
+  };
+
+  const handleUnarchiveClient = async (clientId) => {
+    if (!window.confirm('Are you sure you want to restore this client? They will be moved back to the active clients list.')) {
+      return;
+    }
+    try {
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+      await updateClient(clientId, { 
+        status: 'active',
+        archivedAt: null,
+        archivedBy: null
+      });
+      toast.success('Client restored successfully');
+      await trackAdminEvent('client_restored', {
+        clientId,
+        institutionId: instId,
+        restoredBy: user?.uid || userProfile?.id || 'admin'
+      });
+      await loadDashboardData();
+      setShowClientDetails(false);
+    } catch (error) {
+      console.error('Error restoring client:', error);
+      toast.error('Failed to restore client');
     }
   };
 
@@ -1193,8 +1431,14 @@ const InstitutionAdminDashboard = () => {
       return;
     }
     try {
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
       await assignmentAPI.deleteAssignment(assignmentId);
       toast.success('Assignment deleted successfully');
+      await trackAdminEvent('assignment_deleted', {
+        assignmentId,
+        institutionId: instId,
+        deletedBy: user?.uid || userProfile?.id || 'admin'
+      });
       await loadDashboardData();
     } catch (error) {
       console.error('Error deleting assignment:', error);
@@ -2079,6 +2323,7 @@ const InstitutionAdminDashboard = () => {
             { id: 'users', name: 'User Management', icon: Shield, color: 'red' },
             { id: 'admin-roles', name: 'Admin Roles', icon: Shield, color: 'red' },
             { id: 'approvals', name: 'Pending Approvals', icon: ClipboardCheck, color: 'yellow' },
+            { id: 'cleanup', name: 'Cleanup Orphaned Users', icon: Trash2, color: 'orange' },
             { id: 'messages', name: 'Messages', icon: MessageSquare, color: 'cyan' },
             { id: 'analytics', name: 'Analytics', icon: TrendingUp, color: 'pink' },
             { id: 'settings', name: 'Settings', icon: Settings, color: 'gray' },
@@ -2133,6 +2378,7 @@ const InstitutionAdminDashboard = () => {
                 {activeTab === 'users' && 'User Management'}
                 {activeTab === 'admin-roles' && 'Admin Role Assignment'}
                 {activeTab === 'approvals' && 'Pending Approvals'}
+                {activeTab === 'cleanup' && 'Cleanup Orphaned Users'}
                 {activeTab === 'messages' && 'Messages'}
                 {activeTab === 'analytics' && 'Analytics & Reports'}
                 {activeTab === 'settings' && 'Institution Settings'}
@@ -3163,6 +3409,13 @@ const InstitutionAdminDashboard = () => {
         </div>
       )}
 
+      {/* Cleanup Orphaned Users Tab */}
+      {activeTab === 'cleanup' && (
+        <div className="space-y-6">
+          <CleanupOrphanedUsers institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
       {/* Admin Role Assignment Tab */}
       {activeTab === 'admin-roles' && (
         <div className="space-y-6">
@@ -3798,6 +4051,7 @@ const InstitutionAdminDashboard = () => {
           }}
           onAssignTask={handleAssignTaskToClient}
           onDelete={handleArchiveClient}
+          onUnarchive={handleUnarchiveClient}
           pharmacists={pharmacists}
           onAssignPharmacist={handleAssignPharmacistToClient}
         />
@@ -3817,6 +4071,88 @@ const InstitutionAdminDashboard = () => {
           onDelete={handleDeleteCaregiver}
           onAssignTask={handleAssignTaskToCaregiver}
         />
+      )}
+
+      {showCaregiverPasswordModal && caregiverForPasswordReset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-yellow-600 text-white px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Reset Caregiver Password</h3>
+                <p className="text-sm text-yellow-100">
+                  Set a new password for {caregiverForPasswordReset.name || caregiverForPasswordReset.email}.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCaregiverPasswordModal(false);
+                  setCaregiverForPasswordReset(null);
+                  setCaregiverPasswordForm({ newPassword: '', confirmPassword: '' });
+                }}
+                className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Close password reset modal"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitCaregiverPasswordReset} className="px-6 py-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                <input
+                  type="password"
+                  value={caregiverPasswordForm.newPassword}
+                  onChange={(e) => setCaregiverPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="Enter new password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                <input
+                  type="password"
+                  value={caregiverPasswordForm.confirmPassword}
+                  onChange={(e) => setCaregiverPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="Re-enter new password"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCaregiverPasswordModal(false);
+                    setCaregiverForPasswordReset(null);
+                    setCaregiverPasswordForm({ newPassword: '', confirmPassword: '' });
+                  }}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resettingCaregiverPassword}
+                  className="px-4 py-2 rounded-lg bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                >
+                  {resettingCaregiverPassword ? (
+                    <>
+                      <Loader className="animate-spin h-4 w-4 mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {showProfileSettings && (
@@ -4243,6 +4579,10 @@ const AddClientModal = ({ onClose, onAdd }) => {
 
 // Add Caregiver Modal Component
 const AddCaregiverModal = ({ onClose, onCreate }) => {
+  const STORAGE_KEY = 'caregiverFormDraft';
+  const saveTimeoutRef = React.useRef(null);
+  const [dataRestored, setDataRestored] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -4253,9 +4593,11 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     qualifications: '',
     experience: '',
     availableDays: [],
-    workingHours: '',
+    workingHours: [],
     flexibleArrangement: false,
-    hourlyRate: '',
+    rateType: 'per_hour', // 'per_hour' or 'per_month'
+    rate: '',
+    currency: 'USD',
     address: '',
     emergencyContact: '',
     notes: ''
@@ -4264,6 +4606,91 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailExists, setEmailExists] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
+
+  // Restore saved form data on mount
+  React.useEffect(() => {
+    try {
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        // Don't restore password for security
+        const { password, ...restoredData } = parsed;
+        setFormData(prev => ({
+          ...prev,
+          ...restoredData
+        }));
+        setDataRestored(true);
+        // Show notification
+        setTimeout(() => {
+          toast.info('📝 Your previous form data has been restored. You can continue where you left off.', {
+            autoClose: 5000,
+            position: 'top-right'
+          });
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error restoring form data:', error);
+    }
+  }, []);
+
+  // Auto-save form data whenever it changes (debounced)
+  React.useEffect(() => {
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout to save after 1 second of no changes
+    saveTimeoutRef.current = setTimeout(() => {
+      try {
+        // Don't save if form is empty
+        const hasData = formData.name || formData.email || formData.phone || 
+                       formData.specialization || formData.qualifications || 
+                       formData.notes || formData.address;
+        
+        if (hasData) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+          console.log('💾 Form data auto-saved');
+        }
+      } catch (error) {
+        console.error('Error saving form data:', error);
+      }
+    }, 1000); // Wait 1 second after last change
+
+    // Cleanup function
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [formData]);
+
+  // Clear saved data when modal closes (if user explicitly closes it)
+  const handleClose = () => {
+    // Optionally clear saved data when user closes modal
+    // Uncomment the next line if you want to clear on close
+    // localStorage.removeItem(STORAGE_KEY);
+    onClose();
+  };
+
+  // Submit handler - don't clear saved data here, let handleAddCaregiver do it on success
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Validate working hours
+    if (!formData.workingHours || formData.workingHours.length === 0) {
+      toast.error('Please select at least one working hour option.');
+      return;
+    }
+    
+    // Validate rate if per_hour is selected
+    if (formData.rateType === 'per_hour' && (!formData.rate || formData.rate === '')) {
+      toast.error('Please enter an hourly rate.');
+      return;
+    }
+    
+    onCreate(formData);
+  };
 
   const caregiverRoles = [
     'Doctor',
@@ -4281,10 +4708,40 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     'Friday', 'Saturday', 'Sunday'
   ];
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onCreate(formData);
-  };
+  const workingHoursOptions = [
+    '6:00 AM - 2:00 PM',
+    '7:00 AM - 3:00 PM',
+    '8:00 AM - 4:00 PM',
+    '9:00 AM - 5:00 PM',
+    '10:00 AM - 6:00 PM',
+    '11:00 AM - 7:00 PM',
+    '12:00 PM - 8:00 PM',
+    '2:00 PM - 10:00 PM',
+    '3:00 PM - 11:00 PM',
+    '4:00 PM - 12:00 AM',
+    'Night Shift (10:00 PM - 6:00 AM)',
+    'Flexible Hours',
+    '24/7 On-Call'
+  ];
+
+  const currencies = [
+    { code: 'USD', name: 'US Dollar', symbol: '$' },
+    { code: 'EUR', name: 'Euro', symbol: '€' },
+    { code: 'GBP', name: 'British Pound', symbol: '£' },
+    { code: 'NGN', name: 'Nigerian Naira', symbol: '₦' },
+    { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh' },
+    { code: 'ZAR', name: 'South African Rand', symbol: 'R' },
+    { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵' },
+    { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
+    { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
+    { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+    { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
+    { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+    { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
+    { code: 'SAR', name: 'Saudi Riyal', symbol: '﷼' },
+    { code: 'BRL', name: 'Brazilian Real', symbol: 'R$' },
+    { code: 'MXN', name: 'Mexican Peso', symbol: '$' }
+  ];
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -4341,13 +4798,30 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     });
   };
 
+  const handleWorkingHoursToggle = (hours) => {
+    setFormData({
+      ...formData,
+      workingHours: formData.workingHours.includes(hours)
+        ? formData.workingHours.filter(h => h !== hours)
+        : [...formData.workingHours, hours]
+    });
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-medium text-gray-900">Add New Caregiver</h3>
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Add New Caregiver</h3>
+            {dataRestored && (
+              <p className="text-sm text-blue-600 mt-1 flex items-center gap-1">
+                <CheckCircle className="h-4 w-4" />
+                Previous form data restored
+              </p>
+            )}
+          </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
           >
             <span className="sr-only">Close</span>
@@ -4489,46 +4963,101 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Hourly Rate</label>
+              <label className="block text-sm font-medium text-gray-700">Payment Type *</label>
               <select
-                name="hourlyRate"
-                value={formData.hourlyRate}
+                name="rateType"
+                required
+                value={formData.rateType}
                 onChange={handleChange}
                 className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Select hourly rate</option>
-                <option value="15">$15/hour</option>
-                <option value="20">$20/hour</option>
-                <option value="25">$25/hour</option>
-                <option value="30">$30/hour</option>
-                <option value="35">$35/hour</option>
-                <option value="40">$40/hour</option>
-                <option value="45">$45/hour</option>
-                <option value="50">$50/hour</option>
-                <option value="60">$60/hour</option>
-                <option value="70">$70/hour</option>
-                <option value="80">$80/hour</option>
-                <option value="90">$90/hour</option>
-                <option value="100">$100/hour</option>
-                <option value="125">$125/hour</option>
-                <option value="150">$150/hour</option>
-                <option value="200">$200/hour</option>
-                <option value="250">$250/hour</option>
-                <option value="300">$300/hour</option>
+                <option value="per_hour">Per Hour</option>
+                <option value="per_month">Per Month</option>
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Working Hours</label>
-              <input
-                type="text"
-                name="workingHours"
-                placeholder="e.g., 9:00 AM - 5:00 PM"
-                value={formData.workingHours}
-                onChange={handleChange}
+            {formData.rateType === 'per_hour' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Rate *</label>
+                  <input
+                    type="number"
+                    name="rate"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={formData.rate}
+                    onChange={handleChange}
+                    placeholder="Enter hourly rate"
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Currency *</label>
+                  <select
+                    name="currency"
+                    required
+                    value={formData.currency}
+                    onChange={handleChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {currencies.map(currency => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.symbol} {currency.code} - {currency.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {formData.rateType === 'per_month' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Monthly Rate</label>
+                <p className="mt-1 text-sm text-gray-500">Monthly rate will be set separately in the wage management section.</p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Working Hours *</label>
+            <div className="relative">
+              <select
                 className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleWorkingHoursToggle(e.target.value);
+                    e.target.value = ''; // Reset dropdown
+                  }
+                }}
+              >
+                <option value="">Select working hours to add...</option>
+                {workingHoursOptions
+                  .filter(option => !formData.workingHours.includes(option))
+                  .map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+              </select>
             </div>
+            {formData.workingHours.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {formData.workingHours.map((hours, index) => (
+                  <div key={index} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
+                    <span className="text-sm text-gray-900">{hours}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleWorkingHoursToggle(hours)}
+                      className="text-red-600 hover:text-red-800 focus:outline-none"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {formData.workingHours.length === 0 && (
+              <p className="mt-2 text-sm text-gray-500">No working hours selected. Please select at least one.</p>
+            )}
           </div>
 
           <div>
@@ -4600,7 +5129,7 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
           <div className="flex justify-end space-x-3 pt-6 border-t">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Cancel
@@ -5232,7 +5761,7 @@ const AssignmentModal = ({
 };
 
 // Client Details Modal Component
-const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, pharmacists, onAssignPharmacist }) => {
+const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchive, pharmacists, onAssignPharmacist }) => {
   const [activeTab, setActiveTab] = React.useState('info');
   const [showPharmacistDropdown, setShowPharmacistDropdown] = React.useState(false);
   const [selectedPharmacistId, setSelectedPharmacistId] = React.useState(client?.assignedPharmacistId || '');
@@ -5531,14 +6060,25 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, pharmacis
 
           {/* Actions */}
           <div className="flex justify-between items-center pt-6 border-t">
-            <button
-              type="button"
-              onClick={() => onDelete(client.id)}
-              className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-md hover:bg-yellow-700 flex items-center"
-            >
-              <Package className="h-4 w-4 mr-2" />
-              Archive Client
-            </button>
+            {client.status === 'archived' ? (
+              <button
+                type="button"
+                onClick={() => onUnarchive && onUnarchive(client.id)}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 flex items-center"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Unarchive Client
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onDelete && onDelete(client.id)}
+                className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-md hover:bg-yellow-700 flex items-center"
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Archive Client
+              </button>
+            )}
             <div className="flex space-x-3">
               <button
                 type="button"
@@ -5547,13 +6087,15 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, pharmacis
               >
                 Close
               </button>
-              <button
-                type="button"
-                onClick={() => onAssignTask(client)}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
-              >
-                Assign Task
-              </button>
+              {client.status !== 'archived' && (
+                <button
+                  type="button"
+                  onClick={() => onAssignTask(client)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
+                >
+                  Assign Task
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -6283,7 +6825,15 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
               {caregiver.workingHours && (
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Working Hours</label>
-                  <p className="mt-1 text-gray-900">{caregiver.workingHours}</p>
+                  {Array.isArray(caregiver.workingHours) ? (
+                    <div className="mt-1 space-y-1">
+                      {caregiver.workingHours.map((hours, index) => (
+                        <p key={index} className="text-gray-900">• {hours}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-gray-900">{caregiver.workingHours}</p>
+                  )}
                 </div>
               )}
               {caregiver.availableDays && caregiver.availableDays.length > 0 && (

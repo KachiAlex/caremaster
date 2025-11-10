@@ -7,6 +7,10 @@ class PWAService {
     this.deferredPrompt = null;
     this.isOnline = navigator.onLine;
     this.swRegistration = null;
+    this.updateNotificationElement = null;
+    this.updateNotificationDismissed = false;
+    this.updateNotificationTimeout = null;
+    this.updateNotificationListenerAttached = false;
     
     this.init();
   }
@@ -37,14 +41,7 @@ class PWAService {
         });
         
         // Handle service worker updates
-        this.swRegistration.addEventListener('updatefound', () => {
-          const newWorker = this.swRegistration.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              this.showUpdateNotification();
-            }
-          });
-        });
+        this.attachUpdateFoundListener();
         
         // Handle messages from service worker
         navigator.serviceWorker.addEventListener('message', (event) => {
@@ -165,21 +162,41 @@ class PWAService {
 
   // Service Worker Update Notifications
   setupUpdateNotifications() {
-    if (this.swRegistration) {
-      this.swRegistration.addEventListener('updatefound', () => {
-        const newWorker = this.swRegistration.installing;
-        
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            this.showUpdateNotification();
-          }
-        });
-      });
+    this.attachUpdateFoundListener();
+  }
+
+  attachUpdateFoundListener() {
+    if (!this.swRegistration || this.updateNotificationListenerAttached) {
+      return;
     }
+
+    this.updateNotificationListenerAttached = true;
+
+    this.swRegistration.addEventListener('updatefound', () => {
+      const newWorker = this.swRegistration.installing;
+      if (!newWorker) {
+        return;
+      }
+
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          this.updateNotificationDismissed = false;
+          this.showUpdateNotification();
+        }
+      });
+    });
   }
 
   // Show Update Notification
   showUpdateNotification() {
+    if (this.updateNotificationDismissed) {
+      return;
+    }
+
+    if (this.updateNotificationElement && this.updateNotificationElement.parentNode) {
+      return;
+    }
+
     const updateNotification = document.createElement('div');
     updateNotification.className = 'pwa-update-notification';
     updateNotification.innerHTML = `
@@ -244,26 +261,75 @@ class PWAService {
     `;
     
     document.body.appendChild(updateNotification);
+    this.updateNotificationElement = updateNotification;
+    
+    const updateNow = updateNotification.querySelector('#update-now');
+    const updateLater = updateNotification.querySelector('#update-later');
+    const closeButton = updateNotification.querySelector('#close-update');
+
+    const dismissNotification = ({ toastMessage, toastOptions } = {}) => {
+      if (this.updateNotificationTimeout) {
+        clearTimeout(this.updateNotificationTimeout);
+        this.updateNotificationTimeout = null;
+      }
+
+      if (this.updateNotificationElement && this.updateNotificationElement.parentNode) {
+        this.updateNotificationElement.remove();
+      }
+
+      this.updateNotificationElement = null;
+      this.updateNotificationDismissed = true;
+
+      if (toastMessage) {
+        toast.dismiss('pwa-update-dismissed');
+        toast.info(toastMessage, {
+          toastId: 'pwa-update-dismissed',
+          autoClose: 3500,
+          icon: '🛈',
+          ...toastOptions
+        });
+      }
+    };
     
     // Add event listeners
-    document.getElementById('update-now').addEventListener('click', () => {
-      this.updateApp();
-      updateNotification.remove();
-    });
+    if (updateNow) {
+      updateNow.addEventListener('click', () => {
+        dismissNotification();
+        this.updateApp();
+      });
+    }
     
-    document.getElementById('update-later').addEventListener('click', () => {
-      updateNotification.remove();
-    });
+    if (updateLater) {
+      updateLater.addEventListener('click', () =>
+        dismissNotification({
+          toastMessage: 'Update postponed. Refresh whenever you\'re ready.'
+        })
+      );
+    }
     
-    document.getElementById('close-update').addEventListener('click', () => {
-      updateNotification.remove();
-    });
+    if (closeButton) {
+      closeButton.addEventListener('click', () =>
+        dismissNotification({
+          toastMessage: 'Update reminder dismissed. You can refresh to apply it later.'
+        })
+      );
+    }
     
     // Auto-hide after 30 seconds (increased from 15)
-    setTimeout(() => {
-      if (updateNotification.parentNode) {
+    this.updateNotificationTimeout = setTimeout(() => {
+      if (this.updateNotificationElement === updateNotification && updateNotification.parentNode) {
         updateNotification.remove();
       }
+
+      this.updateNotificationElement = null;
+      this.updateNotificationTimeout = null;
+      this.updateNotificationDismissed = true;
+      toast.dismiss('pwa-update-dismissed');
+      toast.info('Update reminder timed out. You can refresh anytime to apply it.', {
+        toastId: 'pwa-update-dismissed',
+        autoClose: 3500,
+        icon: '🛈'
+      });
     }, 30000);
   }
 

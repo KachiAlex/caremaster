@@ -255,25 +255,65 @@ export const getClientDiagnostics = async (clientId) => {
 // Get all diagnostics (for admin/doctor view)
 export const getAllDiagnostics = async (institutionId) => {
   try {
+    if (!institutionId) {
+      logger.warn('No institutionId provided for getAllDiagnostics');
+      return [];
+    }
+
     logger.info('Fetching all diagnostics for institution', { institutionId });
 
-    const diagnosticsQuery = query(
-      collection(db, DIAGNOSTICS_COLLECTION),
-      where('institutionId', '==', institutionId),
-      orderBy('createdAt', 'desc')
-    );
+    // Try query with orderBy first
+    try {
+      const diagnosticsQuery = query(
+        collection(db, DIAGNOSTICS_COLLECTION),
+        where('institutionId', '==', institutionId),
+        orderBy('createdAt', 'desc')
+      );
 
-    const snapshot = await getDocs(diagnosticsQuery);
-    const diagnostics = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+      const snapshot = await getDocs(diagnosticsQuery);
+      const diagnostics = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
-    logger.info('Fetched all diagnostics', { institutionId, count: diagnostics.length });
-    return diagnostics;
+      logger.info('Fetched all diagnostics', { institutionId, count: diagnostics.length });
+      return diagnostics;
+    } catch (queryError) {
+      // If query fails due to missing index, try without orderBy
+      if (queryError.code === 'failed-precondition' || queryError.message?.includes('index')) {
+        logger.warn('Composite index missing, fetching without orderBy', { institutionId });
+        
+        const diagnosticsQuery = query(
+          collection(db, DIAGNOSTICS_COLLECTION),
+          where('institutionId', '==', institutionId)
+        );
+
+        const snapshot = await getDocs(diagnosticsQuery);
+        const diagnostics = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Sort client-side by createdAt
+        diagnostics.sort((a, b) => {
+          const aTime = a.createdAt?.toMillis?.() || a.createdAt || 0;
+          const bTime = b.createdAt?.toMillis?.() || b.createdAt || 0;
+          return bTime - aTime;
+        });
+
+        logger.info('Fetched all diagnostics (without index)', { institutionId, count: diagnostics.length });
+        return diagnostics;
+      }
+      throw queryError;
+    }
   } catch (error) {
-    logger.error('Error fetching all diagnostics', { error, institutionId });
-    throw error;
+    // Only log non-index errors to avoid console noise
+    const isIndexError = error.code === 'failed-precondition' || error.message?.includes('index');
+    if (!isIndexError) {
+      logger.error('Error fetching all diagnostics', { error, institutionId });
+    }
+    // Return empty array instead of throwing to prevent breaking the dashboard
+    return [];
   }
 };
 

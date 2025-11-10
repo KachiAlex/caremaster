@@ -59,7 +59,7 @@ const PreclinicLayout = ({ children, userRole = 'admin', activeTab, setActiveTab
             </div>
             {sidebarOpen && (
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Care Master</h1>
+                <h1 className="brand-title-alt text-gray-900">Care Master</h1>
                 <p className="text-sm text-gray-500">Healthcare Platform</p>
               </div>
             )}

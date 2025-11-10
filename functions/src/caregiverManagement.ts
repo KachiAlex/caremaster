@@ -22,6 +22,11 @@ interface CreateCaregiverData {
   notes?: string;
 }
 
+interface ResetCaregiverPasswordData {
+  caregiverId: string;
+  newPassword: string;
+}
+
 /**
  * Create a caregiver with Firebase Auth account and user/caregiver documents
  * Callable by institution admins only
@@ -166,6 +171,59 @@ export const createCaregiverWithAuth = functions.https.onCall(
         'internal',
         `Failed to create caregiver: ${error.message}`
       );
+    }
+  }
+);
+
+export const resetCaregiverPassword = functions.https.onCall(
+  async (data: ResetCaregiverPasswordData, context) => {
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+      }
+
+      const callerDoc = await getDb().collection('users').doc(context.auth.uid).get();
+      const callerData = callerDoc.data();
+
+      if (!callerData || (callerData.userType !== 'admin' && callerData.userType !== 'institutionAdmin' && callerData.role !== 'admin')) {
+        throw new functions.https.HttpsError('permission-denied', 'Only admins can reset caregiver passwords');
+      }
+
+      const { caregiverId, newPassword } = data || ({} as ResetCaregiverPasswordData);
+
+      if (!caregiverId || !newPassword) {
+        throw new functions.https.HttpsError('invalid-argument', 'Caregiver ID and new password are required');
+      }
+
+      if (typeof newPassword !== 'string' || newPassword.length < 6) {
+        throw new functions.https.HttpsError('invalid-argument', 'Password must be at least 6 characters long');
+      }
+
+      await admin.auth().updateUser(caregiverId, { password: newPassword });
+
+      try {
+        await getDb().collection('users').doc(caregiverId).set({
+          passwordLastResetAt: admin.firestore.FieldValue.serverTimestamp(),
+          passwordResetBy: context.auth.uid,
+          tempPasswordIssued: false,
+          mustChangePassword: false
+        }, { merge: true });
+      } catch (firestoreError) {
+        console.warn('Failed to update caregiver password metadata', firestoreError);
+      }
+
+      return {
+        success: true,
+        caregiverId
+      };
+    } catch (error: any) {
+      console.error('Error resetting caregiver password:', error);
+
+      if (error instanceof functions.https.HttpsError) {
+        throw error;
+      }
+
+      throw new functions.https.HttpsError('internal', `Failed to reset caregiver password: ${error.message}`);
     }
   }
 );

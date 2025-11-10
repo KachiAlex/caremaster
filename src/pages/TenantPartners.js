@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { institutionAPI } from '../api/institutionAPI';
-import { Building2, Shield, Stethoscope, Pill, Plus, Info } from 'lucide-react';
+import { ArrowRight, LifeBuoy, Lock, Shield, Users, Pill, Sparkles } from 'lucide-react';
 
 const RequestPartnerModal = ({ isOpen, onClose }) => {
   const [orgName, setOrgName] = useState('');
@@ -18,32 +17,81 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
-        <div className="p-5 border-b flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Request to become a Tenant Partner</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-blue-600">Partner With Care Master</p>
+            <h3 className="text-xl font-black text-slate-900">Request to become a Tenant Partner</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+            aria-label="Close partner request form"
+          >
+            ✕
+          </button>
         </div>
-        <form onSubmit={submit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Organization Name</label>
-            <input value={orgName} onChange={e=>setOrgName(e.target.value)} required className="w-full border rounded-md px-3 py-2" />
+        <form onSubmit={submit} className="px-6 py-5">
+          <div className="grid gap-4">
+            <label className="space-y-1 text-sm">
+              <span className="text-slate-600">Organization Name</span>
+              <input
+                value={orgName}
+                onChange={e => setOrgName(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                placeholder="Bulah Health Care"
+              />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="text-slate-600">Email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  placeholder="hello@caremaster.com"
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-slate-600">Website (optional)</span>
+                <input
+                  value={website}
+                  onChange={e => setWebsite(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  placeholder="https://"
+                />
+              </label>
+            </div>
+            <label className="space-y-1 text-sm">
+              <span className="text-slate-600">Message</span>
+              <textarea
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                rows={4}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                placeholder="Tell us about your institution and care goals…"
+              />
+            </label>
           </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Email</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required className="w-full border rounded-md px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Website (optional)</label>
-            <input value={website} onChange={e=>setWebsite(e.target.value)} className="w-full border rounded-md px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Message</label>
-            <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={4} className="w-full border rounded-md px-3 py-2"/>
-          </div>
-          <div className="pt-2 flex justify-end space-x-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200">Cancel</button>
-            <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Submit Request</button>
+          <div className="mt-6 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            >
+              <Sparkles className="h-4 w-4" />
+              Submit request
+            </button>
           </div>
         </form>
       </div>
@@ -53,105 +101,152 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
 
 const TenantPartners = () => {
   const navigate = useNavigate();
-  const [partners, setPartners] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { collection, getDocs, query, orderBy, limit } = await import('firebase/firestore');
-        const { db } = await import('../firebase/config');
-        const ref = collection(db, 'institutions');
-        const q = query(ref, orderBy('name', 'asc'), limit(50));
-        const snap = await getDocs(q);
-        const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setPartners(rows);
-      } catch (e) {
-        console.warn('Could not load institutions; falling back to sample');
-        setPartners([{ id: 'YlRg0VHMK9BrvPQuYXqm', name: 'Bulah Health Care' }]);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  const goToPortals = (id) => {
-    navigate(`/institution?institution=${encodeURIComponent(id)}`);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        <div className="text-center mb-10">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center mb-4">
-            <Building2 className="h-7 w-7 text-blue-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">Welcome, Tenant Partners</h1>
-          <p className="text-gray-600 mt-2 max-w-2xl mx-auto">
-            Care Master helps healthcare institutions deliver modern, connected elder-care. Manage staff, coordinate care, communicate in real time, and streamline pharmacy workflows—all in one secure platform.
-          </p>
-          <div className="mt-4 inline-flex items-center text-blue-700 bg-blue-50 px-3 py-1 rounded-full text-sm">
-            <Info className="h-4 w-4 mr-1"/> Multi-institution support. Role-based portals for Admin, Caregivers, and Pharmacists.
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Current Tenant Partners</h2>
-          <button onClick={()=>setShowModal(true)} className="inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2"/> Request to become a partner
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="p-8 text-center text-gray-600">Loading partners...</div>
-        ) : partners.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No tenant partners yet.</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {partners.map(p => (
-              <div key={p.id} className="bg-white rounded-xl border hover:shadow-md transition p-5 flex flex-col">
-                <div className="flex items-center mb-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                    <Building2 className="h-5 w-5 text-blue-600"/>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">{p.name}</div>
-                    <div className="text-xs text-gray-500">{p.city || '—'}</div>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-600 flex-1">
-                  Secure, role-based portals:
-                  <div className="mt-2 space-x-2">
-                    <a href={`${window.location.origin}/institution-admin/dashboard?institution=${encodeURIComponent(p.id)}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded bg-purple-50 text-purple-700 hover:bg-purple-100 inline-flex items-center text-xs"><Shield className="h-3 w-3 mr-1"/> Admin</a>
-                    <a href={`${window.location.origin}/institution-caregiver/dashboard?institution=${encodeURIComponent(p.id)}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100 inline-flex items-center text-xs"><Stethoscope className="h-3 w-3 mr-1"/> Caregiver</a>
-                    <a href={`${window.location.origin}/institution-caregiver/dashboard?institution=${encodeURIComponent(p.id)}#pharmacy`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 inline-flex items-center text-xs"><Pill className="h-3 w-3 mr-1"/> Pharmacist</a>
-                  </div>
-                </div>
-                <div className="pt-4">
-                  <button onClick={()=>goToPortals(p.id)} className="w-full px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200">Open Institution</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-5 rounded-xl border">
-            <h3 className="font-semibold text-gray-900 mb-2">For Administrators</h3>
-            <p className="text-sm text-gray-600">Onboard staff, manage roles, configure custom links, and monitor operations in real time with analytics and alerts.</p>
-          </div>
-          <div className="bg-white p-5 rounded-xl border">
-            <h3 className="font-semibold text-gray-900 mb-2">For Care Teams</h3>
-            <p className="text-sm text-gray-600">Coordinate patient care, manage schedules and tasks, message securely, and run telemedicine calls—all in one place.</p>
-          </div>
-          <div className="bg-white p-5 rounded-xl border">
-            <h3 className="font-semibold text-gray-900 mb-2">For Pharmacy</h3>
-            <p className="text-sm text-gray-600">Streamline prescription workflows and medication management integrated with the care team’s daily operations.</p>
-          </div>
-        </div>
+    <div className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-blue-50">
+      <div className="pointer-events-none absolute inset-x-0 -top-32 flex justify-center">
+        <div className="h-64 w-[600px] rounded-full bg-blue-200/40 blur-3xl" />
       </div>
-      <RequestPartnerModal isOpen={showModal} onClose={()=>setShowModal(false)} />
+      <div className="relative mx-auto max-w-6xl px-6 pb-20 pt-12 lg:px-12">
+        <section className="grid gap-10 rounded-3xl bg-white/80 p-10 shadow-xl backdrop-blur lg:grid-cols-[1.25fr_1fr]">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+              <Sparkles className="h-3 w-3" />
+              Trusted elder-care infrastructure
+            </div>
+            <h1 className="mt-4 text-4xl font-black text-slate-900 sm:text-5xl">
+              Welcome to the Care Master Partner's Portal
+            </h1>
+            <p className="mt-4 text-lg leading-relaxed text-slate-600">
+              Sign in to access your institution's private workspace. Every tenant operates in a secure, isolated environment with role-based access and unified workflows for administrators, caregivers, and pharmacy teams.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3 text-sm text-blue-700">
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2">
+                <Lock className="h-4 w-4" />
+                Single sign-on security
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2">
+                <Shield className="h-4 w-4" />
+                HIPAA-inspired safeguards
+              </span>
+            </div>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <button
+                onClick={() => navigate('/auth?tab=login&context=partner')}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700"
+              >
+                Partner login
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
+              >
+                Request access
+              </button>
+            </div>
+            <p className="mt-6 text-sm text-slate-500">
+              Need help signing in? <button onClick={() => navigate('/support')} className="font-semibold text-blue-600 hover:underline">Contact support</button>
+            </p>
+          </div>
+          <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-600 via-blue-500 to-blue-400 p-6 text-white shadow-lg">
+            <h2 className="text-lg font-semibold uppercase tracking-wide text-blue-100">Impact Snapshot</h2>
+            <div className="mt-6 grid gap-5">
+              <div className="rounded-xl bg-white/10 p-4">
+                <p className="text-3xl font-black">12+</p>
+                <p className="text-sm text-blue-100">Institutions modernizing their elder-care operations with Care Master</p>
+              </div>
+              <div className="rounded-xl bg-white/10 p-4">
+                <p className="text-3xl font-black">4.8 / 5</p>
+                <p className="text-sm text-blue-100">Average satisfaction score from caregiver and admin teams</p>
+              </div>
+              <div className="rounded-xl bg-white/10 p-4">
+                <p className="text-3xl font-black">3 continents</p>
+                <p className="text-sm text-blue-100">Global reach across Africa, Europe, and North America</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-16 rounded-3xl bg-white/80 p-10 shadow-xl backdrop-blur">
+          <p className="text-xs uppercase tracking-wide text-slate-400">How It Works</p>
+          <h2 className="mt-2 text-3xl font-black text-slate-900">Secure access for every tenant</h2>
+          <div className="mt-8 grid gap-6 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">Step 1</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-900">Partner login</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                Registered administrators sign in using their institution email. Accounts are provisioned with tenant-specific roles and permissions.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">Step 2</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-900">Automatic routing</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                After authentication we redirect users to their private institution workspace powered by Firestore rules and custom claims.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">Step 3</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-900">Tenant operations</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                Administrators, caregivers, and pharmacy teams collaborate within a shared record system where data never leaves the tenant boundary.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-16 grid gap-6 lg:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-slate-900">For Administrators</h3>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Orchestrate institutions with role governance, analytics, alerts, and automated compliance guardrails.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-slate-900">For Care Teams</h3>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Plan shifts, track tasks, collaborate in real time, and capture clinical observations without switching tools.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Pill className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-slate-900">For Pharmacy</h3>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Streamline medication workflows, automate refills, and sync with care plans for safe dispensing.
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-20 rounded-3xl border border-blue-100 bg-blue-50/60 p-10 shadow-inner">
+          <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-blue-600">Need an invite?</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-900">Request onboarding for your institution</h2>
+              <p className="mt-3 max-w-2xl text-sm text-slate-600">
+                We partner closely with healthcare groups to configure workflows, govern access, and train teams. Send us a request and our onboarding specialists will reach out within one business day.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowModal(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100"
+            >
+              <LifeBuoy className="h-4 w-4" />
+              Request onboarding
+            </button>
+          </div>
+        </section>
+      </div>
+      <RequestPartnerModal isOpen={showModal} onClose={() => setShowModal(false)} />
     </div>
   );
 };

@@ -36,26 +36,40 @@ const ArchivedClients = ({ institutionId }) => {
     try {
       setLoading(true);
       
-      // Query clients with archived status
-      const clientsQuery = query(
-        collection(db, 'users'),
-        where('institutionId', '==', institutionId),
-        where('status', '==', 'archived'),
-        where('userType', '==', 'client')
-      );
+      // Query clients with archived status from the 'clients' collection
+      // Try with orderBy first, fallback if index doesn't exist
+      let querySnapshot;
+      try {
+        const clientsQuery = query(
+          collection(db, 'clients'),
+          where('institutionId', '==', institutionId),
+          where('status', '==', 'archived'),
+          orderBy('archivedAt', 'desc')
+        );
+        querySnapshot = await getDocs(clientsQuery);
+      } catch (indexError) {
+        // Fallback: query without orderBy if index doesn't exist
+        console.warn('Index for archivedAt not found, using simpler query');
+        const clientsQuery = query(
+          collection(db, 'clients'),
+          where('institutionId', '==', institutionId),
+          where('status', '==', 'archived')
+        );
+        querySnapshot = await getDocs(clientsQuery);
+      }
       
-      const querySnapshot = await getDocs(clientsQuery);
       const clients = [];
       
       querySnapshot.forEach((doc) => {
         const clientData = doc.data();
         clients.push({
           id: doc.id,
-          ...clientData
+          ...clientData,
+          archivedAt: clientData.archivedAt?.toDate?.() || clientData.archivedAt
         });
       });
       
-      // Sort by archived date (most recent first)
+      // Always sort by archived date (most recent first) as fallback
       clients.sort((a, b) => {
         const dateA = new Date(a.archivedAt || 0);
         const dateB = new Date(b.archivedAt || 0);
@@ -65,7 +79,7 @@ const ArchivedClients = ({ institutionId }) => {
       setArchivedClients(clients);
     } catch (error) {
       console.error('Error loading archived clients:', error);
-      toast.error('Failed to load archived clients');
+      toast.error('Failed to load archived clients: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -94,7 +108,7 @@ const ArchivedClients = ({ institutionId }) => {
     try {
       setRestoring(true);
       
-      const clientRef = doc(db, 'users', clientId);
+      const clientRef = doc(db, 'clients', clientId);
       await updateDoc(clientRef, {
         status: 'active',
         restoredAt: new Date().toISOString(),

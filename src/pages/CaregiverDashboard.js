@@ -247,13 +247,38 @@ const CaregiverDashboard = () => {
           }
         }
         
-        // Load today's schedule (appointments + tasks)
-        const [todaysAppointments, todaysTasks] = await Promise.all([
+        // Load today's schedule (appointments + tasks + assignments)
+        const [todaysAppointments, todaysTasks, assignments] = await Promise.all([
           getTodaysAppointments(user?.uid, 'caregiver'),
-          getTodayTasks(user?.uid)
+          getTodayTasks(user?.uid),
+          assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
         ]);
         
-        // Combine appointments and tasks for today's schedule
+        // Convert assignments to task format for today's schedule
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const assignmentTasks = assignments
+          .filter(a => {
+            if (!a.dueDate) return false;
+            const dueDate = new Date(a.dueDate);
+            dueDate.setHours(0, 0, 0, 0);
+            return dueDate.getTime() === today.getTime();
+          })
+          .map(assignment => ({
+            id: assignment.id,
+            type: 'task',
+            title: assignment.title || 'Assigned Task',
+            time: assignment.dueTime ? `${assignment.dueTime}:00` : '09:00:00',
+            scheduledTime: assignment.dueDate ? new Date(`${assignment.dueDate}T${assignment.dueTime || '09:00'}`) : new Date(),
+            client: assignment.clientName || 'Client',
+            status: assignment.status || 'pending',
+            priority: assignment.priority || 'normal',
+            description: assignment.description,
+            instructions: assignment.instructions,
+            assignmentType: 'clientAssignment'
+          }));
+        
+        // Combine appointments, tasks, and assignments for today's schedule
         const combinedSchedule = [
           ...todaysAppointments.map(apt => ({
             id: apt.id,
@@ -270,7 +295,8 @@ const CaregiverDashboard = () => {
             time: task.scheduledTime,
             client: task.clientName || 'Client',
             status: task.status || 'pending'
-          }))
+          })),
+          ...assignmentTasks
         ];
         
         // Sort by time

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
+import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
 import { 
   UserX, 
   Search, 
@@ -14,7 +16,8 @@ import {
   Activity,
   Clock,
   AlertTriangle,
-  FileText
+  FileText,
+  FileSpreadsheet
 } from 'lucide-react';
 
 const InactiveCaregiversReport = ({ institutionId }) => {
@@ -93,47 +96,118 @@ const InactiveCaregiversReport = ({ institutionId }) => {
 
   const getCaregiverActivityLogs = async (caregiverId) => {
     try {
-      // Query for assignments completed by caregiver
-      const assignmentsQuery = query(
-        collection(db, 'assignments'),
-        where('caregiverId', '==', caregiverId),
-        orderBy('createdAt', 'desc')
-      );
-
-      const assignmentsSnapshot = await getDocs(assignmentsQuery);
       const logs = [];
 
-      assignmentsSnapshot.forEach((doc) => {
-        const assignment = doc.data();
-        logs.push({
-          type: 'assignment',
-          timestamp: assignment.updatedAt || assignment.createdAt,
-          description: `Assignment: ${assignment.title || 'Untitled'}`,
-          status: assignment.status
+      // Query for assignments completed by caregiver
+      try {
+        const assignmentsQuery = query(
+          collection(db, 'assignments'),
+          where('caregiverId', '==', caregiverId),
+          orderBy('createdAt', 'desc')
+        );
+
+        const assignmentsSnapshot = await getDocs(assignmentsQuery);
+        assignmentsSnapshot.forEach((doc) => {
+          const assignment = doc.data();
+          logs.push({
+            type: 'assignment',
+            timestamp: assignment.updatedAt || assignment.createdAt,
+            description: `Assignment: ${assignment.title || 'Untitled'}`,
+            status: assignment.status
+          });
         });
-      });
+      } catch (assignmentsError) {
+        // If index is missing, try without orderBy
+        if (assignmentsError.code === 'failed-precondition' || assignmentsError.message?.includes('index')) {
+          try {
+            const assignmentsQuery = query(
+              collection(db, 'assignments'),
+              where('caregiverId', '==', caregiverId)
+            );
+            const assignmentsSnapshot = await getDocs(assignmentsQuery);
+            const assignmentLogs = [];
+            assignmentsSnapshot.forEach((doc) => {
+              const assignment = doc.data();
+              assignmentLogs.push({
+                type: 'assignment',
+                timestamp: assignment.updatedAt || assignment.createdAt,
+                description: `Assignment: ${assignment.title || 'Untitled'}`,
+                status: assignment.status
+              });
+            });
+            // Sort client-side
+            assignmentLogs.sort((a, b) => {
+              const aTime = a.timestamp?.toMillis?.() || new Date(a.timestamp).getTime() || 0;
+              const bTime = b.timestamp?.toMillis?.() || new Date(b.timestamp).getTime() || 0;
+              return bTime - aTime;
+            });
+            logs.push(...assignmentLogs);
+          } catch (fallbackError) {
+            console.warn('Could not fetch assignments (index may be building):', fallbackError.message);
+          }
+        } else {
+          console.warn('Error fetching assignments:', assignmentsError.message);
+        }
+      }
 
       // Query for care logs created by caregiver
-      const careLogsQuery = query(
-        collection(db, 'careLogs'),
-        where('caregiverId', '==', caregiverId),
-        orderBy('timestamp', 'desc')
-      );
+      try {
+        const careLogsQuery = query(
+          collection(db, 'careLogs'),
+          where('caregiverId', '==', caregiverId),
+          orderBy('timestamp', 'desc')
+        );
 
-      const careLogsSnapshot = await getDocs(careLogsQuery);
-      
-      careLogsSnapshot.forEach((doc) => {
-        const log = doc.data();
-        logs.push({
-          type: 'careLog',
-          timestamp: log.timestamp,
-          description: log.notes || 'Care log entry',
-          clientId: log.clientId
+        const careLogsSnapshot = await getDocs(careLogsQuery);
+        careLogsSnapshot.forEach((doc) => {
+          const log = doc.data();
+          logs.push({
+            type: 'careLog',
+            timestamp: log.timestamp,
+            description: log.notes || 'Care log entry',
+            clientId: log.clientId
+          });
         });
-      });
+      } catch (careLogsError) {
+        // If index is missing, try without orderBy
+        if (careLogsError.code === 'failed-precondition' || careLogsError.message?.includes('index')) {
+          try {
+            const careLogsQuery = query(
+              collection(db, 'careLogs'),
+              where('caregiverId', '==', caregiverId)
+            );
+            const careLogsSnapshot = await getDocs(careLogsQuery);
+            const careLogEntries = [];
+            careLogsSnapshot.forEach((doc) => {
+              const log = doc.data();
+              careLogEntries.push({
+                type: 'careLog',
+                timestamp: log.timestamp,
+                description: log.notes || 'Care log entry',
+                clientId: log.clientId
+              });
+            });
+            // Sort client-side
+            careLogEntries.sort((a, b) => {
+              const aTime = a.timestamp?.toMillis?.() || new Date(a.timestamp).getTime() || 0;
+              const bTime = b.timestamp?.toMillis?.() || new Date(b.timestamp).getTime() || 0;
+              return bTime - aTime;
+            });
+            logs.push(...careLogEntries);
+          } catch (fallbackError) {
+            console.warn('Could not fetch care logs (index may be building):', fallbackError.message);
+          }
+        } else {
+          console.warn('Error fetching care logs:', careLogsError.message);
+        }
+      }
 
       // Sort all logs by timestamp
-      logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      logs.sort((a, b) => {
+        const aTime = a.timestamp?.toMillis?.() || new Date(a.timestamp).getTime() || 0;
+        const bTime = b.timestamp?.toMillis?.() || new Date(b.timestamp).getTime() || 0;
+        return bTime - aTime;
+      });
 
       return logs;
     } catch (error) {
@@ -198,6 +272,185 @@ const InactiveCaregiversReport = ({ institutionId }) => {
     window.URL.revokeObjectURL(url);
 
     toast.success('Report exported successfully');
+  };
+
+  const exportActivityLogsToPDF = () => {
+    if (!selectedCaregiver || activityLogs.length === 0) {
+      toast.error('No activity logs to export');
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 20;
+      const margin = 20;
+      const lineHeight = 7;
+      const maxWidth = pageWidth - 2 * margin;
+
+      // Header
+      doc.setFontSize(18);
+      doc.setFont(undefined, 'bold');
+      doc.text('Activity Log Report', margin, yPosition);
+      yPosition += 10;
+
+      // Caregiver Info
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Caregiver Information:', margin, yPosition);
+      yPosition += lineHeight;
+
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Name: ${selectedCaregiver.name || selectedCaregiver.fullName || 'Unknown'}`, margin, yPosition);
+      yPosition += lineHeight;
+      doc.text(`Email: ${selectedCaregiver.email || 'N/A'}`, margin, yPosition);
+      yPosition += lineHeight;
+      doc.text(`Phone: ${selectedCaregiver.phone || 'N/A'}`, margin, yPosition);
+      yPosition += lineHeight;
+      doc.text(`Role: ${selectedCaregiver.userType || selectedCaregiver.type || 'caregiver'}`, margin, yPosition);
+      yPosition += lineHeight;
+      doc.text(`Last Activity: ${formatDate(selectedCaregiver.lastActivity) || 'Never'}`, margin, yPosition);
+      yPosition += lineHeight;
+      doc.text(`Days Inactive: ${selectedCaregiver.daysSinceLastActivity}`, margin, yPosition);
+      yPosition += 10;
+
+      // Activity Logs Header
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text(`Activity History (${activityLogs.length} entries):`, margin, yPosition);
+      yPosition += 10;
+
+      // Activity Logs
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      
+      activityLogs.forEach((log, index) => {
+        // Check if we need a new page
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        // Log entry
+        doc.setFont(undefined, 'bold');
+        const logType = log.type === 'assignment' ? 'Assignment' : 'Care Log';
+        doc.text(`${index + 1}. ${logType}`, margin, yPosition);
+        yPosition += lineHeight;
+
+        doc.setFont(undefined, 'normal');
+        const timestamp = formatDate(log.timestamp);
+        doc.text(`Date: ${timestamp}`, margin + 5, yPosition);
+        yPosition += lineHeight;
+
+        // Description (split if too long)
+        const description = log.description || 'No description';
+        const splitDescription = doc.splitTextToSize(`Description: ${description}`, maxWidth - 10);
+        splitDescription.forEach((line) => {
+          if (yPosition > pageHeight - 20) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(line, margin + 5, yPosition);
+          yPosition += lineHeight;
+        });
+
+        if (log.status) {
+          doc.text(`Status: ${log.status}`, margin + 5, yPosition);
+          yPosition += lineHeight;
+        }
+
+        yPosition += 3; // Space between entries
+      });
+
+      // Footer
+      const totalPages = doc.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(
+          `Page ${i} of ${totalPages} - Generated on ${new Date().toLocaleDateString()}`,
+          margin,
+          pageHeight - 10
+        );
+      }
+
+      // Save PDF
+      const fileName = `activity-log-${selectedCaregiver.name || selectedCaregiver.fullName || 'caregiver'}-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      toast.success('Activity logs exported to PDF successfully');
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast.error('Failed to export PDF');
+    }
+  };
+
+  const exportActivityLogsToExcel = () => {
+    if (!selectedCaregiver || activityLogs.length === 0) {
+      toast.error('No activity logs to export');
+      return;
+    }
+
+    try {
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // Caregiver Info Sheet
+      const caregiverInfo = [
+        ['Caregiver Information', ''],
+        ['Name', selectedCaregiver.name || selectedCaregiver.fullName || 'Unknown'],
+        ['Email', selectedCaregiver.email || 'N/A'],
+        ['Phone', selectedCaregiver.phone || 'N/A'],
+        ['Role', selectedCaregiver.userType || selectedCaregiver.type || 'caregiver'],
+        ['Last Activity', formatDate(selectedCaregiver.lastActivity) || 'Never'],
+        ['Days Inactive', selectedCaregiver.daysSinceLastActivity],
+        ['Total Activity Logs', activityLogs.length],
+        ['', ''],
+        ['Report Generated', new Date().toLocaleString()]
+      ];
+
+      const caregiverSheet = XLSX.utils.aoa_to_sheet(caregiverInfo);
+      XLSX.utils.book_append_sheet(wb, caregiverSheet, 'Caregiver Info');
+
+      // Activity Logs Sheet
+      const logsData = [
+        ['#', 'Type', 'Date', 'Description', 'Status', 'Client ID']
+      ];
+
+      activityLogs.forEach((log, index) => {
+        logsData.push([
+          index + 1,
+          log.type === 'assignment' ? 'Assignment' : 'Care Log',
+          formatDate(log.timestamp),
+          log.description || 'No description',
+          log.status || 'N/A',
+          log.clientId || 'N/A'
+        ]);
+      });
+
+      const logsSheet = XLSX.utils.aoa_to_sheet(logsData);
+      
+      // Set column widths
+      logsSheet['!cols'] = [
+        { wch: 5 },   // #
+        { wch: 12 },  // Type
+        { wch: 20 },  // Date
+        { wch: 50 },  // Description
+        { wch: 15 },  // Status
+        { wch: 20 }   // Client ID
+      ];
+
+      XLSX.utils.book_append_sheet(wb, logsSheet, 'Activity Logs');
+
+      // Save file
+      const fileName = `activity-log-${selectedCaregiver.name || selectedCaregiver.fullName || 'caregiver'}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast.success('Activity logs exported to Excel successfully');
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Failed to export Excel file');
+    }
   };
 
   const formatDate = (dateString) => {
@@ -480,10 +733,32 @@ const InactiveCaregiversReport = ({ institutionId }) => {
 
                 {/* Activity Logs */}
                 <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <FileText className="h-5 w-5 mr-2" />
-                    Activity History ({activityLogs.length} entries)
-                  </h4>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <FileText className="h-5 w-5 mr-2" />
+                      Activity History ({activityLogs.length} entries)
+                    </h4>
+                    {activityLogs.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={exportActivityLogsToPDF}
+                          className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50"
+                          title="Export to PDF"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Export PDF
+                        </button>
+                        <button
+                          onClick={exportActivityLogsToExcel}
+                          className="inline-flex items-center px-3 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50"
+                          title="Export to Excel"
+                        >
+                          <FileSpreadsheet className="h-4 w-4 mr-2" />
+                          Export Excel
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   
                   {activityLogs.length === 0 ? (
                     <div className="text-center py-8 bg-gray-50 rounded-lg">

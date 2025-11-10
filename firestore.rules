@@ -133,7 +133,7 @@ service cloud.firestore {
     
     // Caregivers collection - caregivers can read their own document and query by institution, admins full access
     match /caregivers/{caregiverId} {
-      allow read, list: if isAdmin() || isCaregiver() || (request.auth != null && request.auth.uid == caregiverId);
+      allow read, list: if isAdmin() || isCaregiver() || isDoctor() || (request.auth != null && request.auth.uid == caregiverId);
       allow write: if isAdmin() || (request.auth != null && request.auth.uid == caregiverId);
     }
     
@@ -148,7 +148,11 @@ service cloud.firestore {
     // Clients collection (same as patients)
     match /clients/{clientId} {
       // Admin full access. Caregivers/doctors/pharmacists can read clients
-      allow read, list: if isAdmin() || isCaregiver() || isDoctor() || isPharmacist();
+      // For list queries, allow based on role (resource.data not available in list queries)
+      // For document reads, also allow based on institutionId match
+      allow read: if isAdmin() || isCaregiver() || isDoctor() || isPharmacist() || 
+                  (request.auth != null && resource.data != null && resource.data.institutionId == userInstitution());
+      allow list: if isAdmin() || isCaregiver() || isDoctor() || isPharmacist();
       // Writes restricted to admin
       allow write: if isAdmin();
     }
@@ -157,6 +161,12 @@ service cloud.firestore {
     match /clientAssignments/{assignmentId} {
       allow read, list: if isAdmin() || (request.auth != null && (isCaregiver() || isPharmacist()));
       allow write: if isAdmin();
+    }
+    
+    // Assignments collection - for caregiver assignments and tasks
+    match /assignments/{assignmentId} {
+      allow read, list: if isAdmin() || (request.auth != null && (isCaregiver() || isDoctor()));
+      allow write: if isAdmin() || (request.auth != null && (isCaregiver() || isDoctor()));
     }
     
     // Medical history
@@ -173,6 +183,12 @@ service cloud.firestore {
       // Allow updates by the assignee (caregiver/doctor) for status-only changes
       allow update: if (isCaregiver() || isDoctor()) && resource.data.caregiverId == request.auth.uid;
       allow create, delete: if isAdmin();
+    }
+    
+    // Analytics events - admin only
+    match /analyticsEvents/{eventId} {
+      allow create, read, list: if isAdmin();
+      allow update, delete: if false;
     }
     
     // Patient-caregiver assignments: caregivers can read their own
@@ -199,9 +215,8 @@ service cloud.firestore {
     
     // Appointments: caregivers/doctors/patients can read their own
     match /appointments/{appointmentId} {
-      // Allow read for assigned users (caregiverId, doctorId, patientId match)
-      // For list queries, allow if authenticated caregiver/doctor/patient
-      allow read, list: if isAdmin() || (
+      // For document reads, allow based on role or ownership
+      allow read: if isAdmin() || (
         request.auth != null && (
           isCaregiver() || isDoctor() ||
           (resource.data != null && (
@@ -211,6 +226,8 @@ service cloud.firestore {
           ))
         )
       );
+      // For list queries, allow based on role (resource.data not available)
+      allow list: if isAdmin() || (request.auth != null && (isCaregiver() || isDoctor()));
       allow write: if isAdmin();
     }
     
@@ -272,7 +289,7 @@ service cloud.firestore {
     
     // Emergency alerts
     match /emergencies/{emergencyId} {
-      allow read: if isAdmin() || isDoctor() || isCaregiver();
+      allow read, list: if isAdmin() || isDoctor() || isCaregiver();
       allow create: if isAdmin() || isDoctor() || isCaregiver();
       allow update: if isAdmin() || isDoctor();
     }
@@ -321,10 +338,17 @@ service cloud.firestore {
     
     // Care logs collection - caregivers can create logs; authenticated users can read
     match /careLogs/{logId} {
-      allow read, list: if request.auth != null;
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        (resource.data != null && resource.data.caregiverId == request.auth.uid) ||
+        (resource.data != null && resource.data.institutionId == userInstitution())
+      );
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && (
-        isAdmin() || request.auth.uid == request.resource.data.caregiverId
+        isAdmin() || 
+        (request.resource.data != null && request.auth.uid == request.resource.data.caregiverId)
       );
     }
 
@@ -568,17 +592,21 @@ service cloud.firestore {
     
     // Diagnostics collection - role-based access
     match /diagnostics/{diagnosticId} {
-      allow read, list: if request.auth != null && (
+      // For document reads, allow based on role or ownership
+      allow read: if request.auth != null && (
         isAdmin() || 
         isDoctor() || 
         isNurse() ||
-        resource.data.clientId == request.auth.uid
+        (resource.data != null && resource.data.clientId == request.auth.uid) ||
+        (resource.data != null && resource.data.institutionId == userInstitution())
       );
+      // For list queries, allow based on role (resource.data not available)
+      allow list: if request.auth != null && (isAdmin() || isDoctor() || isNurse());
       allow create: if request.auth != null && (isAdmin() || isDoctor());
       allow update: if request.auth != null && (
         isAdmin() || 
-        (isDoctor() && resource.data.orderedBy == request.auth.uid) ||
-        (isNurse() && resource.data.orderedBy == request.auth.uid)
+        (resource.data != null && isDoctor() && resource.data.orderedBy == request.auth.uid) ||
+        (resource.data != null && isNurse() && resource.data.orderedBy == request.auth.uid)
       );
       allow delete: if request.auth != null && (isAdmin() || isDoctor());
     }
