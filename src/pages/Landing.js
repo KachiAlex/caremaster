@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import {
+import { 
   HeartPulse,
   Sparkles,
   ShieldCheck,
   Activity,
-  Clock,
-  Phone,
+  Clock, 
+  Phone, 
   ArrowRight,
   Stethoscope,
   Users2,
@@ -112,13 +112,13 @@ const Landing = () => {
             >
               Log in
             </Link>
-            <Link
-              to="/institution"
+              <Link
+                to="/institution"
               className="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-4 py-1.5 text-xs font-semibold text-slate-950 shadow-lg shadow-emerald-500/40 hover:bg-emerald-300 sm:px-5 sm:text-sm"
-            >
+              >
               Launch institution portal
               <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+              </Link>
           </div>
         </div>
       </header>
@@ -132,7 +132,7 @@ const Landing = () => {
               <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-300 backdrop-blur">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 Live in Lagos, Abuja & Port Harcourt
-              </div>
+        </div>
 
               <h1 className="mt-6 text-balance text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl lg:text-6xl">
                 Reimagining
@@ -141,7 +141,7 @@ const Landing = () => {
                   connected care
                 </span>{' '}
                 at home.
-              </h1>
+            </h1>
 
               <p className="mt-5 max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">
                 UltimateCare is a full-stack home-health platform that connects providers, field
@@ -149,13 +149,13 @@ const Landing = () => {
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Link
-                  to="/institution"
+              <Link
+                to="/institution"
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-6 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/40 hover:bg-emerald-300"
-                >
+              >
                   Book a demo for your institution
                   <ChevronRight className="h-4 w-4" />
-                </Link>
+              </Link>
                 <Link
                   to="/services"
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-700 bg-slate-950/60 px-5 py-2 text-xs font-medium text-slate-200 hover:border-slate-500 hover:text-white"
@@ -169,7 +169,7 @@ const Landing = () => {
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-300" />
                   NDPR-ready • HIPAA-inspired controls
-                </div>
+              </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-sky-300" />
                   24/7 triage & emergency escalation
@@ -183,7 +183,7 @@ const Landing = () => {
                       {stat.value}
                     </div>
                     <div className="mt-1 text-[11px] text-slate-400 sm:text-xs">{stat.label}</div>
-                  </div>
+              </div>
                 ))}
               </div>
             </div>
@@ -197,7 +197,7 @@ const Landing = () => {
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
                       <span className="h-1.5 w-1.5 rounded-full bg-sky-400/80" />
                       <span className="h-1.5 w-1.5 rounded-full bg-indigo-400/80" />
-                    </div>
+          </div>
                     Live visit · Nurse Amina
                   </div>
                   <span>UltimateCare OS</span>
@@ -209,8 +209,8 @@ const Landing = () => {
                       <p className="text-xs font-medium text-slate-200">Morning home visit</p>
                       <p className="mt-1 text-[11px] text-slate-400">
                         BP, medication, mobility check, family update.
-                      </p>
-                    </div>
+            </p>
+          </div>
                     <div className="rounded-xl bg-emerald-400/10 px-3 py-1 text-[10px] font-medium text-emerald-300">
                       In progress
                     </div>
@@ -221,25 +221,25 @@ const Landing = () => {
                       <div className="flex items-center gap-1 text-[10px] text-slate-400">
                         <Activity className="h-3 w-3 text-emerald-300" />
                         Vitals
-                      </div>
+                </div>
                       <p className="mt-1 text-xs font-semibold text-slate-50">118/74 · 72 bpm</p>
-                    </div>
+          </div>
                     <div className="rounded-xl bg-slate-950/60 p-2">
                       <div className="flex items-center gap-1 text-[10px] text-slate-400">
                         <Clock className="h-3 w-3 text-sky-300" />
                         Next dose
-                      </div>
+        </div>
                       <p className="mt-1 text-xs font-semibold text-slate-50">08:30 PM</p>
-                    </div>
+          </div>
                     <div className="rounded-xl bg-slate-950/60 p-2">
                       <div className="flex items-center gap-1 text-[10px] text-slate-400">
                         <Users2 className="h-3 w-3 text-indigo-300" />
                         Family
-                      </div>
+                </div>
                       <p className="mt-1 text-[11px] text-emerald-300">Update sent</p>
-                    </div>
-                  </div>
-
+              </div>
+            </div>
+            
                   <div className="rounded-xl border border-slate-800/70 bg-slate-950/70 p-3 text-[11px] text-slate-300">
                     <p className="mb-1 font-medium text-slate-200">
                       “UltimateCare feels like having a digital matron coordinating every visit.”
@@ -274,7 +274,7 @@ const Landing = () => {
                 </p>
               </div>
             </div>
-
+            
             <div className="mt-8 grid gap-6 md:grid-cols-3">
               {pillars.map((pillar) => {
                 const Icon = pillar.icon;
@@ -290,8 +290,8 @@ const Landing = () => {
                       </div>
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
                         <Icon className="h-4 w-4" />
-                      </div>
-                    </div>
+                </div>
+              </div>
                     <h3 className="mt-4 text-sm font-semibold text-slate-50">{pillar.title}</h3>
                     <p className="mt-2 text-xs leading-relaxed text-slate-300">
                       {pillar.description}
@@ -325,7 +325,7 @@ const Landing = () => {
                 <Phone className="h-3.5 w-3.5" />
                 Speak with our team
               </a>
-            </div>
+                </div>
 
             <div className="mt-8 grid gap-6 md:grid-cols-3">
               {personas.map((persona) => (
@@ -343,11 +343,11 @@ const Landing = () => {
                     {persona.cta}
                     <ArrowRight className="h-3.5 w-3.5" />
                   </button>
-                </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* Security & compliance */}
         <section
@@ -372,21 +372,21 @@ const Landing = () => {
                   <div className="flex items-start gap-3">
                     <div className="mt-1 rounded-full bg-emerald-400/10 p-1.5 text-emerald-300">
                       <ShieldCheck className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
+                </div>
+                <div>
                       <p className="font-medium text-slate-100">Fine-grained access</p>
                       <p className="mt-1 text-[11px] text-slate-400">
                         Role- and institution-aware permissions for admins, clinicians, and field
                         caregivers.
-                      </p>
-                    </div>
-                  </div>
-
+                  </p>
+                </div>
+              </div>
+              
                   <div className="flex items-start gap-3">
                     <div className="mt-1 rounded-full bg-sky-400/10 p-1.5 text-sky-300">
                       <Activity className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
+                </div>
+                <div>
                       <p className="font-medium text-slate-100">End-to-end audit trails</p>
                       <p className="mt-1 text-[11px] text-slate-400">
                         Every change, visit, and health event is captured with rich metadata.
@@ -395,7 +395,7 @@ const Landing = () => {
                   </div>
                 </div>
               </div>
-
+              
               <div className="rounded-3xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/15 via-slate-900/90 to-slate-950 p-4 text-[11px] text-slate-100 shadow-lg shadow-emerald-500/20">
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center gap-2 rounded-full bg-slate-950/70 px-3 py-1 text-[10px] text-emerald-200">
@@ -419,17 +419,17 @@ const Landing = () => {
                     <span>Operational uptime</span>
                     <span className="text-emerald-300">&gt; 99.9% last 12 months</span>
                   </div>
-                </div>
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
       </main>
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-slate-800/60 bg-slate-950 py-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <div>
+            <div>
             <div className="flex items-center gap-2 text-slate-200">
               <HeartPulse className="h-4 w-4 text-emerald-300" />
               <span className="text-sm font-semibold">UltimateCare</span>
