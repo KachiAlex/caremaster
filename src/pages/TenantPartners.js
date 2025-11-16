@@ -5,6 +5,7 @@ import { ArrowRight, LifeBuoy, Lock, Shield, Users, Pill, Sparkles } from 'lucid
 const RequestPartnerModal = ({ isOpen, onClose }) => {
   const [orgName, setOrgName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [website, setWebsite] = useState('');
   const [message, setMessage] = useState('');
 
@@ -13,83 +14,99 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
   const submit = (e) => {
     e.preventDefault();
     alert('Request submitted. Our team will reach out shortly.');
+    setOrgName('');
+    setEmail('');
+    setPhone('');
+    setWebsite('');
+    setMessage('');
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
       <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b px-6 py-4">
+        <div className="flex items-center justify-between border-b px-6 py-5">
           <div>
-            <p className="text-xs uppercase tracking-wide text-blue-600">Partner With Care Master</p>
-            <h3 className="text-xl font-black text-slate-900">Request to become a Tenant Partner</h3>
+            <p className="text-sm uppercase tracking-wide text-blue-600">Partner With Care Master</p>
+            <h3 className="text-2xl font-black text-slate-900">Request to become a Tenant Partner</h3>
           </div>
           <button
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
             aria-label="Close partner request form"
           >
             ✕
           </button>
         </div>
-        <form onSubmit={submit} className="px-6 py-5">
-          <div className="grid gap-4">
-            <label className="space-y-1 text-sm">
-              <span className="text-slate-600">Organization Name</span>
+        <form onSubmit={submit} className="px-6 py-6 text-base">
+          <div className="grid gap-5">
+            <label className="space-y-2 text-base">
+              <span className="text-slate-700 font-semibold uppercase text-xs tracking-wide">Company Name</span>
               <input
                 value={orgName}
                 onChange={e => setOrgName(e.target.value)}
                 required
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                placeholder="Bulah Health Care"
+                className="w-full rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                placeholder="Company Name"
               />
             </label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-1 text-sm">
-                <span className="text-slate-600">Email</span>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="space-y-2 text-base">
+                <span className="text-slate-700 font-semibold uppercase text-xs tracking-wide">Email</span>
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                   placeholder="hello@caremaster.com"
                 />
               </label>
-              <label className="space-y-1 text-sm">
-                <span className="text-slate-600">Website (optional)</span>
+              <label className="space-y-2 text-base">
+                <span className="text-slate-700 font-semibold uppercase text-xs tracking-wide">Phone Number</span>
                 <input
-                  value={website}
-                  onChange={e => setWebsite(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  placeholder="https://"
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  placeholder="+234 000 000 0000"
                 />
               </label>
             </div>
-            <label className="space-y-1 text-sm">
-              <span className="text-slate-600">Message</span>
+            <label className="space-y-2 text-base">
+              <span className="text-slate-700 font-semibold uppercase text-xs tracking-wide">Website (optional)</span>
+              <input
+                value={website}
+                onChange={e => setWebsite(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                placeholder="https://"
+              />
+            </label>
+            <label className="space-y-2 text-base">
+              <span className="text-slate-700 font-semibold uppercase text-xs tracking-wide">Message</span>
               <textarea
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 rows={4}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 placeholder="Tell us about your institution and care goals…"
               />
             </label>
           </div>
-          <div className="mt-6 flex items-center justify-end gap-2">
+          <div className="mt-8 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-700"
+              className="rounded-lg border border-slate-200 px-5 py-3 text-base font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-700"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-blue-700"
             >
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-5 w-5" />
               Submit request
             </button>
           </div>
@@ -134,14 +151,14 @@ const TenantPartners = () => {
             <div className="mt-8 flex flex-wrap gap-4">
               <button
                 onClick={() => navigate('/auth?tab=login&context=partner')}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700"
               >
                 Partner login
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setShowModal(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-6 py-3 text-base font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
               >
                 Request access
               </button>
@@ -238,7 +255,7 @@ const TenantPartners = () => {
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100"
+              className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-base font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100"
             >
               <LifeBuoy className="h-4 w-4" />
               Request onboarding

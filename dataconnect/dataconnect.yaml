@@ -1,5 +1,5 @@
 specVersion: "v1"
-serviceId: "Care Master"
+serviceId: "care-master"
 location: "us-central1"
 schema:
   source: "./schema"
@@ -7,7 +7,7 @@ schema:
     postgresql:
       database: "fdcdb"
       cloudSql:
-        instanceId: "Care Master-fdc"
+        instanceId: "care-master-fdc"
         # schemaValidation: "STRICT"     # STRICT mode makes Postgres schema match Data Connect exactly.
         # schemaValidation: "COMPATIBLE" # COMPATIBLE mode makes Postgres schema compatible with Data Connect.
 connectorDirs: ["./example"]

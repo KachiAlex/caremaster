@@ -71,6 +71,7 @@ import InactiveCaregiversReport from '../components/InactiveCaregiversReport';
 import SchedulingModule from '../components/SchedulingModule';
 import ClientActivityTimeline from '../components/ClientActivityTimeline';
 import CaregiverWageManagement from '../components/CaregiverWageManagement';
+import CaregiverWageEditModal from '../components/CaregiverWageEditModal';
 import UserProfileSettings from '../components/UserProfileSettings';
 import InstitutionSettings from '../components/InstitutionSettings';
 import HelpSupport from '../components/HelpSupport';
@@ -81,6 +82,23 @@ import WebRTCService from '../services/webrtcService';
 import PortalSwitcher from '../components/PortalSwitcher';
 import { getAllDiagnostics, updateDiagnosticTest } from '../api/diagnosticsAPI';
 import { trackAdminEvent } from '../services/analyticsService';
+import fileStorageService from '../services/fileStorageService';
+
+const formatTimeForDisplay = (time) => {
+  if (!time) return '';
+  const [hourStr, minuteStr = '00'] = time.split(':');
+  const hour = parseInt(hourStr, 10);
+  const minute = parseInt(minuteStr, 10);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return time;
+  const amPm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12.toString().padStart(2, '0')}:${minuteStr.padStart(2, '0')} ${amPm}`;
+};
+
+const buildWorkingHoursSummary = (startTime, endTime) => {
+  if (!startTime || !endTime) return [];
+  return [`${formatTimeForDisplay(startTime)} - ${formatTimeForDisplay(endTime)}`];
+};
 
 const InstitutionAdminDashboard = () => {
   const navigate = useNavigate();
@@ -160,6 +178,8 @@ const InstitutionAdminDashboard = () => {
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
   const [appointmentView, setAppointmentView] = useState('daily'); // daily, weekly, monthly
+  const [showWageModal, setShowWageModal] = useState(false);
+  const [selectedCaregiverForWage, setSelectedCaregiverForWage] = useState(null);
   
   // Institution Link Customization
   const [showLinkCustomizer, setShowLinkCustomizer] = useState(false);
@@ -316,7 +336,13 @@ const InstitutionAdminDashboard = () => {
 
       // Filter by institution (most data is already filtered server-side)
       const institutionUsers = instId ? users.filter(u => u.institutionId === instId) : users;
-      const institutionCaregivers = instId ? caregiversData.filter(c => c.institutionId === instId) : caregiversData;
+      const institutionCaregivers = (instId ? caregiversData.filter(c => c.institutionId === instId) : caregiversData).map(caregiver => ({
+        ...caregiver,
+        workingHoursStart: caregiver.workingHoursStart || caregiver.startTime || null,
+        workingHoursEnd: caregiver.workingHoursEnd || caregiver.endTime || null,
+        paymentType: caregiver.paymentType || (caregiver.rateType === 'per_month' ? 'monthly' : caregiver.rateType === 'per_hour' ? 'hourly' : caregiver.paymentType),
+        currency: caregiver.currency || 'USD'
+      }));
       // Filter out archived clients from main clients list (they appear in Archived Clients tab)
       const institutionClients = (instId ? clientsData.filter(p => p.institutionId === instId) : clientsData)
         .filter(p => p.status !== 'archived');
@@ -353,7 +379,17 @@ const InstitutionAdminDashboard = () => {
             phone: userCaregiver.phone,
             onboardingComplete: userCaregiver.onboardingComplete,
             createdAt: userCaregiver.createdAt,
-            updatedAt: userCaregiver.updatedAt
+            updatedAt: userCaregiver.updatedAt,
+            workingHours: userCaregiver.workingHours || [],
+            workingHoursStart: userCaregiver.startTime || userCaregiver.workingHoursStart || null,
+            workingHoursEnd: userCaregiver.endTime || userCaregiver.workingHoursEnd || null,
+            currency: userCaregiver.currency || 'USD',
+            hourlyRate: userCaregiver.hourlyRate,
+            monthlyRate: userCaregiver.monthlyRate,
+            rateType: userCaregiver.rateType,
+            paymentType: userCaregiver.paymentType || (userCaregiver.rateType === 'per_month' ? 'monthly' : 'hourly'),
+            profilePictureUrl: userCaregiver.profilePictureUrl,
+            qualificationDocumentUrl: userCaregiver.qualificationDocumentUrl
           });
         }
       });
@@ -484,11 +520,12 @@ const InstitutionAdminDashboard = () => {
   };
 
   // Caregiver Management Functions
-  const handleAddCaregiver = async (caregiverData) => {
+  const handleAddCaregiver = async (caregiverData, files = {}) => {
     try {
       // Always use the admin's institutionId from their profile - this is the most reliable source
       // Priority: userProfile.institutionId > effectiveInstitutionId > institutionId from context
       const instId = userProfile?.institutionId || effectiveInstitutionId || institutionId;
+      const { profilePictureFile, qualificationDocumentFile } = files;
       
       // Enhanced debugging
       console.log('🔍 Institution ID Debug (handleAddCaregiver):', {
@@ -525,6 +562,17 @@ const InstitutionAdminDashboard = () => {
       }
       
       console.log('✅ Creating caregiver for institution:', instId);
+      
+      const paymentType = caregiverData.rateType === 'per_hour' ? 'hourly' : 'monthly';
+      const hourlyRateValue = caregiverData.rateType === 'per_hour'
+        ? Number(caregiverData.rate || caregiverData.hourlyRate || 0)
+        : Number(caregiverData.hourlyRate || caregiverData.rate || 0);
+      const monthlyRateValue = caregiverData.rateType === 'per_month'
+        ? Number(caregiverData.monthlyRate || caregiverData.rate || 0)
+        : Number(caregiverData.monthlyRate || 0);
+      const workingHoursArray = Array.isArray(caregiverData.workingHours)
+        ? caregiverData.workingHours
+        : buildWorkingHoursSummary(caregiverData.startTime, caregiverData.endTime);
       
       // Validate required fields
       if (!caregiverData.email || !caregiverData.password || !caregiverData.name) {
@@ -564,12 +612,12 @@ const InstitutionAdminDashboard = () => {
           qualifications: caregiverData.qualifications || '',
           experience: caregiverData.experience || '0',
           availableDays: caregiverData.availableDays || [],
-          workingHours: Array.isArray(caregiverData.workingHours) 
-            ? caregiverData.workingHours 
-            : (caregiverData.workingHours ? [caregiverData.workingHours] : ['9:00 AM - 5:00 PM']),
-          hourlyRate: caregiverData.rateType === 'per_hour' 
-            ? (caregiverData.rate || caregiverData.hourlyRate || '0')
-            : (caregiverData.hourlyRate || '0'),
+          workingHours: workingHoursArray.length > 0 ? workingHoursArray : ['09:00 AM - 05:00 PM'],
+          workingHoursStart: caregiverData.startTime || null,
+          workingHoursEnd: caregiverData.endTime || null,
+          hourlyRate: hourlyRateValue.toString(),
+          monthlyRate: monthlyRateValue.toString(),
+          paymentType,
           address: caregiverData.address || '',
           emergencyContact: caregiverData.emergencyContact || '',
           notes: caregiverData.notes || ''
@@ -606,11 +654,13 @@ const InstitutionAdminDashboard = () => {
       // Update user document in Firestore with additional fields (Cloud Function already created basic document)
       try {
         // Use updateDoc with merge since the document already exists
-        await updateDoc(doc(db, 'users', caregiverId), {
+        const additionalFields = {
           email: caregiverData.email,
           name: caregiverData.name,
           displayName: caregiverData.name,
           phone: caregiverData.phone || '',
+          startTime: caregiverData.startTime || '',
+          endTime: caregiverData.endTime || '',
           userType: caregiverData.userType || 'caregiver',
           type: caregiverData.userType || 'caregiver',
           role: caregiverData.userType || 'caregiver',
@@ -620,15 +670,16 @@ const InstitutionAdminDashboard = () => {
           experience: caregiverData.experience || '0',
           licenseNumber: caregiverData.licenseNumber || '',
           availableDays: caregiverData.availableDays || [],
-          workingHours: Array.isArray(caregiverData.workingHours) 
-            ? caregiverData.workingHours 
-            : (caregiverData.workingHours ? [caregiverData.workingHours] : ['9:00 AM - 5:00 PM']),
+          workingHours: workingHoursArray.length > 0 ? workingHoursArray : ['09:00 AM - 05:00 PM'],
+          workingHoursStart: caregiverData.startTime || null,
+          workingHoursEnd: caregiverData.endTime || null,
           rateType: caregiverData.rateType || 'per_hour',
-          rate: caregiverData.rate || (caregiverData.hourlyRate || '0'),
+          rate: caregiverData.rateType === 'per_hour' ? hourlyRateValue : monthlyRateValue,
           currency: caregiverData.currency || 'USD',
-          hourlyRate: caregiverData.rateType === 'per_hour' 
-            ? (caregiverData.rate || caregiverData.hourlyRate || '0')
-            : (caregiverData.hourlyRate || '0'),
+          hourlyRate: hourlyRateValue,
+          monthlyRate: monthlyRateValue,
+          paymentType,
+          paymentModuleLinked: true,
           address: caregiverData.address || '',
           emergencyContact: caregiverData.emergencyContact || '',
           notes: caregiverData.notes || '',
@@ -638,7 +689,46 @@ const InstitutionAdminDashboard = () => {
           assignedClients: [],
           updatedAt: new Date().toISOString(),
           createdBy: user?.uid || 'admin'
-        });
+        };
+
+        if (profilePictureFile) {
+          try {
+            if (!fileStorageService.validateFileType(profilePictureFile, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
+              throw new Error('Unsupported profile picture format. Please upload a JPG, PNG, WEBP, or GIF file.');
+            }
+            if (!fileStorageService.validateFileSize(profilePictureFile, 5 * 1024 * 1024)) {
+              throw new Error('Profile picture is too large. Maximum size is 5MB.');
+            }
+            const profilePath = fileStorageService.generateFilePath(caregiverId, 'profile-picture', profilePictureFile.name);
+            const uploadResult = await fileStorageService.uploadFile(profilePictureFile, profilePath);
+            additionalFields.profilePictureUrl = uploadResult.downloadURL;
+            additionalFields.profilePicturePath = uploadResult.path;
+          } catch (profileError) {
+            console.error('Profile picture upload failed:', profileError);
+            toast.warning(profileError.message || 'Profile picture upload failed. You can update it later from caregiver settings.');
+          }
+        }
+
+        if (qualificationDocumentFile) {
+          try {
+            if (!fileStorageService.validateFileType(qualificationDocumentFile)) {
+              throw new Error('Unsupported document format. Please upload PDF, Word, Excel, or image files.');
+            }
+            if (!fileStorageService.validateFileSize(qualificationDocumentFile, 10 * 1024 * 1024)) {
+              throw new Error('Qualification document is too large. Maximum size is 10MB.');
+            }
+            const documentPath = fileStorageService.generateFilePath(caregiverId, 'qualifications', qualificationDocumentFile.name);
+            const uploadResult = await fileStorageService.uploadFile(qualificationDocumentFile, documentPath);
+            additionalFields.qualificationDocumentUrl = uploadResult.downloadURL;
+            additionalFields.qualificationDocumentPath = uploadResult.path;
+          } catch (documentError) {
+            console.error('Qualification document upload failed:', documentError);
+            toast.warning(documentError.message || 'Qualification document upload failed. You can upload it later from caregiver settings.');
+          }
+        }
+
+        await updateDoc(doc(db, 'users', caregiverId), additionalFields);
+        await setDoc(doc(db, 'caregivers', caregiverId), additionalFields, { merge: true });
         
         console.log('✅ Caregiver document updated with additional fields in Firestore');
       } catch (firestoreError) {
@@ -665,7 +755,11 @@ const InstitutionAdminDashboard = () => {
         createdBy: user?.uid || null,
         caregiverEmail: caregiverData.email,
         caregiverName: caregiverData.name,
-        rateType: caregiverData.rateType || 'per_hour'
+        rateType: caregiverData.rateType || 'per_hour',
+        paymentType,
+        hourlyRate: hourlyRateValue,
+        monthlyRate: monthlyRateValue,
+        currency: caregiverData.currency || 'USD'
       });
       
       // Reload dashboard data (no need to reload page - admin session is preserved)
@@ -2921,6 +3015,19 @@ const InstitutionAdminDashboard = () => {
                               <Edit className="h-4 w-4 mr-1" />
                               Edit
                             </button>
+
+                            {/* Wage Management Button */}
+                            <button 
+                              onClick={() => {
+                                setSelectedCaregiverForWage(caregiver);
+                                setShowWageModal(true);
+                              }}
+                              className="text-green-600 hover:text-green-900 inline-flex items-center"
+                              title="Manage wages"
+                            >
+                              <DollarSign className="h-4 w-4 mr-1" />
+                              Wages
+                            </button>
                             
                             {caregiver.status === 'pending' && caregiver.onboardingComplete && (
                               <>
@@ -3305,6 +3412,20 @@ const InstitutionAdminDashboard = () => {
           <HelpSupport userRole={userProfile?.userType || userProfile?.type || 'admin'} />
         </div>
       )}
+
+      {/* Wage Management Modal */}
+      <CaregiverWageEditModal
+        isOpen={showWageModal}
+        onClose={() => {
+          setShowWageModal(false);
+          setSelectedCaregiverForWage(null);
+        }}
+        caregiver={selectedCaregiverForWage}
+        onSave={(updatedCaregiver) => {
+          // Reload dashboard data to reflect the updated wage
+          loadDashboardData();
+        }}
+      />
 
       {/* Pending Approvals Tab */}
       {activeTab === 'approvals' && (
@@ -4346,236 +4467,540 @@ const InstitutionAdminDashboard = () => {
 
 // Add Client Modal Component
 const AddClientModal = ({ onClose, onAdd }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    age: '',
+  const initialFormState = {
+    fullName: '',
+    dateOfBirth: '',
     gender: '',
-    phone: '',
-    email: '',
-    address: '',
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-    medicalRecordNumber: '',
-    medicalConditions: '',
+    phoneNumber: '',
+    residenceAddress: '',
+    preferredLanguage: '',
+    medicalHistory: '',
     allergies: '',
     medications: '',
-    primaryDoctor: '',
-    insuranceProvider: '',
-    priority: 'normal',
-    notes: ''
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onAdd(formData);
+    primaryContactName: '',
+    primaryContactRelationship: '',
+    primaryContactGender: '',
+    primaryContactPhone: '',
+    primaryContactEmail: '',
+    primaryContactAddress: '',
+    primaryContactCommunicationPreference: '',
+    primaryContactNigeriaLocation: '',
+    caregiverStayingInNigeria: '',
+    caregiverType: '',
+    serviceFrequency: '',
+    serviceFrequencyOther: '',
+    preferredCareTypes: [],
+    preferredCareTimes: '',
+    preferredStartDate: '',
+    homeEquipment: '',
+    specialInstructions: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    emergencyContactRelationship: '',
+    additionalNotes: '',
+    referralSource: ''
   };
 
+  const [formData, setFormData] = useState(initialFormState);
+
+  useEffect(() => {
+    if (formData.serviceFrequency !== 'other' && formData.serviceFrequencyOther) {
+      setFormData((prev) => ({
+        ...prev,
+        serviceFrequencyOther: ''
+      }));
+    }
+  }, [formData.serviceFrequency]);
+
+  const caregiverTypeOptions = [
+    'Private Doctor',
+    'Registered Nurse',
+    'Certified Caregiver (Female)',
+    'Certified Caregiver (Male)',
+    'No Preferences'
+  ];
+
+  const serviceFrequencyOptions = [
+    { value: 'full_time', label: 'Full time (Live in)' },
+    { value: 'part_time', label: 'Part-time (Daily living)' },
+    { value: 'weekly', label: 'Weekly visits' },
+    { value: 'other', label: 'Others (please specify)' }
+  ];
+
+  const careTypeOptions = [
+    'Personal care',
+    'Companionship',
+    'Medication management',
+    'Mobility assistance',
+    'Feeding',
+    'Home cleaning services',
+    'Activities of daily living (grooming, laundry, grocery)'
+  ];
+
+  const referralSourceOptions = [
+    'Family',
+    'Friends',
+    'Referral',
+    'Social Media'
+  ];
+
+  const communicationOptions = [
+    'Phone call',
+    'Email',
+    'SMS / WhatsApp',
+    'Video call'
+  ];
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleCheckboxToggle = (field, option) => {
+    setFormData((prev) => {
+      const current = new Set(prev[field] || []);
+      if (current.has(option)) {
+        current.delete(option);
+      } else {
+        current.add(option);
+      }
+      return {
+        ...prev,
+        [field]: Array.from(current)
+      };
     });
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (formData.preferredCareTypes.length === 0) {
+      toast.error('Please select at least one type of care required.');
+      return;
+    }
+
+    if (formData.serviceFrequency === 'other' && !formData.serviceFrequencyOther.trim()) {
+      toast.error('Please specify the other service frequency.');
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      serviceFrequencyOther:
+        formData.serviceFrequency === 'other' ? formData.serviceFrequencyOther : ''
+    };
+
+    onAdd(payload);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-medium text-gray-900">Add New Client</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur">
+      <div className="relative mx-4 w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">
+              Client Intake
+            </p>
+            <h3 className="text-2xl font-black text-slate-900">Add New Client</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Complete all sections below. Mandatory questions are marked as required.
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
           >
             <span className="sr-only">Close</span>
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Full Name *</label>
-              <input
-                type="text"
-                name="name"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+        <form onSubmit={handleSubmit} className="space-y-10 overflow-y-auto px-8 py-8 max-h-[80vh]">
+          <section className="space-y-6">
+            <header>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
+                Section A
+              </p>
+              <h4 className="text-xl font-semibold text-slate-900">
+                Client Personal Information
+              </h4>
+            </header>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="fullName"
+                  required
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Date of Birth <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  required
+                  value={formData.dateOfBirth}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Gender <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {['Male', 'Female', 'Other'].map((option) => (
+                    <label
+                      key={option}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
+                        formData.gender === option
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="gender"
+                        value={option}
+                        required
+                        checked={formData.gender === option}
+                        onChange={handleChange}
+                        className="accent-blue-600"
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  required
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="md:col-span-2 flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Address of Residence <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="residenceAddress"
+                  required
+                  rows={3}
+                  value={formData.residenceAddress}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Preferred Language <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="preferredLanguage"
+                  required
+                  value={formData.preferredLanguage}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  placeholder="e.g. English"
+                />
+              </div>
             </div>
+          </section>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Age *</label>
-              <input
-                type="number"
-                name="age"
-                required
-                min="1"
-                max="120"
-                value={formData.age}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+          <section className="space-y-6">
+            <header>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
+                Section C
+              </p>
+              <h4 className="text-xl font-semibold text-slate-900">
+                Primary Contact Person Information
+              </h4>
+            </header>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="primaryContactName"
+                  required
+                  value={formData.primaryContactName}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Relationship to Client <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="primaryContactRelationship"
+                  required
+                  value={formData.primaryContactRelationship}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Gender <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {['Male', 'Female', 'Other'].map((option) => (
+                    <label
+                      key={option}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
+                        formData.primaryContactGender === option
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="primaryContactGender"
+                        value={option}
+                        required
+                        checked={formData.primaryContactGender === option}
+                        onChange={handleChange}
+                        className="accent-blue-600"
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Phone Number (Include country code) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  name="primaryContactPhone"
+                  required
+                  value={formData.primaryContactPhone}
+                  onChange={handleChange}
+                  placeholder="+234 000 000 0000"
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Email Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  name="primaryContactEmail"
+                  required
+                  value={formData.primaryContactEmail}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="md:col-span-2 flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Residential Address <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="primaryContactAddress"
+                  required
+                  rows={3}
+                  value={formData.primaryContactAddress}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Preferred means of communication <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="primaryContactCommunicationPreference"
+                  required
+                  value={formData.primaryContactCommunicationPreference}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">Select preference</option>
+                  {communicationOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Location in Nigeria (Detailed Address) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="primaryContactNigeriaLocation"
+                  required
+                  value={formData.primaryContactNigeriaLocation}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Is someone currently staying with the care recipient in Nigeria?{' '}
+                  <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {['Yes', 'No'].map((option) => (
+                    <label
+                      key={option}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
+                        formData.caregiverStayingInNigeria === option
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="caregiverStayingInNigeria"
+                        value={option}
+                        required
+                        checked={formData.caregiverStayingInNigeria === option}
+                        onChange={handleChange}
+                        className="accent-blue-600"
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
+          </section>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Gender *</label>
-              <select
-                name="gender"
-                required
-                value={formData.gender}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+          <section className="space-y-6">
+            <header>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
+                Client Care Needs
+              </p>
+              <h4 className="text-xl font-semibold text-slate-900">
+                Service Preferences
+              </h4>
+            </header>
+            <div className="space-y-6">
+              <div>
+                <label className="text-sm font-medium text-slate-700">
+                  Type of caregiver required <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {caregiverTypeOptions.map((option) => (
+                    <label
+                      key={option}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
+                        formData.caregiverType === option
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="caregiverType"
+                        value={option}
+                        required
+                        checked={formData.caregiverType === option}
+                        onChange={handleChange}
+                        className="accent-blue-600"
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700">
+                  Frequency of service <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {serviceFrequencyOptions.map((option) => (
+                    <label
+                      key={option.value}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
+                        formData.serviceFrequency === option.value
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 text-slate-600 hover-border-blue-400'
+                      }`}
+
+          <section className="space-y-6">
+            <header>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
+                Section B
+              </p>
+              <h4 className="text-xl font-semibold text-slate-900">
+                Client Medical Information
+              </h4>
+            </header>
+            <div className="grid grid-cols-1 gap-6">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Medical history, diagnosis, or known conditions{' '}
+                  <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="medicalHistory"
+                  required
+                  rows={4}
+                  value={formData.medicalHistory}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Allergies <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="allergies"
+                  required
+                  rows={3}
+                  value={formData.allergies}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-slate-700">
+                  Medications and dosages <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="medications"
+                  required
+                  rows={3}
+                  value={formData.medications}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
             </div>
+          </section>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email Address</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Address</label>
-              <textarea
-                name="address"
-                rows={3}
-                value={formData.address}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Emergency Contact Name</label>
-              <input
-                type="text"
-                name="emergencyContactName"
-                value={formData.emergencyContactName}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Emergency Contact Phone</label>
-              <input
-                type="tel"
-                name="emergencyContactPhone"
-                value={formData.emergencyContactPhone}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Medical Conditions</label>
-              <textarea
-                name="medicalConditions"
-                rows={3}
-                value={formData.medicalConditions}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="List any medical conditions..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Allergies</label>
-              <textarea
-                name="allergies"
-                rows={3}
-                value={formData.allergies}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="List any allergies..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Current Medications</label>
-              <textarea
-                name="medications"
-                rows={3}
-                value={formData.medications}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="List current medications..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Priority Level</label>
-              <select
-                name="priority"
-                value={formData.priority}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Additional Notes</label>
-            <textarea
-              name="notes"
-              rows={4}
-              value={formData.notes}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Any additional notes or special instructions..."
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-6 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Add Client
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+  ... (truncated for brevity)
 
 // Add Caregiver Modal Component
 const AddCaregiverModal = ({ onClose, onCreate }) => {
@@ -4594,9 +5019,12 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     experience: '',
     availableDays: [],
     workingHours: [],
+    startTime: '',
+    endTime: '',
     flexibleArrangement: false,
     rateType: 'per_hour', // 'per_hour' or 'per_month'
     rate: '',
+    monthlyRate: '',
     currency: 'USD',
     address: '',
     emergencyContact: '',
@@ -4606,6 +5034,8 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailExists, setEmailExists] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [qualificationDocumentFile, setQualificationDocumentFile] = useState(null);
 
   // Restore saved form data on mount
   React.useEffect(() => {
@@ -4613,11 +5043,24 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
       const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
         const parsed = JSON.parse(savedData);
-        // Don't restore password for security
-        const { password, ...restoredData } = parsed;
+        // Don't restore password or file objects for security
+        const { password, profilePictureFile: _discardedProfile, qualificationDocumentFile: _discardedDoc, ...restoredData } = parsed;
+
+        let derivedStartTime = restoredData.startTime || '';
+        let derivedEndTime = restoredData.endTime || '';
+
+        if ((!derivedStartTime || !derivedEndTime) && Array.isArray(restoredData.workingHours) && restoredData.workingHours.length > 0) {
+          const [maybeStart, maybeEnd] = restoredData.workingHours[0].split('-').map(part => part.trim());
+          derivedStartTime = derivedStartTime || maybeStart || '';
+          derivedEndTime = derivedEndTime || maybeEnd || '';
+        }
+
         setFormData(prev => ({
           ...prev,
-          ...restoredData
+          ...restoredData,
+          startTime: derivedStartTime,
+          endTime: derivedEndTime,
+          workingHours: Array.isArray(restoredData.workingHours) ? restoredData.workingHours : []
         }));
         setDataRestored(true);
         // Show notification
@@ -4676,31 +5119,58 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
   // Submit handler - don't clear saved data here, let handleAddCaregiver do it on success
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Validate working hours
-    if (!formData.workingHours || formData.workingHours.length === 0) {
-      toast.error('Please select at least one working hour option.');
+
+    if (!formData.startTime || !formData.endTime) {
+      toast.error('Please select both a start time and an end time.');
       return;
     }
-    
-    // Validate rate if per_hour is selected
-    if (formData.rateType === 'per_hour' && (!formData.rate || formData.rate === '')) {
-      toast.error('Please enter an hourly rate.');
+
+    const startMinutes = timeToMinutes(formData.startTime);
+    const endMinutes = timeToMinutes(formData.endTime);
+
+    if (startMinutes === null || endMinutes === null) {
+      toast.error('Invalid working hours selected.');
       return;
     }
+
+    if (endMinutes <= startMinutes) {
+      toast.error('End time must be after start time.');
+      return;
+    }
+
+    if (formData.rateType === 'per_hour' && (!formData.rate || Number(formData.rate) <= 0)) {
+      toast.error('Please enter a valid hourly rate.');
+      return;
+    }
+
+    if (formData.rateType === 'per_month' && (!formData.monthlyRate || Number(formData.monthlyRate) <= 0)) {
+      toast.error('Please enter a valid monthly rate.');
+      return;
+    }
+
+    const workingHoursSummary = buildWorkingHoursSummary(formData.startTime, formData.endTime);
+
+    const submissionData = {
+      ...formData,
+      workingHours: workingHoursSummary
+    };
     
-    onCreate(formData);
+    onCreate(submissionData, { profilePictureFile, qualificationDocumentFile });
   };
 
+  const formatRoleValue = (role) => role.toLowerCase().replace(/\s+/g, '_');
+
   const caregiverRoles = [
+    'Care Giver',
     'Doctor',
     'Nurse', 
     'Physiotherapist',
     'Occupational Therapist',
     'Social Worker',
     'Home Health Aide',
-    'Companion Caregiver',
-    'Medication Manager'
+    'Medication Manager',
+    'House Keeper',
+    'Other'
   ];
 
   const daysOfWeek = [
@@ -4708,21 +5178,41 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     'Friday', 'Saturday', 'Sunday'
   ];
 
-  const workingHoursOptions = [
-    '6:00 AM - 2:00 PM',
-    '7:00 AM - 3:00 PM',
-    '8:00 AM - 4:00 PM',
-    '9:00 AM - 5:00 PM',
-    '10:00 AM - 6:00 PM',
-    '11:00 AM - 7:00 PM',
-    '12:00 PM - 8:00 PM',
-    '2:00 PM - 10:00 PM',
-    '3:00 PM - 11:00 PM',
-    '4:00 PM - 12:00 AM',
-    'Night Shift (10:00 PM - 6:00 AM)',
-    'Flexible Hours',
-    '24/7 On-Call'
+  const timeOptions = [
+    '00:00',
+    '01:00',
+    '02:00',
+    '03:00',
+    '04:00',
+    '05:00',
+    '06:00',
+    '07:00',
+    '08:00',
+    '09:00',
+    '10:00',
+    '11:00',
+    '12:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
+    '18:00',
+    '19:00',
+    '20:00',
+    '21:00',
+    '22:00',
+    '23:00'
   ];
+
+  const timeToMinutes = (time) => {
+    if (!time) return null;
+    const [hourStr, minuteStr = '00'] = time.split(':');
+    const hour = parseInt(hourStr, 10);
+    const minute = parseInt(minuteStr, 10);
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+    return hour * 60 + minute;
+  };
 
   const currencies = [
     { code: 'USD', name: 'US Dollar', symbol: '$' },
@@ -4745,6 +5235,30 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    if (name === 'startTime' || name === 'endTime') {
+      const updated = {
+        ...formData,
+        [name]: value
+      };
+      const summary = updated.startTime && updated.endTime
+        ? buildWorkingHoursSummary(updated.startTime, updated.endTime)
+        : [];
+      setFormData({
+        ...updated,
+        workingHours: summary
+      });
+      return;
+    }
+
+    if (name === 'rateType') {
+      setFormData(prev => ({
+        ...prev,
+        rateType: value
+      }));
+      return;
+    }
+
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
@@ -4789,21 +5303,22 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     }
   };
 
+  const handleProfilePictureChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setProfilePictureFile(file);
+  };
+
+  const handleQualificationDocumentChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setQualificationDocumentFile(file);
+  };
+
   const handleDayToggle = (day) => {
     setFormData({
       ...formData,
       availableDays: formData.availableDays.includes(day)
         ? formData.availableDays.filter(d => d !== day)
         : [...formData.availableDays, day]
-    });
-  };
-
-  const handleWorkingHoursToggle = (hours) => {
-    setFormData({
-      ...formData,
-      workingHours: formData.workingHours.includes(hours)
-        ? formData.workingHours.filter(h => h !== hours)
-        : [...formData.workingHours, hours]
     });
   };
 
@@ -4934,7 +5449,7 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
                 className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
                 {caregiverRoles.map(role => (
-                  <option key={role} value={role.toLowerCase()}>{role}</option>
+                  <option key={role} value={formatRoleValue(role)}>{role}</option>
                 ))}
               </select>
             </div>
@@ -4977,86 +5492,103 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
             </div>
 
             {formData.rateType === 'per_hour' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Rate *</label>
-                  <input
-                    type="number"
-                    name="rate"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={formData.rate}
-                    onChange={handleChange}
-                    placeholder="Enter hourly rate"
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Currency *</label>
-                  <select
-                    name="currency"
-                    required
-                    value={formData.currency}
-                    onChange={handleChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {currencies.map(currency => (
-                      <option key={currency.code} value={currency.code}>
-                        {currency.symbol} {currency.code} - {currency.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Hourly Rate *</label>
+                <input
+                  type="number"
+                  name="rate"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={formData.rate}
+                  onChange={handleChange}
+                  placeholder="Enter hourly rate"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             )}
 
             {formData.rateType === 'per_month' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Monthly Rate</label>
-                <p className="mt-1 text-sm text-gray-500">Monthly rate will be set separately in the wage management section.</p>
+                <label className="block text-sm font-medium text-gray-700">Monthly Rate *</label>
+                <input
+                  type="number"
+                  name="monthlyRate"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={formData.monthlyRate}
+                  onChange={handleChange}
+                  placeholder="Enter monthly rate"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Currency *</label>
+              <select
+                name="currency"
+                required
+                value={formData.currency}
+                onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              >
+                {currencies.map(currency => (
+                  <option key={currency.code} value={currency.code}>
+                    {currency.symbol} {currency.code} - {currency.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Working Hours *</label>
-            <div className="relative">
-              <select
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                onChange={(e) => {
-                  if (e.target.value) {
-                    handleWorkingHoursToggle(e.target.value);
-                    e.target.value = ''; // Reset dropdown
-                  }
-                }}
-              >
-                <option value="">Select working hours to add...</option>
-                {workingHoursOptions
-                  .filter(option => !formData.workingHours.includes(option))
-                  .map(option => (
-                    <option key={option} value={option}>{option}</option>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="block text-sm font-medium text-gray-700">
+                <span className="block mb-1">Start Time</span>
+                <select
+                  name="startTime"
+                  value={formData.startTime}
+                  onChange={handleChange}
+                  required
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select start time</option>
+                  {timeOptions.map(option => (
+                    <option key={`start-${option}`} value={option}>
+                      {formatTimeForDisplay(option)}
+                    </option>
                   ))}
-              </select>
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-gray-700">
+                <span className="block mb-1">End Time</span>
+                <select
+                  name="endTime"
+                  value={formData.endTime}
+                  onChange={handleChange}
+                  required
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select end time</option>
+                  {timeOptions.map(option => (
+                    <option key={`end-${option}`} value={option}>
+                      {formatTimeForDisplay(option)}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
-            {formData.workingHours.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {formData.workingHours.map((hours, index) => (
-                  <div key={index} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
-                    <span className="text-sm text-gray-900">{hours}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleWorkingHoursToggle(hours)}
-                      className="text-red-600 hover:text-red-800 focus:outline-none"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {formData.workingHours.length === 0 && (
-              <p className="mt-2 text-sm text-gray-500">No working hours selected. Please select at least one.</p>
+            {formData.startTime && formData.endTime ? (
+              <p className="mt-3 text-sm text-gray-600">
+                Scheduled hours: <span className="font-medium text-gray-900">
+                  {`${formatTimeForDisplay(formData.startTime)} - ${formatTimeForDisplay(formData.endTime)}`}
+                </span>
+              </p>
+            ) : (
+              <p className="mt-3 text-sm text-gray-500">Select both start and end times to define the caregiver schedule.</p>
             )}
           </div>
 
@@ -5078,6 +5610,36 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Profile Picture</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleProfilePictureChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+            {profilePictureFile ? (
+              <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{profilePictureFile.name}</span></p>
+            ) : (
+              <p className="mt-1 text-sm text-gray-500">Upload a clear headshot to personalize the caregiver profile.</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Qualifications Document</label>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+              onChange={handleQualificationDocumentChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+            {qualificationDocumentFile ? (
+              <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{qualificationDocumentFile.name}</span></p>
+            ) : (
+              <p className="mt-1 text-sm text-gray-500">Attach certifications, licenses, or other supporting documents.</p>
+            )}
           </div>
 
           <div>
@@ -6700,16 +7262,44 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
   const caregiverAssignments = assignments.filter(a => a.caregiverId === caregiver.id);
   const activeAssignments = caregiverAssignments.filter(a => a.status !== 'completed' && a.status !== 'cancelled');
   const completedAssignments = caregiverAssignments.filter(a => a.status === 'completed');
+  const scheduleStart = caregiver.startTime || caregiver.workingHoursStart || '';
+  const scheduleEnd = caregiver.endTime || caregiver.workingHoursEnd || '';
+  const paymentType = caregiver.paymentType || (caregiver.rateType === 'per_month' ? 'monthly' : 'hourly');
+  const currencyCode = caregiver.currency || 'USD';
+  const hourlyRateValue = caregiver.hourlyRate ?? (caregiver.rateType === 'per_hour' ? caregiver.rate : null);
+  const monthlyRateValue = caregiver.monthlyRate ?? (caregiver.rateType === 'per_month' ? caregiver.rate : null);
+  const formatCurrencyValue = (value) => {
+    if (value === undefined || value === null || value === '') return 'N/A';
+    const amount = Number(value);
+    if (Number.isNaN(amount)) return value;
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currencyCode
+      }).format(amount);
+    } catch (error) {
+      return `${currencyCode} ${amount.toFixed(2)}`;
+    }
+  };
+  const paymentTypeLabel = paymentType === 'monthly' ? 'Monthly' : 'Hourly';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-500 to-blue-600">
           <div className="flex items-center">
-            <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center mr-4">
-              <span className="text-2xl font-bold text-blue-600">
-                {caregiver.name?.charAt(0) || 'C'}
-              </span>
+            <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center mr-4 overflow-hidden">
+              {caregiver.profilePictureUrl ? (
+                <img
+                  src={caregiver.profilePictureUrl}
+                  alt={caregiver.name || 'Caregiver profile'}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-2xl font-bold text-blue-600">
+                  {caregiver.name?.charAt(0) || 'C'}
+                </span>
+              )}
             </div>
             <div>
               <h3 className="text-xl font-bold text-white">{caregiver.name || 'Unknown Caregiver'}</h3>
@@ -6790,6 +7380,18 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                 <label className="block text-sm font-medium text-gray-500">Phone</label>
                 <p className="mt-1 text-gray-900">{caregiver.phone || 'N/A'}</p>
               </div>
+              {scheduleStart && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500">Start Time</label>
+                  <p className="mt-1 text-gray-900">{formatTimeForDisplay(scheduleStart)}</p>
+                </div>
+              )}
+              {scheduleEnd && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500">End Time</label>
+                  <p className="mt-1 text-gray-900">{formatTimeForDisplay(scheduleEnd)}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-500">Rating</label>
                 <div className="flex items-center mt-1">
@@ -6844,6 +7446,34 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
               )}
             </div>
           </div>
+
+          {(paymentType || hourlyRateValue || monthlyRateValue) && (
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Compensation</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500">Payment Type</label>
+                  <p className="mt-1 text-gray-900">{paymentTypeLabel}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500">Currency</label>
+                  <p className="mt-1 text-gray-900">{currencyCode}</p>
+                </div>
+                {hourlyRateValue !== null && hourlyRateValue !== undefined && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Hourly Rate</label>
+                    <p className="mt-1 text-gray-900">{formatCurrencyValue(hourlyRateValue)}</p>
+                  </div>
+                )}
+                {monthlyRateValue !== null && monthlyRateValue !== undefined && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Monthly Rate</label>
+                    <p className="mt-1 text-gray-900">{formatCurrencyValue(monthlyRateValue)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Statistics */}
           <div>

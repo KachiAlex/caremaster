@@ -21,13 +21,15 @@ import {
   Heart,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  DollarSign
 } from 'lucide-react';
 import { getAllUsers, updateUser, deleteUser, createUser } from '../api/usersAPI';
 import { toast } from 'react-toastify';
 import UserDataFixer from './UserDataFixer';
 import ProfilePicture from './ProfilePicture';
 import UserNameWithAvatar from './UserNameWithAvatar';
+import CaregiverWageEditModal from './CaregiverWageEditModal';
 
 const UserManagement = ({ institutionId }) => {
   const [users, setUsers] = useState([]);
@@ -41,6 +43,8 @@ const UserManagement = ({ institutionId }) => {
   const [editingRoles, setEditingRoles] = useState([]);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [showAddCaregiverModal, setShowAddCaregiverModal] = useState(false);
+  const [showWageModal, setShowWageModal] = useState(false);
+  const [selectedCaregiverForWage, setSelectedCaregiverForWage] = useState(null);
   const [newUserForm, setNewUserForm] = useState({
     name: '',
     email: '',
@@ -588,6 +592,19 @@ const UserManagement = ({ institutionId }) => {
                         >
                           <Edit className="h-4 w-4" />
                         </button>
+                        {/* Wage Management Button - Only show for caregivers */}
+                        {(userRoles.includes('caregiver') || userRoles.includes('nurse') || userRoles.includes('doctor')) && (
+                          <button
+                            onClick={() => {
+                              setSelectedCaregiverForWage(user);
+                              setShowWageModal(true);
+                            }}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Manage wages"
+                          >
+                            <DollarSign className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleToggleStatus(user)}
                           disabled={user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')}
@@ -1205,6 +1222,20 @@ const UserManagement = ({ institutionId }) => {
           </div>
         </div>
       )}
+
+      {/* Wage Management Modal */}
+      <CaregiverWageEditModal
+        isOpen={showWageModal}
+        onClose={() => {
+          setShowWageModal(false);
+          setSelectedCaregiverForWage(null);
+        }}
+        caregiver={selectedCaregiverForWage}
+        onSave={(updatedCaregiver) => {
+          // Reload users to reflect the updated wage
+          loadUsers();
+        }}
+      />
       </div>
     </div>
   );
