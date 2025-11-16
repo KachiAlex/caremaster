@@ -91,7 +91,7 @@ const ServiceProviderLayout = () => {
                 <Heart className="h-5 w-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="brand-title-alt text-blue-600 truncate">Care Master</h1>
+                <h1 className="brand-title-alt text-blue-600 truncate">UltimateCare</h1>
                 <p className="text-xs text-gray-500 truncate">
                   {isDoctor ? 'Medical Portal' : 'Care Portal'}
                 </p>
@@ -150,7 +150,7 @@ const ServiceProviderLayout = () => {
                 <Heart className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="brand-title-alt text-blue-600">Care Master</h1>
+                <h1 className="brand-title-alt text-blue-600">UltimateCare</h1>
                 <p className="text-xs text-gray-500">
                   {isDoctor ? 'Medical Portal' : 'Care Portal'}
                 </p>

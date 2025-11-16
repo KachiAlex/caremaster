@@ -230,8 +230,8 @@ const Auth = () => {
         medicalConditions: form.medicalConditions,
         medications: form.medications,
         allergies: form.allergies,
-        userType: 'elderly',
-        type: 'elderly',
+        userType: 'patient',
+        type: 'patient',
         onboardingComplete: true,
         onboardingProfileComplete: true,
         onboardingMedicalComplete: true,
@@ -346,7 +346,7 @@ const Auth = () => {
               <Heart className="h-12 w-12 text-blue-600" />
             </div>
           </div>
-                <h2 className="brand-title text-gray-900">Care Master</h2>
+          <h2 className="brand-title text-gray-900">UltimateCare</h2>
           <p className="text-gray-600 mt-2">{getStepTitle()}</p>
         </div>
 

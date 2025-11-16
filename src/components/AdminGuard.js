@@ -42,7 +42,7 @@ const AdminGuard = ({ children }) => {
           
           if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'admin') {
             navigate('/service-provider');
-          } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
+          } else if (userRole === 'client' || userRole === 'patient') {
             navigate('/');
           } else {
             navigate('/login');

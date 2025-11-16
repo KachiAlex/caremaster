@@ -32,6 +32,16 @@ service cloud.firestore {
       allow read: if true; // Public read for institution branding on login pages
       allow write: if isSuperAdmin();
     }
+
+    // User-Tenant memberships (multi-tenant access control)
+    // Allows a user to read their own memberships and admins to manage all
+    match /userTenants/{membershipId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() ||
+        get(/databases/$(database)/documents/userTenants/$(membershipId)).data.userId == request.auth.uid
+      );
+      allow create, update, delete: if isAdmin();
+    }
     // Licenses: public read (for login/landing pages), write super-admin only
     match /licenses/{licenseId} {
       allow read: if true; // Public read for displaying license status on login pages

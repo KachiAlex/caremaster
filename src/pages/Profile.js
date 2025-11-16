@@ -73,7 +73,7 @@ const Profile = () => {
               <Shield className="h-5 w-5 text-gray-400 mr-3" />
               <div>
                 <p className="text-sm text-gray-500">Account Type</p>
-                <p className="font-medium text-gray-900 capitalize">{userProfile?.userType || 'elderly'}</p>
+                <p className="font-medium text-gray-900 capitalize">{userProfile?.userType || 'patient'}</p>
               </div>
             </div>
           </div>

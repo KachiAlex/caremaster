@@ -107,11 +107,11 @@ export const forceLoadPatients = async () => {
         const userData = doc.data();
         const userType = userData.userType || userData.type;
         
-        // Include elderly, clients, patients
+        // Include clients and patients (including legacy "elderly" records)
         if (
-          userType === 'elderly' || 
           userType === 'client' || 
-          userType === 'patient'
+          userType === 'patient' ||
+          userType === 'elderly'
         ) {
           results.push({
             id: doc.id,

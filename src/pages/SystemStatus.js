@@ -121,7 +121,7 @@ const SystemStatus = () => {
   const checkUserSystem = async () => {
     try {
       const users = await getAllUsers();
-      const clients = users.filter(u => u.userType === 'client' || u.userType === 'elderly' || u.userType === 'patient');
+      const clients = users.filter(u => u.userType === 'client' || u.userType === 'patient');
       const caregivers = users.filter(u => u.userType === 'caregiver');
       const admins = users.filter(u => u.userType === 'admin');
       

@@ -24,7 +24,7 @@ export const Care MasterAdminAPI = {
       
       const userStats = {
         total: 0,
-        elderly: 0,
+        patients: 0,
         caregivers: 0,
         doctors: 0
       };
@@ -32,7 +32,7 @@ export const Care MasterAdminAPI = {
       usersSnapshot.forEach((doc) => {
         const userData = doc.data();
         userStats.total++;
-        if (userData.userType === 'elderly') userStats.elderly++;
+        if (userData.userType === 'patient' || userData.userType === 'elderly') userStats.patients++;
         else if (userData.userType === 'caregiver') userStats.caregivers++;
         else if (userData.userType === 'doctor') userStats.doctors++;
       });

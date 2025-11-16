@@ -125,7 +125,7 @@ class AIService {
           messages: [
             {
               role: 'system',
-              content: `You are an AI assistant for Care Master, a healthcare management platform for elderly care. 
+              content: `You are an AI assistant for UltimateCare, a modern home-health and care coordination platform. 
               You help caregivers, doctors, and patients with healthcare tasks, scheduling, medication management, 
               and emergency situations. Be professional, caring, and helpful. Current context: ${JSON.stringify(context)}`
             },
@@ -294,7 +294,7 @@ class AIService {
           messages: [
             {
               role: 'system',
-              content: 'You are a medical AI assistant specializing in elderly care. Provide accurate, evidence-based healthcare recommendations. Always prioritize patient safety.'
+              content: 'You are a medical AI assistant for multi-generational home and community care. Provide accurate, evidence-based healthcare recommendations and always prioritize patient safety.'
             },
             {
               role: 'user',
@@ -591,7 +591,7 @@ class AIService {
       }
 
       const prompt = `
-        Analyze these vital signs for an elderly patient:
+        Analyze these vital signs for a patient receiving home-based care:
         
         Patient Profile: ${JSON.stringify(patientProfile)}
         Vital Signs: ${JSON.stringify(vitalSignsData)}
@@ -646,7 +646,7 @@ class AIService {
           messages: [
             {
               role: 'system',
-              content: 'You are a medical AI expert specializing in vital signs analysis for elderly patients. Provide accurate assessments and prioritize patient safety.'
+              content: 'You are a medical AI expert specializing in vital signs analysis for patients receiving home-based and community care. Provide accurate assessments and prioritize patient safety.'
             },
             {
               role: 'user',
@@ -690,7 +690,7 @@ class AIService {
       nextSteps: []
     };
 
-    // Basic vital signs ranges for elderly
+    // Basic vital signs ranges for adults receiving home care
     const normalRanges = {
       blood_pressure: { systolic: [90, 140], diastolic: [60, 90] },
       heart_rate: [60, 100],
@@ -747,7 +747,7 @@ class AIService {
       }
 
       const prompt = `
-        Analyze this emergency situation for an elderly patient:
+        Analyze this emergency situation for a patient receiving home-based care:
         
         Patient Context: ${JSON.stringify(patientContext)}
         Situation: ${JSON.stringify(situationData)}
@@ -847,7 +847,7 @@ class AIService {
           estimatedTime: '3 minutes'
         }
       ],
-      riskFactors: ['elderly', 'medical history'],
+      riskFactors: ['age', 'medical history'],
       responseProtocol: {
         level: severity === 'high' ? '1' : '2',
         description: severity === 'high' ? 'Immediate medical attention required' : 'Monitor and assess',

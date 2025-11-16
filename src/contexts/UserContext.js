@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth } from '../firebase/config';
+import { auth, db, functions as firebaseFunctions } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { getUserById } from '../api/usersAPI';
 
 const UserContext = createContext();
@@ -20,8 +22,10 @@ export const UserProvider = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
   const [userRoles, setUserRoles] = useState([]);
   const [licenseActive, setLicenseActive] = useState(true);
-  const [institutionId, setInstitutionId] = useState(null);
+  const [institutionId, setInstitutionId] = useState(null); // active tenantId
   const [institutionData, setInstitutionData] = useState(null);
+  const [tenantMemberships, setTenantMemberships] = useState([]);
+  const [tenantLoading, setTenantLoading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -40,7 +44,7 @@ export const UserProvider = ({ children }) => {
           });
           
           if (profile) {
-            // Handle both 'patient' and 'elderly' as the same role, also check userType field and role field
+            // Handle both 'patient' and legacy 'elderly' as the same role, also check userType field and role field
             // Support multiple roles
             let roleFromProfile;
             let userRoles = [];
@@ -94,7 +98,29 @@ export const UserProvider = ({ children }) => {
             console.log('✅ User role set to:', roleFromProfile);
             console.log('✅ User roles:', userRoles);
 
-            // Institution and License check
+            // Load tenant memberships for this user (multi-tenant support)
+            setTenantLoading(true);
+            try {
+              const membershipsRef = collection(db, 'userTenants');
+              const membershipsQuery = query(
+                membershipsRef,
+                where('userId', '==', firebaseUser.uid),
+                where('status', '==', 'active')
+              );
+              const membershipsSnap = await getDocs(membershipsQuery);
+              const memberships = membershipsSnap.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+              }));
+              setTenantMemberships(memberships);
+            } catch (tenantError) {
+              console.error('Error loading tenant memberships:', tenantError);
+              setTenantMemberships([]);
+            } finally {
+              setTenantLoading(false);
+            }
+
+            // Institution and License check (uses token.claims.institutionId where available)
             try {
               const token = await firebaseUser.getIdTokenResult();
               // Use updatedProfile instead of profile to ensure we get the correct institutionId
@@ -186,6 +212,8 @@ export const UserProvider = ({ children }) => {
         setLicenseActive(true);
         setInstitutionId(null);
         setInstitutionData(null);
+        setTenantMemberships([]);
+        setTenantLoading(false);
       }
       setLoading(false);
     });
@@ -220,11 +248,38 @@ export const UserProvider = ({ children }) => {
   };
 
   const isElderly = () => {
+    // Legacy helper preserved for backwards compatibility with existing data
     return userRole === 'elderly';
   };
 
   const isAdmin = () => {
     return userRole === 'admin';
+  };
+
+  // Switch active tenant (institution) for the current user
+  const switchTenant = async (newInstitutionId) => {
+    if (!user) return;
+    if (!newInstitutionId || newInstitutionId === institutionId) return;
+
+    try {
+      setTenantLoading(true);
+      const callable = httpsCallable(
+        firebaseFunctions,
+        'setCurrentTenantFunction'
+      );
+      const result = await callable({ institutionId: newInstitutionId });
+
+      // Force token refresh so Firestore rules see the new institutionId/roles
+      await user.getIdToken(true);
+
+      // Update local state
+      setInstitutionId(result.data.institutionId);
+    } catch (error) {
+      console.error('Error switching tenant:', error);
+      throw error;
+    } finally {
+      setTenantLoading(false);
+    }
   };
 
   const getCaregiverOnboardingRoute = () => {
@@ -266,8 +321,8 @@ export const UserProvider = ({ children }) => {
       return false;
     }
 
-    // For elderly/patients, check if they've completed patient onboarding  
-    if (userProfile.userType === 'elderly' || userRole === 'patient') {
+    // For patient users, check if they've completed patient onboarding  
+    if (userRole === 'patient') {
       if (!userProfile.onboardingProfileComplete) {
         console.log('🚫 PATIENT ONBOARDING INCOMPLETE - blocking access');
         return true;
@@ -293,8 +348,8 @@ export const UserProvider = ({ children }) => {
       onboardingMedicalComplete: userProfile?.onboardingMedicalComplete
     });
     
-    // For patient/elderly users, check profile and medical completion
-    if (userRole === 'elderly' || userRole === 'patient') {
+    // For patient users, check profile and medical completion
+    if (userRole === 'patient') {
       const hasCompletionFlags = userProfile?.onboardingProfileComplete && userProfile?.onboardingMedicalComplete;
       
       // If user has basic profile data but no completion flags, consider them complete
@@ -349,6 +404,9 @@ export const UserProvider = ({ children }) => {
     licenseActive,
     institutionId,
     institutionData,
+    tenantMemberships,
+    tenantLoading,
+    switchTenant,
   };
 
   return (

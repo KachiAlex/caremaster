@@ -65,7 +65,7 @@ const CaregiverSettings = ({ onProfileImageUpdate }) => {
               specialization: 'Elderly Care',
               experience: '8 years',
               languages: ['English', 'Yoruba', 'Hausa'],
-              bio: 'Dedicated caregiver with 8 years of experience in elderly care. Specialized in diabetes management and physical therapy assistance.'
+              bio: 'Dedicated caregiver with 8 years of experience in home-based care. Specialized in diabetes management and physical therapy assistance.'
             },
             notifications: {
               emailNotifications: true,

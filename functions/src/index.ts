@@ -8,6 +8,7 @@ import { sendNotification, scheduleNotification } from './notificationService';
 import { logAuditEvent, getAuditLogs } from './auditLogging';
 import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin } from './licensing';
 import { createCaregiverWithAuth, resetCaregiverPassword } from './caregiverManagement';
+import { createTenantWithAdmin, setCurrentTenant } from './tenantManagement';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -56,6 +57,10 @@ export const healthCheck = functions.https.onRequest((req, res) => {
 // Caregiver Management Functions
 export const createCaregiverWithAuthFunction = createCaregiverWithAuth;
 export const resetCaregiverPasswordFunction = resetCaregiverPassword;
+
+// Multi-tenant (Institution) Management Functions
+export const createTenantWithAdminFunction = createTenantWithAdmin;
+export const setCurrentTenantFunction = setCurrentTenant;
 
 // Licensing Functions
 export const createInstitutionFunction = createInstitution;
@@ -115,7 +120,7 @@ export const migrateUserRoles = functions.https.onRequest(async (req, res) => {
         // Infer role from existing data
         let inferredRole = 'caregiver';
         
-        if (userData.email === 'superadmin@Care Master.com') {
+        if (userData.email === 'superadmin@ultimatecare.health') {
           inferredRole = 'super-admin';
         } else if (userData.role) {
           inferredRole = userData.role;

@@ -110,16 +110,16 @@ export const PRODUCTION_SECURITY_CONFIG = {
       write: 'auth.uid == resource.data.userId'
     },
     medications: {
-      read: 'auth.uid == resource.data.elderlyProfileId',
-      write: 'auth.uid == resource.data.elderlyProfileId'
+      read: 'auth.uid == resource.data.patientProfileId',
+      write: 'auth.uid == resource.data.patientProfileId'
     },
     vitalSigns: {
-      read: 'auth.uid == resource.data.elderlyProfileId',
-      write: 'auth.uid == resource.data.elderlyProfileId'
+      read: 'auth.uid == resource.data.patientProfileId',
+      write: 'auth.uid == resource.data.patientProfileId'
     },
     appointments: {
-      read: 'auth.uid == resource.data.elderlyProfileId',
-      write: 'auth.uid == resource.data.elderlyProfileId'
+      read: 'auth.uid == resource.data.patientProfileId',
+      write: 'auth.uid == resource.data.patientProfileId'
     }
   },
 

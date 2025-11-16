@@ -216,7 +216,7 @@ const InstitutionLogin = () => {
         // Validate user role matches the portal
         if (roleParam === 'admin' && !isAdmin) {
           // Check if this is a known admin email that should have admin access
-          const adminEmails = ['admin@bulah.com', 'admin@Care Master.com', 'admin2@Care Master.com', 'newadmin@Care Master.com'];
+          const adminEmails = ['admin@bulah.com', 'admin@ultimatecare.health', 'admin2@ultimatecare.health', 'newadmin@ultimatecare.health'];
           const isKnownAdmin = adminEmails.includes(customAuthUser.email?.toLowerCase());
           
           if (!isKnownAdmin) {

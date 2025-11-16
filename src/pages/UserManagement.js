@@ -33,10 +33,10 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('elderly');
+  const [selectedRole, setSelectedRole] = useState('patient');
   const [stats, setStats] = useState({
     total: 0,
-    elderly: 0,
+    patient: 0,
     caregivers: 0,
     doctors: 0,
     active: 0,
@@ -139,7 +139,7 @@ const UserManagement = () => {
 
   const getRoleIcon = (role) => {
     switch (role) {
-      case 'elderly':
+      case 'patient':
         return <Heart size={16} className="text-blue-600" />;
       case 'caregiver':
         return <Users size={16} className="text-green-600" />;
@@ -246,7 +246,7 @@ const UserManagement = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Elderly</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.elderly}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.patient}</p>
               </div>
             </div>
           </div>
@@ -281,7 +281,7 @@ const UserManagement = () => {
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button
-              onClick={() => handleCreateUser('elderly')}
+              onClick={() => handleCreateUser('patient')}
               className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
             >
               <Heart size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-blue-600" />
@@ -337,7 +337,7 @@ const UserManagement = () => {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">All Roles</option>
-                <option value="elderly">Elderly</option>
+                <option value="patient">Patient</option>
                 <option value="caregiver">Caregiver</option>
                 <option value="doctor">Doctor</option>
                 <option value="admin">Admin</option>
@@ -487,7 +487,7 @@ const UserManagement = () => {
           userRole={selectedRole}
           onClose={() => {
             setShowCreateForm(false);
-            setSelectedRole('elderly');
+            setSelectedRole('patient');
           }}
         />
       )}

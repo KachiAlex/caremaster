@@ -56,7 +56,7 @@ const Services = () => {
             Comprehensive Healthcare Services
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Everything you need for quality elderly care, delivered by certified professionals.
+            Everything you need for quality home and community care, delivered by certified professionals.
           </p>
         </div>
 

@@ -172,7 +172,7 @@ export const updateUser = async (userId, updateData) => {
       await setDoc(userRef, {
         ...updatedData,
         id: userId,
-        userType: 'elderly', // Default user type
+        userType: 'patient', // Default user type
         status: 'active',
         joinDate: serverTimestamp(),
         lastActive: serverTimestamp(),
@@ -333,7 +333,7 @@ export const getUserStats = async () => {
     
     const stats = {
       total: users.length,
-      elderly: users.filter(user => user.type === 'elderly').length,
+      patients: users.filter(user => user.type === 'patient' || user.type === 'elderly').length,
       caregivers: users.filter(user => user.type === 'caregiver').length,
       doctors: users.filter(user => user.type === 'doctor').length,
       active: users.filter(user => user.status === 'active').length,

@@ -94,8 +94,8 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
       isAvailable: Math.random() > 0.3,
       completedVisits: Math.floor(Math.random() * 200) + 50,
       responseTime: Math.floor(Math.random() * 30) + 5, // minutes
-      certifications: ['CPR', 'First Aid', 'Geriatric Care', 'Medication Management'].slice(0, Math.floor(Math.random() * 3) + 1),
-      bio: `Experienced caregiver with ${Math.floor(Math.random() * 10) + 1} years of experience in elderly care. Specialized in ${specialties[Math.floor(Math.random() * specialties.length)]}.`,
+      certifications: ['CPR', 'First Aid', 'Home Health Care', 'Medication Management'].slice(0, Math.floor(Math.random() * 3) + 1),
+      bio: `Experienced caregiver with ${Math.floor(Math.random() * 10) + 1} years of experience in home and community care. Specialized in ${specialties[Math.floor(Math.random() * specialties.length)]}.`,
       aiMatchScore: 0, // Will be calculated
       aiInsights: []
     }));

@@ -673,8 +673,8 @@ function SignInRouteHandler() {
     return <Navigate to="/service-provider" replace />;
   }
   
-  // For other users (clients, elderly), show message that this is for caregivers
-  console.log('✅ Client/elderly accessing caregiver portal, redirecting to home');
+  // For other users (clients, patients), show message that this is for caregivers
+  console.log('✅ Client/patient accessing caregiver portal, redirecting to home');
   return <Navigate to="/" replace />;
 }
 
@@ -722,7 +722,7 @@ function RoleBasedDashboardRoute() {
     return <Navigate to="/service-provider" replace />;
   }
   
-  // Default to client dashboard for elderly/client users
+  // Default to client dashboard for client/patient users
   console.log('✅ Showing client dashboard for role:', userRole);
   return <Layout />;
 }
@@ -756,7 +756,7 @@ function OnboardingGuardedLayout() {
       console.log('🔄 Redirecting CAREGIVER to:', caregiverRoute);
       return <Navigate to={caregiverRoute} replace />;
     }
-    // Redirect clients/elderly to client onboarding
+    // Redirect clients/patients to client onboarding
     console.log('🔄 Redirecting PATIENT to onboarding, userType:', userProfile?.userType);
     return <Navigate to="/onboarding/profile" replace />;
   }

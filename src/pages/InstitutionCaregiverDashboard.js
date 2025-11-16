@@ -3595,7 +3595,7 @@ const InstitutionCaregiverDashboard = () => {
                   <Heart className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <h1 className="brand-title-alt text-gray-900">Care Master</h1>
+                  <h1 className="brand-title-alt text-gray-900">UltimateCare</h1>
                   <p className="text-xs text-gray-500">{dashboardConfig.title}</p>
                 </div>
               </div>
@@ -3636,7 +3636,7 @@ const InstitutionCaregiverDashboard = () => {
                     <Heart className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="brand-title-alt text-gray-900 truncate">Care Master</h1>
+                    <h1 className="brand-title-alt text-gray-900 truncate">UltimateCare</h1>
                     <p className="text-xs text-gray-500 truncate">Care Portal</p>
                   </div>
                 </div>

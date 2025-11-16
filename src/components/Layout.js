@@ -59,8 +59,8 @@ const Layout = () => {
                 <Heart className="h-5 w-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="brand-title-alt text-teal-600 truncate">Care Master</h1>
-                <p className="text-xs text-gray-500 truncate hidden sm:block">Home Healthcare for the Elderly</p>
+                <h1 className="brand-title-alt text-teal-600 truncate">UltimateCare</h1>
+                <p className="text-xs text-gray-500 truncate hidden sm:block">Connected care at home</p>
               </div>
             </div>
             <button
@@ -116,8 +116,8 @@ const Layout = () => {
                 <Heart className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="brand-title-alt text-teal-600">Care Master</h1>
-                <p className="text-xs text-gray-500">Home Healthcare for the Elderly</p>
+                <h1 className="brand-title-alt text-teal-600">UltimateCare</h1>
+                <p className="text-xs text-gray-500">Connected care at home</p>
               </div>
             </div>
           </div>

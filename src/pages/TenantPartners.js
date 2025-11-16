@@ -27,7 +27,7 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
       <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b px-6 py-5">
           <div>
-            <p className="text-sm uppercase tracking-wide text-blue-600">Partner With Care Master</p>
+            <p className="text-sm uppercase tracking-wide text-blue-600">Partner with UltimateCare</p>
             <h3 className="text-2xl font-black text-slate-900">Request to become a Tenant Partner</h3>
           </div>
           <button
@@ -52,14 +52,14 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
             </label>
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="space-y-2 text-base">
-                <span className="text-slate-700 font-semibold uppercase text-xs tracking-wide">Email</span>
+              <span className="text-slate-700 font-semibold uppercase text-xs tracking-wide">Email</span>
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  placeholder="hello@caremaster.com"
+                className="w-full rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                placeholder="hello@ultimatecare.health"
                 />
               </label>
               <label className="space-y-2 text-base">
@@ -130,10 +130,10 @@ const TenantPartners = () => {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
               <Sparkles className="h-3 w-3" />
-              Trusted elder-care infrastructure
+              Trusted home-health infrastructure
             </div>
             <h1 className="mt-4 text-4xl font-black text-slate-900 sm:text-5xl">
-              Welcome to the Care Master Partner's Portal
+              Welcome to the UltimateCare Partner Portal
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-slate-600">
               Sign in to access your institution's private workspace. Every tenant operates in a secure, isolated environment with role-based access and unified workflows for administrators, caregivers, and pharmacy teams.
@@ -172,7 +172,7 @@ const TenantPartners = () => {
             <div className="mt-6 grid gap-5">
               <div className="rounded-xl bg-white/10 p-4">
                 <p className="text-3xl font-black">12+</p>
-                <p className="text-sm text-blue-100">Institutions modernizing their elder-care operations with Care Master</p>
+                <p className="text-sm text-blue-100">Institutions modernizing their home-health operations with UltimateCare</p>
               </div>
               <div className="rounded-xl bg-white/10 p-4">
                 <p className="text-3xl font-black">4.8 / 5</p>

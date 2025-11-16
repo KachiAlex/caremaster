@@ -62,7 +62,7 @@ const CaregiverGuard = ({ children }) => {
           
           if (userRole === 'admin') {
             navigate('/new-admin-dashboard');
-          } else if (userRole === 'elderly' || userRole === 'client') {
+          } else if (userRole === 'patient' || userRole === 'client') {
             navigate('/patient-dashboard');
           } else {
             navigate('/login');

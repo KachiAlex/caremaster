@@ -62,10 +62,11 @@ const USER_TYPE_MAPPINGS = {
     roles: ['client'],
     defaultStatus: 'active'
   },
+  // Legacy mapping retained for backwards compatibility with existing "elderly" records.
   elderly: {
-    userType: 'client',
-    type: 'client',
-    roles: ['client'],
+    userType: 'patient',
+    type: 'patient',
+    roles: ['patient'],
     defaultStatus: 'active'
   }
 };
