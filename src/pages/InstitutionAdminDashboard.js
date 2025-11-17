@@ -527,7 +527,7 @@ const InstitutionAdminDashboard = () => {
       // Always use the admin's institutionId from their profile - this is the most reliable source
       // Priority: userProfile.institutionId > effectiveInstitutionId > institutionId from context
       const instId = userProfile?.institutionId || effectiveInstitutionId || institutionId;
-      const { profilePictureFile, qualificationDocumentFile, governmentIdFile, guarantor1LetterFile, guarantor2LetterFile } = files;
+      const { profilePictureFile, qualificationDocumentFile, governmentIdFile, guarantor1LetterFile, guarantor2LetterFile, guarantor1PictureFile, guarantor2PictureFile } = files;
       
       // Enhanced debugging
       console.log('🔍 Institution ID Debug (handleAddCaregiver):', {
@@ -816,6 +816,42 @@ const InstitutionAdminDashboard = () => {
           } catch (letter2Error) {
             console.error('Guarantor 2 letter upload failed:', letter2Error);
             toast.warning(letter2Error.message || 'Guarantor 2 letter upload failed. You can upload it later from caregiver settings.');
+          }
+        }
+
+        if (guarantor1PictureFile) {
+          try {
+            if (!fileStorageService.validateFileType(guarantor1PictureFile, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
+              throw new Error('Unsupported profile picture format. Please upload a JPG, PNG, WEBP, or GIF file.');
+            }
+            if (!fileStorageService.validateFileSize(guarantor1PictureFile, 5 * 1024 * 1024)) {
+              throw new Error('Guarantor 1 picture is too large. Maximum size is 5MB.');
+            }
+            const guarantor1PicPath = fileStorageService.generateFilePath(caregiverId, 'guarantor-1-picture', guarantor1PictureFile.name);
+            const uploadResult = await fileStorageService.uploadFile(guarantor1PictureFile, guarantor1PicPath);
+            additionalFields.guarantor1PictureUrl = uploadResult.downloadURL;
+            additionalFields.guarantor1PicturePath = uploadResult.path;
+          } catch (guarantor1PicError) {
+            console.error('Guarantor 1 picture upload failed:', guarantor1PicError);
+            toast.warning(guarantor1PicError.message || 'Guarantor 1 picture upload failed. You can upload it later from caregiver settings.');
+          }
+        }
+
+        if (guarantor2PictureFile) {
+          try {
+            if (!fileStorageService.validateFileType(guarantor2PictureFile, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
+              throw new Error('Unsupported profile picture format. Please upload a JPG, PNG, WEBP, or GIF file.');
+            }
+            if (!fileStorageService.validateFileSize(guarantor2PictureFile, 5 * 1024 * 1024)) {
+              throw new Error('Guarantor 2 picture is too large. Maximum size is 5MB.');
+            }
+            const guarantor2PicPath = fileStorageService.generateFilePath(caregiverId, 'guarantor-2-picture', guarantor2PictureFile.name);
+            const uploadResult = await fileStorageService.uploadFile(guarantor2PictureFile, guarantor2PicPath);
+            additionalFields.guarantor2PictureUrl = uploadResult.downloadURL;
+            additionalFields.guarantor2PicturePath = uploadResult.path;
+          } catch (guarantor2PicError) {
+            console.error('Guarantor 2 picture upload failed:', guarantor2PicError);
+            toast.warning(guarantor2PicError.message || 'Guarantor 2 picture upload failed. You can upload it later from caregiver settings.');
           }
         }
 
@@ -5316,6 +5352,8 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
   const [governmentIdFile, setGovernmentIdFile] = useState(null);
   const [guarantor1LetterFile, setGuarantor1LetterFile] = useState(null);
   const [guarantor2LetterFile, setGuarantor2LetterFile] = useState(null);
+  const [guarantor1PictureFile, setGuarantor1PictureFile] = useState(null);
+  const [guarantor2PictureFile, setGuarantor2PictureFile] = useState(null);
 
   // Restore saved form data on mount
   React.useEffect(() => {
@@ -5440,7 +5478,9 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
       qualificationDocumentFile,
       governmentIdFile,
       guarantor1LetterFile,
-      guarantor2LetterFile
+      guarantor2LetterFile,
+      guarantor1PictureFile,
+      guarantor2PictureFile
     });
   };
 
@@ -5658,6 +5698,76 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
       return;
     }
     setGuarantor2LetterFile(file);
+  };
+
+  const handleGuarantor1PictureChange = async (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setGuarantor1PictureFile(null);
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please select a valid image file (JPEG, PNG, or WebP)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      // Import resizeImage function
+      const { resizeImage } = await import('../utils/profilePictureUpload');
+      // Resize image to recommended size (400x400)
+      const resizedFile = await resizeImage(file, 400, 400, 0.8);
+      setGuarantor1PictureFile(resizedFile);
+      toast.success('Guarantor 1 picture ready for upload');
+    } catch (error) {
+      console.error('Error resizing image:', error);
+      // If resize fails, use original file
+      setGuarantor1PictureFile(file);
+      toast.warning('Could not resize image, using original file');
+    }
+  };
+
+  const handleGuarantor2PictureChange = async (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setGuarantor2PictureFile(null);
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please select a valid image file (JPEG, PNG, or WebP)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      // Import resizeImage function
+      const { resizeImage } = await import('../utils/profilePictureUpload');
+      // Resize image to recommended size (400x400)
+      const resizedFile = await resizeImage(file, 400, 400, 0.8);
+      setGuarantor2PictureFile(resizedFile);
+      toast.success('Guarantor 2 picture ready for upload');
+    } catch (error) {
+      console.error('Error resizing image:', error);
+      // If resize fails, use original file
+      setGuarantor2PictureFile(file);
+      toast.warning('Could not resize image, using original file');
+    }
   };
 
   const handleDayToggle = (day) => {
@@ -6248,6 +6358,25 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Guarantor 1 Photo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleGuarantor1PictureChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                {guarantor1PictureFile ? (
+                  <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{guarantor1PictureFile.name}</span></p>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-500">Upload a clear photo of Guarantor/Referee 1</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   22. Please upload a scanned copy or clear photo of the signed letter from your referee or surety 1 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -6335,6 +6464,25 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
                   />
                   <p className="text-xs text-gray-500 mt-1">Required</p>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Guarantor 2 Photo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleGuarantor2PictureChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                {guarantor2PictureFile ? (
+                  <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{guarantor2PictureFile.name}</span></p>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-500">Upload a clear photo of Guarantor/Referee 2</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">Required</p>
               </div>
 
               <div>
