@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc, addDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc, addDoc, orderBy } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useUser } from '../contexts/UserContext';
 import authManager from '../utils/authManager';
@@ -56,6 +56,7 @@ import { caregiverAPI } from '../api/caregiverAPI';
 import { getAllClients, createClient, updateClient } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { getClientReports, createClientReport, getClientCareLogs, createClientCareLog } from '../api/patientReportsAPI';
+import { getCareLogsByCaregiver } from '../api/careLogsAPI';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notificationsAPI } from '../api/notificationsAPI';
 import { institutionAPI } from '../api/institutionAPI';
@@ -4669,10 +4670,10 @@ const InstitutionAdminDashboard = () => {
             setShowAssignmentModal(true);
             setShowClientDetails(false);
           }}
-          onDelete={handleDeleteClient}
+          onDelete={handleArchiveClient}
           onUnarchive={handleUnarchiveClient}
           pharmacists={pharmacists}
-          onAssignPharmacist={handleAssignPharmacist}
+          onAssignPharmacist={handleAssignPharmacistToClient}
         />
       )}
 
@@ -8391,10 +8392,12 @@ const PharmacistDetailsModal = ({ pharmacist, clients, onClose, onAssignClient }
 };
 
 const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, onEditPayment, onEditAssignment, onDeleteAssignment, assignments = [], clients = [] }) => {
+  const [activeTab, setActiveTab] = React.useState('info');
+  
   if (!caregiver) return null;
 
   // Filter assignments for this specific caregiver
-  const caregiverAssignments = assignments.filter(a => a.caregiverId === caregiver.id);
+  const caregiverAssignments = assignments.filter(a => a.caregiverId === caregiver.id || a.caregiverId === caregiver.uid);
   const activeAssignments = caregiverAssignments.filter(a => a.status !== 'completed' && a.status !== 'cancelled');
   const completedAssignments = caregiverAssignments.filter(a => a.status === 'completed');
   const scheduleStart = caregiver.startTime || caregiver.workingHoursStart || '';
@@ -8420,7 +8423,7 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-500 to-blue-600">
           <div className="flex items-center">
             <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center mr-4 overflow-hidden">
@@ -8452,7 +8455,36 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-6" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('info')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'info'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Caregiver Info
+            </button>
+            <button
+              onClick={() => setActiveTab('careLogs')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'careLogs'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Care Logs
+            </button>
+          </nav>
+        </div>
+
         <div className="p-6 space-y-6">
+          {/* Caregiver Info Tab */}
+          {activeTab === 'info' && (
+            <>
           {/* Onboarding Status Alert */}
           {!caregiver.onboardingComplete && (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
@@ -8777,6 +8809,13 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
               </div>
             )}
           </div>
+          </>
+          )}
+
+          {/* Care Logs Tab */}
+          {activeTab === 'careLogs' && (
+            <CaregiverCareLogsSection caregiverId={caregiver.id || caregiver.uid} clients={clients} />
+          )}
 
           {/* Actions */}
           <div className="flex justify-between items-center pt-6 border-t">
@@ -9227,6 +9266,280 @@ const ClientCareLogsSection = ({ clientId }) => {
             toast.success('Care log added successfully');
           }}
         />
+      )}
+    </div>
+  );
+};
+
+// Caregiver Care Logs Section Component
+const CaregiverCareLogsSection = ({ caregiverId, clients = [] }) => {
+  const [careLogs, setCareLogs] = React.useState([]);
+  const [adlLogs, setAdlLogs] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [activeLogTab, setActiveLogTab] = React.useState('all'); // all, care, adl
+
+  React.useEffect(() => {
+    loadCareLogs();
+  }, [caregiverId]);
+
+  const loadCareLogs = async () => {
+    try {
+      setLoading(true);
+      
+      // Load regular care logs for this caregiver
+      const logsData = await getCareLogsByCaregiver(caregiverId);
+      setCareLogs(logsData);
+      
+      // Load ADL logs for this caregiver
+      try {
+        const adlLogsQuery = query(
+          collection(db, 'adlLogs'),
+          where('caregiverId', '==', caregiverId),
+          orderBy('timestamp', 'desc')
+        );
+        const adlLogsSnapshot = await getDocs(adlLogsQuery);
+        const adlLogsData = adlLogsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          type: 'adl' // Mark as ADL log
+        }));
+        setAdlLogs(adlLogsData);
+      } catch (adlError) {
+        console.error('Error loading ADL logs:', adlError);
+        // Don't fail the whole component if ADL logs fail
+        setAdlLogs([]);
+      }
+    } catch (error) {
+      console.error('Error loading caregiver care logs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading care logs...</div>;
+  }
+
+  // Combine and filter logs based on active tab
+  const getFilteredLogs = () => {
+    let allLogs = [];
+    
+    if (activeLogTab === 'all' || activeLogTab === 'care') {
+      allLogs = [...allLogs, ...careLogs.map(log => ({ ...log, type: 'care' }))];
+    }
+    
+    if (activeLogTab === 'all' || activeLogTab === 'adl') {
+      allLogs = [...allLogs, ...adlLogs];
+    }
+    
+    // Sort by timestamp (most recent first)
+    return allLogs.sort((a, b) => {
+      const dateA = new Date(a.timestamp || a.createdAt || a.logDate || 0);
+      const dateB = new Date(b.timestamp || b.createdAt || b.logDate || 0);
+      return dateB - dateA;
+    });
+  };
+
+  const filteredLogs = getFilteredLogs();
+  const totalLogs = careLogs.length + adlLogs.length;
+
+  const getClientName = (clientId) => {
+    if (!clientId) return 'Unknown Client';
+    const client = clients.find(c => c.id === clientId || c.uid === clientId);
+    return client?.name || client?.fullName || 'Unknown Client';
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header with stats */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900">Care Activity Logs</h3>
+        <p className="text-sm text-gray-500 mt-1">
+          {totalLogs} total logs ({careLogs.length} care logs, {adlLogs.length} ADL activities)
+        </p>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveLogTab('all')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeLogTab === 'all'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            All Logs ({totalLogs})
+          </button>
+          <button
+            onClick={() => setActiveLogTab('care')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeLogTab === 'care'
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Care Logs ({careLogs.length})
+          </button>
+          <button
+            onClick={() => setActiveLogTab('adl')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeLogTab === 'adl'
+                ? 'border-purple-500 text-purple-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            ADL Activities ({adlLogs.length})
+          </button>
+        </nav>
+      </div>
+
+      {/* Logs List */}
+      {filteredLogs.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">No {activeLogTab === 'all' ? '' : activeLogTab} logs yet</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredLogs.map((log) => (
+            <div 
+              key={log.id} 
+              className={`border-l-4 ${
+                log.type === 'adl' 
+                  ? 'border-purple-500' 
+                  : 'border-green-500'
+              } bg-white shadow-sm rounded-r-lg p-4 hover:shadow-md transition-shadow`}
+            >
+              {/* Header Section */}
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold text-gray-900 text-base">
+                      {log.type === 'adl' ? log.activityName : (log.activityType || log.title || 'Care Activity')}
+                    </p>
+                    {log.type === 'adl' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                        <Activity className="h-3 w-3 mr-1" />
+                        ADL
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Client and timestamp info */}
+                  <div className="flex items-center gap-2 flex-wrap mt-2">
+                    {log.clientId && (
+                      <>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <User className="h-4 w-4 mr-1 text-gray-400" />
+                          <span className="font-medium">{getClientName(log.clientId)}</span>
+                        </div>
+                        <span className="text-gray-400">•</span>
+                      </>
+                    )}
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Clock className="h-4 w-4 mr-1 text-gray-400" />
+                      {new Date(log.timestamp || log.createdAt || log.logDate).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Status Badge */}
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                  log.status === 'completed'
+                    ? 'bg-green-100 text-green-800'
+                    : log.status === 'skipped'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : log.status === 'issue'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {log.status === 'completed' && '✓ '}
+                  {log.status === 'skipped' && '⊘ '}
+                  {log.status === 'issue' && '⚠ '}
+                  {log.status?.toUpperCase() || 'COMPLETED'}
+                </span>
+              </div>
+              
+              {/* Description/Notes Section */}
+              {(log.description || log.notes || log.content) && (
+                <div className="bg-gray-50 rounded-md p-3 mt-2">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Notes:</p>
+                  <p className="text-gray-700 text-sm">{log.description || log.notes || log.content}</p>
+                </div>
+              )}
+              
+              {/* Details Grid */}
+              <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                {/* Client */}
+                {log.clientId && (
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-500 mr-2">Client:</span>
+                    <span className="text-gray-700">{getClientName(log.clientId)}</span>
+                  </div>
+                )}
+                
+                {/* ADL Category */}
+                {log.type === 'adl' && log.activityCategory && (
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-500 mr-2">Category:</span>
+                    <span className="text-gray-700 bg-purple-50 px-2 py-1 rounded">
+                      {log.activityCategory}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Duration */}
+                {log.duration && (
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-500 mr-2">Duration:</span>
+                    <span className="text-gray-700">{log.duration}</span>
+                  </div>
+                )}
+                
+                {/* Location */}
+                {log.location && (
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-500 mr-2">Location:</span>
+                    <span className="text-gray-700">{log.location}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Media/Photos */}
+              {log.media && Array.isArray(log.media) && log.media.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Photos/Media ({log.media.length}):</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {log.media.slice(0, 3).map((media, idx) => (
+                      <img
+                        key={idx}
+                        src={media.url || media}
+                        alt={`Log media ${idx + 1}`}
+                        className="w-full h-20 object-cover rounded border border-gray-200"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ))}
+                    {log.media.length > 3 && (
+                      <div className="w-full h-20 flex items-center justify-center bg-gray-100 rounded border border-gray-200 text-xs text-gray-600">
+                        +{log.media.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
