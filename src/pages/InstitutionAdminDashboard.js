@@ -179,8 +179,6 @@ const InstitutionAdminDashboard = () => {
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
   const [appointmentView, setAppointmentView] = useState('daily'); // daily, weekly, monthly
-  const [showWageModal, setShowWageModal] = useState(false);
-  const [selectedCaregiverForWage, setSelectedCaregiverForWage] = useState(null);
   
   // Institution Link Customization
   const [showLinkCustomizer, setShowLinkCustomizer] = useState(false);
