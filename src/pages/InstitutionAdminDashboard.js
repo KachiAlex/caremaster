@@ -90,9 +90,8 @@ const formatTimeForDisplay = (time) => {
   const hour = parseInt(hourStr, 10);
   const minute = parseInt(minuteStr, 10);
   if (Number.isNaN(hour) || Number.isNaN(minute)) return time;
-  const amPm = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 || 12;
-  return `${hour12.toString().padStart(2, '0')}:${minuteStr.padStart(2, '0')} ${amPm}`;
+  // Return 24-hour format (HH:MM)
+  return `${hour.toString().padStart(2, '0')}:${minuteStr.padStart(2, '0')}`;
 };
 
 const buildWorkingHoursSummary = (startTime, endTime) => {
@@ -170,6 +169,8 @@ const InstitutionAdminDashboard = () => {
   const [selectedCaregiver, setSelectedCaregiver] = useState(null);
   const [showAssignmentDetails, setShowAssignmentDetails] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [showWageModal, setShowWageModal] = useState(false);
+  const [selectedCaregiverForWage, setSelectedCaregiverForWage] = useState(null);
 
   // Dashboard Card Modal States
   const [showStaffModal, setShowStaffModal] = useState(false);
@@ -238,14 +239,15 @@ const InstitutionAdminDashboard = () => {
   }, [webrtc, callStartAt]);
 
   useEffect(() => {
-    if (userProfile && institutionId) {
+    const instIdForSession = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+    if (userProfile && instIdForSession) {
       // Validate tab session for role conflicts
       const userRole = userProfile.userType || userProfile.type || userProfile.role;
       const validation = sessionManager.validateTabSession(user, userRole);
       
       if (validation.needsInit) {
         // First load - set tab session
-        sessionManager.setTabSession(userRole, user.uid, institutionId);
+        sessionManager.setTabSession(userRole, user.uid, instIdForSession);
       } else if (!validation.valid) {
         // Session conflict detected
         sessionManager.handleSessionConflict(validation, navigate, toast);
@@ -263,7 +265,7 @@ const InstitutionAdminDashboard = () => {
       
       return () => clearTimeout(timeout);
     }
-  }, [userProfile, institutionId, user, navigate]);
+  }, [userProfile, institutionId, effectiveInstitutionId, user, navigate]);
   
   // Load institution data
   const loadInstitutionData = async () => {
@@ -4191,6 +4193,29 @@ const InstitutionAdminDashboard = () => {
           onToggleStatus={handleToggleCaregiverStatus}
           onDelete={handleDeleteCaregiver}
           onAssignTask={handleAssignTaskToCaregiver}
+          onEditPayment={(caregiver) => {
+            setSelectedCaregiverForWage(caregiver);
+            setShowWageModal(true);
+          }}
+        />
+      )}
+
+      {showWageModal && selectedCaregiverForWage && (
+        <CaregiverWageEditModal
+          isOpen={showWageModal}
+          onClose={() => {
+            setShowWageModal(false);
+            setSelectedCaregiverForWage(null);
+          }}
+          caregiver={selectedCaregiverForWage}
+          onSave={(updatedCaregiver) => {
+            // Reload dashboard data to reflect the updated wage
+            loadDashboardData();
+            // If the caregiver details modal is open, refresh the selected caregiver
+            if (showCaregiverDetails && selectedCaregiver?.id === updatedCaregiver.id) {
+              setSelectedCaregiver(updatedCaregiver);
+            }
+          }}
         />
       )}
 
@@ -4457,6 +4482,47 @@ const InstitutionAdminDashboard = () => {
           externalCallState={callConnectionState}
           localStream={localStream}
           remoteStream={remoteStream}
+        />
+      )}
+
+      {/* Client Details Modal */}
+      {showClientDetails && selectedClient && (
+        <ClientDetailsModal
+          client={selectedClient}
+          onClose={() => {
+            setShowClientDetails(false);
+            setSelectedClient(null);
+          }}
+          onAssignTask={(client) => {
+            setSelectedClientForAssignment(client.id);
+            setShowAssignmentModal(true);
+            setShowClientDetails(false);
+          }}
+          onDelete={handleDeleteClient}
+          onUnarchive={handleUnarchiveClient}
+          pharmacists={pharmacists}
+          onAssignPharmacist={handleAssignPharmacist}
+        />
+      )}
+
+      {/* Caregiver Details Modal */}
+      {showCaregiverDetails && selectedCaregiver && (
+        <CaregiverDetailsModal
+          caregiver={selectedCaregiver}
+          assignments={assignments.filter(a => a.caregiverId === selectedCaregiver.id || a.caregiverId === selectedCaregiver.uid)}
+          clients={clients}
+          onClose={() => {
+            setShowCaregiverDetails(false);
+            setSelectedCaregiver(null);
+          }}
+          onResetPassword={handleResetPassword}
+          onToggleStatus={handleToggleCaregiverStatus}
+          onDelete={handleDeleteCaregiver}
+          onAssignTask={(caregiver) => {
+            setSelectedCaregiverForAssignment(caregiver.id);
+            setShowAssignmentModal(true);
+            setShowCaregiverDetails(false);
+          }}
         />
       )}
         </div>
@@ -4944,8 +5010,25 @@ const AddClientModal = ({ onClose, onAdd }) => {
                       className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
                         formData.serviceFrequency === option.value
                           ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 text-slate-600 hover-border-blue-400'
+                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
                       }`}
+                    >
+                      <input
+                        type="radio"
+                        name="serviceFrequency"
+                        value={option.value}
+                        required
+                        checked={formData.serviceFrequency === option.value}
+                        onChange={handleChange}
+                        className="accent-blue-600"
+                      />
+                      {option.label || option.value}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
 
           <section className="space-y-6">
             <header>
@@ -5000,7 +5083,26 @@ const AddClientModal = ({ onClose, onAdd }) => {
             </div>
           </section>
 
-  ... (truncated for brevity)
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Add Client
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 // Add Caregiver Modal Component
 const AddCaregiverModal = ({ onClose, onCreate }) => {
@@ -5028,7 +5130,8 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     currency: 'USD',
     address: '',
     emergencyContact: '',
-    notes: ''
+    notes: '',
+    engagementDates: [] // Array of selected dates
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -5303,9 +5406,39 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     }
   };
 
-  const handleProfilePictureChange = (event) => {
+  const handleProfilePictureChange = async (event) => {
     const file = event.target.files?.[0] || null;
-    setProfilePictureFile(file);
+    if (!file) {
+      setProfilePictureFile(null);
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please select a valid image file (JPEG, PNG, or WebP)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      // Import resizeImage function
+      const { resizeImage } = await import('../utils/profilePictureUpload');
+      // Resize image to recommended size (400x400)
+      const resizedFile = await resizeImage(file, 400, 400, 0.8);
+      setProfilePictureFile(resizedFile);
+      toast.success('Image resized and ready for upload');
+    } catch (error) {
+      console.error('Error resizing image:', error);
+      // If resize fails, use original file
+      setProfilePictureFile(file);
+      toast.warning('Could not resize image, using original file');
+    }
   };
 
   const handleQualificationDocumentChange = (event) => {
@@ -5609,6 +5742,53 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
                   {day.slice(0, 3)}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Engagement Dates <span className="text-gray-500 text-xs">(Select dates for engagements)</span>
+            </label>
+            <div className="space-y-2">
+              <input
+                type="date"
+                onChange={(e) => {
+                  const selectedDate = e.target.value;
+                  if (selectedDate && !formData.engagementDates.includes(selectedDate)) {
+                    setFormData(prev => ({
+                      ...prev,
+                      engagementDates: [...prev.engagementDates, selectedDate].sort()
+                    }));
+                    e.target.value = ''; // Reset input after selection
+                  }
+                }}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                min={new Date().toISOString().split('T')[0]}
+              />
+              {formData.engagementDates.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {formData.engagementDates.map((date, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                    >
+                      {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            engagementDates: prev.engagementDates.filter((_, i) => i !== index)
+                          }));
+                        }}
+                        className="ml-2 text-blue-600 hover:text-blue-800"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -6666,6 +6846,7 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchi
   );
 };
 
+
 // Dashboard Card Modals
 const StaffModal = ({ staff, onClose }) => {
   if (!staff) return null;
@@ -7255,7 +7436,7 @@ const PharmacistDetailsModal = ({ pharmacist, clients, onClose, onAssignClient }
   );
 };
 
-const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, assignments = [], clients = [] }) => {
+const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, onEditPayment, assignments = [], clients = [] }) => {
   if (!caregiver) return null;
 
   // Filter assignments for this specific caregiver
@@ -7449,7 +7630,20 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
 
           {(paymentType || hourlyRateValue || monthlyRateValue) && (
             <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Compensation</h4>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold text-gray-900">Compensation</h4>
+                {onEditPayment && (
+                  <button
+                    onClick={() => {
+                      onEditPayment(caregiver);
+                    }}
+                    className="flex items-center px-3 py-1.5 text-sm text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                  >
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    Edit Payment
+                  </button>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Payment Type</label>
@@ -7514,77 +7708,83 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
             </div>
           )}
 
-          {/* Assignments */}
+          {/* Assignments - Large Thumbnail View */}
           <div>
             <h4 className="text-lg font-semibold text-gray-900 mb-4">Assigned Tasks ({caregiverAssignments.length})</h4>
             {caregiverAssignments.length === 0 ? (
-              <p className="text-gray-500 text-sm">No tasks assigned yet</p>
+              <div className="text-center py-12">
+                <Briefcase className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No tasks assigned to this caregiver</p>
+              </div>
             ) : (
-              <div className="space-y-3">
-                {/* Active Assignments */}
-                {activeAssignments.length > 0 && (
-                  <div>
-                    <h5 className="text-sm font-medium text-gray-700 mb-2">Active Tasks ({activeAssignments.length})</h5>
-                    <div className="space-y-2">
-                      {activeAssignments.map(assignment => {
-                        const client = clients.find(p => p.id === assignment.clientId);
-                        return (
-                          <div key={assignment.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <h6 className="font-medium text-gray-900 text-sm">{assignment.title || 'Untitled Task'}</h6>
-                                <p className="text-xs text-gray-600 mt-1">Client: {assignment.clientName || client?.name || 'Unknown Client'}</p>
-                                {assignment.description && (
-                                  <p className="text-xs text-gray-500 mt-1">{assignment.description}</p>
-                                )}
-                                {assignment.dueDate && (
-                                  <p className="text-xs text-gray-500 mt-1">Due: {assignment.dueDate}</p>
-                                )}
-                              </div>
-                              <div className="ml-3">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  assignment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  assignment.status === 'in_progress' || assignment.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {assignment.status || 'pending'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {caregiverAssignments.map((assignment) => {
+                  const client = clients.find(p => p.id === assignment.clientId);
+                  return (
+                    <div
+                      key={assignment.id}
+                      className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h5 className="text-lg font-semibold text-gray-900 mb-2">
+                            {assignment.title || 'Untitled Task'}
+                          </h5>
+                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                            {assignment.description || assignment.instructions || 'No description'}
+                          </p>
+                        </div>
+                        <span className={`ml-2 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          assignment.status === 'completed'
+                            ? 'bg-green-100 text-green-800'
+                            : assignment.status === 'in_progress' || assignment.status === 'active'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {assignment.status || 'pending'}
+                        </span>
+                      </div>
 
-                {/* Completed Assignments */}
-                {completedAssignments.length > 0 && (
-                  <div>
-                    <h5 className="text-sm font-medium text-gray-700 mb-2">Completed Tasks ({completedAssignments.length})</h5>
-                    <div className="space-y-2">
-                      {completedAssignments.slice(0, 3).map(assignment => {
-                        const client = clients.find(p => p.id === assignment.clientId);
-                        return (
-                          <div key={assignment.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <h6 className="font-medium text-gray-900 text-sm">{assignment.title || 'Untitled Task'}</h6>
-                                <p className="text-xs text-gray-600 mt-1">Client: {assignment.clientName || client?.name || 'Unknown Client'}</p>
-                              </div>
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                completed
-                              </span>
-                            </div>
+                      <div className="space-y-2 mb-4">
+                        {assignment.clientName && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <User className="h-4 w-4 mr-2 text-gray-400" />
+                            <span>{assignment.clientName || client?.name || 'Unknown Client'}</span>
                           </div>
-                        );
-                      })}
-                      {completedAssignments.length > 3 && (
-                        <p className="text-xs text-gray-500 text-center">+ {completedAssignments.length - 3} more completed</p>
+                        )}
+                        {assignment.dueDate && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                            <span>
+                              {assignment.dueDate}
+                              {assignment.dueTime && ` at ${assignment.dueTime}`}
+                            </span>
+                          </div>
+                        )}
+                        {assignment.priority && (
+                          <div className="flex items-center text-sm">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              assignment.priority === 'urgent'
+                                ? 'bg-red-100 text-red-800'
+                                : assignment.priority === 'high'
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {assignment.priority}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {assignment.instructions && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Instructions:</p>
+                          <p className="text-sm text-gray-700 line-clamp-3">{assignment.instructions}</p>
+                        </div>
                       )}
                     </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             )}
           </div>

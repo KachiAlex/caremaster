@@ -479,9 +479,9 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Caregiver Tasks & Care Activities */}
+      {/* Assigned Tasks */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Care Tasks & Activities</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Assigned Tasks</h2>
         {dashboardData.loading ? (
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <div className="animate-pulse">

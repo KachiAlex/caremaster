@@ -80,6 +80,13 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
     try {
       setLoading(true);
       const allActivities = [];
+      
+      // Validate clientId before proceeding
+      if (!clientId) {
+        console.warn('ClientActivityTimeline: No clientId provided');
+        setLoading(false);
+        return;
+      }
 
       // 1. Load ADL Logs
       try {
@@ -209,6 +216,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
         });
       } catch (error) {
         console.error('Error loading medical reports:', error);
+        // Don't throw - continue loading other activities
       }
 
       // 5. Load Assignments
@@ -254,7 +262,10 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
       console.log(`✅ Loaded ${allActivities.length} activities for client ${clientName}`);
     } catch (error) {
       console.error('Error loading client activities:', error);
-      toast.error('Failed to load activity timeline');
+      // Only show toast, don't throw or navigate - this prevents logout
+      toast.error('Failed to load activity timeline. Please try again.');
+      // Set empty activities array to prevent UI errors
+      setActivities([]);
     } finally {
       setLoading(false);
     }
