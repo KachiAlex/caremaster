@@ -171,6 +171,8 @@ const InstitutionAdminDashboard = () => {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [showWageModal, setShowWageModal] = useState(false);
   const [selectedCaregiverForWage, setSelectedCaregiverForWage] = useState(null);
+  const [showEditAssignmentModal, setShowEditAssignmentModal] = useState(false);
+  const [selectedAssignmentForEdit, setSelectedAssignmentForEdit] = useState(null);
 
   // Dashboard Card Modal States
   const [showStaffModal, setShowStaffModal] = useState(false);
@@ -1181,6 +1183,36 @@ const InstitutionAdminDashboard = () => {
     } catch (error) {
       console.error('Error creating assignment:', error);
       toast.error('Failed to create assignment');
+    }
+  };
+
+  // Assignment Edit/Delete Handlers
+  const handleEditAssignment = (assignment) => {
+    setSelectedAssignmentForEdit(assignment);
+    setShowEditAssignmentModal(true);
+  };
+
+  const handleUpdateAssignment = async (formData) => {
+    if (!selectedAssignmentForEdit) return;
+
+    try {
+      await assignmentAPI.updateAssignment(selectedAssignmentForEdit.id, {
+        title: formData.title,
+        description: formData.description,
+        instructions: formData.instructions,
+        priority: formData.priority,
+        dueDate: formData.dueDate,
+        dueTime: formData.dueTime,
+        status: formData.status || selectedAssignmentForEdit.status
+      });
+
+      toast.success('Assignment updated successfully');
+      setShowEditAssignmentModal(false);
+      setSelectedAssignmentForEdit(null);
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+      toast.error('Failed to update assignment');
     }
   };
 
@@ -4195,6 +4227,8 @@ const InstitutionAdminDashboard = () => {
             setSelectedCaregiverForWage(caregiver);
             setShowWageModal(true);
           }}
+          onEditAssignment={handleEditAssignment}
+          onDeleteAssignment={handleDeleteAssignment}
         />
       )}
 
@@ -4214,6 +4248,19 @@ const InstitutionAdminDashboard = () => {
               setSelectedCaregiver(updatedCaregiver);
             }
           }}
+        />
+      )}
+
+      {showEditAssignmentModal && selectedAssignmentForEdit && (
+        <EditAssignmentModal
+          assignment={selectedAssignmentForEdit}
+          clients={clients}
+          caregivers={caregivers}
+          onClose={() => {
+            setShowEditAssignmentModal(false);
+            setSelectedAssignmentForEdit(null);
+          }}
+          onSave={handleUpdateAssignment}
         />
       )}
 
@@ -7434,7 +7481,7 @@ const PharmacistDetailsModal = ({ pharmacist, clients, onClose, onAssignClient }
   );
 };
 
-const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, onEditPayment, assignments = [], clients = [] }) => {
+const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, onEditPayment, onEditAssignment, onDeleteAssignment, assignments = [], clients = [] }) => {
   if (!caregiver) return null;
 
   // Filter assignments for this specific caregiver
@@ -7780,6 +7827,38 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                           <p className="text-sm text-gray-700 line-clamp-3">{assignment.instructions}</p>
                         </div>
                       )}
+
+                      {/* Action Buttons */}
+                      <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-end gap-2">
+                        {onEditAssignment && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditAssignment(assignment);
+                            }}
+                            className="flex items-center px-3 py-1.5 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                            title="Edit task"
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </button>
+                        )}
+                        {onDeleteAssignment && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Are you sure you want to delete the task "${assignment.title || 'Untitled Task'}"?`)) {
+                                onDeleteAssignment(assignment.id);
+                              }
+                            }}
+                            className="flex items-center px-3 py-1.5 text-sm text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                            title="Delete task"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -8484,6 +8563,187 @@ const AddCareLogModal = ({ clientId, onClose, onSubmit }) => {
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
             >
               Save Log
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Edit Assignment Modal Component
+const EditAssignmentModal = ({ assignment, onClose, onSave, clients, caregivers }) => {
+  if (!assignment) return null;
+
+  const [formData, setFormData] = React.useState({
+    title: assignment.title || '',
+    description: assignment.description || '',
+    instructions: assignment.instructions || '',
+    priority: assignment.priority || 'normal',
+    dueDate: assignment.dueDate || '',
+    dueTime: assignment.dueTime || '',
+    status: assignment.status || 'pending'
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-500 to-blue-600">
+          <div>
+            <h3 className="text-xl font-bold text-white">Edit Assignment</h3>
+            <p className="text-blue-100 text-sm mt-1">Update task details</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:text-gray-200"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Task Title *</label>
+            <input
+              type="text"
+              name="title"
+              required
+              value={formData.title}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter task title"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <textarea
+              name="description"
+              rows={3}
+              value={formData.description}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter task description"
+            />
+          </div>
+
+          {/* Instructions */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>
+            <textarea
+              name="instructions"
+              rows={4}
+              value={formData.instructions}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter special instructions for the caregiver"
+            />
+          </div>
+
+          {/* Priority and Status */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Priority *</label>
+              <select
+                name="priority"
+                required
+                value={formData.priority}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+              <select
+                name="status"
+                required
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Due Date and Time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+              <input
+                type="date"
+                name="dueDate"
+                value={formData.dueDate}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Due Time</label>
+              <input
+                type="time"
+                name="dueTime"
+                value={formData.dueTime}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Client and Caregiver Info (Read-only) */}
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+            <div className="flex items-center text-sm">
+              <User className="h-4 w-4 text-gray-400 mr-2" />
+              <span className="text-gray-600">Client: </span>
+              <span className="font-medium text-gray-900 ml-1">
+                {assignment.clientName || clients.find(c => c.id === assignment.clientId)?.name || 'Unknown Client'}
+              </span>
+            </div>
+            <div className="flex items-center text-sm">
+              <User className="h-4 w-4 text-gray-400 mr-2" />
+              <span className="text-gray-600">Caregiver: </span>
+              <span className="font-medium text-gray-900 ml-1">
+                {assignment.caregiverName || caregivers.find(c => c.id === assignment.caregiverId)?.name || 'Unknown Caregiver'}
+              </span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            >
+              Save Changes
             </button>
           </div>
         </form>
