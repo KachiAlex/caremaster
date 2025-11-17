@@ -527,7 +527,7 @@ const InstitutionAdminDashboard = () => {
       // Always use the admin's institutionId from their profile - this is the most reliable source
       // Priority: userProfile.institutionId > effectiveInstitutionId > institutionId from context
       const instId = userProfile?.institutionId || effectiveInstitutionId || institutionId;
-      const { profilePictureFile, qualificationDocumentFile } = files;
+      const { profilePictureFile, qualificationDocumentFile, governmentIdFile, guarantor1LetterFile, guarantor2LetterFile } = files;
       
       // Enhanced debugging
       console.log('🔍 Institution ID Debug (handleAddCaregiver):', {
@@ -661,6 +661,10 @@ const InstitutionAdminDashboard = () => {
           name: caregiverData.name,
           displayName: caregiverData.name,
           phone: caregiverData.phone || '',
+          dateOfBirth: caregiverData.dateOfBirth || '',
+          gender: caregiverData.gender || '',
+          linkedInId: caregiverData.linkedInId || '',
+          residentialAddress: caregiverData.residentialAddress || '',
           startTime: caregiverData.startTime || '',
           endTime: caregiverData.endTime || '',
           userType: caregiverData.userType || 'caregiver',
@@ -683,8 +687,40 @@ const InstitutionAdminDashboard = () => {
           paymentType,
           paymentModuleLinked: true,
           address: caregiverData.address || '',
+          
+          // Background & Availability
+          currentlyEmployed: caregiverData.currentlyEmployed || '',
+          caregivingExperience: caregiverData.caregivingExperience || '',
+          yearsOfCaregiverExperience: caregiverData.yearsOfCaregiverExperience || '',
+          certifications: caregiverData.certifications || '',
+          availability: caregiverData.availability || '',
+          preferredLocation: caregiverData.preferredLocation || '',
+          
+          // Emergency Contact
+          emergencyContactName: caregiverData.emergencyContactName || '',
+          emergencyContactRelationship: caregiverData.emergencyContactRelationship || '',
+          emergencyContactPhone: caregiverData.emergencyContactPhone || '',
           emergencyContact: caregiverData.emergencyContact || '',
+          
+          // Health & Availability
+          hasMedicalCondition: caregiverData.hasMedicalCondition || '',
+          medicalConditionDetails: caregiverData.medicalConditionDetails || '',
+          availableToStartDate: caregiverData.availableToStartDate || '',
+          
+          // Guarantor 1
+          guarantor1Name: caregiverData.guarantor1Name || '',
+          guarantor1Relationship: caregiverData.guarantor1Relationship || '',
+          guarantor1Phone: caregiverData.guarantor1Phone || '',
+          guarantor1Address: caregiverData.guarantor1Address || '',
+          
+          // Guarantor 2
+          guarantor2Name: caregiverData.guarantor2Name || '',
+          guarantor2Relationship: caregiverData.guarantor2Relationship || '',
+          guarantor2Phone: caregiverData.guarantor2Phone || '',
+          guarantor2Address: caregiverData.guarantor2Address || '',
+          
           notes: caregiverData.notes || '',
+          engagementDates: caregiverData.engagementDates || [],
           status: 'active',
           onboardingComplete: true,
           profileComplete: true,
@@ -716,8 +752,8 @@ const InstitutionAdminDashboard = () => {
             if (!fileStorageService.validateFileType(qualificationDocumentFile)) {
               throw new Error('Unsupported document format. Please upload PDF, Word, Excel, or image files.');
             }
-            if (!fileStorageService.validateFileSize(qualificationDocumentFile, 10 * 1024 * 1024)) {
-              throw new Error('Qualification document is too large. Maximum size is 10MB.');
+            if (!fileStorageService.validateFileSize(qualificationDocumentFile, 50 * 1024 * 1024)) {
+              throw new Error('Qualification document is too large. Maximum size is 50MB.');
             }
             const documentPath = fileStorageService.generateFilePath(caregiverId, 'qualifications', qualificationDocumentFile.name);
             const uploadResult = await fileStorageService.uploadFile(qualificationDocumentFile, documentPath);
@@ -726,6 +762,60 @@ const InstitutionAdminDashboard = () => {
           } catch (documentError) {
             console.error('Qualification document upload failed:', documentError);
             toast.warning(documentError.message || 'Qualification document upload failed. You can upload it later from caregiver settings.');
+          }
+        }
+
+        if (governmentIdFile) {
+          try {
+            if (!fileStorageService.validateFileType(governmentIdFile)) {
+              throw new Error('Unsupported document format. Please upload PDF, Word, Excel, or image files.');
+            }
+            if (!fileStorageService.validateFileSize(governmentIdFile, 50 * 1024 * 1024)) {
+              throw new Error('Government ID document is too large. Maximum size is 50MB.');
+            }
+            const idPath = fileStorageService.generateFilePath(caregiverId, 'government-id', governmentIdFile.name);
+            const uploadResult = await fileStorageService.uploadFile(governmentIdFile, idPath);
+            additionalFields.governmentIdUrl = uploadResult.downloadURL;
+            additionalFields.governmentIdPath = uploadResult.path;
+          } catch (idError) {
+            console.error('Government ID upload failed:', idError);
+            toast.warning(idError.message || 'Government ID upload failed. You can upload it later from caregiver settings.');
+          }
+        }
+
+        if (guarantor1LetterFile) {
+          try {
+            if (!fileStorageService.validateFileType(guarantor1LetterFile)) {
+              throw new Error('Unsupported document format. Please upload PDF, Word, Excel, or image files.');
+            }
+            if (!fileStorageService.validateFileSize(guarantor1LetterFile, 50 * 1024 * 1024)) {
+              throw new Error('Guarantor 1 letter is too large. Maximum size is 50MB.');
+            }
+            const letter1Path = fileStorageService.generateFilePath(caregiverId, 'guarantor-1-letter', guarantor1LetterFile.name);
+            const uploadResult = await fileStorageService.uploadFile(guarantor1LetterFile, letter1Path);
+            additionalFields.guarantor1LetterUrl = uploadResult.downloadURL;
+            additionalFields.guarantor1LetterPath = uploadResult.path;
+          } catch (letter1Error) {
+            console.error('Guarantor 1 letter upload failed:', letter1Error);
+            toast.warning(letter1Error.message || 'Guarantor 1 letter upload failed. You can upload it later from caregiver settings.');
+          }
+        }
+
+        if (guarantor2LetterFile) {
+          try {
+            if (!fileStorageService.validateFileType(guarantor2LetterFile)) {
+              throw new Error('Unsupported document format. Please upload PDF, Word, Excel, or image files.');
+            }
+            if (!fileStorageService.validateFileSize(guarantor2LetterFile, 50 * 1024 * 1024)) {
+              throw new Error('Guarantor 2 letter is too large. Maximum size is 50MB.');
+            }
+            const letter2Path = fileStorageService.generateFilePath(caregiverId, 'guarantor-2-letter', guarantor2LetterFile.name);
+            const uploadResult = await fileStorageService.uploadFile(guarantor2LetterFile, letter2Path);
+            additionalFields.guarantor2LetterUrl = uploadResult.downloadURL;
+            additionalFields.guarantor2LetterPath = uploadResult.path;
+          } catch (letter2Error) {
+            console.error('Guarantor 2 letter upload failed:', letter2Error);
+            toast.warning(letter2Error.message || 'Guarantor 2 letter upload failed. You can upload it later from caregiver settings.');
           }
         }
 
@@ -5156,11 +5246,29 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
   const [dataRestored, setDataRestored] = useState(false);
 
   const [formData, setFormData] = useState({
+    // Personal Information
     name: '',
+    dateOfBirth: '',
+    gender: '',
     email: '',
-    password: '',
     phone: '',
+    address: '',
+    linkedInId: '',
+    residentialAddress: '',
+    
+    // Account
+    password: '',
     userType: 'caregiver',
+    
+    // Background & Availability
+    currentlyEmployed: '',
+    caregivingExperience: '',
+    yearsOfCaregiverExperience: '',
+    certifications: '',
+    availability: '', // Live-in, Part time, Full time, Weekends, Weekdays
+    preferredLocation: '',
+    
+    // Professional
     specialization: '',
     qualifications: '',
     experience: '',
@@ -5173,8 +5281,29 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     rate: '',
     monthlyRate: '',
     currency: 'USD',
-    address: '',
-    emergencyContact: '',
+    
+    // Emergency Contact
+    emergencyContactName: '',
+    emergencyContactRelationship: '',
+    emergencyContactPhone: '',
+    
+    // Health & Availability
+    hasMedicalCondition: '',
+    medicalConditionDetails: '',
+    availableToStartDate: '',
+    
+    // Guarantor 1
+    guarantor1Name: '',
+    guarantor1Relationship: '',
+    guarantor1Phone: '',
+    guarantor1Address: '',
+    
+    // Guarantor 2
+    guarantor2Name: '',
+    guarantor2Relationship: '',
+    guarantor2Phone: '',
+    guarantor2Address: '',
+    
     notes: '',
     engagementDates: [] // Array of selected dates
   });
@@ -5184,6 +5313,9 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [profilePictureFile, setProfilePictureFile] = useState(null);
   const [qualificationDocumentFile, setQualificationDocumentFile] = useState(null);
+  const [governmentIdFile, setGovernmentIdFile] = useState(null);
+  const [guarantor1LetterFile, setGuarantor1LetterFile] = useState(null);
+  const [guarantor2LetterFile, setGuarantor2LetterFile] = useState(null);
 
   // Restore saved form data on mount
   React.useEffect(() => {
@@ -5303,7 +5435,13 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
       workingHours: workingHoursSummary
     };
     
-    onCreate(submissionData, { profilePictureFile, qualificationDocumentFile });
+    onCreate(submissionData, { 
+      profilePictureFile, 
+      qualificationDocumentFile,
+      governmentIdFile,
+      guarantor1LetterFile,
+      guarantor2LetterFile
+    });
   };
 
   const formatRoleValue = (role) => role.toLowerCase().replace(/\s+/g, '_');
@@ -5488,7 +5626,38 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
 
   const handleQualificationDocumentChange = (event) => {
     const file = event.target.files?.[0] || null;
+    if (file && file.size > 50 * 1024 * 1024) {
+      toast.error('File size must be less than 50MB');
+      return;
+    }
     setQualificationDocumentFile(file);
+  };
+
+  const handleGovernmentIdChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (file && file.size > 50 * 1024 * 1024) {
+      toast.error('File size must be less than 50MB');
+      return;
+    }
+    setGovernmentIdFile(file);
+  };
+
+  const handleGuarantor1LetterChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (file && file.size > 50 * 1024 * 1024) {
+      toast.error('File size must be less than 50MB');
+      return;
+    }
+    setGuarantor1LetterFile(file);
+  };
+
+  const handleGuarantor2LetterChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (file && file.size > 50 * 1024 * 1024) {
+      toast.error('File size must be less than 50MB');
+      return;
+    }
+    setGuarantor2LetterFile(file);
   };
 
   const handleDayToggle = (day) => {
@@ -5524,394 +5693,986 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Full Name *</label>
-              <input
-                type="text"
-                name="name"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+        <form onSubmit={handleSubmit} className="p-6 space-y-8">
+          {/* Personal Information Section */}
+          <section className="space-y-4">
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-t-lg">
+              <h4 className="text-lg font-semibold">Personal Information</h4>
             </div>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    1. Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email Address *</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  name="email"
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    2. Date of Birth <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    required
+                    value={formData.dateOfBirth}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    3. Gender <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-4 mt-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="Male"
+                        checked={formData.gender === 'Male'}
+                        onChange={handleChange}
+                        required
+                        className="mr-2"
+                      />
+                      Male
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="Female"
+                        checked={formData.gender === 'Female'}
+                        onChange={handleChange}
+                        required
+                        className="mr-2"
+                      />
+                      Female
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    4. E-Mail <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                      onBlur={(e) => checkEmailUniqueness(e.target.value)}
+                      className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 ${
+                        emailExists 
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
+                    />
+                    {checkingEmail && (
+                      <div className="absolute right-3 top-3">
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                  </div>
+                  {emailExists && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" />
+                      This email is already in use.
+                    </p>
+                  )}
+                  {!emailExists && formData.email && !checkingEmail && (
+                    <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4" />
+                      Email is available
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    5. Mobile Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    6. Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    required
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    7. LinkedIn ID
+                  </label>
+                  <input
+                    type="text"
+                    name="linkedInId"
+                    value={formData.linkedInId}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    8. Residential Address <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="residentialAddress"
+                    required
+                    value={formData.residentialAddress}
+                    onChange={handleChange}
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Account Information Section */}
+          <section className="space-y-4">
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-t-lg">
+              <h4 className="text-lg font-semibold">Account Information</h4>
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      minLength={6}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Min. 6 characters"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role/Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="userType"
+                    required
+                    value={formData.userType}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {caregiverRoles.map(role => (
+                      <option key={role} value={formatRoleValue(role)}>{role}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Background & Availability Section */}
+          <section className="space-y-4">
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-t-lg">
+              <h4 className="text-lg font-semibold">Background & Availability</h4>
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  9. Are you currently employed? <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-4 mt-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="currentlyEmployed"
+                      value="Yes"
+                      checked={formData.currentlyEmployed === 'Yes'}
+                      onChange={handleChange}
+                      required
+                      className="mr-2"
+                    />
+                    Yes
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="currentlyEmployed"
+                      value="No"
+                      checked={formData.currentlyEmployed === 'No'}
+                      onChange={handleChange}
+                      required
+                      className="mr-2"
+                    />
+                    No
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  10. Do you have any caregiving experience? <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="caregivingExperience"
                   required
-                  value={formData.email}
+                  value={formData.caregivingExperience}
                   onChange={handleChange}
-                  onBlur={(e) => checkEmailUniqueness(e.target.value)}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 ${
-                    emailExists 
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
-                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                  }`}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-                {checkingEmail && (
-                  <div className="absolute right-3 top-3">
-                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  11. Years of Caregiver experience <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="yearsOfCaregiverExperience"
+                  required
+                  min="0"
+                  value={formData.yearsOfCaregiverExperience}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  12. Certifications or Qualifications (e.g. RN, Caregiver Certificate) <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="certifications"
+                  required
+                  value={formData.certifications}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="List certifications, qualifications, etc."
+                />
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  13. Availability <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-2 mt-2">
+                  {['Live-in', 'Part time', 'Full time', 'Weekends', 'Weekdays'].map((option) => (
+                    <label key={option} className="flex items-center">
+                      <input
+                        type="radio"
+                        name="availability"
+                        value={option}
+                        checked={formData.availability === option}
+                        onChange={handleChange}
+                        required
+                        className="mr-2"
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  14. Preferred Location(s) for Assignment <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="preferredLocation"
+                  required
+                  value={formData.preferredLocation}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter preferred locations"
+                />
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Emergency Contact Section */}
+          <section className="space-y-4">
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-t-lg">
+              <h4 className="text-lg font-semibold">Emergency Contact</h4>
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    15. Emergency Contact Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="emergencyContactName"
+                    required
+                    value={formData.emergencyContactName}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    16. Relationship <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="emergencyContactRelationship"
+                    required
+                    value={formData.emergencyContactRelationship}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., Spouse, Parent, Sibling"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    17. Phone number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="emergencyContactPhone"
+                    required
+                    value={formData.emergencyContactPhone}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Health & Availability Section */}
+          <section className="space-y-4">
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-t-lg">
+              <h4 className="text-lg font-semibold">Health & Availability</h4>
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  18. Do you have any medical condition that may affect your work? <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-4 mt-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="hasMedicalCondition"
+                      value="Yes"
+                      checked={formData.hasMedicalCondition === 'Yes'}
+                      onChange={handleChange}
+                      required
+                      className="mr-2"
+                    />
+                    Yes
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="hasMedicalCondition"
+                      value="No"
+                      checked={formData.hasMedicalCondition === 'No'}
+                      onChange={handleChange}
+                      required
+                      className="mr-2"
+                    />
+                    No
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+
+              {formData.hasMedicalCondition === 'Yes' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    19. If yes, please explain <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="medicalConditionDetails"
+                    required={formData.hasMedicalCondition === 'Yes'}
+                    value={formData.medicalConditionDetails}
+                    onChange={handleChange}
+                    rows={4}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  20. When are you available to start work? <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="availableToStartDate"
+                  required
+                  value={formData.availableToStartDate}
+                  onChange={handleChange}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Guarantor 1 Section */}
+          <section className="space-y-4">
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-t-lg">
+              <h4 className="text-lg font-semibold">Guarantor/Referee 1</h4>
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="guarantor1Name"
+                    required
+                    value={formData.guarantor1Name}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Relationship <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="guarantor1Relationship"
+                    required
+                    value={formData.guarantor1Relationship}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., Employer, Supervisor"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="guarantor1Phone"
+                    required
+                    value={formData.guarantor1Phone}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="guarantor1Address"
+                    required
+                    value={formData.guarantor1Address}
+                    onChange={handleChange}
+                    rows={2}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  22. Please upload a scanned copy or clear photo of the signed letter from your referee or surety 1 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  onChange={handleGuarantor1LetterChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                {guarantor1LetterFile ? (
+                  <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{guarantor1LetterFile.name}</span></p>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-500">Please upload a clear photo or scanned copy of the signed letter</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">* Maximum allowed file size is <strong>50MB</strong></p>
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Guarantor 2 Section */}
+          <section className="space-y-4">
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-t-lg">
+              <h4 className="text-lg font-semibold">Guarantor/Referee 2</h4>
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="guarantor2Name"
+                    required
+                    value={formData.guarantor2Name}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Relationship <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="guarantor2Relationship"
+                    required
+                    value={formData.guarantor2Relationship}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., Employer, Supervisor"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="guarantor2Phone"
+                    required
+                    value={formData.guarantor2Phone}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="guarantor2Address"
+                    required
+                    value={formData.guarantor2Address}
+                    onChange={handleChange}
+                    rows={2}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  23. Please upload a scanned copy or clear photo of the signed letter from your referee or surety 2 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  onChange={handleGuarantor2LetterChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                {guarantor2LetterFile ? (
+                  <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{guarantor2LetterFile.name}</span></p>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-500">Please upload a clear photo or scanned copy of the signed letter</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">* Maximum allowed file size is <strong>50MB</strong></p>
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Document Uploads Section */}
+          <section className="space-y-4">
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-t-lg">
+              <h4 className="text-lg font-semibold">Document Uploads</h4>
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Profile Picture
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePictureChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                {profilePictureFile ? (
+                  <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{profilePictureFile.name}</span></p>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-500">Upload a clear headshot to personalize the caregiver profile.</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  21. Upload a clear photo or scanned copy of your chosen ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  onChange={handleGovernmentIdChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                {governmentIdFile ? (
+                  <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{governmentIdFile.name}</span></p>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-500">Please upload a clear photo or scanned copy of your ID</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">* Maximum allowed file size is <strong>50MB</strong></p>
+                <p className="text-xs text-gray-500 mt-1">Required</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  12. Certifications or Qualifications Document
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  onChange={handleQualificationDocumentChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                {qualificationDocumentFile ? (
+                  <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{qualificationDocumentFile.name}</span></p>
+                ) : (
+                  <p className="mt-1 text-sm text-gray-500">Attach certifications, licenses, or other supporting documents.</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">* Maximum allowed file size is <strong>50MB</strong></p>
+              </div>
+            </div>
+          </section>
+
+          {/* Professional & Payment Information Section */}
+          <section className="space-y-4">
+            <div className="bg-slate-800 text-white px-4 py-3 rounded-t-lg">
+              <h4 className="text-lg font-semibold">Professional & Payment Information</h4>
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Specialization
+                  </label>
+                  <input
+                    type="text"
+                    name="specialization"
+                    value={formData.specialization}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Years of Experience (General)
+                  </label>
+                  <input
+                    type="number"
+                    name="experience"
+                    min="0"
+                    value={formData.experience}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Qualifications
+                  </label>
+                  <textarea
+                    name="qualifications"
+                    rows={3}
+                    value={formData.qualifications}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="List educational qualifications, certifications, etc."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="rateType"
+                    required
+                    value={formData.rateType}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="per_hour">Per Hour</option>
+                    <option value="per_month">Per Month</option>
+                  </select>
+                </div>
+
+                {formData.rateType === 'per_hour' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Hourly Rate <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="rate"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={formData.rate}
+                      onChange={handleChange}
+                      placeholder="Enter hourly rate"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                )}
+
+                {formData.rateType === 'per_month' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Monthly Rate <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="monthlyRate"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={formData.monthlyRate}
+                      onChange={handleChange}
+                      placeholder="Enter monthly rate"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Currency <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="currency"
+                    required
+                    value={formData.currency}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {currencies.map(currency => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.symbol} {currency.code} - {currency.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Working Hours <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Start Time</label>
+                      <select
+                        name="startTime"
+                        value={formData.startTime}
+                        onChange={handleChange}
+                        required
+                        className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select start time</option>
+                        {timeOptions.map(option => (
+                          <option key={`start-${option}`} value={option}>
+                            {formatTimeForDisplay(option)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">End Time</label>
+                      <select
+                        name="endTime"
+                        value={formData.endTime}
+                        onChange={handleChange}
+                        required
+                        className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select end time</option>
+                        {timeOptions.map(option => (
+                          <option key={`end-${option}`} value={option}>
+                            {formatTimeForDisplay(option)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  {formData.startTime && formData.endTime && (
+                    <p className="mt-2 text-xs text-gray-600">
+                      Scheduled: <span className="font-medium">{formatTimeForDisplay(formData.startTime)} - {formatTimeForDisplay(formData.endTime)}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Available Days
+                  </label>
+                  <div className="grid grid-cols-7 gap-1">
+                    {daysOfWeek.map(day => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => handleDayToggle(day)}
+                        className={`px-2 py-1 text-xs rounded-md border ${
+                          formData.availableDays.includes(day)
+                            ? 'bg-blue-100 border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {day.slice(0, 3)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Engagement Dates <span className="text-gray-500 text-xs">(Select dates for engagements)</span>
+                </label>
+                <input
+                  type="date"
+                  onChange={(e) => {
+                    const selectedDate = e.target.value;
+                    if (selectedDate && !formData.engagementDates.includes(selectedDate)) {
+                      setFormData(prev => ({
+                        ...prev,
+                        engagementDates: [...prev.engagementDates, selectedDate].sort()
+                      }));
+                      e.target.value = '';
+                    }
+                  }}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+                {formData.engagementDates.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {formData.engagementDates.map((date, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
+                      >
+                        {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              engagementDates: prev.engagementDates.filter((_, i) => i !== index)
+                            }));
+                          }}
+                          className="ml-1 text-blue-600 hover:text-blue-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
-              {emailExists && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="h-4 w-4" />
-                  This email is already in use. Please use a different email.
-                </p>
-              )}
-              {!emailExists && formData.email && !checkingEmail && (
-                <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4" />
-                  Email is available
-                </p>
-              )}
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Password *</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  minLength={6}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Min. 6 characters"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 mt-0.5 text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  {showPassword ? (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Role/Type *</label>
-              <select
-                name="userType"
-                required
-                value={formData.userType}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                {caregiverRoles.map(role => (
-                  <option key={role} value={formatRoleValue(role)}>{role}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Specialization</label>
-              <input
-                type="text"
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Years of Experience</label>
-              <input
-                type="number"
-                name="experience"
-                min="0"
-                value={formData.experience}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Payment Type *</label>
-              <select
-                name="rateType"
-                required
-                value={formData.rateType}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="per_hour">Per Hour</option>
-                <option value="per_month">Per Month</option>
-              </select>
-            </div>
-
-            {formData.rateType === 'per_hour' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Hourly Rate *</label>
-                <input
-                  type="number"
-                  name="rate"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={formData.rate}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Additional Notes
+                </label>
+                <textarea
+                  name="notes"
+                  rows={4}
+                  value={formData.notes}
                   onChange={handleChange}
-                  placeholder="Enter hourly rate"
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Any additional notes or special instructions..."
                 />
               </div>
-            )}
-
-            {formData.rateType === 'per_month' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Monthly Rate *</label>
-                <input
-                  type="number"
-                  name="monthlyRate"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={formData.monthlyRate}
-                  onChange={handleChange}
-                  placeholder="Enter monthly rate"
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Currency *</label>
-              <select
-                name="currency"
-                required
-                value={formData.currency}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                {currencies.map(currency => (
-                  <option key={currency.code} value={currency.code}>
-                    {currency.symbol} {currency.code} - {currency.name}
-                  </option>
-                ))}
-              </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Working Hours *</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="block text-sm font-medium text-gray-700">
-                <span className="block mb-1">Start Time</span>
-                <select
-                  name="startTime"
-                  value={formData.startTime}
-                  onChange={handleChange}
-                  required
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select start time</option>
-                  {timeOptions.map(option => (
-                    <option key={`start-${option}`} value={option}>
-                      {formatTimeForDisplay(option)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm font-medium text-gray-700">
-                <span className="block mb-1">End Time</span>
-                <select
-                  name="endTime"
-                  value={formData.endTime}
-                  onChange={handleChange}
-                  required
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select end time</option>
-                  {timeOptions.map(option => (
-                    <option key={`end-${option}`} value={option}>
-                      {formatTimeForDisplay(option)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            {formData.startTime && formData.endTime ? (
-              <p className="mt-3 text-sm text-gray-600">
-                Scheduled hours: <span className="font-medium text-gray-900">
-                  {`${formatTimeForDisplay(formData.startTime)} - ${formatTimeForDisplay(formData.endTime)}`}
-                </span>
-              </p>
-            ) : (
-              <p className="mt-3 text-sm text-gray-500">Select both start and end times to define the caregiver schedule.</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Available Days</label>
-            <div className="mt-2 grid grid-cols-7 gap-2">
-              {daysOfWeek.map(day => (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => handleDayToggle(day)}
-                  className={`px-3 py-2 text-sm rounded-md border ${
-                    formData.availableDays.includes(day)
-                      ? 'bg-blue-100 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {day.slice(0, 3)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Engagement Dates <span className="text-gray-500 text-xs">(Select dates for engagements)</span>
-            </label>
-            <div className="space-y-2">
-              <input
-                type="date"
-                onChange={(e) => {
-                  const selectedDate = e.target.value;
-                  if (selectedDate && !formData.engagementDates.includes(selectedDate)) {
-                    setFormData(prev => ({
-                      ...prev,
-                      engagementDates: [...prev.engagementDates, selectedDate].sort()
-                    }));
-                    e.target.value = ''; // Reset input after selection
-                  }
-                }}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                min={new Date().toISOString().split('T')[0]}
-              />
-              {formData.engagementDates.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {formData.engagementDates.map((date, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
-                    >
-                      {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            engagementDates: prev.engagementDates.filter((_, i) => i !== index)
-                          }));
-                        }}
-                        className="ml-2 text-blue-600 hover:text-blue-800"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Profile Picture</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleProfilePictureChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-            {profilePictureFile ? (
-              <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{profilePictureFile.name}</span></p>
-            ) : (
-              <p className="mt-1 text-sm text-gray-500">Upload a clear headshot to personalize the caregiver profile.</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Qualifications Document</label>
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-              onChange={handleQualificationDocumentChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-            {qualificationDocumentFile ? (
-              <p className="mt-1 text-sm text-gray-600">Selected file: <span className="font-medium">{qualificationDocumentFile.name}</span></p>
-            ) : (
-              <p className="mt-1 text-sm text-gray-500">Attach certifications, licenses, or other supporting documents.</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Qualifications</label>
-            <textarea
-              name="qualifications"
-              rows={3}
-              value={formData.qualifications}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="List educational qualifications, certifications, etc."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Address</label>
-            <textarea
-              name="address"
-              rows={3}
-              value={formData.address}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Emergency Contact</label>
-            <input
-              type="text"
-              name="emergencyContact"
-              value={formData.emergencyContact}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Additional Notes</label>
-            <textarea
-              name="notes"
-              rows={4}
-              value={formData.notes}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Any additional notes or special instructions..."
-            />
-          </div>
+          </section>
 
           <div className="flex justify-end space-x-3 pt-6 border-t">
             <button
