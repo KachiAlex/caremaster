@@ -8704,14 +8704,20 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
               </div>
             ) : (
               <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
-                {caregiverAssignments.map((assignment) => {
+                {caregiverAssignments.map((assignment, index) => {
                   const client = clients.find(p => p.id === assignment.clientId);
+                  // Use a unique key that combines ID and index to handle duplicates
+                  const uniqueKey = assignment.id ? `${assignment.id}-${index}` : `assignment-${index}`;
                   return (
                     <div
-                      key={assignment.id}
+                      key={uniqueKey}
                       className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => {
-                        if (onEditAssignment) {
+                      onClick={(e) => {
+                        // Only trigger if clicking on the row itself, not on buttons
+                        if (e.target.closest('button')) {
+                          return;
+                        }
+                        if (onEditAssignment && assignment) {
                           onEditAssignment(assignment);
                         }
                       }}
@@ -8778,10 +8784,11 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                          {onEditAssignment && (
+                          {onEditAssignment && assignment && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                e.preventDefault();
                                 onEditAssignment(assignment);
                               }}
                               className="flex items-center px-2.5 py-1.5 text-xs text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
@@ -8791,12 +8798,17 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                               Edit
                             </button>
                           )}
-                          {onDeleteAssignment && (
+                          {onDeleteAssignment && assignment && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (window.confirm(`Are you sure you want to delete the task "${assignment.title || 'Untitled Task'}"?`)) {
-                                  onDeleteAssignment(assignment.id);
+                                e.preventDefault();
+                                if (assignment.id) {
+                                  if (window.confirm(`Are you sure you want to delete the task "${assignment.title || 'Untitled Task'}"?`)) {
+                                    onDeleteAssignment(assignment.id);
+                                  }
+                                } else {
+                                  console.error('Cannot delete assignment: missing ID', assignment);
                                 }
                               }}
                               className="flex items-center px-2.5 py-1.5 text-xs text-red-600 bg-red-50 rounded hover:bg-red-100 transition-colors"
