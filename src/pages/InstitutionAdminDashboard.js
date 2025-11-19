@@ -8709,13 +8709,18 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                   return (
                     <div
                       key={assignment.id}
-                      className="p-4 hover:bg-gray-50 transition-colors"
+                      className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => {
+                        if (onEditAssignment) {
+                          onEditAssignment(assignment);
+                        }
+                      }}
                     >
                       <div className="flex items-start justify-between gap-4">
                         {/* Main Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start gap-3 mb-2">
-                            <h5 className="text-base font-semibold text-gray-900">
+                            <h5 className="text-base font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                               {assignment.title || 'Untitled Task'}
                             </h5>
                             <span className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -8772,7 +8777,7 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                           {onEditAssignment && (
                             <button
                               onClick={(e) => {
