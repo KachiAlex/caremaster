@@ -271,9 +271,14 @@ const InstitutionAdminDashboard = () => {
 
   useEffect(() => {
     if (activeTab === 'assignments' && pendingAssignmentFromCaregiver) {
-      setSelectedAssignmentForEdit(pendingAssignmentFromCaregiver);
-      setShowEditAssignmentModal(true);
-      setPendingAssignmentFromCaregiver(null);
+      // Small delay to ensure the assignments tab is fully rendered
+      const timer = setTimeout(() => {
+        setSelectedAssignmentForEdit(pendingAssignmentFromCaregiver);
+        setShowEditAssignmentModal(true);
+        setPendingAssignmentFromCaregiver(null);
+      }, 150); // Increased delay to ensure tab is rendered
+      
+      return () => clearTimeout(timer);
     }
   }, [activeTab, pendingAssignmentFromCaregiver]);
   
@@ -1331,14 +1336,14 @@ const InstitutionAdminDashboard = () => {
   const handleOpenAssignmentsTabFromCaregiver = (assignment) => {
     setShowCaregiverDetails(false);
     setSelectedCaregiver(null);
-    setActiveTab('assignments');
-
+    
     if (assignment) {
-      setSelectedAssignmentForEdit(assignment);
-    setTimeout(() => {
-      setShowEditAssignmentModal(true);
-    }, 0);
+      // Store assignment to open edit modal after tab switches
+      setPendingAssignmentFromCaregiver(assignment);
     }
+    
+    // Switch to assignments tab
+    setActiveTab('assignments');
   };
 
   const handleUpdateAssignment = async (formData) => {
