@@ -57,6 +57,7 @@ import { getAllClients, createClient, updateClient } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { getClientReports, createClientReport, getClientCareLogs, createClientCareLog } from '../api/patientReportsAPI';
 import { getCareLogsByCaregiver } from '../api/careLogsAPI';
+import * as billingPlansAPI from '../api/billingPlansAPI';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notificationsAPI } from '../api/notificationsAPI';
 import { institutionAPI } from '../api/institutionAPI';
@@ -175,6 +176,11 @@ const InstitutionAdminDashboard = () => {
   const [selectedCaregiverForWage, setSelectedCaregiverForWage] = useState(null);
   const [showEditAssignmentModal, setShowEditAssignmentModal] = useState(false);
   const [selectedAssignmentForEdit, setSelectedAssignmentForEdit] = useState(null);
+  
+  // Billing Plans States
+  const [billingPlans, setBillingPlans] = useState([]);
+  const [showEditBillingPlanModal, setShowEditBillingPlanModal] = useState(false);
+  const [selectedBillingPlan, setSelectedBillingPlan] = useState(null);
 
   // Dashboard Card Modal States
   const [showStaffModal, setShowStaffModal] = useState(false);
@@ -281,6 +287,13 @@ const InstitutionAdminDashboard = () => {
       return () => clearTimeout(timer);
     }
   }, [activeTab, pendingAssignmentFromCaregiver]);
+
+  // Load billing plans when tab is active
+  useEffect(() => {
+    if (activeTab === 'billing-plans') {
+      loadBillingPlans();
+    }
+  }, [activeTab, effectiveInstitutionId]);
   
   // Load institution data
   const loadInstitutionData = async () => {
@@ -497,6 +510,44 @@ const InstitutionAdminDashboard = () => {
       toast.error('Failed to refresh data');
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // Load billing plans
+  const loadBillingPlans = async () => {
+    try {
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+      if (!instId) return;
+      
+      const plans = await billingPlansAPI.getBillingPlans(instId);
+      setBillingPlans(plans);
+    } catch (error) {
+      console.error('Error loading billing plans:', error);
+      toast.error('Failed to load billing plans');
+    }
+  };
+
+  // Save billing plan
+  const handleSaveBillingPlan = async (planData) => {
+    try {
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+      if (!instId) {
+        toast.error('Institution ID not found');
+        return;
+      }
+
+      await billingPlansAPI.saveBillingPlan({
+        ...planData,
+        institutionId: instId
+      });
+
+      toast.success('Billing plan saved successfully');
+      setShowEditBillingPlanModal(false);
+      setSelectedBillingPlan(null);
+      await loadBillingPlans();
+    } catch (error) {
+      console.error('Error saving billing plan:', error);
+      toast.error('Failed to save billing plan');
     }
   };
 
@@ -2600,6 +2651,7 @@ const InstitutionAdminDashboard = () => {
             { id: 'assignments', name: 'Assignments', icon: Users, color: 'orange' },
             { id: 'scheduling', name: 'Scheduling', icon: Calendar, color: 'blue' },
             { id: 'wages', name: 'Wage Management', icon: DollarSign, color: 'green' },
+            { id: 'billing-plans', name: 'Billing Plans', icon: DollarSign, color: 'purple' },
             { id: 'users', name: 'User Management', icon: Shield, color: 'red' },
             { id: 'admin-roles', name: 'Admin Roles', icon: Shield, color: 'red' },
             { id: 'approvals', name: 'Pending Approvals', icon: ClipboardCheck, color: 'yellow' },
@@ -3021,6 +3073,7 @@ const InstitutionAdminDashboard = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pharmacist</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -3055,6 +3108,21 @@ const InstitutionAdminDashboard = () => {
                           </div>
                         ) : (
                           <span className="text-xs text-gray-400">Not assigned</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {client.subscriptionPlan ? (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            client.subscriptionPlan === 'premium'
+                              ? 'bg-purple-100 text-purple-800'
+                              : client.subscriptionPlan === 'standard'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {client.subscriptionPlan}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">No plan</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -3582,6 +3650,95 @@ const InstitutionAdminDashboard = () => {
       {activeTab === 'wages' && (
         <div className="space-y-6">
           <CaregiverWageManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+      {/* Billing Plans Tab Content */}
+      {activeTab === 'billing-plans' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Billing Plans Management</h2>
+              <p className="text-gray-600 mt-1">Configure subscription plans and pricing for clients</p>
+            </div>
+          </div>
+
+          {/* Billing Plans Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {billingPlans.map((plan) => (
+              <div
+                key={plan.id}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedBillingPlan(plan);
+                      setShowEditBillingPlanModal(true);
+                    }}
+                    className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                    title="Edit plan"
+                  >
+                    <Edit className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Monthly Price:</span>
+                    <span className="text-lg font-semibold text-gray-900">
+                      {plan.currency || 'USD'} {plan.monthlyPrice?.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Yearly Price:</span>
+                    <span className="text-lg font-semibold text-gray-900">
+                      {plan.currency || 'USD'} {plan.yearlyPrice?.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Features:</p>
+                  <ul className="space-y-1">
+                    {plan.features?.slice(0, 3).map((feature, index) => (
+                      <li key={index} className="text-xs text-gray-600 flex items-center">
+                        <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                    {plan.features?.length > 3 && (
+                      <li className="text-xs text-gray-400">
+                        +{plan.features.length - 3} more features
+                      </li>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    plan.isActive 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {plan.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {billingPlans.length === 0 && (
+            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+              <DollarSign className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Billing Plans</h3>
+              <p className="text-gray-500">Default plans will be created automatically when you first access this tab.</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -4360,6 +4517,7 @@ const InstitutionAdminDashboard = () => {
           onDelete={handleArchiveClient}
           onUnarchive={handleUnarchiveClient}
           pharmacists={pharmacists}
+          institutionId={effectiveInstitutionId}
           onAssignPharmacist={handleAssignPharmacistToClient}
         />
       )}
@@ -4416,6 +4574,17 @@ const InstitutionAdminDashboard = () => {
             setSelectedAssignmentForEdit(null);
           }}
           onSave={handleUpdateAssignment}
+        />
+      )}
+
+      {showEditBillingPlanModal && selectedBillingPlan && (
+        <EditBillingPlanModal
+          plan={selectedBillingPlan}
+          onClose={() => {
+            setShowEditBillingPlanModal(false);
+            setSelectedBillingPlan(null);
+          }}
+          onSave={handleSaveBillingPlan}
         />
       )}
 
@@ -4701,6 +4870,7 @@ const InstitutionAdminDashboard = () => {
           onDelete={handleArchiveClient}
           onUnarchive={handleUnarchiveClient}
           pharmacists={pharmacists}
+          institutionId={effectiveInstitutionId}
           onAssignPharmacist={handleAssignPharmacistToClient}
         />
       )}
@@ -7489,10 +7659,66 @@ const AssignmentModal = ({
 };
 
 // Client Details Modal Component
-const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchive, pharmacists, onAssignPharmacist }) => {
+const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchive, pharmacists, onAssignPharmacist, institutionId }) => {
   const [activeTab, setActiveTab] = React.useState('info');
   const [showPharmacistDropdown, setShowPharmacistDropdown] = React.useState(false);
   const [selectedPharmacistId, setSelectedPharmacistId] = React.useState(client?.assignedPharmacistId || '');
+  const [clientSubscription, setClientSubscription] = React.useState(null);
+  const [billingPlans, setBillingPlans] = React.useState([]);
+  const [loadingSubscription, setLoadingSubscription] = React.useState(false);
+  const [selectedPlanId, setSelectedPlanId] = React.useState('');
+  const [selectedBillingCycle, setSelectedBillingCycle] = React.useState('monthly');
+  
+  React.useEffect(() => {
+    if (activeTab === 'subscription' && client?.id) {
+      loadClientSubscription();
+      loadBillingPlans();
+    }
+  }, [activeTab, client?.id]);
+
+  const loadClientSubscription = async () => {
+    try {
+      setLoadingSubscription(true);
+      const subscription = await billingPlansAPI.getClientSubscription(client.id);
+      setClientSubscription(subscription);
+      if (subscription) {
+        setSelectedPlanId(subscription.planId);
+        setSelectedBillingCycle(subscription.billingCycle || 'monthly');
+      }
+    } catch (error) {
+      console.error('Error loading client subscription:', error);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  };
+
+  const loadBillingPlans = async () => {
+    try {
+      if (!institutionId) return;
+      const plans = await billingPlansAPI.getBillingPlans(institutionId);
+      setBillingPlans(plans);
+    } catch (error) {
+      console.error('Error loading billing plans:', error);
+    }
+  };
+
+  const handleAssignSubscription = async () => {
+    if (!selectedPlanId) {
+      alert('Please select a billing plan');
+      return;
+    }
+    try {
+      setLoadingSubscription(true);
+      await billingPlansAPI.assignSubscriptionToClient(client.id, selectedPlanId, selectedBillingCycle);
+      await loadClientSubscription();
+      alert('Subscription assigned successfully!');
+    } catch (error) {
+      console.error('Error assigning subscription:', error);
+      alert('Failed to assign subscription: ' + error.message);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  };
   
   if (!client) return null;
 
@@ -7571,6 +7797,16 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchi
               }`}
             >
               Activity Timeline
+            </button>
+            <button
+              onClick={() => setActiveTab('subscription')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'subscription'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Subscription
             </button>
           </nav>
         </div>
@@ -7775,6 +8011,154 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchi
           {/* Care Logs Tab */}
           {activeTab === 'careLogs' && (
             <ClientCareLogsSection clientId={client.id} />
+          )}
+
+          {/* Subscription Tab */}
+          {activeTab === 'subscription' && (
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Subscription Management</h4>
+                
+                {loadingSubscription ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Current Subscription */}
+                    {clientSubscription ? (
+                      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-6 border border-purple-200 mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h5 className="text-lg font-semibold text-gray-900">Current Subscription</h5>
+                            <p className="text-sm text-gray-600 mt-1">{clientSubscription.planName || 'N/A'}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            clientSubscription.status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {clientSubscription.status || 'Active'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500">Billing Cycle</label>
+                            <p className="mt-1 text-sm font-semibold text-gray-900 capitalize">
+                              {clientSubscription.billingCycle || 'Monthly'}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500">Price</label>
+                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                              {clientSubscription.currency || 'USD'} {clientSubscription.price?.toFixed(2) || '0.00'}
+                            </p>
+                          </div>
+                          {clientSubscription.startDate && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500">Start Date</label>
+                              <p className="mt-1 text-sm text-gray-900">
+                                {clientSubscription.startDate instanceof Date
+                                  ? clientSubscription.startDate.toLocaleDateString()
+                                  : new Date(clientSubscription.startDate).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
+                          {clientSubscription.nextBillingDate && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500">Next Billing</label>
+                              <p className="mt-1 text-sm text-gray-900">
+                                {clientSubscription.nextBillingDate instanceof Date
+                                  ? clientSubscription.nextBillingDate.toLocaleDateString()
+                                  : new Date(clientSubscription.nextBillingDate).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        {clientSubscription.plan?.features && (
+                          <div className="mt-4 pt-4 border-t border-purple-200">
+                            <label className="block text-xs font-medium text-gray-500 mb-2">Plan Features</label>
+                            <ul className="space-y-1">
+                              {clientSubscription.plan.features.slice(0, 5).map((feature, index) => (
+                                <li key={index} className="text-xs text-gray-600 flex items-center">
+                                  <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
+                                  {feature}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-6 text-center">
+                        <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-600">No active subscription</p>
+                      </div>
+                    )}
+
+                    {/* Assign/Change Subscription */}
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                      <h5 className="text-md font-semibold text-gray-900 mb-4">
+                        {clientSubscription ? 'Change Subscription' : 'Assign Subscription'}
+                      </h5>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Select Billing Plan *
+                          </label>
+                          <select
+                            value={selectedPlanId}
+                            onChange={(e) => setSelectedPlanId(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          >
+                            <option value="">Select a plan</option>
+                            {billingPlans.filter(p => p.isActive).map((plan) => (
+                              <option key={plan.id} value={plan.id}>
+                                {plan.name} - {plan.currency || 'USD'} {selectedBillingCycle === 'monthly' ? plan.monthlyPrice?.toFixed(2) : plan.yearlyPrice?.toFixed(2)}/{selectedBillingCycle === 'monthly' ? 'month' : 'year'}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Billing Cycle *
+                          </label>
+                          <div className="flex gap-4">
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                value="monthly"
+                                checked={selectedBillingCycle === 'monthly'}
+                                onChange={(e) => setSelectedBillingCycle(e.target.value)}
+                                className="mr-2"
+                              />
+                              <span className="text-sm text-gray-700">Monthly</span>
+                            </label>
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                value="yearly"
+                                checked={selectedBillingCycle === 'yearly'}
+                                onChange={(e) => setSelectedBillingCycle(e.target.value)}
+                                className="mr-2"
+                              />
+                              <span className="text-sm text-gray-700">Yearly</span>
+                            </label>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleAssignSubscription}
+                          disabled={!selectedPlanId || loadingSubscription}
+                          className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loadingSubscription ? 'Processing...' : (clientSubscription ? 'Update Subscription' : 'Assign Subscription')}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Activity Timeline Tab */}
@@ -10365,6 +10749,254 @@ const EditUserRoleModal = ({ user, onClose, onSave }) => {
                 </ul>
               </div>
             </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Edit Billing Plan Modal Component
+const EditBillingPlanModal = ({ plan, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    name: plan?.name || '',
+    tier: plan?.tier || '',
+    description: plan?.description || '',
+    monthlyPrice: plan?.monthlyPrice || 0,
+    yearlyPrice: plan?.yearlyPrice || 0,
+    currency: plan?.currency || 'USD',
+    features: plan?.features || [],
+    isActive: plan?.isActive !== false
+  });
+  const [newFeature, setNewFeature] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({
+      ...formData,
+      id: plan?.id,
+      monthlyPrice: parseFloat(formData.monthlyPrice),
+      yearlyPrice: parseFloat(formData.yearlyPrice)
+    });
+  };
+
+  const handleAddFeature = () => {
+    if (newFeature.trim()) {
+      setFormData({
+        ...formData,
+        features: [...formData.features, newFeature.trim()]
+      });
+      setNewFeature('');
+    }
+  };
+
+  const handleRemoveFeature = (index) => {
+    setFormData({
+      ...formData,
+      features: formData.features.filter((_, i) => i !== index)
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold">Edit Billing Plan</h3>
+              <p className="text-purple-100 text-sm mt-1">Configure pricing and features for {plan?.name || 'plan'}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white/20 rounded-lg p-2"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Plan Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Plan Name *
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              required
+              placeholder="e.g., Basic, Standard, Premium"
+            />
+          </div>
+
+          {/* Plan Tier */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Plan Tier *
+            </label>
+            <select
+              value={formData.tier}
+              onChange={(e) => setFormData({ ...formData, tier: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              required
+            >
+              <option value="">Select tier</option>
+              <option value="basic">Basic</option>
+              <option value="standard">Standard</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              rows={2}
+              placeholder="Brief description of the plan"
+            />
+          </div>
+
+          {/* Pricing */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Monthly Price *
+              </label>
+              <div className="flex items-center">
+                <span className="mr-2 text-gray-500">{formData.currency}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.monthlyPrice}
+                  onChange={(e) => setFormData({ ...formData, monthlyPrice: e.target.value })}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Yearly Price *
+              </label>
+              <div className="flex items-center">
+                <span className="mr-2 text-gray-500">{formData.currency}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.yearlyPrice}
+                  onChange={(e) => setFormData({ ...formData, yearlyPrice: e.target.value })}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Currency */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Currency
+            </label>
+            <select
+              value={formData.currency}
+              onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            >
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="NGN">NGN (₦)</option>
+            </select>
+          </div>
+
+          {/* Features */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Features
+            </label>
+            <div className="space-y-2 mb-3">
+              {formData.features.map((feature, index) => (
+                <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                  <span className="text-sm text-gray-700">{feature}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFeature(index)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newFeature}
+                onChange={(e) => setNewFeature(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddFeature();
+                  }
+                }}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                placeholder="Add a feature"
+              />
+              <button
+                type="button"
+                onClick={handleAddFeature}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Active Status */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Plan Active</label>
+              <p className="text-xs text-gray-500 mt-1">Enable or disable this plan</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                formData.isActive ? 'bg-green-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  formData.isActive ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
           </div>
 
           {/* Action Buttons */}
