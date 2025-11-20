@@ -42,6 +42,7 @@ import {
 import { useUser } from '../contexts/UserContext';
 import caregiverSettingsService from '../services/caregiverSettingsService';
 import { toast } from 'react-toastify';
+import { resizeImage } from '../utils/profilePictureUpload';
 
 const CaregiverSettings = () => {
   // Build tag to verify latest deploy
@@ -166,16 +167,22 @@ const CaregiverSettings = () => {
 
         console.log('✅ File validation passed');
         // Show loading state
-        toast.info('Uploading profile image...');
+        toast.info('Processing and uploading profile image...');
         
-        // Set preview immediately for better UX
-        setProfileImage(file);
-        setProfileImagePreview(URL.createObjectURL(file));
-        console.log('🖼️ Preview set:', URL.createObjectURL(file));
+        // Automatically resize image to meet app specifications (400x400 max, 0.8 quality)
+        console.log('🔄 Resizing image to meet specifications...');
+        const resizedFile = await resizeImage(file, 400, 400, 0.8);
+        console.log('✅ Image resized:', resizedFile.name, resizedFile.size);
         
-        // Upload image
+        // Set preview with resized image for better UX
+        const previewUrl = URL.createObjectURL(resizedFile);
+        setProfileImage(resizedFile);
+        setProfileImagePreview(previewUrl);
+        console.log('🖼️ Preview set:', previewUrl);
+        
+        // Upload resized image
         console.log('🔄 Starting image upload...');
-        const imageUrl = await caregiverSettingsService.uploadProfileImage(user?.uid, file);
+        const imageUrl = await caregiverSettingsService.uploadProfileImage(user?.uid, resizedFile);
         console.log('✅ Image upload successful:', imageUrl);
         handleSettingChange('profile', 'profileImage', imageUrl);
         

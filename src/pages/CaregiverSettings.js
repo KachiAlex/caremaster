@@ -26,6 +26,7 @@ import { useUser } from '../contexts/UserContext';
 import { db, storage } from '../firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { resizeImage } from '../utils/profilePictureUpload';
 
 const CaregiverSettings = ({ onProfileImageUpdate }) => {
   const { user } = useUser();
@@ -169,9 +170,13 @@ const CaregiverSettings = ({ onProfileImageUpdate }) => {
     if (file.size > 5 * 1024 * 1024) return; // 5MB cap
     try {
       if (!user?.uid) return alert('Not signed in');
+      
+      // Automatically resize image to meet app specifications (400x400 max, 0.8 quality)
+      const resizedFile = await resizeImage(file, 400, 400, 0.8);
+      
       const path = `profileImages/${user.uid}`;
       const ref = storageRef(storage, path);
-      await uploadBytes(ref, file);
+      await uploadBytes(ref, resizedFile);
       const downloadURL = await getDownloadURL(ref);
       setProfileImagePreview(downloadURL);
       setSettings(prev => ({
