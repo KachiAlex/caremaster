@@ -159,6 +159,7 @@ const InstitutionAdminDashboard = () => {
   const [showCaregiverPasswordModal, setShowCaregiverPasswordModal] = useState(false);
   const [caregiverPasswordForm, setCaregiverPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [resettingCaregiverPassword, setResettingCaregiverPassword] = useState(false);
+  const [pendingAssignmentFromCaregiver, setPendingAssignmentFromCaregiver] = useState(null);
   const [caregiverForPasswordReset, setCaregiverForPasswordReset] = useState(null);
   
   // View Details Modal States
@@ -267,6 +268,14 @@ const InstitutionAdminDashboard = () => {
       return () => clearTimeout(timeout);
     }
   }, [userProfile, institutionId, effectiveInstitutionId, user, navigate]);
+
+  useEffect(() => {
+    if (activeTab === 'assignments' && pendingAssignmentFromCaregiver) {
+      setSelectedAssignmentForEdit(pendingAssignmentFromCaregiver);
+      setShowEditAssignmentModal(true);
+      setPendingAssignmentFromCaregiver(null);
+    }
+  }, [activeTab, pendingAssignmentFromCaregiver]);
   
   // Load institution data
   const loadInstitutionData = async () => {
@@ -1317,6 +1326,19 @@ const InstitutionAdminDashboard = () => {
   const handleEditAssignment = (assignment) => {
     setSelectedAssignmentForEdit(assignment);
     setShowEditAssignmentModal(true);
+  };
+
+  const handleOpenAssignmentsTabFromCaregiver = (assignment) => {
+    setShowCaregiverDetails(false);
+    setSelectedCaregiver(null);
+    setActiveTab('assignments');
+
+    if (assignment) {
+      setSelectedAssignmentForEdit(assignment);
+    setTimeout(() => {
+      setShowEditAssignmentModal(true);
+    }, 0);
+    }
   };
 
   const handleUpdateAssignment = async (formData) => {
@@ -4342,6 +4364,7 @@ const InstitutionAdminDashboard = () => {
           caregiver={selectedCaregiver}
           assignments={assignments}
           clients={clients}
+          onViewAssignment={handleOpenAssignmentsTabFromCaregiver}
           onClose={() => {
             setShowCaregiverDetails(false);
             setSelectedCaregiver(null);
@@ -4683,6 +4706,7 @@ const InstitutionAdminDashboard = () => {
           caregiver={selectedCaregiver}
           assignments={assignments.filter(a => a.caregiverId === selectedCaregiver.id || a.caregiverId === selectedCaregiver.uid)}
           clients={clients}
+          onViewAssignment={handleOpenAssignmentsTabFromCaregiver}
           onClose={() => {
             setShowCaregiverDetails(false);
             setSelectedCaregiver(null);
@@ -8391,7 +8415,7 @@ const PharmacistDetailsModal = ({ pharmacist, clients, onClose, onAssignClient }
   );
 };
 
-const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, onEditPayment, onEditAssignment, onDeleteAssignment, assignments = [], clients = [] }) => {
+const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleStatus, onDelete, onAssignTask, onEditPayment, onEditAssignment, onDeleteAssignment, onViewAssignment, assignments = [], clients = [] }) => {
   const [activeTab, setActiveTab] = React.useState('info');
   
   if (!caregiver) return null;
@@ -8717,7 +8741,9 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                         if (e.target.closest('button')) {
                           return;
                         }
-                        if (onEditAssignment && assignment) {
+                        if (onViewAssignment && assignment) {
+                          onViewAssignment(assignment);
+                        } else if (onEditAssignment && assignment) {
                           onEditAssignment(assignment);
                         }
                       }}
@@ -8784,6 +8810,22 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {onDeleteAssignment && assignment?.id && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (window.confirm(`Remove the task "${assignment.title || 'Untitled Task'}" from this caregiver?`)) {
+                                  onDeleteAssignment(assignment.id);
+                                }
+                              }}
+                              className="p-1 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Remove task"
+                              aria-label="Remove task"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
                           {onEditAssignment && assignment && (
                             <button
                               onClick={(e) => {
