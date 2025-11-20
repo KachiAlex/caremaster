@@ -15,7 +15,13 @@ import {
 import { toast } from 'react-toastify';
 import { getMedicationsByPatient } from '../api/medicationAPI';
 
+import { logMedicationAdministered } from '../utils/patientLogger';
+import { useUser } from '../contexts/UserContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
+
 const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, onSave, onCancel }) => {
+  const { userProfile } = useUser();
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [administeringMed, setAdministeringMed] = useState(null);
@@ -110,6 +116,37 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
         status: 'administered'
       };
 
+      // Log medication administration to patient logs (comprehensive logging)
+      try {
+        const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
+        
+        await ComprehensivePatientLogger.logMedicationAdministered(
+          patientId,
+          {
+            medicationId: administerForm.medicationId,
+            medicationName: administeringMed.name,
+            dose: administerForm.dose,
+            route: administerForm.route,
+            administeredAt: new Date(administerForm.administeredAt).toISOString(),
+            notes: administerForm.notes,
+            sideEffects: administerForm.sideEffects,
+            patientResponse: administerForm.patientResponse,
+            status: 'administered'
+          },
+          {
+            id: nurseId || userProfile?.id || userProfile?.uid,
+            name: nurseName || userProfile?.name || userProfile?.displayName,
+            role: userProfile?.role || userProfile?.userType || userProfile?.type || 'nurse',
+            email: userProfile?.email,
+            medicalQualification: userProfile?.medicalQualification,
+            institutionId: userProfile?.institutionId
+          }
+        );
+      } catch (logError) {
+        console.warn('Could not log medication administration to patient logs:', logError);
+        // Don't fail the medication administration if logging fails
+      }
+      
       // Simulate API call
       console.log('Recording medication administration:', administrationRecord);
       

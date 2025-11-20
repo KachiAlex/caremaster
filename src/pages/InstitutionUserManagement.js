@@ -23,6 +23,7 @@ import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
 import InstitutionUserCreationModal from '../components/InstitutionUserCreationModal';
+import PatientRegistration from '../components/PatientRegistration';
 
 const InstitutionUserManagement = () => {
   const { userProfile, institutionId } = useUser();
@@ -32,6 +33,7 @@ const InstitutionUserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showPatientRegistration, setShowPatientRegistration] = useState(false);
 
   // Load institution users from Firestore
   useEffect(() => {
@@ -205,13 +207,22 @@ const InstitutionUserManagement = () => {
             Manage caregivers and doctors in your institution
           </p>
         </div>
-        <button
-          onClick={() => setShowInviteModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
-        >
-          <UserPlus className="h-5 w-5 mr-2" />
-          Invite User
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowPatientRegistration(true)}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center"
+          >
+            <UserPlus className="h-5 w-5 mr-2" />
+            Register Patient
+          </button>
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+          >
+            <UserPlus className="h-5 w-5 mr-2" />
+            Invite User
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -387,6 +398,24 @@ const InstitutionUserManagement = () => {
         createdBy={userProfile?.id}
         onUserCreated={handleUserCreated}
       />
+
+      {/* Patient Registration Modal */}
+      {showPatientRegistration && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-4xl">
+            <PatientRegistration
+              institutionId={institutionId}
+              onCancel={() => setShowPatientRegistration(false)}
+              onPatientRegistered={(patientId, patientSimpleId) => {
+                console.log('Patient registered:', { patientId, patientSimpleId });
+                setShowPatientRegistration(false);
+                // Optionally reload users to show new patient
+                handleUserCreated();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

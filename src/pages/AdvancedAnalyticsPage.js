@@ -441,8 +441,8 @@ const AdvancedAnalyticsPage = () => {
               <Brain className="h-8 w-8 text-blue-600 mr-3" />
               Advanced Analytics Dashboard
             </h1>
-            <p className="text-gray-600 mt-2">
-              AI-powered insights and real-time monitoring for Care Master platform
+            <p className="text-slate-300 mt-2">
+              AI-powered insights and real-time monitoring for UltimateCare platform
             </p>
           </div>
           <div className="flex items-center space-x-4">

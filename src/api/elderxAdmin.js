@@ -14,7 +14,7 @@ import {
   getCountFromServer
 } from 'firebase/firestore';
 
-export const Care MasterAdminAPI = {
+export const UltimateCareAdminAPI = {
   // Dashboard Statistics
   getDashboardStats: async () => {
     try {
@@ -300,13 +300,13 @@ export const Care MasterAdminAPI = {
 const getReportData = async (reportType, filters) => {
   switch (reportType) {
     case 'user_activity':
-      return await Care MasterAdminAPI.getUsers(filters);
+      return await UltimateCareAdminAPI.getUsers(filters);
     case 'appointments':
-      return await Care MasterAdminAPI.getAppointments(filters);
+      return await UltimateCareAdminAPI.getAppointments(filters);
     case 'medications':
-      return await Care MasterAdminAPI.getMedications(filters);
+      return await UltimateCareAdminAPI.getMedications(filters);
     case 'system_health':
-      return await Care MasterAdminAPI.getSystemHealth();
+      return await UltimateCareAdminAPI.getSystemHealth();
     default:
       return [];
   }

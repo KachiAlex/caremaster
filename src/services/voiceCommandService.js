@@ -1,4 +1,4 @@
-// Voice Command Service for Care Master
+// Voice Command Service for UltimateCare
 class VoiceCommandService {
   constructor() {
     this.recognition = null;

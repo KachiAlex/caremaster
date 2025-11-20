@@ -172,7 +172,16 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
         monitoringRequirements: carePlanForm.monitoringRequirements
       };
 
-      await carePlansAPI.createCarePlan(carePlanData);
+      // Prepare clinician info for logging
+      const clinicianInfo = {
+        id: doctorId,
+        name: doctorName,
+        role: 'doctor', // CarePlanManager is used by doctors
+        email: null, // Could be passed as prop if needed
+        institutionId: null // Could be passed as prop if needed
+      };
+      
+      await carePlansAPI.createCarePlan(carePlanData, clinicianInfo);
       
       toast.success('Care plan created successfully!');
       setShowCreateForm(false);

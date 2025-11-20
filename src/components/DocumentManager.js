@@ -62,7 +62,7 @@ const DocumentManager = ({
         },
         {
           description: 'Platform Service Fee',
-          details: 'Care Master telemedicine platform usage',
+          details: 'UltimateCare telemedicine platform usage',
           duration: 1,
           rate: platformFee,
           amount: platformFee
@@ -74,7 +74,7 @@ const DocumentManager = ({
       paymentStatus: appointment.paymentStatus || 'paid',
       paymentMethod: appointment.paymentMethod || 'Credit Card',
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      notes: 'Thank you for choosing Care Master Healthcare for your telemedicine consultation.'
+      notes: 'Thank you for choosing UltimateCare Healthcare for your telemedicine consultation.'
     };
   };
 
@@ -99,7 +99,7 @@ const DocumentManager = ({
         phone: doctorInfo.phone || '+234 XXX XXX XXXX',
         licenseNumber: doctorInfo.licenseNumber || 'MD-2024-XXXX',
         qualifications: doctorInfo.qualifications || ['MBBS', 'MD'],
-        hospital: doctorInfo.hospital || 'Care Master Telemedicine Platform'
+        hospital: doctorInfo.hospital || 'UltimateCare Telemedicine Platform'
       },
       consultationDate: appointment.appointmentDate || new Date(),
       diagnosis: appointment.diagnosis || 'General health consultation',

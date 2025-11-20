@@ -71,9 +71,9 @@ import CallInterface from '../components/CallInterface';
 const DashboardHeader = ({ userProfile, userRole }) => {
   const getRoleIcon = () => {
     switch (userRole) {
-      case 'doctor': return <Stethoscope className="h-6 w-6 text-blue-600" />;
-      case 'caregiver': return <UserCheck className="h-6 w-6 text-green-600" />;
-      default: return <Users className="h-6 w-6 text-gray-600" />;
+      case 'doctor': return <Stethoscope className="h-5 w-5 text-slate-950" />;
+      case 'caregiver': return <UserCheck className="h-5 w-5 text-slate-950" />;
+      default: return <Users className="h-5 w-5 text-slate-950" />;
     }
   };
 
@@ -99,27 +99,38 @@ const DashboardHeader = ({ userProfile, userRole }) => {
     return 'Service Provider Dashboard';
   };
 
+  const getIconColor = () => {
+    switch (userRole) {
+      case 'doctor': return 'from-sky-400 to-blue-500';
+      case 'caregiver': return 'from-emerald-400 to-green-500';
+      default: return 'from-indigo-400 to-purple-500';
+    }
+  };
+
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="relative z-10 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-sm px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-blue-100 rounded-lg">
+        <div className="flex items-center gap-4">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${getIconColor()} shadow-lg shadow-emerald-500/40`}>
             {getRoleIcon()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{getRoleTitle()}</h1>
-            <p className="text-gray-600">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300 capitalize">
+              {userRole}
+            </p>
+            <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">{getRoleTitle()}</h1>
+            <p className="text-xs text-slate-400">
               Welcome back, {userProfile?.name || 'User'}
             </p>
             {userProfile?.specializations && userProfile.specializations.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {userProfile.specializations.slice(0, 3).map((spec, index) => (
-                  <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  <span key={index} className="px-2 py-0.5 bg-emerald-400/10 text-emerald-300 border border-emerald-400/30 text-xs rounded-full">
                     {spec}
                   </span>
                 ))}
                 {userProfile.specializations.length > 3 && (
-                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                  <span className="px-2 py-0.5 bg-slate-800/60 text-slate-400 border border-slate-700 text-xs rounded-full">
                     +{userProfile.specializations.length - 3} more
                   </span>
                 )}
@@ -127,20 +138,20 @@ const DashboardHeader = ({ userProfile, userRole }) => {
             )}
           </div>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => window.location.reload()}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+            className="px-3 py-1.5 bg-slate-800/60 text-slate-300 rounded-lg hover:bg-slate-800/80 transition-colors flex items-center gap-2 text-xs font-medium border border-slate-700"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
             <span>Refresh</span>
           </button>
           <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">{userProfile?.name}</p>
-            <p className="text-xs text-gray-500 capitalize">{userRole}</p>
+            <p className="text-xs font-medium text-slate-50">{userProfile?.name}</p>
+            <p className="text-[11px] text-slate-400 capitalize">{userRole}</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-sm font-medium text-gray-700">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-sky-400 flex items-center justify-center ring-2 ring-slate-800">
+            <span className="text-sm font-medium text-slate-950">
               {userProfile?.name?.split(' ').map(n => n[0]).join('') || 'U'}
             </span>
           </div>
@@ -174,16 +185,20 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
 
   const roleStats = getStatsForRole();
 
+  const getAccentColor = (color) => {
+    const accents = {
+      blue: 'from-sky-400 to-sky-300',
+      green: 'from-emerald-400 to-emerald-300',
+      purple: 'from-indigo-400 to-indigo-300',
+      orange: 'from-amber-400 to-orange-300',
+    };
+    return accents[color] || accents.blue;
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
+    <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-6">
       {roleStats.map((stat, index) => {
         const Icon = stat.icon;
-        const colorClasses = {
-          blue: 'bg-blue-100 text-blue-600',
-          green: 'bg-green-100 text-green-600',
-          purple: 'bg-purple-100 text-purple-600',
-          orange: 'bg-orange-100 text-orange-600',
-        };
 
         const handleClick = () => {
           if (stat.action) {
@@ -194,16 +209,16 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
         return (
           <div 
             key={index} 
-            className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow cursor-pointer" 
+            className="rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 shadow-lg shadow-black/40 hover:bg-slate-950/80 transition-all cursor-pointer" 
             onClick={handleClick}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">{stat.label}</p>
+                <p className="mt-2 text-lg font-semibold text-slate-50">{stat.value}</p>
               </div>
-              <div className={`p-3 rounded-full ${colorClasses[stat.color]}`}>
-                <Icon className="h-6 w-6" />
+              <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${getAccentColor(stat.color)}`}>
+                <Icon className="h-4 w-4 text-slate-950" />
               </div>
             </div>
           </div>
@@ -834,7 +849,10 @@ const ServiceProviderDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-950 text-slate-50">
+      {/* Top halo */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top,_#22c55e33,_transparent_60%),radial-gradient(circle_at_30%_20%,_#0ea5e933,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e533,_transparent_55%)]" />
+      
       <DashboardHeader userProfile={userProfile} userRole={effectiveRole} />
       <QuickStats 
         userRole={effectiveRole} 
@@ -845,10 +863,10 @@ const ServiceProviderDashboard = () => {
         onShowAppointments={handleShowAppointments}
         onShowMessages={handleShowMessages}
       />
-      <div className="px-6 -mt-4 mb-2 flex items-center justify-end">
+      <div className="relative z-10 px-6 -mt-4 mb-2 flex items-center justify-end">
         <button
           onClick={() => setShowWeeklyCalendar(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="px-3 py-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg hover:bg-emerald-500/30 border border-emerald-500/30 transition-colors text-xs font-medium"
         >
           Weekly Overview
         </button>
@@ -863,7 +881,7 @@ const ServiceProviderDashboard = () => {
       )}
       
       {isCaregiver && (
-        <div className="p-6">
+        <div className="relative z-10 p-6">
           <SpecializedCaregiverDashboard 
             onPatientClick={handlePatientClick}
             assignedPatients={assignedPatientsData}
@@ -880,15 +898,15 @@ const ServiceProviderDashboard = () => {
 
       {/* Patient Details Modal */}
       {showPatientModal && selectedPatient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Patient Details</h2>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="rounded-3xl border border-slate-800/80 bg-slate-950/95 backdrop-blur-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-800/60">
+              <h2 className="text-xl font-semibold text-slate-50">Patient Details</h2>
               <button
                 onClick={handleCloseModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-slate-400 hover:text-slate-50 transition-colors p-1 rounded-lg hover:bg-slate-800/80"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 

@@ -59,7 +59,7 @@ class EnvironmentConfig {
       // Email Service
       email: {
         sendgridApiKey: process.env.REACT_APP_SENDGRID_API_KEY,
-        fromEmail: process.env.REACT_APP_FROM_EMAIL || 'noreply@Care Master.com'
+        fromEmail: process.env.REACT_APP_FROM_EMAIL || 'noreply@ultimatecare.com'
       },
 
       // Security

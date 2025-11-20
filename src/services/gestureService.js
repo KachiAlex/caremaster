@@ -1,4 +1,4 @@
-// Gesture Service for Care Master Mobile Interface
+// Gesture Service for UltimateCare Mobile Interface
 class GestureService {
   constructor() {
     this.isSupported = 'ontouchstart' in window;

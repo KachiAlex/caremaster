@@ -1,4 +1,4 @@
-// Haptic Feedback Service for Care Master
+// Haptic Feedback Service for UltimateCare
 class HapticService {
   constructor() {
     this.isSupported = 'vibrate' in navigator;

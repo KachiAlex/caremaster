@@ -1,0 +1,578 @@
+/**
+ * Patient Registration Component
+ * Hospital Operations - Patient Registration with Simple ID Generation
+ */
+
+import React, { useState } from 'react';
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Heart,
+  Pill,
+  AlertTriangle,
+  Save,
+  X,
+  UserPlus,
+  CheckCircle,
+  FileText
+} from 'lucide-react';
+import { createPatient } from '../api/patientsAPI';
+import { useUser } from '../contexts/UserContext';
+import { toast } from 'react-toastify';
+
+const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutionId }) => {
+  const { userProfile } = useUser();
+  const institutionId = propInstitutionId || userProfile?.institutionId;
+  
+  const [loading, setLoading] = useState(false);
+  const [createdPatientId, setCreatedPatientId] = useState(null);
+  const [formData, setFormData] = useState({
+    // Basic Information
+    name: '',
+    fullName: '',
+    dateOfBirth: '',
+    gender: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    
+    // Emergency Contact
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    emergencyContactRelationship: '',
+    
+    // Medical Information
+    bloodType: '',
+    medicalConditions: '',
+    medications: '',
+    allergies: '',
+    
+    // Additional
+    insuranceProvider: '',
+    insurancePolicyNumber: '',
+    careLevel: 'basic'
+  });
+
+  const [errors, setErrors] = useState({});
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Patient name is required';
+    }
+    
+    if (!formData.dateOfBirth) {
+      newErrors.dateOfBirth = 'Date of birth is required';
+    }
+    
+    if (!formData.gender) {
+      newErrors.gender = 'Gender is required';
+    }
+    
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    }
+    
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email address';
+    }
+    
+    if (!formData.emergencyContactName.trim()) {
+      newErrors.emergencyContactName = 'Emergency contact name is required';
+    }
+    
+    if (!formData.emergencyContactPhone.trim()) {
+      newErrors.emergencyContactPhone = 'Emergency contact phone is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (!institutionId) {
+      toast.error('Institution ID is required for patient registration');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Prepare patient data
+      const patientData = {
+        name: formData.name.trim(),
+        fullName: formData.fullName.trim() || formData.name.trim(),
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        phone: formData.phone.trim(),
+        email: formData.email.trim() || null,
+        address: formData.address.trim() || null,
+        city: formData.city.trim() || null,
+        state: formData.state.trim() || null,
+        zipCode: formData.zipCode.trim() || null,
+        emergencyContactName: formData.emergencyContactName.trim(),
+        emergencyContactPhone: formData.emergencyContactPhone.trim(),
+        emergencyContactRelationship: formData.emergencyContactRelationship.trim() || null,
+        bloodType: formData.bloodType || null,
+        medicalConditions: formData.medicalConditions.trim() 
+          ? formData.medicalConditions.split(',').map(c => c.trim()).filter(Boolean)
+          : [],
+        medications: formData.medications.trim()
+          ? formData.medications.split(',').map(m => m.trim()).filter(Boolean)
+          : [],
+        allergies: formData.allergies.trim()
+          ? formData.allergies.split(',').map(a => a.trim()).filter(Boolean)
+          : [],
+        insuranceProvider: formData.insuranceProvider.trim() || null,
+        insurancePolicyNumber: formData.insurancePolicyNumber.trim() || null,
+        careLevel: formData.careLevel,
+        institutionId: institutionId,
+        userType: 'patient',
+        type: 'patient'
+      };
+
+      // Register patient
+      const result = await createPatient(patientData, userProfile);
+      setCreatedPatientId(result.patientId);
+      
+      toast.success(
+        <div>
+          <div className="font-semibold">Patient registered successfully!</div>
+          <div className="text-sm mt-1">Patient ID: <span className="font-mono font-bold text-emerald-600">{result.patientId}</span></div>
+        </div>,
+        { autoClose: 6000 }
+      );
+
+      if (onSuccess) {
+        onSuccess({ id: result.id, patientId: result.patientId, ...patientData });
+      }
+      
+      // Reset form after a delay to show success
+      setTimeout(() => {
+        if (onClose) {
+          onClose();
+        }
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error registering patient:', error);
+      toast.error(`Failed to register patient: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (createdPatientId) {
+    return (
+      <div className="rounded-3xl border border-slate-800/80 bg-slate-950/95 backdrop-blur-xl shadow-xl shadow-black/50 p-8 max-w-2xl mx-auto">
+        <div className="text-center">
+          <div className="mx-auto w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle className="h-8 w-8 text-emerald-400" />
+          </div>
+          <h3 className="text-2xl font-bold text-slate-50 mb-2">Patient Registered Successfully!</h3>
+          <div className="mt-6 p-6 bg-slate-900/60 rounded-2xl border border-slate-800/60">
+            <div className="text-sm text-slate-400 mb-2">Patient ID</div>
+            <div className="text-3xl font-mono font-bold text-emerald-400 mb-4">{createdPatientId}</div>
+            <div className="text-sm text-slate-300">
+              <div className="mb-1"><span className="text-slate-400">Name:</span> {formData.name}</div>
+              <div className="mb-1"><span className="text-slate-400">Date of Birth:</span> {new Date(formData.dateOfBirth).toLocaleDateString()}</div>
+              <div><span className="text-slate-400">Gender:</span> {formData.gender}</div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="mt-6 px-6 py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/30 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-3xl border border-slate-800/80 bg-slate-950/95 backdrop-blur-xl shadow-xl shadow-black/50 p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
+            <UserPlus className="h-5 w-5 text-emerald-300" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-slate-50">Register New Patient</h2>
+            <p className="text-xs text-slate-400 mt-1">Hospital Operations - Patient Registration</p>
+          </div>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information */}
+        <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 p-6">
+          <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Basic Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">
+                Full Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                  errors.name ? 'border-red-500/50' : 'border-slate-700'
+                }`}
+                placeholder="Enter patient's full name"
+              />
+              {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">
+                Date of Birth <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="date"
+                name="dateOfBirth"
+                value={formData.dateOfBirth}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                  errors.dateOfBirth ? 'border-red-500/50' : 'border-slate-700'
+                }`}
+              />
+              {errors.dateOfBirth && <p className="text-xs text-red-400 mt-1">{errors.dateOfBirth}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">
+                Gender <span className="text-red-400">*</span>
+              </label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                  errors.gender ? 'border-red-500/50' : 'border-slate-700'
+                }`}
+              >
+                <option value="" className="bg-slate-900">Select gender</option>
+                <option value="male" className="bg-slate-900">Male</option>
+                <option value="female" className="bg-slate-900">Female</option>
+                <option value="other" className="bg-slate-900">Other</option>
+              </select>
+              {errors.gender && <p className="text-xs text-red-400 mt-1">{errors.gender}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">
+                Phone <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                  errors.phone ? 'border-red-500/50' : 'border-slate-700'
+                }`}
+                placeholder="+1234567890"
+              />
+              {errors.phone && <p className="text-xs text-red-400 mt-1">{errors.phone}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Email</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                  errors.email ? 'border-red-500/50' : 'border-slate-700'
+                }`}
+                placeholder="patient@example.com"
+              />
+              {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Blood Type</label>
+              <select
+                name="bloodType"
+                value={formData.bloodType}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+              >
+                <option value="" className="bg-slate-900">Select blood type</option>
+                <option value="A+" className="bg-slate-900">A+</option>
+                <option value="A-" className="bg-slate-900">A-</option>
+                <option value="B+" className="bg-slate-900">B+</option>
+                <option value="B-" className="bg-slate-900">B-</option>
+                <option value="AB+" className="bg-slate-900">AB+</option>
+                <option value="AB-" className="bg-slate-900">AB-</option>
+                <option value="O+" className="bg-slate-900">O+</option>
+                <option value="O-" className="bg-slate-900">O-</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-xs font-medium text-slate-400 mb-2">Address</label>
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+              placeholder="Street address"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <input
+                type="text"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                placeholder="City"
+              />
+            </div>
+            <div>
+              <input
+                type="text"
+                name="state"
+                value={formData.state}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                placeholder="State"
+              />
+            </div>
+            <div>
+              <input
+                type="text"
+                name="zipCode"
+                value={formData.zipCode}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                placeholder="ZIP Code"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Emergency Contact */}
+        <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 p-6">
+          <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Emergency Contact
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">
+                Contact Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                name="emergencyContactName"
+                value={formData.emergencyContactName}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                  errors.emergencyContactName ? 'border-red-500/50' : 'border-slate-700'
+                }`}
+                placeholder="Emergency contact name"
+              />
+              {errors.emergencyContactName && <p className="text-xs text-red-400 mt-1">{errors.emergencyContactName}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">
+                Contact Phone <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="tel"
+                name="emergencyContactPhone"
+                value={formData.emergencyContactPhone}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                  errors.emergencyContactPhone ? 'border-red-500/50' : 'border-slate-700'
+                }`}
+                placeholder="+1234567890"
+              />
+              {errors.emergencyContactPhone && <p className="text-xs text-red-400 mt-1">{errors.emergencyContactPhone}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Relationship</label>
+              <input
+                type="text"
+                name="emergencyContactRelationship"
+                value={formData.emergencyContactRelationship}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                placeholder="e.g., Spouse, Parent, Child"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Medical Information */}
+        <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 p-6">
+          <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+            <Heart className="h-4 w-4" />
+            Medical Information
+          </h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Medical Conditions</label>
+              <textarea
+                name="medicalConditions"
+                value={formData.medicalConditions}
+                onChange={handleChange}
+                rows="2"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                placeholder="Comma-separated list (e.g., Hypertension, Diabetes)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Current Medications</label>
+              <textarea
+                name="medications"
+                value={formData.medications}
+                onChange={handleChange}
+                rows="2"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                placeholder="Comma-separated list (e.g., Aspirin 100mg, Metformin 500mg)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Allergies</label>
+              <textarea
+                name="allergies"
+                value={formData.allergies}
+                onChange={handleChange}
+                rows="2"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                placeholder="Comma-separated list (e.g., Penicillin, Latex)"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Insurance Information */}
+        <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 p-6">
+          <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Insurance Information (Optional)
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Insurance Provider</label>
+              <input
+                type="text"
+                name="insuranceProvider"
+                value={formData.insuranceProvider}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                placeholder="Insurance company name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Policy Number</label>
+              <input
+                type="text"
+                name="insurancePolicyNumber"
+                value={formData.insurancePolicyNumber}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                placeholder="Policy number"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800/60">
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-slate-300 border border-slate-700 rounded-lg hover:bg-slate-800/60 transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-6 py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-300"></div>
+                Registering...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Register Patient
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default PatientRegistration;
+

@@ -407,7 +407,7 @@ const AdvancedAnalyticsDashboard = () => {
               Advanced Analytics Dashboard
             </h1>
             <p className="text-gray-600 mt-2">
-              AI-powered insights and real-time monitoring for Care Master platform
+              AI-powered insights and real-time monitoring for UltimateCare platform
             </p>
           </div>
           <div className="flex items-center space-x-4">

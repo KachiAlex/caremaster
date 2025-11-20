@@ -13,9 +13,9 @@ if (!firebaseConfig?.apiKey || !firebaseConfig?.projectId) {
   logger.warn('Firebase config missing from env; falling back to public config.');
   firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "***REMOVED***",
-    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "elderx-f5c2b.firebaseapp.com",
-    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "elderx-f5c2b",
-    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "elderx-f5c2b.firebasestorage.app",
+    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "ultimatecare-2025.firebaseapp.com",
+    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "ultimatecare-2025",
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "ultimatecare-2025.firebasestorage.app",
     messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "987610993096",
     appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:987610993096:web:97c82732772d1223d3f0fd"
   };

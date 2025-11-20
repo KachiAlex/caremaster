@@ -48,7 +48,7 @@ import {
 import { useUser } from '../contexts/UserContext';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { caregiverAPI } from '../api/caregiverAPI';
-import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
+import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks, completeCareTask } from '../api/careTasksAPI';
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
 import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
@@ -66,7 +66,7 @@ import DashboardSwitcher from '../components/DashboardSwitcher';
 import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { careLogsAPI } from '../api/careLogsAPI';
 import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
-import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation } from '../api/messagesAPI';
+import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, getUnreadCountForConversation } from '../api/messagesAPI';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import { db } from '../firebase/config';
@@ -88,6 +88,8 @@ import WebRTCService from '../services/webrtcService';
 import AdlLogger from '../components/AdlLogger';
 import UserProfileSettings from '../components/UserProfileSettings';
 import HelpSupport from '../components/HelpSupport';
+import PatientSearch from '../components/PatientSearch';
+import PatientLogViewer from '../components/PatientLogViewer';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -916,7 +918,7 @@ const InstitutionCaregiverDashboard = () => {
   // Doctor action guards and navigation helpers
   const requireClient = () => {
     if (!selectedClientId) {
-      alert('Please select a client first.');
+      alert('Please select a patient first.');
       return false;
     }
     return true;
@@ -1247,9 +1249,9 @@ const InstitutionCaregiverDashboard = () => {
       return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
           <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Assigned Clients</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Assigned Patients</h3>
           <p className="text-gray-600 mb-4">
-            You don't have any clients assigned to you at the moment.
+            You don't have any patients assigned to you at the moment.
           </p>
         </div>
       );
@@ -1257,6 +1259,17 @@ const InstitutionCaregiverDashboard = () => {
 
     return (
       <div className="space-y-6">
+        {/* Patient Search */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <PatientSearch
+            onSelectPatient={(patient) => {
+              setSelectedClient(patient);
+              setSelectedClientId(patient.id);
+            }}
+            placeholder="Search patients by ID, name, email, or phone..."
+          />
+        </div>
+        
         {/* Clients List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="overflow-x-auto">
@@ -1264,7 +1277,7 @@ const InstitutionCaregiverDashboard = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client
+                    Patient
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Age / Gender
@@ -1296,7 +1309,9 @@ const InstitutionCaregiverDashboard = () => {
                           size="medium"
                           className="mr-4"
                         />
-                        <div className="text-sm text-gray-500">ID: {client.id.substring(0, 8)}...</div>
+                        <div className="text-sm text-gray-500">
+                          {client.patientId ? `ID: ${client.patientId}` : `ID: ${client.id.substring(0, 8)}...`}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1346,7 +1361,7 @@ const InstitutionCaregiverDashboard = () => {
           <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">Total Clients</p>
+                <p className="text-sm font-medium text-blue-600">Total Patients</p>
                 <p className="text-2xl font-bold text-blue-900">{assignedClients.length}</p>
               </div>
               <Users className="h-10 w-10 text-blue-600" />
@@ -1356,7 +1371,7 @@ const InstitutionCaregiverDashboard = () => {
           <div className="bg-green-50 rounded-xl border border-green-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-600">Active Clients</p>
+                <p className="text-sm font-medium text-green-600">Active Patients</p>
                 <p className="text-2xl font-bold text-green-900">
                   {assignedClients.filter(c => c.status === 'Active' || c.status === 'active' || !c.status).length}
                 </p>
@@ -1368,16 +1383,26 @@ const InstitutionCaregiverDashboard = () => {
           <div className="bg-red-50 rounded-xl border border-red-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-600">Critical Clients</p>
+                <p className="text-sm font-medium text-red-600">Critical Patients</p>
                 <p className="text-2xl font-bold text-red-900">
                   {assignedClients.filter(c => c.status === 'Critical' || c.status === 'critical').length}
                 </p>
               </div>
               <AlertCircle className="h-10 w-10 text-red-600" />
-              </div>
-              </div>
             </div>
           </div>
+        </div>
+
+        {/* Patient Log Viewer - Show when a client is selected */}
+        {selectedClient && selectedClient.patientId && (
+          <div className="mt-6">
+            <PatientLogViewer
+              patientId={selectedClient.patientId}
+              patientName={selectedClient.name || selectedClient.fullName}
+            />
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -1435,23 +1460,28 @@ const InstitutionCaregiverDashboard = () => {
       const users = await loadPlatformUsers();
       const userMap = new Map(users.map(u => [u.id, u]));
       
-      // Enrich existing conversations with participant names
-      const enrichedConversations = existingConversations.map(conv => {
-        // Get the other participant(s) in the conversation
-        const otherParticipants = (conv.participants || []).filter(id => id !== user.uid);
-        const otherUser = otherParticipants.length > 0 ? userMap.get(otherParticipants[0]) : null;
-        
-        return {
-          ...conv,
-          conversationId: conv.id,
-          name: otherUser ? (otherUser.name || otherUser.displayName || otherUser.email || 'Unknown User') : 'Unknown User',
-          avatar: otherUser ? (otherUser.avatar || otherUser.photoURL || null) : null,
-          type: otherUser ? (otherUser.role || otherUser.userType || 'user') : 'user',
-          timestamp: conv.lastMessageTime || conv.updatedAt || new Date().toISOString(),
-          lastMessage: conv.lastMessage || 'Start a conversation',
-          unread: 0 // TODO: Calculate actual unread count
-        };
-      });
+      // Enrich existing conversations with participant names and unread counts
+      const enrichedConversations = await Promise.all(
+        existingConversations.map(async (conv) => {
+          // Get the other participant(s) in the conversation
+          const otherParticipants = (conv.participants || []).filter(id => id !== user.uid);
+          const otherUser = otherParticipants.length > 0 ? userMap.get(otherParticipants[0]) : null;
+          
+          // Calculate unread count for this conversation
+          const unreadCount = await getUnreadCountForConversation(conv.id, user.uid);
+          
+          return {
+            ...conv,
+            conversationId: conv.id,
+            name: otherUser ? (otherUser.name || otherUser.displayName || otherUser.email || 'Unknown User') : 'Unknown User',
+            avatar: otherUser ? (otherUser.avatar || otherUser.photoURL || null) : null,
+            type: otherUser ? (otherUser.role || otherUser.userType || 'user') : 'user',
+            timestamp: conv.lastMessageTime || conv.updatedAt || new Date().toISOString(),
+            lastMessage: conv.lastMessage || 'Start a conversation',
+            unread: unreadCount
+          };
+        })
+      );
       
       // Create conversation entries for users who don't have existing conversations
       const existingUserIds = new Set(
@@ -1778,6 +1808,8 @@ const InstitutionCaregiverDashboard = () => {
         clientName: selectedClient.name || selectedClient.fullName,
         doctorId: user.uid,
         doctorName: userProfile?.name || userProfile?.displayName || user.email,
+        doctorRole: userProfile?.userType || userProfile?.type || 'doctor',
+        doctorEmail: userProfile?.email || user.email,
         institutionId: effectiveInstitutionId || institutionId,
         ...consultationFormData
       };
@@ -1888,13 +1920,24 @@ const InstitutionCaregiverDashboard = () => {
       }
       
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        setLocalStream(stream);
-        setCallType('voice');
-        setIsInCall(true);
-        toast.success('Voice call started');
+        // Get recipient ID from conversation
+        const recipientId = selectedConversation.participants?.find(p => p !== user?.uid) || selectedConversation.id;
         
-        // TODO: Initialize WebRTC connection
+        // Initialize call using CallService
+        const callData = {
+          callerId: user?.uid,
+          recipientId: recipientId,
+          callType: 'voice',
+          institutionId: institutionId,
+        };
+        
+        const result = await initiateCall(callData);
+        
+        if (result?.callId) {
+          setCallType('voice');
+          setIsInCall(true);
+          toast.success('Voice call started');
+        }
       } catch (error) {
         console.error('Error starting voice call:', error);
         toast.error('Failed to start voice call. Please check microphone permissions.');
@@ -1908,13 +1951,24 @@ const InstitutionCaregiverDashboard = () => {
       }
       
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        setLocalStream(stream);
-        setCallType('video');
-        setIsInCall(true);
-        toast.success('Video call started');
+        // Get recipient ID from conversation
+        const recipientId = selectedConversation.participants?.find(p => p !== user?.uid) || selectedConversation.id;
         
-        // TODO: Initialize WebRTC connection
+        // Initialize call using CallService
+        const callData = {
+          callerId: user?.uid,
+          recipientId: recipientId,
+          callType: 'video',
+          institutionId: institutionId,
+        };
+        
+        const result = await initiateCall(callData);
+        
+        if (result?.callId) {
+          setCallType('video');
+          setIsInCall(true);
+          toast.success('Video call started');
+        }
       } catch (error) {
         console.error('Error starting video call:', error);
         toast.error('Failed to start video call. Please check camera and microphone permissions.');
@@ -3536,13 +3590,13 @@ const InstitutionCaregiverDashboard = () => {
       <div className="space-y-6">
             <div className="text-center py-12">
               <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Client First</h3>
-            <p className="text-gray-600 mb-4">Please go to the Clients tab and select a client to log activities for them.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Patient First</h3>
+            <p className="text-gray-600 mb-4">Please go to the Patients tab and select a patient to log activities for them.</p>
               <button
               onClick={() => setActiveTab('clients')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-              Go to Clients Tab
+              Go to Patients Tab
               </button>
             </div>
                       </div>
@@ -3749,7 +3803,7 @@ const InstitutionCaregiverDashboard = () => {
               }`}
             >
               <Users className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Clients'}
+              {!sidebarCollapsed && 'Patients'}
             </button>
             
             <button
@@ -4144,10 +4198,10 @@ const InstitutionCaregiverDashboard = () => {
                   <div className="bg-white rounded-lg p-4 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                       <User className="h-5 w-5 text-blue-600" />
-                      <p className="text-sm font-medium text-gray-600">Client Census</p>
+                      <p className="text-sm font-medium text-gray-600">Patient Census</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
-                    <p className="text-xs text-gray-500 mt-1">Assigned clients</p>
+                    <p className="text-xs text-gray-500 mt-1">Assigned patients</p>
                   </div>
                 
                 <div className="bg-white rounded-lg p-4 shadow-sm">
@@ -4979,7 +5033,16 @@ const InstitutionCaregiverDashboard = () => {
                         specialInstructions: carePlanData.specialInstructions
                       };
                       
-                      await updateCarePlan(editingPlanId, updatePayload);
+                      // Prepare clinician info for logging
+                      const clinicianInfo = {
+                        id: user?.uid || userProfile?.id || userProfile?.uid,
+                        name: userProfile?.name || userProfile?.displayName,
+                        role: userProfile?.userType || userProfile?.type || 'doctor',
+                        email: userProfile?.email,
+                        institutionId: effectiveInstitutionId
+                      };
+                      
+                      await updateCarePlan(editingPlanId, updatePayload, clinicianInfo);
                       alert('Care plan updated successfully!');
                       setEditingPlanId(null);
                     } else {
@@ -5000,7 +5063,16 @@ const InstitutionCaregiverDashboard = () => {
                         specialInstructions: carePlanData.specialInstructions
                       };
                       
-                      await createCarePlan(planPayload);
+                      // Prepare clinician info for logging
+                      const clinicianInfo = {
+                        id: user?.uid || userProfile?.id || userProfile?.uid,
+                        name: userProfile?.name || userProfile?.displayName,
+                        role: userProfile?.userType || userProfile?.type || 'doctor',
+                        email: userProfile?.email,
+                        institutionId: effectiveInstitutionId
+                      };
+                      
+                      await createCarePlan(planPayload, clinicianInfo);
                       
                       // Notify admin
                       await notifyAdmin({
@@ -5206,7 +5278,13 @@ const InstitutionCaregiverDashboard = () => {
                   onClick={async () => {
                     try {
                       // Mark task as completed
-                      // TODO: Add actual API call to update task status
+                      await completeCareTask(selectedTask.id, 'Task completed successfully');
+                      
+                      // Refresh tasks list
+                      if (user?.uid) {
+                        const updatedTasks = await getTodayTasks(user.uid);
+                        setTodaysTasks(updatedTasks);
+                      }
                       
                       // Notify admin
                       await notifyAdmin({

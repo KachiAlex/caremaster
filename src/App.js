@@ -40,6 +40,8 @@ const SuperAdminSettings = lazy(() => import('./pages/SuperAdminSettings'));
 const InstitutionAdminDashboard = lazy(() => import('./pages/InstitutionAdminDashboard'));
 const InstitutionUserManagement = lazy(() => import('./pages/InstitutionUserManagement'));
 const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
+const HospitalOverview = lazy(() => import('./domains/hospital/pages/HospitalOverview'));
+const StaffManagement = lazy(() => import('./domains/hospital/pages/StaffManagement'));
 const InstitutionLanding = lazy(() => import('./pages/InstitutionLanding'));
 const InstitutionLogin = lazy(() => import('./pages/InstitutionLogin'));
 const InstitutionCaregiverOnboarding = lazy(() => import('./pages/InstitutionCaregiverOnboarding'));
@@ -67,6 +69,8 @@ const ServiceProviderDashboard = lazy(() => import('./pages/ServiceProviderDashb
 const RouteOptimization = lazy(() => import('./pages/RouteOptimization'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
 const WebRTCTest = lazy(() => import('./pages/WebRTCTest'));
+const PatientDashboard = lazy(() => import('./pages/PatientDashboard'));
+const InstitutionLabTechnicianDashboard = lazy(() => import('./pages/InstitutionLabTechnicianDashboard'));
 import EnhancedMessagingInterface from './components/EnhancedMessagingInterface';
 import MobileOptimization from './components/MobileOptimization';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -393,25 +397,61 @@ function App() {
         element={<InstitutionLogin />} 
       />
 
-      {/* Institution Admin Routes - TEMPORARILY UNGUARDED FOR DEBUGGING */}
+      {/* Institution Admin Routes */}
       <Route 
         path="/institution-admin/dashboard" 
-        element={<InstitutionAdminDashboard />} 
+        element={
+          <InstitutionAdminGuard>
+            <InstitutionAdminDashboard />
+          </InstitutionAdminGuard>
+        } 
       />
       
       <Route 
         path="/institution-admin/users" 
-        element={<InstitutionUserManagement />} 
+        element={
+          <InstitutionAdminGuard>
+            <InstitutionUserManagement />
+          </InstitutionAdminGuard>
+        } 
       />
       
       <Route 
         path="/institution-admin/settings" 
-        element={<InstitutionSettings />} 
+        element={
+          <InstitutionAdminGuard>
+            <InstitutionSettings />
+          </InstitutionAdminGuard>
+        } 
+      />
+      
+      <Route 
+        path="/institution-admin/hospital-operations" 
+        element={
+          <InstitutionAdminGuard>
+            <HospitalOverview />
+          </InstitutionAdminGuard>
+        } 
+      />
+      
+      <Route 
+        path="/institution-admin/staff-management" 
+        element={
+          <InstitutionAdminGuard>
+            <StaffManagement />
+          </InstitutionAdminGuard>
+        } 
       />
       
       <Route 
         path="/institution-admin" 
         element={<Navigate to="/institution-admin/dashboard" replace />} 
+      />
+
+      {/* Patient Dashboard - Shows all patient activities */}
+      <Route 
+        path="/patient/:patientId/dashboard" 
+        element={<PatientDashboard />} 
       />
       
       {/* Legacy dashboard route - redirect to institution-admin */}
@@ -456,6 +496,17 @@ function App() {
       <Route 
         path="/institution-pharmacist" 
         element={<Navigate to="/institution-pharmacist/dashboard" replace />} 
+      />
+
+      {/* Institution Lab Technician Routes */}
+      <Route 
+        path="/institution-lab-technician/dashboard" 
+        element={user ? <InstitutionLabTechnicianDashboard /> : <Navigate to="/institution/login" replace />} 
+      />
+
+      <Route 
+        path="/institution-lab-technician" 
+        element={<Navigate to="/institution-lab-technician/dashboard" replace />} 
       />
       
       {/* Protected routes - Dashboard removed (clients don't have accounts) */}
@@ -659,7 +710,7 @@ function SignInRouteHandler() {
   }
   
   // Check for admin session override
-  const hasAdminSession = sessionStorage.getItem('Care Master_admin_session') === 'true';
+  const hasAdminSession = sessionStorage.getItem('UltimateCare_admin_session') === 'true';
   
   // Redirect admins to admin dashboard (standalone admins without institution)
   if ((userRole === 'admin' || hasAdminSession) && !userProfile?.institutionId) {
@@ -708,7 +759,7 @@ function RoleBasedDashboardRoute() {
   }
   
   // Check for admin session override
-  const hasAdminSession = sessionStorage.getItem('Care Master_admin_session') === 'true';
+  const hasAdminSession = sessionStorage.getItem('UltimateCare_admin_session') === 'true';
   
   // Redirect admins to admin dashboard (standalone admins without institution)
   if ((userRole === 'admin' || hasAdminSession) && !userProfile?.institutionId) {

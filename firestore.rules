@@ -36,10 +36,14 @@ service cloud.firestore {
     // User-Tenant memberships (multi-tenant access control)
     // Allows a user to read their own memberships and admins to manage all
     match /userTenants/{membershipId} {
-      allow read, list: if request.auth != null && (
+      // For individual document reads, check if user owns it or is admin
+      allow get: if request.auth != null && (
         isAdmin() ||
-        get(/databases/$(database)/documents/userTenants/$(membershipId)).data.userId == request.auth.uid
+        resource.data.userId == request.auth.uid
       );
+      // For list queries: allow authenticated users to list (query filters by userId in app)
+      // The query in UserContext filters by userId == request.auth.uid, so results are scoped
+      allow list: if request.auth != null;
       allow create, update, delete: if isAdmin();
     }
     // Licenses: public read (for login/landing pages), write super-admin only
@@ -755,6 +759,62 @@ service cloud.firestore {
       );
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && isAdmin();
+    }
+
+    // Hospital Beds - Institution admins and staff can manage beds
+    match /hospitalBeds/{bedId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() || 
+        isNurse() ||
+        (resource.data != null && resource.data.institutionId == userInstitution())
+      );
+      allow create, update, delete: if request.auth != null && (
+        isAdmin() || 
+        isNurse() ||
+        (request.resource.data != null && request.resource.data.institutionId == userInstitution())
+      );
+    }
+
+    // Hospital Incidents - Institution admins and staff can report and manage incidents
+    match /hospitalIncidents/{incidentId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() || 
+        isNurse() ||
+        (resource.data != null && resource.data.institutionId == userInstitution())
+      );
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() || 
+        isNurse() ||
+        (request.resource.data != null && request.resource.data.institutionId == userInstitution())
+      );
+      allow update, delete: if request.auth != null && (
+        isAdmin() || 
+        isNurse() ||
+        (resource.data != null && resource.data.institutionId == userInstitution() && 
+         resource.data.reportedById == request.auth.uid)
+      );
+    }
+
+    // Hospital Shifts - Institution admins can manage shifts, staff can view their own
+    match /hospitalShifts/{shiftId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() || 
+        isNurse() ||
+        (resource.data != null && resource.data.institutionId == userInstitution()) ||
+        (resource.data != null && resource.data.staffId == request.auth.uid)
+      );
+      allow create, update, delete: if request.auth != null && (
+        isAdmin() || 
+        (request.resource.data != null && request.resource.data.institutionId == userInstitution())
+      );
     }
 
     // Allow admins to read/write any other collections

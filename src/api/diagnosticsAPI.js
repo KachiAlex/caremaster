@@ -39,26 +39,54 @@ export const createDiagnosticTest = async (diagnosticData) => {
 
     const docRef = await addDoc(collection(db, DIAGNOSTICS_COLLECTION), diagnosticWithTimestamp);
 
-    // Log activity to client database
+    // Log activity to client database (comprehensive logging)
     try {
-      await logActivity({
-        clientId: diagnosticData.clientId,
-        activityType: 'diagnostic',
-        performedBy: diagnosticData.orderedBy,
-        performerName: diagnosticData.orderedByName,
-        performerRole: 'doctor',
-        description: `Diagnostic test ordered: ${diagnosticData.testType}`,
-        details: {
+      // Try comprehensive logger first
+      const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
+      await ComprehensivePatientLogger.logLabTestOrdered(
+        diagnosticData.clientId,
+        {
           diagnosticId: docRef.id,
           testType: diagnosticData.testType,
+          testName: diagnosticData.testType,
           reason: diagnosticData.reason,
-          urgency: diagnosticData.urgency
+          urgency: diagnosticData.urgency,
+          orderedBy: diagnosticData.orderedBy,
+          orderedByName: diagnosticData.orderedByName
         },
-        institutionId: diagnosticData.institutionId
-      });
-    } catch (activityError) {
-      logger.error('Error logging diagnostic activity', { activityError });
-      // Don't throw - diagnostic was created successfully
+        {
+          id: diagnosticData.orderedBy,
+          name: diagnosticData.orderedByName,
+          role: 'doctor',
+          userType: 'doctor',
+          type: 'doctor',
+          email: diagnosticData.orderedByEmail,
+          medicalQualification: 'Physician',
+          institutionId: diagnosticData.institutionId
+        }
+      );
+    } catch (comprehensiveError) {
+      // Fallback to old logger
+      try {
+        await logActivity({
+          clientId: diagnosticData.clientId,
+          activityType: 'diagnostic',
+          performedBy: diagnosticData.orderedBy,
+          performerName: diagnosticData.orderedByName,
+          performerRole: 'doctor',
+          description: `Diagnostic test ordered: ${diagnosticData.testType}`,
+          details: {
+            diagnosticId: docRef.id,
+            testType: diagnosticData.testType,
+            reason: diagnosticData.reason,
+            urgency: diagnosticData.urgency
+          },
+          institutionId: diagnosticData.institutionId
+        });
+      } catch (activityError) {
+        logger.error('Error logging diagnostic activity', { activityError, comprehensiveError });
+        // Don't throw - diagnostic was created successfully
+      }
     }
     
     // Send notification to admin
@@ -116,26 +144,59 @@ export const uploadDiagnosticResults = async (diagnosticId, resultsData) => {
     const diagnosticDoc = await getDoc(diagnosticRef);
     const diagnostic = diagnosticDoc.data();
 
-    // Log activity to client database
+    // Log activity to client database (comprehensive logging)
     try {
-      await logActivity({
-        clientId: diagnostic.clientId,
-        activityType: 'diagnostic',
-        performedBy: resultsData.uploadedBy,
-        performerName: resultsData.uploadedByName,
-        performerRole: 'nurse',
-        description: `Diagnostic results uploaded for: ${diagnostic.testType}`,
-        details: {
+      // Try comprehensive logger first
+      const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
+      const isAbnormal = resultsData.results?.abnormal || 
+                        resultsData.results?.status === 'abnormal' ||
+                        resultsData.results?.find(r => r.status === 'abnormal');
+      
+      await ComprehensivePatientLogger.logLabTestResults(
+        diagnostic.clientId,
+        {
           diagnosticId,
+          testName: diagnostic.testType,
           testType: diagnostic.testType,
+          results: resultsData.results,
+          abnormal: isAbnormal,
           documentCount: resultsData.uploadedDocuments?.length || 0,
-          hasResults: !!resultsData.results
+          uploadedBy: resultsData.uploadedBy,
+          uploadedByName: resultsData.uploadedByName
         },
-        institutionId: diagnostic.institutionId
-      });
-    } catch (activityError) {
-      logger.error('Error logging results upload activity', { activityError });
-      // Don't throw - results were uploaded successfully
+        {
+          id: resultsData.uploadedBy,
+          name: resultsData.uploadedByName,
+          role: 'nurse',
+          userType: 'nurse',
+          type: 'nurse',
+          email: resultsData.uploadedByEmail,
+          medicalQualification: 'Laboratory Technician',
+          institutionId: diagnostic.institutionId
+        }
+      );
+    } catch (comprehensiveError) {
+      // Fallback to old logger
+      try {
+        await logActivity({
+          clientId: diagnostic.clientId,
+          activityType: 'diagnostic',
+          performedBy: resultsData.uploadedBy,
+          performerName: resultsData.uploadedByName,
+          performerRole: 'nurse',
+          description: `Diagnostic results uploaded for: ${diagnostic.testType}`,
+          details: {
+            diagnosticId,
+            testType: diagnostic.testType,
+            documentCount: resultsData.uploadedDocuments?.length || 0,
+            hasResults: !!resultsData.results
+          },
+          institutionId: diagnostic.institutionId
+        });
+      } catch (activityError) {
+        logger.error('Error logging results upload activity', { activityError, comprehensiveError });
+        // Don't throw - results were uploaded successfully
+      }
     }
     
     // Send notification to admin

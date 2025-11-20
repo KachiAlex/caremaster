@@ -367,7 +367,7 @@ class PWAService {
   // Get Queued Requests
   async getQueuedRequests() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('Care Master-offline-queue', 1);
+      const request = indexedDB.open('UltimateCare-offline-queue', 1);
       
       request.onerror = () => reject(request.error);
       
@@ -413,7 +413,7 @@ class PWAService {
   // Remove Queued Request
   async removeQueuedRequest(timestamp) {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('Care Master-offline-queue', 1);
+      const request = indexedDB.open('UltimateCare-offline-queue', 1);
       
       request.onerror = () => reject(request.error);
       

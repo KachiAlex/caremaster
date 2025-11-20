@@ -1,26 +1,74 @@
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import cacheManager, { cachedFetch } from '../utils/cacheManager';
 
 const INSTITUTIONS_COLLECTION = 'institutions';
 
-// Get institution by ID
+/**
+ * Get institution by ID
+ * @param {string} institutionId - The institution document ID
+ * @returns {Promise<Object|null>} Institution data object or null if not found
+ * @throws {Error} If there's an error fetching the institution
+ */
 export const getInstitution = async (institutionId) => {
+  const cacheKey = `institution_${institutionId}`;
+  
+  return cachedFetch(
+    cacheKey,
+    async () => {
+      try {
+        console.log('🏥 Fetching institution:', institutionId);
+        
+        const institutionRef = doc(db, INSTITUTIONS_COLLECTION, institutionId);
+        const institutionSnap = await getDoc(institutionRef);
+        
+        if (institutionSnap.exists()) {
+          const institutionData = institutionSnap.data();
+          console.log('✅ Institution found:', institutionData.name);
+          return { id: institutionSnap.id, ...institutionData };
+        } else {
+          console.warn('⚠️ Institution not found:', institutionId);
+          return null;
+        }
+      } catch (error) {
+        console.error('❌ Error fetching institution:', error);
+        throw error;
+      }
+    },
+    5 * 60 * 1000 // Cache for 5 minutes
+  );
+};
+
+/**
+ * Update institution data
+ * @param {string} institutionId - The institution document ID
+ * @param {Object} updates - Object containing fields to update
+ * @param {string|null} userId - Optional user ID to track who made the update
+ * @returns {Promise<Object>} Success object with { success: true }
+ * @throws {Error} If there's an error updating the institution
+ */
+export const updateInstitution = async (institutionId, updates, userId = null) => {
   try {
-    console.log('🏥 Fetching institution:', institutionId);
+    console.log('🏥 Updating institution:', institutionId);
     
     const institutionRef = doc(db, INSTITUTIONS_COLLECTION, institutionId);
-    const institutionSnap = await getDoc(institutionRef);
     
-    if (institutionSnap.exists()) {
-      const institutionData = institutionSnap.data();
-      console.log('✅ Institution found:', institutionData.name);
-      return { id: institutionSnap.id, ...institutionData };
-    } else {
-      console.warn('⚠️ Institution not found:', institutionId);
-      return null;
+    const updateData = {
+      ...updates,
+      updatedAt: serverTimestamp(),
+    };
+    
+    // Add user ID if provided
+    if (userId) {
+      updateData.lastModifiedBy = userId;
     }
+    
+    await updateDoc(institutionRef, updateData);
+    
+    console.log('✅ Institution updated successfully');
+    return { success: true };
   } catch (error) {
-    console.error('❌ Error fetching institution:', error);
+    console.error('❌ Error updating institution:', error);
     throw error;
   }
 };
@@ -194,6 +242,7 @@ export const getInstitutionByDomain = async (domain) => {
 // Institution API object
 export const institutionAPI = {
   getInstitution,
+  updateInstitution,
   updateInstitutionLinks,
   checkSlugAvailability,
   generateInstitutionUrls,

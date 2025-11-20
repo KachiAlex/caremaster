@@ -62,13 +62,13 @@ class BiometricAuthService {
         publicKey: {
           challenge: challenge,
           rp: {
-            name: "Care Master",
+            name: "UltimateCare",
             id: window.location.hostname
           },
           user: {
             id: new TextEncoder().encode(userInfo.id || 'user'),
-            name: userInfo.email || 'user@Care Master.com',
-            displayName: userInfo.displayName || 'Care Master User'
+            name: userInfo.email || 'user@ultimatecare.com',
+            displayName: userInfo.displayName || 'UltimateCare User'
           },
           pubKeyCredParams: [
             { alg: -7, type: "public-key" }, // ES256
@@ -174,7 +174,7 @@ class BiometricAuthService {
 
       // Store in secure storage (encrypted)
       const encryptedInfo = JSON.stringify(credentialInfo);
-      localStorage.setItem('Care Master_biometric_credential', encryptedInfo);
+      localStorage.setItem('UltimateCare_biometric_credential', encryptedInfo);
       
       logger.debug('Biometric credential info stored');
     } catch (error) {
@@ -186,7 +186,7 @@ class BiometricAuthService {
   // Get stored credential information
   async getStoredCredentialInfo() {
     try {
-      const stored = localStorage.getItem('Care Master_biometric_credential');
+      const stored = localStorage.getItem('UltimateCare_biometric_credential');
       if (!stored) return null;
 
       const credentialInfo = JSON.parse(stored);
@@ -215,7 +215,7 @@ class BiometricAuthService {
   // Remove biometric authentication
   async removeBiometric() {
     try {
-      localStorage.removeItem('Care Master_biometric_credential');
+      localStorage.removeItem('UltimateCare_biometric_credential');
       this.credentialId = null;
       this.isEnabled = false;
       

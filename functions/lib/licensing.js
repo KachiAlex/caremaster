@@ -23,10 +23,22 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeInstitutionAdmin = exports.migrateInstitutionLinks = exports.getInstitutionAdmins = exports.activateLicense = exports.suspendLicense = exports.updateLicense = exports.deleteInstitution = exports.updateInstitution = exports.getLicenses = exports.getInstitutions = exports.setSuperAdminClaim = exports.getLicenseStatus = exports.assignInstitutionAdmin = exports.createLicense = exports.createInstitution = void 0;
+exports.removeInstitutionAdmin = exports.forceUpdateAllInstitutionLinks = exports.migrateInstitutionLinks = exports.getInstitutionAdmins = exports.activateLicense = exports.suspendLicense = exports.updateLicense = exports.deleteInstitution = exports.updateInstitution = exports.getLicenses = exports.getInstitutions = exports.setSuperAdminClaim = exports.getLicenseStatus = exports.assignInstitutionAdmin = exports.createLicense = exports.createInstitution = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const getDb = () => admin.firestore();
+// Get base URL - ALWAYS use UltimateCare domain (ignore environment variables)
+const getBaseURL = () => {
+    // FORCE UltimateCare domain - do not use environment variables
+    const baseURL = 'https://ultimatecare-2025.web.app';
+    console.log('🔍 getBaseURL - FORCED UltimateCare domain:', baseURL);
+    console.log('🔍 getBaseURL - Environment check:', {
+        APP_BASE_URL: process.env.APP_BASE_URL,
+        REACT_APP_BASE_URL: process.env.REACT_APP_BASE_URL,
+        using: baseURL
+    });
+    return baseURL;
+};
 exports.createInstitution = functions.https.onCall(async (data, context) => {
     var _a, _b;
     if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.superAdmin)) {
@@ -41,10 +53,16 @@ exports.createInstitution = functions.https.onCall(async (data, context) => {
     // Generate unique access slug from name
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     const uniqueSlug = `${slug}-${institutionRef.id.substring(0, 8)}`;
-    // Generate institution portal URLs
-    const baseURL = 'https://elderx-f5c2b.web.app';
+    // Generate institution portal URLs - ALWAYS use UltimateCare domain
+    const baseURL = getBaseURL();
     const accessLink = `${baseURL}/onboard?institution=${institutionRef.id}`;
     const loginLink = `${baseURL}/institution/login?institution=${institutionRef.id}`;
+    console.log('🏢 Creating institution with URLs:', {
+        institutionId: institutionRef.id,
+        baseURL,
+        accessLink,
+        loginLink
+    });
     const institution = {
         name,
         domain: domain || null,
@@ -252,23 +270,72 @@ exports.setSuperAdminClaim = functions.https.onCall(async (data, context) => {
     return { success: true, message: 'Super-admin privileges granted successfully' };
 });
 exports.getInstitutions = functions.https.onCall(async (data, context) => {
-    var _a, _b;
-    if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.superAdmin)) {
+    var _a, _b, _c, _d, _e;
+    // LOG IMMEDIATELY to verify function is being called
+    console.log('🚀🚀🚀 getInstitutionsFunction CALLED at', new Date().toISOString());
+    console.log('🚀 Context auth:', (_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid);
+    console.log('🚀 Context token superAdmin:', (_c = (_b = context.auth) === null || _b === void 0 ? void 0 : _b.token) === null || _c === void 0 ? void 0 : _c.superAdmin);
+    if (!((_e = (_d = context.auth) === null || _d === void 0 ? void 0 : _d.token) === null || _e === void 0 ? void 0 : _e.superAdmin)) {
+        console.error('❌ Permission denied - not super admin');
         throw new functions.https.HttpsError('permission-denied', 'Only super-admin can view institutions');
     }
     try {
+        console.log('✅ Super admin verified, fetching institutions...');
         const institutionsSnapshot = await getDb().collection('institutions').orderBy('createdAt', 'desc').get();
+        console.log(`✅ Found ${institutionsSnapshot.size} institutions in database`);
+        // HARDCODE the base URL - DO NOT use getBaseURL() or any environment variables
+        const baseURL = 'https://ultimatecare-2025.web.app';
+        console.log('📋 getInstitutions - HARDCODED baseURL:', baseURL);
+        console.log('📋 getInstitutions - Environment check:', {
+            APP_BASE_URL: process.env.APP_BASE_URL,
+            REACT_APP_BASE_URL: process.env.REACT_APP_BASE_URL,
+            using: baseURL
+        });
         const institutions = institutionsSnapshot.docs.map(doc => {
-            var _a, _b, _c, _d;
+            var _a, _b, _c, _d, _e, _f, _g;
             const data = doc.data();
-            const baseURL = 'https://elderx-f5c2b.web.app';
-            // Generate access links if missing (for backward compatibility)
-            const accessLink = data.accessLink || `${baseURL}/onboard?institution=${doc.id}`;
-            const loginLink = data.loginLink || `${baseURL}/institution/login?institution=${doc.id}`;
+            // ALWAYS regenerate links to ensure they use the correct UltimateCare domain
+            // HARDCODE the base URL directly in the template string
+            const accessLink = `https://ultimatecare-2025.web.app/onboard?institution=${doc.id}`;
+            const loginLink = `https://ultimatecare-2025.web.app/institution/login?institution=${doc.id}`;
             const slug = data.slug || `${(_a = data.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${doc.id.substring(0, 8)}`;
-            return Object.assign(Object.assign({ id: doc.id }, data), { accessLink,
-                loginLink,
-                slug, createdAt: ((_d = (_c = (_b = data.createdAt) === null || _b === void 0 ? void 0 : _b.toDate) === null || _c === void 0 ? void 0 : _c.call(_b)) === null || _d === void 0 ? void 0 : _d.toISOString()) || null });
+            // Log if we're overwriting old links
+            const oldAccessLink = data.accessLink;
+            if (oldAccessLink && (oldAccessLink.includes('elderx') || !oldAccessLink.includes('ultimatecare-2025'))) {
+                console.log(`🔄 Regenerating link for institution ${doc.id}:`, {
+                    old: oldAccessLink,
+                    new: accessLink,
+                    baseURL: baseURL
+                });
+            }
+            // Explicitly construct the return object to ensure old links are overwritten
+            const result = {
+                id: doc.id,
+                name: data.name,
+                domain: data.domain,
+                slug: slug,
+                accessLink: accessLink,
+                loginLink: loginLink,
+                notes: data.notes,
+                active: data.active,
+                createdAt: ((_d = (_c = (_b = data.createdAt) === null || _b === void 0 ? void 0 : _b.toDate) === null || _c === void 0 ? void 0 : _c.call(_b)) === null || _d === void 0 ? void 0 : _d.toISOString()) || null,
+                updatedAt: ((_g = (_f = (_e = data.updatedAt) === null || _e === void 0 ? void 0 : _e.toDate) === null || _f === void 0 ? void 0 : _f.call(_e)) === null || _g === void 0 ? void 0 : _g.toISOString()) || null
+            };
+            // Double-check the result before returning
+            if (result.accessLink.includes('elderx')) {
+                console.error(`❌ CRITICAL ERROR: Institution ${doc.id} accessLink still contains 'elderx'!`, {
+                    accessLink: result.accessLink,
+                    loginLink: result.loginLink
+                });
+                // Force correct link
+                result.accessLink = `https://ultimatecare-2025.web.app/onboard?institution=${doc.id}`;
+                result.loginLink = `https://ultimatecare-2025.web.app/institution/login?institution=${doc.id}`;
+            }
+            return result;
+        });
+        console.log(`📋 getInstitutions - Returning ${institutions.length} institutions`);
+        institutions.forEach(inst => {
+            console.log(`  - ${inst.id}: ${inst.accessLink}`);
         });
         return institutions;
     }
@@ -452,43 +519,228 @@ exports.migrateInstitutionLinks = functions.https.onCall(async (data, context) =
     console.log('🔍 Migration called with data:', JSON.stringify(data));
     console.log('🔍 Force parameter:', force, typeof force);
     try {
-        const baseURL = 'https://elderx-f5c2b.web.app';
         const institutionsSnapshot = await getDb().collection('institutions').get();
-        const batch = getDb().batch();
-        let updatedCount = 0;
+        // HARDCODE the base URL - DO NOT use getBaseURL() or any environment variables
+        const CORRECT_BASE_URL = 'https://ultimatecare-2025.web.app';
+        console.log('🔍 Using HARDCODED base URL:', CORRECT_BASE_URL);
+        // Collect all institutions that need updating
+        const institutionsToUpdate = [];
         institutionsSnapshot.docs.forEach(doc => {
             var _a;
             const docData = doc.data();
-            console.log('Checking institution:', doc.id, {
-                force,
-                hasAccessLink: !!docData.accessLink,
-                currentAccessLink: docData.accessLink
-            });
-            // Force update all institutions if force=true, otherwise only update missing links
-            const shouldUpdate = force || !docData.accessLink || !docData.loginLink || !docData.slug;
-            console.log('Should update?', shouldUpdate);
+            const institutionId = doc.id;
+            // HARDCODE the correct links
+            const correctAccessLink = `${CORRECT_BASE_URL}/onboard?institution=${institutionId}`;
+            const correctLoginLink = `${CORRECT_BASE_URL}/institution/login?institution=${institutionId}`;
+            const slug = docData.slug || `${(_a = docData.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${institutionId.substring(0, 8)}`;
+            // Check for ANY variation of elderx domain (case-insensitive)
+            const accessLinkLower = (docData.accessLink || '').toLowerCase();
+            const loginLinkLower = (docData.loginLink || '').toLowerCase();
+            const hasOldDomain = accessLinkLower.includes('elderx') || loginLinkLower.includes('elderx');
+            // Check if links don't match correct base URL
+            const doesntMatchCorrect = (docData.accessLink !== correctAccessLink) || (docData.loginLink !== correctLoginLink);
+            // ALWAYS update if force=true, otherwise update if links contain old domain, don't match correct URL, or are missing
+            const shouldUpdate = force === true || hasOldDomain || doesntMatchCorrect || !docData.accessLink || !docData.loginLink;
             if (shouldUpdate) {
-                const slug = docData.slug || `${(_a = docData.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${doc.id.substring(0, 8)}`;
-                const accessLink = `${baseURL}/onboard?institution=${doc.id}`;
-                const loginLink = `${baseURL}/institution/login?institution=${doc.id}`;
-                console.log('Updating to:', accessLink);
-                batch.update(doc.ref, {
-                    slug,
-                    accessLink,
-                    loginLink,
-                    updatedAt: admin.firestore.Timestamp.now()
+                console.log('✅ Will update institution:', {
+                    institutionId: institutionId,
+                    name: docData.name,
+                    oldAccessLink: docData.accessLink,
+                    newAccessLink: correctAccessLink,
+                    oldLoginLink: docData.loginLink,
+                    newLoginLink: correctLoginLink,
+                    hasOldDomain,
+                    doesntMatchCorrect
                 });
-                updatedCount++;
+                institutionsToUpdate.push({
+                    ref: doc.ref,
+                    institutionId: institutionId,
+                    name: docData.name || 'Unknown',
+                    oldAccessLink: docData.accessLink || 'missing',
+                    oldLoginLink: docData.loginLink || 'missing',
+                    newAccessLink: correctAccessLink,
+                    newLoginLink: correctLoginLink,
+                    newSlug: slug
+                });
+            }
+            else {
+                console.log('⏭️ Skipping institution (already correct):', {
+                    institutionId: institutionId,
+                    name: docData.name,
+                    accessLink: docData.accessLink
+                });
             }
         });
-        if (updatedCount > 0) {
-            await batch.commit();
+        console.log(`📊 Migration summary: ${institutionsToUpdate.length} institutions to update out of ${institutionsSnapshot.size} total`);
+        if (institutionsToUpdate.length === 0) {
+            return { success: true, message: 'No institutions need updating - all links are already correct', updatedCount: 0 };
         }
-        return { success: true, message: `Migrated ${updatedCount} institutions`, updatedCount };
+        // Firestore batch limit is 500 operations, so we need to split into multiple batches if needed
+        const BATCH_LIMIT = 500;
+        let totalUpdated = 0;
+        for (let i = 0; i < institutionsToUpdate.length; i += BATCH_LIMIT) {
+            const batch = getDb().batch();
+            const batchItems = institutionsToUpdate.slice(i, i + BATCH_LIMIT);
+            console.log(`💾 Processing batch ${Math.floor(i / BATCH_LIMIT) + 1} (${batchItems.length} institutions)...`);
+            batchItems.forEach(item => {
+                console.log(`  - Updating ${item.institutionId} (${item.name}):`, {
+                    oldAccess: item.oldAccessLink,
+                    newAccess: item.newAccessLink
+                });
+                batch.update(item.ref, {
+                    slug: item.newSlug,
+                    accessLink: item.newAccessLink,
+                    loginLink: item.newLoginLink,
+                    updatedAt: admin.firestore.Timestamp.now()
+                });
+            });
+            console.log(`💾 Committing batch ${Math.floor(i / BATCH_LIMIT) + 1}...`);
+            await batch.commit();
+            totalUpdated += batchItems.length;
+            console.log(`✅ Batch ${Math.floor(i / BATCH_LIMIT) + 1} committed successfully (${totalUpdated}/${institutionsToUpdate.length} total)`);
+        }
+        // Verify the updates worked by reading back from database
+        console.log('🔍 Verifying updates by reading from database...');
+        const verifySnapshot = await getDb().collection('institutions').get();
+        let verifiedCount = 0;
+        verifySnapshot.docs.forEach(doc => {
+            var _a, _b;
+            const data = doc.data();
+            if (((_a = data.accessLink) === null || _a === void 0 ? void 0 : _a.includes('ultimatecare-2025')) && ((_b = data.loginLink) === null || _b === void 0 ? void 0 : _b.includes('ultimatecare-2025'))) {
+                verifiedCount++;
+            }
+            else {
+                console.error(`❌ Verification failed for ${doc.id}:`, {
+                    accessLink: data.accessLink,
+                    loginLink: data.loginLink
+                });
+            }
+        });
+        console.log(`✅ Verification: ${verifiedCount}/${verifySnapshot.size} institutions have correct links`);
+        console.log(`✅ Migration complete! Updated ${totalUpdated} institutions`);
+        return {
+            success: true,
+            message: `Successfully migrated ${totalUpdated} institutions. Verified: ${verifiedCount}/${verifySnapshot.size} have correct links.`,
+            updatedCount: totalUpdated,
+            verifiedCount: verifiedCount,
+            totalCount: verifySnapshot.size
+        };
     }
     catch (error) {
-        console.error('Error migrating institutions:', error);
-        throw new functions.https.HttpsError('internal', 'Failed to migrate institutions');
+        console.error('❌ Error migrating institutions:', error);
+        console.error('Error stack:', error.stack);
+        throw new functions.https.HttpsError('internal', `Failed to migrate institutions: ${error.message}`);
+    }
+});
+/**
+ * Force update ALL institution links in database
+ * This function directly overwrites all accessLink and loginLink fields
+ * regardless of their current value
+ */
+exports.forceUpdateAllInstitutionLinks = functions.https.onCall(async (data, context) => {
+    var _a, _b;
+    if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.superAdmin)) {
+        throw new functions.https.HttpsError('permission-denied', 'Only super-admin can force update links');
+    }
+    console.log('🚀🚀🚀 FORCE UPDATE ALL INSTITUTION LINKS CALLED');
+    try {
+        const institutionsSnapshot = await getDb().collection('institutions').get();
+        // HARDCODE the base URL - DO NOT use any environment variables
+        const CORRECT_BASE_URL = 'https://ultimatecare-2025.web.app';
+        console.log('🔍 FORCE UPDATE: Using HARDCODED base URL:', CORRECT_BASE_URL);
+        console.log(`📋 FORCE UPDATE: Found ${institutionsSnapshot.size} institutions to update`);
+        if (institutionsSnapshot.size === 0) {
+            return { success: true, message: 'No institutions found', updatedCount: 0 };
+        }
+        // Firestore batch limit is 500 operations
+        const BATCH_LIMIT = 500;
+        let totalUpdated = 0;
+        const allUpdates = [];
+        // First pass: collect all updates
+        institutionsSnapshot.docs.forEach(doc => {
+            var _a;
+            const docData = doc.data();
+            const institutionId = doc.id;
+            // HARDCODE the correct links
+            const correctAccessLink = `${CORRECT_BASE_URL}/onboard?institution=${institutionId}`;
+            const correctLoginLink = `${CORRECT_BASE_URL}/institution/login?institution=${institutionId}`;
+            const slug = docData.slug || `${(_a = docData.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${institutionId.substring(0, 8)}`;
+            allUpdates.push({
+                id: institutionId,
+                name: docData.name || 'Unknown',
+                oldAccess: docData.accessLink || 'missing',
+                oldLogin: docData.loginLink || 'missing',
+                newAccess: correctAccessLink,
+                newLogin: correctLoginLink,
+                slug: slug
+            });
+        });
+        // Second pass: apply updates in batches
+        for (let i = 0; i < allUpdates.length; i += BATCH_LIMIT) {
+            const batch = getDb().batch();
+            const batchItems = allUpdates.slice(i, i + BATCH_LIMIT);
+            console.log(`💾 FORCE UPDATE: Processing batch ${Math.floor(i / BATCH_LIMIT) + 1} (${batchItems.length} institutions)...`);
+            batchItems.forEach(item => {
+                const docRef = getDb().collection('institutions').doc(item.id);
+                console.log(`  - FORCE UPDATING ${item.id} (${item.name}):`, {
+                    oldAccess: item.oldAccess,
+                    newAccess: item.newAccess,
+                    oldLogin: item.oldLogin,
+                    newLogin: item.newLogin
+                });
+                batch.update(docRef, {
+                    slug: item.slug,
+                    accessLink: item.newAccess,
+                    loginLink: item.newLogin,
+                    updatedAt: admin.firestore.Timestamp.now()
+                });
+            });
+            console.log(`💾 FORCE UPDATE: Committing batch ${Math.floor(i / BATCH_LIMIT) + 1}...`);
+            await batch.commit();
+            totalUpdated += batchItems.length;
+            console.log(`✅ FORCE UPDATE: Batch ${Math.floor(i / BATCH_LIMIT) + 1} committed (${totalUpdated}/${allUpdates.length} total)`);
+        }
+        // Verify the updates worked by reading back from database
+        console.log('🔍 FORCE UPDATE: Verifying updates by reading from database...');
+        const verifySnapshot = await getDb().collection('institutions').get();
+        let verifiedCount = 0;
+        const failedVerifications = [];
+        verifySnapshot.docs.forEach(doc => {
+            var _a, _b;
+            const data = doc.data();
+            if (((_a = data.accessLink) === null || _a === void 0 ? void 0 : _a.includes('ultimatecare-2025')) && ((_b = data.loginLink) === null || _b === void 0 ? void 0 : _b.includes('ultimatecare-2025'))) {
+                verifiedCount++;
+            }
+            else {
+                failedVerifications.push({
+                    id: doc.id,
+                    accessLink: data.accessLink || 'missing',
+                    loginLink: data.loginLink || 'missing'
+                });
+                console.error(`❌ FORCE UPDATE: Verification failed for ${doc.id}:`, {
+                    accessLink: data.accessLink,
+                    loginLink: data.loginLink
+                });
+            }
+        });
+        console.log(`✅ FORCE UPDATE: Verification complete - ${verifiedCount}/${verifySnapshot.size} institutions have correct links`);
+        if (failedVerifications.length > 0) {
+            console.error(`❌ FORCE UPDATE: ${failedVerifications.length} institutions failed verification:`, failedVerifications);
+        }
+        console.log(`✅ FORCE UPDATE: Complete! Updated ${totalUpdated} institutions`);
+        return {
+            success: true,
+            message: `Force updated ${totalUpdated} institutions. Verified: ${verifiedCount}/${verifySnapshot.size} have correct links.`,
+            updatedCount: totalUpdated,
+            verifiedCount: verifiedCount,
+            totalCount: verifySnapshot.size,
+            failedVerifications: failedVerifications.length > 0 ? failedVerifications : undefined
+        };
+    }
+    catch (error) {
+        console.error('❌ FORCE UPDATE: Error updating institutions:', error);
+        console.error('Error stack:', error.stack);
+        throw new functions.https.HttpsError('internal', `Failed to force update institutions: ${error.message}`);
     }
 });
 exports.removeInstitutionAdmin = functions.https.onCall(async (data, context) => {

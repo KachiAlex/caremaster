@@ -16,6 +16,9 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+const inputClass =
+  'w-full rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-50 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-emerald-500/20';
+
 const SuperAdminSettings = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -91,10 +94,10 @@ const SuperAdminSettings = () => {
   };
 
   const SettingSection = ({ title, icon: Icon, children }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-lg shadow-black/40 mb-6">
       <div className="flex items-center mb-4">
-        <Icon className="h-5 w-5 text-blue-600 mr-2" />
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <Icon className="h-5 w-5 text-emerald-300 mr-2" />
+        <h3 className="text-lg font-semibold text-slate-50">{title}</h3>
       </div>
       <div className="space-y-4">
         {children}
@@ -105,13 +108,13 @@ const SuperAdminSettings = () => {
   const ToggleSetting = ({ label, description, checked, onChange }) => (
     <div className="flex items-center justify-between">
       <div className="flex-1">
-        <label className="text-sm font-medium text-gray-900">{label}</label>
-        {description && <p className="text-xs text-gray-500 mt-1">{description}</p>}
+        <label className="text-sm font-semibold text-slate-50">{label}</label>
+        {description && <p className="text-xs text-slate-400 mt-1">{description}</p>}
       </div>
       <button
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          checked ? 'bg-blue-600' : 'bg-gray-300'
+          checked ? 'bg-emerald-500/80' : 'bg-slate-700'
         }`}
       >
         <span
@@ -125,61 +128,58 @@ const SuperAdminSettings = () => {
 
   const InputSetting = ({ label, description, type = 'text', value, onChange, suffix }) => (
     <div>
-      <label className="block text-sm font-medium text-gray-900 mb-2">{label}</label>
-      {description && <p className="text-xs text-gray-500 mb-2">{description}</p>}
+      <label className="block text-sm font-semibold text-slate-50 mb-2">{label}</label>
+      {description && <p className="text-xs text-slate-400 mb-2">{description}</p>}
       <div className="flex items-center">
         <input
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`${inputClass} flex-1`}
         />
-        {suffix && <span className="ml-2 text-sm text-gray-600">{suffix}</span>}
+        {suffix && <span className="ml-2 text-sm text-slate-400">{suffix}</span>}
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
+    <div className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-[360px] bg-[radial-gradient(circle_at_top,_#22c55e22,_transparent_65%),radial-gradient(circle_at_30%_20%,_#0ea5e922,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e522,_transparent_55%)]" />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+        <header className="rounded-3xl border border-slate-800/70 bg-gradient-to-br from-slate-950/90 via-slate-950/70 to-slate-900/70 p-6 shadow-2xl shadow-black/40">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/super-admin/dashboard')}
-                className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="rounded-2xl border border-slate-700 p-2 text-slate-300 hover:border-emerald-400/60"
               >
-                <ArrowLeft className="h-5 w-5 text-gray-600" />
+                <ArrowLeft className="h-5 w-5" />
               </button>
-              <Shield className="h-8 w-8 text-red-600 mr-3" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Super Admin Settings</h1>
-                <p className="text-sm text-gray-600">Configure system-wide settings and preferences</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">UltimateCare</p>
+                <h1 className="text-2xl font-semibold text-slate-50">Super Admin Settings</h1>
+                <p className="text-sm text-slate-400">Configure system-wide preferences, security, and alerts</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleSaveSettings}
-                disabled={loading}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
+            <button
+              onClick={handleSaveSettings}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500/90 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {message && (
-          <div className={`mb-6 p-4 rounded-lg ${
-            message.includes('success') 
-              ? 'bg-green-50 border border-green-200 text-green-800' 
-              : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm ${
+              message.includes('success')
+                ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
+                : 'border-rose-400/40 bg-rose-500/10 text-rose-200'
+            }`}
+          >
             {message}
           </div>
         )}
@@ -285,40 +285,39 @@ const SuperAdminSettings = () => {
 
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            {/* Super Admin List */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-lg shadow-black/40 mb-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <Users className="h-5 w-5 text-blue-600 mr-2" />
-                  <h3 className="text-lg font-semibold text-gray-900">Super Admins</h3>
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-emerald-300" />
+                  <h3 className="text-lg font-semibold text-slate-50">Super Admins</h3>
                 </div>
                 <button
                   onClick={loadSuperAdmins}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                  className="p-1 rounded-lg border border-slate-700 text-slate-300 hover:border-emerald-400/60"
                   title="Refresh"
                 >
-                  <RefreshCw className="h-4 w-4 text-gray-600" />
+                  <RefreshCw className="h-4 w-4" />
                 </button>
               </div>
-              
+
               {loadingSuperAdmins ? (
                 <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-400 mx-auto"></div>
                 </div>
               ) : superAdmins.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No super admins found</p>
+                <p className="text-sm text-slate-500 text-center py-4">No super admins found</p>
               ) : (
                 <div className="space-y-3">
                   {superAdmins.map((admin) => (
-                    <div key={admin.id} className="flex items-start p-3 bg-gray-50 rounded-lg">
+                    <div key={admin.id} className="flex items-start p-3 rounded-2xl border border-slate-800 bg-slate-900/60">
                       <div className="flex-shrink-0 mt-1">
-                        <Shield className="h-4 w-4 text-red-600" />
+                        <Shield className="h-4 w-4 text-emerald-300" />
                       </div>
                       <div className="ml-3 flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-semibold text-slate-50 truncate">
                           {admin.displayName || 'Unnamed Admin'}
                         </p>
-                        <p className="text-xs text-gray-600 truncate">{admin.email}</p>
+                        <p className="text-xs text-slate-400 truncate">{admin.email}</p>
                       </div>
                     </div>
                   ))}
@@ -326,35 +325,29 @@ const SuperAdminSettings = () => {
               )}
             </div>
 
-            {/* System Status */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center mb-4">
-                <Activity className="h-5 w-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">System Status</h3>
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-lg shadow-black/40">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity className="h-5 w-5 text-emerald-300" />
+                <h3 className="text-lg font-semibold text-slate-50">System Status</h3>
               </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">API Status</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Online</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Database</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Connected</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Functions</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Active</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Storage</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Available</span>
-                </div>
+
+              <div className="space-y-3 text-sm">
+                {[
+                  { label: 'API Status', status: 'Online' },
+                  { label: 'Database', status: 'Connected' },
+                  { label: 'Functions', status: 'Active' },
+                  { label: 'Storage', status: 'Available' }
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
+                    <span className="text-slate-400">{item.label}</span>
+                    <span className="px-2 py-1 rounded text-xs border border-emerald-400/40 text-emerald-200">{item.status}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

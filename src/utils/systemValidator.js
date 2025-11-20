@@ -43,7 +43,7 @@ export class SystemValidator {
   // Test 1: User Registration Flow
   async testUserRegistration() {
     try {
-      const testEmail = `test-user-${Date.now()}@Care Master-test.com`;
+      const testEmail = `test-user-${Date.now()}@ultimatecare-test.com`;
       const testPassword = 'TestPassword123!';
       
       // Create test user
@@ -125,7 +125,7 @@ export class SystemValidator {
       }
 
       // Create a test client user
-      const clientEmail = `test-client-${Date.now()}@Care Master-test.com`;
+      const clientEmail = `test-client-${Date.now()}@ultimatecare-test.com`;
       const clientCredential = await createUserWithEmailAndPassword(auth, clientEmail, 'TestPassword123!');
       
       // Wait for profile creation

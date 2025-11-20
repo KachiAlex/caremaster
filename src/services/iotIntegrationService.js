@@ -1,4 +1,4 @@
-// IoT Integration Service for Care Master
+// IoT Integration Service for UltimateCare
 import aiService from './aiService';
 
 class IoTIntegrationService {
@@ -99,10 +99,10 @@ class IoTIntegrationService {
         connected: true,
         broker: this.config.mqttBroker,
         topics: [
-          'Care Master/devices/+',
-          'Care Master/sensors/+',
-          'Care Master/medical/+',
-          'Care Master/wearables/+'
+          'UltimateCare/devices/+',
+          'UltimateCare/sensors/+',
+          'UltimateCare/medical/+',
+          'UltimateCare/wearables/+'
         ]
       };
 
@@ -221,7 +221,7 @@ class IoTIntegrationService {
       device.status = 'connected';
       device.connection = {
         broker: this.config.mqttBroker,
-        topic: `Care Master/devices/${device.id}`,
+        topic: `UltimateCare/devices/${device.id}`,
         qos: 1
       };
 

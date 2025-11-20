@@ -180,7 +180,13 @@ export const createCareTask = async (taskData) => {
   }
 };
 
-// Update care task
+/**
+ * Update a care task
+ * @param {string} taskId - The task document ID
+ * @param {Object} updateData - Object containing fields to update
+ * @returns {Promise<boolean>} True if task was updated successfully
+ * @throws {Error} If there's an error updating the task
+ */
 export const updateCareTask = async (taskId, updateData) => {
   try {
     const taskRef = doc(db, CARE_TASKS_COLLECTION, taskId);
@@ -197,7 +203,14 @@ export const updateCareTask = async (taskId, updateData) => {
   }
 };
 
-// Complete care task
+/**
+ * Complete a care task
+ * @param {string} taskId - The task document ID
+ * @param {string} completionNotes - Notes about task completion
+ * @param {Array<string>} photos - Array of photo URLs (optional)
+ * @returns {Promise<boolean>} True if task was completed successfully
+ * @throws {Error} If there's an error completing the task
+ */
 export const completeCareTask = async (taskId, completionNotes, photos = []) => {
   try {
     const taskRef = doc(db, CARE_TASKS_COLLECTION, taskId);
@@ -215,7 +228,12 @@ export const completeCareTask = async (taskId, completionNotes, photos = []) => 
   }
 };
 
-// Get today's care tasks for a caregiver
+/**
+ * Get today's care tasks for a caregiver
+ * @param {string} caregiverId - The caregiver user ID
+ * @returns {Promise<Array>} Array of care task objects due today
+ * @throws {Error} If there's an error fetching tasks
+ */
 export const getTodaysCareTasks = async (caregiverId) => {
   try {
     const today = new Date();

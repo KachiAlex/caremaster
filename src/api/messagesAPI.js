@@ -19,7 +19,13 @@ import { db } from '../firebase/config';
 const MESSAGES_COLLECTION = 'messages';
 const CONVERSATIONS_COLLECTION = 'conversations';
 
-// Create a conversation between users
+/**
+ * Create a conversation between users
+ * @param {Array<string>} participants - Array of user IDs participating in the conversation
+ * @param {string} conversationType - Type of conversation ('general', 'medical', 'care', 'emergency')
+ * @returns {Promise<string>} The ID of the created conversation
+ * @throws {Error} If participants array is invalid or creation fails
+ */
 export const createConversation = async (participants, conversationType = 'general') => {
   try {
     // Validate input parameters
@@ -53,7 +59,12 @@ export const createConversation = async (participants, conversationType = 'gener
   }
 };
 
-// Get conversations for a user
+/**
+ * Get all conversations for a user
+ * @param {string} userId - The user ID to fetch conversations for
+ * @returns {Promise<Array>} Array of conversation objects
+ * @throws {Error} If there's an error fetching conversations
+ */
 export const getConversationsByUser = async (userId) => {
   try {
     const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
@@ -177,7 +188,14 @@ export const getOrCreateConversation = async (user1IdOrArray, user2Id, conversat
   }
 };
 
-// Send a message
+/**
+ * Send a message in a conversation
+ * @param {string} conversationId - The conversation ID
+ * @param {string} senderId - The ID of the user sending the message
+ * @param {Object} messageData - Message data object containing text/content and optional metadata
+ * @returns {Promise<string>} The ID of the created message
+ * @throws {Error} If conversation ID, sender ID, or message content is missing
+ */
 export const sendMessage = async (conversationId, senderId, messageData) => {
   try {
     // Validate input parameters
@@ -218,7 +236,13 @@ export const sendMessage = async (conversationId, senderId, messageData) => {
   }
 };
 
-// Get messages for a conversation
+/**
+ * Get messages for a conversation
+ * @param {string} conversationId - The conversation ID
+ * @param {number} limitCount - Maximum number of messages to retrieve (default: 50)
+ * @returns {Promise<Array>} Array of message objects in chronological order
+ * @throws {Error} If conversation ID is missing
+ */
 export const getMessagesByConversation = async (conversationId, limitCount = 50) => {
   try {
     // Validate input parameters
@@ -327,6 +351,39 @@ export const getUnreadMessageCount = async (userId) => {
   } catch (error) {
     console.error('Error getting unread message count:', error);
     throw error;
+  }
+};
+
+/**
+ * Get unread message count for a specific conversation
+ * @param {string} conversationId - The conversation ID
+ * @param {string} userId - The user ID to check unread messages for
+ * @returns {Promise<number>} Number of unread messages (returns 0 on error)
+ */
+export const getUnreadCountForConversation = async (conversationId, userId) => {
+  try {
+    const messagesRef = collection(db, MESSAGES_COLLECTION);
+    const q = query(
+      messagesRef,
+      where('conversationId', '==', conversationId),
+      where('read', '==', false)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    let unreadCount = 0;
+    
+    querySnapshot.forEach((doc) => {
+      const messageData = doc.data();
+      // Count unread messages where user is not the sender
+      if (messageData.senderId !== userId && !messageData.read) {
+        unreadCount++;
+      }
+    });
+    
+    return unreadCount;
+  } catch (error) {
+    console.error('Error getting unread count for conversation:', error);
+    return 0; // Return 0 on error to avoid breaking the UI
   }
 };
 

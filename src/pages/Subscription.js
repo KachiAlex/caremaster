@@ -161,7 +161,7 @@ const Subscription = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Subscription</h1>
-          <p className="text-gray-600">Manage your Care Master subscription and billing</p>
+          <p className="text-slate-300">Manage your UltimateCare subscription and billing</p>
         </div>
         <div className="flex items-center space-x-3">
           <button className="btn btn-secondary">

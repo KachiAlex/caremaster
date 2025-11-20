@@ -123,7 +123,7 @@ const HelpSupport = ({ userRole }) => {
 
   const videoTutorials = [
     {
-      title: 'Getting Started with Care Master',
+      title: 'Getting Started with UltimateCare',
       description: 'Learn the basics of navigating the platform',
       duration: '5 min',
       url: '#',
@@ -469,8 +469,8 @@ const HelpSupport = ({ userRole }) => {
                     <Mail className="h-5 w-5 text-purple-600 mr-3 mt-0.5" />
                     <div>
                       <p className="font-medium text-gray-900">Email Support</p>
-                      <a href="mailto:support@Care Master.com" className="text-sm text-purple-600 hover:text-purple-700">
-                        support@Care Master.com
+                      <a href="mailto:support@ultimatecare.com" className="text-sm text-purple-600 hover:text-purple-700">
+                        support@ultimatecare.com
                       </a>
                       <p className="text-xs text-gray-500 mt-1">Response within 24 hours</p>
                     </div>
@@ -480,8 +480,8 @@ const HelpSupport = ({ userRole }) => {
                     <Phone className="h-5 w-5 text-purple-600 mr-3 mt-0.5" />
                     <div>
                       <p className="font-medium text-gray-900">Phone Support</p>
-                      <a href="tel:+1-800-Care Master" className="text-sm text-purple-600 hover:text-purple-700">
-                        +1 (800) Care Master
+                      <a href="tel:+1-800-ULTIMATE" className="text-sm text-purple-600 hover:text-purple-700">
+                        +1 (800) ULTIMATE
                       </a>
                       <p className="text-xs text-gray-500 mt-1">Mon-Fri, 9AM-5PM EST</p>
                     </div>

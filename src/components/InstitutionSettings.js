@@ -171,7 +171,7 @@ const InstitutionSettings = ({ institutionId }) => {
       await updateDoc(institutionRef, {
         ...settings,
         updatedAt: serverTimestamp(),
-        lastModifiedBy: 'admin' // TODO: Add actual user ID
+        lastModifiedBy: user?.uid || userProfile?.id || 'admin'
       });
 
       toast.success('Settings saved successfully!');

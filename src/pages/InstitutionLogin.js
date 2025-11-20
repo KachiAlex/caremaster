@@ -16,7 +16,10 @@ import {
   Loader,
   AlertCircle,
   ArrowLeft,
-  XCircle
+  XCircle,
+  Shield,
+  Stethoscope,
+  Pill
 } from 'lucide-react';
 import authSecurityService from '../services/authSecurityService';
 
@@ -459,12 +462,50 @@ const InstitutionLogin = () => {
     }
   };
 
+  // Get role-specific icon and colors with app theme
+  const getRoleConfig = () => {
+    // Primary app theme color: #3b82f6 (blue-500)
+    const primaryBlue = 'text-blue-400';
+    const primaryBlueBg = 'from-blue-400 to-blue-600';
+    const primaryBlueText = 'text-blue-300';
+    
+    switch (roleParam) {
+      case 'admin':
+        return {
+          icon: Shield,
+          iconColor: primaryBlue,
+          iconBg: primaryBlueBg,
+          portalLabel: '🛡️ Admin Portal',
+          portalColor: primaryBlueText
+        };
+      case 'pharmacist':
+        return {
+          icon: Pill,
+          iconColor: primaryBlue,
+          iconBg: primaryBlueBg,
+          portalLabel: '💊 Pharmacist Portal',
+          portalColor: primaryBlueText
+        };
+      default:
+        return {
+          icon: Stethoscope,
+          iconColor: primaryBlue,
+          iconBg: primaryBlueBg,
+          portalLabel: '👨‍⚕️ Caregiver Portal (Doctors, Nurses & Caregivers)',
+          portalColor: primaryBlueText
+        };
+    }
+  };
+
+  const roleConfig = getRoleConfig();
+  const RoleIcon = roleConfig.icon;
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
+          <Loader className="h-12 w-12 text-blue-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-300">Loading UltimateCare...</p>
         </div>
       </div>
     );
@@ -472,14 +513,14 @@ const InstitutionLogin = () => {
 
   if (error && !institution) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full text-center">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="rounded-3xl border border-slate-800/80 bg-slate-950/90 backdrop-blur-sm shadow-2xl shadow-black/60 p-8 max-w-md w-full text-center">
+          <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-50 mb-2">Access Error</h2>
+          <p className="text-slate-300 mb-6">{error}</p>
           <button
             onClick={() => navigate('/')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30"
           >
             Return to Home
           </button>
@@ -489,42 +530,45 @@ const InstitutionLogin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Gradient Background with app theme */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-950/20 via-slate-950 to-blue-950/20"></div>
+      
+      <div className="w-full max-w-md relative z-10">
         {/* Back Button */}
         <button
           onClick={() => navigate(`/onboard?institution=${institutionId}`)}
-          className="mb-4 flex items-center text-gray-600 hover:text-gray-900"
+          className="mb-4 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to institution page
         </button>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="rounded-3xl border border-slate-800/80 bg-slate-950/90 backdrop-blur-sm shadow-2xl shadow-black/60 p-8">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">
-              <Building2 className="h-10 w-10 text-blue-600" />
+              <div className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br ${roleConfig.iconBg} shadow-lg`}>
+                <RoleIcon className="h-8 w-8 text-slate-950" />
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl font-bold text-slate-50 mb-2">
               {institution?.name}
             </h1>
-            <p className="text-gray-600 mb-1">
+            <p className="text-slate-300 mb-1">
               {isSignUp ? 'Create your account' : 'Sign in to your account'}
             </p>
-            <p className="text-sm font-medium text-blue-600">
-              {roleParam === 'admin' && '🛡️ Admin Portal'}
-              {roleParam === 'caregiver' && '👨‍⚕️ Caregiver Portal (Doctors, Nurses & Caregivers)'}
-              {roleParam === 'pharmacist' && '💊 Pharmacist Portal'}
+            <p className={`text-sm font-medium ${roleConfig.portalColor}`}>
+              {roleConfig.portalLabel}
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
-              <AlertCircle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="mb-6 p-4 rounded-xl border border-red-400/40 bg-red-500/10 backdrop-blur-sm flex items-start">
+              <AlertCircle className="h-5 w-5 text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-200">{error}</p>
             </div>
           )}
 
@@ -533,42 +577,42 @@ const InstitutionLogin = () => {
             {isSignUp && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Full Name
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                     <input
                       type="text"
                       name="displayName"
                       value={formData.displayName}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
                       placeholder="Enter your full name"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Phone Number
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                     <input
                       type="tel"
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
                       placeholder="Enter your phone number"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Role
                   </label>
                   <select
@@ -576,48 +620,48 @@ const InstitutionLogin = () => {
                     value={formData.role}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
                   >
-                    <option value="caregiver">Caregiver</option>
-                    <option value="nurse">Nurse</option>
-                    <option value="doctor">Doctor</option>
-                    <option value="admin">Institution Admin</option>
+                    <option value="caregiver" className="bg-slate-900">Caregiver</option>
+                    <option value="nurse" className="bg-slate-900">Nurse</option>
+                    <option value="doctor" className="bg-slate-900">Doctor</option>
+                    <option value="admin" className="bg-slate-900">Institution Admin</option>
                   </select>
                 </div>
               </>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
                   placeholder="Enter your email"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <input
                   type="password"
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
                   placeholder="Enter your password"
                 />
               </div>
@@ -625,18 +669,18 @@ const InstitutionLogin = () => {
 
             {isSignUp && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <input
                     type="password"
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
                     placeholder="Confirm your password"
                   />
                 </div>
@@ -646,7 +690,7 @@ const InstitutionLogin = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors flex items-center justify-center"
+              className="w-full py-3 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors flex items-center justify-center shadow-lg bg-blue-600 hover:bg-blue-700 shadow-blue-500/30"
             >
               {submitting ? (
                 <>
@@ -666,7 +710,7 @@ const InstitutionLogin = () => {
                 setIsSignUp(!isSignUp);
                 setError('');
               }}
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="font-medium transition-colors text-blue-400 hover:text-blue-300"
             >
               {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
             </button>
@@ -679,7 +723,7 @@ const InstitutionLogin = () => {
                   setResetEmail(formData.email || '');
                   setShowResetModal(true);
                 }}
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-sm text-slate-400 hover:text-slate-200 transition-colors"
               >
                 Forgot password?
               </button>
@@ -689,16 +733,16 @@ const InstitutionLogin = () => {
       </div>
 
       {showResetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="rounded-3xl border border-slate-800/80 bg-slate-950/90 backdrop-blur-sm shadow-2xl shadow-black/60 w-full max-w-md">
+            <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between rounded-t-3xl">
               <div>
                 <h3 className="text-lg font-semibold">Reset your password</h3>
-                <p className="text-sm text-blue-100">Enter your email to receive a password reset link.</p>
+                <p className="text-sm text-white/80">Enter your email to receive a password reset link.</p>
               </div>
               <button
                 onClick={() => setShowResetModal(false)}
-                className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 text-white hover:bg-white/20 rounded-xl transition-colors"
                 aria-label="Close reset password modal"
               >
                 <XCircle className="h-5 w-5" />
@@ -731,17 +775,17 @@ const InstitutionLogin = () => {
               className="px-6 py-6 space-y-4"
             >
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <input
                     type="email"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
                     placeholder="Enter your account email"
                   />
                 </div>
@@ -751,14 +795,14 @@ const InstitutionLogin = () => {
                 <button
                   type="button"
                   onClick={() => setShowResetModal(false)}
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-300 hover:bg-slate-800/60 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={resettingPassword}
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                  className="px-4 py-2 rounded-xl text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center shadow-lg bg-blue-600 hover:bg-blue-700 shadow-blue-500/30"
                 >
                   {resettingPassword ? (
                     <>

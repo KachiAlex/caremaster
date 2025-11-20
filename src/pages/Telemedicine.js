@@ -293,6 +293,41 @@ const Telemedicine = () => {
           };
           
           await telemedicineAPI.endCall(activeCall.callId, callEndData);
+          
+          // Log telemedicine consultation to patient activity database
+          try {
+            const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
+            const patientId = userType === 'patient' ? user.uid : activeCall.patientId;
+            const doctorId = userType === 'doctor' ? user.uid : activeCall.doctorId;
+            
+            if (patientId && doctorId) {
+              await ComprehensivePatientLogger.logConsultation(
+                patientId,
+                {
+                  consultationType: 'telemedicine',
+                  appointmentId: activeCall.appointmentId,
+                  callId: activeCall.callId,
+                  duration: callDuration,
+                  callType: activeCall.callType || 'video',
+                  hasRecording: isRecording,
+                  endReason: 'user_ended'
+                },
+                {
+                  id: doctorId,
+                  name: userProfile?.name || userProfile?.displayName || 'Doctor',
+                  role: 'doctor',
+                  userType: 'doctor',
+                  type: 'doctor',
+                  email: userProfile?.email,
+                  medicalQualification: 'Physician',
+                  institutionId: userProfile?.institutionId
+                }
+              );
+            }
+          } catch (logError) {
+            console.warn('Failed to log telemedicine consultation:', logError);
+            // Don't fail the call end if logging fails
+          }
         } catch (firebaseError) {
           console.warn('Failed to save call end to Firebase:', firebaseError);
         }
@@ -1001,7 +1036,7 @@ const Telemedicine = () => {
           patientInfo={{
             name: user?.displayName || 'Patient Name',
             email: user?.email,
-            phone: user?.phoneNumber || '+234 XXX XXX XXXX',
+            phone: user?.phoneNumber || userProfile?.phone || 'Not provided',
             address: 'Patient Address',
             age: 65,
             gender: 'Not specified',
@@ -1010,11 +1045,11 @@ const Telemedicine = () => {
           doctorInfo={{
             name: selectedAppointmentForDocs.doctorName || 'Healthcare Provider',
             specialty: selectedAppointmentForDocs.doctorSpecialty || 'General Practice',
-            email: 'doctor@Care Master.com',
-            phone: '+234 800 Care Master',
+            email: 'doctor@ultimatecare.com',
+            phone: '+234 800 ULTIMATE',
             licenseNumber: 'MD-2024-001',
             qualifications: ['MBBS', 'MD'],
-            hospital: 'Care Master Telemedicine Platform'
+            hospital: 'UltimateCare Telemedicine Platform'
           }}
           onClose={() => setShowDocuments(false)}
         />

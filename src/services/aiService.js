@@ -1,4 +1,4 @@
-// AI Service for Care Master - Advanced AI Integration
+// AI Service for UltimateCare - Advanced AI Integration
 class AIService {
   constructor() {
     this.isInitialized = false;

@@ -25,6 +25,8 @@ import {
   DollarSign
 } from 'lucide-react';
 import { getAllUsers, updateUser, deleteUser, createUser } from '../api/usersAPI';
+import { createPatient } from '../api/patientsAPI';
+import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import UserDataFixer from './UserDataFixer';
 import ProfilePicture from './ProfilePicture';
@@ -32,6 +34,7 @@ import UserNameWithAvatar from './UserNameWithAvatar';
 import CaregiverWageEditModal from './CaregiverWageEditModal';
 
 const UserManagement = ({ institutionId }) => {
+  const { userProfile } = useUser();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +48,7 @@ const UserManagement = ({ institutionId }) => {
   const [showAddCaregiverModal, setShowAddCaregiverModal] = useState(false);
   const [showWageModal, setShowWageModal] = useState(false);
   const [selectedCaregiverForWage, setSelectedCaregiverForWage] = useState(null);
+  const [createdPatientId, setCreatedPatientId] = useState(null);
   const [newUserForm, setNewUserForm] = useState({
     name: '',
     email: '',
@@ -333,36 +337,62 @@ const UserManagement = ({ institutionId }) => {
         updatedAt: new Date()
       };
 
-      // Add role-specific data
-      if (userType === 'client') {
-        userData.clientData = {
+      // For patients (clients), use the new hospital operations patient registration
+      if (userType === 'client' || userType === 'patient') {
+        // Use the new patient registration system with simple, memorable patient ID
+        const patientData = {
+          name: newUserForm.name.trim(),
+          fullName: newUserForm.name.trim(),
+          email: newUserForm.email.trim().toLowerCase(),
+          phone: newUserForm.phone.trim(),
           address: newUserForm.address.trim(),
-          emergencyContact: newUserForm.emergencyContact.trim(),
-          emergencyPhone: newUserForm.emergencyPhone.trim(),
-          medicalConditions: newUserForm.medicalConditions.trim(),
-          medications: newUserForm.medications.trim(),
-          allergies: newUserForm.allergies.trim(),
-          careLevel: newUserForm.careLevel
+          emergencyContactName: newUserForm.emergencyContact.trim(),
+          emergencyContactPhone: newUserForm.emergencyPhone.trim(),
+          medicalConditions: newUserForm.medicalConditions.trim() ? newUserForm.medicalConditions.trim().split(',').map(c => c.trim()) : [],
+          medications: newUserForm.medications.trim() ? newUserForm.medications.trim().split(',').map(m => m.trim()) : [],
+          allergies: newUserForm.allergies.trim() ? newUserForm.allergies.trim().split(',').map(a => a.trim()) : [],
+          careLevel: newUserForm.careLevel,
+          institutionId: institutionId,
+          userType: 'patient',
+          type: 'patient'
         };
-      } else if (userType === 'caregiver') {
-        userData.caregiverData = {
-          hourlyRate: newUserForm.hourlyRate ? parseFloat(newUserForm.hourlyRate) : null,
-          monthlyRate: newUserForm.monthlyRate ? parseFloat(newUserForm.monthlyRate) : null,
-          specializations: newUserForm.specializations.trim(),
-          experience: newUserForm.experience.trim(),
-          certifications: newUserForm.certifications.trim(),
-          availability: newUserForm.availability
-        };
-      }
 
-      // Create the user in Firestore
-      await createUser(userData);
-      
-      toast.success(`${userType === 'client' ? 'Client' : 'Caregiver'} created successfully!`);
-      resetForm();
-      setShowAddClientModal(false);
-      setShowAddCaregiverModal(false);
-      loadUsers();
+        const result = await createPatient(patientData, userProfile);
+        setCreatedPatientId(result.patientId);
+        
+        toast.success(
+          <div>
+            <div className="font-semibold">Patient registered successfully!</div>
+            <div className="text-sm mt-1">Patient ID: <span className="font-mono font-bold text-emerald-600">{result.patientId}</span></div>
+          </div>,
+          { autoClose: 5000 }
+        );
+        
+        resetForm();
+        setShowAddClientModal(false);
+        loadUsers();
+      } else {
+        // For other user types, use the standard user creation
+        if (userType === 'caregiver') {
+          userData.caregiverData = {
+            hourlyRate: newUserForm.hourlyRate ? parseFloat(newUserForm.hourlyRate) : null,
+            monthlyRate: newUserForm.monthlyRate ? parseFloat(newUserForm.monthlyRate) : null,
+            specializations: newUserForm.specializations.trim(),
+            experience: newUserForm.experience.trim(),
+            certifications: newUserForm.certifications.trim(),
+            availability: newUserForm.availability
+          };
+        }
+
+        // Create the user in Firestore
+        await createUser(userData);
+        
+        toast.success(`${userType === 'client' ? 'Patient' : 'Caregiver'} created successfully!`);
+        resetForm();
+        setShowAddClientModal(false);
+        setShowAddCaregiverModal(false);
+        loadUsers();
+      }
     } catch (error) {
       console.error('Error creating user:', error);
       toast.error(`Failed to create ${userType}: ${error.message}`);

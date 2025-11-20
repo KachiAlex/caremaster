@@ -146,25 +146,59 @@ export const pharmacyAPI = {
 
       await updateDoc(prescriptionRef, updateData);
       
-      // Log activity to client's database
-      await logPharmacistActivity({
-        clientId: currentData.clientId,
-        prescriptionId: prescriptionId,
-        pharmacistId: pharmacyData.pharmacistId,
-        pharmacistName: pharmacyData.pharmacistName,
-        activityType: 'prescription_update',
-        description: `Prescription ${currentData.prescriptionNumber} updated by pharmacist`,
-        details: {
-          prescriptionNumber: currentData.prescriptionNumber,
-          diagnosis: currentData.diagnosis,
-          availability: pharmacyData.available,
-          price: pharmacyData.price,
-          stockQuantity: pharmacyData.stockQuantity,
-          status: pharmacyData.status,
-          notes: pharmacyData.notes,
-          medications: currentData.medications?.map(med => med.medicationName).join(', ') || 'Unknown'
+      // Log activity to client's database (comprehensive logging)
+      try {
+        const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
+        await ComprehensivePatientLogger.logPrescriptionDispensed(
+          currentData.clientId,
+          {
+            prescriptionId: prescriptionId,
+            prescriptionNumber: currentData.prescriptionNumber,
+            medicationName: currentData.medications?.map(med => med.medicationName).join(', ') || 'Unknown',
+            availability: pharmacyData.available,
+            price: pharmacyData.price,
+            stockQuantity: pharmacyData.stockQuantity,
+            dispensedQuantity: pharmacyData.dispensedQuantity,
+            status: pharmacyData.status,
+            notes: pharmacyData.notes,
+            diagnosis: currentData.diagnosis
+          },
+          {
+            id: pharmacyData.pharmacistId,
+            name: pharmacyData.pharmacistName,
+            role: 'pharmacist',
+            userType: 'pharmacist',
+            type: 'pharmacist',
+            email: pharmacyData.pharmacistEmail,
+            medicalQualification: 'Pharmacist',
+            institutionId: currentData.institutionId
+          }
+        );
+      } catch (comprehensiveError) {
+        // Fallback to old logger
+        try {
+          await logPharmacistActivity({
+            clientId: currentData.clientId,
+            prescriptionId: prescriptionId,
+            pharmacistId: pharmacyData.pharmacistId,
+            pharmacistName: pharmacyData.pharmacistName,
+            activityType: 'prescription_update',
+            description: `Prescription ${currentData.prescriptionNumber} updated by pharmacist`,
+            details: {
+              prescriptionNumber: currentData.prescriptionNumber,
+              diagnosis: currentData.diagnosis,
+              availability: pharmacyData.available,
+              price: pharmacyData.price,
+              stockQuantity: pharmacyData.stockQuantity,
+              status: pharmacyData.status,
+              notes: pharmacyData.notes,
+              medications: currentData.medications?.map(med => med.medicationName).join(', ') || 'Unknown'
+            }
+          });
+        } catch (fallbackError) {
+          console.error('Error logging pharmacist activity:', fallbackError, comprehensiveError);
         }
-      });
+      }
       
       // Send notification to admin
       await sendAdminNotification({

@@ -18,14 +18,14 @@ import {
 
 // Storage keys for different roles
 const STORAGE_KEYS = {
-  SUPER_ADMIN: 'Care Master_super_admin_session',
-  ADMIN: 'Care Master_admin_session',
-  CAREGIVER: 'Care Master_caregiver_session',
-  DOCTOR: 'Care Master_doctor_session',
-  NURSE: 'Care Master_nurse_session',
-  PHARMACIST: 'Care Master_pharmacist_session',
-  CLIENT: 'Care Master_client_session',
-  CURRENT_ROLE: 'Care Master_current_role'
+  SUPER_ADMIN: 'UltimateCare_super_admin_session',
+  ADMIN: 'UltimateCare_admin_session',
+  CAREGIVER: 'UltimateCare_caregiver_session',
+  DOCTOR: 'UltimateCare_doctor_session',
+  NURSE: 'UltimateCare_nurse_session',
+  PHARMACIST: 'UltimateCare_pharmacist_session',
+  CLIENT: 'UltimateCare_client_session',
+  CURRENT_ROLE: 'UltimateCare_current_role'
 };
 
 // Get the storage key for a specific role

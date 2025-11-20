@@ -339,7 +339,7 @@ const Dashboard = () => {
 
         {/* Right - Emergency & Contact */}
         <div className="space-y-3">
-          <button
+          <button 
             onClick={handleEmergencyAlert}
             className="flex w-full items-center justify-between gap-3 rounded-3xl border border-rose-500/40 bg-gradient-to-r from-rose-600 to-orange-500 px-4 py-3 text-left text-xs font-medium text-white shadow-lg shadow-rose-500/40 hover:from-rose-500 hover:to-orange-400"
           >
@@ -353,7 +353,7 @@ const Dashboard = () => {
             <Clock className="h-4 w-4 opacity-80" />
           </button>
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <button
+            <button 
               className="rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-left text-slate-200 hover:border-emerald-400/60 hover:bg-slate-900"
               onClick={() =>
                 userProfile?.emergencyContactPhone &&
@@ -365,10 +365,10 @@ const Dashboard = () => {
                 Family contact
               </p>
               <p className="mt-1 text-xs font-medium">
-                {userProfile?.emergencyContactName || 'Family'}
+              {userProfile?.emergencyContactName || 'Family'}
               </p>
             </button>
-            <button
+            <button 
               className="rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-left text-slate-200 hover:border-sky-400/60 hover:bg-slate-900"
               onClick={() =>
                 userProfile?.doctorPhone && window.open(`tel:${userProfile.doctorPhone}`)
@@ -379,7 +379,7 @@ const Dashboard = () => {
                 Primary doctor
               </p>
               <p className="mt-1 text-xs font-medium">
-                {userProfile?.primaryCareDoctor || userProfile?.doctorName || 'Doctor'}
+              {userProfile?.primaryCareDoctor || userProfile?.doctorName || 'Doctor'}
               </p>
             </button>
           </div>
@@ -413,7 +413,7 @@ const Dashboard = () => {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <button
+        <button 
           onClick={() => navigate('/appointments')}
           className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-emerald-400/60 hover:bg-slate-900"
         >
@@ -423,7 +423,7 @@ const Dashboard = () => {
             {dashboardData.loading ? '…' : dashboardData.upcomingAppointments.length}
           </p>
         </button>
-        <button
+        <button 
           onClick={() => navigate('/vital-signs')}
           className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-sky-400/60 hover:bg-slate-900"
         >
@@ -435,11 +435,11 @@ const Dashboard = () => {
             {dashboardData.loading
               ? '…'
               : dashboardData.latestVitalSigns?.type === 'Blood Pressure'
-              ? dashboardData.latestVitalSigns.value
+                ? dashboardData.latestVitalSigns.value 
               : dashboardData.latestVitalSigns?.value || '--'}
           </p>
         </button>
-        <button
+        <button 
           onClick={() => navigate('/messages')}
           className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-indigo-400/60 hover:bg-slate-900"
         >
@@ -449,7 +449,7 @@ const Dashboard = () => {
             {dashboardData.loading ? '…' : dashboardData.unreadMessages}
           </p>
         </button>
-        <button
+        <button 
           onClick={() => navigate('/medications')}
           className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-violet-400/60 hover:bg-slate-900"
         >
@@ -495,10 +495,10 @@ const Dashboard = () => {
                     <p className="mt-1 text-[11px] text-slate-300">
                       {appointment.scheduledTime
                         ? new Date(appointment.scheduledTime).toLocaleString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: 'numeric',
+                          weekday: 'short',
+                          month: 'short', 
+                          day: 'numeric',
+                          hour: 'numeric',
                             minute: '2-digit',
                           })
                         : 'Time TBD'}
@@ -566,31 +566,31 @@ const Dashboard = () => {
                   className="rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-200 hover:border-emerald-400/60"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
+                  <div className="flex-1">
                       <div className="mb-1 flex items-center gap-2">
                         <FileText className="h-3.5 w-3.5 text-emerald-300" />
                         <h3 className="text-sm font-medium text-slate-50">
                           {task.title || 'Care task'}
                         </h3>
-                      </div>
-                      {task.description && (
+                    </div>
+                    {task.description && (
                         <p className="mb-1 text-[11px] text-slate-400">{task.description}</p>
-                      )}
+                    )}
                       <div className="flex flex-wrap gap-2 text-[11px] text-slate-400">
-                        {task.caregiverName && (
+                      {task.caregiverName && (
                           <span>
                             <User className="mr-1 inline h-3 w-3" />
-                            Assigned to: {task.caregiverName}
-                          </span>
-                        )}
-                        {task.dueDate && (
+                          Assigned to: {task.caregiverName}
+                        </span>
+                      )}
+                      {task.dueDate && (
                           <span>
                             <Clock className="mr-1 inline h-3 w-3" />
-                            Due: {task.dueDate} {task.dueTime && `at ${task.dueTime}`}
-                          </span>
-                        )}
-                      </div>
+                          Due: {task.dueDate} {task.dueTime && `at ${task.dueTime}`}
+                        </span>
+                      )}
                     </div>
+                  </div>
                     <div className="ml-3 flex flex-col items-end gap-1">
                       <span
                         className={`rounded-full px-3 py-1 text-[10px] font-medium ${
@@ -604,7 +604,7 @@ const Dashboard = () => {
                         }`}
                       >
                         {task.priority || 'Normal'} priority
-                      </span>
+                    </span>
                       <span
                         className={`rounded-full px-3 py-1 text-[10px] font-medium ${
                           task.status === 'pending'
@@ -619,11 +619,11 @@ const Dashboard = () => {
                         {task.status
                           ? task.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
                           : 'Pending'}
-                      </span>
-                    </div>
+                    </span>
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
             {dashboardData.caregiverTasks.filter((t) => t.status !== 'completed').length > 5 && (
               <p className="mt-2 text-center text-[11px] text-slate-400">
                 +

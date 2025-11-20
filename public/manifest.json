@@ -1,6 +1,6 @@
 {
-  "name": "Care Master",
-  "short_name": "Care Master",
+  "name": "UltimateCare",
+  "short_name": "UltimateCare",
   "description": "Comprehensive platform for elderly care management with real-time communication",
   "start_url": "/",
   "display": "standalone",

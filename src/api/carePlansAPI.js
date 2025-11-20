@@ -14,11 +14,12 @@ import {
   Timestamp,
   onSnapshot
 } from 'firebase/firestore';
+import { logCarePlanUpdate } from '../utils/patientLogger';
 
 const CARE_PLANS_COLLECTION = 'carePlans';
 
 // Create a new care plan (Doctor only)
-export const createCarePlan = async (carePlanData) => {
+export const createCarePlan = async (carePlanData, clinicianInfo = null) => {
   try {
     const docRef = await addDoc(collection(db, CARE_PLANS_COLLECTION), {
       ...carePlanData,
@@ -28,6 +29,46 @@ export const createCarePlan = async (carePlanData) => {
     });
     
     console.log('✅ Care plan created:', docRef.id);
+    
+    // Log to patient logs if clinician info is provided
+    if (clinicianInfo && carePlanData.clientId) {
+      try {
+        // Get patient's simple patientId if available
+        const patientDoc = await getDoc(doc(db, 'patients', carePlanData.clientId)).catch(() => null);
+        const patientData = patientDoc?.exists() ? patientDoc.data() : null;
+        let patientSimpleId = patientData?.patientId || carePlanData.clientId;
+        
+        // Also check legacy clients collection
+        if (!patientData || patientSimpleId === carePlanData.clientId) {
+          const legacyClientDoc = await getDoc(doc(db, 'clients', carePlanData.clientId)).catch(() => null);
+          const legacyClientData = legacyClientDoc?.exists() ? legacyClientDoc.data() : null;
+          if (legacyClientData?.patientId) {
+            patientSimpleId = legacyClientData.patientId;
+          }
+        }
+        
+        await logCarePlanUpdate(patientSimpleId, clinicianInfo, {
+          carePlanId: docRef.id,
+          action: 'created',
+          changes: 'New care plan created',
+          carePlanData: {
+            diagnosis: carePlanData.diagnosis || carePlanData.careObjectives || '',
+            objectives: carePlanData.careObjectives || carePlanData.goals || [],
+            activities: carePlanData.dailyCareActivities || carePlanData.interventions || [],
+            medications: carePlanData.medicationSchedule || carePlanData.medications || [],
+            dietary: carePlanData.dietaryRequirements || '',
+            mobility: carePlanData.mobilityPlan || '',
+            specialInstructions: carePlanData.specialInstructions || '',
+            startDate: carePlanData.startDate,
+            reviewDate: carePlanData.reviewDate
+          }
+        });
+      } catch (logError) {
+        console.warn('Could not log care plan creation to patient logs:', logError);
+        // Don't fail the care plan creation if logging fails
+      }
+    }
+    
     return { id: docRef.id, ...carePlanData };
   } catch (error) {
     console.error('❌ Error creating care plan:', error);
@@ -145,15 +186,51 @@ export const getCarePlan = async (planId) => {
 };
 
 // Update a care plan
-export const updateCarePlan = async (planId, updateData) => {
+export const updateCarePlan = async (planId, updateData, clinicianInfo = null) => {
   try {
     const docRef = doc(db, CARE_PLANS_COLLECTION, planId);
+    
+    // Get existing care plan to find clientId
+    const existingPlan = await getDoc(docRef);
+    const existingData = existingPlan.exists() ? existingPlan.data() : null;
+    
     await updateDoc(docRef, {
       ...updateData,
       updatedAt: serverTimestamp()
     });
     
     console.log('✅ Care plan updated:', planId);
+    
+    // Log to patient logs if clinician info is provided
+    if (clinicianInfo && existingData?.clientId) {
+      try {
+        // Get patient's simple patientId if available
+        const patientDoc = await getDoc(doc(db, 'patients', existingData.clientId)).catch(() => null);
+        const patientData = patientDoc?.exists() ? patientDoc.data() : null;
+        let patientSimpleId = patientData?.patientId || existingData.clientId;
+        
+        // Also check legacy clients collection
+        if (!patientData || patientSimpleId === existingData.clientId) {
+          const legacyClientDoc = await getDoc(doc(db, 'clients', existingData.clientId)).catch(() => null);
+          const legacyClientData = legacyClientDoc?.exists() ? legacyClientDoc.data() : null;
+          if (legacyClientData?.patientId) {
+            patientSimpleId = legacyClientData.patientId;
+          }
+        }
+        
+        await logCarePlanUpdate(patientSimpleId, clinicianInfo, {
+          carePlanId: planId,
+          action: 'updated',
+          changes: Object.keys(updateData).join(', '),
+          previousPlan: existingData,
+          newPlan: { ...existingData, ...updateData }
+        });
+      } catch (logError) {
+        console.warn('Could not log care plan update to patient logs:', logError);
+        // Don't fail the care plan update if logging fails
+      }
+    }
+    
     return { id: planId, ...updateData };
   } catch (error) {
     console.error('❌ Error updating care plan:', error);

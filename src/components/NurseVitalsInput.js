@@ -17,7 +17,7 @@ import { createVitalSign } from '../api/vitalSignsAPI';
 import { useUser } from '../contexts/UserContext';
 
 const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, onCancel }) => {
-  const { institutionId } = useUser();
+  const { institutionId, userProfile } = useUser();
   const [formData, setFormData] = useState({
     // Blood Pressure
     systolic: '',
@@ -286,9 +286,45 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
         });
       }
       
-      // Save all vital signs
+      // Prepare clinician info for logging
+      const clinicianInfo = {
+        id: nurseId || userProfile?.id || userProfile?.uid,
+        name: nurseName || userProfile?.name || userProfile?.displayName,
+        role: userProfile?.userType || userProfile?.type || 'nurse',
+        email: userProfile?.email,
+        institutionId: institutionId
+      };
+      
+      // Save all vital signs with clinician info for logging
       for (const vitalSign of vitalSignsToSave) {
-        await createVitalSign(vitalSign, institutionId);
+        await createVitalSign(vitalSign, institutionId, clinicianInfo);
+      }
+      
+      // Log vital signs activity to patient database (comprehensive logging)
+      try {
+        const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
+        const vitalSignsData = {
+          vitals: vitalSignsToSave.map(v => ({
+            type: v.type,
+            value: v.value,
+            unit: v.unit,
+            status: v.status
+          })),
+          assessmentTime: formData.assessmentTime,
+          notes: formData.notes
+        };
+        
+        await ComprehensivePatientLogger.logVitalSigns(
+          patientId,
+          vitalSignsData,
+          {
+            ...clinicianInfo,
+            medicalQualification: userProfile?.medicalQualification
+          }
+        );
+      } catch (logError) {
+        console.warn('Could not log vital signs to patient database:', logError);
+        // Don't fail the vital signs recording if logging fails
       }
       
       toast.success(`Successfully recorded ${vitalSignsToSave.length} vital sign(s) for ${patientName}`);

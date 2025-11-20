@@ -93,7 +93,7 @@ export const PRODUCTION_SECURITY_CONFIG = {
   // API Security
   apiSecurity: {
     corsEnabled: true,
-    corsOrigins: ['https://elderx-f5c2b.web.app', 'https://elderx-f5c2b.firebaseapp.com'],
+    corsOrigins: ['https://ultimatecare-2025.web.app', 'https://ultimatecare-2025.firebaseapp.com'],
     apiKeyRequired: true,
     requestValidation: true,
     responseSanitization: true
@@ -168,9 +168,9 @@ export const PRODUCTION_SECURITY_CONFIG = {
     enabled: true,
     responseTime: 15, // minutes
     escalationLevels: [
-      { level: 1, time: 15, contacts: ['security@Care Master.com'] },
-      { level: 2, time: 30, contacts: ['cto@Care Master.com', 'security@Care Master.com'] },
-      { level: 3, time: 60, contacts: ['ceo@Care Master.com', 'cto@Care Master.com', 'security@Care Master.com'] }
+      { level: 1, time: 15, contacts: ['security@ultimatecare.com'] },
+      { level: 2, time: 30, contacts: ['cto@ultimatecare.com', 'security@ultimatecare.com'] },
+      { level: 3, time: 60, contacts: ['ceo@ultimatecare.com', 'cto@ultimatecare.com', 'security@ultimatecare.com'] }
     ],
     notificationChannels: ['email', 'sms', 'slack'],
     documentationRequired: true

@@ -85,11 +85,11 @@ const SecuritySettings = () => {
         const credential = await navigator.credentials.create({
           publicKey: {
             challenge: new Uint8Array(32),
-            rp: { name: "Care Master" },
+            rp: { name: "UltimateCare" },
             user: {
               id: new Uint8Array(16),
-              name: "user@Care Master.com",
-              displayName: "Care Master User"
+              name: "user@ultimatecare.com",
+              displayName: "UltimateCare User"
             },
             pubKeyCredParams: [{ alg: -7, type: "public-key" }],
             authenticatorSelection: {

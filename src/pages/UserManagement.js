@@ -210,7 +210,7 @@ const UserManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
-              <p className="text-gray-600 mt-2">Manage users across all roles in the Care Master platform</p>
+              <p className="text-slate-300 mt-2">Manage users across all roles in the UltimateCare platform</p>
             </div>
             
             <div className="flex space-x-3">

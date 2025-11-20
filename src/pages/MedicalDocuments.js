@@ -314,11 +314,11 @@ const MedicalDocuments = () => {
           doctorInfo={{
             name: selectedAppointment.doctorName || 'Healthcare Provider',
             specialty: selectedAppointment.doctorSpecialty || 'General Practice',
-            email: 'doctor@Care Master.com',
-            phone: '+234 800 Care Master',
+            email: 'doctor@ultimatecare.com',
+            phone: '+234 800 ULTIMATE',
             licenseNumber: 'MD-2024-001',
             qualifications: ['MBBS', 'MD'],
-            hospital: 'Care Master Telemedicine Platform'
+            hospital: 'UltimateCare Telemedicine Platform'
           }}
           onClose={() => setShowDocuments(false)}
         />

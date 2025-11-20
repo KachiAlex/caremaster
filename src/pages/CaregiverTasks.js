@@ -17,8 +17,12 @@ import {
   Phone,
   MapPin
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
+import { getTaskAssignmentsByCaregiver } from '../api/taskAssignmentAPI';
 
 const CaregiverTasks = () => {
+  const { user, userProfile } = useUser();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,9 +31,41 @@ const CaregiverTasks = () => {
 
   useEffect(() => {
     const loadTasks = async () => {
+      if (!user?.uid) {
+        setLoading(false);
+        return;
+      }
+      
       try {
-        // TODO: Integrate with real API: getPendingCareTasks(userId) or taskAssignments
-        setTasks([]);
+        setLoading(true);
+        // Load today's tasks and upcoming tasks
+        const [todayTasks, upcomingTasks, assignments] = await Promise.all([
+          getTodayTasks(user.uid).catch(() => []),
+          getUpcomingTasks(user.uid).catch(() => []),
+          getTaskAssignmentsByCaregiver(user.uid).catch(() => [])
+        ]);
+        
+        // Combine and format tasks
+        const allTasks = [
+          ...todayTasks.map(task => ({ ...task, source: 'careTasks' })),
+          ...upcomingTasks.map(task => ({ ...task, source: 'careTasks' })),
+          ...assignments.map(assignment => ({
+            id: assignment.id,
+            title: assignment.taskTitle || assignment.title || 'Care Task',
+            patientName: assignment.patientName || assignment.clientName || 'Unknown',
+            status: assignment.status || 'pending',
+            priority: assignment.priority || 'medium',
+            dueDate: assignment.dueDate || assignment.scheduledTime,
+            source: 'assignments'
+          }))
+        ];
+        
+        // Remove duplicates based on task ID
+        const uniqueTasks = Array.from(
+          new Map(allTasks.map(task => [task.id, task])).values()
+        );
+        
+        setTasks(uniqueTasks);
       } catch (error) {
         console.error('Error loading tasks:', error);
       } finally {
@@ -38,7 +74,7 @@ const CaregiverTasks = () => {
     };
 
     loadTasks();
-  }, []);
+  }, [user?.uid]);
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

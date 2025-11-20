@@ -15,6 +15,8 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { logVitalSigns } from '../utils/patientLogger';
+import { checkAbnormalVitalSigns } from '../utils/patientLogNotifications';
 
 const VITAL_SIGNS_COLLECTION = 'vitalSigns';
 
@@ -129,7 +131,7 @@ export const getVitalSignsByType = async (patientId, vitalType) => {
 };
 
 // Create new vital sign record
-export const createVitalSign = async (vitalSignData, institutionId = null) => {
+export const createVitalSign = async (vitalSignData, institutionId = null, clinicianInfo = null) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
     const newVitalSign = {
@@ -141,6 +143,48 @@ export const createVitalSign = async (vitalSignData, institutionId = null) => {
     };
     
     const docRef = await addDoc(vitalSignsRef, newVitalSign);
+    
+    // Log to patient logs if clinician info is provided
+    if (clinicianInfo && vitalSignData.patientId) {
+      try {
+        // Get patient's simple patientId if available
+        const patientDoc = await getDoc(doc(db, 'patients', vitalSignData.patientId)).catch(() => null);
+        const patientData = patientDoc?.exists() ? patientDoc.data() : null;
+        const patientSimpleId = patientData?.patientId || vitalSignData.patientId;
+        
+        await logVitalSigns(patientSimpleId, clinicianInfo, {
+          type: vitalSignData.type,
+          value: vitalSignData.value,
+          unit: vitalSignData.unit,
+          status: vitalSignData.status,
+          notes: vitalSignData.notes,
+          recordedAt: new Date().toISOString()
+        });
+
+        // Check for abnormal vital signs and send notifications
+        try {
+          const patientName = patientData?.name || patientData?.fullName || 'Patient';
+          await checkAbnormalVitalSigns(
+            {
+              type: vitalSignData.type,
+              value: vitalSignData.value,
+              unit: vitalSignData.unit,
+              status: vitalSignData.status
+            },
+            patientSimpleId,
+            patientName,
+            institutionId || vitalSignData.institutionId
+          );
+        } catch (notificationError) {
+          console.warn('Could not check abnormal vital signs:', notificationError);
+          // Don't fail the vital sign creation if notification check fails
+        }
+      } catch (logError) {
+        console.warn('Could not log vital signs to patient logs:', logError);
+        // Don't fail the vital sign creation if logging fails
+      }
+    }
+    
     return docRef.id;
   } catch (error) {
     console.error('Error creating vital sign:', error);

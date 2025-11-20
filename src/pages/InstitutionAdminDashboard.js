@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
-import { Activity, Users, Calendar, Stethoscope, ShieldCheck, Building2 } from 'lucide-react';
+import { Activity, Users, Calendar, Stethoscope, ShieldCheck, Building2, Bed, UserCog, Heart, UserPlus } from 'lucide-react';
+import CreatePatientModal from '../components/CreatePatientModal';
 
 const StatCard = ({ icon: Icon, label, value, accent }) => (
   <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 shadow-lg shadow-black/40">
@@ -22,6 +24,8 @@ const StatCard = ({ icon: Icon, label, value, accent }) => (
 
 const InstitutionAdminDashboard = () => {
   const { institutionData, userProfile } = useUser();
+  const navigate = useNavigate();
+  const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
 
   const displayName =
     userProfile?.name || userProfile?.displayName || userProfile?.email || 'Institution admin';
@@ -79,7 +83,7 @@ const InstitutionAdminDashboard = () => {
           />
           <StatCard
             icon={Calendar}
-            label="Today’s visits"
+            label="Today's visits"
             value={institutionData?.metrics?.todaysVisits ?? '—'}
             accent="from-indigo-400 to-indigo-300"
           />
@@ -89,6 +93,55 @@ const InstitutionAdminDashboard = () => {
             value={institutionData?.metrics?.openEscalations ?? '—'}
             accent="from-rose-400 to-orange-300"
           />
+        </section>
+
+        {/* Quick Actions */}
+        <section className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-slate-50 sm:text-base">Quick Actions</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <button
+              onClick={() => setShowCreatePatientModal(true)}
+              className="flex flex-col items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-600/10 px-4 py-4 text-center hover:border-emerald-500/50 hover:bg-emerald-600/20 transition-colors group"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg group-hover:shadow-emerald-500/50 transition-shadow">
+                <Heart className="h-5 w-5 text-slate-950" />
+              </div>
+              <span className="text-xs font-semibold text-slate-50">Register Patient</span>
+              <span className="text-[10px] text-slate-400">Create new patient record</span>
+            </button>
+            <button
+              onClick={() => navigate('/institution-admin/users')}
+              className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-sky-400/50 hover:bg-slate-900 transition-colors group"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 shadow-lg">
+                <UserPlus className="h-5 w-5 text-slate-950" />
+              </div>
+              <span className="text-xs font-semibold text-slate-50">Manage Users</span>
+              <span className="text-[10px] text-slate-400">View all users</span>
+            </button>
+            <button
+              onClick={() => navigate('/institution-admin/hospital-operations')}
+              className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-indigo-400/50 hover:bg-slate-900 transition-colors group"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-lg">
+                <Bed className="h-5 w-5 text-slate-950" />
+              </div>
+              <span className="text-xs font-semibold text-slate-50">Hospital Ops</span>
+              <span className="text-[10px] text-slate-400">Bed management</span>
+            </button>
+            <button
+              onClick={() => navigate('/institution-admin/staff-management')}
+              className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-amber-400/50 hover:bg-slate-900 transition-colors group"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg">
+                <UserCog className="h-5 w-5 text-slate-950" />
+              </div>
+              <span className="text-xs font-semibold text-slate-50">Staff Management</span>
+              <span className="text-[10px] text-slate-400">Team & shifts</span>
+            </button>
+          </div>
         </section>
 
         {/* Main grid */}
@@ -106,19 +159,31 @@ const InstitutionAdminDashboard = () => {
                   </h2>
                 </div>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <button className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-emerald-400/60 hover:bg-slate-900">
-                  <span className="text-[11px] font-medium text-slate-400">Assignments</span>
-                  <span className="text-xs font-semibold text-slate-50">Manage care teams</span>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <button 
+                  onClick={() => navigate('/institution-admin/hospital-operations')}
+                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-emerald-400/60 hover:bg-slate-900 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Bed className="h-4 w-4 text-emerald-400" />
+                    <span className="text-[11px] font-medium text-slate-400">Hospital Operations</span>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-50">Bed & Incident Management</span>
                   <span className="text-[11px] text-slate-500">
-                    Match caregivers to patient caseloads.
+                    Monitor bed occupancy, incidents, and hospital KPIs.
                   </span>
                 </button>
-                <button className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-sky-400/60 hover:bg-slate-900">
-                  <span className="text-[11px] font-medium text-slate-400">Utilization</span>
-                  <span className="text-xs font-semibold text-slate-50">Shift coverage</span>
+                <button 
+                  onClick={() => navigate('/institution-admin/staff-management')}
+                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-sky-400/60 hover:bg-slate-900 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <UserCog className="h-4 w-4 text-sky-400" />
+                    <span className="text-[11px] font-medium text-slate-400">Staff Management</span>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-50">Team & Shift Coordination</span>
                   <span className="text-[11px] text-slate-500">
-                    See who is on duty and where gaps exist.
+                    Manage staff roster, shifts, and assignments.
                   </span>
                 </button>
                 <button className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-indigo-400/60 hover:bg-slate-900">
@@ -183,6 +248,16 @@ const InstitutionAdminDashboard = () => {
           </div>
         </section>
       </main>
+
+      {/* Create Patient Modal */}
+      <CreatePatientModal
+        open={showCreatePatientModal}
+        onClose={() => setShowCreatePatientModal(false)}
+        onSuccess={(result) => {
+          // Optionally refresh data or show success message
+          console.log('Patient created:', result);
+        }}
+      />
     </div>
   );
 };

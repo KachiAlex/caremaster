@@ -6,7 +6,7 @@ import { handleEmergencyAlert, processEmergencyResponse } from './emergencyManag
 import { processAIVoiceCommand, generateHealthRecommendations } from './aiProcessing';
 import { sendNotification, scheduleNotification } from './notificationService';
 import { logAuditEvent, getAuditLogs } from './auditLogging';
-import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin } from './licensing';
+import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, forceUpdateAllInstitutionLinks } from './licensing';
 import { createCaregiverWithAuth, resetCaregiverPassword } from './caregiverManagement';
 import { createTenantWithAdmin, setCurrentTenant } from './tenantManagement';
 
@@ -49,7 +49,7 @@ export const healthCheck = functions.https.onRequest((req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    service: 'ElderX Firebase Functions',
+    service: 'UltimateCare Firebase Functions',
     version: '1.0.0'
   });
 });
@@ -76,6 +76,7 @@ export const updateLicenseFunction = updateLicense;
 export const suspendLicenseFunction = suspendLicense;
 export const activateLicenseFunction = activateLicense;
 export const migrateInstitutionLinksFunction = migrateInstitutionLinks;
+export const forceUpdateAllInstitutionLinksFunction = forceUpdateAllInstitutionLinks;
 export const getInstitutionAdminsFunction = getInstitutionAdmins;
 export const removeInstitutionAdminFunction = removeInstitutionAdmin;
 
