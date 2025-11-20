@@ -2623,6 +2623,12 @@ const InstitutionAdminDashboard = () => {
       action: () => setShowAssignmentModal(true)
     },
     {
+      name: 'Schedule',
+      icon: Calendar,
+      color: 'bg-teal-600 hover:bg-teal-700',
+      action: () => setShowAppointmentsModal(true)
+    },
+    {
       name: 'Inventory & Billing',
       icon: Package,
       color: 'bg-indigo-600 hover:bg-indigo-700',
@@ -2827,7 +2833,7 @@ const InstitutionAdminDashboard = () => {
       {activeTab === 'dashboard' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               return (
