@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.migrateUserRoles = exports.removeInstitutionAdminFunction = exports.getInstitutionAdminsFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.resetCaregiverPasswordFunction = exports.createCaregiverWithAuthFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserFunction = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
+exports.migrateUserRoles = exports.removeInstitutionAdminFunction = exports.getInstitutionAdminsFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.resetCaregiverPasswordFunction = exports.createCaregiverWithAuthFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.processEmailQueueFunction = exports.sendPaymentLinkEmailFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserFunction = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const userManagement_1 = require("./userManagement");
@@ -31,6 +31,7 @@ const medicationManagement_1 = require("./medicationManagement");
 const emergencyManagement_1 = require("./emergencyManagement");
 const aiProcessing_1 = require("./aiProcessing");
 const notificationService_1 = require("./notificationService");
+const emailService_1 = require("./emailService");
 const auditLogging_1 = require("./auditLogging");
 const licensing_1 = require("./licensing");
 const caregiverManagement_1 = require("./caregiverManagement");
@@ -56,6 +57,9 @@ exports.generateHealthRecommendationsFunction = functions.https.onCall(aiProcess
 // Notification Functions
 exports.sendNotificationFunction = functions.https.onCall(notificationService_1.sendNotification);
 exports.scheduleNotificationFunction = functions.https.onCall(notificationService_1.scheduleNotification);
+// Email Functions
+exports.sendPaymentLinkEmailFunction = functions.https.onCall(emailService_1.sendPaymentLinkEmail);
+exports.processEmailQueueFunction = emailService_1.processEmailQueue;
 // Audit Logging Functions
 exports.logAuditEventFunction = functions.https.onCall(auditLogging_1.logAuditEvent);
 exports.getAuditLogsFunction = functions.https.onCall(auditLogging_1.getAuditLogs);

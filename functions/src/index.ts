@@ -5,6 +5,7 @@ import { sendMedicationReminder, processMedicationLog } from './medicationManage
 import { handleEmergencyAlert, processEmergencyResponse } from './emergencyManagement';
 import { processAIVoiceCommand, generateHealthRecommendations } from './aiProcessing';
 import { sendNotification, scheduleNotification } from './notificationService';
+import { sendPaymentLinkEmail, processEmailQueue } from './emailService';
 import { logAuditEvent, getAuditLogs } from './auditLogging';
 import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin } from './licensing';
 import { createCaregiverWithAuth, resetCaregiverPassword } from './caregiverManagement';
@@ -38,6 +39,10 @@ export const generateHealthRecommendationsFunction = functions.https.onCall(gene
 // Notification Functions
 export const sendNotificationFunction = functions.https.onCall(sendNotification);
 export const scheduleNotificationFunction = functions.https.onCall(scheduleNotification);
+
+// Email Functions
+export const sendPaymentLinkEmailFunction = functions.https.onCall(sendPaymentLinkEmail);
+export const processEmailQueueFunction = processEmailQueue;
 
 // Audit Logging Functions
 export const logAuditEventFunction = functions.https.onCall(logAuditEvent);

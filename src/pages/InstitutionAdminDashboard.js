@@ -58,6 +58,8 @@ import { assignmentAPI } from '../api/assignmentAPI';
 import { getClientReports, createClientReport, getClientCareLogs, createClientCareLog } from '../api/patientReportsAPI';
 import { getCareLogsByCaregiver } from '../api/careLogsAPI';
 import * as billingPlansAPI from '../api/billingPlansAPI';
+import * as paymentGatewayAPI from '../api/paymentGatewayAPI';
+import * as subscriptionInvoiceAPI from '../api/subscriptionInvoiceAPI';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notificationsAPI } from '../api/notificationsAPI';
 import { institutionAPI } from '../api/institutionAPI';
@@ -181,6 +183,11 @@ const InstitutionAdminDashboard = () => {
   const [billingPlans, setBillingPlans] = useState([]);
   const [showEditBillingPlanModal, setShowEditBillingPlanModal] = useState(false);
   const [selectedBillingPlan, setSelectedBillingPlan] = useState(null);
+  
+  // Payment Gateway States
+  const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
+  const [showPaymentGatewayModal, setShowPaymentGatewayModal] = useState(false);
+  const [selectedGateway, setSelectedGateway] = useState(null);
 
   // Dashboard Card Modal States
   const [showStaffModal, setShowStaffModal] = useState(false);
@@ -292,6 +299,13 @@ const InstitutionAdminDashboard = () => {
   useEffect(() => {
     if (activeTab === 'billing-plans') {
       loadBillingPlans();
+    }
+  }, [activeTab, effectiveInstitutionId]);
+
+  // Load payment gateway config when tab is active
+  useEffect(() => {
+    if (activeTab === 'payment-gateway') {
+      loadPaymentGatewayConfig();
     }
   }, [activeTab, effectiveInstitutionId]);
   
@@ -548,6 +562,40 @@ const InstitutionAdminDashboard = () => {
     } catch (error) {
       console.error('Error saving billing plan:', error);
       toast.error('Failed to save billing plan');
+    }
+  };
+
+  // Load payment gateway configuration
+  const loadPaymentGatewayConfig = async () => {
+    try {
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+      if (!instId) return;
+      
+      const config = await paymentGatewayAPI.getPaymentGatewayConfig(instId);
+      setPaymentGatewayConfig(config);
+    } catch (error) {
+      console.error('Error loading payment gateway config:', error);
+      toast.error('Failed to load payment gateway configuration');
+    }
+  };
+
+  // Save payment gateway configuration
+  const handleSavePaymentGatewayConfig = async (configData) => {
+    try {
+      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+      if (!instId) {
+        toast.error('Institution ID not found');
+        return;
+      }
+
+      await paymentGatewayAPI.savePaymentGatewayConfig(instId, configData);
+      toast.success('Payment gateway configured successfully');
+      setShowPaymentGatewayModal(false);
+      setSelectedGateway(null);
+      await loadPaymentGatewayConfig();
+    } catch (error) {
+      console.error('Error saving payment gateway config:', error);
+      toast.error('Failed to save payment gateway configuration');
     }
   };
 
@@ -2652,6 +2700,7 @@ const InstitutionAdminDashboard = () => {
             { id: 'scheduling', name: 'Scheduling', icon: Calendar, color: 'blue' },
             { id: 'wages', name: 'Wage Management', icon: DollarSign, color: 'green' },
             { id: 'billing-plans', name: 'Billing Plans', icon: DollarSign, color: 'purple' },
+            { id: 'payment-gateway', name: 'Payment Gateway', icon: DollarSign, color: 'indigo' },
             { id: 'users', name: 'User Management', icon: Shield, color: 'red' },
             { id: 'admin-roles', name: 'Admin Roles', icon: Shield, color: 'red' },
             { id: 'approvals', name: 'Pending Approvals', icon: ClipboardCheck, color: 'yellow' },
@@ -3742,6 +3791,116 @@ const InstitutionAdminDashboard = () => {
         </div>
       )}
 
+      {/* Payment Gateway Tab Content */}
+      {activeTab === 'payment-gateway' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Payment Gateway Configuration</h2>
+              <p className="text-gray-600 mt-1">Configure your payment gateway to accept payments from clients</p>
+            </div>
+            {!paymentGatewayConfig?.isConfigured && (
+              <button
+                onClick={() => {
+                  setSelectedGateway(null);
+                  setShowPaymentGatewayModal(true);
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+              >
+                <Plus className="h-5 w-5" />
+                Configure Gateway
+              </button>
+            )}
+          </div>
+
+          {/* Current Configuration */}
+          {paymentGatewayConfig?.isConfigured ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-indigo-100 rounded-lg">
+                    <DollarSign className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {paymentGatewayAPI.SUPPORTED_GATEWAYS[paymentGatewayConfig.gateway]?.name || paymentGatewayConfig.gateway}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {paymentGatewayConfig.mode === 'sandbox' ? 'Sandbox Mode' : 'Live Mode'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    paymentGatewayConfig.isConfigured
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {paymentGatewayConfig.isConfigured ? 'Configured' : 'Not Configured'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedGateway(paymentGatewayConfig.gateway);
+                      setShowPaymentGatewayModal(true);
+                    }}
+                    className="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                Your payment gateway is configured and ready to process payments. Payment links will be generated automatically when invoices are created.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-lg border border-gray-200 p-12 text-center">
+              <DollarSign className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Payment Gateway Configured</h3>
+              <p className="text-gray-500 mb-6">
+                Configure a payment gateway to enable payment link generation for client invoices.
+              </p>
+              <button
+                onClick={() => {
+                  setSelectedGateway(null);
+                  setShowPaymentGatewayModal(true);
+                }}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Configure Payment Gateway
+              </button>
+            </div>
+          )}
+
+          {/* Supported Gateways */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Supported Payment Gateways</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Object.entries(paymentGatewayAPI.SUPPORTED_GATEWAYS).map(([key, gateway]) => (
+                <div
+                  key={key}
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    paymentGatewayConfig?.gateway === key
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => {
+                    setSelectedGateway(key);
+                    setShowPaymentGatewayModal(true);
+                  }}
+                >
+                  <div className="text-3xl mb-2">{gateway.icon}</div>
+                  <h4 className="font-semibold text-gray-900">{gateway.name}</h4>
+                  {paymentGatewayConfig?.gateway === key && (
+                    <span className="text-xs text-indigo-600 mt-1 block">Currently Active</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Settings Tab Content */}
       {activeTab === 'settings' && (
         <div className="space-y-6">
@@ -4585,6 +4744,18 @@ const InstitutionAdminDashboard = () => {
             setSelectedBillingPlan(null);
           }}
           onSave={handleSaveBillingPlan}
+        />
+      )}
+
+      {showPaymentGatewayModal && (
+        <PaymentGatewayConfigModal
+          gateway={selectedGateway}
+          existingConfig={paymentGatewayConfig}
+          onClose={() => {
+            setShowPaymentGatewayModal(false);
+            setSelectedGateway(null);
+          }}
+          onSave={handleSavePaymentGatewayConfig}
         />
       )}
 
@@ -7668,13 +7839,26 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchi
   const [loadingSubscription, setLoadingSubscription] = React.useState(false);
   const [selectedPlanId, setSelectedPlanId] = React.useState('');
   const [selectedBillingCycle, setSelectedBillingCycle] = React.useState('monthly');
+  const [subscriptionInvoices, setSubscriptionInvoices] = React.useState([]);
+  const [generatingInvoice, setGeneratingInvoice] = React.useState(false);
   
   React.useEffect(() => {
     if (activeTab === 'subscription' && client?.id) {
       loadClientSubscription();
       loadBillingPlans();
+      loadSubscriptionInvoices();
     }
   }, [activeTab, client?.id]);
+
+  const loadSubscriptionInvoices = async () => {
+    try {
+      if (!client?.id) return;
+      const invoices = await subscriptionInvoiceAPI.getSubscriptionInvoicesByClient(client.id);
+      setSubscriptionInvoices(invoices);
+    } catch (error) {
+      console.error('Error loading subscription invoices:', error);
+    }
+  };
 
   const loadClientSubscription = async () => {
     try {
@@ -7717,6 +7901,42 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchi
       alert('Failed to assign subscription: ' + error.message);
     } finally {
       setLoadingSubscription(false);
+    }
+  };
+
+  const handleGenerateInvoice = async () => {
+    if (!clientSubscription) {
+      alert('Client does not have an active subscription');
+      return;
+    }
+    
+    if (!window.confirm(`Generate invoice for ${clientSubscription.planName} subscription?`)) {
+      return;
+    }
+    
+    try {
+      setGeneratingInvoice(true);
+      const result = await subscriptionInvoiceAPI.generateInvoiceWithPaymentLink(
+        clientSubscription.id,
+        {
+          ...clientSubscription,
+          clientName: client.name || client.fullName,
+          clientEmail: client.email
+        }
+      );
+      
+      if (result.paymentLink) {
+        alert(`Invoice generated successfully!\n\nPayment Link: ${result.paymentLink.paymentLink}\n\nThe payment link will be sent to the client.`);
+      } else {
+        alert('Invoice generated successfully! However, payment gateway is not configured. Please configure a payment gateway to generate payment links.');
+      }
+      
+      await loadSubscriptionInvoices();
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      alert('Failed to generate invoice: ' + error.message);
+    } finally {
+      setGeneratingInvoice(false);
     }
   };
   
@@ -8088,11 +8308,82 @@ const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchi
                             </ul>
                           </div>
                         )}
+                        {clientSubscription && (
+                          <div className="mt-4 pt-4 border-t border-purple-200">
+                            <button
+                              onClick={handleGenerateInvoice}
+                              disabled={generatingInvoice}
+                              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                              {generatingInvoice ? (
+                                <>
+                                  <Loader className="h-4 w-4 animate-spin" />
+                                  Generating Invoice...
+                                </>
+                              ) : (
+                                <>
+                                  <FileText className="h-4 w-4" />
+                                  Generate Invoice & Payment Link
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-6 text-center">
                         <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-600">No active subscription</p>
+                      </div>
+                    )}
+
+                    {/* Subscription Invoices */}
+                    {subscriptionInvoices.length > 0 && (
+                      <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h5 className="text-md font-semibold text-gray-900 mb-4">Invoice History</h5>
+                        <div className="space-y-3">
+                          {subscriptionInvoices.map((invoice) => (
+                            <div key={invoice.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <p className="font-semibold text-gray-900">{invoice.invoiceNumber}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {invoice.createdAt instanceof Date
+                                      ? invoice.createdAt.toLocaleDateString()
+                                      : new Date(invoice.createdAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-semibold text-gray-900">
+                                    {invoice.currency || 'USD'} {invoice.amount?.toFixed(2) || '0.00'}
+                                  </p>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    invoice.status === 'paid'
+                                      ? 'bg-green-100 text-green-800'
+                                      : invoice.status === 'pending'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {invoice.status || 'pending'}
+                                  </span>
+                                </div>
+                              </div>
+                              {invoice.paymentLink && (
+                                <div className="mt-3 pt-3 border-t border-gray-200">
+                                  <a
+                                    href={invoice.paymentLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-2"
+                                  >
+                                    <DollarSign className="h-4 w-4" />
+                                    View Payment Link
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -11013,6 +11304,221 @@ const EditBillingPlanModal = ({ plan, onClose, onSave }) => {
               className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             >
               Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Payment Gateway Configuration Modal
+const PaymentGatewayConfigModal = ({ gateway, existingConfig, onClose, onSave }) => {
+  const [selectedGateway, setSelectedGateway] = useState(gateway || existingConfig?.gateway || '');
+  const [configData, setConfigData] = useState({});
+  const [mode, setMode] = useState(existingConfig?.mode || 'sandbox');
+  const [isActive, setIsActive] = useState(existingConfig?.isActive !== false);
+
+  const gatewayInfo = selectedGateway ? paymentGatewayAPI.SUPPORTED_GATEWAYS[selectedGateway] : null;
+
+  const handleFieldChange = (field, value) => {
+    setConfigData({
+      ...configData,
+      [field]: value
+    });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!selectedGateway) {
+      alert('Please select a payment gateway');
+      return;
+    }
+
+    // Validate required fields
+    const requiredFields = Object.entries(gatewayInfo.fields)
+      .filter(([_, field]) => field.required)
+      .map(([key, _]) => key);
+
+    const missingFields = requiredFields.filter(field => !configData[field]);
+    if (missingFields.length > 0) {
+      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    onSave({
+      gateway: selectedGateway,
+      credentials: configData,
+      mode,
+      isActive
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold">Configure Payment Gateway</h3>
+              <p className="text-indigo-100 text-sm mt-1">Set up your payment gateway credentials</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white/20 rounded-lg p-2"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Gateway Selection */}
+          {!gateway && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Payment Gateway *
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                {Object.entries(paymentGatewayAPI.SUPPORTED_GATEWAYS).map(([key, info]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSelectedGateway(key)}
+                    className={`p-4 border-2 rounded-lg text-left transition-all ${
+                      selectedGateway === key
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-2xl mb-2">{info.icon}</div>
+                    <div className="font-semibold text-gray-900">{info.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedGateway && gatewayInfo && (
+            <>
+              {/* Gateway Info */}
+              <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl">{gatewayInfo.icon}</div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{gatewayInfo.name}</h4>
+                    <p className="text-sm text-gray-600">Enter your {gatewayInfo.name} credentials below</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Gateway Fields */}
+              <div className="space-y-4">
+                {Object.entries(gatewayInfo.fields).map(([key, field]) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {field.type === 'select' ? (
+                      <select
+                        value={configData[key] || ''}
+                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        required={field.required}
+                      >
+                        <option value="">Select {field.label}</option>
+                        {field.options?.map(option => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type || 'text'}
+                        value={configData[key] || ''}
+                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder={`Enter ${field.label}`}
+                        required={field.required}
+                      />
+                    )}
+                    {field.type === 'password' && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Your credentials are stored securely and encrypted
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Mode Selection */}
+              {gatewayInfo.fields.mode || selectedGateway === 'paypal' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mode *
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="sandbox"
+                        checked={mode === 'sandbox'}
+                        onChange={(e) => setMode(e.target.value)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Sandbox (Test Mode)</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="live"
+                        checked={mode === 'live'}
+                        onChange={(e) => setMode(e.target.value)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">Live (Production)</span>
+                    </label>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Active Status */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Enable Gateway</label>
+                  <p className="text-xs text-gray-500 mt-1">Activate this payment gateway</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsActive(!isActive)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isActive ? 'bg-green-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isActive ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!selectedGateway}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save Configuration
             </button>
           </div>
         </form>
