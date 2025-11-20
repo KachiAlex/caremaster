@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getAllClients } from '../api/patientsAPI';
+import { createAppointment, updateAppointment } from '../api/appointmentsAPI';
 import { toast } from 'react-toastify';
 import { 
   Calendar, 
@@ -540,13 +541,59 @@ const SchedulingModule = ({ institutionId }) => {
                   };
 
                   if (showEditModal && selectedSchedule) {
+                    // Update schedule
                     await updateDoc(doc(db, 'schedules', selectedSchedule.id), {
                       ...scheduleData,
                       createdAt: selectedSchedule.createdAt
                     });
+                    
+                    // Update corresponding appointment if it exists
+                    if (selectedSchedule.appointmentId) {
+                      const scheduledDateTime = new Date(`${scheduleData.scheduleDate}T${scheduleData.startTime}`);
+                      await updateAppointment(selectedSchedule.appointmentId, {
+                        patientId: scheduleData.clientId,
+                        patientName: scheduleData.clientName,
+                        caregiverId: scheduleData.caregiverId,
+                        caregiverName: scheduleData.caregiverName,
+                        scheduledTime: scheduledDateTime,
+                        title: scheduleData.title,
+                        description: scheduleData.description || scheduleData.comments,
+                        notes: scheduleData.comments,
+                        status: 'scheduled',
+                        institutionId: scheduleData.institutionId
+                      });
+                    }
+                    
                     toast.success('Schedule updated successfully!');
                   } else {
-                    await addDoc(collection(db, 'schedules'), scheduleData);
+                    // Create schedule
+                    const scheduleRef = await addDoc(collection(db, 'schedules'), scheduleData);
+                    
+                    // Create corresponding appointment in appointments collection
+                    const scheduledDateTime = new Date(`${scheduleData.scheduleDate}T${scheduleData.startTime}`);
+                    const appointmentData = {
+                      patientId: scheduleData.clientId,
+                      patientName: scheduleData.clientName,
+                      caregiverId: scheduleData.caregiverId,
+                      caregiverName: scheduleData.caregiverName,
+                      scheduledTime: scheduledDateTime,
+                      title: scheduleData.title,
+                      description: scheduleData.description || scheduleData.comments,
+                      notes: scheduleData.comments,
+                      status: 'scheduled',
+                      institutionId: scheduleData.institutionId,
+                      scheduleId: scheduleRef.id, // Link back to schedule
+                      careType: scheduleData.title,
+                      priority: scheduleData.priority || 'medium'
+                    };
+                    
+                    const appointmentId = await createAppointment(appointmentData);
+                    
+                    // Update schedule with appointment ID for future reference
+                    await updateDoc(scheduleRef, {
+                      appointmentId: appointmentId
+                    });
+                    
                     toast.success('Schedule created successfully!');
                   }
 

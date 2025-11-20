@@ -4724,6 +4724,8 @@ const InstitutionAdminDashboard = () => {
             setShowAssignmentModal(true);
             setShowCaregiverDetails(false);
           }}
+          onEditAssignment={handleEditAssignment}
+          onDeleteAssignment={handleDeleteAssignment}
         />
       )}
         </div>
