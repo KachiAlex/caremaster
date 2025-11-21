@@ -2604,10 +2604,10 @@ const InstitutionAdminDashboard = () => {
   // Quick action functions
   const quickActions = [
     {
-      name: 'Add Client',
+      name: 'Register Patient',
       icon: Heart,
       color: 'bg-blue-600 hover:bg-blue-700',
-      action: () => setShowAddClient(true)
+      action: () => setShowCreatePatientModal(true)
     },
     {
       name: 'Add Caregiver',
@@ -2824,21 +2824,21 @@ const InstitutionAdminDashboard = () => {
           />
         </section>
 
-        {/* Quick Actions */}
-        <section className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-slate-50 sm:text-base">Quick Actions</h2>
+        {/* Quick Actions - Register Patient and More */}
+        <section className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-6 shadow-xl shadow-black/50 mt-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-base font-semibold text-slate-50 sm:text-lg">Quick Actions</h2>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <button
               onClick={() => setShowCreatePatientModal(true)}
-              className="flex flex-col items-center gap-2 rounded-2xl border border-blue-500/30 bg-blue-600/10 px-4 py-4 text-center hover:border-blue-500/50 hover:bg-blue-600/20 transition-colors group"
+              className="flex flex-col items-center gap-3 rounded-2xl border-2 border-blue-500/40 bg-blue-600/20 px-6 py-6 text-center hover:border-blue-500/60 hover:bg-blue-600/30 transition-all group shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg group-hover:shadow-emerald-500/50 transition-shadow">
-                <Heart className="h-5 w-5 text-slate-950" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg group-hover:shadow-blue-500/50 transition-shadow">
+                <Heart className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xs font-semibold text-slate-50">Register Patient</span>
-              <span className="text-[10px] text-slate-400">Create new patient record</span>
+              <span className="text-sm font-bold text-slate-50">Register Patient</span>
+              <span className="text-xs text-slate-300">Create new patient record</span>
             </button>
             <button
               onClick={() => navigate('/institution-admin/users')}
@@ -2979,28 +2979,38 @@ const InstitutionAdminDashboard = () => {
               <span className="text-xs font-semibold text-slate-50">Register Patient</span>
               <span className="text-[10px] text-slate-400">Create new patient record</span>
             </button>
-                </button>
-
-                <button
-                  onClick={refreshData}
-                  disabled={refreshing}
-                  className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  title="Refresh data"
-                >
-                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                </button>
-                
-                <button
-                  onClick={() => navigate(`/onboard?institution=${effectiveInstitutionId}`)}
-                  className="flex items-center px-3 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  title="Back to Portal"
-                >
-                  <Shield className="h-4 w-4" />
-                </button>
+            <button
+              onClick={() => navigate('/institution-admin/users')}
+              className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-blue-400/50 hover:bg-slate-900 transition-colors group"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 shadow-lg">
+                <UserPlus className="h-5 w-5 text-slate-950" />
               </div>
-            </div>
+              <span className="text-xs font-semibold text-slate-50">Manage Users</span>
+              <span className="text-[10px] text-slate-400">View all users</span>
+            </button>
+            <button
+              onClick={() => navigate('/institution-admin/hospital-operations')}
+              className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-blue-400/50 hover:bg-slate-900 transition-colors group"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-lg">
+                <Bed className="h-5 w-5 text-slate-950" />
+              </div>
+              <span className="text-xs font-semibold text-slate-50">Hospital Ops</span>
+              <span className="text-[10px] text-slate-400">Bed management</span>
+            </button>
+            <button
+              onClick={() => navigate('/institution-admin/staff-management')}
+              className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-amber-400/50 hover:bg-slate-900 transition-colors group"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg">
+                <UserCog className="h-5 w-5 text-slate-950" />
+              </div>
+              <span className="text-xs font-semibold text-slate-50">Staff Management</span>
+              <span className="text-[10px] text-slate-400">Team & shifts</span>
+            </button>
           </div>
-        </div>
+        </section>
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -3287,11 +3297,11 @@ const InstitutionAdminDashboard = () => {
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900">Clients</h2>
             <button
-              onClick={() => setShowAddClient(true)}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              onClick={() => setShowCreatePatientModal(true)}
+              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-colors font-semibold"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Client
+              <Heart className="h-5 w-5 mr-2" />
+              Register Patient
             </button>
           </div>
           
@@ -3743,18 +3753,6 @@ const InstitutionAdminDashboard = () => {
 };
 
 // Helper Components
-// Add Client Modal Component
-const AddClientModal = ({ onClose, onAdd }) => {
-  const initialFormState = {
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Billing Plans Management</h2>
-              <p className="text-gray-600 mt-1">Configure subscription plans and pricing for clients</p>
-            </div>
-          </div>
-
-          {/* Billing Plans Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {billingPlans.map((plan) => (
               <div
                 key={plan.id}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
