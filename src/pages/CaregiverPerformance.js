@@ -154,14 +154,14 @@ const CaregiverPerformance = () => {
       };
 
   const getRatingColor = (rating) => {
-    if (rating >= 4.5) return 'text-green-600';
+    if (rating >= 4.5) return 'text-blue-600';
     if (rating >= 3.5) return 'text-yellow-600';
     return 'text-red-600';
   };
 
   const getPerformanceColor = (value, type) => {
     if (type === 'rate') {
-      if (value >= 95) return 'text-green-600';
+      if (value >= 95) return 'text-blue-600';
       if (value >= 85) return 'text-yellow-600';
       return 'text-red-600';
     }
@@ -185,7 +185,7 @@ const CaregiverPerformance = () => {
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
               <TrendingUp className="h-8 w-8 text-white" />
             </div>
             <div>
@@ -195,7 +195,7 @@ const CaregiverPerformance = () => {
           </div>
           <div className="flex items-center space-x-4">
             <select
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
             >
@@ -203,7 +203,7 @@ const CaregiverPerformance = () => {
               <option value="monthly">This Month</option>
               <option value="overall">Overall</option>
             </select>
-            <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
               <Download className="h-5 w-5 mr-2" />
               Export Report
             </button>
@@ -223,8 +223,8 @@ const CaregiverPerformance = () => {
                   {performanceData.overall?.rating || 0}
                 </p>
               </div>
-              <div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <Star className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Star className="h-6 w-6 text-blue-600" />
               </div>
             </div>
             <p className="text-sm text-gray-600 mt-2">Based on patient feedback</p>
@@ -255,8 +255,8 @@ const CaregiverPerformance = () => {
                   {currentData.patientsServed || performanceData.overall?.totalPatients || 0}
                 </p>
               </div>
-              <div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Users className="h-6 w-6 text-blue-600" />
               </div>
             </div>
             <p className="text-sm text-gray-600 mt-2">Active patients</p>
@@ -343,7 +343,7 @@ const CaregiverPerformance = () => {
 
             {patientFeedback.length > 6 && (
               <div className="mt-4 text-center">
-                <button className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                   View All Feedback ({patientFeedback.length} entries)
                 </button>
               </div>
@@ -367,7 +367,7 @@ const CaregiverPerformance = () => {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
-                      className="bg-green-600 h-2 rounded-full" 
+                      className="bg-blue-600 h-2 rounded-full" 
                       style={{ width: `${performanceData.overall?.onTimeRate || 0}%` }}
                     ></div>
                   </div>
@@ -424,7 +424,7 @@ const CaregiverPerformance = () => {
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
-                    <Heart className="h-5 w-5 text-green-600 mr-3" />
+                    <Heart className="h-5 w-5 text-blue-600 mr-3" />
                     <span className="text-sm font-medium text-gray-900">Therapy Sessions</span>
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
@@ -434,7 +434,7 @@ const CaregiverPerformance = () => {
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
-                    <Phone className="h-5 w-5 text-purple-600 mr-3" />
+                    <Phone className="h-5 w-5 text-blue-600 mr-3" />
                     <span className="text-sm font-medium text-gray-900">Patient Calls</span>
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
@@ -516,23 +516,23 @@ const CaregiverPerformance = () => {
                   </div>
                 </div>
 
-                <div className="p-3 bg-green-50 rounded-lg">
+                <div className="p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-green-900">Patient Satisfaction</span>
                     <span className="text-sm font-semibold text-green-900">98%</span>
                   </div>
                   <div className="w-full bg-green-200 rounded-full h-2">
-                    <div className="bg-green-600 h-2 rounded-full" style={{ width: `${performanceData.overall?.patientSatisfaction || 0}%` }}></div>
+                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${performanceData.overall?.patientSatisfaction || 0}%` }}></div>
                   </div>
                 </div>
 
-                <div className="p-3 bg-purple-50 rounded-lg">
+                <div className="p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-purple-900">Emergency Response</span>
                     <span className="text-sm font-semibold text-purple-900">&lt;5 min</span>
                   </div>
                   <div className="w-full bg-purple-200 rounded-full h-2">
-                    <div className="bg-purple-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: '85%' }}></div>
                   </div>
                 </div>
               </div>

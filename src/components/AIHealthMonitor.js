@@ -255,9 +255,9 @@ const AIHealthMonitor = ({ isOpen, onClose, patientData }) => {
 
   const getRiskColor = (risk) => {
     switch (risk) {
-      case 'low': return 'text-green-600 bg-green-100';
+      case 'low': return 'text-blue-600 bg-blue-100';
       case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'high': return 'text-orange-600 bg-orange-100';
+      case 'high': return 'text-blue-600 bg-blue-100';
       case 'critical': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
     }
@@ -267,8 +267,8 @@ const AIHealthMonitor = ({ isOpen, onClose, patientData }) => {
     switch (type) {
       case 'critical': return <AlertTriangle className="w-5 h-5 text-red-600" />;
       case 'warning': return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
-      case 'alert': return <AlertTriangle className="w-5 h-5 text-orange-600" />;
-      default: return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'alert': return <AlertTriangle className="w-5 h-5 text-blue-600" />;
+      default: return <CheckCircle className="w-5 h-5 text-blue-600" />;
     }
   };
 
@@ -278,7 +278,7 @@ const AIHealthMonitor = ({ isOpen, onClose, patientData }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-red-500 to-pink-600 text-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-red-500 to-blue-600 text-white">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Brain className="w-6 h-6" />
@@ -385,7 +385,7 @@ const AIHealthMonitor = ({ isOpen, onClose, patientData }) => {
               </button>
               
               {aiAnalysis && (
-                <div className="flex items-center space-x-2 text-sm text-green-600">
+                <div className="flex items-center space-x-2 text-sm text-blue-600">
                   <CheckCircle className="w-4 h-4" />
                   <span>Analysis complete!</span>
                 </div>
@@ -459,21 +459,21 @@ const AIHealthMonitor = ({ isOpen, onClose, patientData }) => {
                 <h3 className="text-lg font-semibold text-gray-900">Health Predictions</h3>
                 
                 {/* Short-term Predictions */}
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="p-4 bg-blue-50 rounded-lg border border-green-200">
                   <h4 className="font-medium text-green-900 mb-2">Next 24 Hours</h4>
                   <div className="space-y-2">
-                    <div className="text-sm text-green-800">
+                    <div className="text-sm text-blue-800">
                       <span className="font-medium">Risk Level:</span> {predictions.shortTerm.next24Hours.riskLevel}
                     </div>
                     {predictions.shortTerm.next24Hours.predictedVitals && (
-                      <div className="text-sm text-green-800">
+                      <div className="text-sm text-blue-800">
                         <span className="font-medium">Predicted Vitals:</span>
                         <div className="ml-4 space-y-1">
                           {Object.entries(predictions.shortTerm.next24Hours.predictedVitals).map(([type, data]) => (
                             <div key={type} className="flex items-center space-x-2">
                               <span>{type}:</span>
                               <span>{data.predicted}</span>
-                              <TrendingUp className={`w-3 h-3 ${data.trend === 'increasing' ? 'text-red-500' : data.trend === 'decreasing' ? 'text-green-500' : 'text-gray-500'}`} />
+                              <TrendingUp className={`w-3 h-3 ${data.trend === 'increasing' ? 'text-red-500' : data.trend === 'decreasing' ? 'text-blue-500' : 'text-gray-500'}`} />
                             </div>
                           ))}
                         </div>

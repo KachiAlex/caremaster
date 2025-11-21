@@ -143,9 +143,9 @@ const Subscription = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Active':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'Paid':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'Pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'Failed':
@@ -209,9 +209,9 @@ const Subscription = () => {
             </div>
           </div>
 
-          <div className="p-6 bg-green-50 rounded-lg">
+          <div className="p-6 bg-blue-50 rounded-lg">
             <div className="flex items-center mb-4">
-              <Activity className="h-8 w-8 text-green-600 mr-3" />
+              <Activity className="h-8 w-8 text-blue-600 mr-3" />
               <h3 className="text-lg font-semibold text-gray-900">Usage This Month</h3>
             </div>
             <div className="space-y-2">
@@ -230,15 +230,15 @@ const Subscription = () => {
             </div>
           </div>
 
-          <div className="p-6 bg-purple-50 rounded-lg">
+          <div className="p-6 bg-blue-50 rounded-lg">
             <div className="flex items-center mb-4">
-              <Shield className="h-8 w-8 text-purple-600 mr-3" />
+              <Shield className="h-8 w-8 text-blue-600 mr-3" />
               <h3 className="text-lg font-semibold text-gray-900">Benefits</h3>
             </div>
             <div className="space-y-1">
               {subscriptionData.features.slice(0, 4).map((feature, index) => (
                 <div key={index} className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-2" />
+                  <Check className="h-4 w-4 text-blue-500 mr-2" />
                   <span className="text-sm text-gray-600">{feature}</span>
                 </div>
               ))}
@@ -292,7 +292,7 @@ const Subscription = () => {
                   plan.popular
                     ? 'border-blue-500 bg-blue-50'
                     : isCurrentPlan
-                    ? 'border-green-500 bg-green-50'
+                    ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -305,7 +305,7 @@ const Subscription = () => {
                 )}
                 {isCurrentPlan && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
                       Current Plan
                     </span>
                   </div>
@@ -313,7 +313,7 @@ const Subscription = () => {
 
                 <div className="text-center mb-6">
                   <Icon className={`h-12 w-12 mx-auto mb-4 ${
-                    plan.popular ? 'text-blue-600' : isCurrentPlan ? 'text-green-600' : 'text-gray-600'
+                    plan.popular ? 'text-blue-600' : isCurrentPlan ? 'text-blue-600' : 'text-gray-600'
                   }`} />
                   <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
                   <p className="text-gray-600 mb-4">{plan.description}</p>
@@ -322,14 +322,14 @@ const Subscription = () => {
                     <span className="text-gray-600">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
                   </div>
                   {savings > 0 && (
-                    <p className="text-sm text-green-600 font-medium">Save {savings}% with yearly billing</p>
+                    <p className="text-sm text-blue-600 font-medium">Save {savings}% with yearly billing</p>
                   )}
                 </div>
 
                 <div className="space-y-3 mb-6">
                   {plan.features.map((feature, index) => (
                     <div key={index} className="flex items-center">
-                      <Check className="h-4 w-4 text-green-500 mr-3 flex-shrink-0" />
+                      <Check className="h-4 w-4 text-blue-500 mr-3 flex-shrink-0" />
                       <span className="text-sm text-gray-600">{feature}</span>
                     </div>
                   ))}
@@ -339,7 +339,7 @@ const Subscription = () => {
                   onClick={() => handlePlanChange(plan.id)}
                   className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${
                     isCurrentPlan
-                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : plan.popular
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -379,7 +379,7 @@ const Subscription = () => {
                   <p className="text-sm text-gray-500">Expires {method.expiry}</p>
                 </div>
                 {method.isDefault && (
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
                     Default
                   </span>
                 )}

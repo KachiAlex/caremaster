@@ -211,9 +211,9 @@ const CareLogFormModal = ({
 
   const getRoleColor = () => {
     switch (roleType) {
-      case 'doctor': return 'from-blue-600 to-indigo-600';
-      case 'nurse': return 'from-red-600 to-orange-600';
-      case 'caregiver': return 'from-green-600 to-teal-600';
+      case 'doctor': return 'from-blue-600 to-blue-600';
+      case 'nurse': return 'from-red-600 to-blue-600';
+      case 'caregiver': return 'from-blue-600 to-blue-600';
       default: return 'from-gray-600 to-gray-700';
     }
   };
@@ -226,7 +226,7 @@ const CareLogFormModal = ({
         onClick={() => toggleSection(section)}
         className={`w-full px-6 py-4 flex items-center justify-between transition-colors ${
           expandedSections[section] 
-            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' 
+            ? 'bg-gradient-to-r from-blue-600 to-blue-600 text-white' 
             : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
         }`}
       >

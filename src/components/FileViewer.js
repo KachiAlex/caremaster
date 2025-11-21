@@ -80,7 +80,7 @@ const FileViewer = ({ files = [], onRemove, canRemove = false }) => {
             
             <button
               onClick={() => handleDownload(file)}
-              className="text-gray-400 hover:text-green-500 transition-colors"
+              className="text-gray-400 hover:text-blue-500 transition-colors"
               title="Download file"
             >
               <Download className="h-4 w-4" />

@@ -142,7 +142,7 @@ const PharmacyInvoiceGenerator = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Receipt className="h-8 w-8 text-white" />
             <div>
@@ -433,7 +433,7 @@ const PharmacyInvoiceGenerator = ({
             
             <button
               onClick={handleDownloadPDF}
-              className="px-6 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors flex items-center"
+              className="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center"
             >
               <Download className="h-4 w-4 mr-2" />
               Download PDF

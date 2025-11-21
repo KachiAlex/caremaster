@@ -201,7 +201,7 @@ const SchedulingModule = ({ institutionId }) => {
       case 'in-progress':
         return <AlertCircle className="h-4 w-4 text-yellow-600" />;
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case 'cancelled':
         return <XCircle className="h-4 w-4 text-red-600" />;
       default:
@@ -216,7 +216,7 @@ const SchedulingModule = ({ institutionId }) => {
       case 'in-progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -352,7 +352,7 @@ const SchedulingModule = ({ institutionId }) => {
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-600">Completed</div>
-          <div className="text-2xl font-bold text-green-600">
+          <div className="text-2xl font-bold text-blue-600">
             {filteredSchedules.filter(s => s.status === 'completed').length}
           </div>
         </div>
@@ -440,7 +440,7 @@ const SchedulingModule = ({ institutionId }) => {
                         schedule.priority === 'urgent'
                           ? 'bg-red-100 text-red-800'
                           : schedule.priority === 'high'
-                          ? 'bg-orange-100 text-orange-800'
+                          ? 'bg-blue-100 text-orange-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
                         {schedule.priority}
@@ -470,7 +470,7 @@ const SchedulingModule = ({ institutionId }) => {
                           setSelectedSchedule(schedule);
                           setShowEditModal(true);
                         }}
-                        className="text-green-600 hover:text-green-900"
+                        className="text-blue-600 hover:text-green-900"
                         title="Edit"
                       >
                         <Edit className="h-4 w-4" />
@@ -502,7 +502,7 @@ const SchedulingModule = ({ institutionId }) => {
       {(showAddModal || showEditModal) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-            <div className="bg-purple-600 px-6 py-4 flex justify-between items-center">
+            <div className="bg-blue-600 px-6 py-4 flex justify-between items-center">
               <h3 className="text-xl font-bold text-white">
                 {showEditModal ? 'Edit Schedule' : 'Create New Schedule'}
               </h3>
@@ -618,7 +618,7 @@ const SchedulingModule = ({ institutionId }) => {
                       name="clientId"
                       required
                       defaultValue={selectedSchedule?.clientId || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Client</option>
                       {clients.map(client => (
@@ -635,7 +635,7 @@ const SchedulingModule = ({ institutionId }) => {
                       name="caregiverId"
                       required
                       defaultValue={selectedSchedule?.caregiverId || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Caregiver</option>
                       {caregivers.map(caregiver => (
@@ -654,7 +654,7 @@ const SchedulingModule = ({ institutionId }) => {
                     name="title"
                     required
                     defaultValue={selectedSchedule?.title || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g., Morning Care Visit"
                   />
                 </div>
@@ -667,7 +667,7 @@ const SchedulingModule = ({ institutionId }) => {
                     name="description"
                     rows={3}
                     defaultValue={selectedSchedule?.description || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Additional details about this schedule..."
                   />
                 </div>
@@ -682,7 +682,7 @@ const SchedulingModule = ({ institutionId }) => {
                       name="scheduleDate"
                       required
                       defaultValue={selectedSchedule?.scheduleDate || new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -695,7 +695,7 @@ const SchedulingModule = ({ institutionId }) => {
                       name="startTime"
                       required
                       defaultValue={selectedSchedule?.startTime || '09:00'}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -708,7 +708,7 @@ const SchedulingModule = ({ institutionId }) => {
                       name="endTime"
                       required
                       defaultValue={selectedSchedule?.endTime || '17:00'}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -722,7 +722,7 @@ const SchedulingModule = ({ institutionId }) => {
                     rows={3}
                     required
                     defaultValue={selectedSchedule?.comments || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Required: Add any special notes or instructions..."
                   />
                 </div>
@@ -743,7 +743,7 @@ const SchedulingModule = ({ institutionId }) => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   {showEditModal ? 'Update Schedule' : 'Create Schedule'}
                 </button>

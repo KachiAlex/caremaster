@@ -303,7 +303,7 @@ const AIVoiceAssistant = ({ isOpen, onClose, onCommand }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Brain className="w-6 h-6" />
@@ -455,7 +455,7 @@ const AIVoiceAssistant = ({ isOpen, onClose, onCommand }) => {
               {/* AI Status */}
               <div className="flex items-center space-x-1 text-xs text-gray-500">
                 <div className={`w-2 h-2 rounded-full ${
-                  aiStatus.initialized ? 'bg-green-500' : 'bg-red-500'
+                  aiStatus.initialized ? 'bg-blue-500' : 'bg-red-500'
                 }`}></div>
                 <span>AI {aiStatus.initialized ? 'Ready' : 'Loading'}</span>
               </div>

@@ -321,7 +321,7 @@ const PreclinicCaregiverDashboard = () => {
                   {task.status === 'pending' && (
                     <button
                       onClick={() => handleTaskComplete(task.id)}
-                      className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
+                      className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
                     >
                       Complete
                     </button>
@@ -376,13 +376,13 @@ const PreclinicCaregiverDashboard = () => {
         label: 'Call',
         icon: Phone,
         onClick: (client) => window.open(`tel:${client.phone}`),
-        className: 'text-green-600 hover:text-green-900 hover:bg-green-50'
+        className: 'text-blue-600 hover:text-green-900 hover:bg-blue-50'
       },
       {
         label: 'Message',
         icon: MessageSquare,
         onClick: (client) => console.log('Message client:', client),
-        className: 'text-purple-600 hover:text-purple-900 hover:bg-purple-50'
+        className: 'text-blue-600 hover:text-purple-900 hover:bg-blue-50'
       }
     ];
 
@@ -430,7 +430,7 @@ const PreclinicCaregiverDashboard = () => {
                     {task.status === 'pending' && (
                       <button
                         onClick={() => handleTaskComplete(task.id)}
-                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                        className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
                       >
                         ✓
                       </button>
@@ -454,10 +454,10 @@ const PreclinicCaregiverDashboard = () => {
                 <div key={task.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      task.status === 'completed' ? 'bg-green-100' : 'bg-yellow-100'
+                      task.status === 'completed' ? 'bg-blue-100' : 'bg-yellow-100'
                     }`}>
                       {task.status === 'completed' ? 
-                        <CheckCircle className="h-4 w-4 text-green-600" /> :
+                        <CheckCircle className="h-4 w-4 text-blue-600" /> :
                         <Clock className="h-4 w-4 text-yellow-600" />
                       }
                     </div>
@@ -523,7 +523,7 @@ const PreclinicCaregiverDashboard = () => {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
           <p className="text-slate-400">Loading dashboard...</p>
         </div>
       </div>

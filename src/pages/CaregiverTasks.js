@@ -87,7 +87,7 @@ const CaregiverTasks = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'in-progress':
         return 'bg-blue-100 text-blue-800';
       case 'pending':
@@ -104,11 +104,11 @@ const CaregiverTasks = () => {
       case 'critical':
         return 'bg-red-100 text-red-800';
       case 'high':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-blue-100 text-blue-800';
       case 'medium':
         return 'bg-yellow-100 text-yellow-800';
       case 'low':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -119,13 +119,13 @@ const CaregiverTasks = () => {
       case 'medication':
         return <FileText className="h-5 w-5 text-blue-600" />;
       case 'therapy':
-        return <Heart className="h-5 w-5 text-green-600" />;
+        return <Heart className="h-5 w-5 text-blue-600" />;
       case 'meal':
-        return <FileText className="h-5 w-5 text-orange-600" />;
+        return <FileText className="h-5 w-5 text-blue-600" />;
       case 'emergency':
         return <AlertTriangle className="h-5 w-5 text-red-600" />;
       case 'care':
-        return <User className="h-5 w-5 text-purple-600" />;
+        return <User className="h-5 w-5 text-blue-600" />;
       default:
         return <FileText className="h-5 w-5 text-gray-600" />;
     }
@@ -296,7 +296,7 @@ const CaregiverTasks = () => {
                         </button>
                         <button
                           onClick={() => handleTaskComplete(task.id)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                         >
                           Complete
                         </button>
@@ -305,13 +305,13 @@ const CaregiverTasks = () => {
                     {task.status === 'in-progress' && (
                       <button
                         onClick={() => handleTaskComplete(task.id)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
                         Mark Complete
                       </button>
                     )}
                     {task.status === 'completed' && (
-                      <div className="flex items-center text-green-600 text-sm">
+                      <div className="flex items-center text-blue-600 text-sm">
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Completed
                       </div>

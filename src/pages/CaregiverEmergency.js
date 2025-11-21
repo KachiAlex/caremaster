@@ -138,11 +138,11 @@ const CaregiverEmergency = () => {
       case 'critical':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'high':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
+        return 'bg-blue-100 text-blue-800 border-orange-200';
       case 'medium':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-blue-100 text-blue-800 border-green-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -155,7 +155,7 @@ const CaregiverEmergency = () => {
       case 'in-progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'resolved':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'cancelled':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -168,7 +168,7 @@ const CaregiverEmergency = () => {
       case 'medical':
         return <Heart className="h-5 w-5 text-red-600" />;
       case 'fall':
-        return <User className="h-5 w-5 text-orange-600" />;
+        return <User className="h-5 w-5 text-blue-600" />;
       case 'medication':
         return <FileText className="h-5 w-5 text-blue-600" />;
       case 'fire':
@@ -410,7 +410,7 @@ const CaregiverEmergency = () => {
                             </div>
                             <button
                               onClick={() => handleCallEmergencyContact(contact)}
-                              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                             >
                               <Phone className="h-4 w-4" />
                             </button>
@@ -465,7 +465,7 @@ const CaregiverEmergency = () => {
                           </button>
                           <button
                             onClick={() => handleEmergencyAction(activeEmergency.id, 'Emergency resolved')}
-                            className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                            className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                           >
                             <CheckCircle className="h-5 w-5 mx-auto mb-1" />
                             Resolve
@@ -477,7 +477,7 @@ const CaregiverEmergency = () => {
                         <MessageCircle className="h-5 w-5 mx-auto mb-1" />
                         Message
                       </button>
-                      <button className="p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
+                      <button className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
                         <Camera className="h-5 w-5 mx-auto mb-1" />
                         Photo
                       </button>

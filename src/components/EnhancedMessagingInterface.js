@@ -358,9 +358,9 @@ const EnhancedMessagingInterface = () => {
       case 'doctor':
         return <Stethoscope className="h-4 w-4 text-blue-600" />;
       case 'caregiver':
-        return <Heart className="h-4 w-4 text-green-600" />;
+        return <Heart className="h-4 w-4 text-blue-600" />;
       case 'admin':
-        return <Shield className="h-4 w-4 text-purple-600" />;
+        return <Shield className="h-4 w-4 text-blue-600" />;
       default:
         return <User className="h-4 w-4 text-gray-600" />;
     }
@@ -589,7 +589,7 @@ const EnhancedMessagingInterface = () => {
                         <User className="h-6 w-6 text-gray-600" />
                       </div>
                       <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${
-                        getUserStatus(user) === 'online' ? 'bg-green-500' : 'bg-gray-400'
+                        getUserStatus(user) === 'online' ? 'bg-blue-500' : 'bg-gray-400'
                       }`}></div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -607,7 +607,7 @@ const EnhancedMessagingInterface = () => {
                       <button
                         onClick={() => handleStartCall(user, 'audio')}
                         disabled={sending}
-                        className="p-1 hover:bg-green-100 rounded text-green-600 hover:text-green-700"
+                        className="p-1 hover:bg-blue-100 rounded text-blue-600 hover:text-blue-700"
                         title="Voice Call"
                       >
                         <Phone className="h-4 w-4" />
@@ -687,7 +687,7 @@ const EnhancedMessagingInterface = () => {
                   <button 
                     onClick={() => handleStartCall(selectedConversation.otherUser, 'audio')}
                     disabled={sending}
-                    className="p-2 hover:bg-green-100 rounded-lg text-green-600 hover:text-green-700"
+                    className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 hover:text-blue-700"
                     title="Voice Call"
                   >
                     <Phone className="h-5 w-5" />

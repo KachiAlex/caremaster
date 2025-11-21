@@ -57,7 +57,7 @@ const PreclinicLayout = ({ children, userRole = 'admin', activeTab, setActiveTab
         {/* Logo */}
         <div className="p-6 border-b border-slate-800/60">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 via-sky-400 to-indigo-500 shadow-lg shadow-emerald-500/40">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-400 to-blue-500 shadow-lg shadow-blue-500/40">
               <Building className="h-5 w-5 text-slate-950" />
             </div>
             {sidebarOpen && (
@@ -81,7 +81,7 @@ const PreclinicLayout = ({ children, userRole = 'admin', activeTab, setActiveTab
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center px-3 py-3 rounded-lg transition-colors ${
                   activeTab === item.id
-                    ? 'bg-emerald-500/20 text-emerald-300 border-r-2 border-emerald-400'
+                    ? 'bg-blue-500/20 text-blue-300 border-r-2 border-blue-400'
                     : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
                 }`}
               >
@@ -97,7 +97,7 @@ const PreclinicLayout = ({ children, userRole = 'admin', activeTab, setActiveTab
         {/* User Profile */}
         <div className="p-4 border-t border-slate-800/60">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-sky-400 flex items-center justify-center ring-2 ring-slate-800">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-400 flex items-center justify-center ring-2 ring-slate-800">
               <span className="text-sm font-semibold text-slate-950">
                 {userEmail?.charAt(0).toUpperCase() || 'U'}
               </span>
@@ -131,7 +131,7 @@ const PreclinicLayout = ({ children, userRole = 'admin', activeTab, setActiveTab
                 <input
                   type="text"
                   placeholder="Search..."
-                  className="pl-9 pr-4 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 w-64 placeholder:text-slate-500"
+                  className="pl-9 pr-4 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 w-64 placeholder:text-slate-500"
                 />
               </div>
             </div>
@@ -141,7 +141,7 @@ const PreclinicLayout = ({ children, userRole = 'admin', activeTab, setActiveTab
                 <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-rose-400 ring-2 ring-slate-950"></span>
               </button>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-sky-400 flex items-center justify-center ring-2 ring-slate-800">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-400 flex items-center justify-center ring-2 ring-slate-800">
                   <span className="text-sm font-semibold text-slate-950">
                     {userEmail?.charAt(0).toUpperCase() || 'U'}
                   </span>

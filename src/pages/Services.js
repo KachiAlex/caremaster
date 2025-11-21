@@ -14,8 +14,8 @@ const Services = () => {
       icon: Heart,
       title: "Vitals Monitoring",
       description: "Regular monitoring of blood pressure, blood sugar, temperature, and other vital signs.",
-      bgColor: "bg-green-100",
-      iconColor: "text-green-600"
+      bgColor: "bg-blue-100",
+      iconColor: "text-blue-600"
     },
     {
       icon: AlertTriangle,
@@ -28,15 +28,15 @@ const Services = () => {
       icon: Video,
       title: "Telemedicine",
       description: "Video consultations with doctors and specialists.",
-      bgColor: "bg-purple-100",
-      iconColor: "text-purple-600"
+      bgColor: "bg-blue-100",
+      iconColor: "text-blue-600"
     },
     {
       icon: Users,
       title: "Family Integration",
       description: "Keep family members informed with real-time updates and notifications.",
-      bgColor: "bg-orange-100",
-      iconColor: "text-orange-600"
+      bgColor: "bg-blue-100",
+      iconColor: "text-blue-600"
     },
     {
       icon: Shield,

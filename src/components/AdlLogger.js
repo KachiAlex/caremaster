@@ -414,7 +414,7 @@ const AdlLogger = ({ clientId, clientName, onActivityLogged }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'completed': return 'text-green-600 bg-green-100';
+      case 'completed': return 'text-blue-600 bg-blue-100';
       case 'skipped': return 'text-yellow-600 bg-yellow-100';
       case 'issue': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
@@ -544,7 +544,7 @@ const AdlLogger = ({ clientId, clientName, onActivityLogged }) => {
                         readOnly
                       />
                       <div className={`w-11 h-6 rounded-full shadow-inner transition-colors duration-200 ${
-                        activity.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                        activity.status === 'completed' ? 'bg-blue-500' : 'bg-gray-300'
                       }`}></div>
                       <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
                         activity.status === 'completed' ? 'translate-x-5' : 'translate-x-0.5'

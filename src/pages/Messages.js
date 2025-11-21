@@ -73,7 +73,7 @@ const Messages = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'online':
-        return 'bg-green-500';
+        return 'bg-blue-500';
       case 'offline':
         return 'bg-gray-400';
       default:

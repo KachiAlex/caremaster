@@ -330,7 +330,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case 'skipped':
         return <XCircle className="h-4 w-4 text-yellow-600" />;
       case 'issue':
@@ -343,7 +343,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'skipped':
         return 'bg-yellow-100 text-yellow-800';
       case 'issue':
@@ -593,7 +593,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
                                   <span className="font-medium text-gray-500">Priority:</span>
                                   <span className={`ml-2 font-medium ${
                                     activity.details.priority === 'urgent' ? 'text-red-600' :
-                                    activity.details.priority === 'high' ? 'text-orange-600' :
+                                    activity.details.priority === 'high' ? 'text-blue-600' :
                                     'text-gray-700'
                                   }`}>{activity.details.priority.toUpperCase()}</span>
                                 </div>

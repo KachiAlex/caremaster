@@ -71,7 +71,7 @@ const InvoiceTemplate = ({
               <p>Date: {formatDate(new Date())}</p>
               <p>Due Date: {formatDate(dueDate)}</p>
               {paymentStatus === 'paid' && (
-                <div className="flex items-center mt-2 text-green-300">
+                <div className="flex items-center mt-2 text-blue-300">
                   <CheckCircle className="h-4 w-4 mr-1" />
                   <span>PAID</span>
                 </div>
@@ -220,7 +220,7 @@ const InvoiceTemplate = ({
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span className={`font-semibold ${
-                    paymentStatus === 'paid' ? 'text-green-600' : 
+                    paymentStatus === 'paid' ? 'text-blue-600' : 
                     paymentStatus === 'pending' ? 'text-yellow-600' : 'text-red-600'
                   }`}>
                     {paymentStatus.toUpperCase()}

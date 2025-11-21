@@ -114,25 +114,25 @@ const Dashboard = () => {
     {
       name: 'Message Caregiver',
       icon: MessageCircle,
-      color: 'bg-green-600 hover:bg-green-700',
+      color: 'bg-blue-600 hover:bg-blue-700',
       action: () => navigate('/messages')
     },
     {
       name: 'Video Consultation',
       icon: Video,
-      color: 'bg-purple-600 hover:bg-purple-700',
+      color: 'bg-blue-600 hover:bg-blue-700',
       action: () => navigate('/telemedicine')
     },
     {
       name: 'View Medications',
       icon: Pill,
-      color: 'bg-orange-600 hover:bg-orange-700',
+      color: 'bg-blue-600 hover:bg-blue-700',
       action: () => navigate('/medications')
     },
     {
       name: 'Medical Documents',
       icon: FileText,
-      color: 'bg-indigo-600 hover:bg-indigo-700',
+      color: 'bg-blue-600 hover:bg-blue-700',
       action: () => navigate('/medical-documents')
     },
     {
@@ -284,7 +284,7 @@ const Dashboard = () => {
         <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-300">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-300">
                 Welcome back
               </p>
               <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-50 sm:text-xl">
@@ -295,7 +295,7 @@ const Dashboard = () => {
               </p>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] text-slate-300">
-              <Shield className="h-3.5 w-3.5 text-emerald-300" />
+              <Shield className="h-3.5 w-3.5 text-blue-300" />
               {getSubscriptionStatus()} plan
             </span>
           </div>
@@ -341,7 +341,7 @@ const Dashboard = () => {
         <div className="space-y-3">
           <button 
             onClick={handleEmergencyAlert}
-            className="flex w-full items-center justify-between gap-3 rounded-3xl border border-rose-500/40 bg-gradient-to-r from-rose-600 to-orange-500 px-4 py-3 text-left text-xs font-medium text-white shadow-lg shadow-rose-500/40 hover:from-rose-500 hover:to-orange-400"
+            className="flex w-full items-center justify-between gap-3 rounded-3xl border border-rose-500/40 bg-gradient-to-r from-rose-600 to-blue-500 px-4 py-3 text-left text-xs font-medium text-white shadow-lg shadow-rose-500/40 hover:from-rose-500 hover:to-blue-400"
           >
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
@@ -354,14 +354,14 @@ const Dashboard = () => {
           </button>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <button 
-              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-left text-slate-200 hover:border-emerald-400/60 hover:bg-slate-900"
+              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-left text-slate-200 hover:border-blue-400/60 hover:bg-slate-900"
               onClick={() =>
                 userProfile?.emergencyContactPhone &&
                 window.open(`tel:${userProfile.emergencyContactPhone}`)
               }
             >
               <p className="flex items-center gap-1 text-[11px] text-slate-400">
-                <Phone className="h-3.5 w-3.5 text-emerald-300" />
+                <Phone className="h-3.5 w-3.5 text-blue-300" />
                 Family contact
               </p>
               <p className="mt-1 text-xs font-medium">
@@ -369,13 +369,13 @@ const Dashboard = () => {
               </p>
             </button>
             <button 
-              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-left text-slate-200 hover:border-sky-400/60 hover:bg-slate-900"
+              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-left text-slate-200 hover:border-blue-400/60 hover:bg-slate-900"
               onClick={() =>
                 userProfile?.doctorPhone && window.open(`tel:${userProfile.doctorPhone}`)
               }
             >
               <p className="flex items-center gap-1 text-[11px] text-slate-400">
-                <Stethoscope className="h-3.5 w-3.5 text-sky-300" />
+                <Stethoscope className="h-3.5 w-3.5 text-blue-300" />
                 Primary doctor
               </p>
               <p className="mt-1 text-xs font-medium">
@@ -399,9 +399,9 @@ const Dashboard = () => {
               <button
                 key={index}
                 onClick={action.action}
-                className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-center text-[11px] text-slate-200 hover:border-emerald-400/60 hover:bg-slate-900"
+                className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-center text-[11px] text-slate-200 hover:border-blue-400/60 hover:bg-slate-900"
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-emerald-300">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-blue-300">
                   <Icon className="h-4 w-4" />
                 </div>
                 <span className="line-clamp-2">{action.name}</span>
@@ -415,9 +415,9 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <button 
           onClick={() => navigate('/appointments')}
-          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-emerald-400/60 hover:bg-slate-900"
+          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-blue-400/60 hover:bg-slate-900"
         >
-          <Calendar className="h-4 w-4 text-emerald-300" />
+          <Calendar className="h-4 w-4 text-blue-300" />
           <p className="mt-3 text-[11px] text-slate-400">Upcoming visits</p>
           <p className="mt-1 text-xl font-semibold text-slate-50">
             {dashboardData.loading ? '…' : dashboardData.upcomingAppointments.length}
@@ -425,7 +425,7 @@ const Dashboard = () => {
         </button>
         <button 
           onClick={() => navigate('/vital-signs')}
-          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-sky-400/60 hover:bg-slate-900"
+          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-blue-400/60 hover:bg-slate-900"
         >
           <Heart className="h-4 w-4 text-rose-300" />
           <p className="mt-3 text-[11px] text-slate-400">
@@ -441,9 +441,9 @@ const Dashboard = () => {
         </button>
         <button 
           onClick={() => navigate('/messages')}
-          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-indigo-400/60 hover:bg-slate-900"
+          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-blue-400/60 hover:bg-slate-900"
         >
-          <MessageCircle className="h-4 w-4 text-emerald-300" />
+          <MessageCircle className="h-4 w-4 text-blue-300" />
           <p className="mt-3 text-[11px] text-slate-400">New messages</p>
           <p className="mt-1 text-xl font-semibold text-slate-50">
             {dashboardData.loading ? '…' : dashboardData.unreadMessages}
@@ -512,11 +512,11 @@ const Dashboard = () => {
                   <span
                     className={`rounded-full px-3 py-1 text-[11px] font-medium ${
                       appointment.status === 'scheduled'
-                        ? 'bg-slate-900 text-sky-300'
+                        ? 'bg-slate-900 text-blue-300'
                         : appointment.status === 'confirmed'
-                        ? 'bg-emerald-500/10 text-emerald-300'
+                        ? 'bg-blue-500/10 text-blue-300'
                         : appointment.status === 'pending'
-                        ? 'bg-amber-500/10 text-amber-300'
+                        ? 'bg-blue-500/10 text-blue-300'
                         : 'bg-slate-900 text-slate-300'
                     }`}
                   >
@@ -563,12 +563,12 @@ const Dashboard = () => {
               .map((task) => (
                 <div
                   key={task.id}
-                  className="rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-200 hover:border-emerald-400/60"
+                  className="rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-200 hover:border-blue-400/60"
                 >
                   <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                       <div className="mb-1 flex items-center gap-2">
-                        <FileText className="h-3.5 w-3.5 text-emerald-300" />
+                        <FileText className="h-3.5 w-3.5 text-blue-300" />
                         <h3 className="text-sm font-medium text-slate-50">
                           {task.title || 'Care task'}
                         </h3>
@@ -597,9 +597,9 @@ const Dashboard = () => {
                           task.priority === 'urgent'
                             ? 'bg-rose-500/15 text-rose-300'
                             : task.priority === 'high'
-                            ? 'bg-amber-500/15 text-amber-300'
+                            ? 'bg-blue-500/15 text-blue-300'
                             : task.priority === 'normal'
-                            ? 'bg-sky-500/15 text-sky-300'
+                            ? 'bg-blue-500/15 text-blue-300'
                             : 'bg-slate-800 text-slate-300'
                         }`}
                       >
@@ -608,11 +608,11 @@ const Dashboard = () => {
                       <span
                         className={`rounded-full px-3 py-1 text-[10px] font-medium ${
                           task.status === 'pending'
-                            ? 'bg-amber-500/15 text-amber-300'
+                            ? 'bg-blue-500/15 text-blue-300'
                             : task.status === 'in_progress' || task.status === 'active'
-                            ? 'bg-sky-500/15 text-sky-300'
+                            ? 'bg-blue-500/15 text-blue-300'
                             : task.status === 'completed'
-                            ? 'bg-emerald-500/15 text-emerald-300'
+                            ? 'bg-blue-500/15 text-blue-300'
                             : 'bg-slate-800 text-slate-300'
                         }`}
                       >

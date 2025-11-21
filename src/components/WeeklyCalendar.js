@@ -106,7 +106,7 @@ const WeeklyCalendar = ({
                     {bucket.tasks.map((t) => (
                       <div key={t.id} className="bg-white rounded border p-2 flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <ClipboardList className="h-4 w-4 text-green-600" />
+                          <ClipboardList className="h-4 w-4 text-blue-600" />
                           <div>
                             <div className="text-sm font-medium text-gray-900">{t.title || 'Task'}</div>
                             <div className="text-xs text-gray-500">{t.patient || t.patientName || ''}</div>

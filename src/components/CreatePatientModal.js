@@ -213,7 +213,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
         <div>
           <div className="font-semibold">Patient registered successfully!</div>
           <div className="text-sm mt-1">
-            Patient ID: <span className="font-mono font-bold text-emerald-400">{result.patientId}</span>
+            Patient ID: <span className="font-mono font-bold text-blue-400">{result.patientId}</span>
           </div>
         </div>,
         { autoClose: 5000 }
@@ -264,7 +264,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
     }
   };
 
-  const inputClass = "w-full rounded-xl border border-slate-700/60 bg-slate-900/60 px-4 py-3 text-sm text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors";
+  const inputClass = "w-full rounded-xl border border-slate-700/60 bg-slate-900/60 px-4 py-3 text-sm text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors";
   const labelClass = "block text-sm font-medium text-slate-300 mb-1.5";
 
   if (!open) return null;
@@ -273,9 +273,9 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-4xl max-h-[90vh] rounded-3xl border border-slate-800/80 bg-slate-950/90 backdrop-blur-sm shadow-2xl shadow-black/60 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800/60 px-6 py-4 bg-gradient-to-r from-emerald-600/20 to-sky-600/20">
+        <div className="flex items-center justify-between border-b border-slate-800/60 px-6 py-4 bg-gradient-to-r from-blue-600/20 to-blue-600/20">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg">
               <Heart className="h-5 w-5 text-slate-950" />
             </div>
             <div>
@@ -285,7 +285,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-400 hover:border-emerald-400/60 hover:text-emerald-200 transition-colors"
+            className="rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-400 hover:border-blue-400/60 hover:text-blue-200 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -299,7 +299,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                 <div className="flex items-center">
                   <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
                     currentStep >= step 
-                      ? 'bg-emerald-600 text-white' 
+                      ? 'bg-blue-600 text-white' 
                       : 'bg-slate-800 text-slate-400'
                   } transition-colors`}>
                     {currentStep > step ? (
@@ -309,14 +309,14 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     )}
                   </div>
                   <span className={`ml-2 text-xs font-medium ${
-                    currentStep >= step ? 'text-emerald-300' : 'text-slate-400'
+                    currentStep >= step ? 'text-blue-300' : 'text-slate-400'
                   }`}>
                     {step === 1 ? 'Personal Info' : step === 2 ? 'Emergency Contact' : 'Medical Info'}
                   </span>
                 </div>
                 {step < 3 && (
                   <div className={`flex-1 h-0.5 mx-4 ${
-                    currentStep > step ? 'bg-emerald-600' : 'bg-slate-800'
+                    currentStep > step ? 'bg-blue-600' : 'bg-slate-800'
                   } transition-colors`} />
                 )}
               </React.Fragment>
@@ -329,14 +329,14 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
           {createdPatientId ? (
             <div className="text-center py-8">
               <div className="flex items-center justify-center mb-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-600/20">
-                  <CheckCircle className="h-8 w-8 text-emerald-400" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600/20">
+                  <CheckCircle className="h-8 w-8 text-blue-400" />
                 </div>
               </div>
               <h3 className="text-xl font-semibold text-slate-50 mb-2">Patient Registered Successfully!</h3>
               <p className="text-sm text-slate-400 mb-1">Registration Number</p>
-              <div className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600/20 to-sky-600/20 border-2 border-emerald-500/50 mb-4">
-                <span className="font-mono font-bold text-emerald-300 text-2xl tracking-wider">{createdPatientId}</span>
+              <div className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-600/20 border-2 border-blue-500/50 mb-4">
+                <span className="font-mono font-bold text-blue-300 text-2xl tracking-wider">{createdPatientId}</span>
               </div>
               <p className="text-xs text-slate-400 mt-4 max-w-md mx-auto">
                 This registration number will be used to identify the patient throughout the system. 
@@ -349,7 +349,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-4">
-                    <User className="h-5 w-5 text-emerald-400" />
+                    <User className="h-5 w-5 text-blue-400" />
                     <h4 className="text-base font-semibold text-slate-50">Personal Information</h4>
                   </div>
 
@@ -509,7 +509,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
               {currentStep === 2 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-4">
-                    <AlertCircle className="h-5 w-5 text-amber-400" />
+                    <AlertCircle className="h-5 w-5 text-blue-400" />
                     <h4 className="text-base font-semibold text-slate-50">Emergency Contact Information</h4>
                   </div>
 
@@ -568,7 +568,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
               {currentStep === 3 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <Activity className="h-5 w-5 text-sky-400" />
+                    <Activity className="h-5 w-5 text-blue-400" />
                     <h4 className="text-base font-semibold text-slate-50">Medical Information</h4>
                   </div>
 
@@ -580,7 +580,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                           key={level.value}
                           className={`relative flex cursor-pointer rounded-xl border p-4 transition-colors ${
                             formData.careLevel === level.value
-                              ? 'border-emerald-500/50 bg-emerald-600/10'
+                              ? 'border-blue-500/50 bg-blue-600/10'
                               : 'border-slate-700/60 bg-slate-900/60 hover:border-slate-600'
                           }`}
                         >
@@ -597,7 +597,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                             <div className="text-xs text-slate-400 mt-1">{level.description}</div>
                           </div>
                           {formData.careLevel === level.value && (
-                            <CheckCircle className="h-5 w-5 text-emerald-400" />
+                            <CheckCircle className="h-5 w-5 text-blue-400" />
                           )}
                         </label>
                       ))}
@@ -618,7 +618,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                       <button
                         type="button"
                         onClick={addMedicalCondition}
-                        className="px-4 py-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                        className="px-4 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                       >
                         Add
                       </button>
@@ -658,7 +658,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                       <button
                         type="button"
                         onClick={addMedication}
-                        className="px-4 py-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                        className="px-4 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                       >
                         Add
                       </button>
@@ -699,7 +699,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                       <button
                         type="button"
                         onClick={addAllergy}
-                        className="px-4 py-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                        className="px-4 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                       >
                         Add
                       </button>
@@ -709,13 +709,13 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                         {formData.allergies.map((allergy, index) => (
                           <span
                             key={index}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-200"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-sm text-amber-200"
                           >
                             {allergy}
                             <button
                               type="button"
                               onClick={() => removeAllergy(index)}
-                              className="text-amber-400 hover:text-amber-300"
+                              className="text-blue-400 hover:text-blue-300"
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -807,7 +807,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="px-6 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/30 flex items-center gap-2"
+                  className="px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2"
                 >
                   Next
                   <UserPlus className="h-4 w-4" />
@@ -817,7 +817,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   type="button"
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="px-6 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-emerald-500/30 flex items-center gap-2"
+                  className="px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2"
                 >
                   {loading ? (
                     <>

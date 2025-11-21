@@ -244,7 +244,7 @@ const InstitutionCaregiverOnboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Back to Portal Button */}
         <div className="mb-6">
@@ -535,8 +535,8 @@ const InstitutionCaregiverOnboarding = () => {
           {step === 3 && (
             <div className="p-8">
               <div className="text-center mb-8">
-                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle className="h-10 w-10 text-green-600" />
+                <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="h-10 w-10 text-blue-600" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Ready for Review</h2>
                 <p className="text-gray-600">
@@ -592,7 +592,7 @@ const InstitutionCaregiverOnboarding = () => {
                 <button
                   onClick={handleComplete}
                   disabled={saving}
-                  className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? 'Submitting...' : 'Submit for Review'}
                 </button>

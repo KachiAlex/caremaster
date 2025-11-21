@@ -94,17 +94,17 @@ const CaregiverWageEditModal = ({ isOpen, onClose, caregiver, onSave }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
           <div className="flex items-center space-x-3">
             <DollarSign className="h-6 w-6 text-white" />
             <div>
               <h3 className="text-xl font-bold text-white">Manage Wages</h3>
-              <p className="text-purple-100 text-sm">Update caregiver wage rates</p>
+              <p className="text-blue-100 text-sm">Update caregiver wage rates</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:bg-purple-500 rounded-lg p-2 transition-colors"
+            className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -136,7 +136,7 @@ const CaregiverWageEditModal = ({ isOpen, onClose, caregiver, onSave }) => {
             <select
               value={formData.paymentType}
               onChange={(e) => setFormData({ ...formData, paymentType: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="hourly">Hourly Rate (Activity-Based)</option>
               <option value="monthly">Monthly Flat Rate</option>
@@ -162,7 +162,7 @@ const CaregiverWageEditModal = ({ isOpen, onClose, caregiver, onSave }) => {
                   min="0"
                   value={formData.hourlyRate}
                   onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold text-lg"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-lg"
                   placeholder="15.00"
                 />
               </div>
@@ -183,7 +183,7 @@ const CaregiverWageEditModal = ({ isOpen, onClose, caregiver, onSave }) => {
                   min="0"
                   value={formData.monthlyRate}
                   onChange={(e) => setFormData({ ...formData, monthlyRate: e.target.value })}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold text-lg"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-lg"
                   placeholder="3000.00"
                 />
               </div>
@@ -211,7 +211,7 @@ const CaregiverWageEditModal = ({ isOpen, onClose, caregiver, onSave }) => {
           <button
             onClick={handleSave}
             disabled={loading}
-            className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
             {loading ? (
               <>

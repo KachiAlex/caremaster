@@ -273,7 +273,7 @@ const TelemedicineInterface = ({
       <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <Users className="text-green-400" size={20} />
+            <Users className="text-blue-400" size={20} />
             <span className="font-medium">Telemedicine Session</span>
           </div>
           <div className="flex items-center space-x-2">

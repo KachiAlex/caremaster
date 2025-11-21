@@ -52,7 +52,7 @@ const ConsultationModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-600 p-6 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center">
               <Stethoscope className="h-7 w-7 mr-3" />
@@ -118,7 +118,7 @@ const ConsultationModal = ({
           </div>
 
           {/* SOAP Notes Section */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-blue-50 to-blue-50 border-2 border-blue-200 rounded-xl p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
               <ClipboardList className="h-5 w-5 text-blue-600 mr-2" />
               SOAP Notes
@@ -350,7 +350,7 @@ const ConsultationModal = ({
           </button>
           <button
             onClick={onSubmit}
-            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors font-medium flex items-center"
+            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-lg hover:from-blue-700 hover:to-blue-700 transition-colors font-medium flex items-center"
           >
             <FileText className="h-4 w-4 mr-2" />
             Save Consultation

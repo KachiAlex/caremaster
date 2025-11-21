@@ -372,7 +372,7 @@ const AdvancedAnalyticsDashboard = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'healthy': return 'text-green-600';
+      case 'healthy': return 'text-blue-600';
       case 'warning': return 'text-yellow-600';
       case 'critical': return 'text-red-600';
       default: return 'text-gray-600';
@@ -381,7 +381,7 @@ const AdvancedAnalyticsDashboard = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'healthy': return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'healthy': return <CheckCircle className="h-5 w-5 text-blue-600" />;
       case 'warning': return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
       case 'critical': return <XCircle className="h-5 w-5 text-red-600" />;
       default: return <Info className="h-5 w-5 text-gray-600" />;
@@ -416,7 +416,7 @@ const AdvancedAnalyticsDashboard = () => {
                 onClick={() => setRealTimeUpdates(!realTimeUpdates)}
                 className={`px-3 py-2 rounded-lg text-sm font-medium ${
                   realTimeUpdates 
-                    ? 'bg-green-100 text-green-700' 
+                    ? 'bg-blue-100 text-blue-700' 
                     : 'bg-gray-100 text-gray-700'
                 }`}
               >
@@ -483,20 +483,20 @@ const AdvancedAnalyticsDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-gray-700">Live Data</span>
               </div>
               <div className="text-sm text-gray-600">
                 Active Users: <span className="font-semibold text-blue-600">{realTimeData.activeUsers}</span>
               </div>
               <div className="text-sm text-gray-600">
-                Current Calls: <span className="font-semibold text-green-600">{realTimeData.currentCalls}</span>
+                Current Calls: <span className="font-semibold text-blue-600">{realTimeData.currentCalls}</span>
               </div>
               <div className="text-sm text-gray-600">
-                System Load: <span className="font-semibold text-orange-600">{realTimeData.systemLoad}%</span>
+                System Load: <span className="font-semibold text-blue-600">{realTimeData.systemLoad}%</span>
               </div>
               <div className="text-sm text-gray-600">
-                Response Time: <span className="font-semibold text-purple-600">{realTimeData.responseTime}ms</span>
+                Response Time: <span className="font-semibold text-blue-600">{realTimeData.responseTime}ms</span>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -508,7 +508,7 @@ const AdvancedAnalyticsDashboard = () => {
 
       {/* AI Insights Section */}
       <div className="mb-6">
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
+        <div className="bg-gradient-to-r from-blue-50 to-blue-50 rounded-lg p-6 border border-blue-200">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 flex items-center">
               <Sparkles className="h-6 w-6 text-blue-600 mr-2" />
@@ -540,7 +540,7 @@ const AdvancedAnalyticsDashboard = () => {
                   <h3 className="font-semibold text-gray-900 mb-2">{recommendation.title}</h3>
                   <p className="text-sm text-gray-600 mb-2">{recommendation.description}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-green-600 font-medium">Recommendation</span>
+                    <span className="text-xs text-blue-600 font-medium">Recommendation</span>
                     <span className="text-xs text-gray-500">{recommendation.priority}</span>
                   </div>
                 </div>
@@ -556,7 +556,7 @@ const AdvancedAnalyticsDashboard = () => {
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                <Shield className="h-6 w-6 text-green-600 mr-2" />
+                <Shield className="h-6 w-6 text-blue-600 mr-2" />
                 System Health
               </h2>
               <button
@@ -592,15 +592,15 @@ const AdvancedAnalyticsDashboard = () => {
                     <div className="text-sm text-gray-600">CPU Usage</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{systemHealth.performance.memory}%</div>
+                    <div className="text-2xl font-bold text-blue-600">{systemHealth.performance.memory}%</div>
                     <div className="text-sm text-gray-600">Memory Usage</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{systemHealth.performance.disk}%</div>
+                    <div className="text-2xl font-bold text-blue-600">{systemHealth.performance.disk}%</div>
                     <div className="text-sm text-gray-600">Disk Usage</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{systemHealth.performance.network}%</div>
+                    <div className="text-2xl font-bold text-blue-600">{systemHealth.performance.network}%</div>
                     <div className="text-sm text-gray-600">Network Usage</div>
                   </div>
                 </div>
@@ -637,11 +637,11 @@ const AdvancedAnalyticsDashboard = () => {
                   <div className="text-sm text-gray-600">Total Users</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">{analytics.overview.activeCaregivers || 0}</div>
+                  <div className="text-3xl font-bold text-blue-600">{analytics.overview.activeCaregivers || 0}</div>
                   <div className="text-sm text-gray-600">Active Caregivers</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-orange-600">{analytics.overview.totalAppointments || 0}</div>
+                  <div className="text-3xl font-bold text-blue-600">{analytics.overview.totalAppointments || 0}</div>
                   <div className="text-sm text-gray-600">Appointments</div>
                 </div>
                 <div className="text-center">
@@ -658,7 +658,7 @@ const AdvancedAnalyticsDashboard = () => {
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                <Users className="h-6 w-6 text-green-600 mr-2" />
+                <Users className="h-6 w-6 text-blue-600 mr-2" />
                 User Analytics
               </h2>
               <button
@@ -675,7 +675,7 @@ const AdvancedAnalyticsDashboard = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Active Users</span>
-                  <span className="font-semibold text-green-600">{analytics.userMetrics.activeUsers || 0}</span>
+                  <span className="font-semibold text-blue-600">{analytics.userMetrics.activeUsers || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">New Users This Month</span>
@@ -683,11 +683,11 @@ const AdvancedAnalyticsDashboard = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">User Retention</span>
-                  <span className="font-semibold text-purple-600">{analytics.userMetrics.userRetention || 0}%</span>
+                  <span className="font-semibold text-blue-600">{analytics.userMetrics.userRetention || 0}%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Average Age</span>
-                  <span className="font-semibold text-orange-600">{analytics.userMetrics.averageAge || 0}</span>
+                  <span className="font-semibold text-blue-600">{analytics.userMetrics.averageAge || 0}</span>
                 </div>
               </div>
             </div>
@@ -719,7 +719,7 @@ const AdvancedAnalyticsDashboard = () => {
         {/* Geographic Distribution */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <MapPin className="h-5 w-5 text-green-600 mr-2" />
+            <MapPin className="h-5 w-5 text-blue-600 mr-2" />
             Geographic Distribution
           </h3>
           <div className="space-y-3">

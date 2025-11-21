@@ -99,7 +99,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
     return (
       <div className="bg-slate-950 rounded-3xl border border-slate-800/80 shadow-xl shadow-black/50 p-6">
         <div className="flex items-center justify-center p-8 text-slate-400">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400 mr-3"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mr-3"></div>
           Loading analytics...
         </div>
       </div>
@@ -129,13 +129,13 @@ const PatientAnalytics = ({ patientId, patientName }) => {
     <div className="bg-slate-950 rounded-3xl border border-slate-800/80 shadow-xl shadow-black/50 p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-slate-50 flex items-center">
-          <BarChart3 className="h-6 w-6 mr-3 text-emerald-400" />
+          <BarChart3 className="h-6 w-6 mr-3 text-blue-400" />
           Analytics for {patientName || patientId}
         </h3>
         <select
           value={timeRange}
           onChange={(e) => setTimeRange(e.target.value)}
-          className="px-3 py-2 bg-slate-900/60 border border-slate-700 rounded-lg text-slate-50 text-sm focus:ring-emerald-500 focus:border-emerald-500"
+          className="px-3 py-2 bg-slate-900/60 border border-slate-700 rounded-lg text-slate-50 text-sm focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="7">Last 7 days</option>
           <option value="30">Last 30 days</option>
@@ -152,18 +152,18 @@ const PatientAnalytics = ({ patientId, patientName }) => {
               <p className="text-xs text-slate-400 mb-1">Total Activities</p>
               <p className="text-2xl font-bold text-slate-50">{analytics.totalActivities}</p>
             </div>
-            <Activity className="h-8 w-8 text-emerald-400" />
+            <Activity className="h-8 w-8 text-blue-400" />
           </div>
         </div>
         <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-slate-400 mb-1">Activity Trend</p>
-              <p className={`text-2xl font-bold ${analytics.trend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              <p className={`text-2xl font-bold ${analytics.trend >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                 {analytics.trend >= 0 ? '+' : ''}{analytics.trend}%
               </p>
             </div>
-            <TrendingUp className={`h-8 w-8 ${analytics.trend >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
+            <TrendingUp className={`h-8 w-8 ${analytics.trend >= 0 ? 'text-blue-400' : 'text-red-400'}`} />
           </div>
         </div>
         <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-4">
@@ -172,7 +172,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
               <p className="text-xs text-slate-400 mb-1">Categories</p>
               <p className="text-2xl font-bold text-slate-50">{Object.keys(analytics.categoryCounts).length}</p>
             </div>
-            <PieChartIcon className="h-8 w-8 text-sky-400" />
+            <PieChartIcon className="h-8 w-8 text-blue-400" />
           </div>
         </div>
         <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-4">
@@ -181,7 +181,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
               <p className="text-xs text-slate-400 mb-1">Active Clinicians</p>
               <p className="text-2xl font-bold text-slate-50">{Object.keys(analytics.clinicianCounts).length}</p>
             </div>
-            <Users className="h-8 w-8 text-purple-400" />
+            <Users className="h-8 w-8 text-blue-400" />
           </div>
         </div>
       </div>
@@ -190,7 +190,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
         {/* Category Distribution */}
         <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-6">
           <h4 className="text-lg font-semibold text-slate-50 mb-4 flex items-center">
-            <PieChartIcon className="h-5 w-5 mr-2 text-emerald-400" />
+            <PieChartIcon className="h-5 w-5 mr-2 text-blue-400" />
             Top Categories
           </h4>
           <div className="space-y-3">
@@ -204,7 +204,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
                   </div>
                   <div className="w-full bg-slate-800 rounded-full h-2">
                     <div
-                      className="bg-emerald-400 h-2 rounded-full transition-all"
+                      className="bg-blue-400 h-2 rounded-full transition-all"
                       style={{ width: `${percentage}%` }}
                     ></div>
                   </div>
@@ -217,7 +217,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
         {/* Top Clinicians */}
         <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-6">
           <h4 className="text-lg font-semibold text-slate-50 mb-4 flex items-center">
-            <Users className="h-5 w-5 mr-2 text-sky-400" />
+            <Users className="h-5 w-5 mr-2 text-blue-400" />
             Most Active Clinicians
           </h4>
           <div className="space-y-3">
@@ -243,7 +243,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
       {Object.keys(analytics.dailyActivity).length > 0 && (
         <div className="mt-6 bg-slate-900/70 border border-slate-800/60 rounded-xl p-6">
           <h4 className="text-lg font-semibold text-slate-50 mb-4 flex items-center">
-            <Calendar className="h-5 w-5 mr-2 text-purple-400" />
+            <Calendar className="h-5 w-5 mr-2 text-blue-400" />
             Daily Activity
           </h4>
           <div className="flex items-end gap-2 h-48">
@@ -256,7 +256,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
                 return (
                   <div key={index} className="flex-1 flex flex-col items-center">
                     <div
-                      className="w-full bg-emerald-400 rounded-t transition-all hover:bg-emerald-300"
+                      className="w-full bg-blue-400 rounded-t transition-all hover:bg-blue-300"
                       style={{ height: `${height}%` }}
                       title={`${date}: ${count} activities`}
                     ></div>

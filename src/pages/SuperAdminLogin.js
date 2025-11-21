@@ -60,10 +60,10 @@ const SuperAdminLogin = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center px-4">
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-[360px] bg-[radial-gradient(circle_at_top,_#22c55e22,_transparent_65%),radial-gradient(circle_at_30%_20%,_#0ea5e922,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e522,_transparent_55%)]" />
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-[360px] bg-[radial-gradient(circle_at_top,_#3b82f622,_transparent_65%),radial-gradient(circle_at_30%_20%,_#3b82f622,_transparent_55%),radial-gradient(circle_at_80%_0,_#3b82f622,_transparent_55%)]" />
       <div className="relative w-full max-w-lg space-y-6 rounded-3xl border border-slate-800 bg-slate-950/85 p-8 shadow-2xl shadow-black/50">
         <div className="text-center space-y-3">
-          <div className="mx-auto h-14 w-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 via-sky-400 to-indigo-400 shadow-lg shadow-emerald-500/30">
+          <div className="mx-auto h-14 w-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-lg shadow-blue-500/30">
             <Shield className="h-7 w-7 text-slate-950" />
           </div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">UltimateCare</p>
@@ -78,7 +78,7 @@ const SuperAdminLogin = () => {
               type="email"
               autoComplete="email"
               required
-              className="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-50 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-emerald-500/20"
+              className="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-50 placeholder-slate-500 focus:border-blue-400 focus:outline-none focus:ring-blue-500/20"
               placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -88,7 +88,7 @@ const SuperAdminLogin = () => {
               type="password"
               autoComplete="current-password"
               required
-              className="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-50 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-emerald-500/20"
+              className="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-50 placeholder-slate-500 focus:border-blue-400 focus:outline-none focus:ring-blue-500/20"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -98,7 +98,7 @@ const SuperAdminLogin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-2xl bg-emerald-500/90 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 disabled:opacity-50"
+            className="w-full rounded-2xl bg-blue-500/90 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-blue-500/30 transition hover:bg-blue-400 disabled:opacity-50"
           >
             {loading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-900 mx-auto" />
@@ -118,9 +118,9 @@ const SuperAdminLogin = () => {
           </button>
         </div>
 
-        <div className="rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-100">
+        <div className="rounded-2xl border border-blue-400/40 bg-blue-500/10 p-4 text-sm text-blue-100">
           <p className="font-semibold">Super Admin Access</p>
-          <p className="mt-1 text-amber-200">This area is restricted to super administrators. Accounts must carry the super-admin claim to proceed.</p>
+          <p className="mt-1 text-blue-200">This area is restricted to super administrators. Accounts must carry the super-admin claim to proceed.</p>
         </div>
       </div>
     </div>

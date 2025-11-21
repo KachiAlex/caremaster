@@ -172,8 +172,8 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
       <div className="rounded-3xl border border-slate-800/80 bg-slate-950/95 backdrop-blur-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-slate-800/60">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-teal-500/10 border border-teal-500/20">
-              <TestTube className="h-5 w-5 text-teal-400" />
+            <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
+              <TestTube className="h-5 w-5 text-blue-400" />
             </div>
             <h2 className="text-xl font-semibold text-slate-50">Schedule Home Lab Visit</h2>
           </div>
@@ -195,7 +195,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
               value={formData.patientId}
               onChange={(e) => handlePatientChange(e.target.value)}
               required
-              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value="">Select Patient</option>
               {patients.map(patient => (
@@ -228,7 +228,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
               value={formData.assignedLabTechnicianId}
               onChange={(e) => handleTechnicianChange(e.target.value)}
               required
-              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value="">Select Lab Technician</option>
               {labTechnicians.map(tech => (
@@ -250,7 +250,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
               onChange={(e) => setFormData(prev => ({ ...prev, testType: e.target.value }))}
               placeholder="e.g., Blood Test, Urine Test, Swab"
               required
-              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
           </div>
 
@@ -264,7 +264,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
               value={formData.testName}
               onChange={(e) => setFormData(prev => ({ ...prev, testName: e.target.value }))}
               placeholder="Specific test name if applicable"
-              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
           </div>
 
@@ -278,7 +278,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
               onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
               placeholder="Reason for ordering this test..."
               rows={3}
-              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
           </div>
 
@@ -291,7 +291,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
               value={formData.urgency}
               onChange={(e) => setFormData(prev => ({ ...prev, urgency: e.target.value }))}
               required
-              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value="normal">Normal</option>
               <option value="urgent">Urgent</option>
@@ -309,7 +309,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
               onChange={(e) => setFormData(prev => ({ ...prev, scheduledAt: e.target.value }))}
               required
               min={new Date().toISOString().slice(0, 16)}
-              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
           </div>
 
@@ -323,7 +323,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
               placeholder="Any special instructions or notes..."
               rows={3}
-              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
           </div>
 
@@ -332,7 +332,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Scheduling...' : 'Schedule Visit'}
             </button>

@@ -5,7 +5,7 @@ import { auth } from '../firebase/config';
 import { X, Building2, Shield, FileText, RefreshCw, Plus, LogOut, ExternalLink, Copy, Edit, Trash2, UserPlus } from 'lucide-react';
 import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, forceUpdateAllInstitutionLinks } from '../services/licenseService';
 
-const Card = ({ title, value, accent = 'text-emerald-300', icon: Icon }) => (
+const Card = ({ title, value, accent = 'text-blue-300', icon: Icon }) => (
   <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 backdrop-blur-sm p-6 shadow-xl shadow-black/50">
     <div className="flex items-center justify-between gap-3">
       <div>
@@ -16,9 +16,9 @@ const Card = ({ title, value, accent = 'text-emerald-300', icon: Icon }) => (
       </div>
       {Icon && (
         <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${
-          accent.includes('emerald') ? 'from-emerald-400 to-emerald-600' :
-          accent.includes('sky') ? 'from-sky-400 to-sky-600' :
-          accent.includes('amber') ? 'from-amber-400 to-amber-600' :
+          accent.includes('emerald') ? 'from-blue-400 to-blue-600' :
+          accent.includes('sky') ? 'from-blue-400 to-blue-600' :
+          accent.includes('amber') ? 'from-blue-400 to-blue-600' :
           'from-slate-400 to-slate-600'
         } shadow-lg`}>
           <Icon className="h-5 w-5 text-slate-950" />
@@ -35,7 +35,7 @@ const Modal = ({ open, title, onClose, children }) => {
       <div className="w-full max-w-xl rounded-3xl border border-slate-800/80 bg-slate-950/90 backdrop-blur-sm shadow-2xl shadow-black/60">
         <div className="flex items-center justify-between border-b border-slate-800/60 px-6 py-4">
           <h3 className="text-lg font-semibold text-slate-50">{title}</h3>
-          <button onClick={onClose} className="rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-400 hover:border-emerald-400/60 hover:text-emerald-200 transition-colors">
+          <button onClick={onClose} className="rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-400 hover:border-blue-400/60 hover:text-blue-200 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -80,7 +80,7 @@ const SuperAdminLicensing = () => {
   const [selectedInstitutionForAdmin, setSelectedInstitutionForAdmin] = useState(null);
 
   const inputClass =
-    'rounded-xl border border-slate-800/60 bg-slate-900/60 backdrop-blur-sm px-4 py-2.5 text-sm text-slate-50 placeholder-slate-500 focus:border-emerald-400/60 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-colors';
+    'rounded-xl border border-slate-800/60 bg-slate-900/60 backdrop-blur-sm px-4 py-2.5 text-sm text-slate-50 placeholder-slate-500 focus:border-blue-400/60 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors';
 
   // Helper function to fix old domain links
   const fixInstitutionLinks = (institutions) => {
@@ -515,7 +515,7 @@ const SuperAdminLicensing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-400 via-amber-400 to-orange-500 shadow-lg shadow-rose-500/40">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-400 via-blue-400 to-blue-500 shadow-lg shadow-rose-500/40">
                 <Shield className="h-5 w-5 text-slate-950" />
               </div>
               <div>
@@ -530,7 +530,7 @@ const SuperAdminLicensing = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleNavigateToDashboard}
-                className="px-4 py-2 rounded-xl border border-slate-800/60 bg-slate-900/60 text-slate-300 text-sm font-medium hover:border-emerald-400/60 hover:text-emerald-300 transition-colors"
+                className="px-4 py-2 rounded-xl border border-slate-800/60 bg-slate-900/60 text-slate-300 text-sm font-medium hover:border-blue-400/60 hover:text-blue-300 transition-colors"
               >
                 Dashboard
               </button>
@@ -562,21 +562,21 @@ const SuperAdminLicensing = () => {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowInstitutionModal(true)}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 flex items-center gap-2 transition-colors shadow-lg shadow-emerald-500/30"
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/30"
               >
                 <Plus className="h-4 w-4" />
                 New Institution
               </button>
               <button
                 onClick={() => setShowLicenseModal(true)}
-                className="px-4 py-2 bg-sky-600 text-white rounded-xl hover:bg-sky-700 flex items-center gap-2 transition-colors shadow-lg shadow-sky-500/30"
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/30"
               >
                 <FileText className="h-4 w-4" />
                 New License
               </button>
               <button
                 onClick={() => setShowAdminModal(true)}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 flex items-center gap-2 transition-colors shadow-lg shadow-indigo-500/30"
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/30"
               >
                 <UserPlus className="h-4 w-4" />
                 Assign Admin
@@ -586,7 +586,7 @@ const SuperAdminLicensing = () => {
         </div>
 
         {message && (
-          <div className="rounded-3xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 backdrop-blur-sm">
+          <div className="rounded-3xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm text-blue-200 backdrop-blur-sm">
             {message}
           </div>
         )}
@@ -596,19 +596,19 @@ const SuperAdminLicensing = () => {
           <Card
             title="Institutions"
             value={loading ? '...' : (institutions.length || 0).toString()}
-            accent="text-emerald-300"
+            accent="text-blue-300"
             icon={Building2}
           />
           <Card
             title="Active Licenses"
             value={loading ? '...' : (licenses.filter(l => l.active !== false).length || 0).toString()}
-            accent="text-sky-300"
+            accent="text-blue-300"
             icon={Shield}
           />
           <Card
             title="Total Licenses"
             value={loading ? '...' : (licenses.length || 0).toString()}
-            accent="text-amber-300"
+            accent="text-blue-300"
             icon={FileText}
           />
         </div>
@@ -726,14 +726,14 @@ const SuperAdminLicensing = () => {
                   }
                 }}
                 disabled={busy}
-                className="px-4 py-2 rounded-xl border border-slate-800/60 bg-slate-900/60 text-slate-300 text-sm font-medium hover:border-emerald-400/60 hover:text-emerald-300 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 rounded-xl border border-slate-800/60 bg-slate-900/60 text-slate-300 text-sm font-medium hover:border-blue-400/60 hover:text-blue-300 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
                 Force Update Links
               </button>
               <button
                 onClick={() => setShowInstitutionModal(true)}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm font-medium transition-colors shadow-lg shadow-emerald-500/30 flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-medium transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
                 New Institution
@@ -746,7 +746,7 @@ const SuperAdminLicensing = () => {
         <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 backdrop-blur-sm shadow-xl shadow-black/50 overflow-hidden">
           <div className="p-6 border-b border-slate-800/60">
             <h3 className="text-xl font-semibold text-slate-50 flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-emerald-400" />
+              <Building2 className="h-5 w-5 text-blue-400" />
               Institutions
             </h3>
             <p className="text-sm text-slate-400 mt-1">Manage all healthcare institutions</p>
@@ -781,7 +781,7 @@ const SuperAdminLicensing = () => {
                             href={i.accessLink} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="text-emerald-300 hover:text-emerald-200 text-xs flex items-center gap-1 transition-colors"
+                            className="text-blue-300 hover:text-blue-200 text-xs flex items-center gap-1 transition-colors"
                           >
                             <span>Portal Link</span>
                             <ExternalLink className="h-3 w-3" />
@@ -805,7 +805,7 @@ const SuperAdminLicensing = () => {
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                         i.active !== false 
-                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/40' 
+                          ? 'bg-blue-500/15 text-blue-300 border border-blue-400/40' 
                           : 'bg-slate-800/60 text-slate-400 border border-slate-700/60'
                       }`}>
                         {i.active !== false ? 'Active' : 'Inactive'}
@@ -816,7 +816,7 @@ const SuperAdminLicensing = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEditInstitution(i)}
-                          className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/60 bg-slate-900/60 text-slate-200 hover:border-emerald-400/60 hover:text-emerald-300 transition-colors flex items-center gap-1"
+                          className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/60 bg-slate-900/60 text-slate-200 hover:border-blue-400/60 hover:text-blue-300 transition-colors flex items-center gap-1"
                           title="Edit Institution"
                         >
                           <Edit className="h-3 w-3" />
@@ -824,7 +824,7 @@ const SuperAdminLicensing = () => {
                         </button>
                         <button
                           onClick={() => setLicense(l => ({ ...l, institutionId: i.id })) || setShowLicenseModal(true)}
-                          className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/60 bg-slate-900/60 text-slate-200 hover:border-sky-400/60 hover:text-sky-300 transition-colors"
+                          className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/60 bg-slate-900/60 text-slate-200 hover:border-blue-400/60 hover:text-blue-300 transition-colors"
                           title="Create License"
                         >
                           License
@@ -845,7 +845,7 @@ const SuperAdminLicensing = () => {
                               setLoadingAdmins(false);
                             }
                           }} 
-                          className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/60 bg-slate-900/60 text-slate-200 hover:border-indigo-400/60 hover:text-indigo-300 transition-colors"
+                          className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/60 bg-slate-900/60 text-slate-200 hover:border-blue-400/60 hover:text-blue-300 transition-colors"
                           title="Manage Admins"
                         >
                           Admins
@@ -871,7 +871,7 @@ const SuperAdminLicensing = () => {
       <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 backdrop-blur-sm shadow-xl shadow-black/50 overflow-hidden">
         <div className="p-6 border-b border-slate-800/60">
           <h3 className="text-xl font-semibold text-slate-50 flex items-center gap-2">
-            <FileText className="h-5 w-5 text-sky-400" />
+            <FileText className="h-5 w-5 text-blue-400" />
             Licenses
           </h3>
           <p className="text-sm text-slate-400 mt-1">Manage all institution licenses</p>
@@ -903,7 +903,7 @@ const SuperAdminLicensing = () => {
                       <div className="font-semibold text-slate-50">{institution?.name || l.institutionId || 'Unknown'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-500/15 text-sky-300 border border-sky-400/40 capitalize">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/15 text-blue-300 border border-blue-400/40 capitalize">
                         {l.plan || 'basic'}
                       </span>
                     </td>
@@ -911,7 +911,7 @@ const SuperAdminLicensing = () => {
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                         l.active !== false 
-                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/40' 
+                          ? 'bg-blue-500/15 text-blue-300 border border-blue-400/40' 
                           : 'bg-slate-800/60 text-slate-400 border border-slate-700/60'
                       }`}>
                         {l.active !== false ? 'Active' : 'Suspended'}
@@ -927,7 +927,7 @@ const SuperAdminLicensing = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEditLicense(l)}
-                          className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/60 bg-slate-900/60 text-slate-200 hover:border-sky-400/60 hover:text-sky-300 transition-colors flex items-center gap-1"
+                          className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/60 bg-slate-900/60 text-slate-200 hover:border-blue-400/60 hover:text-blue-300 transition-colors flex items-center gap-1"
                           title="Edit License"
                         >
                           <Edit className="h-3 w-3" />
@@ -938,8 +938,8 @@ const SuperAdminLicensing = () => {
                           disabled={busy}
                           className={`px-3 py-1.5 text-xs rounded-lg border transition-colors flex items-center gap-1 ${
                             l.active !== false
-                              ? 'border-amber-500/60 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:bg-amber-500/20'
-                              : 'border-emerald-500/60 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400 hover:bg-emerald-500/20'
+                              ? 'border-blue-500/60 bg-blue-500/10 text-amber-200 hover:border-blue-400 hover:bg-blue-500/20'
+                              : 'border-blue-500/60 bg-blue-500/10 text-blue-200 hover:border-blue-400 hover:bg-blue-500/20'
                           } disabled:opacity-50`}
                           title={l.active !== false ? 'Suspend License' : 'Activate License'}
                         >
@@ -963,7 +963,7 @@ const SuperAdminLicensing = () => {
           <input className={inputClass} placeholder="Notes (optional)" value={institution.notes} onChange={e => setInstitution({ ...institution, notes: e.target.value })} />
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={() => setShowInstitutionModal(false)} className="px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 transition-colors">Cancel</button>
-            <button disabled={busy} onClick={handleCreateInstitution} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 disabled:opacity-50 transition-colors">Create</button>
+            <button disabled={busy} onClick={handleCreateInstitution} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:bg-blue-700 disabled:opacity-50 transition-colors">Create</button>
           </div>
         </div>
       </Modal>
@@ -981,7 +981,7 @@ const SuperAdminLicensing = () => {
           <input className={inputClass} type="date" placeholder="Ends At" value={license.endsAt} onChange={e => setLicense({ ...license, endsAt: e.target.value })} />
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={() => setShowLicenseModal(false)} className="px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 transition-colors">Cancel</button>
-            <button disabled={busy} onClick={handleCreateLicense} className="px-4 py-2 rounded-xl bg-sky-600 text-white font-semibold shadow-lg shadow-sky-500/30 hover:bg-sky-700 disabled:opacity-50 transition-colors">Create</button>
+            <button disabled={busy} onClick={handleCreateLicense} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:bg-blue-700 disabled:opacity-50 transition-colors">Create</button>
           </div>
         </div>
       </Modal>
@@ -1016,7 +1016,7 @@ const SuperAdminLicensing = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        admin.active ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/40' : 'bg-slate-800/60 text-slate-400 border border-slate-700/60'
+                        admin.active ? 'bg-blue-500/15 text-blue-300 border border-blue-400/40' : 'bg-slate-800/60 text-slate-400 border border-slate-700/60'
                       }`}>
                         {admin.active ? 'Active' : 'Inactive'}
                       </span>
@@ -1073,7 +1073,7 @@ const SuperAdminLicensing = () => {
                 <button 
                   disabled={busy || !adminUser.email || !adminUser.password || (adminUser.password && adminUser.password.length < 6)} 
                   onClick={handleAssignAdmin} 
-                  className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:bg-blue-700 disabled:opacity-50 transition-colors"
                   title={!adminUser.password || adminUser.password.length < 6 ? 'Password must be at least 6 characters' : ''}
                 >
                   {busy ? 'Adding...' : 'Add Admin'}
@@ -1118,7 +1118,7 @@ const SuperAdminLicensing = () => {
               <button
                 onClick={() => setEditingInstitution({ ...editingInstitution, active: !editingInstitution.active })}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  editingInstitution.active ? 'bg-emerald-500/80' : 'bg-slate-700'
+                  editingInstitution.active ? 'bg-blue-500/80' : 'bg-slate-700'
                 }`}
               >
                 <span
@@ -1130,7 +1130,7 @@ const SuperAdminLicensing = () => {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setShowEditInstitutionModal(false)} className="px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 transition-colors">Cancel</button>
-              <button disabled={busy} onClick={handleUpdateInstitution} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 disabled:opacity-50 transition-colors">Update</button>
+              <button disabled={busy} onClick={handleUpdateInstitution} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:bg-blue-700 disabled:opacity-50 transition-colors">Update</button>
             </div>
           </div>
         )}
@@ -1172,7 +1172,7 @@ const SuperAdminLicensing = () => {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setShowEditLicenseModal(false)} className="px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 transition-colors">Cancel</button>
-              <button disabled={busy} onClick={handleUpdateLicense} className="px-4 py-2 rounded-xl bg-sky-600 text-white font-semibold shadow-lg shadow-sky-500/30 hover:bg-sky-700 disabled:opacity-50 transition-colors">Update</button>
+              <button disabled={busy} onClick={handleUpdateLicense} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:bg-blue-700 disabled:opacity-50 transition-colors">Update</button>
             </div>
           </div>
         )}

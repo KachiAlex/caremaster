@@ -151,7 +151,7 @@ const Profile = () => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Medication Adherence</span>
-              <span className="font-semibold text-green-600">95%</span>
+              <span className="font-semibold text-blue-600">95%</span>
             </div>
           </div>
           <button className="btn btn-primary mt-4">

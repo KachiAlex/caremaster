@@ -133,7 +133,7 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
             setTimeout(() => setShowResults(false), 200);
           }}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+          className="w-full pl-10 pr-10 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
         />
         {searchTerm && (
           <button
@@ -164,7 +164,7 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
                 onClick={() => handleSelect(patient)}
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
                   index === selectedIndex
-                    ? 'bg-emerald-500/20 border border-emerald-500/30'
+                    ? 'bg-blue-500/20 border border-blue-500/30'
                     : 'bg-slate-900/60 hover:bg-slate-800/60 border border-transparent'
                 } ${index < results.length - 1 ? 'mb-2' : ''}`}
               >
@@ -176,7 +176,7 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
                         {patient.name || patient.fullName || 'Unknown Patient'}
                       </div>
                       {patient.patientId && (
-                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded text-xs font-mono flex-shrink-0">
+                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded text-xs font-mono flex-shrink-0">
                           {patient.patientId}
                         </span>
                       )}

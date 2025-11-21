@@ -180,7 +180,7 @@ const CaregiverMessages = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'online':
-        return 'bg-green-500';
+        return 'bg-blue-500';
       case 'offline':
         return 'bg-gray-400';
       default:
@@ -216,7 +216,7 @@ const CaregiverMessages = () => {
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
               <MessageCircle className="h-8 w-8 text-white" />
             </div>
             <div>
@@ -225,7 +225,7 @@ const CaregiverMessages = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <button className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            <button className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               <Phone className="h-5 w-5" />
             </button>
             <button className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">

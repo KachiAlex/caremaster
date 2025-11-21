@@ -349,7 +349,7 @@ const CallInterface = ({
                   }}
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-blue-900 to-purple-900 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-900 flex items-center justify-center">
                   <div className="text-center text-white">
                     <div className="w-32 h-32 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-4xl font-bold">
@@ -370,7 +370,7 @@ const CallInterface = ({
               <div className="absolute top-4 left-4 bg-black bg-opacity-50 rounded-lg px-3 py-2">
                 <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${
-                    connectionQuality === 'good' ? 'bg-green-500' : 
+                    connectionQuality === 'good' ? 'bg-blue-500' : 
                     connectionQuality === 'fair' ? 'bg-yellow-500' : 'bg-red-500'
                 }`} />
                   <span className="text-white text-sm font-medium">
@@ -440,7 +440,7 @@ const CallInterface = ({
                   
                   {callState === 'ringing' && (
                     <>
-                      <div className="w-24 h-24 md:w-24 md:h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                      <div className="w-24 h-24 md:w-24 md:h-24 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                         <Phone className="text-white" size={32} />
                       </div>
                       <h2 className="text-xl md:text-2xl font-semibold mb-2">Incoming Call</h2>
@@ -454,7 +454,7 @@ const CallInterface = ({
                         </button>
                         <button
                           onClick={handleAcceptCall}
-                          className="w-20 h-20 md:w-16 md:h-16 bg-green-500 rounded-full flex items-center justify-center hover:bg-green-600 active:bg-green-700 transition-colors touch-manipulation"
+                          className="w-20 h-20 md:w-16 md:h-16 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 active:bg-blue-700 transition-colors touch-manipulation"
                         >
                           <Check className="text-white" size={28} />
                         </button>

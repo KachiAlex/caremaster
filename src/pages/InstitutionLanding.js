@@ -100,7 +100,7 @@ const InstitutionLanding = () => {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader className="h-12 w-12 text-emerald-400 animate-spin mx-auto mb-4" />
+          <Loader className="h-12 w-12 text-blue-400 animate-spin mx-auto mb-4" />
           <p className="text-slate-300">{checkingAuth ? 'Checking authentication...' : 'Loading institution...'}</p>
         </div>
       </div>
@@ -116,7 +116,7 @@ const InstitutionLanding = () => {
           <p className="text-slate-300 mb-6">{error || 'Institution not found'}</p>
           <Link
             to="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-400 text-slate-950 rounded-full font-semibold hover:bg-emerald-300 shadow-lg shadow-emerald-500/40"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-400 text-slate-950 rounded-full font-semibold hover:bg-blue-300 shadow-lg shadow-blue-500/40"
           >
             Return to Home
             <ArrowRight className="h-4 w-4" />
@@ -167,7 +167,7 @@ const InstitutionLanding = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 via-sky-400 to-indigo-500 shadow-lg shadow-emerald-500/30">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-400 to-blue-500 shadow-lg shadow-blue-500/30">
                 <HeartPulse className="h-5 w-5 text-slate-950" />
               </div>
               <div>
@@ -175,8 +175,8 @@ const InstitutionLanding = () => {
                   <span className="text-base font-semibold tracking-tight text-slate-50">
                     UltimateCare
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-300">
-                    <Sparkles className="h-3 w-3 text-emerald-300" />
+                  <span className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-blue-300">
+                    <Sparkles className="h-3 w-3 text-blue-300" />
                     Institution
                   </span>
                 </div>
@@ -201,12 +201,12 @@ const InstitutionLanding = () => {
           {/* Hero Section */}
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-300 backdrop-blur mb-6">
-              <Shield className="h-3.5 w-3.5 text-emerald-400" />
+              <Shield className="h-3.5 w-3.5 text-blue-400" />
               <span className="font-medium">Licensed & Active</span>
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-slate-50 mb-4">
-              <span className="bg-gradient-to-r from-emerald-300 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-300 via-blue-300 to-blue-300 bg-clip-text text-transparent">
                 {institution.name}
               </span>
             </h1>
@@ -218,11 +218,11 @@ const InstitutionLanding = () => {
             {license && (
               <div className="inline-flex items-center gap-6 text-xs sm:text-sm text-slate-300">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-emerald-400" />
+                  <CheckCircle className="h-4 w-4 text-blue-400" />
                   <span className="capitalize">{license.plan} Plan</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-sky-400" />
+                  <Users className="h-4 w-4 text-blue-400" />
                   <span>{license.seats} User Seats</span>
                 </div>
               </div>
@@ -232,7 +232,7 @@ const InstitutionLanding = () => {
           {/* Access Roles Section */}
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300 mb-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300 mb-3">
                 Access Portals
               </p>
               <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-50">
@@ -248,10 +248,10 @@ const InstitutionLanding = () => {
                     href={getPortalUrl(role.role)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group relative rounded-2xl border border-slate-800 bg-slate-900/70 p-8 shadow-lg shadow-black/40 hover:border-emerald-400/50 hover:shadow-emerald-500/20 transition-all duration-200 block"
+                    className="group relative rounded-2xl border border-slate-800 bg-slate-900/70 p-8 shadow-lg shadow-black/40 hover:border-blue-400/50 hover:shadow-blue-500/20 transition-all duration-200 block"
                   >
                     <div className="flex flex-col items-center text-center space-y-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300 group-hover:bg-emerald-400/25 transition-colors">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-400/15 text-blue-300 group-hover:bg-blue-400/25 transition-colors">
                         <role.icon className="h-6 w-6" />
                       </div>
                       <div>
@@ -261,7 +261,7 @@ const InstitutionLanding = () => {
                         </div>
                         <p className="text-xs leading-relaxed text-slate-300">{role.description}</p>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-emerald-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowRight className="h-4 w-4 text-blue-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </a>
                   
@@ -279,7 +279,7 @@ const InstitutionLanding = () => {
                         className="flex-shrink-0 p-2 hover:bg-slate-800 rounded-lg transition-colors"
                         title="Copy link"
                       >
-                        <Copy className="h-4 w-4 text-slate-400 hover:text-emerald-300" />
+                        <Copy className="h-4 w-4 text-slate-400 hover:text-blue-300" />
                       </button>
                     </div>
                   </div>
@@ -293,15 +293,15 @@ const InstitutionLanding = () => {
               <h3 className="font-semibold text-slate-50 mb-3">How to Access Your Portal</h3>
               <ol className="text-xs text-slate-300 text-left space-y-2">
                 <li className="flex items-start gap-2">
-                  <span className="font-semibold text-emerald-300">1.</span>
+                  <span className="font-semibold text-blue-300">1.</span>
                   <span>Click on your portal box above (opens in new tab)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-semibold text-emerald-300">2.</span>
+                  <span className="font-semibold text-blue-300">2.</span>
                   <span>Or copy the direct link using the <Copy className="h-3 w-3 inline text-slate-400" /> button</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-semibold text-emerald-300">3.</span>
+                  <span className="font-semibold text-blue-300">3.</span>
                   <span>Share the link with your team members</span>
                 </li>
               </ol>
@@ -317,7 +317,7 @@ const InstitutionLanding = () => {
         <div className="border-t border-slate-800/60 bg-[radial-gradient(circle_at_top,_#0f172a,_#020617)] py-14 sm:py-16">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300 mb-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300 mb-3">
                 Platform Features
               </p>
               <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-50">
@@ -326,24 +326,24 @@ const InstitutionLanding = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center shadow-lg shadow-black/40 transition hover:border-emerald-400/50 hover:shadow-emerald-500/20">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300 mx-auto mb-4">
+              <div className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center shadow-lg shadow-black/40 transition hover:border-blue-400/50 hover:shadow-blue-500/20">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400/15 text-blue-300 mx-auto mb-4">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
                 <h3 className="font-semibold text-slate-50 mb-2 text-sm">Secure & Compliant</h3>
                 <p className="text-xs text-slate-300 leading-relaxed">NDPR-ready • HIPAA-inspired healthcare data management</p>
               </div>
               
-              <div className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center shadow-lg shadow-black/40 transition hover:border-emerald-400/50 hover:shadow-emerald-500/20">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-400/15 text-sky-300 mx-auto mb-4">
+              <div className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center shadow-lg shadow-black/40 transition hover:border-blue-400/50 hover:shadow-blue-500/20">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400/15 text-blue-300 mx-auto mb-4">
                   <Users className="h-5 w-5" />
                 </div>
                 <h3 className="font-semibold text-slate-50 mb-2 text-sm">Staff Management</h3>
                 <p className="text-xs text-slate-300 leading-relaxed">Manage doctors, nurses, and caregivers efficiently</p>
               </div>
               
-              <div className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center shadow-lg shadow-black/40 transition hover:border-emerald-400/50 hover:shadow-emerald-500/20">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-400/15 text-indigo-300 mx-auto mb-4">
+              <div className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center shadow-lg shadow-black/40 transition hover:border-blue-400/50 hover:shadow-blue-500/20">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400/15 text-blue-300 mx-auto mb-4">
                   <Activity className="h-5 w-5" />
                 </div>
                 <h3 className="font-semibold text-slate-50 mb-2 text-sm">Real-time Updates</h3>
@@ -359,7 +359,7 @@ const InstitutionLanding = () => {
         <div className="max-w-7xl mx-auto flex flex-col gap-6 px-4 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div>
             <div className="flex items-center gap-2 text-slate-200">
-              <HeartPulse className="h-4 w-4 text-emerald-300" />
+              <HeartPulse className="h-4 w-4 text-blue-300" />
               <span className="text-sm font-semibold">UltimateCare</span>
             </div>
             <p className="mt-2 text-[11px]">
@@ -368,13 +368,13 @@ const InstitutionLanding = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-4">
-            <Link to="/privacy" className="hover:text-emerald-300">
+            <Link to="/privacy" className="hover:text-blue-300">
               Privacy
             </Link>
-            <Link to="/terms" className="hover:text-emerald-300">
+            <Link to="/terms" className="hover:text-blue-300">
               Terms
             </Link>
-            <Link to="/pricing" className="hover:text-emerald-300">
+            <Link to="/pricing" className="hover:text-blue-300">
               Pricing
             </Link>
           </div>

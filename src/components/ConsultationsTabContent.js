@@ -23,8 +23,8 @@ const ConsultationsTabContent = ({
 
   const getConsultationTypeBadge = (type) => {
     const config = {
-      telemedicine: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Telemedicine' },
-      'in-person': { bg: 'bg-green-100', text: 'text-green-800', label: 'In-Person' },
+      telemedicine: { bg: 'bg-blue-100', text: 'text-purple-800', label: 'Telemedicine' },
+      'in-person': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'In-Person' },
       'follow-up': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Follow-Up' },
       review: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Review' },
       emergency: { bg: 'bg-red-100', text: 'text-red-800', label: 'Emergency' }
@@ -54,7 +54,7 @@ const ConsultationsTabContent = ({
         {isDoctor && selectedClient && (
           <button
             onClick={onOpenConsultationModal}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center font-medium"
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-lg hover:from-blue-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center font-medium"
           >
             <FileText className="h-5 w-5 mr-2" />
             Write Consultation
@@ -64,7 +64,7 @@ const ConsultationsTabContent = ({
 
       {/* Client Info Banner */}
       {selectedClient ? (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5">
+        <div className="bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-xl p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <User className="h-6 w-6 text-blue-600 mr-3" />
@@ -172,7 +172,7 @@ const ConsultationsTabContent = ({
                 {expandedConsultation === consultation.id && (
                   <div className="p-6 space-y-5">
                     {/* SOAP Notes */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5">
+                    <div className="bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-lg p-5">
                       <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center">
                         <FileText className="h-5 w-5 text-blue-600 mr-2" />
                         Clinical Notes (SOAP)
@@ -194,7 +194,7 @@ const ConsultationsTabContent = ({
                         {/* Objective */}
                         {consultation.objective && (
                           <div className="bg-white rounded-lg p-4">
-                            <h5 className="text-xs font-bold text-green-600 uppercase mb-2">
+                            <h5 className="text-xs font-bold text-blue-600 uppercase mb-2">
                               O - Objective
                             </h5>
                             <p className="text-sm text-gray-900 whitespace-pre-wrap">
@@ -206,7 +206,7 @@ const ConsultationsTabContent = ({
                         {/* Assessment */}
                         {consultation.assessment && (
                           <div className="bg-white rounded-lg p-4">
-                            <h5 className="text-xs font-bold text-purple-600 uppercase mb-2">
+                            <h5 className="text-xs font-bold text-blue-600 uppercase mb-2">
                               A - Assessment
                             </h5>
                             <p className="text-sm text-gray-900 whitespace-pre-wrap">
@@ -218,7 +218,7 @@ const ConsultationsTabContent = ({
                         {/* Plan */}
                         {consultation.plan && (
                           <div className="bg-white rounded-lg p-4">
-                            <h5 className="text-xs font-bold text-orange-600 uppercase mb-2">
+                            <h5 className="text-xs font-bold text-blue-600 uppercase mb-2">
                               P - Plan
                             </h5>
                             <p className="text-sm text-gray-900 whitespace-pre-wrap">

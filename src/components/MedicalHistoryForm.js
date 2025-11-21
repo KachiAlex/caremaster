@@ -421,7 +421,7 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
         {/* Pain Assessment */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-            <Activity className="mr-2 text-orange-500" />
+            <Activity className="mr-2 text-blue-500" />
             Pain Assessment
           </h3>
           
@@ -473,7 +473,7 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
       {/* Physical Assessment */}
       <div className="mt-6 space-y-4">
         <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-          <Eye className="mr-2 text-green-500" />
+          <Eye className="mr-2 text-blue-500" />
           Physical Assessment
         </h3>
         
@@ -618,7 +618,7 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
       {/* Photo Upload */}
       <div className="mt-6 space-y-4">
         <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-          <Camera className="mr-2 text-purple-500" />
+          <Camera className="mr-2 text-blue-500" />
           Photo Documentation
         </h3>
         

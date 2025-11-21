@@ -71,11 +71,11 @@ const InstitutionCaregiverPendingApproval = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-green-600 p-8 text-white text-center">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-600 p-8 text-white text-center">
             <div className="flex justify-center mb-4">
               <div className="bg-white/20 p-4 rounded-full">
                 <Clock className="h-12 w-12" />
@@ -107,8 +107,8 @@ const InstitutionCaregiverPendingApproval = () => {
               <div className="space-y-4">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
                     </div>
                   </div>
                   <div className="ml-4">
@@ -135,8 +135,8 @@ const InstitutionCaregiverPendingApproval = () => {
 
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Mail className="h-5 w-5 text-purple-600" />
+                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-blue-600" />
                     </div>
                   </div>
                   <div className="ml-4">

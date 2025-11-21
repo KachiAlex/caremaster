@@ -211,7 +211,7 @@ const CaregiverSchedule = () => {
       case 'medium':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-blue-100 text-blue-800 border-green-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -224,7 +224,7 @@ const CaregiverSchedule = () => {
       case 'in-progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -250,7 +250,7 @@ const CaregiverSchedule = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -375,8 +375,8 @@ const CaregiverSchedule = () => {
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                      <span className="text-green-600 font-medium">
+                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-medium">
                         {appointment.patientName.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
@@ -483,8 +483,8 @@ const CaregiverSchedule = () => {
         </div>
         <div className="card">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <CheckCircle className="h-6 w-6 text-blue-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Completed</p>

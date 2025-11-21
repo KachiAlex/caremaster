@@ -109,9 +109,9 @@ const InstitutionPharmacyDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading pharmacy dashboard...</p>
         </div>
       </div>
@@ -129,11 +129,11 @@ const InstitutionPharmacyDashboard = () => {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
           {/* Logo and Title */}
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 via-sky-400 to-indigo-500 shadow-lg shadow-emerald-500/40">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-400 to-blue-500 shadow-lg shadow-blue-500/40">
               <Pill className="h-4 w-4 text-slate-950" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-300">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-300">
                 Institution pharmacy
               </p>
               <h1 className="truncate text-sm font-semibold text-slate-50 sm:text-base">
@@ -145,15 +145,15 @@ const InstitutionPharmacyDashboard = () => {
           {/* User Info and Actions */}
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-[11px] text-slate-300 md:flex">
-              <Building2 className="h-3.5 w-3.5 text-sky-300" />
+              <Building2 className="h-3.5 w-3.5 text-blue-300" />
               <span className="truncate">{institutionData?.name || 'Institution'}</span>
             </div>
             <button className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900 relative">
               <Bell className="h-4 w-4" />
-              <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-blue-400" />
             </button>
             <div className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-200">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-400 text-slate-950 text-xs font-semibold">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-400 text-slate-950 text-xs font-semibold">
                 {(userProfile?.name || userProfile?.displayName || 'P').charAt(0).toUpperCase()}
               </div>
               <div className="hidden min-w-0 md:block">

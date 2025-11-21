@@ -165,7 +165,7 @@ const Consultation = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'paused':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
@@ -182,9 +182,9 @@ const Consultation = () => {
       case 'high':
         return 'bg-red-100 text-red-800';
       case 'medium':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-blue-100 text-blue-800';
       case 'low':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -351,12 +351,12 @@ const Consultation = () => {
                   <div className="border-t border-gray-200 pt-4">
                     <h4 className="font-medium text-gray-900 mb-3">Execution Timeline</h4>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-blue-50 border border-green-200 rounded-lg">
                         <div className="flex items-center">
-                          <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                          <span className="text-sm font-medium text-green-800">Initial Assessment</span>
+                          <CheckCircle className="h-5 w-5 text-blue-600 mr-2" />
+                          <span className="text-sm font-medium text-blue-800">Initial Assessment</span>
                         </div>
-                        <span className="text-xs text-green-600">Completed</span>
+                        <span className="text-xs text-blue-600">Completed</span>
                       </div>
                       
                       <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">

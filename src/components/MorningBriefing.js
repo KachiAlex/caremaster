@@ -30,10 +30,10 @@ const MorningBriefing = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-600 p-8 text-white">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className="bg-white bg-opacity-20 p-3 rounded-full">
@@ -138,12 +138,12 @@ const MorningBriefing = ({
           {todaysAppointments.length > 0 && (
             <div>
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-                <Calendar className="h-5 w-5 mr-2 text-green-600" />
+                <Calendar className="h-5 w-5 mr-2 text-blue-600" />
                 Today's Appointments
               </h3>
               <div className="space-y-2">
                 {todaysAppointments.map((apt, index) => (
-                  <div key={index} className="bg-green-50 rounded-lg p-3 flex items-center justify-between">
+                  <div key={index} className="bg-blue-50 rounded-lg p-3 flex items-center justify-between">
                     <div>
                       <p className="font-medium text-gray-900">{apt.patientName || apt.type}</p>
                       <p className="text-sm text-gray-600">{apt.location || 'Virtual'}</p>
@@ -170,7 +170,7 @@ const MorningBriefing = ({
               onStartDay?.();
               onClose();
             }}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-bold text-lg flex items-center justify-center space-x-2 shadow-lg"
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-lg hover:from-blue-700 hover:to-blue-700 font-bold text-lg flex items-center justify-center space-x-2 shadow-lg"
           >
             <TrendingUp className="h-6 w-6" />
             <span>Start My Day</span>

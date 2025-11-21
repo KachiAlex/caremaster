@@ -68,8 +68,8 @@ const NotificationPanel = ({ userId }) => {
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'task': return <ClipboardList className="h-5 w-5 text-blue-600" />;
-      case 'appointment': return <Calendar className="h-5 w-5 text-green-600" />;
-      case 'message': return <MessageSquare className="h-5 w-5 text-purple-600" />;
+      case 'appointment': return <Calendar className="h-5 w-5 text-blue-600" />;
+      case 'message': return <MessageSquare className="h-5 w-5 text-blue-600" />;
       case 'emergency': return <AlertTriangle className="h-5 w-5 text-red-600" />;
       default: return <Bell className="h-5 w-5 text-gray-600" />;
     }
@@ -78,7 +78,7 @@ const NotificationPanel = ({ userId }) => {
   const getNotificationColor = (priority) => {
     switch (priority) {
       case 'urgent': return 'border-l-4 border-red-500 bg-red-50';
-      case 'high': return 'border-l-4 border-orange-500 bg-orange-50';
+      case 'high': return 'border-l-4 border-blue-500 bg-blue-50';
       case 'medium': return 'border-l-4 border-blue-500 bg-blue-50';
       default: return 'border-l-4 border-gray-300 bg-white';
     }

@@ -4,11 +4,11 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 // Statistics Card Component (like in Preclinic template)
 export const StatCard = ({ title, value, change, changeType, icon: Icon, color = 'blue' }) => {
   const accentColors = {
-    blue: 'from-sky-400 to-sky-300',
+    blue: 'from-blue-400 to-blue-300',
     red: 'from-rose-400 to-rose-300',
-    green: 'from-emerald-400 to-emerald-300',
-    yellow: 'from-amber-400 to-amber-300',
-    purple: 'from-indigo-400 to-indigo-300'
+    green: 'from-blue-400 to-blue-300',
+    yellow: 'from-blue-400 to-blue-300',
+    purple: 'from-blue-400 to-blue-300'
   };
 
   return (
@@ -20,7 +20,7 @@ export const StatCard = ({ title, value, change, changeType, icon: Icon, color =
         {change && (
           <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
             changeType === 'increase' 
-              ? 'bg-emerald-400/10 text-emerald-300 border border-emerald-400/30' 
+              ? 'bg-blue-400/10 text-blue-300 border border-blue-400/30' 
               : 'bg-rose-400/10 text-rose-300 border border-rose-400/30'
           }`}>
             {changeType === 'increase' ? (
@@ -108,7 +108,7 @@ export const PreclinicTable = ({ headers, data, actions, loading = false }) => {
                           <button
                             key={actionIndex}
                             onClick={() => action.onClick(row)}
-                            className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium transition-colors ${action.className || 'text-emerald-300 hover:text-emerald-200'}`}
+                            className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium transition-colors ${action.className || 'text-blue-300 hover:text-blue-200'}`}
                           >
                             {action.icon && <action.icon className="h-3 w-3 mr-1" />}
                             {action.label}
@@ -130,18 +130,18 @@ export const PreclinicTable = ({ headers, data, actions, loading = false }) => {
 // Status Badge Component
 export const StatusBadge = ({ status, customColors }) => {
   const defaultColors = {
-    'active': 'bg-emerald-400/10 text-emerald-300 border border-emerald-400/30',
+    'active': 'bg-blue-400/10 text-blue-300 border border-blue-400/30',
     'inactive': 'bg-slate-800/60 text-slate-400 border border-slate-700',
-    'pending': 'bg-amber-400/10 text-amber-300 border border-amber-400/30',
-    'completed': 'bg-emerald-400/10 text-emerald-300 border border-emerald-400/30',
+    'pending': 'bg-blue-400/10 text-blue-300 border border-blue-400/30',
+    'completed': 'bg-blue-400/10 text-blue-300 border border-blue-400/30',
     'cancelled': 'bg-rose-400/10 text-rose-300 border border-rose-400/30',
-    'scheduled': 'bg-sky-400/10 text-sky-300 border border-sky-400/30',
-    'available': 'bg-emerald-400/10 text-emerald-300 border border-emerald-400/30',
+    'scheduled': 'bg-blue-400/10 text-blue-300 border border-blue-400/30',
+    'available': 'bg-blue-400/10 text-blue-300 border border-blue-400/30',
     'unavailable': 'bg-rose-400/10 text-rose-300 border border-rose-400/30',
-    'online': 'bg-emerald-400/10 text-emerald-300 border border-emerald-400/30',
+    'online': 'bg-blue-400/10 text-blue-300 border border-blue-400/30',
     'offline': 'bg-slate-800/60 text-slate-400 border border-slate-700',
-    'verified': 'bg-emerald-400/10 text-emerald-300 border border-emerald-400/30',
-    'unverified': 'bg-amber-400/10 text-amber-300 border border-amber-400/30'
+    'verified': 'bg-blue-400/10 text-blue-300 border border-blue-400/30',
+    'unverified': 'bg-blue-400/10 text-blue-300 border border-blue-400/30'
   };
 
   const colors = customColors || defaultColors;
@@ -169,7 +169,7 @@ export const PageHeader = ({ title, subtitle, actions }) => {
               <button
                 key={index}
                 onClick={action.onClick}
-                className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${action.className || 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30'}`}
+                className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${action.className || 'bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30'}`}
               >
                 {action.icon && <action.icon className="h-3.5 w-3.5 mr-1.5" />}
                 {action.label}
@@ -196,7 +196,7 @@ export const PreclinicCard = ({ title, children, actions, className = '' }) => {
                   <button
                     key={index}
                     onClick={action.onClick}
-                    className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium transition-colors ${action.className || 'text-emerald-300 hover:text-emerald-200'}`}
+                    className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium transition-colors ${action.className || 'text-blue-300 hover:text-blue-200'}`}
                   >
                     {action.icon && <action.icon className="h-3.5 w-3.5 mr-1" />}
                     {action.label}
@@ -227,7 +227,7 @@ export const PreclinicInput = ({ label, type = 'text', placeholder, value, onCha
         value={value}
         onChange={onChange}
         required={required}
-        className="w-full px-3 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors placeholder:text-slate-500"
+        className="w-full px-3 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors placeholder:text-slate-500"
       />
     </div>
   );
@@ -243,7 +243,7 @@ export const PreclinicSelect = ({ label, options, value, onChange, required = fa
         value={value}
         onChange={onChange}
         required={required}
-        className="w-full px-3 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
+        className="w-full px-3 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
       >
         {options.map((option, index) => (
           <option key={index} value={option.value} className="bg-slate-900">
@@ -267,7 +267,7 @@ export const PreclinicTextarea = ({ label, placeholder, value, onChange, rows = 
         onChange={onChange}
         rows={rows}
         required={required}
-        className="w-full px-3 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors resize-none placeholder:text-slate-500"
+        className="w-full px-3 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors resize-none placeholder:text-slate-500"
       />
     </div>
   );

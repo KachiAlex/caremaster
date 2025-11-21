@@ -146,7 +146,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
   };
 
   const getMatchScoreColor = (score) => {
-    if (score >= 90) return 'text-green-600 bg-green-100';
+    if (score >= 90) return 'text-blue-600 bg-blue-100';
     if (score >= 80) return 'text-blue-600 bg-blue-100';
     if (score >= 70) return 'text-yellow-600 bg-yellow-100';
     return 'text-gray-600 bg-gray-100';
@@ -154,7 +154,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
 
   const getAvailabilityColor = (availability) => {
     switch (availability) {
-      case 'flexible': return 'text-green-600 bg-green-100';
+      case 'flexible': return 'text-blue-600 bg-blue-100';
       case 'specific_hours': return 'text-yellow-600 bg-yellow-100';
       case 'weekends_only': return 'text-blue-600 bg-blue-100';
       default: return 'text-gray-600 bg-gray-100';
@@ -171,7 +171,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-pink-600 text-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Brain className="w-6 h-6" />
@@ -292,7 +292,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
                     onClick={() => handleLanguageToggle(language)}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                       filters.languages.includes(language)
-                        ? 'bg-green-600 text-white'
+                        ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
@@ -318,7 +318,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
               </button>
               
               {matchedCaregivers.length > 0 && (
-                <div className="flex items-center space-x-2 text-sm text-green-600">
+                <div className="flex items-center space-x-2 text-sm text-blue-600">
                   <CheckCircle className="w-4 h-4" />
                   <span>{matchedCaregivers.length} matches found!</span>
                 </div>
@@ -492,7 +492,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
                     <h5 className="font-medium text-gray-900 mb-2">Certifications</h5>
                     <div className="flex flex-wrap gap-2">
                       {selectedCaregiver.certifications.map((cert) => (
-                        <span key={cert} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded">
+                        <span key={cert} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
                           {cert}
                         </span>
                       ))}

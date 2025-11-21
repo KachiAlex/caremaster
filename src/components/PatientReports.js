@@ -107,21 +107,21 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
     <div className="bg-slate-950 rounded-3xl border border-slate-800/80 shadow-xl shadow-black/50 p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-slate-50 flex items-center">
-          <FileText className="h-6 w-6 mr-3 text-emerald-400" />
+          <FileText className="h-6 w-6 mr-3 text-blue-400" />
           Patient Reports
         </h3>
         {reportData && (
           <div className="flex gap-2">
             <button
               onClick={handleExportCSV}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center text-sm"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm"
             >
               <Download className="h-4 w-4 mr-2" />
               CSV
             </button>
             <button
               onClick={handleExportJSON}
-              className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors flex items-center text-sm"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm"
             >
               <Download className="h-4 w-4 mr-2" />
               JSON
@@ -148,7 +148,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
                 setReportType(e.target.value);
                 setReportData(null);
               }}
-              className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-50 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-50 focus:ring-blue-500 focus:border-blue-500"
             >
               {patientId && <option value="patient">Patient Activity</option>}
               <option value="clinician">Clinician Activity</option>
@@ -161,7 +161,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-50 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-50 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
@@ -170,14 +170,14 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-50 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-50 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div className="flex items-end">
             <button
               onClick={generateReport}
               disabled={generating}
-              className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {generating ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -208,7 +208,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
                   <p className="text-xs text-slate-400 mb-1">Total Activities</p>
                   <p className="text-2xl font-bold text-slate-50">{reportData.statistics?.totalActivities || 0}</p>
                 </div>
-                <Activity className="h-8 w-8 text-emerald-400" />
+                <Activity className="h-8 w-8 text-blue-400" />
               </div>
             </div>
             {reportData.statistics?.uniquePatients && (
@@ -218,7 +218,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
                     <p className="text-xs text-slate-400 mb-1">Unique Patients</p>
                     <p className="text-2xl font-bold text-slate-50">{reportData.statistics.uniquePatients}</p>
                   </div>
-                  <Users className="h-8 w-8 text-sky-400" />
+                  <Users className="h-8 w-8 text-blue-400" />
                 </div>
               </div>
             )}
@@ -229,7 +229,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
                     <p className="text-xs text-slate-400 mb-1">Total Patients</p>
                     <p className="text-2xl font-bold text-slate-50">{reportData.statistics.totalPatients}</p>
                   </div>
-                  <Users className="h-8 w-8 text-indigo-400" />
+                  <Users className="h-8 w-8 text-blue-400" />
                 </div>
               </div>
             )}
@@ -241,7 +241,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
                     {new Date(reportData.dateRange.start).toLocaleDateString()} - {new Date(reportData.dateRange.end).toLocaleDateString()}
                   </p>
                 </div>
-                <Calendar className="h-8 w-8 text-purple-400" />
+                <Calendar className="h-8 w-8 text-blue-400" />
               </div>
             </div>
           </div>
@@ -250,14 +250,14 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
           {reportData.statistics?.byCategory && reportData.statistics.byCategory.length > 0 && (
             <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-6">
               <h4 className="text-lg font-semibold text-slate-50 mb-4 flex items-center">
-                <PieChart className="h-5 w-5 mr-2 text-emerald-400" />
+                <PieChart className="h-5 w-5 mr-2 text-blue-400" />
                 Activities by Category
               </h4>
               <div className="space-y-3">
                 {reportData.statistics.byCategory.map((cat, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-emerald-400 mr-3"></div>
+                      <div className="w-3 h-3 rounded-full bg-blue-400 mr-3"></div>
                       <span className="text-slate-300 capitalize">{cat.category || 'general'}</span>
                     </div>
                     <div className="flex items-center gap-4">
@@ -265,7 +265,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
                       <span className="text-slate-500 text-sm">({cat.percentage}%)</span>
                       <div className="w-32 bg-slate-800 rounded-full h-2">
                         <div
-                          className="bg-emerald-400 h-2 rounded-full"
+                          className="bg-blue-400 h-2 rounded-full"
                           style={{ width: `${cat.percentage}%` }}
                         ></div>
                       </div>
@@ -280,7 +280,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
           {reportData.statistics?.byClinician && reportData.statistics.byClinician.length > 0 && (
             <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-6">
               <h4 className="text-lg font-semibold text-slate-50 mb-4 flex items-center">
-                <Users className="h-5 w-5 mr-2 text-sky-400" />
+                <Users className="h-5 w-5 mr-2 text-blue-400" />
                 Activities by Clinician
               </h4>
               <div className="space-y-3">
@@ -306,7 +306,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
           {reportData.logs && reportData.logs.length > 0 && (
             <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-6">
               <h4 className="text-lg font-semibold text-slate-50 mb-4 flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2 text-purple-400" />
+                <TrendingUp className="h-5 w-5 mr-2 text-blue-400" />
                 Activity Timeline
               </h4>
               <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
@@ -314,7 +314,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
                   const logDate = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.dateTime || log.timestamp);
                   return (
                     <div key={index} className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">
-                      <div className="flex-shrink-0 w-2 h-2 rounded-full bg-emerald-400 mt-2"></div>
+                      <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-400 mt-2"></div>
                       <div className="flex-grow">
                         <p className="text-slate-50 text-sm">{log.description || log.action}</p>
                         <p className="text-xs text-slate-400 mt-1">

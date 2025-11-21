@@ -134,7 +134,7 @@ const InstitutionUserManagement = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'active': return 'text-green-600 bg-green-100';
+      case 'active': return 'text-blue-600 bg-blue-100';
       case 'pending': return 'text-yellow-600 bg-yellow-100';
       case 'inactive': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
@@ -210,7 +210,7 @@ const InstitutionUserManagement = () => {
         <div className="flex gap-3">
           <button
             onClick={() => setShowPatientRegistration(true)}
-            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
           >
             <UserPlus className="h-5 w-5 mr-2" />
             Register Patient

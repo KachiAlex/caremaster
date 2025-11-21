@@ -470,7 +470,7 @@ const InactiveCaregiversReport = ({ institutionId }) => {
 
   const getInactivityBadge = (days) => {
     if (days >= 90) return { text: '90+ days', color: 'bg-red-100 text-red-800' };
-    if (days >= 30) return { text: '30+ days', color: 'bg-orange-100 text-orange-800' };
+    if (days >= 30) return { text: '30+ days', color: 'bg-blue-100 text-orange-800' };
     if (days >= 14) return { text: '14+ days', color: 'bg-yellow-100 text-yellow-800' };
     return { text: `${days} days`, color: 'bg-gray-100 text-gray-800' };
   };
@@ -561,7 +561,7 @@ const InactiveCaregiversReport = ({ institutionId }) => {
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-600">14-30 Days</div>
-          <div className="text-2xl font-bold text-orange-600">
+          <div className="text-2xl font-bold text-blue-600">
             {inactiveCaregivers.filter(c => c.daysSinceLastActivity >= 14 && c.daysSinceLastActivity < 30).length}
           </div>
         </div>
@@ -750,7 +750,7 @@ const InactiveCaregiversReport = ({ institutionId }) => {
                         </button>
                         <button
                           onClick={exportActivityLogsToExcel}
-                          className="inline-flex items-center px-3 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50"
+                          className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50"
                           title="Export to Excel"
                         >
                           <FileSpreadsheet className="h-4 w-4 mr-2" />
@@ -771,7 +771,7 @@ const InactiveCaregiversReport = ({ institutionId }) => {
                         <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                           <div className="flex items-center justify-between mb-2">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              log.type === 'assignment' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                              log.type === 'assignment' ? 'bg-blue-100 text-blue-800' : 'bg-blue-100 text-blue-800'
                             }`}>
                               {log.type === 'assignment' ? 'Assignment' : 'Care Log'}
                             </span>
@@ -784,7 +784,7 @@ const InactiveCaregiversReport = ({ institutionId }) => {
                             <div className="mt-2">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                                 log.status === 'completed' 
-                                  ? 'bg-green-100 text-green-800'
+                                  ? 'bg-blue-100 text-blue-800'
                                   : log.status === 'in-progress'
                                   ? 'bg-yellow-100 text-yellow-800'
                                   : 'bg-gray-100 text-gray-800'

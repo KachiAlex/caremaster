@@ -173,7 +173,7 @@ const SuperAdminDashboard = () => {
           </p>
           <p className="mt-2 text-lg font-semibold text-slate-50">{value}</p>
           {trend && (
-            <div className={`mt-1 flex items-center text-[10px] ${trend > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <div className={`mt-1 flex items-center text-[10px] ${trend > 0 ? 'text-blue-400' : 'text-rose-400'}`}>
               <TrendingUp className="h-3 w-3 mr-1" />
               <span>{Math.abs(trend)}% {trend > 0 ? '↑' : '↓'}</span>
             </div>
@@ -188,10 +188,10 @@ const SuperAdminDashboard = () => {
 
   const AlertBanner = ({ type, message, action }) => {
     const styles = {
-      warning: 'bg-amber-400/10 border-amber-400/30 text-amber-300',
+      warning: 'bg-blue-400/10 border-blue-400/30 text-blue-300',
       error: 'bg-rose-400/10 border-rose-400/30 text-rose-300',
-      info: 'bg-sky-400/10 border-sky-400/30 text-sky-300',
-      success: 'bg-emerald-400/10 border-emerald-400/30 text-emerald-300'
+      info: 'bg-blue-400/10 border-blue-400/30 text-blue-300',
+      success: 'bg-blue-400/10 border-blue-400/30 text-blue-300'
     };
 
     const icons = {
@@ -223,7 +223,7 @@ const SuperAdminDashboard = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
           <p className="text-slate-400">Loading dashboard...</p>
         </div>
       </div>
@@ -240,7 +240,7 @@ const SuperAdminDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-400 via-amber-400 to-orange-500 shadow-lg shadow-rose-500/40">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-400 via-blue-400 to-orange-500 shadow-lg shadow-rose-500/40">
                 <Shield className="h-5 w-5 text-slate-950" />
               </div>
               <div>
@@ -285,7 +285,7 @@ const SuperAdminDashboard = () => {
         <section className="mb-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
           <div className="rounded-3xl border border-slate-800/70 bg-gradient-to-br from-slate-950/90 via-slate-950/70 to-slate-900/70 p-6 shadow-2xl shadow-black/50">
             <div className="flex flex-col gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1 text-[11px] font-medium uppercase tracking-[0.3em] text-emerald-200">
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-400/10 px-4 py-1 text-[11px] font-medium uppercase tracking-[0.3em] text-blue-200">
                 <Sparkles className="h-3 w-3" />
                 Platform mission control
               </div>
@@ -302,15 +302,15 @@ const SuperAdminDashboard = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-slate-400">Active tenants</p>
-                  <p className="text-3xl font-semibold text-emerald-300">{stats.activeInstitutions}</p>
+                  <p className="text-3xl font-semibold text-blue-300">{stats.activeInstitutions}</p>
                 </div>
               </div>
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               {[
-                { label: 'Total tenants', value: stats.totalInstitutions, accent: 'text-emerald-300' },
-                { label: 'Licenses live', value: stats.activeLicenses, accent: 'text-sky-300' },
-                { label: 'Support tickets', value: Math.max(2, stats.expiringLicenses), accent: 'text-amber-300' }
+                { label: 'Total tenants', value: stats.totalInstitutions, accent: 'text-blue-300' },
+                { label: 'Licenses live', value: stats.activeLicenses, accent: 'text-blue-300' },
+                { label: 'Support tickets', value: Math.max(2, stats.expiringLicenses), accent: 'text-blue-300' }
               ].map(item => (
                 <div key={item.label} className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
                   <p className="text-xs text-slate-500 uppercase tracking-[0.3em]">{item.label}</p>
@@ -324,9 +324,9 @@ const SuperAdminDashboard = () => {
             <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Live metric pulse</p>
             <div className="mt-4 space-y-3">
               {[
-                { label: 'Institutions onboarded this week', value: '+4', accent: 'text-emerald-300' },
-                { label: 'Licenses pending approval', value: stats.expiringLicenses, accent: 'text-amber-300' },
-                { label: 'Care team logins (24h)', value: Math.max(32, stats.activeUsers * 0.4 >> 0), accent: 'text-sky-300' }
+                { label: 'Institutions onboarded this week', value: '+4', accent: 'text-blue-300' },
+                { label: 'Licenses pending approval', value: stats.expiringLicenses, accent: 'text-blue-300' },
+                { label: 'Care team logins (24h)', value: Math.max(32, stats.activeUsers * 0.4 >> 0), accent: 'text-blue-300' }
               ].map(item => (
                 <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
                   <p className="text-xs text-slate-400">{item.label}</p>
@@ -336,7 +336,7 @@ const SuperAdminDashboard = () => {
             </div>
             <button
               onClick={() => navigate('/super-admin/reports')}
-              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 hover:border-emerald-400/60"
+              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 hover:border-blue-400/60"
             >
               Launch full report
               <ArrowUpRight className="h-3.5 w-3.5" />
@@ -360,28 +360,28 @@ const SuperAdminDashboard = () => {
             label="Active Institutions"
             value={stats.activeInstitutions}
             trend={5}
-            accent="from-emerald-400 to-emerald-300"
+            accent="from-blue-400 to-blue-300"
           />
           <StatCard
             icon={FileText}
             label="Active Licenses"
             value={stats.activeLicenses}
             trend={3}
-            accent="from-sky-400 to-sky-300"
+            accent="from-blue-400 to-blue-300"
           />
           <StatCard
             icon={Users}
             label="Total Users"
             value={stats.totalUsers}
             trend={8}
-            accent="from-indigo-400 to-indigo-300"
+            accent="from-blue-400 to-blue-300"
           />
           <StatCard
             icon={DollarSign}
             label="Monthly Revenue"
             value={formatCurrency(stats.totalRevenue)}
             trend={12}
-            accent="from-amber-400 to-orange-300"
+            accent="from-blue-400 to-orange-300"
           />
         </div>
 
@@ -401,9 +401,9 @@ const SuperAdminDashboard = () => {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Expiring Soon</p>
-                <p className="mt-2 text-lg font-semibold text-amber-400">{stats.expiringLicenses}</p>
+                <p className="mt-2 text-lg font-semibold text-blue-400">{stats.expiringLicenses}</p>
               </div>
-              <Clock className="h-8 w-8 text-amber-500" />
+              <Clock className="h-8 w-8 text-blue-500" />
             </div>
           </div>
 
@@ -426,36 +426,36 @@ const SuperAdminDashboard = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <button
                   onClick={() => navigate('/super-admin/licensing')}
-                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-emerald-400/60 hover:bg-slate-900 transition-colors"
+                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-blue-400/60 hover:bg-slate-900 transition-colors"
                 >
-                  <Building2 className="h-5 w-5 text-emerald-400 mb-1" />
+                  <Building2 className="h-5 w-5 text-blue-400 mb-1" />
                   <span className="text-xs font-semibold text-slate-50">Manage Institutions</span>
                   <span className="text-[11px] text-slate-500">View and configure all institutions</span>
                 </button>
 
                 <button
                   onClick={() => navigate('/super-admin/licensing')}
-                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-sky-400/60 hover:bg-slate-900 transition-colors"
+                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-blue-400/60 hover:bg-slate-900 transition-colors"
                 >
-                  <FileText className="h-5 w-5 text-sky-400 mb-1" />
+                  <FileText className="h-5 w-5 text-blue-400 mb-1" />
                   <span className="text-xs font-semibold text-slate-50">Issue License</span>
                   <span className="text-[11px] text-slate-500">Create new license assignments</span>
                 </button>
 
                 <button
                   onClick={() => navigate('/super-admin/licensing')}
-                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-indigo-400/60 hover:bg-slate-900 transition-colors"
+                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-blue-400/60 hover:bg-slate-900 transition-colors"
                 >
-                  <Users className="h-5 w-5 text-indigo-400 mb-1" />
+                  <Users className="h-5 w-5 text-blue-400 mb-1" />
                   <span className="text-xs font-semibold text-slate-50">Assign Admin</span>
                   <span className="text-[11px] text-slate-500">Manage administrator roles</span>
                 </button>
 
                 <button
                   onClick={() => navigate('/super-admin/settings')}
-                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-amber-400/60 hover:bg-slate-900 transition-colors"
+                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-blue-400/60 hover:bg-slate-900 transition-colors"
                 >
-                  <Settings className="h-5 w-5 text-amber-400 mb-1" />
+                  <Settings className="h-5 w-5 text-blue-400 mb-1" />
                   <span className="text-xs font-semibold text-slate-50">System Settings</span>
                   <span className="text-[11px] text-slate-500">Configure platform settings</span>
                 </button>
@@ -475,17 +475,17 @@ const SuperAdminDashboard = () => {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
                     <p className="text-xs text-slate-400">Active</p>
-                    <p className="text-2xl font-semibold text-emerald-300">{stats.activeInstitutions}</p>
+                    <p className="text-2xl font-semibold text-blue-300">{stats.activeInstitutions}</p>
                     <p className="text-[10px] text-slate-500">of {stats.totalInstitutions}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
                     <p className="text-xs text-slate-400">Licenses</p>
-                    <p className="text-2xl font-semibold text-sky-300">{stats.activeLicenses}</p>
+                    <p className="text-2xl font-semibold text-blue-300">{stats.activeLicenses}</p>
                     <p className="text-[10px] text-slate-500">active</p>
                   </div>
                   <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
                     <p className="text-xs text-slate-400">Users</p>
-                    <p className="text-2xl font-semibold text-indigo-300">{stats.activeUsers}</p>
+                    <p className="text-2xl font-semibold text-blue-300">{stats.activeUsers}</p>
                     <p className="text-[10px] text-slate-500">active</p>
                   </div>
                 </div>
@@ -503,11 +503,11 @@ const SuperAdminDashboard = () => {
                   <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
                     <div>
                       <p className="text-xs text-slate-400">Expiring 30 days</p>
-                      <p className="text-sm font-semibold text-amber-300">{stats.expiringLicenses}</p>
+                      <p className="text-sm font-semibold text-blue-300">{stats.expiringLicenses}</p>
                     </div>
                     <button
                       onClick={() => navigate('/super-admin/licensing')}
-                      className="text-xs text-amber-300 hover:text-amber-200"
+                      className="text-xs text-blue-300 hover:text-blue-200"
                     >
                       Review →
                     </button>
@@ -532,15 +532,15 @@ const SuperAdminDashboard = () => {
 
             {/* Revenue Snapshot */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <div className="rounded-3xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-slate-950 p-5 shadow-xl shadow-emerald-500/30">
+              <div className="rounded-3xl border border-blue-400/30 bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-slate-950 p-5 shadow-xl shadow-blue-500/30">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-emerald-200">Revenue snapshot</p>
+                    <p className="text-xs uppercase tracking-[0.3em] text-blue-200">Revenue snapshot</p>
                     <p className="text-2xl font-semibold text-slate-50 mt-1">{formatCurrency(stats.totalRevenue)}</p>
                     <p className="text-[11px] text-slate-200 mt-1">Current billing cycle</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-emerald-200">+12% vs last month</p>
+                    <p className="text-sm text-blue-200">+12% vs last month</p>
                     <p className="text-xs text-slate-200">Projected: {formatCurrency(stats.totalRevenue * 1.12)}</p>
                   </div>
                 </div>
@@ -551,11 +551,11 @@ const SuperAdminDashboard = () => {
                   </div>
                   <div>
                     <p className="text-slate-300">Churn</p>
-                    <p className="text-base font-semibold text-emerald-300">1.4%</p>
+                    <p className="text-base font-semibold text-blue-300">1.4%</p>
                   </div>
                   <div>
                     <p className="text-slate-300">Growth</p>
-                    <p className="text-base font-semibold text-emerald-300">+18%</p>
+                    <p className="text-base font-semibold text-blue-300">+18%</p>
                   </div>
                 </div>
               </div>
@@ -574,10 +574,10 @@ const SuperAdminDashboard = () => {
                       <p className="text-xs text-slate-300">{item.label}</p>
                       <span className={`text-[11px] font-semibold ${
                         item.status === 'ok'
-                          ? 'text-emerald-300'
+                          ? 'text-blue-300'
                           : item.status === 'warning'
-                          ? 'text-amber-300'
-                          : 'text-sky-300'
+                          ? 'text-blue-300'
+                          : 'text-blue-300'
                       }`}>
                         {item.status === 'ok' ? 'Healthy' : item.status === 'warning' ? 'Action' : 'Monitoring'}
                       </span>
@@ -600,7 +600,7 @@ const SuperAdminDashboard = () => {
                   recentActivity.map((activity) => (
                     <div key={activity.id} className="flex items-start gap-3 p-3 rounded-2xl border border-slate-800/60 bg-slate-900/60 hover:bg-slate-900 transition-colors">
                       <div className="flex-shrink-0 mt-0.5">
-                        <Activity className="h-4 w-4 text-sky-400" />
+                        <Activity className="h-4 w-4 text-blue-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-slate-50">
@@ -625,19 +625,19 @@ const SuperAdminDashboard = () => {
               <div className="space-y-3 text-xs text-slate-300">
                 <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
                   <span>Realtime listeners</span>
-                  <span className="text-emerald-300">Stable</span>
+                  <span className="text-blue-300">Stable</span>
                 </div>
                 <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
                   <span>Call infrastructure</span>
-                  <span className="text-emerald-300">Online</span>
+                  <span className="text-blue-300">Online</span>
                 </div>
                 <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
                   <span>Medication workflows</span>
-                  <span className="text-sky-300">Monitoring</span>
+                  <span className="text-blue-300">Monitoring</span>
                 </div>
                 <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
                   <span>Emergency alerts</span>
-                  <span className="text-emerald-300">Ready</span>
+                  <span className="text-blue-300">Ready</span>
                 </div>
               </div>
             </div>

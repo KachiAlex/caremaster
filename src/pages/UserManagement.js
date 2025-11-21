@@ -142,9 +142,9 @@ const UserManagement = () => {
       case 'patient':
         return <Heart size={16} className="text-blue-600" />;
       case 'caregiver':
-        return <Users size={16} className="text-green-600" />;
+        return <Users size={16} className="text-blue-600" />;
       case 'doctor':
-        return <Stethoscope size={16} className="text-purple-600" />;
+        return <Stethoscope size={16} className="text-blue-600" />;
       case 'admin':
         return <Shield size={16} className="text-red-600" />;
       default:
@@ -156,7 +156,7 @@ const UserManagement = () => {
     switch (status) {
       case 'active':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
             <CheckCircle size={12} className="mr-1" />
             Active
           </span>
@@ -241,8 +241,8 @@ const UserManagement = () => {
 
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-full">
-                <Heart className="text-green-600" size={24} />
+              <div className="p-3 bg-blue-100 rounded-full">
+                <Heart className="text-blue-600" size={24} />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Elderly</p>
@@ -253,8 +253,8 @@ const UserManagement = () => {
 
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-purple-100 rounded-full">
-                <Stethoscope className="text-purple-600" size={24} />
+              <div className="p-3 bg-blue-100 rounded-full">
+                <Stethoscope className="text-blue-600" size={24} />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Doctors</p>
@@ -265,8 +265,8 @@ const UserManagement = () => {
 
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-orange-100 rounded-full">
-                <Users className="text-orange-600" size={24} />
+              <div className="p-3 bg-blue-100 rounded-full">
+                <Users className="text-blue-600" size={24} />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Caregivers</p>
@@ -290,18 +290,18 @@ const UserManagement = () => {
 
             <button
               onClick={() => handleCreateUser('caregiver')}
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors group"
+              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
             >
-              <Users size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-green-600" />
-              <p className="text-sm font-medium text-gray-600 group-hover:text-green-800">Add Caregiver</p>
+              <Users size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-blue-600" />
+              <p className="text-sm font-medium text-gray-600 group-hover:text-blue-800">Add Caregiver</p>
             </button>
 
             <button
               onClick={() => handleCreateUser('doctor')}
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors group"
+              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
             >
-              <Stethoscope size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-purple-600" />
-              <p className="text-sm font-medium text-gray-600 group-hover:text-purple-800">Add Doctor</p>
+              <Stethoscope size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-blue-600" />
+              <p className="text-sm font-medium text-gray-600 group-hover:text-blue-800">Add Doctor</p>
             </button>
 
             <button
@@ -445,7 +445,7 @@ const UserManagement = () => {
                           </button>
                           <button
                             onClick={() => {/* Edit user */}}
-                            className="text-green-600 hover:text-green-900"
+                            className="text-blue-600 hover:text-green-900"
                           >
                             <Edit size={16} />
                           </button>
@@ -459,7 +459,7 @@ const UserManagement = () => {
                           ) : (
                             <button
                               onClick={() => handleUserAction(user.id, 'activate')}
-                              className="text-green-600 hover:text-green-900"
+                              className="text-blue-600 hover:text-green-900"
                             >
                               <CheckCircle size={16} />
                             </button>

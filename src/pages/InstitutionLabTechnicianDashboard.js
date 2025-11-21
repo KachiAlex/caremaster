@@ -202,7 +202,7 @@ const InstitutionLabTechnicianDashboard = () => {
       case 'in_progress':
         return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
       case 'completed':
-        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+        return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
       case 'cancelled':
         return 'bg-red-500/10 text-red-400 border-red-500/20';
       default:
@@ -225,7 +225,7 @@ const InstitutionLabTechnicianDashboard = () => {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <TestTube className="h-8 w-8 text-emerald-400 animate-pulse mx-auto mb-4" />
+          <TestTube className="h-8 w-8 text-blue-400 animate-pulse mx-auto mb-4" />
           <p className="text-slate-400">Loading dashboard...</p>
         </div>
       </div>
@@ -239,7 +239,7 @@ const InstitutionLabTechnicianDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-400 via-cyan-400 to-blue-500 shadow-lg shadow-teal-500/40">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-cyan-400 to-blue-500 shadow-lg shadow-blue-500/40">
                 <TestTube className="h-5 w-5 text-slate-950" />
               </div>
               <div>
@@ -269,7 +269,7 @@ const InstitutionLabTechnicianDashboard = () => {
             onClick={() => setActiveTab('visits')}
             className={`px-4 py-2 rounded-lg transition-colors ${
               activeTab === 'visits'
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700/80'
             }`}
           >
@@ -280,7 +280,7 @@ const InstitutionLabTechnicianDashboard = () => {
             onClick={() => setActiveTab('collections')}
             className={`px-4 py-2 rounded-lg transition-colors ${
               activeTab === 'collections'
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700/80'
             }`}
           >
@@ -291,7 +291,7 @@ const InstitutionLabTechnicianDashboard = () => {
             onClick={() => setActiveTab('history')}
             className={`px-4 py-2 rounded-lg transition-colors ${
               activeTab === 'history'
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700/80'
             }`}
           >
@@ -357,7 +357,7 @@ const InstitutionLabTechnicianDashboard = () => {
                     {visit.status === 'scheduled' && (
                       <button
                         onClick={() => handleStartVisit(visit.id)}
-                        className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors flex items-center gap-2"
+                        className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors flex items-center gap-2"
                       >
                         <Clock className="h-4 w-4" />
                         Start Visit
@@ -418,7 +418,7 @@ const InstitutionLabTechnicianDashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span className="px-3 py-1 rounded-full text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">
                       Collected
                     </span>
                   </div>
@@ -522,7 +522,7 @@ const InstitutionLabTechnicianDashboard = () => {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleCollectSample}
-                  className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors"
+                  className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors"
                 >
                   Record Collection
                 </button>

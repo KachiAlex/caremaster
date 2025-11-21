@@ -70,13 +70,13 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
       {/* Top gradient halo */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[520px] bg-[radial-gradient(circle_at_top,_#22c55e33,_transparent_60%),radial-gradient(circle_at_20%_40%,_#38bdf833,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e533,_transparent_55%)]" />
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[520px] bg-[radial-gradient(circle_at_top,_#3b82f633,_transparent_60%),radial-gradient(circle_at_20%_40%,_#3b82f633,_transparent_55%),radial-gradient(circle_at_80%_0,_#3b82f633,_transparent_55%)]" />
 
       {/* Navigation */}
       <header className="relative z-10 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 via-sky-400 to-indigo-500 shadow-lg shadow-emerald-500/30">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-lg shadow-blue-500/30">
               <HeartPulse className="h-5 w-5 text-slate-950" />
             </div>
             <div>
@@ -84,8 +84,8 @@ const Landing = () => {
                 <span className="text-base font-semibold tracking-tight text-slate-50">
                   UltimateCare
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-300">
-                  <Sparkles className="h-3 w-3 text-emerald-300" />
+                <span className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-blue-300">
+                  <Sparkles className="h-3 w-3 text-blue-300" />
                   New
                 </span>
               </div>
@@ -94,13 +94,13 @@ const Landing = () => {
           </div>
 
           <nav className="hidden items-center gap-8 text-xs font-medium text-slate-300 sm:flex">
-            <a href="#platform" className="hover:text-emerald-300">
+            <a href="#platform" className="hover:text-blue-300">
               Platform
             </a>
-            <a href="#who-we-serve" className="hover:text-emerald-300">
+            <a href="#who-we-serve" className="hover:text-blue-300">
               Who we serve
             </a>
-            <a href="#security" className="hover:text-emerald-300">
+            <a href="#security" className="hover:text-blue-300">
               Security
             </a>
           </nav>
@@ -114,7 +114,7 @@ const Landing = () => {
             </Link>
               <Link
                 to="/institution"
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-4 py-1.5 text-xs font-semibold text-slate-950 shadow-lg shadow-emerald-500/40 hover:bg-emerald-300 sm:px-5 sm:text-sm"
+              className="inline-flex items-center gap-2 rounded-full bg-blue-400 px-4 py-1.5 text-xs font-semibold text-slate-950 shadow-lg shadow-blue-500/40 hover:bg-blue-300 sm:px-5 sm:text-sm"
               >
               Launch institution portal
               <ArrowRight className="h-3.5 w-3.5" />
@@ -130,13 +130,13 @@ const Landing = () => {
             {/* Left column */}
             <div className="flex-1">
               <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-300 backdrop-blur">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
                 Live in Lagos, Abuja & Port Harcourt
         </div>
 
               <h1 className="mt-6 text-balance text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl lg:text-6xl">
                 Reimagining
-                <span className="bg-gradient-to-r from-emerald-300 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-blue-300 via-blue-300 to-blue-300 bg-clip-text text-transparent">
                   {' '}
                   connected care
                 </span>{' '}
@@ -151,7 +151,7 @@ const Landing = () => {
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
                 to="/institution"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-6 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/40 hover:bg-emerald-300"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-400 px-6 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-blue-500/40 hover:bg-blue-300"
               >
                   Book a demo for your institution
                   <ChevronRight className="h-4 w-4" />
@@ -167,11 +167,11 @@ const Landing = () => {
 
               <div className="mt-6 flex flex-wrap gap-6 text-xs text-slate-400">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-300" />
+                  <ShieldCheck className="h-4 w-4 text-blue-300" />
                   NDPR-ready • HIPAA-inspired controls
               </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-sky-300" />
+                  <Clock className="h-4 w-4 text-blue-300" />
                   24/7 triage & emergency escalation
                 </div>
               </div>
@@ -194,9 +194,9 @@ const Landing = () => {
                 <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
                   <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/80 px-2.5 py-1">
                     <div className="flex h-1.5 w-5 items-center justify-between">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-sky-400/80" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-indigo-400/80" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
           </div>
                     Live visit · Nurse Amina
                   </div>
@@ -211,7 +211,7 @@ const Landing = () => {
                         BP, medication, mobility check, family update.
             </p>
           </div>
-                    <div className="rounded-xl bg-emerald-400/10 px-3 py-1 text-[10px] font-medium text-emerald-300">
+                    <div className="rounded-xl bg-blue-400/10 px-3 py-1 text-[10px] font-medium text-blue-300">
                       In progress
                     </div>
                   </div>
@@ -219,24 +219,24 @@ const Landing = () => {
                   <div className="grid grid-cols-3 gap-2 text-[10px] text-slate-300">
                     <div className="rounded-xl bg-slate-950/60 p-2">
                       <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <Activity className="h-3 w-3 text-emerald-300" />
+                        <Activity className="h-3 w-3 text-blue-300" />
                         Vitals
                 </div>
                       <p className="mt-1 text-xs font-semibold text-slate-50">118/74 · 72 bpm</p>
           </div>
                     <div className="rounded-xl bg-slate-950/60 p-2">
                       <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <Clock className="h-3 w-3 text-sky-300" />
+                        <Clock className="h-3 w-3 text-blue-300" />
                         Next dose
         </div>
                       <p className="mt-1 text-xs font-semibold text-slate-50">08:30 PM</p>
           </div>
                     <div className="rounded-xl bg-slate-950/60 p-2">
                       <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <Users2 className="h-3 w-3 text-indigo-300" />
+                        <Users2 className="h-3 w-3 text-blue-300" />
                         Family
                 </div>
-                      <p className="mt-1 text-[11px] text-emerald-300">Update sent</p>
+                      <p className="mt-1 text-[11px] text-blue-300">Update sent</p>
               </div>
             </div>
             
@@ -262,7 +262,7 @@ const Landing = () => {
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
                   Platform
                 </p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
@@ -281,14 +281,14 @@ const Landing = () => {
                 return (
                   <div
                     key={pillar.title}
-                    className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-lg shadow-black/40 transition hover:border-emerald-400/50 hover:shadow-emerald-500/20"
+                    className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-lg shadow-black/40 transition hover:border-blue-400/50 hover:shadow-blue-500/20"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/90 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
                         {pillar.tag}
                       </div>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-400/15 text-blue-300">
                         <Icon className="h-4 w-4" />
                 </div>
               </div>
@@ -311,7 +311,7 @@ const Landing = () => {
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
                   Who we serve
                 </p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
@@ -320,7 +320,7 @@ const Landing = () => {
               </div>
               <a
                 href="tel:+2340000000000"
-                className="inline-flex items-center gap-2 text-xs font-medium text-emerald-300 hover:text-emerald-200"
+                className="inline-flex items-center gap-2 text-xs font-medium text-blue-300 hover:text-blue-200"
               >
                 <Phone className="h-3.5 w-3.5" />
                 Speak with our team
@@ -339,7 +339,7 @@ const Landing = () => {
                       {persona.description}
                     </p>
                   </div>
-                  <button className="mt-5 inline-flex items-center gap-2 text-xs font-medium text-emerald-300 hover:text-emerald-200">
+                  <button className="mt-5 inline-flex items-center gap-2 text-xs font-medium text-blue-300 hover:text-blue-200">
                     {persona.cta}
                     <ArrowRight className="h-3.5 w-3.5" />
                   </button>
@@ -357,7 +357,7 @@ const Landing = () => {
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-10 md:grid-cols-[minmax(0,1.1fr),minmax(0,1fr)] md:items-center">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
                   Security & trust
                 </p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
@@ -370,7 +370,7 @@ const Landing = () => {
 
                 <div className="mt-6 grid gap-4 text-xs text-slate-300 sm:grid-cols-2">
                   <div className="flex items-start gap-3">
-                    <div className="mt-1 rounded-full bg-emerald-400/10 p-1.5 text-emerald-300">
+                    <div className="mt-1 rounded-full bg-blue-400/10 p-1.5 text-blue-300">
                       <ShieldCheck className="h-3.5 w-3.5" />
                 </div>
                 <div>
@@ -383,7 +383,7 @@ const Landing = () => {
               </div>
               
                   <div className="flex items-start gap-3">
-                    <div className="mt-1 rounded-full bg-sky-400/10 p-1.5 text-sky-300">
+                    <div className="mt-1 rounded-full bg-blue-400/10 p-1.5 text-blue-300">
                       <Activity className="h-3.5 w-3.5" />
                 </div>
                 <div>
@@ -396,28 +396,28 @@ const Landing = () => {
                 </div>
               </div>
               
-              <div className="rounded-3xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/15 via-slate-900/90 to-slate-950 p-4 text-[11px] text-slate-100 shadow-lg shadow-emerald-500/20">
+              <div className="rounded-3xl border border-blue-400/30 bg-gradient-to-br from-blue-500/15 via-slate-900/90 to-slate-950 p-4 text-[11px] text-slate-100 shadow-lg shadow-blue-500/20">
                 <div className="flex items-center justify-between">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-950/70 px-3 py-1 text-[10px] text-emerald-200">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-950/70 px-3 py-1 text-[10px] text-blue-200">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     Security posture · UltimateCare Cloud
                   </div>
-                  <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] text-emerald-200">
+                  <span className="rounded-full bg-blue-400/15 px-2 py-0.5 text-[10px] text-blue-200">
                     Realtime monitoring
                   </span>
                 </div>
                 <div className="mt-4 space-y-3">
                   <div className="flex items-center justify-between text-slate-200">
                     <span>Data residency</span>
-                    <span className="text-emerald-300">Africa + EU options</span>
+                    <span className="text-blue-300">Africa + EU options</span>
                   </div>
                   <div className="flex items-center justify-between text-slate-200">
                     <span>Encryption</span>
-                    <span className="text-emerald-300">In transit & at rest</span>
+                    <span className="text-blue-300">In transit & at rest</span>
                   </div>
                   <div className="flex items-center justify-between text-slate-200">
                     <span>Operational uptime</span>
-                    <span className="text-emerald-300">&gt; 99.9% last 12 months</span>
+                    <span className="text-blue-300">&gt; 99.9% last 12 months</span>
                   </div>
               </div>
             </div>
@@ -431,7 +431,7 @@ const Landing = () => {
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
             <div>
             <div className="flex items-center gap-2 text-slate-200">
-              <HeartPulse className="h-4 w-4 text-emerald-300" />
+              <HeartPulse className="h-4 w-4 text-blue-300" />
               <span className="text-sm font-semibold">UltimateCare</span>
             </div>
             <p className="mt-2 text-[11px]">
@@ -440,13 +440,13 @@ const Landing = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-4">
-            <a href="/privacy" className="hover:text-emerald-300">
+            <a href="/privacy" className="hover:text-blue-300">
               Privacy
             </a>
-            <a href="/terms" className="hover:text-emerald-300">
+            <a href="/terms" className="hover:text-blue-300">
               Terms
             </a>
-            <a href="/pricing" className="hover:text-emerald-300">
+            <a href="/pricing" className="hover:text-blue-300">
               Pricing
             </a>
           </div>

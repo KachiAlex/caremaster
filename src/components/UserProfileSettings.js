@@ -275,7 +275,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4 flex justify-between items-center">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
           <button
             onClick={onClose}
@@ -292,7 +292,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
               onClick={() => setActiveTab('profile')}
               className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'profile'
-                  ? 'border-purple-500 text-purple-600'
+                  ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -303,7 +303,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
               onClick={() => setActiveTab('security')}
               className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'security'
-                  ? 'border-purple-500 text-purple-600'
+                  ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -367,7 +367,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                       type="text"
                       value={profileData.name}
                       onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Jane Smith"
                     />
                   </div>
@@ -380,7 +380,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                       type="text"
                       value={profileData.fullName}
                       onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Jane Elizabeth Smith"
                     />
                   </div>
@@ -414,7 +414,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                         type="tel"
                         value={profileData.phone}
                         onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="+1 (555) 123-4567"
                       />
                     </div>
@@ -430,7 +430,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                         value={profileData.address}
                         onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
                         rows={2}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="123 Main Street, City, State, ZIP"
                       />
                     </div>
@@ -446,7 +446,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                         type="date"
                         value={profileData.dateOfBirth}
                         onChange={(e) => setProfileData({ ...profileData, dateOfBirth: e.target.value })}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -468,7 +468,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                           type="text"
                           value={profileData.specialization}
                           onChange={(e) => setProfileData({ ...profileData, specialization: e.target.value })}
-                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="e.g., Geriatrics, General Practice"
                         />
                       </div>
@@ -482,7 +482,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                         type="text"
                         value={profileData.licenseNumber}
                         onChange={(e) => setProfileData({ ...profileData, licenseNumber: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Medical License #"
                       />
                     </div>
@@ -499,7 +499,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                   value={profileData.bio}
                   onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Tell us about yourself, your experience, and interests..."
                 />
               </div>
@@ -516,7 +516,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                       type="text"
                       value={profileData.emergencyContact}
                       onChange={(e) => setProfileData({ ...profileData, emergencyContact: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Emergency contact name"
                     />
                   </div>
@@ -531,7 +531,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                         type="tel"
                         value={profileData.emergencyPhone}
                         onChange={(e) => setProfileData({ ...profileData, emergencyPhone: e.target.value })}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="+1 (555) 999-8888"
                       />
                     </div>
@@ -560,7 +560,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                         type={showPasswords.current ? 'text' : 'password'}
                         value={securityData.currentPassword}
                         onChange={(e) => setSecurityData({ ...securityData, currentPassword: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 pr-10"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
                         placeholder="Enter current password"
                       />
                       <button
@@ -582,7 +582,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                         type={showPasswords.new ? 'text' : 'password'}
                         value={securityData.newPassword}
                         onChange={(e) => setSecurityData({ ...securityData, newPassword: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 pr-10"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
                         placeholder="Enter new password (min 6 characters)"
                       />
                       <button
@@ -604,7 +604,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                         type={showPasswords.confirm ? 'text' : 'password'}
                         value={securityData.confirmPassword}
                         onChange={(e) => setSecurityData({ ...securityData, confirmPassword: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 pr-10"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
                         placeholder="Confirm new password"
                       />
                       <button
@@ -654,7 +654,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                       type="email"
                       value={securityData.newEmail}
                       onChange={(e) => setSecurityData({ ...securityData, newEmail: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="newemail@example.com"
                     />
                   </div>
@@ -667,7 +667,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
                       type="password"
                       value={securityData.currentPassword}
                       onChange={(e) => setSecurityData({ ...securityData, currentPassword: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter current password"
                     />
                   </div>
@@ -704,7 +704,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
             <button
               onClick={handleSaveProfile}
               disabled={loading || uploading}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
             >
               {loading || uploading ? (
                 <>

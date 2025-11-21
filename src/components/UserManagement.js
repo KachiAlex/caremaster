@@ -363,7 +363,7 @@ const UserManagement = ({ institutionId }) => {
         toast.success(
           <div>
             <div className="font-semibold">Patient registered successfully!</div>
-            <div className="text-sm mt-1">Patient ID: <span className="font-mono font-bold text-emerald-600">{result.patientId}</span></div>
+            <div className="text-sm mt-1">Patient ID: <span className="font-mono font-bold text-blue-600">{result.patientId}</span></div>
           </div>,
           { autoClose: 5000 }
         );
@@ -432,7 +432,7 @@ const UserManagement = ({ institutionId }) => {
                 resetForm();
                 setShowAddClientModal(true);
               }}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
             >
               <Heart className="h-4 w-4 mr-2" />
               Add Client
@@ -442,7 +442,7 @@ const UserManagement = ({ institutionId }) => {
                 resetForm();
                 setShowAddCaregiverModal(true);
               }}
-              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
             >
               <UserPlus className="h-4 w-4 mr-2" />
               Add Caregiver
@@ -574,7 +574,7 @@ const UserManagement = ({ institutionId }) => {
                     </td>
                     <td className="px-4 py-4">
                       <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                        user.status === 'active' ? 'bg-green-100 text-green-700' :
+                        user.status === 'active' ? 'bg-blue-100 text-blue-700' :
                         user.status === 'suspended' ? 'bg-red-100 text-red-700' :
                         'bg-yellow-100 text-yellow-700'
                       }`}>
@@ -629,7 +629,7 @@ const UserManagement = ({ institutionId }) => {
                               setSelectedCaregiverForWage(user);
                               setShowWageModal(true);
                             }}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Manage wages"
                           >
                             <DollarSign className="h-4 w-4" />
@@ -643,7 +643,7 @@ const UserManagement = ({ institutionId }) => {
                               ? 'text-gray-300 cursor-not-allowed'
                               : user.status === 'active' 
                                 ? 'text-red-600 hover:bg-red-50' 
-                                : 'text-green-600 hover:bg-green-50'
+                                : 'text-blue-600 hover:bg-blue-50'
                           }`}
                           title={
                             user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')
@@ -684,7 +684,7 @@ const UserManagement = ({ institutionId }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Shield className="h-6 w-6 text-white" />
                 <div>
@@ -799,17 +799,17 @@ const UserManagement = ({ institutionId }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Heart className="h-6 w-6 text-white" />
                 <div>
                   <h3 className="text-xl font-bold text-white">Add New Client</h3>
-                  <p className="text-green-100 text-sm">Create a new client profile</p>
+                  <p className="text-blue-100 text-sm">Create a new client profile</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddClientModal(false)}
-                className="text-white hover:bg-green-500 rounded-lg p-2 transition-colors"
+                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -853,7 +853,7 @@ const UserManagement = ({ institutionId }) => {
                     type="text"
                     value={newUserForm.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter full name"
                   />
                 </div>
@@ -864,7 +864,7 @@ const UserManagement = ({ institutionId }) => {
                     type="email"
                     value={newUserForm.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter email address"
                   />
                 </div>
@@ -875,7 +875,7 @@ const UserManagement = ({ institutionId }) => {
                     type="tel"
                     value={newUserForm.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -885,7 +885,7 @@ const UserManagement = ({ institutionId }) => {
                   <select
                     value={newUserForm.careLevel}
                     onChange={(e) => handleInputChange('careLevel', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="basic">Basic Care</option>
                     <option value="intermediate">Intermediate Care</option>
@@ -902,7 +902,7 @@ const UserManagement = ({ institutionId }) => {
                       type={showPassword ? 'text' : 'password'}
                       value={newUserForm.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter password"
                     />
                     <button
@@ -922,7 +922,7 @@ const UserManagement = ({ institutionId }) => {
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={newUserForm.confirmPassword}
                       onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Confirm password"
                     />
                     <button
@@ -946,7 +946,7 @@ const UserManagement = ({ institutionId }) => {
                     type="text"
                     value={newUserForm.address}
                     onChange={(e) => handleInputChange('address', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter address"
                   />
                 </div>
@@ -957,7 +957,7 @@ const UserManagement = ({ institutionId }) => {
                     type="text"
                     value={newUserForm.emergencyContact}
                     onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Emergency contact name"
                   />
                 </div>
@@ -968,7 +968,7 @@ const UserManagement = ({ institutionId }) => {
                     type="tel"
                     value={newUserForm.emergencyPhone}
                     onChange={(e) => handleInputChange('emergencyPhone', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Emergency contact phone"
                   />
                 </div>
@@ -978,7 +978,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.medicalConditions}
                     onChange={(e) => handleInputChange('medicalConditions', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="List medical conditions"
                     rows="2"
                   />
@@ -989,7 +989,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.medications}
                     onChange={(e) => handleInputChange('medications', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="List current medications"
                     rows="2"
                   />
@@ -1000,7 +1000,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.allergies}
                     onChange={(e) => handleInputChange('allergies', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="List known allergies"
                     rows="2"
                   />
@@ -1018,7 +1018,7 @@ const UserManagement = ({ institutionId }) => {
               </button>
               <button
                 onClick={() => handleCreateUser('client')}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Create Client
@@ -1033,17 +1033,17 @@ const UserManagement = ({ institutionId }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <UserPlus className="h-6 w-6 text-white" />
                 <div>
                   <h3 className="text-xl font-bold text-white">Add New Caregiver</h3>
-                  <p className="text-purple-100 text-sm">Create a new caregiver profile</p>
+                  <p className="text-blue-100 text-sm">Create a new caregiver profile</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddCaregiverModal(false)}
-                className="text-white hover:bg-purple-500 rounded-lg p-2 transition-colors"
+                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -1087,7 +1087,7 @@ const UserManagement = ({ institutionId }) => {
                     type="text"
                     value={newUserForm.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter full name"
                   />
                 </div>
@@ -1098,7 +1098,7 @@ const UserManagement = ({ institutionId }) => {
                     type="email"
                     value={newUserForm.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter email address"
                   />
                 </div>
@@ -1109,7 +1109,7 @@ const UserManagement = ({ institutionId }) => {
                     type="tel"
                     value={newUserForm.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -1119,7 +1119,7 @@ const UserManagement = ({ institutionId }) => {
                   <select
                     value={newUserForm.availability}
                     onChange={(e) => handleInputChange('availability', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="full-time">Full Time</option>
                     <option value="part-time">Part Time</option>
@@ -1136,7 +1136,7 @@ const UserManagement = ({ institutionId }) => {
                       type={showPassword ? 'text' : 'password'}
                       value={newUserForm.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter password"
                     />
                     <button
@@ -1156,7 +1156,7 @@ const UserManagement = ({ institutionId }) => {
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={newUserForm.confirmPassword}
                       onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Confirm password"
                     />
                     <button
@@ -1181,7 +1181,7 @@ const UserManagement = ({ institutionId }) => {
                     step="0.01"
                     value={newUserForm.hourlyRate}
                     onChange={(e) => handleInputChange('hourlyRate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter hourly rate"
                   />
                 </div>
@@ -1193,7 +1193,7 @@ const UserManagement = ({ institutionId }) => {
                     step="0.01"
                     value={newUserForm.monthlyRate}
                     onChange={(e) => handleInputChange('monthlyRate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter monthly rate"
                   />
                 </div>
@@ -1203,7 +1203,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.specializations}
                     onChange={(e) => handleInputChange('specializations', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="List specializations (e.g., dementia care, mobility assistance)"
                     rows="2"
                   />
@@ -1214,7 +1214,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.experience}
                     onChange={(e) => handleInputChange('experience', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Describe relevant experience"
                     rows="2"
                   />
@@ -1225,7 +1225,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.certifications}
                     onChange={(e) => handleInputChange('certifications', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="List certifications and licenses"
                     rows="2"
                   />
@@ -1243,7 +1243,7 @@ const UserManagement = ({ institutionId }) => {
               </button>
               <button
                 onClick={() => handleCreateUser('caregiver')}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Create Caregiver

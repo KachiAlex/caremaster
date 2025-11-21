@@ -278,7 +278,7 @@ const MessagingInterface = () => {
       case 'medical':
         return <Stethoscope size={16} className="text-blue-600" />;
       case 'care':
-        return <Heart size={16} className="text-green-600" />;
+        return <Heart size={16} className="text-blue-600" />;
       case 'emergency':
         return <AlertCircle size={16} className="text-red-600" />;
       case 'general':
@@ -293,7 +293,7 @@ const MessagingInterface = () => {
       case 'medical':
         return 'bg-blue-50 border-blue-200';
       case 'care':
-        return 'bg-green-50 border-green-200';
+        return 'bg-blue-50 border-green-200';
       case 'emergency':
         return 'bg-red-50 border-red-200';
       default:
@@ -428,7 +428,7 @@ const MessagingInterface = () => {
                     <div className="flex items-center space-x-2 mt-1">
                       <span className={`text-xs px-2 py-1 rounded-full ${
                         conversation.conversationType === 'medical' ? 'bg-blue-100 text-blue-800' :
-                        conversation.conversationType === 'care' ? 'bg-green-100 text-green-800' :
+                        conversation.conversationType === 'care' ? 'bg-blue-100 text-blue-800' :
                         conversation.conversationType === 'emergency' ? 'bg-red-100 text-red-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
@@ -472,7 +472,7 @@ const MessagingInterface = () => {
             <div className="flex items-center space-x-2">
               <button 
                 onClick={handleVoiceCall}
-                className="p-2 text-green-600 hover:text-green-800 rounded-lg hover:bg-green-50 transition-colors"
+                className="p-2 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
                 title="Voice Call"
               >
                 <Phone size={20} />
@@ -509,7 +509,7 @@ const MessagingInterface = () => {
                 <div className="flex items-center space-x-2">
                   <button 
                     onClick={handleVoiceCall}
-                    className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+                    className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
                     title="Voice Call"
                   >
                     <Phone size={20} />

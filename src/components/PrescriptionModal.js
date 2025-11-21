@@ -29,13 +29,13 @@ const PrescriptionModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-600 p-6 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center">
               <Pill className="h-7 w-7 mr-3" />
               Write Prescription
             </h2>
-            <p className="text-indigo-100 text-sm mt-1">
+            <p className="text-blue-100 text-sm mt-1">
               {selectedClient ? `For ${selectedClient.name || selectedClient.fullName}` : 'No client selected'}
             </p>
           </div>
@@ -59,7 +59,7 @@ const PrescriptionModal = ({
               value={prescriptionFormData.diagnosis}
               onChange={(e) => setPrescriptionFormData(prev => ({ ...prev, diagnosis: e.target.value }))}
               placeholder="e.g., Hypertension, Type 2 Diabetes"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -71,7 +71,7 @@ const PrescriptionModal = ({
               </label>
               <button
                 onClick={onAddMedication}
-                className="flex items-center px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Add Medication
@@ -80,11 +80,11 @@ const PrescriptionModal = ({
 
             <div className="space-y-4">
               {prescriptionFormData.medications.map((medication, index) => (
-                <div key={index} className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-5">
+                <div key={index} className="bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-lg p-5">
                   {/* Item Number Header */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
-                      <div className="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm mr-3">
+                      <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm mr-3">
                         {index + 1}
                       </div>
                       <h3 className="font-semibold text-gray-900">
@@ -113,7 +113,7 @@ const PrescriptionModal = ({
                         value={medication.name}
                         onChange={(e) => handleMedicationChange(index, 'name', e.target.value)}
                         placeholder="e.g., Lisinopril, Metformin"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
 
@@ -127,7 +127,7 @@ const PrescriptionModal = ({
                         value={medication.dosage}
                         onChange={(e) => handleMedicationChange(index, 'dosage', e.target.value)}
                         placeholder="e.g., 10mg, 500mg"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
 
@@ -139,7 +139,7 @@ const PrescriptionModal = ({
                       <select
                         value={medication.route}
                         onChange={(e) => handleMedicationChange(index, 'route', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="oral">Oral</option>
                         <option value="topical">Topical</option>
@@ -160,7 +160,7 @@ const PrescriptionModal = ({
                         value={medication.frequency}
                         onChange={(e) => handleMedicationChange(index, 'frequency', e.target.value)}
                         placeholder="e.g., Once daily, Twice daily"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
 
@@ -174,7 +174,7 @@ const PrescriptionModal = ({
                         value={medication.duration}
                         onChange={(e) => handleMedicationChange(index, 'duration', e.target.value)}
                         placeholder="e.g., 7 days, 30 days"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
 
@@ -188,7 +188,7 @@ const PrescriptionModal = ({
                         value={medication.quantity}
                         onChange={(e) => handleMedicationChange(index, 'quantity', e.target.value)}
                         placeholder="e.g., 30 tablets"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
 
@@ -202,7 +202,7 @@ const PrescriptionModal = ({
                         onChange={(e) => handleMedicationChange(index, 'instructions', e.target.value)}
                         placeholder="e.g., Take with food, Take at bedtime"
                         rows="2"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -221,7 +221,7 @@ const PrescriptionModal = ({
               onChange={(e) => setPrescriptionFormData(prev => ({ ...prev, notes: e.target.value }))}
               placeholder="Any additional information or precautions..."
               rows="3"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -236,7 +236,7 @@ const PrescriptionModal = ({
           </button>
           <button
             onClick={onSubmit}
-            className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center"
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
           >
             <Pill className="h-4 w-4 mr-2" />
             Create Prescription

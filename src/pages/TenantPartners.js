@@ -27,12 +27,12 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
       <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/90 shadow-2xl shadow-black/60">
         <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-emerald-300">Partner with UltimateCare</p>
+            <p className="text-xs uppercase tracking-[0.28em] text-blue-300">Partner with UltimateCare</p>
             <h3 className="text-2xl font-semibold text-slate-50">Request to become a Tenant Partner</h3>
           </div>
           <button
             onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 text-slate-400 transition hover:border-emerald-400/60 hover:text-emerald-300"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 text-slate-400 transition hover:border-blue-400/60 hover:text-blue-300"
             aria-label="Close partner request form"
           >
             ✕
@@ -46,7 +46,7 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
                 value={orgName}
                 onChange={e => setOrgName(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 placeholder="Company Name"
               />
             </label>
@@ -58,7 +58,7 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   placeholder="hello@ultimatecare.health"
                 />
               </label>
@@ -69,7 +69,7 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   required
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   placeholder="+234 000 000 0000"
                 />
               </label>
@@ -79,7 +79,7 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
               <input
                 value={website}
                 onChange={e => setWebsite(e.target.value)}
-                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 placeholder="https://"
               />
             </label>
@@ -89,7 +89,7 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 rows={4}
-                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-base text-slate-50 placeholder-slate-500 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 placeholder="Tell us about your institution and care goals…"
               />
             </label>
@@ -104,7 +104,7 @@ const RequestPartnerModal = ({ isOpen, onClose }) => {
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/90 px-5 py-3 text-base font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-500/90 px-5 py-3 text-base font-semibold text-slate-950 shadow-lg shadow-blue-500/30 transition hover:bg-blue-400"
             >
               <Sparkles className="h-5 w-5" />
               Submit request
@@ -123,12 +123,12 @@ const TenantPartners = () => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-50">
       <div className="pointer-events-none absolute inset-x-0 -top-48 flex justify-center">
-        <div className="h-72 w-[620px] rounded-full bg-emerald-500/20 blur-[160px]" />
+        <div className="h-72 w-[620px] rounded-full bg-blue-500/20 blur-[160px]" />
       </div>
       <div className="relative mx-auto max-w-6xl px-6 pb-20 pt-12 lg:px-12">
         <section className="grid gap-10 rounded-3xl border border-slate-800/70 bg-slate-950/80 p-10 shadow-2xl shadow-black/40 backdrop-blur lg:grid-cols-[1.25fr_1fr]">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1 text-[11px] font-medium uppercase tracking-[0.28em] text-emerald-200">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-400/10 px-4 py-1 text-[11px] font-medium uppercase tracking-[0.28em] text-blue-200">
               <Sparkles className="h-3 w-3" />
               Trusted home-health infrastructure
             </div>
@@ -138,12 +138,12 @@ const TenantPartners = () => {
             <p className="mt-4 text-base leading-relaxed text-slate-300">
               Sign in to access your institution's private workspace. Every tenant operates in a secure, isolated environment with role-based access and unified workflows for administrators, caregivers, and pharmacy teams.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3 text-sm text-emerald-200">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-slate-900/70 px-4 py-2">
+            <div className="mt-6 flex flex-wrap gap-3 text-sm text-blue-200">
+              <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-slate-900/70 px-4 py-2">
                 <Lock className="h-4 w-4" />
                 Single sign-on security
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-slate-900/70 px-4 py-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-slate-900/70 px-4 py-2">
                 <Shield className="h-4 w-4" />
                 HIPAA-inspired safeguards
               </span>
@@ -151,14 +151,14 @@ const TenantPartners = () => {
             <div className="mt-8 flex flex-wrap gap-4">
               <button
                 onClick={() => navigate('/auth?tab=login&context=partner')}
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500/90 px-6 py-3 text-base font-semibold text-slate-950 shadow-xl shadow-emerald-500/30 transition hover:bg-emerald-400"
+                className="inline-flex items-center gap-2 rounded-2xl bg-blue-500/90 px-6 py-3 text-base font-semibold text-slate-950 shadow-xl shadow-blue-500/30 transition hover:bg-blue-400"
               >
                 Partner login
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setShowModal(true)}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 px-6 py-3 text-base font-semibold text-slate-200 transition hover:border-emerald-400 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 px-6 py-3 text-base font-semibold text-slate-200 transition hover:border-blue-400 hover:text-white"
               >
                 Request access
               </button>
@@ -167,7 +167,7 @@ const TenantPartners = () => {
               Need help signing in?{' '}
               <button
                 onClick={() => navigate('/support')}
-                className="font-semibold text-emerald-300 hover:underline"
+                className="font-semibold text-blue-300 hover:underline"
               >
                 Contact support
               </button>
@@ -202,7 +202,7 @@ const TenantPartners = () => {
               { step: 'Step 3', title: 'Tenant operations', body: 'Administrators, caregivers, and pharmacy teams collaborate within a shared record system where data never leaves the tenant boundary.' }
             ].map((card, index) => (
               <div key={card.step} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-black/30">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">{card.step}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-300">{card.step}</p>
                 <h3 className="mt-2 text-xl font-semibold text-slate-50">{card.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-300">{card.body}</p>
               </div>
@@ -220,7 +220,7 @@ const TenantPartners = () => {
             return (
               <div key={card.title} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-black/30">
                 <div className="flex items-center gap-3">
-                  <Icon className="h-5 w-5 text-emerald-300" />
+                  <Icon className="h-5 w-5 text-blue-300" />
                   <h3 className="text-lg font-semibold text-slate-50">{card.title}</h3>
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-slate-300">{card.body}</p>
@@ -232,7 +232,7 @@ const TenantPartners = () => {
         <section className="mt-20 rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/30 p-10 shadow-inner shadow-black/40">
           <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-emerald-300">Need an invite?</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-blue-300">Need an invite?</p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-50">Request onboarding for your institution</h2>
               <p className="mt-3 max-w-2xl text-sm text-slate-300">
                 We partner closely with healthcare groups to configure workflows, govern access, and train teams. Send us a request and our onboarding specialists will reach out within one business day.
@@ -240,7 +240,7 @@ const TenantPartners = () => {
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-6 py-3 text-base font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
+              className="inline-flex items-center gap-2 rounded-2xl border border-blue-400/40 bg-blue-500/10 px-6 py-3 text-base font-semibold text-blue-200 transition hover:bg-blue-500/20"
             >
               <LifeBuoy className="h-4 w-4" />
               Request onboarding

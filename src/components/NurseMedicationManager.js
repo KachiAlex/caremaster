@@ -211,8 +211,8 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
     const colors = {
       'pending': 'bg-yellow-100 text-yellow-800',
       'due': 'bg-red-100 text-red-800',
-      'soon': 'bg-orange-100 text-orange-800',
-      'administered': 'bg-green-100 text-green-800'
+      'soon': 'bg-blue-100 text-orange-800',
+      'administered': 'bg-blue-100 text-blue-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
@@ -228,8 +228,8 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Pill className="h-6 w-6 text-green-600" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Pill className="h-6 w-6 text-blue-600" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Medication Management</h2>
@@ -249,7 +249,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
         <div className="p-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : medications.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
@@ -319,7 +319,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                         {status.status === 'due' || status.status === 'soon' ? (
                           <button
                             onClick={() => handleAdministerMedication(medication)}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Administer
@@ -349,8 +349,8 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Pill className="h-6 w-6 text-green-600" />
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Pill className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">Record Medication Administration</h3>
@@ -375,7 +375,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                         type="datetime-local"
                         value={administerForm.administeredAt}
                         onChange={(e) => setAdministerForm(prev => ({ ...prev, administeredAt: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required
                       />
                     </div>
@@ -386,7 +386,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                         value={administerForm.dose}
                         onChange={(e) => setAdministerForm(prev => ({ ...prev, dose: e.target.value }))}
                         placeholder="e.g., 10mg, 1 tablet"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required
                       />
                     </div>
@@ -397,7 +397,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                     <select
                       value={administerForm.route}
                       onChange={(e) => setAdministerForm(prev => ({ ...prev, route: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       {routes.map(route => (
                         <option key={route.value} value={route.value}>{route.label}</option>
@@ -410,7 +410,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                     <select
                       value={administerForm.patientResponse}
                       onChange={(e) => setAdministerForm(prev => ({ ...prev, patientResponse: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       {patientResponses.map(response => (
                         <option key={response.value} value={response.value}>{response.label}</option>
@@ -425,7 +425,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                       onChange={(e) => setAdministerForm(prev => ({ ...prev, sideEffects: e.target.value }))}
                       placeholder="Describe any side effects observed..."
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
 
@@ -436,7 +436,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                       onChange={(e) => setAdministerForm(prev => ({ ...prev, notes: e.target.value }))}
                       placeholder="Additional notes about the administration..."
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
                 </div>
@@ -451,7 +451,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center"
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
                   >
                     <Save className="h-4 w-4 mr-2" />
                     Record Administration

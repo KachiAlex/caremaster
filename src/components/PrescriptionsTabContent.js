@@ -51,8 +51,8 @@ const PrescriptionsTabContent = ({
   const getStatusBadge = (status) => {
     const statusConfig = {
       active: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Active' },
-      dispensed: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Dispensed' },
-      completed: { bg: 'bg-green-100', text: 'text-green-800', label: 'Completed' },
+      dispensed: { bg: 'bg-blue-100', text: 'text-purple-800', label: 'Dispensed' },
+      completed: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Completed' },
       // Legacy status support
       pending: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Active' },
       verified: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Active' }
@@ -103,7 +103,7 @@ const PrescriptionsTabContent = ({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Pill className="h-8 w-8 text-indigo-600 mr-3" />
+            <Pill className="h-8 w-8 text-blue-600 mr-3" />
             Prescription Management
           </h2>
           <p className="text-sm text-gray-600 mt-1">
@@ -115,7 +115,7 @@ const PrescriptionsTabContent = ({
         {isDoctor && selectedClient && (
           <button
             onClick={onOpenPrescriptionModal}
-            className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center font-medium"
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-lg hover:from-blue-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center font-medium"
           >
             <Pill className="h-5 w-5 mr-2" />
             Write Prescription
@@ -125,9 +125,9 @@ const PrescriptionsTabContent = ({
 
       {/* Client Info Banner */}
       {selectedClient ? (
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-5">
+        <div className="bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-xl p-5">
           <div className="flex items-center">
-            <User className="h-6 w-6 text-indigo-600 mr-3" />
+            <User className="h-6 w-6 text-blue-600 mr-3" />
             <div>
               <h3 className="font-bold text-gray-900">
                 {selectedClient.name || selectedClient.fullName}
@@ -163,7 +163,7 @@ const PrescriptionsTabContent = ({
               {isDoctor && (
                 <button
                   onClick={onOpenPrescriptionModal}
-                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors inline-flex items-center"
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center"
                 >
                   <Pill className="h-4 w-4 mr-2" />
                   Write First Prescription
@@ -195,7 +195,7 @@ const PrescriptionsTabContent = ({
                           <Clock className="h-4 w-4 mr-1" />
                           {new Date(prescription.prescriptionDate).toLocaleDateString()}
                         </span>
-                        <span className="flex items-center font-medium text-indigo-600">
+                        <span className="flex items-center font-medium text-blue-600">
                           {prescription.totalItems} item{prescription.totalItems !== 1 ? 's' : ''}
                         </span>
                       </div>
@@ -205,7 +205,7 @@ const PrescriptionsTabContent = ({
                         <>
                           <button
                             onClick={() => onEditPrescription && onEditPrescription(prescription)}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-sm font-medium"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm font-medium"
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
@@ -254,7 +254,7 @@ const PrescriptionsTabContent = ({
                     {/* Medications */}
                     <div>
                       <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center">
-                        <Package className="h-5 w-5 text-indigo-600 mr-2" />
+                        <Package className="h-5 w-5 text-blue-600 mr-2" />
                         Prescribed Medications ({prescription.medications?.length || 0})
                       </h4>
                       <div className="space-y-4">
@@ -268,12 +268,12 @@ const PrescriptionsTabContent = ({
                             return (
                               <div
                                 key={medication.id}
-                                className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-5"
+                                className="bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-lg p-5"
                               >
                                 {/* Item Number and Name */}
                                 <div className="flex items-start justify-between mb-3">
                                   <div className="flex items-start flex-1">
-                                    <div className="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm mr-3 flex-shrink-0">
+                                    <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm mr-3 flex-shrink-0">
                                       {medication.itemNumber}
                                     </div>
                                     <div className="flex-1">
@@ -307,7 +307,7 @@ const PrescriptionsTabContent = ({
                                         )}
                                       </div>
                                       {medication.instructions && (
-                                        <div className="mt-2 p-2 bg-white rounded border border-indigo-200">
+                                        <div className="mt-2 p-2 bg-white rounded border border-blue-200">
                                           <span className="text-xs font-semibold text-gray-500 uppercase">Instructions:</span>
                                           <p className="text-sm text-gray-900 mt-1">{medication.instructions}</p>
                                         </div>
@@ -318,9 +318,9 @@ const PrescriptionsTabContent = ({
 
                                 {/* Pharmacist Controls */}
                                 {isPharmacist && (
-                                  <div className="mt-4 pt-4 border-t border-indigo-300">
+                                  <div className="mt-4 pt-4 border-t border-blue-300">
                                     <h6 className="text-sm font-bold text-gray-700 mb-3 flex items-center">
-                                      <DollarSign className="h-4 w-4 text-green-600 mr-1" />
+                                      <DollarSign className="h-4 w-4 text-blue-600 mr-1" />
                                       Pharmacist Controls
                                     </h6>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -331,7 +331,7 @@ const PrescriptionsTabContent = ({
                                           id={`available-${medication.id}`}
                                           checked={isAvailable === true}
                                           onChange={(e) => handleItemFieldChange(medication.id, 'isAvailable', e.target.checked)}
-                                          className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                          className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                         />
                                         <label htmlFor={`available-${medication.id}`} className="ml-3 text-sm font-medium text-gray-900">
                                           Available in Stock
@@ -350,7 +350,7 @@ const PrescriptionsTabContent = ({
                                           placeholder="0.00"
                                           value={unitPrice || ''}
                                           onChange={(e) => handleItemFieldChange(medication.id, 'unitPrice', e.target.value)}
-                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                         />
                                       </div>
 
@@ -366,7 +366,7 @@ const PrescriptionsTabContent = ({
                                           placeholder="0.00"
                                           value={totalPrice || ''}
                                           onChange={(e) => handleItemFieldChange(medication.id, 'totalPrice', e.target.value)}
-                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                         />
                                       </div>
 
@@ -380,7 +380,7 @@ const PrescriptionsTabContent = ({
                                           placeholder="Suggest alternative medication if unavailable"
                                           value={currentUpdates.alternativeSuggestion || medication.alternativeSuggestion || ''}
                                           onChange={(e) => handleItemFieldChange(medication.id, 'alternativeSuggestion', e.target.value)}
-                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                         />
                                       </div>
 
@@ -394,7 +394,7 @@ const PrescriptionsTabContent = ({
                                           value={currentUpdates.pharmacistNotes || medication.pharmacistNotes || ''}
                                           onChange={(e) => handleItemFieldChange(medication.id, 'pharmacistNotes', e.target.value)}
                                           rows="2"
-                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                         />
                                       </div>
                                     </div>
@@ -403,7 +403,7 @@ const PrescriptionsTabContent = ({
                                     {itemUpdates[medication.id] && (
                                       <button
                                         onClick={() => handleSaveItemUpdates(medication.id)}
-                                        className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center"
+                                        className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
                                       >
                                         <CheckCircle className="h-4 w-4 mr-2" />
                                         Save Changes
@@ -414,11 +414,11 @@ const PrescriptionsTabContent = ({
 
                                 {/* View-only Status for non-pharmacists */}
                                 {!isPharmacist && medication.isAvailable !== null && (
-                                  <div className="mt-4 pt-4 border-t border-indigo-300">
+                                  <div className="mt-4 pt-4 border-t border-blue-300">
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center">
                                         {medication.isAvailable ? (
-                                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold flex items-center">
+                                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold flex items-center">
                                             <CheckCircle className="h-4 w-4 mr-1" />
                                             Available - ₦{medication.totalPrice || medication.unitPrice || '0.00'}
                                           </span>
@@ -459,10 +459,10 @@ const PrescriptionsTabContent = ({
 
                     {/* Total Cost */}
                     {isPharmacist && prescription.totalCost > 0 && (
-                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="mt-4 p-4 bg-blue-50 border border-green-200 rounded-lg">
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-bold text-gray-900">Total Prescription Cost:</span>
-                          <span className="text-2xl font-bold text-green-600">₦{prescription.totalCost.toFixed(2)}</span>
+                          <span className="text-2xl font-bold text-blue-600">₦{prescription.totalCost.toFixed(2)}</span>
                         </div>
                       </div>
                     )}

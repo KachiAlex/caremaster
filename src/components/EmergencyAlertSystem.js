@@ -39,19 +39,19 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
 
   const emergencyTypes = [
     { value: 'medical', label: 'Medical Emergency', icon: Heart, color: 'text-red-600' },
-    { value: 'fall', label: 'Fall Incident', icon: AlertTriangle, color: 'text-orange-600' },
+    { value: 'fall', label: 'Fall Incident', icon: AlertTriangle, color: 'text-blue-600' },
     { value: 'cardiac', label: 'Cardiac Emergency', icon: Activity, color: 'text-red-700' },
     { value: 'respiratory', label: 'Respiratory Distress', icon: Activity, color: 'text-red-600' },
     { value: 'medication', label: 'Medication Error', icon: Shield, color: 'text-yellow-600' },
-    { value: 'behavioral', label: 'Behavioral Emergency', icon: User, color: 'text-purple-600' },
+    { value: 'behavioral', label: 'Behavioral Emergency', icon: User, color: 'text-blue-600' },
     { value: 'environmental', label: 'Environmental Hazard', icon: MapPin, color: 'text-gray-600' },
     { value: 'other', label: 'Other Emergency', icon: AlertTriangle, color: 'text-gray-600' }
   ];
 
   const severityLevels = [
-    { value: 'low', label: 'Low Priority', color: 'bg-green-100 text-green-800' },
+    { value: 'low', label: 'Low Priority', color: 'bg-blue-100 text-blue-800' },
     { value: 'medium', label: 'Medium Priority', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'high', label: 'High Priority', color: 'bg-orange-100 text-orange-800' },
+    { value: 'high', label: 'High Priority', color: 'bg-blue-100 text-orange-800' },
     { value: 'critical', label: 'Critical Emergency', color: 'bg-red-100 text-red-800' }
   ];
 
@@ -258,13 +258,13 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => updateEmergencyStatus(emergency.id, 'in_progress', 'Emergency response initiated')}
-                      className="px-3 py-1 bg-orange-600 text-white rounded text-sm hover:bg-orange-700"
+                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-orange-700"
                     >
                       Respond
                     </button>
                     <button
                       onClick={() => updateEmergencyStatus(emergency.id, 'resolved', 'Emergency resolved')}
-                      className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                     >
                       Resolve
                     </button>
@@ -331,7 +331,7 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           emergency.status === 'active' ? 'bg-red-100 text-red-800' :
-                          emergency.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                          emergency.status === 'resolved' ? 'bg-blue-100 text-blue-800' :
                           'bg-yellow-100 text-yellow-800'
                         }`}>
                           {emergency.status}

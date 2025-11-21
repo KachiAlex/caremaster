@@ -90,7 +90,7 @@ const AIMedicationChecker = ({ isOpen, onClose, currentMedications = [] }) => {
     switch (severity) {
       case 'minor': return 'text-blue-600 bg-blue-100';
       case 'moderate': return 'text-yellow-600 bg-yellow-100';
-      case 'major': return 'text-orange-600 bg-orange-100';
+      case 'major': return 'text-blue-600 bg-blue-100';
       case 'contraindicated': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
     }
@@ -98,7 +98,7 @@ const AIMedicationChecker = ({ isOpen, onClose, currentMedications = [] }) => {
 
   const getRiskColor = (risk) => {
     switch (risk) {
-      case 'low': return 'text-green-600 bg-green-100';
+      case 'low': return 'text-blue-600 bg-blue-100';
       case 'medium': return 'text-yellow-600 bg-yellow-100';
       case 'high': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
@@ -109,9 +109,9 @@ const AIMedicationChecker = ({ isOpen, onClose, currentMedications = [] }) => {
     switch (severity) {
       case 'minor': return <Info className="w-4 h-4 text-blue-600" />;
       case 'moderate': return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
-      case 'major': return <AlertTriangle className="w-4 h-4 text-orange-600" />;
+      case 'major': return <AlertTriangle className="w-4 h-4 text-blue-600" />;
       case 'contraindicated': return <X className="w-4 h-4 text-red-600" />;
-      default: return <CheckCircle className="w-4 h-4 text-green-600" />;
+      default: return <CheckCircle className="w-4 h-4 text-blue-600" />;
     }
   };
 
@@ -121,7 +121,7 @@ const AIMedicationChecker = ({ isOpen, onClose, currentMedications = [] }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-blue-600 text-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Brain className="w-6 h-6" />
@@ -235,7 +235,7 @@ const AIMedicationChecker = ({ isOpen, onClose, currentMedications = [] }) => {
               <div className="flex space-x-2 mt-4">
                 <button
                   onClick={addMedication}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Add Medication
                 </button>
@@ -298,7 +298,7 @@ const AIMedicationChecker = ({ isOpen, onClose, currentMedications = [] }) => {
               </button>
               
               {interactionResults && (
-                <div className="flex items-center space-x-2 text-sm text-green-600">
+                <div className="flex items-center space-x-2 text-sm text-blue-600">
                   <CheckCircle className="w-4 h-4" />
                   <span>Analysis complete!</span>
                 </div>
@@ -361,7 +361,7 @@ const AIMedicationChecker = ({ isOpen, onClose, currentMedications = [] }) => {
               </div>
             ) : (
               <div className="text-center py-8">
-                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                <CheckCircle className="w-12 h-12 text-blue-500 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No Interactions Detected</h3>
                 <p className="text-gray-600">Your current medications appear to be safe to take together.</p>
               </div>
@@ -383,9 +383,9 @@ const AIMedicationChecker = ({ isOpen, onClose, currentMedications = [] }) => {
             )}
 
             {/* Safety Tips */}
-            <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-green-200">
               <h4 className="font-medium text-green-900 mb-2">Safety Tips</h4>
-              <ul className="space-y-1 text-sm text-green-800">
+              <ul className="space-y-1 text-sm text-blue-800">
                 <li>• Always consult your healthcare provider before starting new medications</li>
                 <li>• Keep an updated list of all medications you're taking</li>
                 <li>• Inform all healthcare providers about your current medications</li>

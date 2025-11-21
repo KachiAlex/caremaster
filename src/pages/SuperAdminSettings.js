@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 const inputClass =
-  'w-full rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-50 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-emerald-500/20';
+  'w-full rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-50 placeholder-slate-500 focus:border-blue-400 focus:outline-none focus:ring-blue-500/20';
 
 const SuperAdminSettings = () => {
   const navigate = useNavigate();
@@ -96,7 +96,7 @@ const SuperAdminSettings = () => {
   const SettingSection = ({ title, icon: Icon, children }) => (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-lg shadow-black/40 mb-6">
       <div className="flex items-center mb-4">
-        <Icon className="h-5 w-5 text-emerald-300 mr-2" />
+        <Icon className="h-5 w-5 text-blue-300 mr-2" />
         <h3 className="text-lg font-semibold text-slate-50">{title}</h3>
       </div>
       <div className="space-y-4">
@@ -114,7 +114,7 @@ const SuperAdminSettings = () => {
       <button
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          checked ? 'bg-emerald-500/80' : 'bg-slate-700'
+          checked ? 'bg-blue-500/80' : 'bg-slate-700'
         }`}
       >
         <span
@@ -151,7 +151,7 @@ const SuperAdminSettings = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/super-admin/dashboard')}
-                className="rounded-2xl border border-slate-700 p-2 text-slate-300 hover:border-emerald-400/60"
+                className="rounded-2xl border border-slate-700 p-2 text-slate-300 hover:border-blue-400/60"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
@@ -164,7 +164,7 @@ const SuperAdminSettings = () => {
             <button
               onClick={handleSaveSettings}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500/90 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl bg-blue-500/90 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-blue-500/30 hover:bg-blue-400 disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               {loading ? 'Saving...' : 'Save Changes'}
@@ -176,7 +176,7 @@ const SuperAdminSettings = () => {
           <div
             className={`rounded-2xl border px-4 py-3 text-sm ${
               message.includes('success')
-                ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
+                ? 'border-blue-400/40 bg-blue-500/10 text-blue-200'
                 : 'border-rose-400/40 bg-rose-500/10 text-rose-200'
             }`}
           >
@@ -288,12 +288,12 @@ const SuperAdminSettings = () => {
             <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-lg shadow-black/40 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-emerald-300" />
+                  <Users className="h-5 w-5 text-blue-300" />
                   <h3 className="text-lg font-semibold text-slate-50">Super Admins</h3>
                 </div>
                 <button
                   onClick={loadSuperAdmins}
-                  className="p-1 rounded-lg border border-slate-700 text-slate-300 hover:border-emerald-400/60"
+                  className="p-1 rounded-lg border border-slate-700 text-slate-300 hover:border-blue-400/60"
                   title="Refresh"
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -302,7 +302,7 @@ const SuperAdminSettings = () => {
 
               {loadingSuperAdmins ? (
                 <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-400 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400 mx-auto"></div>
                 </div>
               ) : superAdmins.length === 0 ? (
                 <p className="text-sm text-slate-500 text-center py-4">No super admins found</p>
@@ -311,7 +311,7 @@ const SuperAdminSettings = () => {
                   {superAdmins.map((admin) => (
                     <div key={admin.id} className="flex items-start p-3 rounded-2xl border border-slate-800 bg-slate-900/60">
                       <div className="flex-shrink-0 mt-1">
-                        <Shield className="h-4 w-4 text-emerald-300" />
+                        <Shield className="h-4 w-4 text-blue-300" />
                       </div>
                       <div className="ml-3 flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-50 truncate">
@@ -327,7 +327,7 @@ const SuperAdminSettings = () => {
 
             <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-lg shadow-black/40">
               <div className="flex items-center gap-2 mb-4">
-                <Activity className="h-5 w-5 text-emerald-300" />
+                <Activity className="h-5 w-5 text-blue-300" />
                 <h3 className="text-lg font-semibold text-slate-50">System Status</h3>
               </div>
 
@@ -340,7 +340,7 @@ const SuperAdminSettings = () => {
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
                     <span className="text-slate-400">{item.label}</span>
-                    <span className="px-2 py-1 rounded text-xs border border-emerald-400/40 text-emerald-200">{item.status}</span>
+                    <span className="px-2 py-1 rounded text-xs border border-blue-400/40 text-blue-200">{item.status}</span>
                   </div>
                 ))}
               </div>

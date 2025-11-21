@@ -168,7 +168,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
       toast.success(
         <div>
           <div className="font-semibold">Patient registered successfully!</div>
-          <div className="text-sm mt-1">Patient ID: <span className="font-mono font-bold text-emerald-600">{result.patientId}</span></div>
+          <div className="text-sm mt-1">Patient ID: <span className="font-mono font-bold text-blue-600">{result.patientId}</span></div>
         </div>,
         { autoClose: 6000 }
       );
@@ -196,13 +196,13 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
     return (
       <div className="rounded-3xl border border-slate-800/80 bg-slate-950/95 backdrop-blur-xl shadow-xl shadow-black/50 p-8 max-w-2xl mx-auto">
         <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4">
-            <CheckCircle className="h-8 w-8 text-emerald-400" />
+          <div className="mx-auto w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle className="h-8 w-8 text-blue-400" />
           </div>
           <h3 className="text-2xl font-bold text-slate-50 mb-2">Patient Registered Successfully!</h3>
           <div className="mt-6 p-6 bg-slate-900/60 rounded-2xl border border-slate-800/60">
             <div className="text-sm text-slate-400 mb-2">Patient ID</div>
-            <div className="text-3xl font-mono font-bold text-emerald-400 mb-4">{createdPatientId}</div>
+            <div className="text-3xl font-mono font-bold text-blue-400 mb-4">{createdPatientId}</div>
             <div className="text-sm text-slate-300">
               <div className="mb-1"><span className="text-slate-400">Name:</span> {formData.name}</div>
               <div className="mb-1"><span className="text-slate-400">Date of Birth:</span> {new Date(formData.dateOfBirth).toLocaleDateString()}</div>
@@ -211,7 +211,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
           </div>
           <button
             onClick={onClose}
-            className="mt-6 px-6 py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/30 transition-colors"
+            className="mt-6 px-6 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition-colors"
           >
             Close
           </button>
@@ -225,8 +225,8 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
-            <UserPlus className="h-5 w-5 text-emerald-300" />
+          <div className="p-2 rounded-lg bg-blue-500/20 border border-blue-500/30">
+            <UserPlus className="h-5 w-5 text-blue-300" />
           </div>
           <div>
             <h2 className="text-xl font-semibold tracking-tight text-slate-50">Register New Patient</h2>
@@ -261,7 +261,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
                   errors.name ? 'border-red-500/50' : 'border-slate-700'
                 }`}
                 placeholder="Enter patient's full name"
@@ -278,7 +278,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="dateOfBirth"
                 value={formData.dateOfBirth}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
                   errors.dateOfBirth ? 'border-red-500/50' : 'border-slate-700'
                 }`}
               />
@@ -293,7 +293,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
                   errors.gender ? 'border-red-500/50' : 'border-slate-700'
                 }`}
               >
@@ -314,7 +314,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
                   errors.phone ? 'border-red-500/50' : 'border-slate-700'
                 }`}
                 placeholder="+1234567890"
@@ -329,7 +329,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
                   errors.email ? 'border-red-500/50' : 'border-slate-700'
                 }`}
                 placeholder="patient@example.com"
@@ -343,7 +343,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="bloodType"
                 value={formData.bloodType}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
               >
                 <option value="" className="bg-slate-900">Select blood type</option>
                 <option value="A+" className="bg-slate-900">A+</option>
@@ -365,7 +365,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
               name="address"
               value={formData.address}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+              className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
               placeholder="Street address"
             />
           </div>
@@ -377,7 +377,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="city"
                 value={formData.city}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
                 placeholder="City"
               />
             </div>
@@ -387,7 +387,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="state"
                 value={formData.state}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
                 placeholder="State"
               />
             </div>
@@ -397,7 +397,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="zipCode"
                 value={formData.zipCode}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
                 placeholder="ZIP Code"
               />
             </div>
@@ -421,7 +421,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="emergencyContactName"
                 value={formData.emergencyContactName}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
                   errors.emergencyContactName ? 'border-red-500/50' : 'border-slate-700'
                 }`}
                 placeholder="Emergency contact name"
@@ -438,7 +438,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="emergencyContactPhone"
                 value={formData.emergencyContactPhone}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm ${
+                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
                   errors.emergencyContactPhone ? 'border-red-500/50' : 'border-slate-700'
                 }`}
                 placeholder="+1234567890"
@@ -453,7 +453,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="emergencyContactRelationship"
                 value={formData.emergencyContactRelationship}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
                 placeholder="e.g., Spouse, Parent, Child"
               />
             </div>
@@ -475,7 +475,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 value={formData.medicalConditions}
                 onChange={handleChange}
                 rows="2"
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
                 placeholder="Comma-separated list (e.g., Hypertension, Diabetes)"
               />
             </div>
@@ -487,7 +487,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 value={formData.medications}
                 onChange={handleChange}
                 rows="2"
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
                 placeholder="Comma-separated list (e.g., Aspirin 100mg, Metformin 500mg)"
               />
             </div>
@@ -499,7 +499,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 value={formData.allergies}
                 onChange={handleChange}
                 rows="2"
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
                 placeholder="Comma-separated list (e.g., Penicillin, Latex)"
               />
             </div>
@@ -521,7 +521,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="insuranceProvider"
                 value={formData.insuranceProvider}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
                 placeholder="Insurance company name"
               />
             </div>
@@ -533,7 +533,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 name="insurancePolicyNumber"
                 value={formData.insurancePolicyNumber}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
                 placeholder="Policy number"
               />
             </div>
@@ -554,11 +554,11 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
+            className="px-6 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
           >
             {loading ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-300"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-300"></div>
                 Registering...
               </>
             ) : (

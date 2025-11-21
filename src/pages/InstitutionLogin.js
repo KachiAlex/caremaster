@@ -643,7 +643,7 @@ const InstitutionLogin = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
                   placeholder="Enter your email"
                 />
               </div>
@@ -661,7 +661,7 @@ const InstitutionLogin = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
                   placeholder="Enter your password"
                 />
               </div>
@@ -680,7 +680,7 @@ const InstitutionLogin = () => {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
                     placeholder="Confirm your password"
                   />
                 </div>

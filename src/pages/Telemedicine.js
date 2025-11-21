@@ -513,7 +513,7 @@ const Telemedicine = () => {
       case 'in-progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -651,7 +651,7 @@ const Telemedicine = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className={`w-3 h-3 rounded-full mr-2 ${
-                  connectionState === 'CONNECTED' ? 'bg-green-500' : 
+                  connectionState === 'CONNECTED' ? 'bg-blue-500' : 
                   connectionState === 'CONNECTING' ? 'bg-yellow-500' : 
                   'bg-red-500'
                 }`}></div>
@@ -994,7 +994,7 @@ const Telemedicine = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      {appointment.type === 'video' ? <Video className="h-4 w-4 text-blue-600 mr-1" /> : <Phone className="h-4 w-4 text-green-600 mr-1" />}
+                      {appointment.type === 'video' ? <Video className="h-4 w-4 text-blue-600 mr-1" /> : <Phone className="h-4 w-4 text-blue-600 mr-1" />}
                       <span className="text-sm text-gray-900 capitalize">{appointment.type}</span>
                     </div>
                   </td>
@@ -1013,11 +1013,11 @@ const Telemedicine = () => {
                         <FileText className="h-4 w-4" />
                       </button>
                       {appointment.recording && (
-                        <button className="text-green-600 hover:text-green-900">
+                        <button className="text-blue-600 hover:text-green-900">
                           <Download className="h-4 w-4" />
                         </button>
                       )}
-                      <button className="text-purple-600 hover:text-purple-900">
+                      <button className="text-blue-600 hover:text-purple-900">
                         <MoreVertical className="h-4 w-4" />
                       </button>
                     </div>

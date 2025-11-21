@@ -610,7 +610,7 @@ const Auth = () => {
                   type="button"
                   onClick={completePatientSignup}
                   disabled={loading || !validatePatientStep(3)}
-                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loading ? 'Creating Account...' : 'Complete Registration'}
                 </button>
@@ -625,7 +625,7 @@ const Auth = () => {
             {/* Back button */}
             <button
               onClick={() => { setMode('signin'); setCurrentStep(1); }}
-              className="flex items-center text-green-600 hover:text-green-800"
+              className="flex items-center text-blue-600 hover:text-blue-800"
             >
               <ArrowLeft size={16} className="mr-1" />
               Back to Sign In
@@ -998,7 +998,7 @@ const Auth = () => {
                   type="button"
                   onClick={nextStep}
                   disabled={!validateCaregiverStep(currentStep)}
-                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -1007,7 +1007,7 @@ const Auth = () => {
                   type="button"
                   onClick={completeCaregiverSignup}
                   disabled={loading || !validateCaregiverStep(4)}
-                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loading ? 'Creating Account...' : 'Complete Registration'}
                 </button>

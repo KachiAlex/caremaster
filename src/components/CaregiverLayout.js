@@ -65,7 +65,7 @@ const CaregiverLayout = () => {
         <div className="relative flex h-full w-full max-w-xs flex-col bg-slate-950 border-r border-slate-800/80">
           <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/80">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-2xl bg-gradient-to-br from-emerald-400 via-sky-400 to-indigo-500 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-2xl bg-gradient-to-br from-blue-400 via-blue-400 to-blue-500 flex items-center justify-center">
                 <Heart className="h-4 w-4 text-slate-950" />
               </div>
               <div>
@@ -92,12 +92,12 @@ const CaregiverLayout = () => {
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
                     active
-                      ? 'bg-slate-900 text-emerald-300'
+                      ? 'bg-slate-900 text-blue-300'
                       : 'text-slate-300 hover:bg-slate-900/70 hover:text-slate-50'
                   }`}
                 >
                   <Icon
-                    className={`h-4 w-4 ${active ? 'text-emerald-300' : 'text-slate-400'}`}
+                    className={`h-4 w-4 ${active ? 'text-blue-300' : 'text-slate-400'}`}
                   />
                   <span className="truncate">{item.name}</span>
                 </Link>
@@ -120,7 +120,7 @@ const CaregiverLayout = () => {
       <div className="hidden lg:flex lg:flex-shrink-0">
         <div className="flex h-full w-64 flex-col border-r border-slate-800/80 bg-slate-950">
           <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800/80">
-            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-emerald-400 via-sky-400 to-indigo-500 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-blue-400 via-blue-400 to-blue-500 flex items-center justify-center">
               <Heart className="h-5 w-5 text-slate-950" />
             </div>
             <div>
@@ -138,12 +138,12 @@ const CaregiverLayout = () => {
                   to={item.href}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
                     active
-                      ? 'bg-slate-900 text-emerald-300'
+                      ? 'bg-slate-900 text-blue-300'
                       : 'text-slate-300 hover:bg-slate-900/70 hover:text-slate-50'
                   }`}
                 >
                   <Icon
-                    className={`h-4 w-4 ${active ? 'text-emerald-300' : 'text-slate-400'}`}
+                    className={`h-4 w-4 ${active ? 'text-blue-300' : 'text-slate-400'}`}
                   />
                   <span className="truncate">{item.name}</span>
                 </Link>
@@ -191,7 +191,7 @@ const CaregiverLayout = () => {
                 <Bell className="h-4 w-4" />
               </button>
               <div className="hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-[11px] text-slate-300 sm:flex">
-                <Phone className="h-3.5 w-3.5 text-emerald-300" />
+                <Phone className="h-3.5 w-3.5 text-blue-300" />
                 On duty
               </div>
             </div>

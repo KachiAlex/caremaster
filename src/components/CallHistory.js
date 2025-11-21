@@ -110,7 +110,7 @@ const CallHistory = ({ onCallBack, showStats = true }) => {
   // Get call status icon
   const getCallStatusIcon = (status, direction) => {
     if (status === 'answered') {
-      return <Check className="text-green-500" size={16} />;
+      return <Check className="text-blue-500" size={16} />;
     } else if (status === 'rejected' || status === 'initiating') {
       return <X className="text-red-500" size={16} />;
     } else {
@@ -122,13 +122,13 @@ const CallHistory = ({ onCallBack, showStats = true }) => {
   const getCallDirectionIcon = (direction) => {
     return direction === 'outgoing' 
       ? <ArrowUpRight className="text-blue-500" size={16} />
-      : <ArrowDownLeft className="text-green-500" size={16} />;
+      : <ArrowDownLeft className="text-blue-500" size={16} />;
   };
 
   // Get call type icon
   const getCallTypeIcon = (callType) => {
     return callType === 'video' 
-      ? <Video className="text-purple-500" size={16} />
+      ? <Video className="text-blue-500" size={16} />
       : <Phone className="text-blue-500" size={16} />;
   };
 
@@ -201,9 +201,9 @@ const CallHistory = ({ onCallBack, showStats = true }) => {
               </div>
             </div>
 
-            <div className="bg-green-50 p-4 rounded-lg">
+            <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-center">
-                <Check className="text-green-600" size={20} />
+                <Check className="text-blue-600" size={20} />
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-600">Answered</p>
                   <p className="text-lg font-semibold text-gray-900">{stats.answeredCalls}</p>
@@ -221,9 +221,9 @@ const CallHistory = ({ onCallBack, showStats = true }) => {
               </div>
             </div>
 
-            <div className="bg-purple-50 p-4 rounded-lg">
+            <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-center">
-                <Clock className="text-purple-600" size={20} />
+                <Clock className="text-blue-600" size={20} />
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-600">Avg Duration</p>
                   <p className="text-lg font-semibold text-gray-900">{formatDuration(stats.averageDuration)}</p>

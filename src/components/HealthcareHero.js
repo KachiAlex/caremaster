@@ -31,7 +31,7 @@ const HealthcareHero = () => {
         <div className="text-center">
           <h1 className="text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl md:text-6xl">
             Your Health,{' '}
-            <span className="bg-gradient-to-r from-emerald-300 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-300 via-blue-300 to-blue-300 bg-clip-text text-transparent">
               Our Priority
             </span>
           </h1>
@@ -43,7 +43,7 @@ const HealthcareHero = () => {
             <div>
               <a
                 href="/signup"
-                className="inline-flex items-center px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/30"
+                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30"
               >
                 Get Started
               </a>
@@ -51,7 +51,7 @@ const HealthcareHero = () => {
             <div>
               <a
                 href="#services"
-                className="inline-flex items-center px-6 py-3 border border-slate-700 text-slate-300 rounded-lg font-semibold hover:border-emerald-400 hover:text-emerald-300 transition-colors"
+                className="inline-flex items-center px-6 py-3 border border-slate-700 text-slate-300 rounded-lg font-semibold hover:border-blue-400 hover:text-blue-300 transition-colors"
               >
                 Learn More
               </a>
@@ -66,7 +66,7 @@ const HealthcareHero = () => {
               const Icon = feature.icon;
               return (
                 <div key={index} className="text-center group">
-                  <div className="flex items-center justify-center h-12 w-12 mx-auto mb-4 rounded-full bg-emerald-400/15 text-emerald-300 group-hover:bg-emerald-400/25 transition-colors">
+                  <div className="flex items-center justify-center h-12 w-12 mx-auto mb-4 rounded-full bg-blue-400/15 text-blue-300 group-hover:bg-blue-400/25 transition-colors">
                     <Icon className="h-6 w-6" />
                   </div>
                   <h3 className="text-lg font-semibold text-slate-50 mb-2">{feature.title}</h3>

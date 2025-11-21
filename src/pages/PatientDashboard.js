@@ -202,7 +202,7 @@ const PatientDashboard = () => {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 text-emerald-400 animate-spin mx-auto mb-4" />
+          <RefreshCw className="h-8 w-8 text-blue-400 animate-spin mx-auto mb-4" />
           <p className="text-slate-400">Loading patient data...</p>
         </div>
       </div>
@@ -241,7 +241,7 @@ const PatientDashboard = () => {
               </button>
               <button
                 onClick={exportActivities}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors flex items-center gap-2"
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
                 Export
@@ -263,7 +263,7 @@ const PatientDashboard = () => {
                 placeholder="Search activities..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
             </div>
 
@@ -271,7 +271,7 @@ const PatientDashboard = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               {categories.map(cat => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -282,7 +282,7 @@ const PatientDashboard = () => {
             <select
               value={selectedStaffRole}
               onChange={(e) => setSelectedStaffRole(e.target.value)}
-              className="px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               {staffRoles.map(role => (
                 <option key={role.value} value={role.value}>{role.label}</option>
@@ -295,13 +295,13 @@ const PatientDashboard = () => {
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="flex-1 px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                className="flex-1 px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
               <input
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="flex-1 px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                className="flex-1 px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
             </div>
           </div>
@@ -311,7 +311,7 @@ const PatientDashboard = () => {
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-12">
-              <RefreshCw className="h-8 w-8 text-emerald-400 animate-spin mx-auto mb-4" />
+              <RefreshCw className="h-8 w-8 text-blue-400 animate-spin mx-auto mb-4" />
               <p className="text-slate-400">Loading activities...</p>
             </div>
           ) : activities.length === 0 ? (

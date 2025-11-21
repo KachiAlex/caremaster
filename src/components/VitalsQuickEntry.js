@@ -48,14 +48,14 @@ const VitalsQuickEntry = ({ patient, onClose, onSave }) => {
   const getStatusIcon = (status) => {
     if (status === 'low') return <TrendingDown className="h-4 w-4 text-blue-600" />;
     if (status === 'high') return <TrendingUp className="h-4 w-4 text-red-600" />;
-    if (status === 'normal') return <Minus className="h-4 w-4 text-green-600" />;
+    if (status === 'normal') return <Minus className="h-4 w-4 text-blue-600" />;
     return null;
   };
 
   const getStatusColor = (status) => {
     if (status === 'low') return 'border-blue-300 bg-blue-50';
     if (status === 'high') return 'border-red-300 bg-red-50';
-    if (status === 'normal') return 'border-green-300 bg-green-50';
+    if (status === 'normal') return 'border-blue-300 bg-blue-50';
     return 'border-gray-300';
   };
 
@@ -164,7 +164,7 @@ const VitalsQuickEntry = ({ patient, onClose, onSave }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-600">
           <div>
             <h2 className="text-2xl font-bold text-white">Record Vital Signs</h2>
             <p className="text-sm text-blue-100 mt-1">{patient?.name}</p>
@@ -259,7 +259,7 @@ const VitalsQuickEntry = ({ patient, onClose, onSave }) => {
                   onClick={() => handleQuickPainLevel(level)}
                   className={`h-12 rounded-lg font-bold transition-all ${
                     vitals.painLevel === level.toString()
-                      ? level <= 3 ? 'bg-green-600 text-white' :
+                      ? level <= 3 ? 'bg-blue-600 text-white' :
                         level <= 6 ? 'bg-yellow-500 text-white' :
                         'bg-red-600 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'

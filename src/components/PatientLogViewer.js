@@ -148,7 +148,7 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
     return (
       <div className="flex items-center justify-center h-64 bg-slate-950 rounded-3xl border border-slate-800/80">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
           <p className="text-slate-400">Loading patient logs...</p>
         </div>
       </div>
@@ -169,7 +169,7 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
             </p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-emerald-400">{filteredLogs.length}</div>
+            <div className="text-2xl font-bold text-blue-400">{filteredLogs.length}</div>
             <div className="text-xs text-slate-400">Total Logs</div>
           </div>
         </div>
@@ -184,7 +184,7 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
               placeholder="Search logs by clinician, action, or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
             />
           </div>
 
@@ -194,7 +194,7 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 text-sm appearance-none"
+              className="w-full pl-10 pr-4 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm appearance-none"
             >
               {categories.map(cat => (
                 <option key={cat.value} value={cat.value} className="bg-slate-900">
@@ -313,7 +313,7 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
                         <div className="text-xs font-medium text-slate-400 mb-1">Severity</div>
                         <div className={`text-xs capitalize px-2 py-0.5 rounded inline-block ${
                           log.severity === 'critical' ? 'bg-red-500/20 text-red-300' :
-                          log.severity === 'warning' ? 'bg-amber-500/20 text-amber-300' :
+                          log.severity === 'warning' ? 'bg-blue-500/20 text-blue-300' :
                           'bg-blue-500/20 text-blue-300'
                         }`}>
                           {log.severity || 'info'}
@@ -337,7 +337,7 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
         <div className="text-center">
           <button
             onClick={() => setLimit(limit + 50)}
-            className="px-4 py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/30 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition-colors text-sm font-medium"
           >
             Load More Logs
           </button>

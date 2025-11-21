@@ -459,7 +459,7 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
             {/* Temperature */}
             <div className="space-y-2">
               <label className="flex items-center text-sm font-medium text-gray-700">
-                <Thermometer className="h-4 w-4 text-orange-600 mr-2" />
+                <Thermometer className="h-4 w-4 text-blue-600 mr-2" />
                 Temperature
               </label>
               <input
@@ -497,7 +497,7 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
             {/* Height */}
             <div className="space-y-2">
               <label className="flex items-center text-sm font-medium text-gray-700">
-                <Ruler className="h-4 w-4 text-green-600 mr-2" />
+                <Ruler className="h-4 w-4 text-blue-600 mr-2" />
                 Height
               </label>
               <input
@@ -533,7 +533,7 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
             {/* Respiratory Rate */}
             <div className="space-y-2">
               <label className="flex items-center text-sm font-medium text-gray-700">
-                <Activity className="h-4 w-4 text-purple-600 mr-2" />
+                <Activity className="h-4 w-4 text-blue-600 mr-2" />
                 Respiratory Rate
               </label>
               <input
@@ -551,7 +551,7 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
             {/* Pain Level */}
             <div className="space-y-2">
               <label className="flex items-center text-sm font-medium text-gray-700">
-                <Heart className="h-4 w-4 text-pink-600 mr-2" />
+                <Heart className="h-4 w-4 text-blue-600 mr-2" />
                 Pain Level
               </label>
               <input

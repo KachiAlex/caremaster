@@ -101,9 +101,9 @@ const DashboardHeader = ({ userProfile, userRole }) => {
 
   const getIconColor = () => {
     switch (userRole) {
-      case 'doctor': return 'from-sky-400 to-blue-500';
-      case 'caregiver': return 'from-emerald-400 to-green-500';
-      default: return 'from-indigo-400 to-purple-500';
+      case 'doctor': return 'from-blue-400 to-blue-500';
+      case 'caregiver': return 'from-blue-400 to-blue-500';
+      default: return 'from-blue-400 to-blue-500';
     }
   };
 
@@ -111,11 +111,11 @@ const DashboardHeader = ({ userProfile, userRole }) => {
     <div className="relative z-10 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-sm px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${getIconColor()} shadow-lg shadow-emerald-500/40`}>
+          <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${getIconColor()} shadow-lg shadow-blue-500/40`}>
             {getRoleIcon()}
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300 capitalize">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300 capitalize">
               {userRole}
             </p>
             <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">{getRoleTitle()}</h1>
@@ -125,7 +125,7 @@ const DashboardHeader = ({ userProfile, userRole }) => {
             {userProfile?.specializations && userProfile.specializations.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {userProfile.specializations.slice(0, 3).map((spec, index) => (
-                  <span key={index} className="px-2 py-0.5 bg-emerald-400/10 text-emerald-300 border border-emerald-400/30 text-xs rounded-full">
+                  <span key={index} className="px-2 py-0.5 bg-blue-400/10 text-blue-300 border border-blue-400/30 text-xs rounded-full">
                     {spec}
                   </span>
                 ))}
@@ -150,7 +150,7 @@ const DashboardHeader = ({ userProfile, userRole }) => {
             <p className="text-xs font-medium text-slate-50">{userProfile?.name}</p>
             <p className="text-[11px] text-slate-400 capitalize">{userRole}</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-sky-400 flex items-center justify-center ring-2 ring-slate-800">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-400 flex items-center justify-center ring-2 ring-slate-800">
             <span className="text-sm font-medium text-slate-950">
               {userProfile?.name?.split(' ').map(n => n[0]).join('') || 'U'}
             </span>
@@ -187,10 +187,10 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
 
   const getAccentColor = (color) => {
     const accents = {
-      blue: 'from-sky-400 to-sky-300',
-      green: 'from-emerald-400 to-emerald-300',
-      purple: 'from-indigo-400 to-indigo-300',
-      orange: 'from-amber-400 to-orange-300',
+      blue: 'from-blue-400 to-blue-300',
+      green: 'from-blue-400 to-blue-300',
+      purple: 'from-blue-400 to-blue-300',
+      orange: 'from-blue-400 to-blue-300',
     };
     return accents[color] || accents.blue;
   };
@@ -257,7 +257,7 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
                   <div className="text-right">
                     <p className="text-xs text-gray-500">{patient.lastVisit ? new Date(patient.lastVisit).toLocaleDateString() : 'No visits'}</p>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      patient.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      patient.status === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
                     }`}>
                       {patient.status || 'active'}
                     </span>
@@ -866,7 +866,7 @@ const ServiceProviderDashboard = () => {
       <div className="relative z-10 px-6 -mt-4 mb-2 flex items-center justify-end">
         <button
           onClick={() => setShowWeeklyCalendar(true)}
-          className="px-3 py-1.5 bg-emerald-500/20 text-emerald-300 rounded-lg hover:bg-emerald-500/30 border border-emerald-500/30 transition-colors text-xs font-medium"
+          className="px-3 py-1.5 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30 border border-blue-500/30 transition-colors text-xs font-medium"
         >
           Weekly Overview
         </button>
@@ -956,7 +956,7 @@ const ServiceProviderDashboard = () => {
                       <Activity className="h-5 w-5 text-gray-400 mr-3" />
                       <span className="text-gray-600">Status:</span>
                       <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedPatient.status === 'stable' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        selectedPatient.status === 'stable' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
                       }`}>
                         {selectedPatient.status || 'Unknown'}
                       </span>
@@ -984,7 +984,7 @@ const ServiceProviderDashboard = () => {
                               <span className="ml-2 text-sm text-gray-500">• {report.date}</span>
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              report.status === 'stable' ? 'bg-green-100 text-green-800' : 
+                              report.status === 'stable' ? 'bg-blue-100 text-blue-800' : 
                               report.status === 'improving' ? 'bg-blue-100 text-blue-800' : 
                               'bg-yellow-100 text-yellow-800'
                             }`}>
@@ -1022,7 +1022,7 @@ const ServiceProviderDashboard = () => {
                   {/* Care Plan Section */}
                   <div className="border-t border-gray-200 pt-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <FileText className="h-5 w-5 text-green-600 mr-2" />
+                      <FileText className="h-5 w-5 text-blue-600 mr-2" />
                       Care Plan Preparation
                     </h3>
                     
@@ -1037,7 +1037,7 @@ const ServiceProviderDashboard = () => {
                           value={carePlan.diagnosis}
                           onChange={(e) => handleCarePlanChange('diagnosis', e.target.value)}
                           placeholder="Enter primary diagnosis..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
 
@@ -1051,7 +1051,7 @@ const ServiceProviderDashboard = () => {
                           onChange={(e) => handleCarePlanChange('treatmentPlan', e.target.value)}
                           placeholder="Describe the treatment approach..."
                           rows="3"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
 
@@ -1065,7 +1065,7 @@ const ServiceProviderDashboard = () => {
                           onChange={(e) => handleCarePlanChange('medications', e.target.value)}
                           placeholder="List prescribed medications..."
                           rows="2"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
 
@@ -1078,7 +1078,7 @@ const ServiceProviderDashboard = () => {
                           type="date"
                           value={carePlan.followUpDate}
                           onChange={(e) => handleCarePlanChange('followUpDate', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
 
@@ -1090,7 +1090,7 @@ const ServiceProviderDashboard = () => {
                         <select
                           value={carePlan.priority}
                           onChange={(e) => handleCarePlanChange('priority', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="low">Low</option>
                           <option value="medium">Medium</option>
@@ -1109,7 +1109,7 @@ const ServiceProviderDashboard = () => {
                           onChange={(e) => handleCarePlanChange('specialInstructions', e.target.value)}
                           placeholder="Any special instructions for caregivers..."
                           rows="3"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
                     </div>
@@ -1124,7 +1124,7 @@ const ServiceProviderDashboard = () => {
                       </button>
                       <button
                         onClick={handleSubmitCarePlan}
-                        className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
+                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
                       >
                         <FileText className="h-4 w-4 mr-2" />
                         Create Care Plan

@@ -154,7 +154,7 @@ const SecuritySettings = () => {
       </div>
 
       {/* Security Status */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
+      <div className="bg-gradient-to-r from-blue-50 to-blue-50 rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Shield className="h-8 w-8 text-blue-600" />
@@ -165,16 +165,16 @@ const SecuritySettings = () => {
           </div>
           <div className="flex items-center space-x-2">
             {securityFeatures.dataEncryption && (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-blue-500" />
             )}
             {securityFeatures.auditLogging && (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-blue-500" />
             )}
             {twoFactorEnabled && (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-blue-500" />
             )}
             {biometricEnabled && (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-blue-500" />
             )}
           </div>
         </div>
@@ -192,7 +192,7 @@ const SecuritySettings = () => {
           </div>
           <div className="flex items-center space-x-2">
             {twoFactorEnabled ? (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Enabled
               </span>
@@ -266,7 +266,7 @@ const SecuritySettings = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <Fingerprint className="h-6 w-6 text-green-600" />
+            <Fingerprint className="h-6 w-6 text-blue-600" />
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Biometric Authentication</h3>
               <p className="text-sm text-gray-600">Use fingerprint or face recognition for quick access</p>
@@ -274,7 +274,7 @@ const SecuritySettings = () => {
           </div>
           <div className="flex items-center space-x-2">
             {biometricEnabled ? (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Enabled
               </span>
@@ -299,7 +299,7 @@ const SecuritySettings = () => {
       {/* Password Management */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center space-x-3 mb-4">
-          <Eye className="h-6 w-6 text-purple-600" />
+          <Eye className="h-6 w-6 text-blue-600" />
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Password Management</h3>
             <p className="text-sm text-gray-600">Change your password and manage security</p>
@@ -321,19 +321,19 @@ const SecuritySettings = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <span className="text-sm font-medium text-gray-700">Data Encryption</span>
-            <CheckCircle className="h-5 w-5 text-green-500" />
+            <CheckCircle className="h-5 w-5 text-blue-500" />
           </div>
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <span className="text-sm font-medium text-gray-700">Audit Logging</span>
-            <CheckCircle className="h-5 w-5 text-green-500" />
+            <CheckCircle className="h-5 w-5 text-blue-500" />
           </div>
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <span className="text-sm font-medium text-gray-700">Rate Limiting</span>
-            <CheckCircle className="h-5 w-5 text-green-500" />
+            <CheckCircle className="h-5 w-5 text-blue-500" />
           </div>
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <span className="text-sm font-medium text-gray-700">Session Timeout</span>
-            <CheckCircle className="h-5 w-5 text-green-500" />
+            <CheckCircle className="h-5 w-5 text-blue-500" />
           </div>
         </div>
       </div>

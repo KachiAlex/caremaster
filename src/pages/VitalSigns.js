@@ -100,9 +100,9 @@ const VitalSigns = () => {
       case 'increasing':
         return 'text-red-600';
       case 'decreasing':
-        return 'text-green-600';
+        return 'text-blue-600';
       case 'improving':
-        return 'text-green-600';
+        return 'text-blue-600';
       default:
         return 'text-gray-600';
     }
@@ -237,7 +237,7 @@ const VitalSigns = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Normal':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'Warning':
         return 'bg-yellow-100 text-yellow-800';
       case 'Critical':
@@ -421,14 +421,14 @@ const VitalSigns = () => {
           </button>
           <button 
             onClick={() => window.location.href = '/telemedicine?type=health-review'}
-            className="flex items-center justify-center p-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+            className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-purple-200 transition-colors"
           >
             <Stethoscope className="h-5 w-5 mr-2" />
             Doctor Review
           </button>
           <button 
             onClick={() => window.location.href = '/appointments?type=health-checkup'}
-            className="flex items-center justify-center p-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+            className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-green-200 transition-colors"
           >
             <Calendar className="h-5 w-5 mr-2" />
             Schedule Checkup
@@ -440,7 +440,7 @@ const VitalSigns = () => {
                 navigator.share({title: 'My Vital Signs', text: vitalsData}) :
                 navigator.clipboard.writeText(vitalsData).then(() => toast.success('Vital signs copied to clipboard'));
             }}
-            className="flex items-center justify-center p-4 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+            className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-orange-200 transition-colors"
           >
             <FileText className="h-5 w-5 mr-2" />
             Export Data

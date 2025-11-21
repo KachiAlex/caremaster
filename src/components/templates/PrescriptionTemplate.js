@@ -53,11 +53,11 @@ const PrescriptionTemplate = ({
   return (
     <div className="max-w-4xl mx-auto bg-white shadow-lg" id="prescription-template">
       {/* Header */}
-      <div className="bg-green-600 text-white p-6">
+      <div className="bg-blue-600 text-white p-6">
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold">UltimateCare Healthcare</h1>
-            <p className="text-green-100 mt-2">Professional Medical Prescription</p>
+            <p className="text-blue-100 mt-2">Professional Medical Prescription</p>
             <div className="mt-4 text-sm">
               <p>📍 Lagos, Nigeria</p>
               <p>📞 +234 800 ULTIMATE (353379)</p>
@@ -66,7 +66,7 @@ const PrescriptionTemplate = ({
             </div>
           </div>
           <div className="text-right">
-            <div className="bg-white text-green-600 px-4 py-2 rounded-lg">
+            <div className="bg-white text-blue-600 px-4 py-2 rounded-lg">
               <h2 className="text-xl font-bold">PRESCRIPTION</h2>
               <p className="text-sm">#{prescriptionNumber}</p>
             </div>
@@ -85,11 +85,11 @@ const PrescriptionTemplate = ({
           <Stethoscope className="h-5 w-5 mr-2" />
           Prescribing Physician
         </h3>
-        <div className="bg-green-50 p-4 rounded-lg">
+        <div className="bg-blue-50 p-4 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="font-bold text-lg text-green-800">{doctorInfo.name}</p>
-              <p className="text-green-700">{doctorInfo.specialty}</p>
+              <p className="font-bold text-lg text-blue-800">{doctorInfo.name}</p>
+              <p className="text-blue-700">{doctorInfo.specialty}</p>
               <p className="text-gray-600 mt-2">{doctorInfo.qualifications?.join(', ')}</p>
             </div>
             <div>
@@ -160,7 +160,7 @@ const PrescriptionTemplate = ({
           {vitalSigns && (
             <div className="md:col-span-2">
               <h4 className="font-semibold text-gray-700 mb-2">Vital Signs</h4>
-              <div className="bg-green-50 p-3 rounded-lg">
+              <div className="bg-blue-50 p-3 rounded-lg">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Blood Pressure</p>
@@ -256,7 +256,7 @@ const PrescriptionTemplate = ({
               <Calendar className="h-5 w-5 mr-2" />
               Follow-up Care
             </h3>
-            <div className="bg-green-50 p-4 rounded-lg">
+            <div className="bg-blue-50 p-4 rounded-lg">
               <p className="font-semibold">Next Appointment</p>
               <p className="text-gray-700">{formatDate(followUpDate)}</p>
               <p className="text-sm text-gray-600 mt-2">
@@ -291,7 +291,7 @@ const PrescriptionTemplate = ({
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="bg-gray-100 p-4 rounded-lg">
           <div className="flex items-start space-x-3">
-            <Shield className="h-6 w-6 text-green-600 mt-1" />
+            <Shield className="h-6 w-6 text-blue-600 mt-1" />
             <div>
               <h4 className="font-semibold text-gray-800">Digital Prescription Verification</h4>
               <p className="text-sm text-gray-600 mt-1">
@@ -335,7 +335,7 @@ const PrescriptionTemplate = ({
           <div className="flex justify-center">
             <button
               onClick={onDownload}
-              className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Download className="h-5 w-5 mr-2" />
               Download Prescription PDF
