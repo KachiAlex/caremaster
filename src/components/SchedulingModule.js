@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { getAllClients } from '../api/patientsAPI';
+import { createAppointment, updateAppointment } from '../api/appointmentsAPI';
 import { toast } from 'react-toastify';
 import { 
   Calendar, 
@@ -34,6 +36,31 @@ const SchedulingModule = ({ institutionId }) => {
   const [caregivers, setCaregivers] = useState([]);
   const [viewMode, setViewMode] = useState('day'); // day, week, month
 
+  const resolveClientDisplayName = (client) => {
+    if (!client) return 'Unknown Client';
+    const fallbackName = [client.firstName, client.lastName].filter(Boolean).join(' ').trim();
+    return (
+      client.name ||
+      client.fullName ||
+      client.displayName ||
+      fallbackName ||
+      client.email ||
+      'Unnamed Client'
+    );
+  };
+
+  const resolveCaregiverDisplayName = (caregiver) => {
+    if (!caregiver) return 'Unknown Caregiver';
+    const fallbackName = [caregiver.firstName, caregiver.lastName].filter(Boolean).join(' ').trim();
+    return (
+      caregiver.name ||
+      caregiver.displayName ||
+      fallbackName ||
+      caregiver.email ||
+      'Unnamed Caregiver'
+    );
+  };
+
   useEffect(() => {
     loadData();
   }, [institutionId, selectedDate]);
@@ -45,32 +72,41 @@ const SchedulingModule = ({ institutionId }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      
-      // Load clients
-      const clientsQuery = query(
-        collection(db, 'users'),
-        where('institutionId', '==', institutionId),
-        where('userType', '==', 'client')
-      );
-      const clientsSnapshot = await getDocs(clientsQuery);
-      const clientsList = clientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const instFilter = institutionId || null;
+
+      // Load clients from dedicated clients collection (fallback to users if needed)
+      let clientsList = [];
+      try {
+        clientsList = await getAllClients(instFilter);
+      } catch (clientError) {
+        console.warn('Failed to load clients collection, falling back to users query:', clientError);
+        const clientConstraints = [where('userType', '==', 'client')];
+        if (instFilter) {
+          clientConstraints.unshift(where('institutionId', '==', instFilter));
+        }
+        const fallbackClientsQuery = query(collection(db, 'users'), ...clientConstraints);
+        const clientsSnapshot = await getDocs(fallbackClientsQuery);
+        clientsList = clientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
       setClients(clientsList);
 
-      // Load caregivers
-      const caregiversQuery = query(
-        collection(db, 'users'),
-        where('institutionId', '==', institutionId),
-        where('userType', 'in', ['caregiver', 'doctor', 'nurse'])
-      );
+      // Load caregivers (allow doctors and nurses to be scheduled too)
+      const caregiverConstraints = [where('userType', 'in', ['caregiver', 'doctor', 'nurse'])];
+      if (instFilter) {
+        caregiverConstraints.unshift(where('institutionId', '==', instFilter));
+      }
+      const caregiversQuery = query(collection(db, 'users'), ...caregiverConstraints);
       const caregiversSnapshot = await getDocs(caregiversQuery);
-      const caregiversList = caregiversSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const caregiversList = caregiversSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(caregiver => caregiver.status !== 'deleted' && caregiver.active !== false);
       setCaregivers(caregiversList);
 
       // Load schedules
-      const schedulesQuery = query(
-        collection(db, 'schedules'),
-        where('institutionId', '==', institutionId)
-      );
+      const schedulesRef = collection(db, 'schedules');
+      const schedulesQuery = instFilter
+        ? query(schedulesRef, where('institutionId', '==', instFilter))
+        : schedulesRef;
       const schedulesSnapshot = await getDocs(schedulesQuery);
       const schedulesList = schedulesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setSchedules(schedulesList);
@@ -490,9 +526,9 @@ const SchedulingModule = ({ institutionId }) => {
                   const scheduleData = {
                     institutionId,
                     clientId: formData.get('clientId'),
-                    clientName: clients.find(c => c.id === formData.get('clientId'))?.name || '',
+                    clientName: resolveClientDisplayName(clients.find(c => c.id === formData.get('clientId'))),
                     caregiverId: formData.get('caregiverId'),
-                    caregiverName: caregivers.find(c => c.id === formData.get('caregiverId'))?.name || '',
+                    caregiverName: resolveCaregiverDisplayName(caregivers.find(c => c.id === formData.get('caregiverId'))),
                     title: formData.get('title'),
                     description: formData.get('description'),
                     scheduleDate: formData.get('scheduleDate'),
@@ -505,13 +541,59 @@ const SchedulingModule = ({ institutionId }) => {
                   };
 
                   if (showEditModal && selectedSchedule) {
+                    // Update schedule
                     await updateDoc(doc(db, 'schedules', selectedSchedule.id), {
                       ...scheduleData,
                       createdAt: selectedSchedule.createdAt
                     });
+                    
+                    // Update corresponding appointment if it exists
+                    if (selectedSchedule.appointmentId) {
+                      const scheduledDateTime = new Date(`${scheduleData.scheduleDate}T${scheduleData.startTime}`);
+                      await updateAppointment(selectedSchedule.appointmentId, {
+                        patientId: scheduleData.clientId,
+                        patientName: scheduleData.clientName,
+                        caregiverId: scheduleData.caregiverId,
+                        caregiverName: scheduleData.caregiverName,
+                        scheduledTime: scheduledDateTime,
+                        title: scheduleData.title,
+                        description: scheduleData.description || scheduleData.comments,
+                        notes: scheduleData.comments,
+                        status: 'scheduled',
+                        institutionId: scheduleData.institutionId
+                      });
+                    }
+                    
                     toast.success('Schedule updated successfully!');
                   } else {
-                    await addDoc(collection(db, 'schedules'), scheduleData);
+                    // Create schedule
+                    const scheduleRef = await addDoc(collection(db, 'schedules'), scheduleData);
+                    
+                    // Create corresponding appointment in appointments collection
+                    const scheduledDateTime = new Date(`${scheduleData.scheduleDate}T${scheduleData.startTime}`);
+                    const appointmentData = {
+                      patientId: scheduleData.clientId,
+                      patientName: scheduleData.clientName,
+                      caregiverId: scheduleData.caregiverId,
+                      caregiverName: scheduleData.caregiverName,
+                      scheduledTime: scheduledDateTime,
+                      title: scheduleData.title,
+                      description: scheduleData.description || scheduleData.comments,
+                      notes: scheduleData.comments,
+                      status: 'scheduled',
+                      institutionId: scheduleData.institutionId,
+                      scheduleId: scheduleRef.id, // Link back to schedule
+                      careType: scheduleData.title,
+                      priority: scheduleData.priority || 'medium'
+                    };
+                    
+                    const appointmentId = await createAppointment(appointmentData);
+                    
+                    // Update schedule with appointment ID for future reference
+                    await updateDoc(scheduleRef, {
+                      appointmentId: appointmentId
+                    });
+                    
                     toast.success('Schedule created successfully!');
                   }
 
@@ -540,7 +622,7 @@ const SchedulingModule = ({ institutionId }) => {
                     >
                       <option value="">Select Client</option>
                       {clients.map(client => (
-                        <option key={client.id} value={client.id}>{client.name || client.email}</option>
+                        <option key={client.id} value={client.id}>{resolveClientDisplayName(client)}</option>
                       ))}
                     </select>
                   </div>
@@ -557,7 +639,7 @@ const SchedulingModule = ({ institutionId }) => {
                     >
                       <option value="">Select Caregiver</option>
                       {caregivers.map(caregiver => (
-                        <option key={caregiver.id} value={caregiver.id}>{caregiver.name || caregiver.email}</option>
+                        <option key={caregiver.id} value={caregiver.id}>{resolveCaregiverDisplayName(caregiver)}</option>
                       ))}
                     </select>
                   </div>

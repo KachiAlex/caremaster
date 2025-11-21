@@ -619,9 +619,17 @@ const InstitutionCaregiverDashboard = () => {
               assignmentType: 'clientAssignment' // Mark as admin-created assignment
             }));
             
-            // Merge both sources
-            loadedRecentTasks = [...careTasksData, ...assignmentTasks];
-            console.log(`✅ Total tasks (merged): ${loadedRecentTasks.length}`);
+            // Merge both sources and deduplicate by ID
+            const allTasks = [...careTasksData, ...assignmentTasks];
+            // Deduplicate by ID - use Map to keep only unique tasks
+            const uniqueTasksMap = new Map();
+            allTasks.forEach(task => {
+              if (task.id && !uniqueTasksMap.has(task.id)) {
+                uniqueTasksMap.set(task.id, task);
+              }
+            });
+            loadedRecentTasks = Array.from(uniqueTasksMap.values());
+            console.log(`✅ Total tasks (merged and deduplicated): ${loadedRecentTasks.length}`);
             
             // Sort by created date (most recent first)
             loadedRecentTasks.sort((a, b) => {

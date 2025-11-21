@@ -116,6 +116,7 @@ export const generateDefaultAvatar = (name, userType = 'user') => {
 
 /**
  * Resize image file to optimize for profile pictures
+ * Automatically forces image to meet app specifications (max dimensions and quality)
  * @param {File} file - The original image file
  * @param {number} maxWidth - Maximum width in pixels
  * @param {number} maxHeight - Maximum height in pixels
@@ -123,46 +124,89 @@ export const generateDefaultAvatar = (name, userType = 'user') => {
  * @returns {Promise<File>} - The resized image file
  */
 export const resizeImage = (file, maxWidth = 400, maxHeight = 400, quality = 0.8) => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
     
+    img.onerror = () => {
+      reject(new Error('Failed to load image'));
+    };
+    
     img.onload = () => {
-      // Calculate new dimensions
-      let { width, height } = img;
-      
-      if (width > height) {
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
+      try {
+        // Get original dimensions
+        let { width, height } = img;
+        const originalWidth = width;
+        const originalHeight = height;
+        
+        // Calculate new dimensions while maintaining aspect ratio
+        // Always ensure image fits within maxWidth x maxHeight
+        if (width > maxWidth || height > maxHeight) {
+          const aspectRatio = width / height;
+          
+          if (width > height) {
+            // Landscape: constrain by width
+            if (width > maxWidth) {
+              width = maxWidth;
+              height = width / aspectRatio;
+            }
+            // Check if height still exceeds maxHeight
+            if (height > maxHeight) {
+              height = maxHeight;
+              width = height * aspectRatio;
+            }
+          } else {
+            // Portrait or square: constrain by height
+            if (height > maxHeight) {
+              height = maxHeight;
+              width = height * aspectRatio;
+            }
+            // Check if width still exceeds maxWidth
+            if (width > maxWidth) {
+              width = maxWidth;
+              height = width / aspectRatio;
+            }
+          }
         }
-      } else {
-        if (height > maxHeight) {
-          width = (width * maxHeight) / height;
-          height = maxHeight;
-        }
+        
+        // Ensure dimensions are integers
+        width = Math.round(width);
+        height = Math.round(height);
+        
+        // Set canvas dimensions
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Enable image smoothing for better quality
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        // Draw and resize image
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to blob with consistent JPEG format and quality
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Failed to process image'));
+              return;
+            }
+            
+            // Create a new file with JPEG format
+            const fileName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
+            const resizedFile = new File([blob], fileName, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(resizedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      } catch (error) {
+        reject(error);
       }
-      
-      // Set canvas dimensions
-      canvas.width = width;
-      canvas.height = height;
-      
-      // Draw and resize image
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      // Convert to blob
-      canvas.toBlob(
-        (blob) => {
-          const resizedFile = new File([blob], file.name, {
-            type: 'image/jpeg',
-            lastModified: Date.now(),
-          });
-          resolve(resizedFile);
-        },
-        'image/jpeg',
-        quality
-      );
     };
     
     img.src = URL.createObjectURL(file);
