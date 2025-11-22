@@ -55,6 +55,9 @@ const CallInterface = ({
   const [webrtcService, setWebrtcService] = useState(null);
   const [localStream, setLocalStream] = useState(externalLocalStream);
   const [remoteStream, setRemoteStream] = useState(externalRemoteStream);
+  const [availableDevices, setAvailableDevices] = useState({ audioInput: [], videoInput: [] });
+  const [selectedDevices, setSelectedDevices] = useState({ audio: null, video: null });
+  const [showDeviceSettings, setShowDeviceSettings] = useState(false);
   
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -122,6 +125,17 @@ const CallInterface = ({
 
       const service = new WebRTCService();
       await service.initialize();
+      
+      // Load available devices
+      try {
+        const devices = await WebRTCService.getMediaDevices();
+        setAvailableDevices({
+          audioInput: devices.audioInput,
+          videoInput: devices.videoInput
+        });
+      } catch (error) {
+        console.warn('Could not load devices:', error);
+      }
       
       // Set up callbacks
       service.setCallbacks({
@@ -246,6 +260,18 @@ const CallInterface = ({
       const success = await webrtcService.switchCamera();
       if (!success) {
         toast.error('Failed to switch camera');
+      }
+    }
+  };
+
+  const handleDeviceChange = async (deviceType, deviceId) => {
+    if (webrtcService) {
+      const success = await webrtcService.switchDevice(deviceType, deviceId);
+      if (success) {
+        setSelectedDevices(prev => ({ ...prev, [deviceType]: deviceId }));
+        toast.success(`${deviceType === 'audio' ? 'Microphone' : 'Camera'} changed`);
+      } else {
+        toast.error(`Failed to switch ${deviceType === 'audio' ? 'microphone' : 'camera'}`);
       }
     }
   };
@@ -540,6 +566,15 @@ const CallInterface = ({
                     {isSpeakerEnabled ? <Volume2 className="text-white" size={24} /> : <VolumeX className="text-white" size={24} />}
                   </button>
 
+                  {/* Device Settings */}
+                  <button
+                    onClick={() => setShowDeviceSettings(!showDeviceSettings)}
+                    className="w-14 h-14 md:w-12 md:h-12 rounded-full bg-gray-600 hover:bg-gray-700 active:bg-gray-800 flex items-center justify-center transition-colors touch-manipulation"
+                    title="Device Settings"
+                  >
+                    <Settings className="text-white" size={24} />
+                  </button>
+
                   {/* Minimize - hidden on mobile */}
                   <button
                     onClick={() => setIsMinimized(!isMinimized)}
@@ -577,6 +612,57 @@ const CallInterface = ({
                   <p className="text-sm font-medium">{participantInfo?.name}</p>
                   <p className="text-xs text-gray-300">{participantInfo?.role}</p>
                 </div>
+              </div>
+            )}
+
+            {/* Device Settings Panel */}
+            {showDeviceSettings && callState === 'connected' && (
+              <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-90 rounded-lg p-4 min-w-[280px] z-50">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-white font-semibold">Device Settings</h3>
+                  <button
+                    onClick={() => setShowDeviceSettings(false)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                {/* Microphone Selection */}
+                {availableDevices.audioInput.length > 0 && (
+                  <div className="mb-3">
+                    <label className="text-white text-sm mb-1 block">Microphone</label>
+                    <select
+                      value={selectedDevices.audio || ''}
+                      onChange={(e) => handleDeviceChange('audio', e.target.value)}
+                      className="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm"
+                    >
+                      {availableDevices.audioInput.map(device => (
+                        <option key={device.deviceId} value={device.deviceId}>
+                          {device.label || `Microphone ${device.deviceId.slice(0, 8)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Camera Selection */}
+                {callType === 'video' && availableDevices.videoInput.length > 0 && (
+                  <div>
+                    <label className="text-white text-sm mb-1 block">Camera</label>
+                    <select
+                      value={selectedDevices.video || ''}
+                      onChange={(e) => handleDeviceChange('video', e.target.value)}
+                      className="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm"
+                    >
+                      {availableDevices.videoInput.map(device => (
+                        <option key={device.deviceId} value={device.deviceId}>
+                          {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             )}
           </div>

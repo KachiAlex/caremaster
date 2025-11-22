@@ -14,7 +14,6 @@ import {
   Calendar, 
   Activity, 
   AlertTriangle, 
-  AlertCircle,
   TrendingUp,
   UserCheck,
   Clock,
@@ -22,6 +21,12 @@ import {
   ChevronRight,
   Shield,
   BarChart3,
+  Stethoscope,
+  ClipboardList,
+  Briefcase,
+  CheckCircle2,
+  Circle,
+  Dot,
   FileText,
   MessageSquare,
   Eye,
@@ -51,7 +56,6 @@ import {
   RotateCcw,
   Loader,
   TestTube,
-  Stethoscope,
   XCircle,
   ShieldCheck,
   Bed,
@@ -5049,8 +5053,6 @@ const InstitutionAdminDashboard = () => {
           onDeleteAssignment={handleDeleteAssignment}
         />
       )}
-        </div>
->>>>>>> 72479fb (Add caregiver schedule calendar view to admin dashboard - Shows all caregiver schedules in monthly calendar format - Displays tasks, appointments, and assignments color-coded by caregiver - Includes day detail panel showing all tasks for selected day - Fetches data from appointments, taskAssignments, careTasks, and clientAssignments collections)
       </div>
     </div>
   );
@@ -8885,12 +8887,61 @@ const AppointmentsModal = ({ appointments, view, onViewChange, onClose, institut
 
   const getCaregiverColor = (caregiverId) => {
     const colors = [
-      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
-      'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-red-500',
-      'bg-yellow-500', 'bg-cyan-500'
+      { bg: 'bg-blue-500', gradient: 'from-blue-500 to-blue-600', light: 'bg-blue-50', border: 'border-blue-300' },
+      { bg: 'bg-green-500', gradient: 'from-green-500 to-green-600', light: 'bg-green-50', border: 'border-green-300' },
+      { bg: 'bg-purple-500', gradient: 'from-purple-500 to-purple-600', light: 'bg-purple-50', border: 'border-purple-300' },
+      { bg: 'bg-orange-500', gradient: 'from-orange-500 to-orange-600', light: 'bg-orange-50', border: 'border-orange-300' },
+      { bg: 'bg-pink-500', gradient: 'from-pink-500 to-pink-600', light: 'bg-pink-50', border: 'border-pink-300' },
+      { bg: 'bg-indigo-500', gradient: 'from-indigo-500 to-indigo-600', light: 'bg-indigo-50', border: 'border-indigo-300' },
+      { bg: 'bg-teal-500', gradient: 'from-teal-500 to-teal-600', light: 'bg-teal-50', border: 'border-teal-300' },
+      { bg: 'bg-red-500', gradient: 'from-red-500 to-red-600', light: 'bg-red-50', border: 'border-red-300' },
+      { bg: 'bg-yellow-500', gradient: 'from-yellow-500 to-yellow-600', light: 'bg-yellow-50', border: 'border-yellow-300' },
+      { bg: 'bg-cyan-500', gradient: 'from-cyan-500 to-cyan-600', light: 'bg-cyan-50', border: 'border-cyan-300' }
     ];
     const index = caregivers.findIndex(c => c.id === caregiverId);
-    return colors[index % colors.length] || 'bg-gray-500';
+    return colors[index % colors.length] || { bg: 'bg-gray-500', gradient: 'from-gray-500 to-gray-600', light: 'bg-gray-50', border: 'border-gray-300' };
+  };
+
+  const getTaskTypeIcon = (type) => {
+    switch (type) {
+      case 'appointment':
+        return <Stethoscope className="h-3 w-3" />;
+      case 'task':
+        return <ClipboardList className="h-3 w-3" />;
+      case 'careTask':
+        return <Heart className="h-3 w-3" />;
+      case 'assignment':
+        return <Briefcase className="h-3 w-3" />;
+      default:
+        return <Circle className="h-3 w-3" />;
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle2 className="h-3 w-3 text-green-600" />;
+      case 'scheduled':
+      case 'active':
+        return <Clock className="h-3 w-3 text-blue-600" />;
+      case 'pending':
+        return <AlertCircle className="h-3 w-3 text-yellow-600" />;
+      default:
+        return <Dot className="h-3 w-3 text-gray-400" />;
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'high':
+        return 'border-l-red-500';
+      case 'medium':
+        return 'border-l-yellow-500';
+      case 'low':
+        return 'border-l-green-500';
+      default:
+        return 'border-l-gray-300';
+    }
   };
 
   const navigateMonth = (direction) => {
@@ -8907,31 +8958,89 @@ const AppointmentsModal = ({ appointments, view, onViewChange, onClose, institut
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b">
+        <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">Caregiver Schedule Calendar</h2>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Calendar className="h-7 w-7 text-blue-600" />
+                Caregiver Schedule Calendar
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">View all caregiver schedules at a glance</p>
+            </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg p-2 transition-colors"
             >
               <X className="h-6 w-6" />
             </button>
           </div>
 
+          {/* Stats Summary */}
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Total Tasks</p>
+                  <p className="text-lg font-bold text-gray-900">{calendarData.length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Completed</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {calendarData.filter(t => t.status === 'completed').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Pending</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {calendarData.filter(t => t.status === 'pending').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Users className="h-4 w-4 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Caregivers</p>
+                  <p className="text-lg font-bold text-gray-900">{caregivers.length}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Month Navigation */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
             <button
               onClick={() => navigateMonth(-1)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-bold text-gray-900">
               {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </h3>
             <button
               onClick={() => navigateMonth(1)}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -8959,7 +9068,7 @@ const AppointmentsModal = ({ appointments, view, onViewChange, onClose, institut
                   </div>
 
                   {/* Calendar Days */}
-                  <div className="grid grid-cols-7 gap-1">
+                  <div className="grid grid-cols-7 gap-2">
                     {days.map((date, index) => {
                       if (!date) {
                         return <div key={`empty-${index}`} className="aspect-square" />;
@@ -8968,56 +9077,130 @@ const AppointmentsModal = ({ appointments, view, onViewChange, onClose, institut
                       const dayTasks = getTasksForDay(date);
                       const isToday = date.toDateString() === new Date().toDateString();
                       const isSelected = date.toDateString() === selectedDate.toDateString();
+                      const hasTasks = dayTasks.length > 0;
+                      const completedCount = dayTasks.filter(t => t.status === 'completed').length;
+                      const pendingCount = dayTasks.filter(t => t.status === 'pending').length;
+
+                      // Group tasks by caregiver for better visualization
+                      const tasksByCaregiver = dayTasks.reduce((acc, task) => {
+                        if (!acc[task.caregiverId]) {
+                          acc[task.caregiverId] = [];
+                        }
+                        acc[task.caregiverId].push(task);
+                        return acc;
+                      }, {});
 
                       return (
                         <button
                           key={date.toDateString()}
                           onClick={() => handleDateClick(date)}
-                          className={`aspect-square border border-gray-200 rounded-lg p-1 hover:bg-gray-50 transition-colors ${
-                            isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                          } ${isToday ? 'bg-yellow-50 border-yellow-300' : ''}`}
+                          className={`relative aspect-square border-2 rounded-xl p-2 transition-all duration-200 hover:shadow-lg hover:scale-105 ${
+                            isSelected 
+                              ? 'ring-4 ring-blue-400 bg-blue-50 border-blue-400 shadow-lg' 
+                              : isToday 
+                              ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-400 shadow-md' 
+                              : hasTasks
+                              ? 'bg-gray-50 border-gray-300 hover:border-gray-400'
+                              : 'bg-white border-gray-200 hover:border-gray-300'
+                          }`}
                         >
-                          <div className="text-sm font-medium mb-1">
-                            {date.getDate()}
+                          {/* Date Number */}
+                          <div className={`flex items-center justify-between mb-1 ${
+                            isToday ? 'text-yellow-700' : isSelected ? 'text-blue-700' : 'text-gray-700'
+                          }`}>
+                            <span className={`text-sm font-bold ${isToday ? 'text-lg' : ''}`}>
+                              {date.getDate()}
+                            </span>
+                            {hasTasks && (
+                              <span className="text-xs font-semibold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full">
+                                {dayTasks.length}
+                              </span>
+                            )}
                           </div>
-                          <div className="space-y-0.5">
-                            {dayTasks.slice(0, 3).map((task, taskIndex) => (
-                              <div
-                                key={task.id}
-                                className={`${getCaregiverColor(task.caregiverId)} text-white text-xs px-1 py-0.5 rounded truncate`}
-                                title={`${task.caregiverName}: ${task.title}`}
-                              >
-                                {task.time} {task.title.substring(0, 8)}
-                              </div>
-                            ))}
-                            {dayTasks.length > 3 && (
-                              <div className="text-xs text-gray-500 font-medium">
-                                +{dayTasks.length - 3} more
+
+                          {/* Task Indicators */}
+                          <div className="space-y-1 mt-1">
+                            {Object.entries(tasksByCaregiver).slice(0, 2).map(([caregiverId, tasks]) => {
+                              const colorScheme = getCaregiverColor(caregiverId);
+                              const firstTask = tasks[0];
+                              return (
+                                <div
+                                  key={caregiverId}
+                                  className={`flex items-center gap-1 ${colorScheme.bg} text-white text-[10px] px-1.5 py-0.5 rounded-md shadow-sm`}
+                                  title={`${firstTask.caregiverName}: ${tasks.length} task${tasks.length > 1 ? 's' : ''}`}
+                                >
+                                  {getTaskTypeIcon(firstTask.type)}
+                                  <span className="font-semibold truncate flex-1">
+                                    {firstTask.time}
+                                  </span>
+                                  {tasks.length > 1 && (
+                                    <span className="bg-white/20 px-1 rounded font-bold">
+                                      +{tasks.length - 1}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {Object.keys(tasksByCaregiver).length > 2 && (
+                              <div className="text-[10px] font-semibold text-gray-600 bg-gray-200 px-1.5 py-0.5 rounded text-center">
+                                +{Object.keys(tasksByCaregiver).length - 2} more
                               </div>
                             )}
                           </div>
+
+                          {/* Status Indicators */}
+                          {hasTasks && (
+                            <div className="absolute bottom-1 right-1 flex gap-0.5">
+                              {completedCount > 0 && (
+                                <div className="w-2 h-2 bg-green-500 rounded-full" title={`${completedCount} completed`} />
+                              )}
+                              {pendingCount > 0 && (
+                                <div className="w-2 h-2 bg-yellow-500 rounded-full" title={`${pendingCount} pending`} />
+                              )}
+                            </div>
+                          )}
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Caregiver Legend */}
-                <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Caregivers</h4>
-                  <div className="flex flex-wrap gap-2">
+                {/* Caregiver Legend & Stats */}
+                <div className="mt-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Caregivers ({caregivers.length})
+                    </h4>
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                        <span>Completed</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                        <span>Pending</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
                     {caregivers.slice(0, 10).map((caregiver, index) => {
-                      const colors = [
-                        'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
-                        'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-red-500',
-                        'bg-yellow-500', 'bg-cyan-500'
-                      ];
+                      const colorScheme = getCaregiverColor(caregiver.id);
+                      const caregiverTasks = calendarData.filter(t => t.caregiverId === caregiver.id);
                       return (
-                        <div key={caregiver.id} className="flex items-center space-x-2">
-                          <div className={`w-4 h-4 rounded ${colors[index % colors.length]}`} />
-                          <span className="text-xs text-gray-600">
-                            {caregiver.name || caregiver.fullName || 'Unknown'}
-                          </span>
+                        <div 
+                          key={caregiver.id} 
+                          className="flex items-center space-x-2 bg-white rounded-lg p-2 border border-gray-200 hover:shadow-md transition-shadow"
+                        >
+                          <div className={`w-4 h-4 rounded-md shadow-sm ${colorScheme.bg}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-gray-800 truncate">
+                              {caregiver.name || caregiver.fullName || 'Unknown'}
+                            </p>
+                            <p className="text-[10px] text-gray-500">
+                              {caregiverTasks.length} task{caregiverTasks.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
                         </div>
                       );
                     })}
@@ -9041,43 +9224,69 @@ const AppointmentsModal = ({ appointments, view, onViewChange, onClose, institut
                     <div className="space-y-3 max-h-[600px] overflow-y-auto">
                       {selectedDayTasks.map((task) => {
                         const caregiver = caregivers.find(c => c.id === task.caregiverId);
+                        const colorScheme = getCaregiverColor(task.caregiverId);
                         return (
                           <div
                             key={task.id}
-                            className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow"
+                            className={`border-l-4 ${getPriorityColor(task.priority)} bg-white border border-gray-200 rounded-lg p-3 hover:shadow-lg transition-all duration-200 hover:scale-[1.02]`}
                           >
                             <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2 mb-1">
-                                  <div className={`w-3 h-3 rounded-full ${getCaregiverColor(task.caregiverId)}`} />
-                                  <span className="text-sm font-semibold text-gray-900">
+                                  <div className={`w-3 h-3 rounded-full ${colorScheme.bg} shadow-sm`} />
+                                  <span className="text-sm font-bold text-gray-900 truncate">
                                     {task.caregiverName || 'Unknown Caregiver'}
                                   </span>
                                 </div>
-                                <h4 className="text-sm font-medium text-gray-800">{task.title}</h4>
-                                <p className="text-xs text-gray-600 mt-1">{task.clientName}</p>
+                                <div className="flex items-center gap-2 mb-1">
+                                  {getTaskTypeIcon(task.type)}
+                                  <h4 className="text-sm font-semibold text-gray-800 truncate">{task.title}</h4>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-600">
+                                  <User className="h-3 w-3" />
+                                  <span className="truncate">{task.clientName}</span>
+                                </div>
                               </div>
-                              <span className="text-xs font-medium text-gray-500">{task.time}</span>
+                              <div className="flex flex-col items-end gap-1 ml-2">
+                                <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md">
+                                  <Clock className="h-3 w-3 text-gray-600" />
+                                  <span className="text-xs font-bold text-gray-700">{task.time}</span>
+                                </div>
+                                {getStatusIcon(task.status)}
+                              </div>
                             </div>
                             {task.description && (
-                              <p className="text-xs text-gray-600 mt-2 line-clamp-2">{task.description}</p>
+                              <p className="text-xs text-gray-600 mt-2 line-clamp-2 bg-gray-50 p-2 rounded">
+                                {task.description}
+                              </p>
                             )}
-                            <div className="flex items-center space-x-2 mt-2">
-                              <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                task.type === 'appointment' ? 'bg-blue-100 text-blue-800' :
-                                task.type === 'task' ? 'bg-green-100 text-green-800' :
-                                task.type === 'careTask' ? 'bg-purple-100 text-purple-800' :
-                                'bg-orange-100 text-orange-800'
+                            <div className="flex items-center flex-wrap gap-2 mt-3">
+                              <span className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md font-medium ${
+                                task.type === 'appointment' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                                task.type === 'task' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                task.type === 'careTask' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                                'bg-orange-100 text-orange-800 border border-orange-200'
                               }`}>
+                                {getTaskTypeIcon(task.type)}
                                 {task.type}
                               </span>
-                              <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                task.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-                                task.status === 'scheduled' || task.status === 'active' ? 'bg-green-100 text-green-800' :
-                                'bg-yellow-100 text-yellow-800'
+                              <span className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md font-medium ${
+                                task.status === 'completed' ? 'bg-gray-100 text-gray-800 border border-gray-200' :
+                                task.status === 'scheduled' || task.status === 'active' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                'bg-yellow-100 text-yellow-800 border border-yellow-200'
                               }`}>
+                                {getStatusIcon(task.status)}
                                 {task.status}
                               </span>
+                              {task.priority && task.priority !== 'normal' && (
+                                <span className={`px-2 py-1 text-xs rounded-md font-medium ${
+                                  task.priority === 'high' ? 'bg-red-100 text-red-800 border border-red-200' :
+                                  task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                                  'bg-green-100 text-green-800 border border-green-200'
+                                }`}>
+                                  {task.priority} priority
+                                </span>
+                              )}
                             </div>
                           </div>
                         );
@@ -11790,3 +11999,4 @@ const PaymentGatewayConfigModal = ({ gateway, existingConfig, onClose, onSave })
 };
 
 export default InstitutionAdminDashboard;
+

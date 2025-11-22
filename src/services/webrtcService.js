@@ -22,6 +22,9 @@ class WebRTCService {
     this.isInitiator = false;
     this.isScreenSharing = false;
     this.statsInterval = null;
+    this.reconnectionAttempts = 0;
+    this.reconnectionTimeout = null;
+    this.currentQuality = 'high'; // high, medium, low
     this.networkStats = {
       bandwidth: 0,
       packetLoss: 0,
@@ -102,18 +105,37 @@ class WebRTCService {
       }
     };
 
-    // Handle connection state changes
+    // Handle connection state changes with reconnection logic
     this.peerConnection.onconnectionstatechange = () => {
-      console.log('Connection state:', this.peerConnection.connectionState);
+      const state = this.peerConnection.connectionState;
+      console.log('Connection state:', state);
+      
       if (this.callbacks.onCallStateChange) {
-        this.callbacks.onCallStateChange(this.peerConnection.connectionState);
+        this.callbacks.onCallStateChange(state);
       }
       
       // Start monitoring stats when connected
-      if (this.peerConnection.connectionState === 'connected') {
+      if (state === 'connected') {
         this.startStatsMonitoring();
-      } else if (this.peerConnection.connectionState === 'disconnected' || 
-                 this.peerConnection.connectionState === 'failed') {
+        this.reconnectionAttempts = 0; // Reset on successful connection
+      } else if (state === 'disconnected') {
+        this.stopStatsMonitoring();
+        // Attempt reconnection if call is still active
+        if (this.callId && this.reconnectionAttempts < 3) {
+          this.attemptReconnection();
+        }
+      } else if (state === 'failed') {
+        this.stopStatsMonitoring();
+        // Try to recover from failed state
+        if (this.callId && this.reconnectionAttempts < 3) {
+          this.attemptReconnection();
+        } else {
+          console.error('Connection failed after multiple attempts');
+          if (this.callbacks.onCallEnded) {
+            this.callbacks.onCallEnded();
+          }
+        }
+      } else if (state === 'closed') {
         this.stopStatsMonitoring();
       }
     };
@@ -124,15 +146,46 @@ class WebRTCService {
       if (this.peerConnection.iceConnectionState === 'failed' ||
           this.peerConnection.iceConnectionState === 'disconnected' ||
           this.peerConnection.iceConnectionState === 'closed') {
-        this.endCall();
+        // Don't immediately end call, let reconnection logic handle it
+        if (this.peerConnection.iceConnectionState === 'failed' && this.reconnectionAttempts >= 3) {
+          this.endCall();
+        }
       }
     };
+
+    // Set preferred codecs when negotiation is needed
+    this.peerConnection.addEventListener('negotiationneeded', async () => {
+      try {
+        await this.setPreferredCodecs();
+      } catch (error) {
+        console.warn('Could not set codec preferences during negotiation:', error);
+      }
+    });
   }
 
-  // Get user media (camera and microphone)
-  async getUserMedia(constraints = { video: true, audio: true }) {
+  // Get user media (camera and microphone) with enhanced constraints
+  async getUserMedia(constraints = { video: true, audio: true }, deviceId = null) {
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Enhanced audio constraints with echo cancellation and noise suppression
+      const enhancedConstraints = {
+        audio: constraints.audio ? {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+          channelCount: 1,
+          ...(deviceId?.audio ? { deviceId: { exact: deviceId.audio } } : {})
+        } : false,
+        video: constraints.video ? {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 30 },
+          facingMode: 'user',
+          ...(deviceId?.video ? { deviceId: { exact: deviceId.video } } : {})
+        } : false
+      };
+
+      this.localStream = await navigator.mediaDevices.getUserMedia(enhancedConstraints);
       
       // Add tracks to peer connection
       this.localStream.getTracks().forEach(track => {
@@ -146,6 +199,32 @@ class WebRTCService {
       return this.localStream;
     } catch (error) {
       console.error('Error accessing media devices:', error);
+      
+      // Fallback to basic constraints if enhanced fails
+      if (error.name === 'OverconstrainedError' || error.name === 'NotReadableError') {
+        console.warn('Falling back to basic constraints');
+        try {
+          const basicConstraints = {
+            audio: constraints.audio ? true : false,
+            video: constraints.video ? true : false
+          };
+          this.localStream = await navigator.mediaDevices.getUserMedia(basicConstraints);
+          
+          this.localStream.getTracks().forEach(track => {
+            this.peerConnection.addTrack(track, this.localStream);
+          });
+
+          if (this.callbacks.onLocalStream) {
+            this.callbacks.onLocalStream(this.localStream);
+          }
+
+          return this.localStream;
+        } catch (fallbackError) {
+          console.error('Fallback constraints also failed:', fallbackError);
+          throw fallbackError;
+        }
+      }
+      
       throw error;
     }
   }
@@ -203,6 +282,9 @@ class WebRTCService {
         : { video: false, audio: true };
       
       await this.getUserMedia(mediaConstraints);
+      
+      // Set preferred codecs before creating answer
+      await this.setPreferredCodecs();
 
       return true;
     } catch (error) {
@@ -541,15 +623,18 @@ class WebRTCService {
     
     // Poor quality conditions
     if (packetLoss > 5 || rtt > 300 || jitter > 50) {
+      this.adjustQuality('low');
       return 'poor';
     }
     
     // Fair quality conditions
     if (packetLoss > 2 || rtt > 150 || jitter > 30) {
+      this.adjustQuality('medium');
       return 'fair';
     }
     
     // Good quality (default)
+    this.adjustQuality('high');
     return 'good';
   }
 
@@ -684,6 +769,9 @@ class WebRTCService {
   // Get available media devices
   static async getMediaDevices() {
     try {
+      // Request permission first to get device labels
+      await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      
       const devices = await navigator.mediaDevices.enumerateDevices();
       return {
         audioInput: devices.filter(device => device.kind === 'audioinput'),
@@ -692,8 +780,154 @@ class WebRTCService {
       };
     } catch (error) {
       console.error('Error getting media devices:', error);
-      return { audioInput: [], audioOutput: [], videoInput: [] };
+      // Try without permission (will have empty labels)
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        return {
+          audioInput: devices.filter(device => device.kind === 'audioinput'),
+          audioOutput: devices.filter(device => device.kind === 'audiooutput'),
+          videoInput: devices.filter(device => device.kind === 'videoinput')
+        };
+      } catch (e) {
+        return { audioInput: [], audioOutput: [], videoInput: [] };
+      }
     }
+  }
+
+  // Switch to specific device
+  async switchDevice(deviceType, deviceId) {
+    try {
+      if (deviceType === 'audio' && this.localStream) {
+        const audioTrack = this.localStream.getAudioTracks()[0];
+        if (audioTrack) {
+          await audioTrack.applyConstraints({ deviceId: { exact: deviceId } });
+        }
+      } else if (deviceType === 'video' && this.localStream) {
+        const videoTrack = this.localStream.getVideoTracks()[0];
+        if (videoTrack) {
+          await videoTrack.applyConstraints({ deviceId: { exact: deviceId } });
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error(`Error switching ${deviceType} device:`, error);
+      return false;
+    }
+  }
+
+  // Set preferred codecs
+  async setPreferredCodecs() {
+    try {
+      const transceivers = this.peerConnection.getTransceivers();
+      
+      for (const transceiver of transceivers) {
+        if (transceiver.sender.track) {
+          const capabilities = RTCRtpSender.getCapabilities(transceiver.sender.track.kind);
+          
+          if (transceiver.sender.track.kind === 'video') {
+            // Prefer VP8 or VP9 for video
+            const codecs = capabilities.codecs.filter(codec => 
+              codec.mimeType.includes('VP8') || codec.mimeType.includes('VP9')
+            );
+            if (codecs.length > 0) {
+              await transceiver.setCodecPreferences([codecs[0], ...capabilities.codecs]);
+            }
+          } else if (transceiver.sender.track.kind === 'audio') {
+            // Prefer Opus for audio
+            const codecs = capabilities.codecs.filter(codec => 
+              codec.mimeType.includes('opus')
+            );
+            if (codecs.length > 0) {
+              await transceiver.setCodecPreferences([codecs[0], ...capabilities.codecs]);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Could not set preferred codecs:', error);
+      // Not critical, continue without codec preferences
+    }
+  }
+
+  // Adjust call quality based on network conditions
+  async adjustQuality(targetQuality) {
+    if (targetQuality === this.currentQuality) return;
+    
+    console.log(`📊 Adjusting quality from ${this.currentQuality} to ${targetQuality}`);
+    
+    try {
+      const senders = this.peerConnection.getSenders();
+      const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+      
+      if (videoSender && videoSender.track) {
+        const constraints = {};
+        
+        switch (targetQuality) {
+          case 'low':
+            constraints.width = { ideal: 320, max: 640 };
+            constraints.height = { ideal: 240, max: 480 };
+            constraints.frameRate = { ideal: 15, max: 15 };
+            break;
+          case 'medium':
+            constraints.width = { ideal: 640, max: 1280 };
+            constraints.height = { ideal: 480, max: 720 };
+            constraints.frameRate = { ideal: 24, max: 24 };
+            break;
+          case 'high':
+            constraints.width = { ideal: 1280, max: 1920 };
+            constraints.height = { ideal: 720, max: 1080 };
+            constraints.frameRate = { ideal: 30, max: 30 };
+            break;
+        }
+        
+        await videoSender.track.applyConstraints(constraints);
+        this.currentQuality = targetQuality;
+        console.log(`✅ Quality adjusted to ${targetQuality}`);
+      }
+    } catch (error) {
+      console.error('Error adjusting quality:', error);
+    }
+  }
+
+  // Attempt to reconnect after disconnection
+  async attemptReconnection() {
+    if (this.reconnectionTimeout) {
+      clearTimeout(this.reconnectionTimeout);
+    }
+    
+    this.reconnectionAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectionAttempts - 1), 10000); // Exponential backoff, max 10s
+    
+    console.log(`🔄 Attempting reconnection (${this.reconnectionAttempts}/3) in ${delay}ms`);
+    
+    this.reconnectionTimeout = setTimeout(async () => {
+      try {
+        // Create new offer/answer to re-establish connection
+        if (this.isInitiator) {
+          const offer = await this.peerConnection.createOffer();
+          await this.peerConnection.setLocalDescription(offer);
+          await this.sendSignalingMessage('offer', {
+            offer: offer,
+            reconnection: true
+          });
+        } else {
+          const answer = await this.peerConnection.createAnswer();
+          await this.peerConnection.setLocalDescription(answer);
+          await this.sendSignalingMessage('answer', {
+            answer: answer,
+            reconnection: true
+          });
+        }
+      } catch (error) {
+        console.error('Reconnection attempt failed:', error);
+        if (this.reconnectionAttempts >= 3) {
+          console.error('Max reconnection attempts reached');
+          if (this.callbacks.onCallEnded) {
+            this.callbacks.onCallEnded();
+          }
+        }
+      }
+    }, delay);
   }
 }
 
