@@ -18,6 +18,8 @@ import {
   TrendingUp,
   UserCheck,
   Clock,
+  ChevronLeft,
+  ChevronRight,
   Shield,
   BarChart3,
   FileText,
@@ -67,6 +69,9 @@ import { getCareLogsByCaregiver } from '../api/careLogsAPI';
 import * as billingPlansAPI from '../api/billingPlansAPI';
 import * as paymentGatewayAPI from '../api/paymentGatewayAPI';
 import * as subscriptionInvoiceAPI from '../api/subscriptionInvoiceAPI';
+import { getAllAppointments } from '../api/appointmentsAPI';
+import { getAllTaskAssignments } from '../api/taskAssignmentAPI';
+import { getAllCareTasks } from '../api/careTasksAPI';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notificationsAPI } from '../api/notificationsAPI';
 import { institutionAPI } from '../api/institutionAPI';
@@ -3902,6 +3907,1150 @@ const InstitutionAdminDashboard = () => {
           toast.success(`Patient ${result.patientId} created successfully!`);
         }}
       />
+
+      {/* Pending Approvals Tab */}
+      {activeTab === 'approvals' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Pending Approvals</h2>
+              <p className="text-gray-600 mt-1">Review and approve pending diagnostic test requests</p>
+            </div>
+          </div>
+
+          {/* Pending Diagnostics */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Activity className="h-5 w-5 text-green-600 mr-2" />
+                Diagnostic Test Requests ({pendingDiagnostics.length})
+              </h3>
+            </div>
+            
+            {pendingDiagnostics.length === 0 ? (
+              <div className="p-12 text-center">
+                <CheckCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No pending diagnostic approvals</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {pendingDiagnostics.map((diagnostic) => (
+                  <div key={diagnostic.id} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            {diagnostic.testName || diagnostic.testType || 'Diagnostic Test'}
+                          </h4>
+                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+                            Pending Approval
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                          <div>
+                            <p className="text-gray-500">Client</p>
+                            <p className="font-medium text-gray-900">{diagnostic.clientName || 'Unknown'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Ordered By</p>
+                            <p className="font-medium text-gray-900">{diagnostic.doctorName || 'Unknown Doctor'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Order Date</p>
+                            <p className="font-medium text-gray-900">
+                              {diagnostic.orderDate instanceof Date 
+                                ? diagnostic.orderDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                : new Date(diagnostic.orderDate || diagnostic.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Test Type</p>
+                            <p className="font-medium text-gray-900">{diagnostic.testType || 'General'}</p>
+                          </div>
+                        </div>
+                        
+                        {diagnostic.testReason && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Reason:</span> {diagnostic.testReason}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={() => handleApproveDiagnostic(diagnostic)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectDiagnostic(diagnostic)}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* User Management Tab */}
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          <UserManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+      {/* Cleanup Orphaned Users Tab */}
+      {activeTab === 'cleanup' && (
+        <div className="space-y-6">
+          <CleanupOrphanedUsers institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+      {/* Admin Role Assignment Tab */}
+      {activeTab === 'admin-roles' && (
+        <div className="space-y-6">
+          <AdminRoleAssignment institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+      {/* Messages Tab Content */}
+      {activeTab === 'messages' && (
+        <div className="space-y-6">
+          {renderMessagesTab()}
+        </div>
+      )}
+
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Institution Analytics</h2>
+              <p className="text-gray-600 mt-1">Comprehensive insights for {institutionData?.name || 'your institution'}</p>
+            </div>
+            <button
+              onClick={() => loadDashboardData()}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Data
+            </button>
+          </div>
+
+          {/* Overview Analytics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Total Users</p>
+                  <p className="text-3xl font-bold mt-2">{stats.totalUsers}</p>
+                  <div className="mt-2 flex items-center text-blue-100 text-sm">
+                    <Users className="h-4 w-4 mr-1" />
+                    <span>Active members</span>
+                  </div>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <Users className="h-8 w-8" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-sm font-medium">Caregivers</p>
+                  <p className="text-3xl font-bold mt-2">{stats.caregivers + stats.doctors + stats.nurses}</p>
+                  <div className="mt-2 flex items-center text-green-100 text-sm">
+                    <UserCheck className="h-4 w-4 mr-1" />
+                    <span>{stats.caregivers} active</span>
+                  </div>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <UserCheck className="h-8 w-8" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Clients</p>
+                  <p className="text-3xl font-bold mt-2">{stats.clients}</p>
+                  <div className="mt-2 flex items-center text-purple-100 text-sm">
+                    <Heart className="h-4 w-4 mr-1" />
+                    <span>Under care</span>
+                  </div>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <Heart className="h-8 w-8" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-sm font-medium">Active Tasks</p>
+                  <p className="text-3xl font-bold mt-2">{stats.activeAssignments}</p>
+                  <div className="mt-2 flex items-center text-orange-100 text-sm">
+                    <Activity className="h-4 w-4 mr-1" />
+                    <span>{stats.pendingAssignments} pending</span>
+                  </div>
+                </div>
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <Activity className="h-8 w-8" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Analytics Sections */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Staff Distribution */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <UserCheck className="h-5 w-5 mr-2 text-blue-600" />
+                Staff Distribution
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                      {stats.caregivers}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Caregivers</p>
+                      <p className="text-xs text-gray-500">Primary care providers</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-blue-600">
+                    {stats.totalUsers > 0 ? Math.round((stats.caregivers / stats.totalUsers) * 100) : 0}%
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                      {stats.doctors}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Doctors</p>
+                      <p className="text-xs text-gray-500">Medical professionals</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-green-600">
+                    {stats.totalUsers > 0 ? Math.round((stats.doctors / stats.totalUsers) * 100) : 0}%
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                      {stats.nurses}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Nurses</p>
+                      <p className="text-xs text-gray-500">Nursing staff</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-purple-600">
+                    {stats.totalUsers > 0 ? Math.round((stats.nurses / stats.totalUsers) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Assignment Statistics */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Activity className="h-5 w-5 mr-2 text-purple-600" />
+                Assignment Statistics
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Pending Tasks</p>
+                    <p className="text-xs text-gray-500">Awaiting action</p>
+                  </div>
+                  <span className="text-3xl font-bold text-yellow-600">{stats.pendingAssignments}</span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Active Tasks</p>
+                    <p className="text-xs text-gray-500">In progress</p>
+                  </div>
+                  <span className="text-3xl font-bold text-blue-600">{stats.activeAssignments}</span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Completed Tasks</p>
+                    <p className="text-xs text-gray-500">Successfully finished</p>
+                  </div>
+                  <span className="text-3xl font-bold text-green-600">{stats.completedAssignments}</span>
+                </div>
+
+                {/* Completion Rate */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">Completion Rate</span>
+                    <span className="text-sm font-bold text-gray-900">
+                      {(stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments) > 0 
+                        ? Math.round((stats.completedAssignments / (stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments)) * 100) 
+                        : 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${(stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments) > 0 
+                          ? Math.round((stats.completedAssignments / (stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments)) * 100) 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Client Care Overview */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+              <Heart className="h-5 w-5 mr-2 text-pink-600" />
+              Client Care Overview
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center p-6 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-pink-500 rounded-full mb-4">
+                  <Heart className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{clients.length}</p>
+                <p className="text-sm text-gray-600 mt-1">Total Clients</p>
+              </div>
+
+              <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-full mb-4">
+                  <UserCheck className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{caregivers.length}</p>
+                <p className="text-sm text-gray-600 mt-1">Available Caregivers</p>
+              </div>
+
+              <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 rounded-full mb-4">
+                  <Activity className="h-8 w-8 text-white" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900">
+                  {caregivers.length > 0 ? (clients.length / caregivers.length).toFixed(1) : 0}
+                </p>
+                <p className="text-sm text-gray-600 mt-1">Clients per Caregiver</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity & Top Performers */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Performing Caregivers */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Award className="h-5 w-5 mr-2 text-yellow-600" />
+                Top Performing Caregivers
+              </h3>
+              <div className="space-y-3">
+                {caregivers
+                  .filter(c => c.status === 'active')
+                  .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+                  .slice(0, 5)
+                  .map((caregiver, index) => {
+                    const caregiverAssignments = assignments.filter(a => a.caregiverId === caregiver.id && a.status === 'completed');
+                    return (
+                      <div key={caregiver.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{caregiver.name}</p>
+                            <p className="text-xs text-gray-500">{caregiver.userType || caregiver.type}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center justify-end mb-1">
+                            <span className="text-yellow-500 mr-1">★</span>
+                            <span className="text-sm font-semibold text-gray-900">{(caregiver.rating || 0).toFixed(1)}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">{caregiverAssignments.length} completed</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                {caregivers.filter(c => c.status === 'active').length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <UserCheck className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>No active caregivers yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Client Status Distribution */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Users className="h-5 w-5 mr-2 text-indigo-600" />
+                Client Status Distribution
+              </h3>
+              <div className="space-y-4">
+                {[
+                  { 
+                    status: 'active', 
+                    label: 'Active Clients', 
+                    count: clients.filter(c => c.status === 'active').length,
+                    color: 'green',
+                    bgColor: 'bg-green-50',
+                    textColor: 'text-green-600'
+                  },
+                  { 
+                    status: 'pending', 
+                    label: 'Pending Setup', 
+                    count: clients.filter(c => c.status === 'pending').length,
+                    color: 'yellow',
+                    bgColor: 'bg-yellow-50',
+                    textColor: 'text-yellow-600'
+                  },
+                  { 
+                    status: 'inactive', 
+                    label: 'Inactive', 
+                    count: clients.filter(c => c.status === 'inactive').length,
+                    color: 'gray',
+                    bgColor: 'bg-gray-50',
+                    textColor: 'text-gray-600'
+                  }
+                ].map((item) => (
+                  <div key={item.status} className={`flex items-center justify-between p-4 ${item.bgColor} rounded-lg`}>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{item.status}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-2xl font-bold ${item.textColor}`}>{item.count}</p>
+                      <p className="text-xs text-gray-500">
+                        {clients.length > 0 ? Math.round((item.count / clients.length) * 100) : 0}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Assignment Performance */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+              <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
+              Assignment Performance Metrics
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600 mb-2">Total Assignments</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments}
+                </p>
+              </div>
+              <div className="text-center p-4 border border-gray-200 rounded-lg bg-yellow-50">
+                <p className="text-sm text-gray-600 mb-2">Pending</p>
+                <p className="text-3xl font-bold text-yellow-600">{stats.pendingAssignments}</p>
+              </div>
+              <div className="text-center p-4 border border-gray-200 rounded-lg bg-blue-50">
+                <p className="text-sm text-gray-600 mb-2">In Progress</p>
+                <p className="text-3xl font-bold text-blue-600">{stats.activeAssignments}</p>
+              </div>
+              <div className="text-center p-4 border border-gray-200 rounded-lg bg-green-50">
+                <p className="text-sm text-gray-600 mb-2">Completed</p>
+                <p className="text-3xl font-bold text-green-600">{stats.completedAssignments}</p>
+              </div>
+            </div>
+
+            {/* Visual Progress Bar */}
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Overall Progress</span>
+                <span className="text-sm text-gray-600">
+                  {stats.completedAssignments} of {stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments} completed
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div className="flex h-full">
+                  {/* Completed */}
+                  <div 
+                    className="bg-gradient-to-r from-green-500 to-green-600 transition-all duration-500"
+                    style={{ 
+                      width: `${(stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments) > 0 
+                        ? (stats.completedAssignments / (stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments)) * 100 
+                        : 0}%` 
+                    }}
+                  ></div>
+                  {/* Active */}
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                    style={{ 
+                      width: `${(stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments) > 0 
+                        ? (stats.activeAssignments / (stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments)) * 100 
+                        : 0}%` 
+                    }}
+                  ></div>
+                  {/* Pending */}
+                  <div 
+                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 transition-all duration-500"
+                    style={{ 
+                      width: `${(stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments) > 0 
+                        ? (stats.pendingAssignments / (stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments)) * 100 
+                        : 0}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-2 text-xs">
+                <span className="flex items-center">
+                  <span className="w-3 h-3 bg-green-500 rounded-full mr-1"></span>
+                  Completed
+                </span>
+                <span className="flex items-center">
+                  <span className="w-3 h-3 bg-blue-500 rounded-full mr-1"></span>
+                  Active
+                </span>
+                <span className="flex items-center">
+                  <span className="w-3 h-3 bg-yellow-500 rounded-full mr-1"></span>
+                  Pending
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-gray-700">Staff Utilization</h4>
+                <Activity className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Assigned Caregivers</span>
+                    <span className="font-semibold text-gray-900">
+                      {caregivers.filter(c => assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{ 
+                        width: `${caregivers.length > 0 
+                          ? (caregivers.filter(c => assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length / caregivers.length) * 100 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Available Caregivers</span>
+                    <span className="font-semibold text-gray-900">
+                      {caregivers.filter(c => !assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{ 
+                        width: `${caregivers.length > 0 
+                          ? (caregivers.filter(c => !assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length / caregivers.length) * 100 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-gray-700">Client Coverage</h4>
+                <Heart className="h-5 w-5 text-pink-500" />
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Clients with Caregivers</span>
+                    <span className="font-semibold text-gray-900">
+                      {clients.filter(c => assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{ 
+                        width: `${clients.length > 0 
+                          ? (clients.filter(c => assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length / clients.length) * 100 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Unassigned Clients</span>
+                    <span className="font-semibold text-gray-900">
+                      {clients.filter(c => !assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-red-500 h-2 rounded-full"
+                      style={{ 
+                        width: `${clients.length > 0 
+                          ? (clients.filter(c => !assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length / clients.length) * 100 
+                          : 0}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-semibold text-gray-700">System Health</h4>
+                <Shield className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full ${
+                    stats.systemHealth === 'Good' ? 'bg-green-100' :
+                    stats.systemHealth === 'Warning' ? 'bg-yellow-100' :
+                    'bg-red-100'
+                  } mb-2`}>
+                    <span className={`text-2xl font-bold ${
+                      stats.systemHealth === 'Good' ? 'text-green-600' :
+                      stats.systemHealth === 'Warning' ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {stats.uptime || 99}%
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">{stats.systemHealth || 'Good'}</p>
+                  <p className="text-xs text-gray-500 mt-1">System Status</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Institution Summary */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+            <div className="flex items-center mb-4">
+              <Building className="h-6 w-6 text-blue-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Institution Summary</h3>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Institution Name</p>
+                <p className="text-lg font-bold text-gray-900">{institutionData?.name || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Staff</p>
+                <p className="text-lg font-bold text-gray-900">{stats.caregivers + stats.doctors + stats.nurses}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Clients</p>
+                <p className="text-lg font-bold text-gray-900">{stats.clients}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Active Tasks</p>
+                <p className="text-lg font-bold text-gray-900">{stats.activeAssignments + stats.pendingAssignments}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inventory & Billing Tab Content */}
+      {activeTab === 'inventory' && (
+        <InventoryBillingTab 
+          institutionId={effectiveInstitutionId}
+          clients={clients}
+        />
+      )}
+
+      {/* Modals */}
+      {showAddClient && (
+        <AddClientModal 
+          onClose={() => setShowAddClient(false)} 
+          onAdd={handleAddClient}
+        />
+      )}
+
+      {showAddCaregiver && (
+        <AddCaregiverModal 
+          onClose={() => setShowAddCaregiver(false)} 
+          onCreate={handleAddCaregiver}
+        />
+      )}
+
+      {showAddPharmacist && (
+        <AddPharmacistModal 
+          onClose={() => setShowAddPharmacist(false)} 
+          onCreate={handleAddPharmacist}
+        />
+      )}
+
+      {showEditUserModal && selectedUserForEdit && (
+        <EditUserRoleModal 
+          user={selectedUserForEdit}
+          onClose={() => {
+            setShowEditUserModal(false);
+            setSelectedUserForEdit(null);
+          }}
+          onSave={handleEditUserRole}
+        />
+      )}
+
+      {showAssignmentModal && (
+        <AssignmentModal 
+          onClose={() => setShowAssignmentModal(false)} 
+          onCreate={handleCreateAssignment}
+          clients={clients}
+          caregivers={caregivers}
+          selectedClient={selectedClientForAssignment}
+          selectedCaregiver={selectedCaregiverForAssignment}
+          onClientChange={setSelectedClientForAssignment}
+          onCaregiverChange={setSelectedCaregiverForAssignment}
+          assignmentType={assignmentType}
+          onAssignmentTypeChange={setAssignmentType}
+        />
+      )}
+
+      {showClientDetails && selectedClient && (
+        <ClientDetailsModal
+          client={selectedClient}
+          onClose={() => {
+            setShowClientDetails(false);
+            setSelectedClient(null);
+          }}
+          onAssignTask={handleAssignTaskToClient}
+          onDelete={handleArchiveClient}
+          onUnarchive={handleUnarchiveClient}
+          pharmacists={pharmacists}
+          institutionId={effectiveInstitutionId}
+          onAssignPharmacist={handleAssignPharmacistToClient}
+        />
+      )}
+
+      {showCaregiverDetails && selectedCaregiver && (
+        <CaregiverDetailsModal
+          caregiver={selectedCaregiver}
+          assignments={assignments}
+          clients={clients}
+          onViewAssignment={handleOpenAssignmentsTabFromCaregiver}
+          onClose={() => {
+            setShowCaregiverDetails(false);
+            setSelectedCaregiver(null);
+          }}
+          onResetPassword={handleResetPassword}
+          onToggleStatus={handleToggleCaregiverStatus}
+          onDelete={handleDeleteCaregiver}
+          onAssignTask={handleAssignTaskToCaregiver}
+          onEditPayment={(caregiver) => {
+            setSelectedCaregiverForWage(caregiver);
+            setShowWageModal(true);
+          }}
+          onEditAssignment={handleEditAssignment}
+          onDeleteAssignment={handleDeleteAssignment}
+        />
+      )}
+
+      {showWageModal && selectedCaregiverForWage && (
+        <CaregiverWageEditModal
+          isOpen={showWageModal}
+          onClose={() => {
+            setShowWageModal(false);
+            setSelectedCaregiverForWage(null);
+          }}
+          caregiver={selectedCaregiverForWage}
+          onSave={(updatedCaregiver) => {
+            // Reload dashboard data to reflect the updated wage
+            loadDashboardData();
+            // If the caregiver details modal is open, refresh the selected caregiver
+            if (showCaregiverDetails && selectedCaregiver?.id === updatedCaregiver.id) {
+              setSelectedCaregiver(updatedCaregiver);
+            }
+          }}
+        />
+      )}
+
+      {showEditAssignmentModal && selectedAssignmentForEdit && (
+        <EditAssignmentModal
+          assignment={selectedAssignmentForEdit}
+          clients={clients}
+          caregivers={caregivers}
+          onClose={() => {
+            setShowEditAssignmentModal(false);
+            setSelectedAssignmentForEdit(null);
+          }}
+          onSave={handleUpdateAssignment}
+        />
+      )}
+
+      {showEditBillingPlanModal && selectedBillingPlan && (
+        <EditBillingPlanModal
+          plan={selectedBillingPlan}
+          onClose={() => {
+            setShowEditBillingPlanModal(false);
+            setSelectedBillingPlan(null);
+          }}
+          onSave={handleSaveBillingPlan}
+        />
+      )}
+
+      {showPaymentGatewayModal && (
+        <PaymentGatewayConfigModal
+          gateway={selectedGateway}
+          existingConfig={paymentGatewayConfig}
+          onClose={() => {
+            setShowPaymentGatewayModal(false);
+            setSelectedGateway(null);
+          }}
+          onSave={handleSavePaymentGatewayConfig}
+        />
+      )}
+
+      {showCaregiverPasswordModal && caregiverForPasswordReset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-yellow-600 text-white px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Reset Caregiver Password</h3>
+                <p className="text-sm text-yellow-100">
+                  Set a new password for {caregiverForPasswordReset.name || caregiverForPasswordReset.email}.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCaregiverPasswordModal(false);
+                  setCaregiverForPasswordReset(null);
+                  setCaregiverPasswordForm({ newPassword: '', confirmPassword: '' });
+                }}
+                className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Close password reset modal"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitCaregiverPasswordReset} className="px-6 py-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                <input
+                  type="password"
+                  value={caregiverPasswordForm.newPassword}
+                  onChange={(e) => setCaregiverPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="Enter new password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                <input
+                  type="password"
+                  value={caregiverPasswordForm.confirmPassword}
+                  onChange={(e) => setCaregiverPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  placeholder="Re-enter new password"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCaregiverPasswordModal(false);
+                    setCaregiverForPasswordReset(null);
+                    setCaregiverPasswordForm({ newPassword: '', confirmPassword: '' });
+                  }}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resettingCaregiverPassword}
+                  className="px-4 py-2 rounded-lg bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                >
+                  {resettingCaregiverPassword ? (
+                    <>
+                      <Loader className="animate-spin h-4 w-4 mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showProfileSettings && (
+        <UserProfileSettings
+          userId={user?.uid}
+          onClose={() => setShowProfileSettings(false)}
+        />
+      )}
+
+      {showPharmacistDetails && selectedPharmacist && (
+        <PharmacistDetailsModal
+          pharmacist={selectedPharmacist}
+          clients={clients}
+          onClose={() => {
+            setShowPharmacistDetails(false);
+            setSelectedPharmacist(null);
+          }}
+          onAssignClient={handleAssignPharmacistToClient}
+        />
+      )}
+
+      {showAssignmentDetails && selectedAssignment && (
+        <AssignmentDetailsModal
+          assignment={selectedAssignment}
+          clients={clients}
+          caregivers={caregivers}
+          onClose={() => {
+            setShowAssignmentDetails(false);
+            setSelectedAssignment(null);
+          }}
+        />
+      )}
+
+      {/* Dashboard Card Modals */}
+      {showStaffModal && (
+        <StaffModal
+          staff={caregivers}
+          onClose={() => setShowStaffModal(false)}
+        />
+      )}
+
+      {showClientsModal && (
+        <ClientsModal
+          clients={clients}
+          onClose={() => setShowClientsModal(false)}
+        />
+      )}
+
+      {showAppointmentsModal && (
+        <AppointmentsModal
+          appointments={[]} // Using mock data inside the modal
+          view={appointmentView}
+          onViewChange={setAppointmentView}
+          onClose={() => setShowAppointmentsModal(false)}
+          institutionId={effectiveInstitutionId}
+        />
+      )}
+
+      {/* Institution Link Customizer */}
+      {showLinkCustomizer && institutionData && (
+        <InstitutionLinkCustomizer
+          institution={institutionData}
+          onUpdate={handleInstitutionLinkUpdate}
+          onClose={() => setShowLinkCustomizer(false)}
+        />
+      )}
+
+      {/* Notifications Dropdown */}
+      {showNotifications && (
+        <div className="fixed top-20 right-4 w-96 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 max-h-[600px] overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-indigo-50">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-indigo-600" />
+              <h3 className="font-semibold text-gray-900">Notifications</h3>
+              {unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  Mark all read
+                </button>
+              )}
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="p-8 text-center">
+                <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No notifications yet</p>
+                <p className="text-sm text-gray-400 mt-1">You'll be notified of important updates here</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`p-4 cursor-pointer transition-colors ${
+                      notification.read
+                        ? 'bg-white hover:bg-gray-50'
+                        : 'bg-blue-50 hover:bg-blue-100'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-full ${
+                        notification.priority === 'high' || notification.priority === 'urgent'
+                          ? 'bg-red-100'
+                          : notification.priority === 'medium'
+                          ? 'bg-yellow-100'
+                          : 'bg-blue-100'
+                      }`}>
+                        {notification.type === 'pharmacist_prescription_update' ? (
+                          <Pill className={`h-4 w-4 ${
+                            notification.priority === 'high' ? 'text-red-600' : 'text-blue-600'
+                          }`} />
+                        ) : notification.type === 'doctor_consultation' ? (
+                          <FileText className="h-4 w-4 text-blue-600" />
+                        ) : notification.type === 'diagnostic_test_ordered' || notification.type === 'diagnostic_results_uploaded' ? (
+                          <Activity className="h-4 w-4 text-yellow-600" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-gray-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <p className="font-medium text-gray-900 text-sm">
+                            {notification.title}
+                          </p>
+                          {!notification.read && (
+                            <div className="h-2 w-2 bg-blue-600 rounded-full flex-shrink-0 mt-1"></div>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                          {notification.message}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Clock className="h-3 w-3 text-gray-400" />
+                          <p className="text-xs text-gray-400">
+                            {notification.createdAt?.toDate ? 
+                              notification.createdAt.toDate().toLocaleString() : 
+                              new Date(notification.createdAt).toLocaleString()
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Active Call Interface */}
+      {activeCall && (
+        <CallInterface
+          isOpen={!!activeCall}
+          onClose={handleEndCall}
+          callType={activeCall.callType}
+          participantInfo={{
+            id: activeCall.participantId,
+            name: activeCall.participantName,
+            role: 'caregiver'
+          }}
+          isIncoming={false}
+          externalWebrtcService={webrtc}
+          externalCallState={callConnectionState}
+          localStream={localStream}
+          remoteStream={remoteStream}
+        />
+      )}
+
+      {/* Client Details Modal */}
+      {showClientDetails && selectedClient && (
+        <ClientDetailsModal
+          client={selectedClient}
+          onClose={() => {
+            setShowClientDetails(false);
+            setSelectedClient(null);
+          }}
+          onAssignTask={(client) => {
+            setSelectedClientForAssignment(client.id);
+            setShowAssignmentModal(true);
+            setShowClientDetails(false);
+          }}
+          onDelete={handleArchiveClient}
+          onUnarchive={handleUnarchiveClient}
+          pharmacists={pharmacists}
+          institutionId={effectiveInstitutionId}
+          onAssignPharmacist={handleAssignPharmacistToClient}
+        />
+      )}
+
+      {/* Caregiver Details Modal */}
+      {showCaregiverDetails && selectedCaregiver && (
+        <CaregiverDetailsModal
+          caregiver={selectedCaregiver}
+          assignments={assignments.filter(a => a.caregiverId === selectedCaregiver.id || a.caregiverId === selectedCaregiver.uid)}
+          clients={clients}
+          onViewAssignment={handleOpenAssignmentsTabFromCaregiver}
+          onClose={() => {
+            setShowCaregiverDetails(false);
+            setSelectedCaregiver(null);
+          }}
+          onResetPassword={handleResetPassword}
+          onToggleStatus={handleToggleCaregiverStatus}
+          onDelete={handleDeleteCaregiver}
+          onAssignTask={(caregiver) => {
+            setSelectedCaregiverForAssignment(caregiver.id);
+            setShowAssignmentModal(true);
+            setShowCaregiverDetails(false);
+          }}
+          onEditAssignment={handleEditAssignment}
+          onDeleteAssignment={handleDeleteAssignment}
+        />
+      )}
+        </div>
+>>>>>>> 72479fb (Add caregiver schedule calendar view to admin dashboard - Shows all caregiver schedules in monthly calendar format - Displays tasks, appointments, and assignments color-coded by caregiver - Includes day detail panel showing all tasks for selected day - Fetches data from appointments, taskAssignments, careTasks, and clientAssignments collections)
       </div>
     </div>
   );
@@ -7531,70 +8680,236 @@ const ClientsModal = ({ clients, onClose }) => {
   );
 };
 
-const AppointmentsModal = ({ appointments, view, onViewChange, onClose }) => {
-  if (!appointments) return null;
+const AppointmentsModal = ({ appointments, view, onViewChange, onClose, institutionId }) => {
+  const [calendarData, setCalendarData] = useState([]);
+  const [caregivers, setCaregivers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDayTasks, setSelectedDayTasks] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Mock appointment data for demonstration
-  const mockAppointments = [
-    {
-      id: '1',
-      clientName: 'John Doe',
-      caregiverName: 'Dr. Sarah Johnson',
-      type: 'Consultation',
-      date: new Date(),
-      time: '10:00 AM',
-      status: 'scheduled'
-    },
-    {
-      id: '2',
-      clientName: 'Jane Smith',
-      caregiverName: 'Nurse Mike Wilson',
-      type: 'Check-up',
-      date: new Date(Date.now() + 86400000),
-      time: '2:00 PM',
-      status: 'scheduled'
-    },
-    {
-      id: '3',
-      clientName: 'Robert Brown',
-      caregiverName: 'Dr. Emily Davis',
-      type: 'Follow-up',
-      date: new Date(Date.now() + 172800000),
-      time: '11:30 AM',
-      status: 'scheduled'
-    }
-  ];
+  useEffect(() => {
+    loadCalendarData();
+  }, [institutionId, currentMonth.getMonth(), currentMonth.getFullYear()]);
 
-  const getFilteredAppointments = () => {
-    const now = new Date();
-    switch (view) {
-      case 'daily':
-        return mockAppointments.filter(apt => 
-          apt.date.toDateString() === now.toDateString()
-        );
-      case 'weekly':
-        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-        const weekEnd = new Date(now.setDate(now.getDate() - now.getDay() + 6));
-        return mockAppointments.filter(apt => 
-          apt.date >= weekStart && apt.date <= weekEnd
-        );
-      case 'monthly':
-        return mockAppointments.filter(apt => 
-          apt.date.getMonth() === now.getMonth() && apt.date.getFullYear() === now.getFullYear()
-        );
-      default:
-        return mockAppointments;
+  const loadCalendarData = async () => {
+    if (!institutionId) return;
+    
+    try {
+      setLoading(true);
+      
+      // Load all caregivers for the institution
+      const caregiversData = await caregiverAPI.getCaregivers({ institutionId });
+      setCaregivers(caregiversData);
+
+      // Load all schedules: appointments, task assignments, and care tasks
+      const [appointmentsData, taskAssignmentsData, careTasksData] = await Promise.all([
+        getAllAppointments(institutionId).catch(() => []),
+        getAllTaskAssignments().catch(() => []),
+        getAllCareTasks().catch(() => [])
+      ]);
+
+      // Get all client assignments
+      const allAssignments = await assignmentAPI.getAssignmentsByInstitution(institutionId).catch(() => []);
+
+      // Combine all schedules into a unified format
+      const allSchedules = [];
+
+      // Process appointments
+      appointmentsData.forEach(apt => {
+        if (apt.scheduledTime && apt.caregiverId) {
+          const date = apt.scheduledTime instanceof Date ? apt.scheduledTime : new Date(apt.scheduledTime);
+          allSchedules.push({
+            id: apt.id,
+            type: 'appointment',
+            caregiverId: apt.caregiverId,
+            caregiverName: apt.caregiverName || 'Unknown',
+            clientName: apt.clientName || apt.patientName || 'Client',
+            title: apt.title || apt.type || 'Appointment',
+            date: date,
+            time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            status: apt.status || 'scheduled',
+            description: apt.description || apt.notes || ''
+          });
+        }
+      });
+
+      // Process task assignments
+      taskAssignmentsData.forEach(task => {
+        const caregiverId = task.caregiverId || task.assignedTo;
+        if (caregiverId) {
+          const date = task.scheduledTime || task.dueDate;
+          if (date) {
+            const taskDate = date instanceof Date ? date : new Date(date);
+            allSchedules.push({
+              id: task.id,
+              type: 'task',
+              caregiverId: caregiverId,
+              caregiverName: task.caregiverName || 'Unknown',
+              clientName: task.clientName || 'Client',
+              title: task.title || 'Task',
+              date: taskDate,
+              time: taskDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+              status: task.status || 'pending',
+              description: task.description || task.instructions || '',
+              priority: task.priority || 'normal'
+            });
+          }
+        }
+      });
+
+      // Process care tasks
+      careTasksData.forEach(task => {
+        if (task.caregiverId && task.scheduledTime) {
+          const date = task.scheduledTime instanceof Date ? task.scheduledTime : new Date(task.scheduledTime);
+          allSchedules.push({
+            id: task.id,
+            type: 'careTask',
+            caregiverId: task.caregiverId,
+            caregiverName: task.caregiverName || 'Unknown',
+            clientName: task.clientName || 'Client',
+            title: task.title || task.task || 'Care Task',
+            date: date,
+            time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            status: task.status || 'pending',
+            description: task.description || ''
+          });
+        }
+      });
+
+      // Process client assignments
+      allAssignments.forEach(assignment => {
+        if (assignment.caregiverId) {
+          const date = assignment.dueDate || assignment.startDate;
+          if (date) {
+            const assignmentDate = date instanceof Date ? date : new Date(date);
+            allSchedules.push({
+              id: assignment.id,
+              type: 'assignment',
+              caregiverId: assignment.caregiverId,
+              caregiverName: assignment.caregiverName || 'Unknown',
+              clientName: assignment.clientName || 'Client',
+              title: assignment.title || 'Assignment',
+              date: assignmentDate,
+              time: assignment.dueTime || '09:00',
+              status: assignment.status || 'active',
+              description: assignment.description || assignment.instructions || ''
+            });
+          }
+        }
+      });
+
+      // Filter schedules for current month
+      const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      
+      const filteredSchedules = allSchedules.filter(schedule => {
+        const scheduleDate = new Date(schedule.date);
+        scheduleDate.setHours(0, 0, 0, 0);
+        return scheduleDate >= monthStart && scheduleDate <= monthEnd;
+      });
+
+      setCalendarData(filteredSchedules);
+      
+      // Update selected day tasks
+      updateSelectedDayTasks(selectedDate, filteredSchedules);
+    } catch (error) {
+      console.error('Error loading calendar data:', error);
+      toast.error('Failed to load schedule data');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filteredAppointments = getFilteredAppointments();
+  const updateSelectedDayTasks = (date, schedules = calendarData) => {
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const dayTasks = schedules.filter(schedule => {
+      const scheduleDate = new Date(schedule.date);
+      return scheduleDate >= dayStart && scheduleDate <= dayEnd;
+    });
+
+    // Sort by time
+    dayTasks.sort((a, b) => {
+      const timeA = a.time || '00:00';
+      const timeB = b.time || '00:00';
+      return timeA.localeCompare(timeB);
+    });
+
+    setSelectedDayTasks(dayTasks);
+  };
+
+  const handleDateClick = (date) => {
+    setSelectedDate(date);
+    updateSelectedDayTasks(date);
+  };
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add all days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    
+    return days;
+  };
+
+  const getTasksForDay = (date) => {
+    if (!date) return [];
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    return calendarData.filter(schedule => {
+      const scheduleDate = new Date(schedule.date);
+      return scheduleDate >= dayStart && scheduleDate <= dayEnd;
+    });
+  };
+
+  const getCaregiverColor = (caregiverId) => {
+    const colors = [
+      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
+      'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-red-500',
+      'bg-yellow-500', 'bg-cyan-500'
+    ];
+    const index = caregivers.findIndex(c => c.id === caregiverId);
+    return colors[index % colors.length] || 'bg-gray-500';
+  };
+
+  const navigateMonth = (direction) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(currentMonth.getMonth() + direction);
+    setCurrentMonth(newMonth);
+  };
+
+  const days = getDaysInMonth(currentMonth);
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Active Appointments</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">Caregiver Schedule Calendar</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
@@ -7603,63 +8918,176 @@ const AppointmentsModal = ({ appointments, view, onViewChange, onClose }) => {
             </button>
           </div>
 
-          {/* View Toggle */}
-          <div className="flex space-x-2 mb-6">
-            {['daily', 'weekly', 'monthly'].map((period) => (
-              <button
-                key={period}
-                onClick={() => onViewChange(period)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  view === period
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {period.charAt(0).toUpperCase() + period.slice(1)}
-              </button>
-            ))}
+          {/* Month Navigation */}
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => navigateMonth(-1)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </h3>
+            <button
+              onClick={() => navigateMonth(1)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
+        </div>
 
-          {/* Appointments List */}
-          <div className="space-y-4">
-            {filteredAppointments.map((appointment) => (
-              <div key={appointment.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{appointment.clientName}</h3>
-                        <p className="text-sm text-gray-600">with {appointment.caregiverName}</p>
+        {/* Calendar and Details */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Calendar */}
+              <div className="lg:col-span-2">
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  {/* Day Headers */}
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {dayNames.map(day => (
+                      <div key={day} className="text-center text-sm font-semibold text-gray-600 py-2">
+                        {day}
                       </div>
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-gray-900">{appointment.time}</p>
-                        <p className="text-xs text-gray-600">{appointment.date.toLocaleDateString()}</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                      {appointment.type}
-                    </span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      appointment.status === 'scheduled' ? 'bg-green-100 text-green-800' :
-                      appointment.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {appointment.status}
-                    </span>
+
+                  {/* Calendar Days */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {days.map((date, index) => {
+                      if (!date) {
+                        return <div key={`empty-${index}`} className="aspect-square" />;
+                      }
+
+                      const dayTasks = getTasksForDay(date);
+                      const isToday = date.toDateString() === new Date().toDateString();
+                      const isSelected = date.toDateString() === selectedDate.toDateString();
+
+                      return (
+                        <button
+                          key={date.toDateString()}
+                          onClick={() => handleDateClick(date)}
+                          className={`aspect-square border border-gray-200 rounded-lg p-1 hover:bg-gray-50 transition-colors ${
+                            isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                          } ${isToday ? 'bg-yellow-50 border-yellow-300' : ''}`}
+                        >
+                          <div className="text-sm font-medium mb-1">
+                            {date.getDate()}
+                          </div>
+                          <div className="space-y-0.5">
+                            {dayTasks.slice(0, 3).map((task, taskIndex) => (
+                              <div
+                                key={task.id}
+                                className={`${getCaregiverColor(task.caregiverId)} text-white text-xs px-1 py-0.5 rounded truncate`}
+                                title={`${task.caregiverName}: ${task.title}`}
+                              >
+                                {task.time} {task.title.substring(0, 8)}
+                              </div>
+                            ))}
+                            {dayTasks.length > 3 && (
+                              <div className="text-xs text-gray-500 font-medium">
+                                +{dayTasks.length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Caregiver Legend */}
+                <div className="mt-4 bg-gray-50 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Caregivers</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {caregivers.slice(0, 10).map((caregiver, index) => {
+                      const colors = [
+                        'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
+                        'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-red-500',
+                        'bg-yellow-500', 'bg-cyan-500'
+                      ];
+                      return (
+                        <div key={caregiver.id} className="flex items-center space-x-2">
+                          <div className={`w-4 h-4 rounded ${colors[index % colors.length]}`} />
+                          <span className="text-xs text-gray-600">
+                            {caregiver.name || caregiver.fullName || 'Unknown'}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
-            ))}
-            
-            {filteredAppointments.length === 0 && (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No appointments found for {view} view</p>
+
+              {/* Selected Day Details */}
+              <div className="lg:col-span-1">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 sticky top-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </h3>
+                  
+                  {selectedDayTasks.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No tasks scheduled</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                      {selectedDayTasks.map((task) => {
+                        const caregiver = caregivers.find(c => c.id === task.caregiverId);
+                        return (
+                          <div
+                            key={task.id}
+                            className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <div className={`w-3 h-3 rounded-full ${getCaregiverColor(task.caregiverId)}`} />
+                                  <span className="text-sm font-semibold text-gray-900">
+                                    {task.caregiverName || 'Unknown Caregiver'}
+                                  </span>
+                                </div>
+                                <h4 className="text-sm font-medium text-gray-800">{task.title}</h4>
+                                <p className="text-xs text-gray-600 mt-1">{task.clientName}</p>
+                              </div>
+                              <span className="text-xs font-medium text-gray-500">{task.time}</span>
+                            </div>
+                            {task.description && (
+                              <p className="text-xs text-gray-600 mt-2 line-clamp-2">{task.description}</p>
+                            )}
+                            <div className="flex items-center space-x-2 mt-2">
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                task.type === 'appointment' ? 'bg-blue-100 text-blue-800' :
+                                task.type === 'task' ? 'bg-green-100 text-green-800' :
+                                task.type === 'careTask' ? 'bg-purple-100 text-purple-800' :
+                                'bg-orange-100 text-orange-800'
+                              }`}>
+                                {task.type}
+                              </span>
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                task.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                                task.status === 'scheduled' || task.status === 'active' ? 'bg-green-100 text-green-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {task.status}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
