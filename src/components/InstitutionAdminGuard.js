@@ -100,12 +100,7 @@ const InstitutionAdminGuard = ({ children }) => {
           return;
         }
 
-        // Check license status (temporarily disabled for debugging)
-        console.log('🔍 Skipping license check temporarily for debugging');
-        console.log('Institution ID:', userProfile.institutionId);
-        
-        // TODO: Re-enable license checking after debugging
-        /*
+        // Check license status
         try {
           const licenseStatus = await fetchLicenseStatus(userProfile.institutionId);
           console.log('License status check:', licenseStatus);
@@ -119,7 +114,6 @@ const InstitutionAdminGuard = ({ children }) => {
           console.error('Error checking license status:', licenseError);
           console.warn('License check failed, allowing access for development');
         }
-        */
 
         setIsAuthorized(true);
         setLoading(false);

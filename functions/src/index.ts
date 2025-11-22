@@ -9,7 +9,7 @@ import { sendPaymentLinkEmail, processEmailQueue } from './emailService';
 import { logAuditEvent, getAuditLogs } from './auditLogging';
 import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, forceUpdateAllInstitutionLinks } from './licensing';
 import { createCaregiverWithAuth, resetCaregiverPassword } from './caregiverManagement';
-import { createTenantWithAdmin, setCurrentTenant } from './tenantManagement';
+import { createTenantWithAdmin, setCurrentTenant, getTenants, getTenantsHTTP } from './tenantManagement';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -66,6 +66,8 @@ export const resetCaregiverPasswordFunction = resetCaregiverPassword;
 // Multi-tenant (Institution) Management Functions
 export const createTenantWithAdminFunction = createTenantWithAdmin;
 export const setCurrentTenantFunction = setCurrentTenant;
+export const getTenantsFunction = getTenants;
+export const apiTenants = getTenantsHTTP;
 
 // Licensing Functions
 export const createInstitutionFunction = createInstitution;

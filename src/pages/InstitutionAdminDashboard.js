@@ -48,8 +48,9 @@ import {
   HelpCircle,
   RotateCcw,
   Loader,
-  XCircle,
+  TestTube,
   Stethoscope,
+  XCircle,
   ShieldCheck,
   Bed,
   UserCog,
@@ -198,7 +199,7 @@ const InstitutionAdminDashboard = () => {
   
   // Institution Link Customization
   const [showLinkCustomizer, setShowLinkCustomizer] = useState(false);
-  const [institutionData, setInstitutionData] = useState(null);
+  // Note: institutionData comes from useUser() hook at line 134
 
   // Messaging states
   const [conversations, setConversations] = useState([]);
@@ -2682,21 +2683,64 @@ const InstitutionAdminDashboard = () => {
       {/* Top halo */}
       <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top,_#22c55e33,_transparent_60%),radial-gradient(circle_at_30%_20%,_#0ea5e933,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e533,_transparent_55%)]" />
 
+      {/* Fixed Register Patient Button - Always Visible - Multiple Locations */}
+      {/* Top Right Fixed Button - Highest Priority */}
+      <div 
+        className="fixed top-4 right-4 z-[9999] pointer-events-auto"
+        style={{ zIndex: 9999, position: 'fixed', top: '1rem', right: '1rem' }}
+      >
+        <button
+          onClick={() => setShowCreatePatientModal(true)}
+          className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-2xl shadow-blue-500/50 transition-all font-bold text-base"
+          style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: '#2563eb',
+            color: 'white',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '0.5rem',
+            cursor: 'pointer',
+            border: 'none',
+            boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.5)'
+          }}
+        >
+          <Heart className="h-6 w-6 mr-2" style={{ display: 'inline-block' }} />
+          Register Patient
+        </button>
+      </div>
+
       <main className="relative z-10 mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         {/* Header */}
         <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 via-sky-400 to-indigo-500 shadow-lg shadow-emerald-500/40">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-lg shadow-blue-500/40">
               <Building2 className="h-5 w-5 text-slate-950" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
                 Institution admin
               </p>
               <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">
                 {institutionData?.name || 'UltimateCare institution workspace'}
               </h1>
             </div>
+          </div>
+          {/* Register Patient Button - Always Visible in Header */}
+          <div className="flex-shrink-0">
+            <button
+              onClick={() => setShowCreatePatientModal(true)}
+              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-bold text-base"
+              style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              <Heart className="h-6 w-6 mr-2" />
+              Register Patient
+            </button>
           </div>
         </section>
 
@@ -2751,13 +2795,14 @@ const InstitutionAdminDashboard = () => {
             Logout
           </button>
         </div>
-      </div>
+      </main>
 
-      {/* Main Content */}
+      {/* OLD LAYOUT - DISABLED */}
+      {false && (
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold text-gray-900 truncate">
                 {activeTab === 'dashboard' && 'Dashboard Overview'}
@@ -2782,7 +2827,31 @@ const InstitutionAdminDashboard = () => {
                 Orchestrate providers, patients, and operations from a single control surface.
               </p>
             </div>
+            {/* Register Patient Button - Always Visible in Content Header - PROMINENT */}
+            <div className="ml-4 flex-shrink-0" style={{ display: 'flex', alignItems: 'center' }}>
+              <button
+                onClick={() => setShowCreatePatientModal(true)}
+                className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-bold text-base"
+                style={{ 
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  border: 'none',
+                  minWidth: '180px',
+                  zIndex: 100
+                }}
+              >
+                <Heart className="h-6 w-6 mr-2" style={{ display: 'inline-block', width: '24px', height: '24px' }} />
+                <span style={{ display: 'inline-block' }}>Register Patient</span>
+              </button>
           </div>
+          </div>
+          {/* User Profile Row with Register Patient Button */}
+          <div className="flex items-center justify-between mt-3">
           <div className="flex items-center gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/80 px-3 py-2 text-xs text-slate-300">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-200">
               <span className="text-sm font-medium">
@@ -2794,7 +2863,26 @@ const InstitutionAdminDashboard = () => {
               <p className="text-[11px] text-slate-400">Administrator</p>
             </div>
           </div>
-        </section>
+            {/* Register Patient Button - RIGHT SIDE OF USER PROFILE ROW */}
+            <div className="flex-shrink-0 ml-4">
+              <button
+                onClick={() => setShowCreatePatientModal(true)}
+                className="flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-bold text-sm"
+                style={{ 
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  cursor: 'pointer',
+                  border: 'none'
+                }}
+              >
+                <Heart className="h-5 w-5 mr-2" />
+                Register Patient
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Stats row */}
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -2824,15 +2912,38 @@ const InstitutionAdminDashboard = () => {
           />
         </section>
 
-        {/* Quick Actions - Register Patient and More */}
-        <section className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-6 shadow-xl shadow-black/50 mt-6">
+        {/* Quick Actions - Register Patient and More - MOVED TO TOP FOR VISIBILITY */}
+        <section 
+          className="rounded-3xl border-2 border-blue-500/50 bg-slate-950/90 p-6 shadow-2xl shadow-blue-500/20 mt-6"
+          style={{
+            display: 'block',
+            visibility: 'visible',
+            opacity: 1,
+            zIndex: 10,
+            position: 'relative'
+          }}
+        >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-base font-semibold text-slate-50 sm:text-lg">Quick Actions</h2>
+            {/* Additional Register Patient Button in Quick Actions Header */}
+            <button
+              onClick={() => setShowCreatePatientModal(true)}
+              className="flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-bold text-sm"
+              style={{ display: 'flex', alignItems: 'center', backgroundColor: '#2563eb', color: 'white' }}
+            >
+              <Heart className="h-5 w-5 mr-2" />
+              Register Patient
+            </button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <button
               onClick={() => setShowCreatePatientModal(true)}
               className="flex flex-col items-center gap-3 rounded-2xl border-2 border-blue-500/40 bg-blue-600/20 px-6 py-6 text-center hover:border-blue-500/60 hover:bg-blue-600/30 transition-all group shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40"
+              style={{ 
+                border: '2px solid rgba(59, 130, 246, 0.4)',
+                backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                cursor: 'pointer'
+              }}
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg group-hover:shadow-blue-500/50 transition-shadow">
                 <Heart className="h-6 w-6 text-white" />
@@ -2988,8 +3099,8 @@ const InstitutionAdminDashboard = () => {
               </div>
               <span className="text-xs font-semibold text-slate-50">Manage Users</span>
               <span className="text-[10px] text-slate-400">View all users</span>
-            </button>
-            <button
+                </button>
+                <button
               onClick={() => navigate('/institution-admin/hospital-operations')}
               className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-blue-400/50 hover:bg-slate-900 transition-colors group"
             >
@@ -2998,8 +3109,8 @@ const InstitutionAdminDashboard = () => {
               </div>
               <span className="text-xs font-semibold text-slate-50">Hospital Ops</span>
               <span className="text-[10px] text-slate-400">Bed management</span>
-            </button>
-            <button
+                </button>
+                <button
               onClick={() => navigate('/institution-admin/staff-management')}
               className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-amber-400/50 hover:bg-slate-900 transition-colors group"
             >
@@ -3008,15 +3119,17 @@ const InstitutionAdminDashboard = () => {
               </div>
               <span className="text-xs font-semibold text-slate-50">Staff Management</span>
               <span className="text-[10px] text-slate-400">Team & shifts</span>
-            </button>
-          </div>
+                </button>
+              </div>
         </section>
+      </div>
+      )}
 
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-      {/* Quick Actions */}
-      {activeTab === 'dashboard' && (
+      <div>
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Quick Actions */}
+        {activeTab === 'dashboard' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -3298,9 +3411,16 @@ const InstitutionAdminDashboard = () => {
             <h2 className="text-2xl font-bold text-gray-900">Clients</h2>
             <button
               onClick={() => setShowCreatePatientModal(true)}
-              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-colors font-semibold"
+              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-colors font-bold text-base"
+              style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                cursor: 'pointer'
+              }}
             >
-              <Heart className="h-5 w-5 mr-2" />
+              <Heart className="h-6 w-6 mr-2" />
               Register Patient
             </button>
           </div>
@@ -3376,16 +3496,49 @@ const InstitutionAdminDashboard = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center gap-2">
                         <button 
                           onClick={() => {
                             setSelectedClient(client);
                             setShowClientDetails(true);
                           }}
                           className="text-blue-600 hover:text-blue-900 inline-flex items-center"
+                            title="View full details"
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          View Details
+                            Details
                         </button>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => navigate(`/service-provider/diagnostics?patientId=${client.id}&patientName=${encodeURIComponent(client.name || '')}`)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Record Patient Vitals"
+                            >
+                              <Activity className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => navigate(`/service-provider/consultations?patientId=${client.id}&patientName=${encodeURIComponent(client.name || '')}`)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Schedule Patient Consultation"
+                            >
+                              <Stethoscope className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => navigate(`/service-provider/prescriptions?patientId=${client.id}&patientName=${encodeURIComponent(client.name || '')}`)}
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                              title="View Patient Prescriptions"
+                            >
+                              <Pill className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => navigate(`/service-provider/diagnostics?patientId=${client.id}&patientName=${encodeURIComponent(client.name || '')}&action=order`)}
+                              className="p-1.5 text-purple-600 hover:bg-purple-50 rounded transition-colors"
+                              title="Order Patient Lab Test"
+                            >
+                              <TestTube className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -3735,9 +3888,10 @@ const InstitutionAdminDashboard = () => {
               </p>
             </div>
           </div>
-        </section>
-      </main>
-
+        </div>
+      )}
+      </div>
+      
       {/* Create Patient Modal */}
       <CreatePatientModal
         open={showCreatePatientModal}
@@ -3748,1370 +3902,12 @@ const InstitutionAdminDashboard = () => {
           toast.success(`Patient ${result.patientId} created successfully!`);
         }}
       />
+      </div>
     </div>
   );
 };
 
 // Helper Components
-              <div
-                key={plan.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedBillingPlan(plan);
-                      setShowEditBillingPlanModal(true);
-                    }}
-                    className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                    title="Edit plan"
-                  >
-                    <Edit className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="space-y-3 mb-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Monthly Price:</span>
-                    <span className="text-lg font-semibold text-gray-900">
-                      {plan.currency || 'USD'} {plan.monthlyPrice?.toFixed(2) || '0.00'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Yearly Price:</span>
-                    <span className="text-lg font-semibold text-gray-900">
-                      {plan.currency || 'USD'} {plan.yearlyPrice?.toFixed(2) || '0.00'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Features:</p>
-                  <ul className="space-y-1">
-                    {plan.features?.slice(0, 3).map((feature, index) => (
-                      <li key={index} className="text-xs text-gray-600 flex items-center">
-                        <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                    {plan.features?.length > 3 && (
-                      <li className="text-xs text-gray-400">
-                        +{plan.features.length - 3} more features
-                      </li>
-                    )}
-                  </ul>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    plan.isActive 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {plan.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {billingPlans.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-              <DollarSign className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Billing Plans</h3>
-              <p className="text-gray-500">Default plans will be created automatically when you first access this tab.</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Payment Gateway Tab Content */}
-      {activeTab === 'payment-gateway' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Payment Gateway Configuration</h2>
-              <p className="text-gray-600 mt-1">Configure your payment gateway to accept payments from clients</p>
-            </div>
-            {!paymentGatewayConfig?.isConfigured && (
-              <button
-                onClick={() => {
-                  setSelectedGateway(null);
-                  setShowPaymentGatewayModal(true);
-                }}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
-              >
-                <Plus className="h-5 w-5" />
-                Configure Gateway
-              </button>
-            )}
-          </div>
-
-          {/* Current Configuration */}
-          {paymentGatewayConfig?.isConfigured ? (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-indigo-100 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {paymentGatewayAPI.SUPPORTED_GATEWAYS[paymentGatewayConfig.gateway]?.name || paymentGatewayConfig.gateway}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {paymentGatewayConfig.mode === 'sandbox' ? 'Sandbox Mode' : 'Live Mode'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    paymentGatewayConfig.isConfigured
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {paymentGatewayConfig.isConfigured ? 'Configured' : 'Not Configured'}
-                  </span>
-                  <button
-                    onClick={() => {
-                      setSelectedGateway(paymentGatewayConfig.gateway);
-                      setShowPaymentGatewayModal(true);
-                    }}
-                    className="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600">
-                Your payment gateway is configured and ready to process payments. Payment links will be generated automatically when invoices are created.
-              </p>
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg border border-gray-200 p-12 text-center">
-              <DollarSign className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Payment Gateway Configured</h3>
-              <p className="text-gray-500 mb-6">
-                Configure a payment gateway to enable payment link generation for client invoices.
-              </p>
-              <button
-                onClick={() => {
-                  setSelectedGateway(null);
-                  setShowPaymentGatewayModal(true);
-                }}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-              >
-                Configure Payment Gateway
-              </button>
-            </div>
-          )}
-
-          {/* Supported Gateways */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Supported Payment Gateways</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Object.entries(paymentGatewayAPI.SUPPORTED_GATEWAYS).map(([key, gateway]) => (
-                <div
-                  key={key}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    paymentGatewayConfig?.gateway === key
-                      ? 'border-indigo-500 bg-indigo-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => {
-                    setSelectedGateway(key);
-                    setShowPaymentGatewayModal(true);
-                  }}
-                >
-                  <div className="text-3xl mb-2">{gateway.icon}</div>
-                  <h4 className="font-semibold text-gray-900">{gateway.name}</h4>
-                  {paymentGatewayConfig?.gateway === key && (
-                    <span className="text-xs text-indigo-600 mt-1 block">Currently Active</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Settings Tab Content */}
-      {activeTab === 'settings' && (
-        <div className="space-y-6">
-          <InstitutionSettings institutionId={effectiveInstitutionId} />
-        </div>
-      )}
-
-      {/* Help & Support Tab Content */}
-      {activeTab === 'help' && (
-        <div className="space-y-6">
-          <HelpSupport userRole={userProfile?.userType || userProfile?.type || 'admin'} />
-        </div>
-      )}
-
-      {/* Wage Management Modal */}
-      <CaregiverWageEditModal
-        isOpen={showWageModal}
-        onClose={() => {
-          setShowWageModal(false);
-          setSelectedCaregiverForWage(null);
-        }}
-        caregiver={selectedCaregiverForWage}
-        onSave={(updatedCaregiver) => {
-          // Reload dashboard data to reflect the updated wage
-          loadDashboardData();
-        }}
-      />
-
-      {/* Pending Approvals Tab */}
-      {activeTab === 'approvals' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Pending Approvals</h2>
-              <p className="text-gray-600 mt-1">Review and approve pending diagnostic test requests</p>
-            </div>
-          </div>
-
-          {/* Pending Diagnostics */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                <Activity className="h-5 w-5 text-green-600 mr-2" />
-                Diagnostic Test Requests ({pendingDiagnostics.length})
-              </h3>
-            </div>
-            
-            {pendingDiagnostics.length === 0 ? (
-              <div className="p-12 text-center">
-                <CheckCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No pending diagnostic approvals</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {pendingDiagnostics.map((diagnostic) => (
-                  <div key={diagnostic.id} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="text-lg font-semibold text-gray-900">
-                            {diagnostic.testName || diagnostic.testType || 'Diagnostic Test'}
-                          </h4>
-                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
-                            Pending Approval
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-                          <div>
-                            <p className="text-gray-500">Client</p>
-                            <p className="font-medium text-gray-900">{diagnostic.clientName || 'Unknown'}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Ordered By</p>
-                            <p className="font-medium text-gray-900">{diagnostic.doctorName || 'Unknown Doctor'}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Order Date</p>
-                            <p className="font-medium text-gray-900">
-                              {diagnostic.orderDate instanceof Date 
-                                ? diagnostic.orderDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                : new Date(diagnostic.orderDate || diagnostic.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Test Type</p>
-                            <p className="font-medium text-gray-900">{diagnostic.testType || 'General'}</p>
-                          </div>
-                        </div>
-                        
-                        {diagnostic.testReason && (
-                          <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">Reason:</span> {diagnostic.testReason}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-2 ml-4">
-                        <button
-                          onClick={() => handleApproveDiagnostic(diagnostic)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleRejectDiagnostic(diagnostic)}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                        >
-                          <X className="h-4 w-4" />
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* User Management Tab */}
-      {activeTab === 'users' && (
-        <div className="space-y-6">
-          <UserManagement institutionId={effectiveInstitutionId} />
-        </div>
-      )}
-
-      {/* Cleanup Orphaned Users Tab */}
-      {activeTab === 'cleanup' && (
-        <div className="space-y-6">
-          <CleanupOrphanedUsers institutionId={effectiveInstitutionId} />
-        </div>
-      )}
-
-      {/* Admin Role Assignment Tab */}
-      {activeTab === 'admin-roles' && (
-        <div className="space-y-6">
-          <AdminRoleAssignment institutionId={effectiveInstitutionId} />
-        </div>
-      )}
-
-      {/* Messages Tab Content */}
-      {activeTab === 'messages' && (
-        <div className="space-y-6">
-          {renderMessagesTab()}
-        </div>
-      )}
-
-      {/* Analytics Tab */}
-      {activeTab === 'analytics' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Institution Analytics</h2>
-              <p className="text-gray-600 mt-1">Comprehensive insights for {institutionData?.name || 'your institution'}</p>
-            </div>
-            <button
-              onClick={() => loadDashboardData()}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh Data
-            </button>
-          </div>
-
-          {/* Overview Analytics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-sm font-medium">Total Users</p>
-                  <p className="text-3xl font-bold mt-2">{stats.totalUsers}</p>
-                  <div className="mt-2 flex items-center text-blue-100 text-sm">
-                    <Users className="h-4 w-4 mr-1" />
-                    <span>Active members</span>
-                  </div>
-                </div>
-                <div className="bg-white bg-opacity-20 rounded-full p-3">
-                  <Users className="h-8 w-8" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-100 text-sm font-medium">Caregivers</p>
-                  <p className="text-3xl font-bold mt-2">{stats.caregivers + stats.doctors + stats.nurses}</p>
-                  <div className="mt-2 flex items-center text-green-100 text-sm">
-                    <UserCheck className="h-4 w-4 mr-1" />
-                    <span>{stats.caregivers} active</span>
-                  </div>
-                </div>
-                <div className="bg-white bg-opacity-20 rounded-full p-3">
-                  <UserCheck className="h-8 w-8" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-100 text-sm font-medium">Clients</p>
-                  <p className="text-3xl font-bold mt-2">{stats.clients}</p>
-                  <div className="mt-2 flex items-center text-purple-100 text-sm">
-                    <Heart className="h-4 w-4 mr-1" />
-                    <span>Under care</span>
-                  </div>
-                </div>
-                <div className="bg-white bg-opacity-20 rounded-full p-3">
-                  <Heart className="h-8 w-8" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-orange-100 text-sm font-medium">Active Tasks</p>
-                  <p className="text-3xl font-bold mt-2">{stats.activeAssignments}</p>
-                  <div className="mt-2 flex items-center text-orange-100 text-sm">
-                    <Activity className="h-4 w-4 mr-1" />
-                    <span>{stats.pendingAssignments} pending</span>
-                  </div>
-                </div>
-                <div className="bg-white bg-opacity-20 rounded-full p-3">
-                  <Activity className="h-8 w-8" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Detailed Analytics Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Staff Distribution */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <UserCheck className="h-5 w-5 mr-2 text-blue-600" />
-                Staff Distribution
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
-                      {stats.caregivers}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Caregivers</p>
-                      <p className="text-xs text-gray-500">Primary care providers</p>
-                    </div>
-                  </div>
-                  <span className="text-2xl font-bold text-blue-600">
-                    {stats.totalUsers > 0 ? Math.round((stats.caregivers / stats.totalUsers) * 100) : 0}%
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
-                      {stats.doctors}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Doctors</p>
-                      <p className="text-xs text-gray-500">Medical professionals</p>
-                    </div>
-                  </div>
-                  <span className="text-2xl font-bold text-green-600">
-                    {stats.totalUsers > 0 ? Math.round((stats.doctors / stats.totalUsers) * 100) : 0}%
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
-                      {stats.nurses}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Nurses</p>
-                      <p className="text-xs text-gray-500">Nursing staff</p>
-                    </div>
-                  </div>
-                  <span className="text-2xl font-bold text-purple-600">
-                    {stats.totalUsers > 0 ? Math.round((stats.nurses / stats.totalUsers) * 100) : 0}%
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Assignment Statistics */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Activity className="h-5 w-5 mr-2 text-purple-600" />
-                Assignment Statistics
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Pending Tasks</p>
-                    <p className="text-xs text-gray-500">Awaiting action</p>
-                  </div>
-                  <span className="text-3xl font-bold text-yellow-600">{stats.pendingAssignments}</span>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Active Tasks</p>
-                    <p className="text-xs text-gray-500">In progress</p>
-                  </div>
-                  <span className="text-3xl font-bold text-blue-600">{stats.activeAssignments}</span>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Completed Tasks</p>
-                    <p className="text-xs text-gray-500">Successfully finished</p>
-                  </div>
-                  <span className="text-3xl font-bold text-green-600">{stats.completedAssignments}</span>
-                </div>
-
-                {/* Completion Rate */}
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Completion Rate</span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {(stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments) > 0 
-                        ? Math.round((stats.completedAssignments / (stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments)) * 100) 
-                        : 0}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-500"
-                      style={{ 
-                        width: `${(stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments) > 0 
-                          ? Math.round((stats.completedAssignments / (stats.activeAssignments + stats.completedAssignments + stats.pendingAssignments)) * 100) 
-                          : 0}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Client Care Overview */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-              <Heart className="h-5 w-5 mr-2 text-pink-600" />
-              Client Care Overview
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center p-6 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-pink-500 rounded-full mb-4">
-                  <Heart className="h-8 w-8 text-white" />
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{clients.length}</p>
-                <p className="text-sm text-gray-600 mt-1">Total Clients</p>
-              </div>
-
-              <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-full mb-4">
-                  <UserCheck className="h-8 w-8 text-white" />
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{caregivers.length}</p>
-                <p className="text-sm text-gray-600 mt-1">Available Caregivers</p>
-              </div>
-
-              <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 rounded-full mb-4">
-                  <Activity className="h-8 w-8 text-white" />
-                </div>
-                <p className="text-3xl font-bold text-gray-900">
-                  {caregivers.length > 0 ? (clients.length / caregivers.length).toFixed(1) : 0}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">Clients per Caregiver</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity & Top Performers */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top Performing Caregivers */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Award className="h-5 w-5 mr-2 text-yellow-600" />
-                Top Performing Caregivers
-              </h3>
-              <div className="space-y-3">
-                {caregivers
-                  .filter(c => c.status === 'active')
-                  .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-                  .slice(0, 5)
-                  .map((caregiver, index) => {
-                    const caregiverAssignments = assignments.filter(a => a.caregiverId === caregiver.id && a.status === 'completed');
-                    return (
-                      <div key={caregiver.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold mr-3">
-                            #{index + 1}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{caregiver.name}</p>
-                            <p className="text-xs text-gray-500">{caregiver.userType || caregiver.type}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center justify-end mb-1">
-                            <span className="text-yellow-500 mr-1">★</span>
-                            <span className="text-sm font-semibold text-gray-900">{(caregiver.rating || 0).toFixed(1)}</span>
-                          </div>
-                          <p className="text-xs text-gray-500">{caregiverAssignments.length} completed</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                {caregivers.filter(c => c.status === 'active').length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <UserCheck className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                    <p>No active caregivers yet</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Client Status Distribution */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Users className="h-5 w-5 mr-2 text-indigo-600" />
-                Client Status Distribution
-              </h3>
-              <div className="space-y-4">
-                {[
-                  { 
-                    status: 'active', 
-                    label: 'Active Clients', 
-                    count: clients.filter(c => c.status === 'active').length,
-                    color: 'green',
-                    bgColor: 'bg-green-50',
-                    textColor: 'text-green-600'
-                  },
-                  { 
-                    status: 'pending', 
-                    label: 'Pending Setup', 
-                    count: clients.filter(c => c.status === 'pending').length,
-                    color: 'yellow',
-                    bgColor: 'bg-yellow-50',
-                    textColor: 'text-yellow-600'
-                  },
-                  { 
-                    status: 'inactive', 
-                    label: 'Inactive', 
-                    count: clients.filter(c => c.status === 'inactive').length,
-                    color: 'gray',
-                    bgColor: 'bg-gray-50',
-                    textColor: 'text-gray-600'
-                  }
-                ].map((item) => (
-                  <div key={item.status} className={`flex items-center justify-between p-4 ${item.bgColor} rounded-lg`}>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{item.label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{item.status}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-2xl font-bold ${item.textColor}`}>{item.count}</p>
-                      <p className="text-xs text-gray-500">
-                        {clients.length > 0 ? Math.round((item.count / clients.length) * 100) : 0}%
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Assignment Performance */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
-              Assignment Performance Metrics
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 border border-gray-200 rounded-lg">
-                <p className="text-sm text-gray-600 mb-2">Total Assignments</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments}
-                </p>
-              </div>
-              <div className="text-center p-4 border border-gray-200 rounded-lg bg-yellow-50">
-                <p className="text-sm text-gray-600 mb-2">Pending</p>
-                <p className="text-3xl font-bold text-yellow-600">{stats.pendingAssignments}</p>
-              </div>
-              <div className="text-center p-4 border border-gray-200 rounded-lg bg-blue-50">
-                <p className="text-sm text-gray-600 mb-2">In Progress</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.activeAssignments}</p>
-              </div>
-              <div className="text-center p-4 border border-gray-200 rounded-lg bg-green-50">
-                <p className="text-sm text-gray-600 mb-2">Completed</p>
-                <p className="text-3xl font-bold text-green-600">{stats.completedAssignments}</p>
-              </div>
-            </div>
-
-            {/* Visual Progress Bar */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Overall Progress</span>
-                <span className="text-sm text-gray-600">
-                  {stats.completedAssignments} of {stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments} completed
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                <div className="flex h-full">
-                  {/* Completed */}
-                  <div 
-                    className="bg-gradient-to-r from-green-500 to-green-600 transition-all duration-500"
-                    style={{ 
-                      width: `${(stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments) > 0 
-                        ? (stats.completedAssignments / (stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments)) * 100 
-                        : 0}%` 
-                    }}
-                  ></div>
-                  {/* Active */}
-                  <div 
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
-                    style={{ 
-                      width: `${(stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments) > 0 
-                        ? (stats.activeAssignments / (stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments)) * 100 
-                        : 0}%` 
-                    }}
-                  ></div>
-                  {/* Pending */}
-                  <div 
-                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 transition-all duration-500"
-                    style={{ 
-                      width: `${(stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments) > 0 
-                        ? (stats.pendingAssignments / (stats.activeAssignments + stats.pendingAssignments + stats.completedAssignments)) * 100 
-                        : 0}%` 
-                    }}
-                  ></div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between mt-2 text-xs">
-                <span className="flex items-center">
-                  <span className="w-3 h-3 bg-green-500 rounded-full mr-1"></span>
-                  Completed
-                </span>
-                <span className="flex items-center">
-                  <span className="w-3 h-3 bg-blue-500 rounded-full mr-1"></span>
-                  Active
-                </span>
-                <span className="flex items-center">
-                  <span className="w-3 h-3 bg-yellow-500 rounded-full mr-1"></span>
-                  Pending
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-semibold text-gray-700">Staff Utilization</h4>
-                <Activity className="h-5 w-5 text-blue-500" />
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Assigned Caregivers</span>
-                    <span className="font-semibold text-gray-900">
-                      {caregivers.filter(c => assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-500 h-2 rounded-full"
-                      style={{ 
-                        width: `${caregivers.length > 0 
-                          ? (caregivers.filter(c => assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length / caregivers.length) * 100 
-                          : 0}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Available Caregivers</span>
-                    <span className="font-semibold text-gray-900">
-                      {caregivers.filter(c => !assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ 
-                        width: `${caregivers.length > 0 
-                          ? (caregivers.filter(c => !assignments.some(a => a.caregiverId === c.id && a.status !== 'completed')).length / caregivers.length) * 100 
-                          : 0}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-semibold text-gray-700">Client Coverage</h4>
-                <Heart className="h-5 w-5 text-pink-500" />
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Clients with Caregivers</span>
-                    <span className="font-semibold text-gray-900">
-                      {clients.filter(c => assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ 
-                        width: `${clients.length > 0 
-                          ? (clients.filter(c => assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length / clients.length) * 100 
-                          : 0}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Unassigned Clients</span>
-                    <span className="font-semibold text-gray-900">
-                      {clients.filter(c => !assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-red-500 h-2 rounded-full"
-                      style={{ 
-                        width: `${clients.length > 0 
-                          ? (clients.filter(c => !assignments.some(a => a.clientId === c.id && a.status !== 'completed')).length / clients.length) * 100 
-                          : 0}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-semibold text-gray-700">System Health</h4>
-                <Shield className="h-5 w-5 text-green-500" />
-              </div>
-              <div className="space-y-4">
-                <div className="text-center">
-                  <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full ${
-                    stats.systemHealth === 'Good' ? 'bg-green-100' :
-                    stats.systemHealth === 'Warning' ? 'bg-yellow-100' :
-                    'bg-red-100'
-                  } mb-2`}>
-                    <span className={`text-2xl font-bold ${
-                      stats.systemHealth === 'Good' ? 'text-green-600' :
-                      stats.systemHealth === 'Warning' ? 'text-yellow-600' :
-                      'text-red-600'
-                    }`}>
-                      {stats.uptime || 99}%
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium text-gray-900">{stats.systemHealth || 'Good'}</p>
-                  <p className="text-xs text-gray-500 mt-1">System Status</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Institution Summary */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
-            <div className="flex items-center mb-4">
-              <Building className="h-6 w-6 text-blue-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Institution Summary</h3>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Institution Name</p>
-                <p className="text-lg font-bold text-gray-900">{institutionData?.name || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total Staff</p>
-                <p className="text-lg font-bold text-gray-900">{stats.caregivers + stats.doctors + stats.nurses}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total Clients</p>
-                <p className="text-lg font-bold text-gray-900">{stats.clients}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Active Tasks</p>
-                <p className="text-lg font-bold text-gray-900">{stats.activeAssignments + stats.pendingAssignments}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Inventory & Billing Tab Content */}
-      {activeTab === 'inventory' && (
-        <InventoryBillingTab 
-          institutionId={effectiveInstitutionId}
-          clients={clients}
-        />
-      )}
-
-      {/* Modals */}
-      {showAddClient && (
-        <AddClientModal 
-          onClose={() => setShowAddClient(false)} 
-          onAdd={handleAddClient}
-        />
-      )}
-
-      {showAddCaregiver && (
-        <AddCaregiverModal 
-          onClose={() => setShowAddCaregiver(false)} 
-          onCreate={handleAddCaregiver}
-        />
-      )}
-
-      {showAddPharmacist && (
-        <AddPharmacistModal 
-          onClose={() => setShowAddPharmacist(false)} 
-          onCreate={handleAddPharmacist}
-        />
-      )}
-
-      {showEditUserModal && selectedUserForEdit && (
-        <EditUserRoleModal 
-          user={selectedUserForEdit}
-          onClose={() => {
-            setShowEditUserModal(false);
-            setSelectedUserForEdit(null);
-          }}
-          onSave={handleEditUserRole}
-        />
-      )}
-
-      {showAssignmentModal && (
-        <AssignmentModal 
-          onClose={() => setShowAssignmentModal(false)} 
-          onCreate={handleCreateAssignment}
-          clients={clients}
-          caregivers={caregivers}
-          selectedClient={selectedClientForAssignment}
-          selectedCaregiver={selectedCaregiverForAssignment}
-          onClientChange={setSelectedClientForAssignment}
-          onCaregiverChange={setSelectedCaregiverForAssignment}
-          assignmentType={assignmentType}
-          onAssignmentTypeChange={setAssignmentType}
-        />
-      )}
-
-      {showClientDetails && selectedClient && (
-        <ClientDetailsModal
-          client={selectedClient}
-          onClose={() => {
-            setShowClientDetails(false);
-            setSelectedClient(null);
-          }}
-          onAssignTask={handleAssignTaskToClient}
-          onDelete={handleArchiveClient}
-          onUnarchive={handleUnarchiveClient}
-          pharmacists={pharmacists}
-          institutionId={effectiveInstitutionId}
-          onAssignPharmacist={handleAssignPharmacistToClient}
-        />
-      )}
-
-      {showCaregiverDetails && selectedCaregiver && (
-        <CaregiverDetailsModal
-          caregiver={selectedCaregiver}
-          assignments={assignments}
-          clients={clients}
-          onViewAssignment={handleOpenAssignmentsTabFromCaregiver}
-          onClose={() => {
-            setShowCaregiverDetails(false);
-            setSelectedCaregiver(null);
-          }}
-          onResetPassword={handleResetPassword}
-          onToggleStatus={handleToggleCaregiverStatus}
-          onDelete={handleDeleteCaregiver}
-          onAssignTask={handleAssignTaskToCaregiver}
-          onEditPayment={(caregiver) => {
-            setSelectedCaregiverForWage(caregiver);
-            setShowWageModal(true);
-          }}
-          onEditAssignment={handleEditAssignment}
-          onDeleteAssignment={handleDeleteAssignment}
-        />
-      )}
-
-      {showWageModal && selectedCaregiverForWage && (
-        <CaregiverWageEditModal
-          isOpen={showWageModal}
-          onClose={() => {
-            setShowWageModal(false);
-            setSelectedCaregiverForWage(null);
-          }}
-          caregiver={selectedCaregiverForWage}
-          onSave={(updatedCaregiver) => {
-            // Reload dashboard data to reflect the updated wage
-            loadDashboardData();
-            // If the caregiver details modal is open, refresh the selected caregiver
-            if (showCaregiverDetails && selectedCaregiver?.id === updatedCaregiver.id) {
-              setSelectedCaregiver(updatedCaregiver);
-            }
-          }}
-        />
-      )}
-
-      {showEditAssignmentModal && selectedAssignmentForEdit && (
-        <EditAssignmentModal
-          assignment={selectedAssignmentForEdit}
-          clients={clients}
-          caregivers={caregivers}
-          onClose={() => {
-            setShowEditAssignmentModal(false);
-            setSelectedAssignmentForEdit(null);
-          }}
-          onSave={handleUpdateAssignment}
-        />
-      )}
-
-      {showEditBillingPlanModal && selectedBillingPlan && (
-        <EditBillingPlanModal
-          plan={selectedBillingPlan}
-          onClose={() => {
-            setShowEditBillingPlanModal(false);
-            setSelectedBillingPlan(null);
-          }}
-          onSave={handleSaveBillingPlan}
-        />
-      )}
-
-      {showPaymentGatewayModal && (
-        <PaymentGatewayConfigModal
-          gateway={selectedGateway}
-          existingConfig={paymentGatewayConfig}
-          onClose={() => {
-            setShowPaymentGatewayModal(false);
-            setSelectedGateway(null);
-          }}
-          onSave={handleSavePaymentGatewayConfig}
-        />
-      )}
-
-      {showCaregiverPasswordModal && caregiverForPasswordReset && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="bg-yellow-600 text-white px-6 py-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Reset Caregiver Password</h3>
-                <p className="text-sm text-yellow-100">
-                  Set a new password for {caregiverForPasswordReset.name || caregiverForPasswordReset.email}.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowCaregiverPasswordModal(false);
-                  setCaregiverForPasswordReset(null);
-                  setCaregiverPasswordForm({ newPassword: '', confirmPassword: '' });
-                }}
-                className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
-                aria-label="Close password reset modal"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitCaregiverPasswordReset} className="px-6 py-6 space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                <input
-                  type="password"
-                  value={caregiverPasswordForm.newPassword}
-                  onChange={(e) => setCaregiverPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                  required
-                  minLength={6}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                  placeholder="Enter new password"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-                <input
-                  type="password"
-                  value={caregiverPasswordForm.confirmPassword}
-                  onChange={(e) => setCaregiverPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  required
-                  minLength={6}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                  placeholder="Re-enter new password"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCaregiverPasswordModal(false);
-                    setCaregiverForPasswordReset(null);
-                    setCaregiverPasswordForm({ newPassword: '', confirmPassword: '' });
-                  }}
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={resettingCaregiverPassword}
-                  className="px-4 py-2 rounded-lg bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-                >
-                  {resettingCaregiverPassword ? (
-                    <>
-                      <Loader className="animate-spin h-4 w-4 mr-2" />
-                      Updating...
-                    </>
-                  ) : (
-                    'Update Password'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showProfileSettings && (
-        <UserProfileSettings
-          userId={user?.uid}
-          onClose={() => setShowProfileSettings(false)}
-        />
-      )}
-
-      {showPharmacistDetails && selectedPharmacist && (
-        <PharmacistDetailsModal
-          pharmacist={selectedPharmacist}
-          clients={clients}
-          onClose={() => {
-            setShowPharmacistDetails(false);
-            setSelectedPharmacist(null);
-          }}
-          onAssignClient={handleAssignPharmacistToClient}
-        />
-      )}
-
-      {showAssignmentDetails && selectedAssignment && (
-        <AssignmentDetailsModal
-          assignment={selectedAssignment}
-          clients={clients}
-          caregivers={caregivers}
-          onClose={() => {
-            setShowAssignmentDetails(false);
-            setSelectedAssignment(null);
-          }}
-        />
-      )}
-
-      {/* Dashboard Card Modals */}
-      {showStaffModal && (
-        <StaffModal
-          staff={caregivers}
-          onClose={() => setShowStaffModal(false)}
-        />
-      )}
-
-      {showClientsModal && (
-        <ClientsModal
-          clients={clients}
-          onClose={() => setShowClientsModal(false)}
-        />
-      )}
-
-      {showAppointmentsModal && (
-        <AppointmentsModal
-          appointments={[]} // Using mock data inside the modal
-          view={appointmentView}
-          onViewChange={setAppointmentView}
-          onClose={() => setShowAppointmentsModal(false)}
-        />
-      )}
-
-      {/* Institution Link Customizer */}
-      {showLinkCustomizer && institutionData && (
-        <InstitutionLinkCustomizer
-          institution={institutionData}
-          onUpdate={handleInstitutionLinkUpdate}
-          onClose={() => setShowLinkCustomizer(false)}
-        />
-      )}
-
-      {/* Notifications Dropdown */}
-      {showNotifications && (
-        <div className="fixed top-20 right-4 w-96 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 max-h-[600px] overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-indigo-50">
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-indigo-600" />
-              <h3 className="font-semibold text-gray-900">Notifications</h3>
-              {unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                  {unreadCount}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button
-                  onClick={handleMarkAllRead}
-                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                >
-                  Mark all read
-                </button>
-              )}
-              <button
-                onClick={() => setShowNotifications(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="p-8 text-center">
-                <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No notifications yet</p>
-                <p className="text-sm text-gray-400 mt-1">You'll be notified of important updates here</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 cursor-pointer transition-colors ${
-                      notification.read
-                        ? 'bg-white hover:bg-gray-50'
-                        : 'bg-blue-50 hover:bg-blue-100'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-full ${
-                        notification.priority === 'high' || notification.priority === 'urgent'
-                          ? 'bg-red-100'
-                          : notification.priority === 'medium'
-                          ? 'bg-yellow-100'
-                          : 'bg-blue-100'
-                      }`}>
-                        {notification.type === 'pharmacist_prescription_update' ? (
-                          <Pill className={`h-4 w-4 ${
-                            notification.priority === 'high' ? 'text-red-600' : 'text-blue-600'
-                          }`} />
-                        ) : notification.type === 'doctor_consultation' ? (
-                          <FileText className="h-4 w-4 text-blue-600" />
-                        ) : notification.type === 'diagnostic_test_ordered' || notification.type === 'diagnostic_results_uploaded' ? (
-                          <Activity className="h-4 w-4 text-yellow-600" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4 text-gray-600" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <p className="font-medium text-gray-900 text-sm">
-                            {notification.title}
-                          </p>
-                          {!notification.read && (
-                            <div className="h-2 w-2 bg-blue-600 rounded-full flex-shrink-0 mt-1"></div>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Clock className="h-3 w-3 text-gray-400" />
-                          <p className="text-xs text-gray-400">
-                            {notification.createdAt?.toDate ? 
-                              notification.createdAt.toDate().toLocaleString() : 
-                              new Date(notification.createdAt).toLocaleString()
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Active Call Interface */}
-      {activeCall && (
-        <CallInterface
-          isOpen={!!activeCall}
-          onClose={handleEndCall}
-          callType={activeCall.callType}
-          participantInfo={{
-            id: activeCall.participantId,
-            name: activeCall.participantName,
-            role: 'caregiver'
-          }}
-          isIncoming={false}
-          externalWebrtcService={webrtc}
-          externalCallState={callConnectionState}
-          localStream={localStream}
-          remoteStream={remoteStream}
-        />
-      )}
-
-      {/* Client Details Modal */}
-      {showClientDetails && selectedClient && (
-        <ClientDetailsModal
-          client={selectedClient}
-          onClose={() => {
-            setShowClientDetails(false);
-            setSelectedClient(null);
-          }}
-          onAssignTask={(client) => {
-            setSelectedClientForAssignment(client.id);
-            setShowAssignmentModal(true);
-            setShowClientDetails(false);
-          }}
-          onDelete={handleArchiveClient}
-          onUnarchive={handleUnarchiveClient}
-          pharmacists={pharmacists}
-          institutionId={effectiveInstitutionId}
-          onAssignPharmacist={handleAssignPharmacistToClient}
-        />
-      )}
-
-      {/* Caregiver Details Modal */}
-      {showCaregiverDetails && selectedCaregiver && (
-        <CaregiverDetailsModal
-          caregiver={selectedCaregiver}
-          assignments={assignments.filter(a => a.caregiverId === selectedCaregiver.id || a.caregiverId === selectedCaregiver.uid)}
-          clients={clients}
-          onViewAssignment={handleOpenAssignmentsTabFromCaregiver}
-          onClose={() => {
-            setShowCaregiverDetails(false);
-            setSelectedCaregiver(null);
-          }}
-          onResetPassword={handleResetPassword}
-          onToggleStatus={handleToggleCaregiverStatus}
-          onDelete={handleDeleteCaregiver}
-          onAssignTask={(caregiver) => {
-            setSelectedCaregiverForAssignment(caregiver.id);
-            setShowAssignmentModal(true);
-            setShowCaregiverDetails(false);
-          }}
-          onEditAssignment={handleEditAssignment}
-          onDeleteAssignment={handleDeleteAssignment}
-        />
-      )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Add Client Modal Component
 const AddClientModal = ({ onClose, onAdd }) => {

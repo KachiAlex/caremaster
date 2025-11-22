@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setCurrentTenant = exports.createTenantWithAdmin = void 0;
+exports.getTenantsHTTP = exports.getTenants = exports.setCurrentTenant = exports.createTenantWithAdmin = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const getDb = () => admin.firestore();
@@ -163,5 +163,158 @@ exports.setCurrentTenant = functions.https.onCall(async (data, context) => {
         institutionId,
         roles: membership.roles,
     };
+});
+/**
+ * Callable: getTenants
+ *
+ * Returns a list of all institutions (tenants) that the caller has access to.
+ * For super admins, returns all institutions.
+ * For regular users, returns only institutions they're members of.
+ */
+exports.getTenants = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated.');
+    }
+    const db = getDb();
+    const userId = context.auth.uid;
+    const isSuperAdmin = context.auth.token.superAdmin === true;
+    try {
+        if (isSuperAdmin) {
+            // Super admins can see all institutions
+            const institutionsSnapshot = await db.collection('institutions').get();
+            const institutions = institutionsSnapshot.docs.map(doc => {
+                var _a, _b, _c, _d, _e, _f;
+                return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: ((_c = (_b = (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate) === null || _b === void 0 ? void 0 : _b.call(_a)) === null || _c === void 0 ? void 0 : _c.toISOString()) || null, updatedAt: ((_f = (_e = (_d = doc.data().updatedAt) === null || _d === void 0 ? void 0 : _d.toDate) === null || _e === void 0 ? void 0 : _e.call(_d)) === null || _f === void 0 ? void 0 : _f.toISOString()) || null }));
+            });
+            return { success: true, tenants: institutions };
+        }
+        else {
+            // Regular users only see institutions they're members of
+            const membershipsSnapshot = await db
+                .collection('userTenants')
+                .where('userId', '==', userId)
+                .where('status', '==', 'active')
+                .get();
+            if (membershipsSnapshot.empty) {
+                return { success: true, tenants: [] };
+            }
+            const institutionIds = membershipsSnapshot.docs.map(doc => doc.data().institutionId);
+            // Fetch institution details
+            const institutions = await Promise.all(institutionIds.map(async (institutionId) => {
+                var _a, _b, _c, _d, _e, _f, _g, _h;
+                const institutionDoc = await db
+                    .collection('institutions')
+                    .doc(institutionId)
+                    .get();
+                if (institutionDoc.exists) {
+                    return Object.assign(Object.assign({ id: institutionDoc.id }, institutionDoc.data()), { createdAt: ((_d = (_c = (_b = (_a = institutionDoc.data()) === null || _a === void 0 ? void 0 : _a.createdAt) === null || _b === void 0 ? void 0 : _b.toDate) === null || _c === void 0 ? void 0 : _c.call(_b)) === null || _d === void 0 ? void 0 : _d.toISOString()) || null, updatedAt: ((_h = (_g = (_f = (_e = institutionDoc.data()) === null || _e === void 0 ? void 0 : _e.updatedAt) === null || _f === void 0 ? void 0 : _f.toDate) === null || _g === void 0 ? void 0 : _g.call(_f)) === null || _h === void 0 ? void 0 : _h.toISOString()) || null });
+                }
+                return null;
+            }));
+            return {
+                success: true,
+                tenants: institutions.filter(Boolean),
+            };
+        }
+    }
+    catch (error) {
+        console.error('Error fetching tenants:', error);
+        throw new functions.https.HttpsError('internal', `Failed to fetch tenants: ${error.message}`);
+    }
+});
+/**
+ * HTTP: getTenantsHTTP
+ *
+ * REST endpoint for fetching tenants. Used by frontend at /api/tenants
+ * This handles the case where frontend calls /api/tenants as a REST endpoint
+ */
+exports.getTenantsHTTP = functions.https.onRequest(async (req, res) => {
+    // Enable CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+    }
+    if (req.method !== 'GET') {
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
+    }
+    try {
+        // Get auth token from header
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            res.status(401).json({ error: 'Unauthorized: Missing or invalid token' });
+            return;
+        }
+        const token = authHeader.split('Bearer ')[1];
+        const auth = admin.auth();
+        const decodedToken = await auth.verifyIdToken(token);
+        const userId = decodedToken.uid;
+        const isSuperAdmin = decodedToken.superAdmin === true;
+        const db = getDb();
+        if (isSuperAdmin) {
+            // Super admins can see all institutions
+            const institutionsSnapshot = await db.collection('institutions').get();
+            const institutions = institutionsSnapshot.docs.map(doc => {
+                var _a, _b, _c, _d, _e, _f;
+                return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: ((_c = (_b = (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate) === null || _b === void 0 ? void 0 : _b.call(_a)) === null || _c === void 0 ? void 0 : _c.toISOString()) || null, updatedAt: ((_f = (_e = (_d = doc.data().updatedAt) === null || _d === void 0 ? void 0 : _d.toDate) === null || _e === void 0 ? void 0 : _e.call(_d)) === null || _f === void 0 ? void 0 : _f.toISOString()) || null }));
+            });
+            res.status(200).json({ success: true, tenants: institutions });
+        }
+        else {
+            // Regular users only see institutions they're members of
+            const membershipsSnapshot = await db
+                .collection('userTenants')
+                .where('userId', '==', userId)
+                .where('status', '==', 'active')
+                .get();
+            if (membershipsSnapshot.empty) {
+                res.status(200).json({ success: true, tenants: [] });
+                return;
+            }
+            const institutionIds = membershipsSnapshot.docs.map(doc => doc.data().institutionId);
+            // Fetch institution details
+            const institutions = await Promise.all(institutionIds.map(async (institutionId) => {
+                var _a, _b, _c, _d, _e, _f, _g, _h;
+                const institutionDoc = await db
+                    .collection('institutions')
+                    .doc(institutionId)
+                    .get();
+                if (institutionDoc.exists) {
+                    return Object.assign(Object.assign({ id: institutionDoc.id }, institutionDoc.data()), { createdAt: ((_d = (_c = (_b = (_a = institutionDoc.data()) === null || _a === void 0 ? void 0 : _a.createdAt) === null || _b === void 0 ? void 0 : _b.toDate) === null || _c === void 0 ? void 0 : _c.call(_b)) === null || _d === void 0 ? void 0 : _d.toISOString()) || null, updatedAt: ((_h = (_g = (_f = (_e = institutionDoc.data()) === null || _e === void 0 ? void 0 : _e.updatedAt) === null || _f === void 0 ? void 0 : _f.toDate) === null || _g === void 0 ? void 0 : _g.call(_f)) === null || _h === void 0 ? void 0 : _h.toISOString()) || null });
+                }
+                return null;
+            }));
+            res.status(200).json({
+                success: true,
+                tenants: institutions.filter(Boolean),
+            });
+        }
+    }
+    catch (error) {
+        console.error('Error fetching tenants:', error);
+        // Provide more specific error messages
+        if (error.code === 'auth/argument-error' || error.code === 'auth/invalid-credential') {
+            res.status(401).json({
+                error: 'Unauthorized',
+                message: 'Invalid or expired authentication token'
+            });
+        }
+        else if (error.code === 'permission-denied') {
+            res.status(403).json({
+                error: 'Permission denied',
+                message: 'You do not have permission to access tenants'
+            });
+        }
+        else {
+            res.status(500).json({
+                error: 'Failed to fetch tenants',
+                message: error.message || 'An unexpected error occurred',
+                code: error.code || 'unknown'
+            });
+        }
+    }
 });
 //# sourceMappingURL=tenantManagement.js.map

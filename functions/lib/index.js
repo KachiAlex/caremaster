@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.migrateUserRoles = exports.removeInstitutionAdminFunction = exports.getInstitutionAdminsFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.resetCaregiverPasswordFunction = exports.createCaregiverWithAuthFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.processEmailQueueFunction = exports.sendPaymentLinkEmailFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserFunction = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
+exports.migrateUserRoles = exports.removeInstitutionAdminFunction = exports.getInstitutionAdminsFunction = exports.forceUpdateAllInstitutionLinksFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.apiTenants = exports.getTenantsFunction = exports.setCurrentTenantFunction = exports.createTenantWithAdminFunction = exports.resetCaregiverPasswordFunction = exports.createCaregiverWithAuthFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.processEmailQueueFunction = exports.sendPaymentLinkEmailFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserFunction = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const userManagement_1 = require("./userManagement");
@@ -35,6 +35,7 @@ const emailService_1 = require("./emailService");
 const auditLogging_1 = require("./auditLogging");
 const licensing_1 = require("./licensing");
 const caregiverManagement_1 = require("./caregiverManagement");
+const tenantManagement_1 = require("./tenantManagement");
 // Initialize Firebase Admin
 admin.initializeApp();
 const db = admin.firestore();
@@ -68,13 +69,18 @@ exports.healthCheck = functions.https.onRequest((req, res) => {
     res.status(200).json({
         status: 'OK',
         timestamp: new Date().toISOString(),
-        service: 'ElderX Firebase Functions',
+        service: 'UltimateCare Firebase Functions',
         version: '1.0.0'
     });
 });
 // Caregiver Management Functions
 exports.createCaregiverWithAuthFunction = caregiverManagement_1.createCaregiverWithAuth;
 exports.resetCaregiverPasswordFunction = caregiverManagement_1.resetCaregiverPassword;
+// Multi-tenant (Institution) Management Functions
+exports.createTenantWithAdminFunction = tenantManagement_1.createTenantWithAdmin;
+exports.setCurrentTenantFunction = tenantManagement_1.setCurrentTenant;
+exports.getTenantsFunction = tenantManagement_1.getTenants;
+exports.apiTenants = tenantManagement_1.getTenantsHTTP;
 // Licensing Functions
 exports.createInstitutionFunction = licensing_1.createInstitution;
 exports.createLicenseFunction = licensing_1.createLicense;
@@ -89,6 +95,7 @@ exports.updateLicenseFunction = licensing_1.updateLicense;
 exports.suspendLicenseFunction = licensing_1.suspendLicense;
 exports.activateLicenseFunction = licensing_1.activateLicense;
 exports.migrateInstitutionLinksFunction = licensing_1.migrateInstitutionLinks;
+exports.forceUpdateAllInstitutionLinksFunction = licensing_1.forceUpdateAllInstitutionLinks;
 exports.getInstitutionAdminsFunction = licensing_1.getInstitutionAdmins;
 exports.removeInstitutionAdminFunction = licensing_1.removeInstitutionAdmin;
 // User Role Migration Function
@@ -123,7 +130,7 @@ exports.migrateUserRoles = functions.https.onRequest(async (req, res) => {
             try {
                 // Infer role from existing data
                 let inferredRole = 'caregiver';
-                if (userData.email === 'superadmin@Care Master.com') {
+                if (userData.email === 'superadmin@ultimatecare.health') {
                     inferredRole = 'super-admin';
                 }
                 else if (userData.role) {
