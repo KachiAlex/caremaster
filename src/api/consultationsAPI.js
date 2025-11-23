@@ -170,6 +170,23 @@ export const createConsultation = async (consultationData) => {
       // Don't throw - consultation was created successfully
     }
     
+    // Auto-generate bill for consultation (Phase 1: Auto-billing integration)
+    try {
+      // Only auto-bill if autoBilling is enabled (default: true)
+      const shouldAutoBill = consultationData.autoBilling !== false;
+      
+      if (shouldAutoBill && consultationData.institutionId) {
+        const { generateBillFromConsultation } = await import('./autoBillingAPI');
+        await generateBillFromConsultation(docRef.id, {
+          notes: `Auto-generated bill for ${consultationData.consultationType} consultation`
+        });
+        console.log('✅ Auto-bill generated for consultation:', docRef.id);
+      }
+    } catch (billingError) {
+      console.warn('Could not auto-generate bill for consultation:', billingError);
+      // Don't throw - consultation was created successfully, billing can be done manually
+    }
+    
     return { id: docRef.id, ...newConsultation };
   } catch (error) {
     console.error('Error creating consultation:', error);

@@ -179,6 +179,39 @@ export const createAppointment = async (appointmentData) => {
     };
     
     const docRef = await addDoc(appointmentsRef, newAppointment);
+    
+    // Send SMS/WhatsApp appointment reminder if enabled
+    try {
+      const patientId = appointmentData.clientId || appointmentData.patientId;
+      if (patientId) {
+        const patientDoc = await getDoc(doc(db, 'patients', patientId)).catch(() => null);
+        const patientData = patientDoc?.exists() ? patientDoc.data() : null;
+        const patientPhone = patientData?.phone || patientData?.phoneNumber;
+        
+        if (patientPhone && appointmentData.institutionId) {
+          const { getSettings, sendAppointmentReminder } = await import('./smsWhatsAppAPI');
+          const settings = await getSettings(appointmentData.institutionId);
+          
+          if (settings?.enabled && settings?.appointmentReminders?.enabled) {
+            await sendAppointmentReminder(
+              patientPhone,
+              {
+                appointmentDate: appointmentData.appointmentDate || appointmentData.scheduledTime,
+                appointmentTime: appointmentData.appointmentTime,
+                doctorName: appointmentData.caregiverName || appointmentData.doctorName,
+                type: appointmentData.type,
+                notes: appointmentData.notes
+              },
+              settings.appointmentReminders.channel || 'sms'
+            );
+          }
+        }
+      }
+    } catch (smsError) {
+      console.warn('Could not send appointment reminder SMS/WhatsApp:', smsError);
+      // Don't throw - SMS failure shouldn't break appointment creation
+    }
+    
     return docRef.id;
   } catch (error) {
     console.error('Error creating appointment:', error);

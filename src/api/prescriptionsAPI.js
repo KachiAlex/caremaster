@@ -141,6 +141,23 @@ export const createPrescription = async (prescriptionData) => {
       // Don't throw - prescription was created successfully
     }
 
+    // Auto-generate bill for prescription (Phase 1: Auto-billing integration)
+    try {
+      // Only auto-bill if autoBilling is enabled (default: true)
+      const shouldAutoBill = prescriptionData.autoBilling !== false;
+      
+      if (shouldAutoBill && prescriptionData.institutionId) {
+        const { generateBillFromPrescription } = await import('./autoBillingAPI');
+        await generateBillFromPrescription(prescriptionId, {
+          notes: `Auto-generated bill for prescription ${newPrescription.prescriptionNumber}`
+        });
+        console.log('✅ Auto-bill generated for prescription:', prescriptionId);
+      }
+    } catch (billingError) {
+      console.warn('Could not auto-generate bill for prescription:', billingError);
+      // Don't throw - prescription was created successfully, billing can be done manually
+    }
+
     return { id: prescriptionId, ...newPrescription };
   } catch (error) {
     console.error('Error creating prescription:', error);

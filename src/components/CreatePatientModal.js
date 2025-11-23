@@ -14,11 +14,19 @@ import {
   Activity,
   Save,
   Loader,
-  CheckCircle
+  CheckCircle,
+  Upload,
+  QrCode,
+  Shield,
+  AlertTriangle
 } from 'lucide-react';
 import { createPatient } from '../api/patientsAPI';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
+import { checkForDuplicates, shouldBlockRegistration } from '../utils/patientDuplicateDetection';
+import { uploadPatientDocument, validateFile } from '../utils/patientDocumentUpload';
+import { generatePatientQRCodeData } from '../utils/patientQRCodeGenerator';
+import QRCode from 'qrcode.react';
 
 const CreatePatientModal = ({ open, onClose, onSuccess }) => {
   const { userProfile, institutionId } = useUser();
@@ -56,12 +64,27 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
     insurancePolicyNumber: '',
     primaryCarePhysician: '',
     physicianPhone: '',
-    notes: ''
+    notes: '',
+    nationalId: ''
   });
 
   const [tempMedicalCondition, setTempMedicalCondition] = useState('');
   const [tempMedication, setTempMedication] = useState('');
   const [tempAllergy, setTempAllergy] = useState('');
+  
+  // Enhanced registration features
+  const [duplicateCheck, setDuplicateCheck] = useState(null);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [uploadedDocuments, setUploadedDocuments] = useState({
+    idCard: null,
+    referralLetter: null,
+    medicalRecord: null,
+    insuranceCard: null
+  });
+  const [uploading, setUploading] = useState({});
+  const [nationalId, setNationalId] = useState('');
+  const [hmoPlan, setHmoPlan] = useState('');
 
   const careLevels = [
     { value: 'basic', label: 'Basic Care', description: 'Minimal assistance needed' },
@@ -166,10 +189,103 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
+  // Check for duplicates before submission
+  const handleDuplicateCheck = async () => {
+    if (!formData.name || !formData.phone) {
+      return true; // Skip if required fields not filled
+    }
+
+    setCheckingDuplicates(true);
+    try {
+      const result = await checkForDuplicates(formData, institutionId || userProfile?.institutionId);
+      setDuplicateCheck(result);
+      
+      if (shouldBlockRegistration(result)) {
+        setShowDuplicateModal(true);
+        setCheckingDuplicates(false);
+        return false;
+      }
+      
+      if (result.hasDuplicates) {
+        // Show warning but allow proceed
+        toast.warning(
+          `Found ${result.exactMatches.length} exact match(es) and ${result.similarMatches.length} similar match(es). Please review before proceeding.`,
+          { autoClose: 5000 }
+        );
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error checking duplicates:', error);
+      // Continue with registration if duplicate check fails
+      return true;
+    } finally {
+      setCheckingDuplicates(false);
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (file, documentType) => {
+    if (!file) return;
+
+    const validation = validateFile(file);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+
+    setUploading(prev => ({ ...prev, [documentType]: true }));
+    try {
+      // We'll upload after patient is created, store file for now
+      setUploadedDocuments(prev => ({
+        ...prev,
+        [documentType]: { file, type: documentType }
+      }));
+      toast.success(`${documentType.replace('_', ' ')} file selected`);
+    } catch (error) {
+      console.error('Error handling file:', error);
+      toast.error('Failed to process file');
+    } finally {
+      setUploading(prev => ({ ...prev, [documentType]: false }));
+    }
+  };
+
+  // Upload documents after patient creation
+  const uploadDocumentsAfterRegistration = async (patientId) => {
+    const uploadPromises = [];
+    
+    for (const [docType, docData] of Object.entries(uploadedDocuments)) {
+      if (docData && docData.file) {
+        uploadPromises.push(
+          uploadPatientDocument(
+            docData.file,
+            patientId,
+            institutionId || userProfile?.institutionId,
+            docType
+          ).catch(error => {
+            console.error(`Error uploading ${docType}:`, error);
+            return null; // Continue with other uploads
+          })
+        );
+      }
+    }
+
+    if (uploadPromises.length > 0) {
+      await Promise.all(uploadPromises);
+      toast.success('Documents uploaded successfully');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateStep(currentStep)) {
+      return;
+    }
+
+    // Check for duplicates
+    const canProceed = await handleDuplicateCheck();
+    if (!canProceed) {
       return;
     }
 
@@ -197,6 +313,8 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
         careLevel: formData.careLevel,
         insuranceProvider: formData.insuranceProvider.trim() || null,
         insurancePolicyNumber: formData.insurancePolicyNumber.trim() || null,
+        hmoPlan: hmoPlan || null,
+        nationalId: formData.nationalId.trim() || nationalId.trim() || null,
         primaryCarePhysician: formData.primaryCarePhysician.trim() || null,
         physicianPhone: formData.physicianPhone.trim() || null,
         notes: formData.notes.trim() || null,
@@ -208,6 +326,11 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
 
       const result = await createPatient(patientData, userProfile);
       setCreatedPatientId(result.patientId);
+      
+      // Upload documents after patient creation
+      if (Object.values(uploadedDocuments).some(doc => doc !== null)) {
+        await uploadDocumentsAfterRegistration(result.patientId);
+      }
       
       toast.success(
         <div>
@@ -243,8 +366,18 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
         insurancePolicyNumber: '',
         primaryCarePhysician: '',
         physicianPhone: '',
-        notes: ''
+        notes: '',
+        nationalId: ''
       });
+      setNationalId('');
+      setHmoPlan('');
+      setUploadedDocuments({
+        idCard: null,
+        referralLetter: null,
+        medicalRecord: null,
+        insuranceCard: null
+      });
+      setDuplicateCheck(null);
       setCurrentStep(1);
       
       if (onSuccess) {
@@ -335,9 +468,31 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
               </div>
               <h3 className="text-xl font-semibold text-slate-50 mb-2">Patient Registered Successfully!</h3>
               <p className="text-sm text-slate-400 mb-1">Registration Number</p>
-              <div className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-600/20 border-2 border-blue-500/50 mb-4">
+              <div className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-600/20 border-2 border-blue-500/50 mb-6">
                 <span className="font-mono font-bold text-blue-300 text-2xl tracking-wider">{createdPatientId}</span>
               </div>
+              
+              {/* QR Code Display */}
+              <div className="flex flex-col items-center gap-4 mb-6 p-6 rounded-xl bg-slate-900/60 border border-slate-700/60">
+                <QrCode className="h-6 w-6 text-blue-400" />
+                <p className="text-sm font-medium text-slate-300">Patient QR Code</p>
+                <div className="p-4 bg-white rounded-lg">
+                  <QRCode
+                    value={generatePatientQRCodeData(
+                      createdPatientId,
+                      institutionId || userProfile?.institutionId,
+                      formData
+                    )}
+                    size={150}
+                    level="M"
+                    includeMargin={true}
+                  />
+                </div>
+                <p className="text-xs text-slate-400 max-w-xs">
+                  Scan this QR code to quickly access patient information
+                </p>
+              </div>
+
               <p className="text-xs text-slate-400 mt-4 max-w-md mx-auto">
                 This registration number will be used to identify the patient throughout the system. 
                 All activities will be logged with this number.
@@ -449,6 +604,18 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                         <option value="O+">O+</option>
                         <option value="O-">O-</option>
                       </select>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>National ID</label>
+                      <input
+                        type="text"
+                        name="nationalId"
+                        value={formData.nationalId}
+                        onChange={handleInputChange}
+                        className={inputClass}
+                        placeholder="National identification number"
+                      />
                     </div>
                   </div>
 
@@ -727,27 +894,93 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>Insurance Provider</label>
+                      <label className={labelClass}>Insurance/HMO Provider</label>
                       <input
                         type="text"
                         name="insuranceProvider"
                         value={formData.insuranceProvider}
                         onChange={handleInputChange}
                         className={inputClass}
-                        placeholder="Insurance company name"
+                        placeholder="Insurance company or HMO name"
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Policy Number</label>
+                      <label className={labelClass}>Policy/Plan Number</label>
                       <input
                         type="text"
                         name="insurancePolicyNumber"
                         value={formData.insurancePolicyNumber}
                         onChange={handleInputChange}
                         className={inputClass}
-                        placeholder="Policy number"
+                        placeholder="Policy or plan number"
                       />
                     </div>
+                    <div className="md:col-span-2">
+                      <label className={labelClass}>HMO Plan (if applicable)</label>
+                      <input
+                        type="text"
+                        value={hmoPlan}
+                        onChange={(e) => setHmoPlan(e.target.value)}
+                        className={inputClass}
+                        placeholder="e.g., Premium Plan, Standard Plan"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Document Upload Section */}
+                  <div className="border-t border-slate-700/60 pt-4 mt-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <FileText className="h-5 w-5 text-blue-400" />
+                      <h4 className="text-base font-semibold text-slate-50">Documents (Optional)</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        { key: 'idCard', label: 'ID Card', icon: User },
+                        { key: 'referralLetter', label: 'Referral Letter', icon: FileText },
+                        { key: 'medicalRecord', label: 'Medical Records', icon: Activity },
+                        { key: 'insuranceCard', label: 'Insurance Card', icon: Shield }
+                      ].map(({ key, label, icon: Icon }) => (
+                        <div key={key}>
+                          <label className={labelClass}>{label}</label>
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.webp"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) handleFileUpload(file, key);
+                              }}
+                              className="hidden"
+                              id={`file-${key}`}
+                              disabled={uploading[key]}
+                            />
+                            <label
+                              htmlFor={`file-${key}`}
+                              className={`flex items-center gap-2 px-4 py-3 rounded-xl border cursor-pointer transition-colors ${
+                                uploadedDocuments[key]
+                                  ? 'border-green-500/50 bg-green-500/10 text-green-200'
+                                  : 'border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-blue-500/50'
+                              } ${uploading[key] ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              <Icon className="h-4 w-4" />
+                              <span className="text-sm flex-1">
+                                {uploadedDocuments[key] 
+                                  ? uploadedDocuments[key].file?.name || 'File selected'
+                                  : uploading[key] 
+                                    ? 'Uploading...' 
+                                    : `Upload ${label}`}
+                              </span>
+                              {uploadedDocuments[key] && (
+                                <CheckCircle className="h-4 w-4 text-green-400" />
+                              )}
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">
+                      Supported formats: PDF, JPG, PNG, WebP (Max 10MB per file)
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -832,6 +1065,68 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   )}
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Duplicate Warning Modal */}
+        {showDuplicateModal && duplicateCheck && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-slate-900 rounded-2xl border border-red-500/50 p-6 max-w-2xl w-full">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-50">Potential Duplicate Patient</h3>
+                  <p className="text-sm text-slate-400">Exact matches found in the system</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
+                {duplicateCheck.exactMatches.map((match, index) => (
+                  <div key={index} className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-slate-50">{match.patientName}</p>
+                        <p className="text-sm text-slate-400">Patient ID: {match.patientId}</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {match.matchReasons.map((reason, i) => (
+                            <span key={i} className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-200">
+                              {reason}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <span className="text-xs font-medium text-red-400">
+                        {Math.round(match.matchScore * 100)}% match
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDuplicateModal(false);
+                    setDuplicateCheck(null);
+                  }}
+                  className="flex-1 px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-300 hover:bg-slate-800/60"
+                >
+                  Cancel Registration
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDuplicateModal(false);
+                    // Proceed with registration anyway
+                    handleSubmit(new Event('submit'));
+                  }}
+                  className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700"
+                >
+                  Proceed Anyway
+                </button>
+              </div>
             </div>
           </div>
         )}

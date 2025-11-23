@@ -60,7 +60,8 @@ import {
   ShieldCheck,
   Bed,
   UserCog,
-  UserPlus
+  UserPlus,
+  Database
 } from 'lucide-react';
 import { getAllUsers, createUser } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -105,6 +106,19 @@ import { trackAdminEvent } from '../services/analyticsService';
 import fileStorageService from '../services/fileStorageService';
 import CreatePatientModal from '../components/CreatePatientModal';
 import QueueManagementDashboard from '../components/QueueManagementDashboard';
+import AttendanceTracking from '../components/AttendanceTracking';
+import HMOClaimsManagement from '../components/HMOClaimsManagement';
+import RadiologyManagement from '../components/RadiologyManagement';
+import DischargeManagement from '../components/DischargeManagement';
+import EnhancedLISManagement from '../components/EnhancedLISManagement';
+import ComplianceManagement from '../components/ComplianceManagement';
+import EnhancedTriageManagement from '../components/EnhancedTriageManagement';
+import SMSWhatsAppManagement from '../components/SMSWhatsAppManagement';
+import EnhancedInventoryManagement from '../components/EnhancedInventoryManagement';
+import SecurityManagement from '../components/SecurityManagement';
+import AdvancedReporting from '../components/AdvancedReporting';
+import DataMigrationTool from '../components/DataMigrationTool';
+import TestingQADashboard from '../components/TestingQADashboard';
 
 const formatTimeForDisplay = (time) => {
   if (!time) return '';
@@ -2749,15 +2763,28 @@ const InstitutionAdminDashboard = () => {
             { id: 'assignments', name: 'Assignments', icon: Users, color: 'orange' },
             { id: 'scheduling', name: 'Scheduling', icon: Calendar, color: 'blue' },
             { id: 'queue', name: 'Queue Management', icon: Clock, color: 'cyan' },
+            { id: 'triage', name: 'Enhanced Triage', icon: Stethoscope, color: 'red' },
+            { id: 'attendance', name: 'Attendance Tracking', icon: Clock, color: 'teal' },
+            { id: 'radiology', name: 'Radiology', icon: Activity, color: 'pink' },
+            { id: 'discharge', name: 'Discharge Management', icon: CheckCircle, color: 'green' },
+            { id: 'enhanced-lis', name: 'Enhanced LIS', icon: TestTube, color: 'cyan' },
             { id: 'wages', name: 'Wage Management', icon: DollarSign, color: 'green' },
             { id: 'billing-plans', name: 'Billing Plans', icon: DollarSign, color: 'purple' },
             { id: 'payment-gateway', name: 'Payment Gateway', icon: DollarSign, color: 'indigo' },
+            { id: 'hmo-claims', name: 'HMO Claims', icon: FileText, color: 'teal' },
             { id: 'users', name: 'User Management', icon: Shield, color: 'red' },
             { id: 'admin-roles', name: 'Admin Roles', icon: Shield, color: 'red' },
             { id: 'approvals', name: 'Pending Approvals', icon: ClipboardCheck, color: 'yellow' },
             { id: 'cleanup', name: 'Cleanup Orphaned Users', icon: Trash2, color: 'orange' },
             { id: 'messages', name: 'Messages', icon: MessageSquare, color: 'cyan' },
+            { id: 'sms-whatsapp', name: 'SMS/WhatsApp', icon: MessageSquare, color: 'green' },
+            { id: 'enhanced-inventory', name: 'Enhanced Inventory', icon: Package, color: 'orange' },
             { id: 'analytics', name: 'Analytics', icon: TrendingUp, color: 'pink' },
+            { id: 'advanced-reporting', name: 'Advanced Reporting', icon: FileText, color: 'indigo' },
+            { id: 'data-migration', name: 'Data Migration', icon: Database, color: 'teal' },
+            { id: 'testing-qa', name: 'Testing & QA', icon: TestTube, color: 'green' },
+            { id: 'compliance', name: 'Compliance', icon: Shield, color: 'purple' },
+            { id: 'security', name: 'Security', icon: ShieldCheck, color: 'red' },
             { id: 'settings', name: 'Settings', icon: Settings, color: 'gray' },
             { id: 'help', name: 'Help & Support', icon: HelpCircle, color: 'blue' }
           ].map((tab) => {
@@ -2885,13 +2912,20 @@ const InstitutionAdminDashboard = () => {
                 {activeTab === 'pharmacists' && 'Pharmacist Management'}
                 {activeTab === 'assignments' && 'Assignment Management'}
                 {activeTab === 'scheduling' && 'Scheduling Management'}
+                {activeTab === 'attendance' && 'Attendance Tracking'}
+                {activeTab === 'hmo-claims' && 'HMO Claims Management'}
+                {activeTab === 'radiology' && 'Radiology Management'}
+                {activeTab === 'discharge' && 'Discharge Management'}
+                {activeTab === 'enhanced-lis' && 'Enhanced LIS Management'}
                 {activeTab === 'wages' && 'Wage Management & Payroll'}
                 {activeTab === 'users' && 'User Management'}
                 {activeTab === 'admin-roles' && 'Admin Role Assignment'}
                 {activeTab === 'approvals' && 'Pending Approvals'}
                 {activeTab === 'cleanup' && 'Cleanup Orphaned Users'}
                 {activeTab === 'messages' && 'Messages'}
+                {activeTab === 'sms-whatsapp' && 'SMS/WhatsApp Management'}
                 {activeTab === 'analytics' && 'Analytics & Reports'}
+                {activeTab === 'compliance' && 'Compliance Management'}
                 {activeTab === 'settings' && 'Institution Settings'}
                 {activeTab === 'help' && 'Help & Support'}
               </h1>
@@ -3936,6 +3970,91 @@ const InstitutionAdminDashboard = () => {
             {activeTab === 'queue' && (
         <div className="space-y-6">
           <QueueManagementDashboard institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {/* Enhanced Triage Tab Content */}
+            {activeTab === 'triage' && (
+        <div className="space-y-6">
+          <EnhancedTriageManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {activeTab === 'attendance' && (
+        <div className="space-y-6">
+          <AttendanceTracking viewMode="admin" />
+        </div>
+      )}
+
+            {activeTab === 'hmo-claims' && (
+        <div className="space-y-6">
+          <HMOClaimsManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {activeTab === 'radiology' && (
+        <div className="space-y-6">
+          <RadiologyManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {activeTab === 'discharge' && (
+        <div className="space-y-6">
+          <DischargeManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {activeTab === 'enhanced-lis' && (
+        <div className="space-y-6">
+          <EnhancedLISManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {activeTab === 'compliance' && (
+        <div className="space-y-6">
+          <ComplianceManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {/* SMS/WhatsApp Management Tab Content */}
+            {activeTab === 'sms-whatsapp' && (
+        <div className="space-y-6">
+          <SMSWhatsAppManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {/* Enhanced Inventory Management Tab Content */}
+            {activeTab === 'enhanced-inventory' && (
+        <div className="space-y-6">
+          <EnhancedInventoryManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {/* Security Management Tab Content */}
+            {activeTab === 'security' && (
+        <div className="space-y-6">
+          <SecurityManagement institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {/* Advanced Reporting Tab Content */}
+            {activeTab === 'advanced-reporting' && (
+        <div className="space-y-6">
+          <AdvancedReporting institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {/* Data Migration Tab Content */}
+            {activeTab === 'data-migration' && (
+        <div className="space-y-6">
+          <DataMigrationTool institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+
+            {/* Testing & QA Tab Content */}
+            {activeTab === 'testing-qa' && (
+        <div className="space-y-6">
+          <TestingQADashboard />
         </div>
       )}
           </div>

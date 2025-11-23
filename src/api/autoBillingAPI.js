@@ -355,6 +355,88 @@ export const generateBillFromLabTest = async (labTestId, options = {}) => {
 };
 
 /**
+ * Generate bill from imaging request
+ */
+export const generateBillFromImaging = async (imagingRequestId, options = {}) => {
+  try {
+    const imagingRef = doc(db, 'imagingRequests', imagingRequestId);
+    const imagingSnap = await getDoc(imagingRef);
+
+    if (!imagingSnap.exists()) {
+      throw new Error('Imaging request not found');
+    }
+
+    const imaging = imagingSnap.data();
+    
+    // Check if bill already exists
+    const existingBillsQuery = query(
+      collection(db, BILLS_COLLECTION),
+      where('imagingRequestId', '==', imagingRequestId),
+      where('status', '!=', BILL_STATUS.CANCELLED)
+    );
+    const existingBills = await getDocs(existingBillsQuery);
+    if (!existingBills.empty) {
+      return {
+        id: existingBills.docs[0].id,
+        ...existingBills.docs[0].data(),
+        alreadyExists: true
+      };
+    }
+
+    const serviceItems = [{
+      serviceType: SERVICE_TYPE.IMAGING,
+      serviceId: imagingRequestId,
+      description: `Imaging - ${imaging.imagingType || 'Diagnostic Imaging'} (${imaging.bodyPart || ''})`,
+      quantity: 1,
+      date: imaging.scheduledDate || imaging.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+    }];
+
+    const calculation = await calculateBillAmount(
+      imaging.institutionId,
+      imaging.patientId,
+      serviceItems
+    );
+
+    const bill = {
+      patientId: imaging.patientId,
+      patientName: imaging.patientName || 'Unknown',
+      institutionId: imaging.institutionId,
+      imagingRequestId,
+      serviceType: SERVICE_TYPE.IMAGING,
+      items: calculation.items,
+      subtotal: calculation.subtotal,
+      discount: calculation.discount,
+      hmoCovered: calculation.hmoCovered,
+      coPay: calculation.coPay,
+      total: calculation.total,
+      currency: calculation.currency,
+      hmoPlan: calculation.hmoPlan,
+      status: BILL_STATUS.PENDING,
+      dueDate: options.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      notes: options.notes || '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      paidAt: null,
+      paymentMethod: null
+    };
+
+    const billRef = await addDoc(collection(db, BILLS_COLLECTION), bill);
+
+    if (calculation.hmoPlan) {
+      await createHMOClaim(billRef.id, calculation);
+    }
+
+    return {
+      id: billRef.id,
+      ...bill
+    };
+  } catch (error) {
+    console.error('Error generating bill from imaging:', error);
+    throw error;
+  }
+};
+
+/**
  * Generate bill from pharmacy prescription
  */
 export const generateBillFromPrescription = async (prescriptionId, options = {}) => {
@@ -705,6 +787,114 @@ export const submitHMOClaim = async (claimId) => {
     return { success: true, claimId };
   } catch (error) {
     console.error('Error submitting HMO claim:', error);
+    throw error;
+  }
+};
+
+/**
+ * Approve HMO claim
+ */
+export const approveHMOClaim = async (claimId, approverId) => {
+  try {
+    const claimRef = doc(db, HMO_CLAIMS_COLLECTION, claimId);
+    await updateDoc(claimRef, {
+      status: 'approved',
+      approvedAt: serverTimestamp(),
+      approvedBy: approverId,
+      updatedAt: serverTimestamp()
+    });
+
+    return { success: true, claimId };
+  } catch (error) {
+    console.error('Error approving HMO claim:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reject HMO claim
+ */
+export const rejectHMOClaim = async (claimId, reason, rejectedBy) => {
+  try {
+    const claimRef = doc(db, HMO_CLAIMS_COLLECTION, claimId);
+    await updateDoc(claimRef, {
+      status: 'rejected',
+      rejectionReason: reason,
+      rejectedBy: rejectedBy,
+      rejectedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    return { success: true, claimId };
+  } catch (error) {
+    console.error('Error rejecting HMO claim:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mark HMO claim as paid
+ */
+export const markHMOClaimAsPaid = async (claimId, paymentData = {}) => {
+  try {
+    const { paymentDate, transactionId, notes } = paymentData;
+    const claimRef = doc(db, HMO_CLAIMS_COLLECTION, claimId);
+    await updateDoc(claimRef, {
+      status: 'paid',
+      paidAt: paymentDate ? serverTimestamp() : serverTimestamp(),
+      paymentTransactionId: transactionId || null,
+      paymentNotes: notes || null,
+      updatedAt: serverTimestamp()
+    });
+
+    return { success: true, claimId };
+  } catch (error) {
+    console.error('Error marking HMO claim as paid:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get HMO claim statistics
+ */
+export const getHMOClaimStats = async (institutionId, startDate = null, endDate = null) => {
+  try {
+    const claims = await getHMOClaims(institutionId);
+    
+    let filteredClaims = claims;
+    if (startDate || endDate) {
+      filteredClaims = claims.filter(claim => {
+        const claimDate = claim.createdAt instanceof Date 
+          ? claim.createdAt 
+          : new Date(claim.createdAt);
+        if (startDate && claimDate < new Date(startDate)) return false;
+        if (endDate && claimDate > new Date(endDate)) return false;
+        return true;
+      });
+    }
+
+    const stats = {
+      total: filteredClaims.length,
+      pending: filteredClaims.filter(c => c.status === 'pending').length,
+      submitted: filteredClaims.filter(c => c.status === 'submitted').length,
+      approved: filteredClaims.filter(c => c.status === 'approved').length,
+      rejected: filteredClaims.filter(c => c.status === 'rejected').length,
+      paid: filteredClaims.filter(c => c.status === 'paid').length,
+      totalAmount: filteredClaims.reduce((sum, c) => sum + (c.claimAmount || 0), 0),
+      pendingAmount: filteredClaims
+        .filter(c => ['pending', 'submitted'].includes(c.status))
+        .reduce((sum, c) => sum + (c.claimAmount || 0), 0),
+      paidAmount: filteredClaims
+        .filter(c => c.status === 'paid')
+        .reduce((sum, c) => sum + (c.claimAmount || 0), 0),
+      averageClaimAmount: filteredClaims.length > 0
+        ? filteredClaims.reduce((sum, c) => sum + (c.claimAmount || 0), 0) / filteredClaims.length
+        : 0
+    };
+
+    return stats;
+  } catch (error) {
+    console.error('Error calculating HMO claim stats:', error);
     throw error;
   }
 };

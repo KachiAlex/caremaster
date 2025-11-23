@@ -39,15 +39,24 @@ import {
   skipPatient,
   cancelQueueEntry,
   getQueueStats,
+  reorderQueue,
   QUEUE_STATUS,
   QUEUE_PRIORITY,
   DEPARTMENT_TYPES
 } from '../api/queueAPI';
 import { useUser } from '../contexts/UserContext';
+import PatientRegistrationToQueue from './PatientRegistrationToQueue';
+import QueueAnalyticsDashboard from './QueueAnalyticsDashboard';
+import { getPatientQueuePosition } from '../api/queueAnalyticsAPI';
 
 const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
-  const { institutionId: contextInstitutionId } = useUser();
+  const { institutionId: contextInstitutionId, userProfile } = useUser();
   const institutionId = propInstitutionId || contextInstitutionId;
+  
+  // Check if user is receptionist or admin (can register patients)
+  const canRegisterPatients = userProfile?.userType === 'receptionist' || 
+                              userProfile?.userType === 'admin' ||
+                              userProfile?.type === 'receptionist';
 
   const [activeDepartment, setActiveDepartment] = useState(DEPARTMENT_TYPES.GP);
   const [queues, setQueues] = useState([]);
@@ -55,6 +64,11 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
   const [loading, setLoading] = useState(true);
   const [displayMode, setDisplayMode] = useState(false); // Digital display mode
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [queuePositions, setQueuePositions] = useState({}); // Track patient positions
+  const [showReorderModal, setShowReorderModal] = useState(false);
+  const [selectedQueueForReorder, setSelectedQueueForReorder] = useState(null);
+  const [reorderPosition, setReorderPosition] = useState(1);
 
   const departments = [
     { id: DEPARTMENT_TYPES.GP, name: 'General Practice', icon: Stethoscope, color: 'blue' },
@@ -94,10 +108,45 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
 
     const interval = setInterval(() => {
       loadQueueStats();
+      updateQueuePositions();
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
   }, [autoRefresh, activeDepartment]);
+
+  // Update queue positions for all waiting patients
+  const updateQueuePositions = async () => {
+    try {
+      const waitingPatients = queues.filter(q => q.status === QUEUE_STATUS.WAITING);
+      const positions = {};
+      
+      for (const queue of waitingPatients) {
+        try {
+          const position = await getPatientQueuePosition(
+            queue.patientId,
+            institutionId,
+            activeDepartment
+          );
+          if (position) {
+            positions[queue.patientId] = position;
+          }
+        } catch (error) {
+          console.warn('Error getting queue position:', error);
+        }
+      }
+      
+      setQueuePositions(positions);
+    } catch (error) {
+      console.error('Error updating queue positions:', error);
+    }
+  };
+
+  // Initial position update
+  useEffect(() => {
+    if (queues.length > 0) {
+      updateQueuePositions();
+    }
+  }, [queues.length, activeDepartment]);
 
   const loadQueueData = async () => {
     try {
@@ -148,6 +197,9 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
   };
 
   const handleSkip = async (queueId) => {
+    if (!window.confirm('Are you sure you want to skip this patient?')) {
+      return;
+    }
     try {
       await skipPatient(queueId, 'Skipped by staff');
       toast.info('Patient skipped');
@@ -155,6 +207,22 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
     } catch (error) {
       console.error('Error skipping patient:', error);
       toast.error('Failed to skip patient');
+    }
+  };
+
+  const handleReorder = async () => {
+    if (!selectedQueueForReorder) return;
+    
+    try {
+      const result = await reorderQueue(selectedQueueForReorder.id, reorderPosition, 'Reordered by staff');
+      toast.success(`Queue number updated to #${result.newQueueNumber}`);
+      setShowReorderModal(false);
+      setSelectedQueueForReorder(null);
+      loadQueueData();
+      loadQueueStats();
+    } catch (error) {
+      console.error('Error reordering queue:', error);
+      toast.error('Failed to reorder queue');
     }
   };
 
@@ -223,6 +291,15 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
   const currentDepartment = departments.find(d => d.id === activeDepartment);
 
   if (displayMode) {
+    // Auto-refresh display every 30 seconds
+    useEffect(() => {
+      const interval = setInterval(() => {
+        loadQueueData();
+        loadQueueStats();
+      }, 30000);
+      return () => clearInterval(interval);
+    }, [displayMode]);
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white p-8">
         <div className="max-w-7xl mx-auto">
@@ -230,6 +307,9 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
             <div>
               <h1 className="text-5xl font-bold mb-2">Queue Display</h1>
               <p className="text-2xl text-blue-200">{currentDepartment?.name}</p>
+              <p className="text-lg text-blue-300 mt-2">
+                {new Date().toLocaleString()}
+              </p>
             </div>
             <button
               onClick={() => setDisplayMode(false)}
@@ -279,19 +359,27 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
               <div className="mt-12">
                 <h3 className="text-2xl font-semibold mb-4 text-center">Next in Queue</h3>
                 <div className="grid grid-cols-5 gap-4">
-                  {waitingQueues.slice(0, 5).map((queue) => (
-                    <div
-                      key={queue.id}
-                      className="bg-white/20 rounded-xl p-4 text-center"
-                    >
-                      <div className="text-4xl font-bold text-white mb-2">
-                        #{queue.queueNumber}
+                  {waitingQueues.slice(0, 10).map((queue) => {
+                    const position = queuePositions[queue.patientId];
+                    return (
+                      <div
+                        key={queue.id}
+                        className="bg-white/20 rounded-xl p-4 text-center"
+                      >
+                        <div className="text-4xl font-bold text-white mb-2">
+                          #{queue.queueNumber}
+                        </div>
+                        <div className="text-sm text-blue-200 truncate mb-1">
+                          {queue.patientName}
+                        </div>
+                        {position && (
+                          <div className="text-xs text-blue-300">
+                            Est. wait: {position.estimatedWaitTime}m
+                          </div>
+                        )}
                       </div>
-                      <div className="text-sm text-blue-200 truncate">
-                        {queue.patientName}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -303,6 +391,17 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
 
   return (
     <div className="space-y-6">
+      {/* Patient Registration (for Receptionist/Admin) */}
+      {canRegisterPatients && (
+        <PatientRegistrationToQueue
+          institutionId={institutionId}
+          onPatientAdded={(queueEntry) => {
+            toast.success(`Patient #${queueEntry.queueNumber} added to queue`);
+            loadQueueData();
+          }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -318,9 +417,21 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
             Display Mode
           </button>
           <button
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+              showAnalytics
+                ? 'bg-purple-600 text-white hover:bg-purple-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <TrendingUp className="h-4 w-4" />
+            Analytics
+          </button>
+          <button
             onClick={() => {
               loadQueueData();
               loadQueueStats();
+              updateQueuePositions();
             }}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2 transition-colors"
           >
@@ -429,6 +540,13 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
         </div>
       </div>
 
+      {/* Analytics Dashboard */}
+      {showAnalytics && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <QueueAnalyticsDashboard institutionId={institutionId} />
+        </div>
+      )}
+
       {/* Queue Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Waiting Queue */}
@@ -463,13 +581,34 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
                   </div>
                   <p className="text-sm font-medium text-gray-900 mb-1">{queue.patientName}</p>
                   <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Wait: {formatWaitTime(queue.addedAt)}</span>
-                    <button
-                      onClick={() => handleSkip(queue.id)}
-                      className="text-orange-600 hover:text-orange-700"
-                    >
-                      Skip
-                    </button>
+                    <div>
+                      <div>Wait: {formatWaitTime(queue.addedAt)}</div>
+                      {queuePositions[queue.patientId] && (
+                        <div className="text-blue-600 font-medium">
+                          Position: {queuePositions[queue.patientId].position} • 
+                          Est: {queuePositions[queue.patientId].estimatedWaitTime}m
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedQueueForReorder(queue);
+                          setReorderPosition(1);
+                          setShowReorderModal(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-700"
+                        title="Reorder"
+                      >
+                        ↕
+                      </button>
+                      <button
+                        onClick={() => handleSkip(queue.id)}
+                        className="text-orange-600 hover:text-orange-700"
+                      >
+                        Skip
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -555,6 +694,55 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
           </div>
         </div>
       </div>
+
+      {/* Reorder Modal */}
+      {showReorderModal && selectedQueueForReorder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Reorder Queue</h3>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  Patient: <span className="font-medium">{selectedQueueForReorder.patientName}</span>
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Current Queue: <span className="font-medium">#{selectedQueueForReorder.queueNumber}</span>
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Position (1 = front of queue)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={waitingQueues.length}
+                  value={reorderPosition}
+                  onChange={(e) => setReorderPosition(parseInt(e.target.value) || 1)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowReorderModal(false);
+                    setSelectedQueueForReorder(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReorder}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Reorder
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

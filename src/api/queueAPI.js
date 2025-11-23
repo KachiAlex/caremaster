@@ -511,6 +511,183 @@ export const subscribeToQueue = (institutionId, department, callback, options = 
 };
 
 /**
+ * Transfer patient to another queue (referral system)
+ */
+export const transferPatientToQueue = async (queueId, targetDepartment, reason = '', transferredBy = null) => {
+  try {
+    const queueRef = doc(db, QUEUE_COLLECTION, queueId);
+    const queueSnap = await getDoc(queueRef);
+
+    if (!queueSnap.exists()) {
+      throw new Error('Queue entry not found');
+    }
+
+    const queueData = queueSnap.data();
+
+    // Complete current queue entry
+    await updateDoc(queueRef, {
+      status: QUEUE_STATUS.COMPLETED,
+      completedAt: serverTimestamp(),
+      transferredTo: targetDepartment,
+      transferReason: reason,
+      transferredBy: transferredBy || queueData.doctorId,
+      updatedAt: serverTimestamp()
+    });
+
+    // Add to new queue
+    const newQueueEntry = await addToQueue({
+      patientId: queueData.patientId,
+      patientName: queueData.patientName,
+      institutionId: queueData.institutionId,
+      department: targetDepartment,
+      priority: queueData.priority,
+      appointmentId: queueData.appointmentId,
+      doctorId: null, // Will be assigned by the new department
+      notes: `Transferred from ${queueData.department}. ${reason}`,
+      estimatedWaitTime: null
+    });
+
+    // Send notification
+    try {
+      await sendQueueNotification(queueData.patientId, {
+        type: 'queue_transferred',
+        queueNumber: newQueueEntry.queueNumber,
+        department: targetDepartment,
+        message: `You have been referred to ${targetDepartment}. Your new queue number is ${newQueueEntry.queueNumber}`
+      });
+    } catch (notifError) {
+      console.warn('Failed to send transfer notification:', notifError);
+    }
+
+    return {
+      success: true,
+      oldQueueId: queueId,
+      newQueueId: newQueueEntry.id,
+      newQueueNumber: newQueueEntry.queueNumber
+    };
+  } catch (error) {
+    console.error('Error transferring patient:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get queues visible to a specific staff role
+ */
+export const getQueuesByStaffRole = async (institutionId, staffRole, staffId = null) => {
+  try {
+    // Map staff roles to departments they can see
+    const roleDepartmentMap = {
+      'receptionist': [DEPARTMENT_TYPES.TRIAGE], // Can add to triage, see all
+      'nurse': [DEPARTMENT_TYPES.TRIAGE],
+      'doctor': [DEPARTMENT_TYPES.GP, DEPARTMENT_TYPES.SPECIALIST],
+      'lab-technician': [DEPARTMENT_TYPES.LAB],
+      'pharmacist': [DEPARTMENT_TYPES.PHARMACY],
+      'billing-staff': [DEPARTMENT_TYPES.BILLING],
+      'radiology-staff': [DEPARTMENT_TYPES.RADIOLOGY],
+      'admin': Object.values(DEPARTMENT_TYPES) // Admin sees all
+    };
+
+    const allowedDepartments = roleDepartmentMap[staffRole] || [];
+
+    if (allowedDepartments.length === 0) {
+      return [];
+    }
+
+    // Get queues for all allowed departments
+    const allQueues = [];
+    for (const department of allowedDepartments) {
+      const queues = await getQueueByDepartment(institutionId, department, {
+        status: null // Get all statuses
+      });
+      allQueues.push(...queues);
+    }
+
+    // Filter by assigned staff if provided
+    if (staffId) {
+      return allQueues.filter(q => q.doctorId === staffId || !q.doctorId);
+    }
+
+    return allQueues;
+  } catch (error) {
+    console.error('Error fetching queues by staff role:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reorder queue - Move patient to different position
+ */
+export const reorderQueue = async (queueId, newPosition, reason = '') => {
+  try {
+    const queueRef = doc(db, QUEUE_COLLECTION, queueId);
+    const queueSnap = await getDoc(queueRef);
+
+    if (!queueSnap.exists()) {
+      throw new Error('Queue entry not found');
+    }
+
+    const queueData = queueSnap.data();
+    
+    // Get all waiting queues for the department
+    const waitingQueues = await getQueueByDepartment(
+      queueData.institutionId,
+      queueData.department,
+      { status: QUEUE_STATUS.WAITING }
+    );
+
+    // Calculate new queue number based on position
+    const sortedQueues = waitingQueues
+      .filter(q => q.id !== queueId)
+      .sort((a, b) => a.queueNumber - b.queueNumber);
+
+    let newQueueNumber;
+    if (newPosition === 1) {
+      // Move to front
+      newQueueNumber = sortedQueues.length > 0 ? sortedQueues[0].queueNumber - 1 : queueData.queueNumber;
+    } else if (newPosition >= sortedQueues.length) {
+      // Move to end
+      newQueueNumber = sortedQueues.length > 0 
+        ? Math.max(...sortedQueues.map(q => q.queueNumber)) + 1 
+        : queueData.queueNumber;
+    } else {
+      // Insert at specific position
+      const targetQueue = sortedQueues[newPosition - 1];
+      newQueueNumber = targetQueue ? targetQueue.queueNumber : queueData.queueNumber;
+    }
+
+    // Update queue number
+    await updateDoc(queueRef, {
+      queueNumber: newQueueNumber,
+      reorderedAt: serverTimestamp(),
+      reorderReason: reason,
+      updatedAt: serverTimestamp()
+    });
+
+    // Send notification
+    try {
+      await sendQueueNotification(queueData.patientId, {
+        type: 'queue_position',
+        queueNumber: newQueueNumber,
+        department: queueData.department,
+        message: `Your queue position has been updated. New queue number: ${newQueueNumber}`
+      });
+    } catch (notifError) {
+      console.warn('Failed to send reorder notification:', notifError);
+    }
+
+    return {
+      success: true,
+      newQueueNumber,
+      newPosition
+    };
+  } catch (error) {
+    console.error('Error reordering queue:', error);
+    throw error;
+  }
+};
+
+/**
  * Send queue notification to patient
  */
 const sendQueueNotification = async (patientId, notificationData) => {
@@ -553,9 +730,36 @@ const sendQueueNotification = async (patientId, notificationData) => {
       }
     });
 
-    // TODO: Integrate with SMS/WhatsApp service
-    // await sendSMS(patientPhone, notificationMessage);
-    // await sendWhatsApp(patientPhone, notificationMessage);
+    // Send SMS/WhatsApp notification
+    try {
+      // Get patient phone number
+      const patientDoc = await getDoc(doc(db, 'patients', patientId)).catch(() => null);
+      const patientData = patientDoc?.exists() ? patientDoc.data() : null;
+      const patientPhone = patientData?.phone || patientData?.phoneNumber;
+      
+      if (patientPhone) {
+        // Get institution settings for SMS/WhatsApp
+        const { getSettings } = await import('./smsWhatsAppAPI');
+        const settings = await getSettings(institutionId || notificationData.institutionId);
+        
+        if (settings?.enabled && settings?.queueNotifications?.enabled) {
+          const { sendQueueNotification } = await import('./smsWhatsAppAPI');
+          await sendQueueNotification(
+            patientPhone,
+            {
+              queueNumber,
+              department,
+              estimatedWaitTime,
+              type
+            },
+            settings.queueNotifications.channel || 'sms'
+          );
+        }
+      }
+    } catch (smsError) {
+      console.warn('Could not send SMS/WhatsApp queue notification:', smsError);
+      // Don't throw - SMS failure shouldn't break queue notification
+    }
   } catch (error) {
     console.error('Error sending queue notification:', error);
     throw error;

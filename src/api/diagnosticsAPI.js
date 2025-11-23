@@ -408,12 +408,66 @@ export const updateDiagnosticTest = async (diagnosticId, updateData) => {
 
     const diagnosticRef = doc(db, DIAGNOSTICS_COLLECTION, diagnosticId);
     
+    // Get current diagnostic to check if status changed to completed
+    const diagnosticSnap = await getDoc(diagnosticRef);
+    const currentDiagnostic = diagnosticSnap.exists() ? diagnosticSnap.data() : null;
+    const wasCompleted = currentDiagnostic?.status === 'completed';
+    const isNowCompleted = updateData.status === 'completed';
+    
     const updateWithTimestamp = {
       ...updateData,
       updatedAt: serverTimestamp()
     };
 
     await updateDoc(diagnosticRef, updateWithTimestamp);
+
+    // Auto-generate bill when lab test is completed (Phase 1: Auto-billing integration)
+    if (!wasCompleted && isNowCompleted && currentDiagnostic?.institutionId) {
+      try {
+        const { generateBillFromLabTest } = await import('./autoBillingAPI');
+        await generateBillFromLabTest(diagnosticId, {
+          notes: `Auto-generated bill for completed lab test: ${currentDiagnostic.testType || currentDiagnostic.testName}`
+        });
+        logger.info('✅ Auto-bill generated for lab test:', diagnosticId);
+      } catch (billingError) {
+        logger.warn('Could not auto-generate bill for lab test:', billingError);
+        // Don't throw - diagnostic was updated successfully, billing can be done manually
+      }
+    }
+
+    // Send SMS/WhatsApp notification when lab results are ready
+    if (!wasCompleted && isNowCompleted && currentDiagnostic?.clientId) {
+      try {
+        const patientDoc = await getDoc(doc(db, 'patients', currentDiagnostic.clientId)).catch(() => null);
+        const patientData = patientDoc?.exists() ? patientDoc.data() : null;
+        const patientPhone = patientData?.phone || patientData?.phoneNumber;
+        
+        if (patientPhone && currentDiagnostic.institutionId) {
+          const { getSettings, sendLabResultNotification } = await import('./smsWhatsAppAPI');
+          const settings = await getSettings(currentDiagnostic.institutionId);
+          
+          if (settings?.enabled && settings?.labResults?.enabled) {
+            // Check if results are critical/abnormal
+            const results = updateData.results || currentDiagnostic.results;
+            const isCritical = results?.some(r => r.status === 'critical' || r.status === 'abnormal');
+            const isAbnormal = results?.some(r => r.status === 'abnormal');
+            
+            await sendLabResultNotification(
+              patientPhone,
+              {
+                testName: currentDiagnostic.testType || currentDiagnostic.testName,
+                status: isCritical ? 'critical' : (isAbnormal ? 'abnormal' : 'normal'),
+                critical: isCritical
+              },
+              settings.labResults.channel || 'sms'
+            );
+          }
+        }
+      } catch (smsError) {
+        logger.warn('Could not send lab result SMS/WhatsApp notification:', smsError);
+        // Don't throw - SMS failure shouldn't break lab result update
+      }
+    }
 
     logger.info('Diagnostic test updated successfully', { diagnosticId });
   } catch (error) {

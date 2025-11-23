@@ -823,5 +823,310 @@ export const analyticsAPI = {
       console.error('Error fetching all analytics:', error);
       throw error;
     }
+  },
+
+  // Get advanced financial analytics (Phase 3)
+  getAdvancedFinancialAnalytics: async (institutionId, dateRange = {}) => {
+    try {
+      const { startDate, endDate } = dateRange;
+      const start = startDate ? new Date(startDate) : new Date();
+      start.setMonth(start.getMonth() - 3);
+      const end = endDate ? new Date(endDate) : new Date();
+
+      // Get bills
+      let billsQuery = query(
+        collection(db, 'bills'),
+        where('institutionId', '==', institutionId),
+        where('createdAt', '>=', Timestamp.fromDate(start)),
+        where('createdAt', '<=', Timestamp.fromDate(end)),
+        orderBy('createdAt', 'desc')
+      );
+      const billsSnapshot = await getDocs(billsQuery);
+      const bills = billsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Calculate metrics
+      const totalRevenue = bills.reduce((sum, bill) => sum + (bill.total || 0), 0);
+      const paidRevenue = bills.filter(b => b.status === 'paid').reduce((sum, bill) => sum + (bill.total || 0), 0);
+      const pendingRevenue = bills.filter(b => b.status === 'pending').reduce((sum, bill) => sum + (bill.total || 0), 0);
+      const hmoCovered = bills.filter(b => b.hmoPlan).reduce((sum, bill) => sum + (bill.hmoCovered || 0), 0);
+      const coPay = bills.filter(b => b.hmoPlan).reduce((sum, bill) => sum + (bill.coPay || 0), 0);
+
+      // Revenue by service type
+      const revenueByService = {};
+      bills.forEach(bill => {
+        const serviceType = bill.serviceType || 'other';
+        revenueByService[serviceType] = (revenueByService[serviceType] || 0) + (bill.total || 0);
+      });
+
+      // Daily revenue trend
+      const dailyRevenue = {};
+      bills.forEach(bill => {
+        const date = bill.createdAt?.toDate();
+        if (date) {
+          const dateKey = date.toISOString().split('T')[0];
+          dailyRevenue[dateKey] = (dailyRevenue[dateKey] || 0) + (bill.total || 0);
+        }
+      });
+
+      return {
+        totalRevenue,
+        paidRevenue,
+        pendingRevenue,
+        hmoCovered,
+        coPay,
+        outstandingAmount: pendingRevenue,
+        revenueByService,
+        dailyRevenueTrend: Object.entries(dailyRevenue).map(([date, amount]) => ({ date, amount })),
+        totalBills: bills.length,
+        paidBills: bills.filter(b => b.status === 'paid').length,
+        pendingBills: bills.filter(b => b.status === 'pending').length
+      };
+    } catch (error) {
+      console.error('Error fetching advanced financial analytics:', error);
+      throw error;
+    }
+  },
+
+  // Get HMO claims analytics (Phase 3)
+  getHMOClaimsAnalytics: async (institutionId, dateRange = {}) => {
+    try {
+      const { startDate, endDate } = dateRange;
+      const start = startDate ? new Date(startDate) : new Date();
+      start.setMonth(start.getMonth() - 3);
+      const end = endDate ? new Date(endDate) : new Date();
+
+      // Get HMO claims
+      let claimsQuery = query(
+        collection(db, 'hmoClaims'),
+        where('institutionId', '==', institutionId),
+        where('createdAt', '>=', Timestamp.fromDate(start)),
+        where('createdAt', '<=', Timestamp.fromDate(end)),
+        orderBy('createdAt', 'desc')
+      );
+      const claimsSnapshot = await getDocs(claimsQuery);
+      const claims = claimsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Calculate metrics
+      const totalClaims = claims.length;
+      const totalClaimAmount = claims.reduce((sum, claim) => sum + (claim.amount || 0), 0);
+      const approvedAmount = claims.filter(c => c.status === 'approved').reduce((sum, claim) => sum + (claim.amount || 0), 0);
+      const pendingAmount = claims.filter(c => c.status === 'pending').reduce((sum, claim) => sum + (claim.amount || 0), 0);
+      const rejectedAmount = claims.filter(c => c.status === 'rejected').reduce((sum, claim) => sum + (claim.amount || 0), 0);
+
+      // Claims by status
+      const claimsByStatus = {
+        pending: claims.filter(c => c.status === 'pending').length,
+        approved: claims.filter(c => c.status === 'approved').length,
+        rejected: claims.filter(c => c.status === 'rejected').length,
+        paid: claims.filter(c => c.status === 'paid').length
+      };
+
+      // Claims by HMO plan
+      const claimsByPlan = {};
+      claims.forEach(claim => {
+        const planName = claim.hmoPlanName || 'Unknown';
+        claimsByPlan[planName] = (claimsByPlan[planName] || 0) + 1;
+      });
+
+      // Monthly trend
+      const monthlyClaims = {};
+      claims.forEach(claim => {
+        const date = claim.createdAt?.toDate();
+        if (date) {
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          monthlyClaims[monthKey] = (monthlyClaims[monthKey] || 0) + 1;
+        }
+      });
+
+      return {
+        totalClaims,
+        totalClaimAmount,
+        approvedAmount,
+        pendingAmount,
+        rejectedAmount,
+        claimsByStatus,
+        claimsByPlan,
+        monthlyTrend: Object.entries(monthlyClaims).map(([month, count]) => ({ month, count })),
+        approvalRate: totalClaims > 0 ? (claimsByStatus.approved / totalClaims) * 100 : 0
+      };
+    } catch (error) {
+      console.error('Error fetching HMO claims analytics:', error);
+      throw error;
+    }
+  },
+
+  // Get disease trend analytics (Phase 3)
+  getDiseaseTrendAnalytics: async (institutionId, dateRange = {}) => {
+    try {
+      const { startDate, endDate } = dateRange;
+      const start = startDate ? new Date(startDate) : new Date();
+      start.setMonth(start.getMonth() - 6);
+      const end = endDate ? new Date(endDate) : new Date();
+
+      // Get consultations with diagnoses
+      let consultationsQuery = query(
+        collection(db, 'consultations'),
+        where('institutionId', '==', institutionId),
+        where('createdAt', '>=', Timestamp.fromDate(start)),
+        where('createdAt', '<=', Timestamp.fromDate(end)),
+        orderBy('createdAt', 'desc')
+      );
+      const consultationsSnapshot = await getDocs(consultationsQuery);
+      const consultations = consultationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Get SOAP notes with ICD-10 codes
+      let soapNotesQuery = query(
+        collection(db, 'soapNotes'),
+        where('institutionId', '==', institutionId),
+        where('createdAt', '>=', Timestamp.fromDate(start)),
+        where('createdAt', '<=', Timestamp.fromDate(end)),
+        orderBy('createdAt', 'desc')
+      );
+      const soapNotesSnapshot = await getDocs(soapNotesQuery);
+      const soapNotes = soapNotesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Extract diagnoses
+      const diseaseCounts = {};
+      const diseaseByMonth = {};
+
+      // From consultations
+      consultations.forEach(consultation => {
+        const diagnosis = consultation.diagnosis || consultation.primaryDiagnosis;
+        if (diagnosis) {
+          const disease = diagnosis.toLowerCase();
+          diseaseCounts[disease] = (diseaseCounts[disease] || 0) + 1;
+
+          const date = consultation.createdAt?.toDate();
+          if (date) {
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (!diseaseByMonth[monthKey]) {
+              diseaseByMonth[monthKey] = {};
+            }
+            diseaseByMonth[monthKey][disease] = (diseaseByMonth[monthKey][disease] || 0) + 1;
+          }
+        }
+      });
+
+      // From SOAP notes
+      soapNotes.forEach(note => {
+        const diagnoses = note.assessment?.diagnoses || [];
+        diagnoses.forEach(diagnosis => {
+          const disease = (diagnosis.icd10Code || diagnosis.name || '').toLowerCase();
+          if (disease) {
+            diseaseCounts[disease] = (diseaseCounts[disease] || 0) + 1;
+
+            const date = note.createdAt?.toDate();
+            if (date) {
+              const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+              if (!diseaseByMonth[monthKey]) {
+                diseaseByMonth[monthKey] = {};
+              }
+              diseaseByMonth[monthKey][disease] = (diseaseByMonth[monthKey][disease] || 0) + 1;
+            }
+          }
+        });
+      });
+
+      // Top diseases
+      const topDiseases = Object.entries(diseaseCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([disease, count]) => ({ disease, count }));
+
+      // Monthly trend for top diseases
+      const monthlyTrend = Object.entries(diseaseByMonth).map(([month, diseases]) => ({
+        month,
+        diseases: Object.entries(diseases)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([disease, count]) => ({ disease, count }))
+      }));
+
+      return {
+        totalDiagnoses: Object.values(diseaseCounts).reduce((sum, count) => sum + count, 0),
+        uniqueDiseases: Object.keys(diseaseCounts).length,
+        topDiseases,
+        monthlyTrend,
+        diseaseCounts
+      };
+    } catch (error) {
+      console.error('Error fetching disease trend analytics:', error);
+      throw error;
+    }
+  },
+
+  // Get patient statistics (Phase 3)
+  getPatientStatistics: async (institutionId, dateRange = {}) => {
+    try {
+      const { startDate, endDate } = dateRange;
+      const start = startDate ? new Date(startDate) : new Date();
+      start.setMonth(start.getMonth() - 12);
+      const end = endDate ? new Date(endDate) : new Date();
+
+      // Get patients
+      let patientsQuery = query(
+        collection(db, 'patients'),
+        where('institutionId', '==', institutionId),
+        orderBy('createdAt', 'desc')
+      );
+      const patientsSnapshot = await getDocs(patientsQuery);
+      const patients = patientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Get consultations
+      let consultationsQuery = query(
+        collection(db, 'consultations'),
+        where('institutionId', '==', institutionId),
+        where('createdAt', '>=', Timestamp.fromDate(start)),
+        where('createdAt', '<=', Timestamp.fromDate(end)),
+        orderBy('createdAt', 'desc')
+      );
+      const consultationsSnapshot = await getDocs(consultationsQuery);
+      const consultations = consultationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Calculate visit counts per patient
+      const patientVisits = {};
+      consultations.forEach(consultation => {
+        const patientId = consultation.patientId;
+        patientVisits[patientId] = (patientVisits[patientId] || 0) + 1;
+      });
+
+      // Repeat patients (visited more than once)
+      const repeatPatients = Object.entries(patientVisits).filter(([, count]) => count > 1).length;
+      const newPatients = Object.entries(patientVisits).filter(([, count]) => count === 1).length;
+
+      // Monthly patient registration
+      const monthlyRegistrations = {};
+      patients.forEach(patient => {
+        const date = patient.createdAt?.toDate();
+        if (date) {
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          monthlyRegistrations[monthKey] = (monthlyRegistrations[monthKey] || 0) + 1;
+        }
+      });
+
+      // Monthly visits
+      const monthlyVisits = {};
+      consultations.forEach(consultation => {
+        const date = consultation.createdAt?.toDate();
+        if (date) {
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          monthlyVisits[monthKey] = (monthlyVisits[monthKey] || 0) + 1;
+        }
+      });
+
+      return {
+        totalPatients: patients.length,
+        totalVisits: consultations.length,
+        repeatPatients,
+        newPatients,
+        averageVisitsPerPatient: patients.length > 0 ? consultations.length / patients.length : 0,
+        repeatRate: consultations.length > 0 ? (repeatPatients / consultations.length) * 100 : 0,
+        monthlyRegistrations: Object.entries(monthlyRegistrations).map(([month, count]) => ({ month, count })),
+        monthlyVisits: Object.entries(monthlyVisits).map(([month, count]) => ({ month, count }))
+      };
+    } catch (error) {
+      console.error('Error fetching patient statistics:', error);
+      throw error;
+    }
   }
 };
