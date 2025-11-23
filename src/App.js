@@ -70,6 +70,7 @@ const RouteOptimization = lazy(() => import('./pages/RouteOptimization'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
 const WebRTCTest = lazy(() => import('./pages/WebRTCTest'));
 const PatientDashboard = lazy(() => import('./pages/PatientDashboard'));
+const PatientAccount = lazy(() => import('./pages/PatientAccount'));
 const InstitutionLabTechnicianDashboard = lazy(() => import('./pages/InstitutionLabTechnicianDashboard'));
 import EnhancedMessagingInterface from './components/EnhancedMessagingInterface';
 import MobileOptimization from './components/MobileOptimization';
@@ -452,6 +453,18 @@ function App() {
       <Route 
         path="/patient/:patientId/dashboard" 
         element={<PatientDashboard />} 
+      />
+      
+      {/* Patient Account - Manage patient account information */}
+      <Route 
+        path="/patient/:patientId/account" 
+        element={<PatientAccount />} 
+      />
+      
+      {/* Patient Account without ID - uses logged-in user */}
+      <Route 
+        path="/patient/account" 
+        element={<PatientAccount />} 
       />
       
       {/* Legacy dashboard route - redirect to institution-admin */}

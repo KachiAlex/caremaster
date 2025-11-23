@@ -155,50 +155,78 @@ const InstitutionLogin = () => {
     setError('');
 
     try {
-      // First, try custom authentication for caregivers created by admin
-      console.log('🔍 Attempting custom auth for:', formData.email);
+      // Check if user exists and determine auth method
+      console.log('🔍 Checking user for:', formData.email);
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('email', '==', formData.email));
       const querySnapshot = await getDocs(q);
       
       console.log('📊 Found', querySnapshot.size, 'user(s) with this email');
       
-      let customAuthUser = null;
+      let userDocData = null;
+      let userDocId = null;
       querySnapshot.forEach((userDoc) => {
         const data = userDoc.data();
-        console.log('👤 Checking user:', userDoc.id, {
-          hasPassword: !!data.password,
-          institutionId: data.institutionId,
-          targetInstitution: institutionId,
-          userType: data.userType || data.type
-        });
-        
-        // Check if password matches and belongs to this institution
-        const passwordMatches = data.password === formData.password;
-        const institutionMatches = data.institutionId === institutionId;
-        
-        console.log('🔐 Password check:', {
-          passwordMatches,
-          institutionMatches,
-          storedPassword: data.password ? '***' : 'undefined',
-          inputPassword: formData.password ? '***' : 'undefined',
-          storedInstitutionId: data.institutionId,
-          targetInstitutionId: institutionId,
-          userType: data.userType || data.type,
-          isAdmin: data.userType === 'admin' || data.type === 'admin'
-        });
-        
-        if (passwordMatches && institutionMatches) {
-          customAuthUser = { uid: userDoc.id, ...data };
-          console.log('✅ Custom auth successful!');
-        } else {
-          if (!passwordMatches) console.log('❌ Password mismatch');
-          if (!institutionMatches) console.log('❌ Institution mismatch');
+        // Check if belongs to this institution
+        if (data.institutionId === institutionId) {
+          userDocData = data;
+          userDocId = userDoc.id;
         }
       });
       
+      if (!userDocData) {
+        toast.error('User not found for this institution');
+        setSubmitting(false);
+        return;
+      }
+      
+      const userRole = userDocData.role || userDocData.type || userDocData.userType;
+      const isAdmin = userRole === 'admin' || 
+                     userRole === 'institutionAdmin' ||
+                     userDocData.userType === 'admin' || 
+                     userDocData.type === 'admin' ||
+                     userDocData.isAdmin === true;
+      
+      console.log('👤 User check:', {
+        userId: userDocId,
+        hasPassword: !!userDocData.password,
+        institutionId: userDocData.institutionId,
+        targetInstitution: institutionId,
+        userType: userDocData.userType || userDocData.type,
+        isAdmin: isAdmin
+      });
+      
+      // For admins, use Firebase Auth (they don't have password in Firestore)
+      // For other users, try custom auth first (caregivers created by admin)
+      let customAuthUser = null;
+      let shouldUseFirebaseAuth = isAdmin;
+      
+      if (!shouldUseFirebaseAuth && userDocData.password) {
+        // Try custom authentication for non-admin users with password in Firestore
+        const passwordMatches = userDocData.password === formData.password;
+        const institutionMatches = userDocData.institutionId === institutionId;
+        
+        console.log('🔐 Custom auth check:', {
+          passwordMatches,
+          institutionMatches,
+          storedPassword: userDocData.password ? '***' : 'undefined',
+          inputPassword: formData.password ? '***' : 'undefined'
+        });
+        
+        if (passwordMatches && institutionMatches) {
+          customAuthUser = { uid: userDocId, ...userDocData };
+          console.log('✅ Custom auth successful!');
+        } else {
+          if (!passwordMatches) console.log('❌ Password mismatch - will try Firebase Auth');
+          if (!institutionMatches) console.log('❌ Institution mismatch');
+        }
+      } else if (isAdmin) {
+        console.log('🔐 Admin user detected - will use Firebase Auth');
+        shouldUseFirebaseAuth = true;
+      }
+      
       // If custom auth successful, validate role and redirect
-      if (customAuthUser) {
+      if (customAuthUser && !shouldUseFirebaseAuth) {
         // Check multiple role fields for flexibility
         const userRole = customAuthUser.role || customAuthUser.type || customAuthUser.userType;
         const isAdmin = userRole === 'admin' || 
@@ -323,7 +351,8 @@ const InstitutionLogin = () => {
         }
       }
 
-      // Standard Firebase Auth login
+      // For admins or if custom auth failed, use standard Firebase Auth login
+      console.log('🔐 Using Firebase Auth login (admin or custom auth not available)');
       const userCredential = await signInWithEmailAndPassword(
         auth,
         formData.email,

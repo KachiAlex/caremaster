@@ -205,7 +205,7 @@ const TenantPartners = () => {
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-300">{card.step}</p>
                 <h3 className="mt-2 text-xl font-semibold text-slate-50">{card.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-300">{card.body}</p>
-              </div>
+            </div>
             ))}
           </div>
         </section>
@@ -219,12 +219,12 @@ const TenantPartners = () => {
             const Icon = card.icon;
             return (
               <div key={card.title} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-black/30">
-                <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
                   <Icon className="h-5 w-5 text-blue-300" />
                   <h3 className="text-lg font-semibold text-slate-50">{card.title}</h3>
-                </div>
+            </div>
                 <p className="mt-3 text-sm leading-relaxed text-slate-300">{card.body}</p>
-              </div>
+          </div>
             );
           })}
         </section>

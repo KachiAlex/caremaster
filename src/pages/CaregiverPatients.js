@@ -152,7 +152,7 @@ const CaregiverClients = () => {
           <div className="flex items-center space-x-4">
             <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
               <Plus className="h-5 w-5 mr-2" />
-              Add Client
+              Add Patient
             </button>
           </div>
         </div>

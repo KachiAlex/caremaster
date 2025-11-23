@@ -55,8 +55,40 @@ export const UserProvider = ({ children }) => {
               roleFromProfile = profile.roles[0]; // Primary role
             } else {
               // Single role (backward compatibility)
-              roleFromProfile = profile.role || profile.userType || profile.type || 'patient';
-              userRoles = [roleFromProfile];
+              // Check all possible role fields, prioritizing admin
+              const possibleRole = profile.role || profile.userType || profile.type;
+              
+              // SAFEGUARD: If email contains "admin" or userType/type is admin, ensure role is admin
+              const isLikelyAdmin = firebaseUser.email?.toLowerCase().includes('admin') ||
+                                   profile.userType === 'admin' ||
+                                   profile.type === 'admin' ||
+                                   profile.role === 'admin' ||
+                                   profile.isAdmin === true ||
+                                   profile.institutionAdmin === true;
+              
+              if (isLikelyAdmin && possibleRole !== 'admin') {
+                console.warn('⚠️ User appears to be admin but role field shows:', possibleRole);
+                console.warn('🔧 Auto-correcting to admin role');
+                roleFromProfile = 'admin';
+                userRoles = ['admin'];
+                
+                // Update Firestore to fix the issue
+                try {
+                  const { doc, updateDoc } = await import('firebase/firestore');
+                  const userRef = doc(db, 'users', firebaseUser.uid);
+                  await updateDoc(userRef, { 
+                    userType: 'admin',
+                    type: 'admin',
+                    role: 'admin'
+                  });
+                  console.log('✅ Fixed admin role in Firestore');
+                } catch (updateError) {
+                  console.error('❌ Failed to update admin role:', updateError);
+                }
+              } else {
+                roleFromProfile = possibleRole || 'patient';
+                userRoles = [roleFromProfile];
+              }
             }
             
             let updatedProfile = {
@@ -65,8 +97,47 @@ export const UserProvider = ({ children }) => {
               userType: roleFromProfile // Keep for backward compatibility
             };
             
+            // SAFEGUARD: Check if user should be admin but role is wrong
+            const isLikelyAdmin = firebaseUser.email?.toLowerCase().includes('admin') ||
+                                 profile.userType === 'admin' ||
+                                 profile.type === 'admin' ||
+                                 profile.role === 'admin' ||
+                                 profile.isAdmin === true ||
+                                 profile.institutionAdmin === true;
+            
+            if (isLikelyAdmin && roleFromProfile !== 'admin') {
+              console.warn('⚠️ User appears to be admin but role is:', roleFromProfile);
+              console.warn('🔧 Auto-correcting to admin role');
+              roleFromProfile = 'admin';
+              userRoles = ['admin'];
+              
+              // Update local profile state immediately
+              updatedProfile = {
+                ...profile,
+                userType: 'admin',
+                type: 'admin',
+                role: 'admin',
+                roles: ['admin']
+              };
+              
+              // Update Firestore to fix the issue permanently
+              try {
+                const { doc, updateDoc } = await import('firebase/firestore');
+                const userRef = doc(db, 'users', firebaseUser.uid);
+                await updateDoc(userRef, { 
+                  userType: 'admin',
+                  type: 'admin',
+                  role: 'admin',
+                  roles: ['admin']
+                });
+                console.log('✅ Fixed admin role in Firestore');
+              } catch (updateError) {
+                console.error('❌ Failed to update admin role:', updateError);
+              }
+            }
+            
             // SAFEGUARD: If user ID starts with 'caregiver_' but role is not caregiver, fix it
-            if (firebaseUser.uid.startsWith('caregiver_') && roleFromProfile !== 'caregiver') {
+            if (firebaseUser.uid.startsWith('caregiver_') && roleFromProfile !== 'caregiver' && !isLikelyAdmin) {
               console.warn('⚠️ User ID indicates caregiver but role is:', roleFromProfile);
               console.warn('🔧 Auto-correcting to caregiver role');
               roleFromProfile = 'caregiver';

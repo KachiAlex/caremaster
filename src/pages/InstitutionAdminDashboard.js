@@ -104,6 +104,7 @@ import { getAllDiagnostics, updateDiagnosticTest } from '../api/diagnosticsAPI';
 import { trackAdminEvent } from '../services/analyticsService';
 import fileStorageService from '../services/fileStorageService';
 import CreatePatientModal from '../components/CreatePatientModal';
+import QueueManagementDashboard from '../components/QueueManagementDashboard';
 
 const formatTimeForDisplay = (time) => {
   if (!time) return '';
@@ -139,19 +140,47 @@ const StatCard = ({ icon: Icon, label, value, accent }) => (
 );
 
 const InstitutionAdminDashboard = () => {
-  const { institutionData, userProfile } = useUser();
+  const [searchParams] = useSearchParams();
+  const { user, institutionData, userProfile, institutionId } = useUser();
   const navigate = useNavigate();
+  
+  // Get institution ID from URL params or user context
+  const urlInstitutionId = searchParams.get('institution');
+  const effectiveInstitutionId = urlInstitutionId || institutionId || userProfile?.institutionId;
   const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
 
   const displayName =
     userProfile?.name || userProfile?.displayName || userProfile?.email || 'Institution admin';
-  
+
   const [recentActivity, setRecentActivity] = useState([]);
   const [topCaregivers, setTopCaregivers] = useState([]);
   const [systemAlerts, setSystemAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Dashboard stats state
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    clients: 0,
+    caregivers: 0,
+    doctors: 0,
+    nurses: 0,
+    pharmacists: 0,
+    activeAppointments: 0,
+    activeAssignments: 0,
+    pendingAssignments: 0,
+    completedAssignments: 0,
+    emergencyAlerts: 0,
+    medicationReminders: 0,
+    systemHealth: 'Good',
+    satisfaction: 0,
+    responseTime: 0,
+    uptime: 99
+  });
+  
+  // Local institution data state (can override context if needed)
+  const [localInstitutionData, setLocalInstitutionData] = useState(null);
 
   // Client and Caregiver Management States
   const [clients, setClients] = useState([]);
@@ -325,7 +354,7 @@ const InstitutionAdminDashboard = () => {
       const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
       if (instId) {
         const data = await institutionAPI.getInstitution(instId);
-        setInstitutionData(data);
+        setLocalInstitutionData(data);
       }
     } catch (error) {
       console.error('Error loading institution data:', error);
@@ -634,13 +663,13 @@ const InstitutionAdminDashboard = () => {
       console.log('✅ Client created with ID:', clientId);
       
       setShowAddClient(false);
-      toast.success('Client added successfully');
+      toast.success('Patient added successfully');
       
       // Reload dashboard data to get the newly created client
       await loadDashboardData();
     } catch (error) {
       console.error('Error adding client:', error);
-      toast.error(error.message || 'Failed to add client');
+      toast.error(error.message || 'Failed to add patient');
     }
   };
 
@@ -1757,7 +1786,7 @@ const InstitutionAdminDashboard = () => {
 
   // Client Action Handlers
   const handleArchiveClient = async (clientId) => {
-    if (!window.confirm('Are you sure you want to archive this client? You can restore them later from the Archived Clients section.')) {
+    if (!window.confirm('Are you sure you want to archive this patient? You can restore them later from the Archived Patients section.')) {
       return;
     }
     try {
@@ -1768,7 +1797,7 @@ const InstitutionAdminDashboard = () => {
         archivedAt: new Date().toISOString(),
         archivedBy
       });
-      toast.success('Client archived successfully');
+      toast.success('Patient archived successfully');
       await trackAdminEvent('client_archived', {
         clientId,
         institutionId: instId,
@@ -1778,12 +1807,12 @@ const InstitutionAdminDashboard = () => {
       setShowClientDetails(false);
     } catch (error) {
       console.error('Error archiving client:', error);
-      toast.error('Failed to archive client');
+      toast.error('Failed to archive patient');
     }
   };
 
   const handleUnarchiveClient = async (clientId) => {
-    if (!window.confirm('Are you sure you want to restore this client? They will be moved back to the active clients list.')) {
+    if (!window.confirm('Are you sure you want to restore this patient? They will be moved back to the active patients list.')) {
       return;
     }
     try {
@@ -1793,7 +1822,7 @@ const InstitutionAdminDashboard = () => {
         archivedAt: null,
         archivedBy: null
       });
-      toast.success('Client restored successfully');
+      toast.success('Patient restored successfully');
       await trackAdminEvent('client_restored', {
         clientId,
         institutionId: instId,
@@ -1803,7 +1832,7 @@ const InstitutionAdminDashboard = () => {
       setShowClientDetails(false);
     } catch (error) {
       console.error('Error restoring client:', error);
-      toast.error('Failed to restore client');
+      toast.error('Failed to restore patient');
     }
   };
 
@@ -2692,78 +2721,34 @@ const InstitutionAdminDashboard = () => {
       {/* Top halo */}
       <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top,_#22c55e33,_transparent_60%),radial-gradient(circle_at_30%_20%,_#0ea5e933,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e533,_transparent_55%)]" />
 
-      {/* Fixed Register Patient Button - Always Visible - Multiple Locations */}
-      {/* Top Right Fixed Button - Highest Priority */}
-      <div 
-        className="fixed top-4 right-4 z-[9999] pointer-events-auto"
-        style={{ zIndex: 9999, position: 'fixed', top: '1rem', right: '1rem' }}
-      >
-        <button
-          onClick={() => setShowCreatePatientModal(true)}
-          className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-2xl shadow-blue-500/50 transition-all font-bold text-base"
-          style={{ 
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: '#2563eb',
-            color: 'white',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            border: 'none',
-            boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.5)'
-          }}
-        >
-          <Heart className="h-6 w-6 mr-2" style={{ display: 'inline-block' }} />
-          Register Patient
-        </button>
-      </div>
-
-      <main className="relative z-10 mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-        {/* Header */}
-        <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-lg shadow-blue-500/40">
-              <Building2 className="h-5 w-5 text-slate-950" />
-            </div>
-            <div>
+      <div className="flex min-h-screen">
+        {/* Sidebar */}
+        <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
+          {/* Sidebar Header */}
+          <div className="p-4 border-b border-slate-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Building2 className="h-5 w-5 text-blue-400" />
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
                 Institution admin
               </p>
-              <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">
-                {institutionData?.name || 'UltimateCare institution workspace'}
-              </h1>
             </div>
+            <h2 className="text-sm font-semibold text-slate-50">
+              {(localInstitutionData?.name || institutionData?.name || 'UltimateCare institution workspace')}
+            </h2>
           </div>
-          {/* Register Patient Button - Always Visible in Header */}
-          <div className="flex-shrink-0">
-            <button
-              onClick={() => setShowCreatePatientModal(true)}
-              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-bold text-base"
-              style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                backgroundColor: '#2563eb',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              <Heart className="h-6 w-6 mr-2" />
-              Register Patient
-            </button>
-          </div>
-        </section>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-          {[
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+            {[
             { id: 'dashboard', name: 'Dashboard', icon: BarChart3, color: 'blue' },
-            { id: 'clients', name: 'Clients', icon: Heart, color: 'green' },
-            { id: 'archived-clients', name: 'Archived Clients', icon: Package, color: 'yellow' },
+            { id: 'clients', name: 'Patients', icon: Heart, color: 'green' },
+            { id: 'archived-clients', name: 'Archived Patients', icon: Package, color: 'yellow' },
             { id: 'caregivers', name: 'Caregivers', icon: UserCheck, color: 'purple' },
             { id: 'inactive-caregivers', name: 'Inactive Caregivers', icon: UserCheck, color: 'red' },
             { id: 'pharmacists', name: 'Pharmacists', icon: Pill, color: 'indigo' },
             { id: 'assignments', name: 'Assignments', icon: Users, color: 'orange' },
             { id: 'scheduling', name: 'Scheduling', icon: Calendar, color: 'blue' },
+            { id: 'queue', name: 'Queue Management', icon: Clock, color: 'cyan' },
             { id: 'wages', name: 'Wage Management', icon: DollarSign, color: 'green' },
             { id: 'billing-plans', name: 'Billing Plans', icon: DollarSign, color: 'purple' },
             { id: 'payment-gateway', name: 'Payment Gateway', icon: DollarSign, color: 'indigo' },
@@ -2783,8 +2768,8 @@ const InstitutionAdminDashboard = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab.id
-                    ? `bg-${tab.color}-50 text-${tab.color}-700 border-l-4 border-${tab.color}-500`
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? `bg-blue-600 text-white border-l-4 border-blue-400`
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
                 <Icon className="h-5 w-5 mr-3 shrink-0" />
@@ -2792,19 +2777,97 @@ const InstitutionAdminDashboard = () => {
               </button>
             );
           })}
-        </nav>
+          </nav>
 
-        {/* Sidebar Footer */}
-        <div className="p-3 border-t border-gray-200 space-y-2">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogOut className="h-5 w-5 mr-3" />
-            Logout
-          </button>
-        </div>
-      </main>
+          {/* Sidebar Footer */}
+          <div className="p-3 border-t border-slate-800 space-y-2">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center px-3 py-2 text-sm text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+            >
+              <LogOut className="h-5 w-5 mr-3" />
+              Logout
+            </button>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 relative z-10 overflow-y-auto">
+          <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+            {/* Header */}
+            <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
+                  Dashboard
+                </h1>
+                <p className="mt-1 text-sm text-slate-400">
+                  Manage your institution operations
+                </p>
+              </div>
+              {/* Register Patient Button - Always Visible in Header */}
+              <div className="flex-shrink-0">
+                <button
+                  onClick={() => setShowCreatePatientModal(true)}
+                  className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-bold text-base"
+                >
+                  <Heart className="h-6 w-6 mr-2" />
+                  Register Patient
+                </button>
+              </div>
+            </section>
+
+            {/* Quick Actions - Register Patient and More */}
+            {activeTab === 'dashboard' && (
+              <section 
+                className="rounded-3xl border-2 border-blue-500/50 bg-slate-950/90 p-6 shadow-2xl shadow-blue-500/20 mt-6"
+              >
+                <div className="mb-6">
+                  <h2 className="text-base font-semibold text-slate-50 sm:text-lg">Quick Actions</h2>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <button
+                    onClick={() => setShowCreatePatientModal(true)}
+                    className="flex flex-col items-center gap-3 rounded-2xl border-2 border-blue-500/40 bg-blue-600/20 px-6 py-6 text-center hover:border-blue-500/60 hover:bg-blue-600/30 transition-all group shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg group-hover:shadow-blue-500/50 transition-shadow">
+                      <Heart className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-50">Register Patient</span>
+                    <span className="text-xs text-slate-300">Create new patient record</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/institution-admin/users')}
+                    className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-blue-400/50 hover:bg-slate-900 transition-colors group"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 shadow-lg">
+                      <UserPlus className="h-5 w-5 text-slate-950" />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-50">Manage Users</span>
+                    <span className="text-[10px] text-slate-400">View all users</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/institution-admin/hospital-operations')}
+                    className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-blue-400/50 hover:bg-slate-900 transition-colors group"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-lg">
+                      <Bed className="h-5 w-5 text-slate-950" />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-50">Hospital Ops</span>
+                    <span className="text-[10px] text-slate-400">Bed management</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/institution-admin/staff-management')}
+                    className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-amber-400/50 hover:bg-slate-900 transition-colors group"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg">
+                      <UserCog className="h-5 w-5 text-slate-950" />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-50">Staff Management</span>
+                    <span className="text-[10px] text-slate-400">Team & shifts</span>
+                  </button>
+                </div>
+              </section>
+            )}
 
       {/* OLD LAYOUT - DISABLED */}
       {false && (
@@ -2815,8 +2878,8 @@ const InstitutionAdminDashboard = () => {
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold text-gray-900 truncate">
                 {activeTab === 'dashboard' && 'Dashboard Overview'}
-                {activeTab === 'clients' && 'Client Management'}
-                {activeTab === 'archived-clients' && 'Archived Clients'}
+                {activeTab === 'clients' && 'Patient Management'}
+                {activeTab === 'archived-clients' && 'Archived Patients'}
                 {activeTab === 'caregivers' && 'Caregiver Management'}
                 {activeTab === 'inactive-caregivers' && 'Inactive Caregivers Report'}
                 {activeTab === 'pharmacists' && 'Pharmacist Management'}
@@ -2838,7 +2901,7 @@ const InstitutionAdminDashboard = () => {
             </div>
             {/* Register Patient Button - Always Visible in Content Header - PROMINENT */}
             <div className="ml-4 flex-shrink-0" style={{ display: 'flex', alignItems: 'center' }}>
-              <button
+                  <button
                 onClick={() => setShowCreatePatientModal(true)}
                 className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-bold text-base"
                 style={{ 
@@ -2865,7 +2928,7 @@ const InstitutionAdminDashboard = () => {
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-200">
               <span className="text-sm font-medium">
                 {displayName.charAt(0).toUpperCase()}
-              </span>
+                      </span>
             </div>
             <div className="min-w-0">
               <p className="truncate text-xs font-medium text-slate-100">{displayName}</p>
@@ -2888,35 +2951,35 @@ const InstitutionAdminDashboard = () => {
               >
                 <Heart className="h-5 w-5 mr-2" />
                 Register Patient
-              </button>
+                  </button>
             </div>
           </div>
-        </div>
+                </div>
 
         {/* Stats row */}
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             icon={Users}
             label="Active patients"
-            value={institutionData?.metrics?.activePatients ?? '—'}
+            value={(localInstitutionData?.metrics?.activePatients || institutionData?.metrics?.activePatients) ?? '—'}
             accent="from-emerald-400 to-emerald-300"
           />
           <StatCard
             icon={Stethoscope}
             label="Care team members"
-            value={institutionData?.metrics?.careTeam ?? '—'}
+            value={(localInstitutionData?.metrics?.careTeam || institutionData?.metrics?.careTeam) ?? '—'}
             accent="from-sky-400 to-sky-300"
           />
           <StatCard
             icon={Calendar}
             label="Today's visits"
-            value={institutionData?.metrics?.todaysVisits ?? '—'}
+            value={(localInstitutionData?.metrics?.todaysVisits || institutionData?.metrics?.todaysVisits) ?? '—'}
             accent="from-indigo-400 to-indigo-300"
           />
           <StatCard
             icon={Activity}
             label="Open escalations"
-            value={institutionData?.metrics?.openEscalations ?? '—'}
+            value={(localInstitutionData?.metrics?.openEscalations || institutionData?.metrics?.openEscalations) ?? '—'}
             accent="from-rose-400 to-orange-300"
           />
         </section>
@@ -2932,17 +2995,8 @@ const InstitutionAdminDashboard = () => {
             position: 'relative'
           }}
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6">
             <h2 className="text-base font-semibold text-slate-50 sm:text-lg">Quick Actions</h2>
-            {/* Additional Register Patient Button in Quick Actions Header */}
-            <button
-              onClick={() => setShowCreatePatientModal(true)}
-              className="flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-bold text-sm"
-              style={{ display: 'flex', alignItems: 'center', backgroundColor: '#2563eb', color: 'white' }}
-            >
-              <Heart className="h-5 w-5 mr-2" />
-              Register Patient
-            </button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <button
@@ -3009,7 +3063,7 @@ const InstitutionAdminDashboard = () => {
                 </div>
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                <button 
+                <button
                   onClick={() => navigate('/institution-admin/hospital-operations')}
                   className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-blue-400/60 hover:bg-slate-900 transition-colors"
                 >
@@ -3089,7 +3143,7 @@ const InstitutionAdminDashboard = () => {
             <h2 className="text-sm font-semibold text-slate-50 sm:text-base">Quick Actions</h2>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <button
+                <button
               onClick={() => setShowCreatePatientModal(true)}
               className="flex flex-col items-center gap-2 rounded-2xl border border-blue-500/30 bg-blue-600/10 px-4 py-4 text-center hover:border-blue-500/50 hover:bg-blue-600/20 transition-colors group"
             >
@@ -3098,7 +3152,7 @@ const InstitutionAdminDashboard = () => {
               </div>
               <span className="text-xs font-semibold text-slate-50">Register Patient</span>
               <span className="text-[10px] text-slate-400">Create new patient record</span>
-            </button>
+                </button>
             <button
               onClick={() => navigate('/institution-admin/users')}
               className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-4 py-4 text-center hover:border-blue-400/50 hover:bg-slate-900 transition-colors group"
@@ -3115,7 +3169,7 @@ const InstitutionAdminDashboard = () => {
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-lg">
                 <Bed className="h-5 w-5 text-slate-950" />
-              </div>
+            </div>
               <span className="text-xs font-semibold text-slate-50">Hospital Ops</span>
               <span className="text-[10px] text-slate-400">Bed management</span>
                 </button>
@@ -3125,42 +3179,17 @@ const InstitutionAdminDashboard = () => {
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg">
                 <UserCog className="h-5 w-5 text-slate-950" />
-              </div>
+          </div>
               <span className="text-xs font-semibold text-slate-50">Staff Management</span>
               <span className="text-[10px] text-slate-400">Team & shifts</span>
                 </button>
-              </div>
+        </div>
         </section>
       </div>
       )}
 
-      <div>
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Quick Actions */}
-        {activeTab === 'dashboard' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={index}
-                  onClick={action.action}
-                  className={`${action.color} text-white p-4 rounded-lg transition-colors flex flex-col items-center space-y-2`}
-                >
-                  <Icon className="h-6 w-6" />
-                  <span className="text-sm font-medium text-center">{action.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Dashboard Tab Content */}
-      {activeTab === 'dashboard' && (
+            {/* Dashboard Tab Content */}
+            {activeTab === 'dashboard' && (
         <>
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -3184,14 +3213,14 @@ const InstitutionAdminDashboard = () => {
               </div>
             </div>
 
-            {/* Total Clients Card */}
+            {/* Total Patients Card */}
             <div 
               className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-md hover:border-green-300 transition-all duration-200"
               onClick={() => setShowClientsModal(true)}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Clients</p>
+                  <p className="text-sm font-medium text-gray-600">Total Patients</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.clients.toLocaleString()}</p>
                 </div>
                 <div className="p-3 bg-green-100 rounded-full">
@@ -3413,25 +3442,11 @@ const InstitutionAdminDashboard = () => {
         </>
       )}
 
-      {/* Clients Tab Content */}
-      {activeTab === 'clients' && (
+            {/* Patients Tab Content */}
+            {activeTab === 'clients' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">Clients</h2>
-            <button
-              onClick={() => setShowCreatePatientModal(true)}
-              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-colors font-bold text-base"
-              style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                backgroundColor: '#2563eb',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              <Heart className="h-6 w-6 mr-2" />
-              Register Patient
-            </button>
+            <h2 className="text-2xl font-bold text-gray-900">Patients</h2>
           </div>
           
           <div className="bg-white rounded-lg shadow-sm border">
@@ -3558,15 +3573,15 @@ const InstitutionAdminDashboard = () => {
         </div>
       )}
 
-      {/* Archived Clients Tab Content */}
-      {activeTab === 'archived-clients' && (
+            {/* Archived Clients Tab Content */}
+            {activeTab === 'archived-clients' && (
         <div className="space-y-6">
           <ArchivedClients institutionId={effectiveInstitutionId} />
         </div>
       )}
 
-      {/* Caregivers Tab Content */}
-      {activeTab === 'caregivers' && (
+            {/* Caregivers Tab Content */}
+            {activeTab === 'caregivers' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900">Caregivers</h2>
@@ -3716,15 +3731,15 @@ const InstitutionAdminDashboard = () => {
         </div>
       )}
 
-      {/* Inactive Caregivers Report Tab Content */}
-      {activeTab === 'inactive-caregivers' && (
+            {/* Inactive Caregivers Report Tab Content */}
+            {activeTab === 'inactive-caregivers' && (
         <div className="space-y-6">
           <InactiveCaregiversReport institutionId={effectiveInstitutionId} />
         </div>
       )}
 
-      {/* Pharmacists Tab Content */}
-      {activeTab === 'pharmacists' && (
+            {/* Pharmacists Tab Content */}
+            {activeTab === 'pharmacists' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900">Pharmacists</h2>
@@ -3844,7 +3859,7 @@ const InstitutionAdminDashboard = () => {
         </div>
       )}
 
-      {/* Assignments Tab Content */}
+            {/* Assignments Tab Content */}
       {activeTab === 'assignments' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
@@ -3880,27 +3895,53 @@ const InstitutionAdminDashboard = () => {
                     {assignments.filter(a => a.status === 'pending').length}
                   </p>
                 </div>
-              </div>
-              <div className="mt-4 space-y-2 text-[11px] text-slate-300">
-                <p>• Role-based access aligned with UltimateCare’s institution model.</p>
-                <p>• Audit trails available across key clinical and operational actions.</p>
-                <p>• Data residency and encryption policies managed centrally.</p>
+                <div className="bg-yellow-100 p-3 rounded-lg">
+                  <Clock className="h-6 w-6 text-yellow-600" />
+                </div>
               </div>
             </div>
-
-            <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 text-[11px] text-slate-300 shadow-xl shadow-black/50">
-              <p className="font-medium text-slate-100">Need deeper configuration?</p>
-              <p className="mt-1">
-                The current dashboard is a streamlined shell. Connect this to your institution’s
-                metrics, assignments, and EHR connectors to unlock the full UltimateCare admin
-                experience.
-              </p>
+            
+            <div className="bg-white rounded-lg shadow-sm border p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Completed</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {assignments.filter(a => a.status === 'completed').length}
+                  </p>
+                </div>
+                <div className="bg-green-100 p-3 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-sm border p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Active</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {assignments.filter(a => a.status === 'active').length}
+                  </p>
+                </div>
+                <div className="bg-blue-100 p-3 rounded-lg">
+                  <Activity className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+            {/* Queue Management Tab Content */}
+            {activeTab === 'queue' && (
+        <div className="space-y-6">
+          <QueueManagementDashboard institutionId={effectiveInstitutionId} />
+        </div>
+      )}
+          </div>
+        </main>
       </div>
-      
+
       {/* Create Patient Modal */}
       <CreatePatientModal
         open={showCreatePatientModal}
@@ -3911,6 +3952,7 @@ const InstitutionAdminDashboard = () => {
           toast.success(`Patient ${result.patientId} created successfully!`);
         }}
       />
+<<<<<<< HEAD
 
       {/* Pending Approvals Tab */}
       {activeTab === 'approvals' && (
@@ -5054,13 +5096,15 @@ const InstitutionAdminDashboard = () => {
         />
       )}
       </div>
+=======
+>>>>>>> 166d63f (Add Priority Phase 1 features: Queue Management, Auto-billing & HMO Claims, SOAP Notes, Attendance Tracking APIs)
     </div>
   );
 };
 
 // Helper Components
 
-// Add Client Modal Component
+// Add Patient Modal Component
 const AddClientModal = ({ onClose, onAdd }) => {
   const initialFormState = {
     fullName: '',
@@ -5624,7 +5668,7 @@ const AddClientModal = ({ onClose, onAdd }) => {
               type="submit"
               className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Add Client
+              Add Patient
             </button>
           </div>
         </form>
@@ -6017,7 +6061,7 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
     } catch (error) {
       console.error('Error resizing image:', error);
       // If resize fails, use original file
-      setProfilePictureFile(file);
+    setProfilePictureFile(file);
       toast.warning('Could not resize image, using original file');
     }
   };
@@ -6169,22 +6213,22 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
             </div>
             <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     1. Name <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="name"
+                required
+                value={formData.name}
+                onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+              />
                   <p className="text-xs text-gray-500 mt-1">Required</p>
-                </div>
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     2. Date of Birth <span className="text-red-500">*</span>
                   </label>
@@ -6236,42 +6280,42 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     4. E-Mail <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      name="email"
-                      required
-                      value={formData.email}
-                      onChange={handleChange}
-                      onBlur={(e) => checkEmailUniqueness(e.target.value)}
+              <div className="relative">
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={(e) => checkEmailUniqueness(e.target.value)}
                       className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 ${
-                        emailExists 
-                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
-                    />
-                    {checkingEmail && (
-                      <div className="absolute right-3 top-3">
-                        <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                      </div>
-                    )}
+                    emailExists 
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                />
+                {checkingEmail && (
+                  <div className="absolute right-3 top-3">
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
                   </div>
-                  {emailExists && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
+                )}
+              </div>
+              {emailExists && (
+                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
                       This email is already in use.
-                    </p>
-                  )}
-                  {!emailExists && formData.email && !checkingEmail && (
-                    <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
-                      <CheckCircle className="h-4 w-4" />
-                      Email is available
-                    </p>
-                  )}
+                </p>
+              )}
+              {!emailExists && formData.email && !checkingEmail && (
+                <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-4 w-4" />
+                  Email is available
+                </p>
+              )}
                   <p className="text-xs text-gray-500 mt-1">Required</p>
-                </div>
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     5. Mobile Number <span className="text-red-500">*</span>
                   </label>
@@ -6343,47 +6387,47 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Password <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      required
-                      value={formData.password}
-                      onChange={handleChange}
-                      minLength={6}
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  minLength={6}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Min. 6 characters"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
+                  placeholder="Min. 6 characters"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    >
-                      {showPassword ? (
+                >
+                  {showPassword ? (
                         <EyeOff className="h-5 w-5" />
-                      ) : (
+                  ) : (
                         <Eye className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                  )}
+                </button>
+              </div>
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Role/Type <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="userType"
-                    required
-                    value={formData.userType}
-                    onChange={handleChange}
+              <select
+                name="userType"
+                required
+                value={formData.userType}
+                onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {caregiverRoles.map(role => (
-                      <option key={role} value={formatRoleValue(role)}>{role}</option>
-                    ))}
-                  </select>
-                </div>
+              >
+                {caregiverRoles.map(role => (
+                  <option key={role} value={formatRoleValue(role)}>{role}</option>
+                ))}
+              </select>
+            </div>
               </div>
             </div>
           </section>
@@ -6394,7 +6438,7 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
               <h4 className="text-lg font-semibold">Background & Availability</h4>
             </div>
             <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   9. Are you currently employed? <span className="text-red-500">*</span>
                 </label>
@@ -6939,30 +6983,30 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Specialization
                   </label>
-                  <input
-                    type="text"
-                    name="specialization"
-                    value={formData.specialization}
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="specialization"
+                value={formData.specialization}
+                onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+              />
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Years of Experience (General)
                   </label>
-                  <input
-                    type="number"
-                    name="experience"
-                    min="0"
-                    value={formData.experience}
-                    onChange={handleChange}
+              <input
+                type="number"
+                name="experience"
+                min="0"
+                value={formData.experience}
+                onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+              />
+            </div>
 
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Qualifications
                   </label>
@@ -6980,150 +7024,150 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Payment Type <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="rateType"
-                    required
-                    value={formData.rateType}
-                    onChange={handleChange}
+              <select
+                name="rateType"
+                required
+                value={formData.rateType}
+                onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="per_hour">Per Hour</option>
-                    <option value="per_month">Per Month</option>
-                  </select>
-                </div>
+              >
+                <option value="per_hour">Per Hour</option>
+                <option value="per_month">Per Month</option>
+              </select>
+            </div>
 
-                {formData.rateType === 'per_hour' && (
-                  <div>
+            {formData.rateType === 'per_hour' && (
+              <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Hourly Rate <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="number"
-                      name="rate"
-                      required
-                      min="0"
-                      step="0.01"
-                      value={formData.rate}
-                      onChange={handleChange}
-                      placeholder="Enter hourly rate"
+                <input
+                  type="number"
+                  name="rate"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={formData.rate}
+                  onChange={handleChange}
+                  placeholder="Enter hourly rate"
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                )}
+                />
+              </div>
+            )}
 
-                {formData.rateType === 'per_month' && (
-                  <div>
+            {formData.rateType === 'per_month' && (
+              <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Monthly Rate <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="number"
-                      name="monthlyRate"
-                      required
-                      min="0"
-                      step="0.01"
-                      value={formData.monthlyRate}
-                      onChange={handleChange}
-                      placeholder="Enter monthly rate"
+                <input
+                  type="number"
+                  name="monthlyRate"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={formData.monthlyRate}
+                  onChange={handleChange}
+                  placeholder="Enter monthly rate"
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                )}
+                />
+              </div>
+            )}
 
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Currency <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="currency"
-                    required
-                    value={formData.currency}
-                    onChange={handleChange}
+              <select
+                name="currency"
+                required
+                value={formData.currency}
+                onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {currencies.map(currency => (
-                      <option key={currency.code} value={currency.code}>
-                        {currency.symbol} {currency.code} - {currency.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              >
+                {currencies.map(currency => (
+                  <option key={currency.code} value={currency.code}>
+                    {currency.symbol} {currency.code} - {currency.name}
+                  </option>
+                ))}
+              </select>
+          </div>
 
-                <div>
+          <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Working Hours <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">Start Time</label>
-                      <select
-                        name="startTime"
-                        value={formData.startTime}
-                        onChange={handleChange}
-                        required
+                <select
+                  name="startTime"
+                  value={formData.startTime}
+                  onChange={handleChange}
+                  required
                         className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select start time</option>
-                        {timeOptions.map(option => (
-                          <option key={`start-${option}`} value={option}>
-                            {formatTimeForDisplay(option)}
-                          </option>
-                        ))}
-                      </select>
+                >
+                  <option value="">Select start time</option>
+                  {timeOptions.map(option => (
+                    <option key={`start-${option}`} value={option}>
+                      {formatTimeForDisplay(option)}
+                    </option>
+                  ))}
+                </select>
                     </div>
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">End Time</label>
-                      <select
-                        name="endTime"
-                        value={formData.endTime}
-                        onChange={handleChange}
-                        required
+                <select
+                  name="endTime"
+                  value={formData.endTime}
+                  onChange={handleChange}
+                  required
                         className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select end time</option>
-                        {timeOptions.map(option => (
-                          <option key={`end-${option}`} value={option}>
-                            {formatTimeForDisplay(option)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                >
+                  <option value="">Select end time</option>
+                  {timeOptions.map(option => (
+                    <option key={`end-${option}`} value={option}>
+                      {formatTimeForDisplay(option)}
+                    </option>
+                  ))}
+                </select>
+            </div>
                   </div>
                   {formData.startTime && formData.endTime && (
                     <p className="mt-2 text-xs text-gray-600">
                       Scheduled: <span className="font-medium">{formatTimeForDisplay(formData.startTime)} - {formatTimeForDisplay(formData.endTime)}</span>
                     </p>
-                  )}
-                </div>
+            )}
+          </div>
 
-                <div>
+          <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Available Days
                   </label>
                   <div className="grid grid-cols-7 gap-1">
-                    {daysOfWeek.map(day => (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() => handleDayToggle(day)}
+              {daysOfWeek.map(day => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => handleDayToggle(day)}
                         className={`px-2 py-1 text-xs rounded-md border ${
-                          formData.availableDays.includes(day)
-                            ? 'bg-blue-100 border-blue-500 text-blue-700'
-                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {day.slice(0, 3)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                    formData.availableDays.includes(day)
+                      ? 'bg-blue-100 border-blue-500 text-blue-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {day.slice(0, 3)}
+                </button>
+              ))}
+            </div>
+          </div>
+          </div>
 
-              <div>
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Engagement Dates <span className="text-gray-500 text-xs">(Select dates for engagements)</span>
                 </label>
-                <input
+            <input
                   type="date"
                   onChange={(e) => {
                     const selectedDate = e.target.value;
@@ -7161,22 +7205,22 @@ const AddCaregiverModal = ({ onClose, onCreate }) => {
                       </span>
                     ))}
                   </div>
-                )}
-              </div>
+            )}
+          </div>
 
-              <div>
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Additional Notes
                 </label>
-                <textarea
-                  name="notes"
-                  rows={4}
-                  value={formData.notes}
-                  onChange={handleChange}
+            <textarea
+              name="notes"
+              rows={4}
+              value={formData.notes}
+              onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Any additional notes or special instructions..."
-                />
-              </div>
+              placeholder="Any additional notes or special instructions..."
+            />
+          </div>
             </div>
           </section>
 
@@ -9882,10 +9926,10 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
             ) : (
               <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
                 {caregiverAssignments.map((assignment, index) => {
-                  const client = clients.find(p => p.id === assignment.clientId);
+                        const client = clients.find(p => p.id === assignment.clientId);
                   // Use a unique key that combines ID and index to handle duplicates
                   const uniqueKey = assignment.id ? `${assignment.id}-${index}` : `assignment-${index}`;
-                  return (
+                        return (
                     <div
                       key={uniqueKey}
                       className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
@@ -9914,9 +9958,9 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                                 : assignment.status === 'in_progress' || assignment.status === 'active'
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {assignment.status || 'pending'}
-                            </span>
+                                }`}>
+                                  {assignment.status || 'pending'}
+                                </span>
                             {assignment.priority && (
                               <span className={`flex-shrink-0 px-2 py-1 rounded text-xs font-medium ${
                                 assignment.priority === 'urgent'
@@ -9928,7 +9972,7 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                                 {assignment.priority}
                               </span>
                             )}
-                          </div>
+                              </div>
                           
                           {(assignment.description || assignment.instructions) && (
                             <p className="text-sm text-gray-600 mb-2 line-clamp-1">
@@ -9942,7 +9986,7 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                               <div className="flex items-center">
                                 <User className="h-3 w-3 mr-1.5 text-gray-400" />
                                 <span>{assignment.clientName || client?.name || 'Unknown Client'}</span>
-                              </div>
+                            </div>
                             )}
                             {assignment.dueDate && (
                               <div className="flex items-center">
@@ -9951,15 +9995,15 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                                   {assignment.dueDate}
                                   {assignment.dueTime && ` at ${assignment.dueTime}`}
                                 </span>
-                              </div>
+                          </div>
                             )}
                             {assignment.instructions && (
                               <span className="text-gray-400 italic line-clamp-1">
                                 {assignment.instructions}
                               </span>
                             )}
-                          </div>
-                        </div>
+                    </div>
+                  </div>
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -10013,14 +10057,14 @@ const CaregiverDetailsModal = ({ caregiver, onClose, onResetPassword, onToggleSt
                               Delete
                             </button>
                           )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
           </>
           )}
 

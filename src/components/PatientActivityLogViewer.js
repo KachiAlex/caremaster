@@ -52,18 +52,18 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
   ];
 
   const severityColors = {
-    info: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-    warning: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+    info: 'text-sky-400 bg-sky-500/10 border-sky-500/30',
+    warning: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
     critical: 'text-red-400 bg-red-500/10 border-red-500/30'
   };
 
   const getRoleColor = (role) => {
     const roleColors = {
-      admin: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+      admin: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
       doctor: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-      nurse: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-      caregiver: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-      pharmacist: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+      nurse: 'text-sky-400 bg-sky-500/10 border-sky-500/30',
+      caregiver: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30',
+      pharmacist: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
       default: 'text-slate-400 bg-slate-500/10 border-slate-500/30'
     };
     return roleColors[role?.toLowerCase()] || roleColors.default;
@@ -160,16 +160,16 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
   return (
     <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 backdrop-blur-sm shadow-xl shadow-black/50 overflow-hidden">
       {/* Header */}
-      <div className="border-b border-slate-800/60 px-6 py-4 bg-gradient-to-r from-blue-600/10 to-blue-600/10">
+      <div className="border-b border-slate-800/60 px-6 py-4 bg-gradient-to-r from-emerald-600/10 to-sky-600/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-400 to-blue-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600">
               <Activity className="h-5 w-5 text-slate-950" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-50">Patient Activity Log</h3>
               <p className="text-xs text-slate-400">
-                {patientName} • Registration: <span className="font-mono text-blue-300">{patientId}</span>
+                {patientName} • Registration: <span className="font-mono text-emerald-300">{patientId}</span>
               </p>
             </div>
           </div>
@@ -201,7 +201,7 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search activities..."
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
               />
             </div>
           </div>
@@ -209,7 +209,7 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50"
+              className="px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-emerald-500/50"
             >
               {categories.map(cat => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -223,7 +223,7 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
       <div className="max-h-[600px] overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className="h-8 w-8 text-blue-400 animate-spin" />
+            <RefreshCw className="h-8 w-8 text-emerald-400 animate-spin" />
           </div>
         ) : filteredActivities.length === 0 ? (
           <div className="text-center py-12">
@@ -272,7 +272,7 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
                             </span>
                             {category && (
                               <span className={`px-2 py-0.5 rounded-lg border ${
-                                category.color === 'emerald' ? 'text-blue-300 bg-blue-500/10 border-blue-500/30' :
+                                category.color === 'emerald' ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30' :
                                 category.color === 'red' ? 'text-red-300 bg-red-500/10 border-red-500/30' :
                                 category.color === 'blue' ? 'text-blue-300 bg-blue-500/10 border-blue-500/30' :
                                 'text-slate-300 bg-slate-500/10 border-slate-500/30'
@@ -310,7 +310,7 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
               <h3 className="text-lg font-semibold text-slate-50">Activity Details</h3>
               <button
                 onClick={() => setSelectedActivity(null)}
-                className="rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-400 hover:border-blue-400/60 hover:text-blue-200 transition-colors"
+                className="rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-400 hover:border-emerald-400/60 hover:text-emerald-200 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
