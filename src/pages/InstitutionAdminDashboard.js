@@ -7975,6 +7975,7 @@ const AssignmentModal = ({
 
 // Client Details Modal Component
 const ClientDetailsModal = ({ client, onClose, onAssignTask, onDelete, onUnarchive, pharmacists, onAssignPharmacist, institutionId }) => {
+  const { userProfile } = useUser();
   const [activeTab, setActiveTab] = React.useState('info');
   const [showPharmacistDropdown, setShowPharmacistDropdown] = React.useState(false);
   const [selectedPharmacistId, setSelectedPharmacistId] = React.useState(client?.assignedPharmacistId || '');
