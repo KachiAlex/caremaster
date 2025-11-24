@@ -4071,7 +4071,6 @@ const InstitutionAdminDashboard = () => {
           toast.success(`Patient ${result.patientId} created successfully!`);
         }}
       />
-<<<<<<< HEAD
 
       {/* Pending Approvals Tab */}
       {activeTab === 'approvals' && (
@@ -5214,9 +5213,6 @@ const InstitutionAdminDashboard = () => {
           onDeleteAssignment={handleDeleteAssignment}
         />
       )}
-      </div>
-=======
->>>>>>> 166d63f (Add Priority Phase 1 features: Queue Management, Auto-billing & HMO Claims, SOAP Notes, Attendance Tracking APIs)
     </div>
   );
 };

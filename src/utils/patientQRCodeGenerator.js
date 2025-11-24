@@ -4,8 +4,6 @@
  * Generates QR codes for patient identification cards
  */
 
-import QRCode from 'qrcode.react';
-
 /**
  * Generate QR code data for a patient
  * @param {string} patientId - Patient ID (e.g., UC-2025-0001)
@@ -122,6 +120,6 @@ export default {
   generatePatientQRCodeURL,
   parsePatientQRCode,
   validatePatientQRCode,
-  PatientQRCode
+  PatientQRCodeComponent
 };
 
