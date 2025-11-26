@@ -15,36 +15,10 @@ service cloud.firestore {
     function isSuperAdmin() {
       return request.auth != null && request.auth.token.superAdmin == true;
     }
-    function licenseActive() {
-      // License enforcement via cached flag on institution doc
-      // Institutions should be updated by backend when license changes
-      return exists(/databases/$(database)/documents/institutions/$(userInstitution())) &&
-             get(/databases/$(database)/documents/institutions/$(userInstitution())).data.active == true;
-    }
-
-    // Tenant isolation guard: collections with institutionId must match caller's institution
-    function belongsToCaller(resourceData) {
-      return resourceData.institutionId == userInstitution();
-    }
-
     // Institutions: public read (for login/landing pages), write super-admin only
     match /institutions/{institutionId} {
       allow read: if true; // Public read for institution branding on login pages
       allow write: if isSuperAdmin();
-    }
-
-    // User-Tenant memberships (multi-tenant access control)
-    // Allows a user to read their own memberships and admins to manage all
-    match /userTenants/{membershipId} {
-      // For individual document reads, check if user owns it or is admin
-      allow get: if request.auth != null && (
-        isAdmin() ||
-        resource.data.userId == request.auth.uid
-      );
-      // For list queries: allow authenticated users to list (query filters by userId in app)
-      // The query in UserContext filters by userId == request.auth.uid, so results are scoped
-      allow list: if request.auth != null;
-      allow create, update, delete: if isAdmin();
     }
     // Licenses: public read (for login/landing pages), write super-admin only
     match /licenses/{licenseId} {
@@ -118,17 +92,6 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'pharmacist' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'pharmacist'
       );
-    }
-    
-    // Helpers: assignment checks based on denormalized fields on the resource
-    function isAssignedCaregiverToResource() {
-      return (
-        resource.data.assignedCaregiver == request.auth.uid ||
-        (resource.data.assignedCaregivers != null && request.auth.uid in resource.data.assignedCaregivers)
-      );
-    }
-    function isAssignedDoctorToResource() {
-      return resource.data.assignedDoctor == request.auth.uid;
     }
     
     // Users collection - users can read their own data, admins can read/write all
@@ -759,62 +722,6 @@ service cloud.firestore {
       );
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && isAdmin();
-    }
-
-    // Hospital Beds - Institution admins and staff can manage beds
-    match /hospitalBeds/{bedId} {
-      allow read, list: if request.auth != null && (
-        isAdmin() || 
-        isCaregiver() || 
-        isDoctor() || 
-        isNurse() ||
-        (resource.data != null && resource.data.institutionId == userInstitution())
-      );
-      allow create, update, delete: if request.auth != null && (
-        isAdmin() || 
-        isNurse() ||
-        (request.resource.data != null && request.resource.data.institutionId == userInstitution())
-      );
-    }
-
-    // Hospital Incidents - Institution admins and staff can report and manage incidents
-    match /hospitalIncidents/{incidentId} {
-      allow read, list: if request.auth != null && (
-        isAdmin() || 
-        isCaregiver() || 
-        isDoctor() || 
-        isNurse() ||
-        (resource.data != null && resource.data.institutionId == userInstitution())
-      );
-      allow create: if request.auth != null && (
-        isAdmin() || 
-        isCaregiver() || 
-        isDoctor() || 
-        isNurse() ||
-        (request.resource.data != null && request.resource.data.institutionId == userInstitution())
-      );
-      allow update, delete: if request.auth != null && (
-        isAdmin() || 
-        isNurse() ||
-        (resource.data != null && resource.data.institutionId == userInstitution() && 
-         resource.data.reportedById == request.auth.uid)
-      );
-    }
-
-    // Hospital Shifts - Institution admins can manage shifts, staff can view their own
-    match /hospitalShifts/{shiftId} {
-      allow read, list: if request.auth != null && (
-        isAdmin() || 
-        isCaregiver() || 
-        isDoctor() || 
-        isNurse() ||
-        (resource.data != null && resource.data.institutionId == userInstitution()) ||
-        (resource.data != null && resource.data.staffId == request.auth.uid)
-      );
-      allow create, update, delete: if request.auth != null && (
-        isAdmin() || 
-        (request.resource.data != null && request.resource.data.institutionId == userInstitution())
-      );
     }
 
     // Allow admins to read/write any other collections

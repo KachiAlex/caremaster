@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
@@ -14,6 +14,7 @@ import {
   Calendar, 
   Activity, 
   AlertTriangle, 
+  AlertCircle,
   TrendingUp,
   UserCheck,
   Clock,
@@ -30,6 +31,7 @@ import {
   FileText,
   MessageSquare,
   Eye,
+  EyeOff,
   Download,
   RefreshCw,
   Zap,
@@ -103,7 +105,6 @@ import WebRTCService from '../services/webrtcService';
 import PortalSwitcher from '../components/PortalSwitcher';
 import { getAllDiagnostics, updateDiagnosticTest } from '../api/diagnosticsAPI';
 import { trackAdminEvent } from '../services/analyticsService';
-import fileStorageService from '../services/fileStorageService';
 import CreatePatientModal from '../components/CreatePatientModal';
 import QueueManagementDashboard from '../components/QueueManagementDashboard';
 import AttendanceTracking from '../components/AttendanceTracking';
@@ -136,32 +137,49 @@ const buildWorkingHoursSummary = (startTime, endTime) => {
 };
 
 const StatCard = ({ icon: Icon, label, value, accent }) => (
-  <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 shadow-lg shadow-black/40">
+  <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
     <div className="flex items-center justify-between gap-3">
       <div>
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
           {label}
         </p>
-        <p className="mt-2 text-lg font-semibold text-slate-50">{value}</p>
+        <p className="mt-2 text-lg font-semibold text-gray-900">{value}</p>
       </div>
       <div
         className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${accent}`}
       >
-        <Icon className="h-4 w-4 text-slate-950" />
+        <Icon className="h-4 w-4 text-white" />
       </div>
     </div>
   </div>
 );
 
 const InstitutionAdminDashboard = () => {
+  const { institutionData: contextInstitutionData, userProfile, institutionId: userInstitutionId, user } = useUser();
   const [searchParams] = useSearchParams();
-  const { user, institutionData, userProfile, institutionId } = useUser();
   const navigate = useNavigate();
   
   // Get institution ID from URL params or user context
   const urlInstitutionId = searchParams.get('institution');
   const effectiveInstitutionId = urlInstitutionId || institutionId || userProfile?.institutionId;
   const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
+  const functions = useMemo(() => {
+    try {
+      return getFunctions();
+    } catch (error) {
+      console.error('Error initializing Firebase functions:', error);
+      return null;
+    }
+  }, []);
+  
+  // Get institutionId from URL params or user profile - use useMemo to ensure it's always defined
+  const institutionId = useMemo(() => {
+    return searchParams.get('institution') || userInstitutionId || userProfile?.institutionId || null;
+  }, [searchParams, userInstitutionId, userProfile?.institutionId]);
+  
+  const effectiveInstitutionId = useMemo(() => {
+    return institutionId || userProfile?.institutionId || null;
+  }, [institutionId, userProfile?.institutionId]);
 
   const displayName =
     userProfile?.name || userProfile?.displayName || userProfile?.email || 'Institution admin';
@@ -172,8 +190,11 @@ const InstitutionAdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
+<<<<<<< HEAD
   
   // Dashboard stats state
+=======
+>>>>>>> Refine admin dashboard and rules
   const [stats, setStats] = useState({
     totalUsers: 0,
     clients: 0,
@@ -192,9 +213,16 @@ const InstitutionAdminDashboard = () => {
     responseTime: 0,
     uptime: 99
   });
+<<<<<<< HEAD
   
   // Local institution data state (can override context if needed)
   const [localInstitutionData, setLocalInstitutionData] = useState(null);
+=======
+  const [localInstitutionData, setLocalInstitutionData] = useState(null);
+  
+  // Use local institution data if available, otherwise use context data
+  const institutionData = localInstitutionData || contextInstitutionData;
+>>>>>>> Refine admin dashboard and rules
 
   // Client and Caregiver Management States
   const [clients, setClients] = useState([]);
@@ -306,10 +334,37 @@ const InstitutionAdminDashboard = () => {
   }, [webrtc, callStartAt]);
 
   useEffect(() => {
-    const instIdForSession = effectiveInstitutionId || institutionId || userProfile?.institutionId;
-    if (userProfile && instIdForSession) {
+    // Partner login flow: First authenticate, then determine partner status and institutionId
+    // Wait for user and userProfile to be loaded
+    if (!user || !userProfile) {
+      console.log('⏳ Waiting for user authentication and profile...');
+      return;
+    }
+    
+    // Check if user is a partner (admin with institutionId)
+    const userRole = userProfile.userType || userProfile.type || userProfile.role;
+    const isPartner = userRole === 'admin' && (userProfile.institutionId || institutionId || effectiveInstitutionId);
+    
+    // Get institutionId from profile (partner flow) or URL params
+    const instIdForSession = userProfile.institutionId || institutionId || effectiveInstitutionId || searchParams.get('institution');
+    
+    // If user is a partner but no institutionId found, show error
+    if (userRole === 'admin' && !instIdForSession) {
+      console.error('❌ Partner admin detected but no institutionId found in profile');
+      setLoading(false);
+      toast.error('Unable to determine your institution. Please contact support.');
+      return;
+    }
+    
+    // If we have user, profile, and institutionId, proceed with dashboard load
+    if (userProfile && instIdForSession && user) {
+      console.log('✅ Partner login flow - Loading dashboard:', {
+        userRole,
+        institutionId: instIdForSession,
+        isPartner
+      });
+      
       // Validate tab session for role conflicts
-      const userRole = userProfile.userType || userProfile.type || userProfile.role;
       const validation = sessionManager.validateTabSession(user, userRole);
       
       if (validation.needsInit) {
@@ -332,7 +387,7 @@ const InstitutionAdminDashboard = () => {
       
       return () => clearTimeout(timeout);
     }
-  }, [userProfile, institutionId, effectiveInstitutionId, user, navigate]);
+  }, [userProfile, institutionId, effectiveInstitutionId, user, navigate, searchParams]);
 
   useEffect(() => {
     if (activeTab === 'assignments' && pendingAssignmentFromCaregiver) {
@@ -688,385 +743,107 @@ const InstitutionAdminDashboard = () => {
   };
 
   // Caregiver Management Functions
-  const handleAddCaregiver = async (caregiverData, files = {}) => {
+  const handleAddCaregiver = async (caregiverData) => {
     try {
-      // Always use the admin's institutionId from their profile - this is the most reliable source
-      // Priority: userProfile.institutionId > effectiveInstitutionId > institutionId from context
       const instId = userProfile?.institutionId || effectiveInstitutionId || institutionId;
-      const { profilePictureFile, qualificationDocumentFile, governmentIdFile, guarantor1LetterFile, guarantor2LetterFile, guarantor1PictureFile, guarantor2PictureFile } = files;
-      
-      // Enhanced debugging
-      console.log('🔍 Institution ID Debug (handleAddCaregiver):', {
-        effectiveInstitutionId,
-        institutionId,
-        userProfileInstitutionId: userProfile?.institutionId,
-        urlInstitutionId,
-        userProfile: userProfile ? { id: userProfile.id, email: userProfile.email, userType: userProfile.userType, institutionId: userProfile.institutionId } : null,
-        user: user ? { uid: user.uid, email: user.email } : null,
-        finalInstId: instId,
-        userLoading
-      });
-      
       if (!instId) {
-        // If user profile is still loading, wait a bit and retry
         if (userLoading) {
           toast.info('Loading your profile... Please wait a moment and try again.');
-          console.warn('⚠️ User profile still loading, institutionId not available yet');
           return;
         }
-        
-        toast.error('Institution ID is required. Please ensure you are logged in and have an institution assigned. Check the browser console for details.');
-        console.error('❌ Missing institution ID. Available data:', {
-          effectiveInstitutionId,
-          institutionId,
-          userProfileInstitutionId: userProfile?.institutionId,
-          urlInstitutionId,
-          userProfile,
-          user,
-          userLoading,
-          searchParams: Object.fromEntries(searchParams.entries())
-        });
-        return;
-      }
-      
-      console.log('✅ Creating caregiver for institution:', instId);
-      
-      const paymentType = caregiverData.rateType === 'per_hour' ? 'hourly' : 'monthly';
-      const hourlyRateValue = caregiverData.rateType === 'per_hour'
-        ? Number(caregiverData.rate || caregiverData.hourlyRate || 0)
-        : Number(caregiverData.hourlyRate || caregiverData.rate || 0);
-      const monthlyRateValue = caregiverData.rateType === 'per_month'
-        ? Number(caregiverData.monthlyRate || caregiverData.rate || 0)
-        : Number(caregiverData.monthlyRate || 0);
-      const workingHoursArray = Array.isArray(caregiverData.workingHours)
-        ? caregiverData.workingHours
-        : buildWorkingHoursSummary(caregiverData.startTime, caregiverData.endTime);
-      
-      // Validate required fields
-      if (!caregiverData.email || !caregiverData.password || !caregiverData.name) {
-        toast.error('Email, password, and name are required fields.');
+        toast.error('Institution ID is required. Please ensure you are logged in and assigned to an institution.');
         return;
       }
 
-      if (caregiverData.password.length < 6) {
+      const { name, email, password, phone } = caregiverData;
+      if (!name || !email || !password) {
+        toast.error('Name, email, and password are required to add a caregiver.');
+        return;
+      }
+
+      if (password.length < 6) {
         toast.error('Password must be at least 6 characters long.');
         return;
       }
-      
-      // Check for duplicate email
+
       const usersRef = collection(db, 'users');
-      const emailQuery = query(usersRef, where('email', '==', caregiverData.email));
+      const emailQuery = query(usersRef, where('email', '==', email));
       const emailSnapshot = await getDocs(emailQuery);
-      
       if (!emailSnapshot.empty) {
         toast.error('A user with this email already exists. Please use a different email.');
         return;
       }
-      
-      console.log('✅ Email is unique, creating caregiver via Cloud Function...');
-      
-      // Use Cloud Function to create caregiver (doesn't affect admin session)
-      let caregiverId;
-      try {
-        const createCaregiverFunction = httpsCallable(functions, 'createCaregiverWithAuthFunction');
-        const result = await createCaregiverFunction({
-          email: caregiverData.email,
-          password: caregiverData.password,
-          name: caregiverData.name,
-          phone: caregiverData.phone || '',
-          institutionId: instId,
-          userType: caregiverData.userType || 'caregiver',
-          specialization: caregiverData.specialization || caregiverData.medicalQualification || '',
-          qualifications: caregiverData.qualifications || '',
-          experience: caregiverData.experience || '0',
-          availableDays: caregiverData.availableDays || [],
-          workingHours: workingHoursArray.length > 0 ? workingHoursArray : ['09:00 AM - 05:00 PM'],
-          workingHoursStart: caregiverData.startTime || null,
-          workingHoursEnd: caregiverData.endTime || null,
-          hourlyRate: hourlyRateValue.toString(),
-          monthlyRate: monthlyRateValue.toString(),
-          paymentType,
-          address: caregiverData.address || '',
-          emergencyContact: caregiverData.emergencyContact || '',
-          notes: caregiverData.notes || ''
-        });
-        
-        caregiverId = result.data.caregiverId || result.data.userId;
-        console.log('✅ Caregiver created via Cloud Function:', caregiverId, 'Full result:', result.data);
-        
-        if (!caregiverId) {
-          console.error('❌ Cloud Function did not return caregiverId');
-          toast.error('Failed to create caregiver: No user ID returned from server.');
-          return;
-        }
-      } catch (cloudFunctionError) {
-        console.error('❌ Cloud Function error:', cloudFunctionError);
-        
-        // Cloud Function is required - no fallback to avoid signing out admin
-        if (cloudFunctionError.code === 'functions/not-found' || cloudFunctionError.code === 'functions/unavailable') {
-          console.error('❌ Cloud Function not available:', cloudFunctionError);
-          toast.error('Cloud Function not deployed. Please deploy Firebase Functions or contact your administrator.');
-          console.error('To deploy functions, run: firebase deploy --only functions');
-          return;
-        } else {
-          // Other Cloud Function errors
-          if (cloudFunctionError.message?.includes('email-already-exists') || cloudFunctionError.code === 'already-exists') {
-            toast.error('A user with this email already exists.');
-          } else {
-            toast.error(`Failed to create caregiver: ${cloudFunctionError.message || 'Unknown error'}`);
-          }
-          return;
-        }
+
+      if (!functions) {
+        toast.error('Cloud functions are currently unavailable. Try again later.');
+        return;
       }
-      
-      // Update user document in Firestore with additional fields (Cloud Function already created basic document)
-      try {
-        // Use updateDoc with merge since the document already exists
-        const additionalFields = {
-          email: caregiverData.email,
-          name: caregiverData.name,
-          displayName: caregiverData.name,
-          phone: caregiverData.phone || '',
-          dateOfBirth: caregiverData.dateOfBirth || '',
-          gender: caregiverData.gender || '',
-          linkedInId: caregiverData.linkedInId || '',
-          residentialAddress: caregiverData.residentialAddress || '',
-          startTime: caregiverData.startTime || '',
-          endTime: caregiverData.endTime || '',
-          userType: caregiverData.userType || 'caregiver',
-          type: caregiverData.userType || 'caregiver',
-          role: caregiverData.userType || 'caregiver',
-          institutionId: instId,
-          specialization: caregiverData.specialization || caregiverData.medicalQualification || '',
-          qualifications: caregiverData.qualifications || '',
-          experience: caregiverData.experience || '0',
-          licenseNumber: caregiverData.licenseNumber || '',
-          availableDays: caregiverData.availableDays || [],
-          workingHours: workingHoursArray.length > 0 ? workingHoursArray : ['09:00 AM - 05:00 PM'],
-          workingHoursStart: caregiverData.startTime || null,
-          workingHoursEnd: caregiverData.endTime || null,
-          rateType: caregiverData.rateType || 'per_hour',
-          rate: caregiverData.rateType === 'per_hour' ? hourlyRateValue : monthlyRateValue,
-          currency: caregiverData.currency || 'USD',
-          hourlyRate: hourlyRateValue,
-          monthlyRate: monthlyRateValue,
-          paymentType,
-          paymentModuleLinked: true,
-          address: caregiverData.address || '',
-          
-          // Background & Availability
-          currentlyEmployed: caregiverData.currentlyEmployed || '',
-          caregivingExperience: caregiverData.caregivingExperience || '',
-          yearsOfCaregiverExperience: caregiverData.yearsOfCaregiverExperience || '',
-          certifications: caregiverData.certifications || '',
-          availability: caregiverData.availability || '',
-          preferredLocation: caregiverData.preferredLocation || '',
-          
-          // Emergency Contact
-          emergencyContactName: caregiverData.emergencyContactName || '',
-          emergencyContactRelationship: caregiverData.emergencyContactRelationship || '',
-          emergencyContactPhone: caregiverData.emergencyContactPhone || '',
-          emergencyContact: caregiverData.emergencyContact || '',
-          
-          // Health & Availability
-          hasMedicalCondition: caregiverData.hasMedicalCondition || '',
-          medicalConditionDetails: caregiverData.medicalConditionDetails || '',
-          availableToStartDate: caregiverData.availableToStartDate || '',
-          
-          // Guarantor 1
-          guarantor1Name: caregiverData.guarantor1Name || '',
-          guarantor1Relationship: caregiverData.guarantor1Relationship || '',
-          guarantor1Phone: caregiverData.guarantor1Phone || '',
-          guarantor1Address: caregiverData.guarantor1Address || '',
-          
-          // Guarantor 2
-          guarantor2Name: caregiverData.guarantor2Name || '',
-          guarantor2Relationship: caregiverData.guarantor2Relationship || '',
-          guarantor2Phone: caregiverData.guarantor2Phone || '',
-          guarantor2Address: caregiverData.guarantor2Address || '',
-          
-          notes: caregiverData.notes || '',
-          engagementDates: caregiverData.engagementDates || [],
-          status: 'active',
-          onboardingComplete: true,
-          profileComplete: true,
-          assignedClients: [],
-          updatedAt: new Date().toISOString(),
-          createdBy: user?.uid || 'admin'
-        };
 
-        if (profilePictureFile) {
-          try {
-            if (!fileStorageService.validateFileType(profilePictureFile, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-              throw new Error('Unsupported profile picture format. Please upload a JPG, PNG, WEBP, or GIF file.');
-            }
-            if (!fileStorageService.validateFileSize(profilePictureFile, 5 * 1024 * 1024)) {
-              throw new Error('Profile picture is too large. Maximum size is 5MB.');
-            }
-            const profilePath = fileStorageService.generateFilePath(caregiverId, 'profile-picture', profilePictureFile.name);
-            const uploadResult = await fileStorageService.uploadFile(profilePictureFile, profilePath);
-            additionalFields.profilePictureUrl = uploadResult.downloadURL;
-            additionalFields.profilePicturePath = uploadResult.path;
-          } catch (profileError) {
-            console.error('Profile picture upload failed:', profileError);
-            toast.warning(profileError.message || 'Profile picture upload failed. You can update it later from caregiver settings.');
-          }
-        }
+      const createCaregiverFunction = httpsCallable(functions, 'createCaregiverWithAuthFunction');
+      const result = await createCaregiverFunction({
+        email,
+        password,
+        name,
+        phone: phone || '',
+        institutionId: instId,
+        userType: 'caregiver'
+      });
 
-        if (qualificationDocumentFile) {
-          try {
-            if (!fileStorageService.validateFileType(qualificationDocumentFile)) {
-              throw new Error('Unsupported document format. Please upload PDF, Word, Excel, or image files.');
-            }
-            if (!fileStorageService.validateFileSize(qualificationDocumentFile, 50 * 1024 * 1024)) {
-              throw new Error('Qualification document is too large. Maximum size is 50MB.');
-            }
-            const documentPath = fileStorageService.generateFilePath(caregiverId, 'qualifications', qualificationDocumentFile.name);
-            const uploadResult = await fileStorageService.uploadFile(qualificationDocumentFile, documentPath);
-            additionalFields.qualificationDocumentUrl = uploadResult.downloadURL;
-            additionalFields.qualificationDocumentPath = uploadResult.path;
-          } catch (documentError) {
-            console.error('Qualification document upload failed:', documentError);
-            toast.warning(documentError.message || 'Qualification document upload failed. You can upload it later from caregiver settings.');
-          }
-        }
-
-        if (governmentIdFile) {
-          try {
-            if (!fileStorageService.validateFileType(governmentIdFile)) {
-              throw new Error('Unsupported document format. Please upload PDF, Word, Excel, or image files.');
-            }
-            if (!fileStorageService.validateFileSize(governmentIdFile, 50 * 1024 * 1024)) {
-              throw new Error('Government ID document is too large. Maximum size is 50MB.');
-            }
-            const idPath = fileStorageService.generateFilePath(caregiverId, 'government-id', governmentIdFile.name);
-            const uploadResult = await fileStorageService.uploadFile(governmentIdFile, idPath);
-            additionalFields.governmentIdUrl = uploadResult.downloadURL;
-            additionalFields.governmentIdPath = uploadResult.path;
-          } catch (idError) {
-            console.error('Government ID upload failed:', idError);
-            toast.warning(idError.message || 'Government ID upload failed. You can upload it later from caregiver settings.');
-          }
-        }
-
-        if (guarantor1LetterFile) {
-          try {
-            if (!fileStorageService.validateFileType(guarantor1LetterFile)) {
-              throw new Error('Unsupported document format. Please upload PDF, Word, Excel, or image files.');
-            }
-            if (!fileStorageService.validateFileSize(guarantor1LetterFile, 50 * 1024 * 1024)) {
-              throw new Error('Guarantor 1 letter is too large. Maximum size is 50MB.');
-            }
-            const letter1Path = fileStorageService.generateFilePath(caregiverId, 'guarantor-1-letter', guarantor1LetterFile.name);
-            const uploadResult = await fileStorageService.uploadFile(guarantor1LetterFile, letter1Path);
-            additionalFields.guarantor1LetterUrl = uploadResult.downloadURL;
-            additionalFields.guarantor1LetterPath = uploadResult.path;
-          } catch (letter1Error) {
-            console.error('Guarantor 1 letter upload failed:', letter1Error);
-            toast.warning(letter1Error.message || 'Guarantor 1 letter upload failed. You can upload it later from caregiver settings.');
-          }
-        }
-
-        if (guarantor2LetterFile) {
-          try {
-            if (!fileStorageService.validateFileType(guarantor2LetterFile)) {
-              throw new Error('Unsupported document format. Please upload PDF, Word, Excel, or image files.');
-            }
-            if (!fileStorageService.validateFileSize(guarantor2LetterFile, 50 * 1024 * 1024)) {
-              throw new Error('Guarantor 2 letter is too large. Maximum size is 50MB.');
-            }
-            const letter2Path = fileStorageService.generateFilePath(caregiverId, 'guarantor-2-letter', guarantor2LetterFile.name);
-            const uploadResult = await fileStorageService.uploadFile(guarantor2LetterFile, letter2Path);
-            additionalFields.guarantor2LetterUrl = uploadResult.downloadURL;
-            additionalFields.guarantor2LetterPath = uploadResult.path;
-          } catch (letter2Error) {
-            console.error('Guarantor 2 letter upload failed:', letter2Error);
-            toast.warning(letter2Error.message || 'Guarantor 2 letter upload failed. You can upload it later from caregiver settings.');
-          }
-        }
-
-        if (guarantor1PictureFile) {
-          try {
-            if (!fileStorageService.validateFileType(guarantor1PictureFile, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-              throw new Error('Unsupported profile picture format. Please upload a JPG, PNG, WEBP, or GIF file.');
-            }
-            if (!fileStorageService.validateFileSize(guarantor1PictureFile, 5 * 1024 * 1024)) {
-              throw new Error('Guarantor 1 picture is too large. Maximum size is 5MB.');
-            }
-            const guarantor1PicPath = fileStorageService.generateFilePath(caregiverId, 'guarantor-1-picture', guarantor1PictureFile.name);
-            const uploadResult = await fileStorageService.uploadFile(guarantor1PictureFile, guarantor1PicPath);
-            additionalFields.guarantor1PictureUrl = uploadResult.downloadURL;
-            additionalFields.guarantor1PicturePath = uploadResult.path;
-          } catch (guarantor1PicError) {
-            console.error('Guarantor 1 picture upload failed:', guarantor1PicError);
-            toast.warning(guarantor1PicError.message || 'Guarantor 1 picture upload failed. You can upload it later from caregiver settings.');
-          }
-        }
-
-        if (guarantor2PictureFile) {
-          try {
-            if (!fileStorageService.validateFileType(guarantor2PictureFile, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-              throw new Error('Unsupported profile picture format. Please upload a JPG, PNG, WEBP, or GIF file.');
-            }
-            if (!fileStorageService.validateFileSize(guarantor2PictureFile, 5 * 1024 * 1024)) {
-              throw new Error('Guarantor 2 picture is too large. Maximum size is 5MB.');
-            }
-            const guarantor2PicPath = fileStorageService.generateFilePath(caregiverId, 'guarantor-2-picture', guarantor2PictureFile.name);
-            const uploadResult = await fileStorageService.uploadFile(guarantor2PictureFile, guarantor2PicPath);
-            additionalFields.guarantor2PictureUrl = uploadResult.downloadURL;
-            additionalFields.guarantor2PicturePath = uploadResult.path;
-          } catch (guarantor2PicError) {
-            console.error('Guarantor 2 picture upload failed:', guarantor2PicError);
-            toast.warning(guarantor2PicError.message || 'Guarantor 2 picture upload failed. You can upload it later from caregiver settings.');
-          }
-        }
-
-        await updateDoc(doc(db, 'users', caregiverId), additionalFields);
-        await setDoc(doc(db, 'caregivers', caregiverId), additionalFields, { merge: true });
-        
-        console.log('✅ Caregiver document updated with additional fields in Firestore');
-      } catch (firestoreError) {
-        console.error('❌ Error updating Firestore document:', firestoreError);
-        // Don't throw - the Cloud Function already created the basic document
-        toast.warning('Caregiver created but some additional fields may not have been saved.');
+      const caregiverId = result.data.caregiverId || result.data.userId;
+      if (!caregiverId) {
+        toast.error('Failed to create caregiver account - no user ID returned.');
+        return;
       }
-      
+
+      const additionalFields = {
+        email,
+        name,
+        displayName: name,
+        phone: phone || '',
+        institutionId: instId,
+        userType: 'caregiver',
+        type: 'caregiver',
+        role: 'caregiver',
+        status: 'pending',
+        onboardingComplete: false,
+        profileComplete: false,
+        paymentType: 'hourly',
+        hourlyRate: 0,
+        monthlyRate: 0,
+        rateType: 'per_hour',
+        currency: 'USD',
+        updatedAt: new Date().toISOString(),
+        createdBy: user?.uid || 'admin'
+      };
+
+      await updateDoc(doc(db, 'users', caregiverId), additionalFields);
+      await setDoc(doc(db, 'caregivers', caregiverId), additionalFields, { merge: true });
+
       setShowAddCaregiver(false);
-      
-      // Clear saved form data on successful creation
-      try {
-        localStorage.removeItem('caregiverFormDraft');
-        console.log('🗑️ Cleared saved form data after successful creation');
-      } catch (clearError) {
-        console.error('Error clearing saved form data:', clearError);
-      }
-      
-      toast.success(`✅ Caregiver ${caregiverData.name} added successfully! They can now login with their credentials.`);
-      
+      toast.success(`Caregiver ${name} added successfully. Invite them to finish their profile.`);
+
+      await loadDashboardData();
+
       await trackAdminEvent('caregiver_created', {
         caregiverId,
         institutionId: instId,
         createdBy: user?.uid || null,
-        caregiverEmail: caregiverData.email,
-        caregiverName: caregiverData.name,
-        rateType: caregiverData.rateType || 'per_hour',
-        paymentType,
-        hourlyRate: hourlyRateValue,
-        monthlyRate: monthlyRateValue,
-        currency: caregiverData.currency || 'USD'
+        caregiverEmail: email,
+        caregiverName: name,
+        rateType: 'per_hour',
+        paymentType: 'hourly',
+        hourlyRate: 0,
+        monthlyRate: 0,
+        currency: 'USD'
       });
-      
-      // Reload dashboard data (no need to reload page - admin session is preserved)
-      await loadDashboardData();
-      
     } catch (error) {
-      console.error('❌ Error adding caregiver:', error);
+      console.error('Error adding caregiver:', error);
       toast.error(error.message || 'Failed to add caregiver. Please try again.');
-      // Don't clear saved data on error - user can retry with the same data
+      throw error;
     }
   };
 
-  // Pharmacist Management Functions
+// Pharmacist Management Functions
   const handleAssignPharmacistToClient = async (clientId, pharmacistId) => {
     try {
       // Use effectiveInstitutionId which includes URL parameter
@@ -2269,6 +2046,42 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
+  // Partner login flow: Show loading while authenticating and loading profile
+  // Don't require institutionId upfront - it will come from userProfile after authentication
+  if (!user || !userProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Authenticating...</p>
+          <p className="text-sm text-gray-500 mt-2">Please wait while we verify your credentials.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // After authentication, check if user is a partner (admin with institutionId)
+  const userRole = userProfile?.userType || userProfile?.type || userProfile?.role;
+  const finalInstitutionId = userProfile?.institutionId || institutionId || effectiveInstitutionId || searchParams.get('institution');
+  
+  // If user is admin but no institutionId, show error
+  if (userRole === 'admin' && !finalInstitutionId && !loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Institution Not Found</h2>
+          <p className="text-gray-600 mb-4">
+            Your account is registered as an admin, but no institution is associated with your account.
+          </p>
+          <p className="text-sm text-gray-500">
+            Please contact support to associate your account with an institution.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const renderMessagesTab = () => {
     const handleSendMessage = async () => {
       if (!newMessage.trim() || !selectedConversation) return;
@@ -2657,10 +2470,10 @@ const InstitutionAdminDashboard = () => {
   // Quick action functions
   const quickActions = [
     {
-      name: 'Register Patient',
+      name: 'Add Client',
       icon: Heart,
-      color: 'bg-blue-600 hover:bg-blue-700',
-      action: () => setShowCreatePatientModal(true)
+      color: 'bg-green-600 hover:bg-green-700',
+      action: () => setShowAddClient(true)
     },
     {
       name: 'Add Caregiver',
@@ -2731,6 +2544,7 @@ const InstitutionAdminDashboard = () => {
   }
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-slate-950 text-slate-50">
       {/* Top halo */}
       <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top,_#22c55e33,_transparent_60%),radial-gradient(circle_at_30%_20%,_#0ea5e933,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e533,_transparent_55%)]" />
@@ -2745,11 +2559,33 @@ const InstitutionAdminDashboard = () => {
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
                 Institution admin
               </p>
+=======
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-screen z-20 shadow-sm">
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-lg shadow-blue-500/40">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">
+                Institution admin
+              </p>
+              <h1 className="mt-1 text-sm font-semibold tracking-tight text-gray-900 truncate">
+                {institutionData?.name || 'Institution'}
+              </h1>
+>>>>>>> Refine admin dashboard and rules
             </div>
             <h2 className="text-sm font-semibold text-slate-50">
               {(localInstitutionData?.name || institutionData?.name || 'UltimateCare institution workspace')}
             </h2>
           </div>
+<<<<<<< HEAD
+=======
+        </div>
+>>>>>>> Refine admin dashboard and rules
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -2793,10 +2629,15 @@ const InstitutionAdminDashboard = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                className={`w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab.id
+<<<<<<< HEAD
                     ? `bg-blue-600 text-white border-l-4 border-blue-400`
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+=======
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+>>>>>>> Refine admin dashboard and rules
                 }`}
               >
                 <Icon className="h-5 w-5 mr-3 shrink-0" />
@@ -2806,6 +2647,7 @@ const InstitutionAdminDashboard = () => {
           })}
           </nav>
 
+<<<<<<< HEAD
           {/* Sidebar Footer */}
           <div className="p-3 border-t border-slate-800 space-y-2">
             <button
@@ -3225,6 +3067,69 @@ const InstitutionAdminDashboard = () => {
             {/* Dashboard Tab Content */}
             {activeTab === 'dashboard' && (
         <>
+=======
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-gray-200">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <LogOut className="h-5 w-5 mr-3" />
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 ml-64 relative z-10">
+        <div className="max-w-7xl mx-auto flex flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+          {/* Header */}
+          <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">
+                  {activeTab === 'dashboard' ? 'Dashboard' : 
+                   activeTab === 'clients' ? 'Client Management' :
+                   activeTab === 'caregivers' ? 'Caregiver Management' :
+                   activeTab === 'messages' ? 'Messages' :
+                   activeTab === 'analytics' ? 'Analytics' :
+                   activeTab === 'settings' ? 'Settings' :
+                   'Institution Admin'}
+                </p>
+                <h1 className="mt-2 text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
+                  {institutionData?.name || 'Institution Dashboard'}
+                </h1>
+              </div>
+            </div>
+          </section>
+
+          {/* Main Content Area - White Background */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] p-6 overflow-y-auto">
+            {/* Scrollable Content Area */}
+            <div className="space-y-6">
+              {/* Tab Content - Rendered based on activeTab */}
+              {activeTab === 'dashboard' && (
+                <div>
+                  {/* Quick Actions */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                      {quickActions.map((action, index) => {
+                        const Icon = action.icon;
+                        return (
+                          <button
+                            key={index}
+                            onClick={action.action}
+                            className={`${action.color} text-white p-4 rounded-lg transition-colors flex flex-col items-center space-y-2`}
+                          >
+                            <Icon className="h-6 w-6" />
+                            <span className="text-sm font-medium text-center">{action.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+>>>>>>> Refine admin dashboard and rules
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Total Staff Card */}
@@ -3473,15 +3378,31 @@ const InstitutionAdminDashboard = () => {
           </button>
         </div>
       </div>
-        </>
-      )}
+              </div>
+              )}
 
+<<<<<<< HEAD
             {/* Patients Tab Content */}
             {activeTab === 'clients' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900">Patients</h2>
           </div>
+=======
+              {/* Clients Tab Content */}
+              {activeTab === 'clients' && (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-gray-900">Clients</h2>
+                    <button
+                      onClick={() => setShowAddClient(true)}
+                      className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-colors font-bold text-base"
+                    >
+                      <Heart className="h-6 w-6 mr-2" />
+                      Add Client
+                    </button>
+                  </div>
+>>>>>>> Refine admin dashboard and rules
           
           <div className="bg-white rounded-lg shadow-sm border">
             <div className="overflow-x-auto">
@@ -3929,6 +3850,7 @@ const InstitutionAdminDashboard = () => {
                     {assignments.filter(a => a.status === 'pending').length}
                   </p>
                 </div>
+<<<<<<< HEAD
                 <div className="bg-yellow-100 p-3 rounded-lg">
                   <Clock className="h-6 w-6 text-yellow-600" />
                 </div>
@@ -3961,11 +3883,21 @@ const InstitutionAdminDashboard = () => {
                   <Activity className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
+=======
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  Action Needed
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-gray-500">
+                Includes tasks awaiting caregiver confirmation or scheduling.
+              </p>
+>>>>>>> Refine admin dashboard and rules
             </div>
           </div>
         </div>
       )}
 
+<<<<<<< HEAD
             {/* Queue Management Tab Content */}
             {activeTab === 'queue' && (
         <div className="space-y-6">
@@ -4071,6 +4003,14 @@ const InstitutionAdminDashboard = () => {
           toast.success(`Patient ${result.patientId} created successfully!`);
         }}
       />
+=======
+      {/* Scheduling Tab Content */}
+      {activeTab === 'scheduling' && (
+        <div className="space-y-6">
+          <SchedulingModule institutionId={effectiveInstitutionId || institutionId || userProfile?.institutionId} />
+        </div>
+      )}
+>>>>>>> Refine admin dashboard and rules
 
       {/* Pending Approvals Tab */}
       {activeTab === 'approvals' && (
@@ -5113,7 +5053,7 @@ const InstitutionAdminDashboard = () => {
                           }`} />
                         ) : notification.type === 'doctor_consultation' ? (
                           <FileText className="h-4 w-4 text-blue-600" />
-                        ) : notification.type === 'diagnostic_test_ordered' || notification.type === 'diagnostic_results_uploaded' ? (
+                        ) : (notification.type === 'diagnostic_test_ordered' || notification.type === 'diagnostic_results_uploaded') ? (
                           <Activity className="h-4 w-4 text-yellow-600" />
                         ) : (
                           <AlertTriangle className="h-4 w-4 text-gray-600" />
@@ -5147,9 +5087,15 @@ const InstitutionAdminDashboard = () => {
               </div>
             )}
           </div>
-        </div>
-      )}
+                </div>
+              )}
 
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Modals */}
       {/* Active Call Interface */}
       {activeCall && (
         <CallInterface
@@ -5213,6 +5159,22 @@ const InstitutionAdminDashboard = () => {
           onDeleteAssignment={handleDeleteAssignment}
         />
       )}
+<<<<<<< HEAD
+=======
+
+      {/* Create Patient Modal */}
+      {showCreatePatientModal && (
+        <CreatePatientModal
+          isOpen={showCreatePatientModal}
+          onClose={() => setShowCreatePatientModal(false)}
+          institutionId={effectiveInstitutionId || institutionId}
+          onSuccess={() => {
+            setShowCreatePatientModal(false);
+            loadDashboardData();
+          }}
+        />
+      )}
+>>>>>>> Refine admin dashboard and rules
     </div>
   );
 };
@@ -5240,7 +5202,7 @@ const AddClientModal = ({ onClose, onAdd }) => {
     primaryContactCommunicationPreference: '',
     primaryContactNigeriaLocation: '',
     caregiverStayingInNigeria: '',
-    caregiverType: '',
+    caregiverType: [],
     serviceFrequency: '',
     serviceFrequencyOther: '',
     preferredCareTypes: [],
@@ -5331,6 +5293,11 @@ const AddClientModal = ({ onClose, onAdd }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    if (formData.caregiverType.length === 0) {
+      toast.error('Please select at least one type of caregiver required.');
+      return;
+    }
+
     if (formData.preferredCareTypes.length === 0) {
       toast.error('Please select at least one type of care required.');
       return;
@@ -5351,21 +5318,21 @@ const AddClientModal = ({ onClose, onAdd }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur">
       <div className="relative mx-4 w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6">
+        <div className="flex items-center justify-between border-b border-gray-200 px-8 py-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">
               Client Intake
             </p>
-            <h3 className="text-2xl font-black text-slate-900">Add New Client</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <h3 className="text-2xl font-bold text-gray-900">Add New Client</h3>
+            <p className="mt-1 text-sm text-gray-600">
               Complete all sections below. Mandatory questions are marked as required.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-700"
           >
             <span className="sr-only">Close</span>
             ✕
@@ -5373,332 +5340,403 @@ const AddClientModal = ({ onClose, onAdd }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-10 overflow-y-auto px-8 py-8 max-h-[80vh]">
+          {/* Section A: Client Information */}
           <section className="space-y-6">
-            <header>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
+            <header className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-100">
                 Section A
               </p>
-              <h4 className="text-xl font-semibold text-slate-900">
-                Client Personal Information
+              <h4 className="text-xl font-semibold text-white">
+                Client Information
               </h4>
             </header>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="fullName"
-                  required
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Date of Birth <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="dateOfBirth"
-                  required
-                  value={formData.dateOfBirth}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Gender <span className="text-red-500">*</span>
-                </label>
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  {['Male', 'Female', 'Other'].map((option) => (
-                    <label
-                      key={option}
-                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
-                        formData.gender === option
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="gender"
-                        value={option}
-                        required
-                        checked={formData.gender === option}
-                        onChange={handleChange}
-                        className="accent-blue-600"
-                      />
-                      {option}
-                    </label>
-                  ))}
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    1. Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    required
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
                 </div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  required
-                  value={formData.phoneNumber}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="md:col-span-2 flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Address of Residence <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  name="residenceAddress"
-                  required
-                  rows={3}
-                  value={formData.residenceAddress}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Preferred Language <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="preferredLanguage"
-                  required
-                  value={formData.preferredLanguage}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  placeholder="e.g. English"
-                />
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    2. Date of Birth <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    required
+                    value={formData.dateOfBirth}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col md:col-span-2">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    3. Gender <span className="text-red-500">*</span>
+                  </label>
+                  <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {['Male', 'Female', 'Other'].map((option) => (
+                      <label
+                        key={option}
+                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition ${
+                          formData.gender === option
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 text-gray-600 hover:border-blue-400'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="gender"
+                          value={option}
+                          required
+                          checked={formData.gender === option}
+                          onChange={handleChange}
+                          className="accent-blue-600"
+                        />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    4. Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    required
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col md:col-span-2">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    5. Address of Residence <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="residenceAddress"
+                    required
+                    rows={3}
+                    value={formData.residenceAddress}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    6. Preferred language <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="preferredLanguage"
+                    required
+                    value={formData.preferredLanguage}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    placeholder="e.g. English"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
               </div>
             </div>
           </section>
 
+          {/* Section B: Client Medical Information */}
           <section className="space-y-6">
-            <header>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
+            <header className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-100">
+                Section B
+              </p>
+              <h4 className="text-xl font-semibold text-white">
+                Client Medical Information
+              </h4>
+            </header>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-1">
+                  7. Medical history, diagnosis, or known conditions <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="medicalHistory"
+                  required
+                  rows={4}
+                  value={formData.medicalHistory}
+                  onChange={handleChange}
+                  className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+                <span className="text-xs text-gray-500 mt-1">Required</span>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-1">
+                  8. Allergies <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="allergies"
+                  required
+                  rows={3}
+                  value={formData.allergies}
+                  onChange={handleChange}
+                  className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+                <span className="text-xs text-gray-500 mt-1">Required</span>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-1">
+                  9. Medications and dosages <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="medications"
+                  required
+                  rows={3}
+                  value={formData.medications}
+                  onChange={handleChange}
+                  className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+                <span className="text-xs text-gray-500 mt-1">Required</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Section C: Primary Contact Person Information */}
+          <section className="space-y-6">
+            <header className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-100">
                 Section C
               </p>
-              <h4 className="text-xl font-semibold text-slate-900">
+              <h4 className="text-xl font-semibold text-white">
                 Primary Contact Person Information
               </h4>
             </header>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="primaryContactName"
-                  required
-                  value={formData.primaryContactName}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Relationship to Client <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="primaryContactRelationship"
-                  required
-                  value={formData.primaryContactRelationship}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Gender <span className="text-red-500">*</span>
-                </label>
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  {['Male', 'Female', 'Other'].map((option) => (
-                    <label
-                      key={option}
-                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
-                        formData.primaryContactGender === option
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="primaryContactGender"
-                        value={option}
-                        required
-                        checked={formData.primaryContactGender === option}
-                        onChange={handleChange}
-                        className="accent-blue-600"
-                      />
-                      {option}
-                    </label>
-                  ))}
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    10. Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="primaryContactName"
+                    required
+                    value={formData.primaryContactName}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
                 </div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Phone Number (Include country code) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  name="primaryContactPhone"
-                  required
-                  value={formData.primaryContactPhone}
-                  onChange={handleChange}
-                  placeholder="+234 000 000 0000"
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Email Address <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  name="primaryContactEmail"
-                  required
-                  value={formData.primaryContactEmail}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="md:col-span-2 flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Residential Address <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  name="primaryContactAddress"
-                  required
-                  rows={3}
-                  value={formData.primaryContactAddress}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Preferred means of communication <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="primaryContactCommunicationPreference"
-                  required
-                  value={formData.primaryContactCommunicationPreference}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="">Select preference</option>
-                  {communicationOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Location in Nigeria (Detailed Address) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="primaryContactNigeriaLocation"
-                  required
-                  value={formData.primaryContactNigeriaLocation}
-                  onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Is someone currently staying with the care recipient in Nigeria?{' '}
-                  <span className="text-red-500">*</span>
-                </label>
-                <div className="mt-3 flex flex-wrap gap-3">
-                  {['Yes', 'No'].map((option) => (
-                    <label
-                      key={option}
-                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
-                        formData.caregiverStayingInNigeria === option
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="caregiverStayingInNigeria"
-                        value={option}
-                        required
-                        checked={formData.caregiverStayingInNigeria === option}
-                        onChange={handleChange}
-                        className="accent-blue-600"
-                      />
-                      {option}
-                    </label>
-                  ))}
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    11. Relationship to Client <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="primaryContactRelationship"
+                    required
+                    value={formData.primaryContactRelationship}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col md:col-span-2">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    12. Gender <span className="text-red-500">*</span>
+                  </label>
+                  <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {['Male', 'Female', 'Other'].map((option) => (
+                      <label
+                        key={option}
+                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition ${
+                          formData.primaryContactGender === option
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 text-gray-600 hover:border-blue-400'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="primaryContactGender"
+                          value={option}
+                          required
+                          checked={formData.primaryContactGender === option}
+                          onChange={handleChange}
+                          className="accent-blue-600"
+                        />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    13. Phone Number (Include country code) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="primaryContactPhone"
+                    required
+                    value={formData.primaryContactPhone}
+                    onChange={handleChange}
+                    placeholder="+234 000 000 0000"
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    14. Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="primaryContactEmail"
+                    required
+                    value={formData.primaryContactEmail}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col md:col-span-2">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    15. Residential Address <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="primaryContactAddress"
+                    required
+                    rows={3}
+                    value={formData.primaryContactAddress}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    16. Preferred means of communication <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="primaryContactCommunicationPreference"
+                    required
+                    value={formData.primaryContactCommunicationPreference}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Select preference</option>
+                    {communicationOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    17. Location in Nigeria. Detailed Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="primaryContactNigeriaLocation"
+                    required
+                    value={formData.primaryContactNigeriaLocation}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col md:col-span-2">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    18. Is someone currently staying with the care recipient in Nigeria? <span className="text-red-500">*</span>
+                  </label>
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    {['Yes', 'No'].map((option) => (
+                      <label
+                        key={option}
+                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition ${
+                          formData.caregiverStayingInNigeria === option
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 text-gray-600 hover:border-blue-400'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="caregiverStayingInNigeria"
+                          value={option}
+                          required
+                          checked={formData.caregiverStayingInNigeria === option}
+                          onChange={handleChange}
+                          className="accent-blue-600"
+                        />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
                 </div>
               </div>
             </div>
           </section>
 
+          {/* Client Care Needs - Service Preferences */}
           <section className="space-y-6">
-            <header>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
+            <header className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-100">
                 Client Care Needs
               </p>
-              <h4 className="text-xl font-semibold text-slate-900">
+              <h4 className="text-xl font-semibold text-white">
                 Service Preferences
               </h4>
             </header>
-            <div className="space-y-6">
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-6">
               <div>
-                <label className="text-sm font-medium text-slate-700">
-                  Type of caregiver required <span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  19. Type of caregiver required <span className="text-red-500">*</span>
                 </label>
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="mt-2 space-y-2">
                   {caregiverTypeOptions.map((option) => (
                     <label
                       key={option}
-                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
-                        formData.caregiverType === option
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
-                      }`}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium transition hover:border-blue-400"
                     >
                       <input
-                        type="radio"
-                        name="caregiverType"
-                        value={option}
-                        required
-                        checked={formData.caregiverType === option}
-                        onChange={handleChange}
+                        type="checkbox"
+                        checked={formData.caregiverType.includes(option)}
+                        onChange={() => handleCheckboxToggle('caregiverType', option)}
                         className="accent-blue-600"
                       />
                       {option}
                     </label>
                   ))}
                 </div>
+                <span className="text-xs text-gray-500 mt-1">Required</span>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-slate-700">
-                  Frequency of service <span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  20. Frequency of service <span className="text-red-500">*</span>
                 </label>
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {serviceFrequencyOptions.map((option) => (
                     <label
                       key={option.value}
-                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-sm transition ${
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition ${
                         formData.serviceFrequency === option.value
                           ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 text-slate-600 hover:border-blue-400'
+                          : 'border-gray-200 text-gray-600 hover:border-blue-400'
                       }`}
                     >
                       <input
@@ -5714,68 +5752,233 @@ const AddClientModal = ({ onClose, onAdd }) => {
                     </label>
                   ))}
                 </div>
+                {formData.serviceFrequency === 'other' && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      name="serviceFrequencyOther"
+                      value={formData.serviceFrequencyOther}
+                      onChange={handleChange}
+                      placeholder="Please specify"
+                      className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                )}
+                <span className="text-xs text-gray-500 mt-1">Required</span>
               </div>
-            </div>
-          </section>
 
-          <section className="space-y-6">
-            <header>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
-                Section B
-              </p>
-              <h4 className="text-xl font-semibold text-slate-900">
-                Client Medical Information
-              </h4>
-            </header>
-            <div className="grid grid-cols-1 gap-6">
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Medical history, diagnosis, or known conditions{' '}
-                  <span className="text-red-500">*</span>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  21. Type of care required <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-2 space-y-2">
+                  {careTypeOptions.map((option) => (
+                    <label
+                      key={option}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium transition hover:border-blue-400"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.preferredCareTypes.includes(option)}
+                        onChange={() => handleCheckboxToggle('preferredCareTypes', option)}
+                        className="accent-blue-600"
+                      />
+                      {option}
+                    </label>
+                  ))}
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      placeholder="Other (please specify)"
+                      className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+                <span className="text-xs text-gray-500 mt-1">Required</span>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  22. Preferred Days/ Times for Care <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  name="medicalHistory"
+                  name="preferredCareTimes"
                   required
                   rows={4}
-                  value={formData.medicalHistory}
+                  value={formData.preferredCareTimes}
                   onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="mt-2 rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 />
+                <span className="text-xs text-gray-500 mt-1">Required</span>
               </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Allergies <span className="text-red-500">*</span>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  23. Preferred start date of care <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="preferredStartDate"
+                  required
+                  value={formData.preferredStartDate}
+                  onChange={handleChange}
+                  className="mt-2 rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+                <span className="text-xs text-gray-500 mt-1">Required</span>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  24. Equipments and supplies in the Home <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  name="allergies"
+                  name="homeEquipment"
                   required
-                  rows={3}
-                  value={formData.allergies}
+                  rows={4}
+                  value={formData.homeEquipment}
                   onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="mt-2 rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 />
+                <span className="text-xs text-gray-500 mt-1">Required</span>
               </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-slate-700">
-                  Medications and dosages <span className="text-red-500">*</span>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2">
+                  25. Special instructions/ Routine <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  name="medications"
+                  name="specialInstructions"
                   required
-                  rows={3}
-                  value={formData.medications}
+                  rows={4}
+                  value={formData.specialInstructions}
                   onChange={handleChange}
-                  className="mt-2 rounded-lg border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="mt-2 rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 />
+                <span className="text-xs text-gray-500 mt-1">Required</span>
               </div>
             </div>
           </section>
 
-          <div className="flex justify-end gap-3 border-t border-slate-200 pt-6">
+          {/* Section D: Local Support and Emergency Contact in Nigeria */}
+          <section className="space-y-6">
+            <header className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-100">
+                Section D
+              </p>
+              <h4 className="text-xl font-semibold text-white">
+                Local Support and Emergency Contact in Nigeria
+              </h4>
+            </header>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    26. Emergency Contact Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="emergencyContactName"
+                    required
+                    value={formData.emergencyContactName}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    27. Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="emergencyContactPhone"
+                    required
+                    value={formData.emergencyContactPhone}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+                <div className="flex flex-col md:col-span-2">
+                  <label className="text-sm font-medium text-gray-700 mb-1">
+                    28. Relationship to client <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="emergencyContactRelationship"
+                    required
+                    value={formData.emergencyContactRelationship}
+                    onChange={handleChange}
+                    className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">Required</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Section E: Additional Information */}
+          <section className="space-y-6">
+            <header className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-100">
+                Section E
+              </p>
+              <h4 className="text-xl font-semibold text-white">
+                Additional Information
+              </h4>
+            </header>
+            <div className="border border-gray-200 rounded-b-lg p-6 space-y-4">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-1">
+                  29. Specific instructions or notes <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="additionalNotes"
+                  required
+                  rows={4}
+                  value={formData.additionalNotes}
+                  onChange={handleChange}
+                  className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+                <span className="text-xs text-gray-500 mt-1">Required</span>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-1">
+                  30. How did you hear about Care Master? <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {referralSourceOptions.map((option) => (
+                    <label
+                      key={option}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition ${
+                        formData.referralSource === option
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 text-gray-600 hover:border-blue-400'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="referralSource"
+                        value={option}
+                        required
+                        checked={formData.referralSource === option}
+                        onChange={handleChange}
+                        className="accent-blue-600"
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+                <span className="text-xs text-gray-500 mt-1">Required</span>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex justify-end gap-3 border-t border-gray-200 pt-6">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              className="px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
@@ -5794,352 +5997,38 @@ const AddClientModal = ({ onClose, onAdd }) => {
 
 // Add Caregiver Modal Component
 const AddCaregiverModal = ({ onClose, onCreate }) => {
-  const STORAGE_KEY = 'caregiverFormDraft';
-  const saveTimeoutRef = React.useRef(null);
-  const [dataRestored, setDataRestored] = useState(false);
-
   const [formData, setFormData] = useState({
-    // Personal Information
     name: '',
-    dateOfBirth: '',
-    gender: '',
     email: '',
     phone: '',
-    address: '',
-    linkedInId: '',
-    residentialAddress: '',
-    
-    // Account
     password: '',
-    userType: 'caregiver',
-    
-    // Background & Availability
-    currentlyEmployed: '',
-    caregivingExperience: '',
-    yearsOfCaregiverExperience: '',
-    certifications: '',
-    availability: '', // Live-in, Part time, Full time, Weekends, Weekdays
-    preferredLocation: '',
-    
-    // Professional
-    specialization: '',
-    qualifications: '',
-    experience: '',
-    availableDays: [],
-    workingHours: [],
-    startTime: '',
-    endTime: '',
-    flexibleArrangement: false,
-    rateType: 'per_hour', // 'per_hour' or 'per_month'
-    rate: '',
-    monthlyRate: '',
-    currency: 'USD',
-    
-    // Emergency Contact
-    emergencyContactName: '',
-    emergencyContactRelationship: '',
-    emergencyContactPhone: '',
-    
-    // Health & Availability
-    hasMedicalCondition: '',
-    medicalConditionDetails: '',
-    availableToStartDate: '',
-    
-    // Guarantor 1
-    guarantor1Name: '',
-    guarantor1Relationship: '',
-    guarantor1Phone: '',
-    guarantor1Address: '',
-    
-    // Guarantor 2
-    guarantor2Name: '',
-    guarantor2Relationship: '',
-    guarantor2Phone: '',
-    guarantor2Address: '',
-    
-    notes: '',
-    engagementDates: [] // Array of selected dates
+    confirmPassword: ''
   });
-
   const [showPassword, setShowPassword] = useState(false);
-  const [emailExists, setEmailExists] = useState(false);
-  const [checkingEmail, setCheckingEmail] = useState(false);
-  const [profilePictureFile, setProfilePictureFile] = useState(null);
-  const [qualificationDocumentFile, setQualificationDocumentFile] = useState(null);
-  const [governmentIdFile, setGovernmentIdFile] = useState(null);
-  const [guarantor1LetterFile, setGuarantor1LetterFile] = useState(null);
-  const [guarantor2LetterFile, setGuarantor2LetterFile] = useState(null);
-  const [guarantor1PictureFile, setGuarantor1PictureFile] = useState(null);
-  const [guarantor2PictureFile, setGuarantor2PictureFile] = useState(null);
+  const [submissionError, setSubmissionError] = useState('');
 
-  // Restore saved form data on mount
-  React.useEffect(() => {
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!formData.name.trim() || !formData.email.trim() || !formData.password) {
+      toast.error('Name, email, and password are required.');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords must match.');
+      return;
+    }
+
     try {
-      const savedData = localStorage.getItem(STORAGE_KEY);
-      if (savedData) {
-        const parsed = JSON.parse(savedData);
-        // Don't restore password or file objects for security
-        const { password, profilePictureFile: _discardedProfile, qualificationDocumentFile: _discardedDoc, ...restoredData } = parsed;
-
-        let derivedStartTime = restoredData.startTime || '';
-        let derivedEndTime = restoredData.endTime || '';
-
-        if ((!derivedStartTime || !derivedEndTime) && Array.isArray(restoredData.workingHours) && restoredData.workingHours.length > 0) {
-          const [maybeStart, maybeEnd] = restoredData.workingHours[0].split('-').map(part => part.trim());
-          derivedStartTime = derivedStartTime || maybeStart || '';
-          derivedEndTime = derivedEndTime || maybeEnd || '';
-        }
-
-        setFormData(prev => ({
-          ...prev,
-          ...restoredData,
-          startTime: derivedStartTime,
-          endTime: derivedEndTime,
-          workingHours: Array.isArray(restoredData.workingHours) ? restoredData.workingHours : []
-        }));
-        setDataRestored(true);
-        // Show notification
-        setTimeout(() => {
-          toast.info('📝 Your previous form data has been restored. You can continue where you left off.', {
-            autoClose: 5000,
-            position: 'top-right'
-          });
-        }, 500);
-      }
-    } catch (error) {
-      console.error('Error restoring form data:', error);
-    }
-  }, []);
-
-  // Auto-save form data whenever it changes (debounced)
-  React.useEffect(() => {
-    // Clear existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    // Set new timeout to save after 1 second of no changes
-    saveTimeoutRef.current = setTimeout(() => {
-      try {
-        // Don't save if form is empty
-        const hasData = formData.name || formData.email || formData.phone || 
-                       formData.specialization || formData.qualifications || 
-                       formData.notes || formData.address;
-        
-        if (hasData) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
-          console.log('💾 Form data auto-saved');
-        }
-      } catch (error) {
-        console.error('Error saving form data:', error);
-      }
-    }, 1000); // Wait 1 second after last change
-
-    // Cleanup function
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [formData]);
-
-  // Clear saved data when modal closes (if user explicitly closes it)
-  const handleClose = () => {
-    // Optionally clear saved data when user closes modal
-    // Uncomment the next line if you want to clear on close
-    // localStorage.removeItem(STORAGE_KEY);
-    onClose();
-  };
-
-  // Submit handler - don't clear saved data here, let handleAddCaregiver do it on success
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (!formData.startTime || !formData.endTime) {
-      toast.error('Please select both a start time and an end time.');
-      return;
-    }
-
-    const startMinutes = timeToMinutes(formData.startTime);
-    const endMinutes = timeToMinutes(formData.endTime);
-
-    if (startMinutes === null || endMinutes === null) {
-      toast.error('Invalid working hours selected.');
-      return;
-    }
-
-    if (endMinutes <= startMinutes) {
-      toast.error('End time must be after start time.');
-      return;
-    }
-
-    if (formData.rateType === 'per_hour' && (!formData.rate || Number(formData.rate) <= 0)) {
-      toast.error('Please enter a valid hourly rate.');
-      return;
-    }
-
-    if (formData.rateType === 'per_month' && (!formData.monthlyRate || Number(formData.monthlyRate) <= 0)) {
-      toast.error('Please enter a valid monthly rate.');
-      return;
-    }
-
-    const workingHoursSummary = buildWorkingHoursSummary(formData.startTime, formData.endTime);
-
-    const submissionData = {
-      ...formData,
-      workingHours: workingHoursSummary
-    };
-    
-    onCreate(submissionData, { 
-      profilePictureFile, 
-      qualificationDocumentFile,
-      governmentIdFile,
-      guarantor1LetterFile,
-      guarantor2LetterFile,
-      guarantor1PictureFile,
-      guarantor2PictureFile
-    });
-  };
-
-  const formatRoleValue = (role) => role.toLowerCase().replace(/\s+/g, '_');
-
-  const caregiverRoles = [
-    'Care Giver',
-    'Doctor',
-    'Nurse', 
-    'Physiotherapist',
-    'Occupational Therapist',
-    'Social Worker',
-    'Home Health Aide',
-    'Medication Manager',
-    'House Keeper',
-    'Other'
-  ];
-
-  const daysOfWeek = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
-    'Friday', 'Saturday', 'Sunday'
-  ];
-
-  const timeOptions = [
-    '00:00',
-    '01:00',
-    '02:00',
-    '03:00',
-    '04:00',
-    '05:00',
-    '06:00',
-    '07:00',
-    '08:00',
-    '09:00',
-    '10:00',
-    '11:00',
-    '12:00',
-    '13:00',
-    '14:00',
-    '15:00',
-    '16:00',
-    '17:00',
-    '18:00',
-    '19:00',
-    '20:00',
-    '21:00',
-    '22:00',
-    '23:00'
-  ];
-
-  const timeToMinutes = (time) => {
-    if (!time) return null;
-    const [hourStr, minuteStr = '00'] = time.split(':');
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr, 10);
-    if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
-    return hour * 60 + minute;
-  };
-
-  const currencies = [
-    { code: 'USD', name: 'US Dollar', symbol: '$' },
-    { code: 'EUR', name: 'Euro', symbol: '€' },
-    { code: 'GBP', name: 'British Pound', symbol: '£' },
-    { code: 'NGN', name: 'Nigerian Naira', symbol: '₦' },
-    { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh' },
-    { code: 'ZAR', name: 'South African Rand', symbol: 'R' },
-    { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵' },
-    { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
-    { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
-    { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
-    { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
-    { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
-    { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
-    { code: 'SAR', name: 'Saudi Riyal', symbol: '﷼' },
-    { code: 'BRL', name: 'Brazilian Real', symbol: 'R$' },
-    { code: 'MXN', name: 'Mexican Peso', symbol: '$' }
-  ];
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    if (name === 'startTime' || name === 'endTime') {
-      const updated = {
-        ...formData,
-        [name]: value
-      };
-      const summary = updated.startTime && updated.endTime
-        ? buildWorkingHoursSummary(updated.startTime, updated.endTime)
-        : [];
-      setFormData({
-        ...updated,
-        workingHours: summary
+      await onCreate({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        password: formData.password,
+        userType: 'caregiver'
       });
-      return;
-    }
-
-    if (name === 'rateType') {
-      setFormData(prev => ({
-        ...prev,
-        rateType: value
-      }));
-      return;
-    }
-
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    });
-    
-    // Reset email exists check when email changes
-    if (name === 'email') {
-      setEmailExists(false);
-    }
-  };
-
-  const checkEmailUniqueness = async (email) => {
-    if (!email || !email.includes('@')) return;
-    
-    setCheckingEmail(true);
-    try {
-      // Check in users collection
-      const usersRef = collection(db, 'users');
-      const emailQuery = query(usersRef, where('email', '==', email));
-      const emailSnapshot = await getDocs(emailQuery);
-      
-      if (!emailSnapshot.empty) {
-        setEmailExists(true);
-        return;
-      }
-      
-      // Check in caregivers collection
-      const caregiversRef = collection(db, 'caregivers');
-      const caregiverEmailQuery = query(caregiversRef, where('email', '==', email));
-      const caregiverEmailSnapshot = await getDocs(caregiverEmailQuery);
-      
-      if (!caregiverEmailSnapshot.empty) {
-        setEmailExists(true);
-        return;
-      }
-      
-      setEmailExists(false);
+      setSubmissionError('');
     } catch (error) {
+<<<<<<< HEAD
       console.error('Error checking email:', error);
     } finally {
       setCheckingEmail(false);
@@ -7435,242 +7324,107 @@ const AddPharmacistModal = ({ onClose, onCreate }) => {
       console.error('Error checking email:', error);
     } finally {
       setCheckingEmail(false);
+=======
+      setSubmissionError(error.message || 'Unable to invite caregiver. Please try again.');
+>>>>>>> Refine admin dashboard and rules
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-green-600 to-emerald-600">
-          <div className="flex items-center space-x-3">
-            <Pill className="h-8 w-8 text-white" />
-            <div>
-              <h3 className="text-lg font-medium text-white">Add New Pharmacist</h3>
-              <p className="text-sm text-green-100">Onboard a pharmacist to your institution</p>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur">
+      <div className="relative mx-4 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">Caregiver Onboarding</p>
+            <h3 className="text-xl font-semibold text-gray-900">Invite a caregiver</h3>
+            <p className="mt-1 text-sm text-gray-600">Fill the basic credentials; the caregiver finishes onboarding later.</p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-green-500 rounded-lg p-2 transition-colors"
-          >
-            <X className="h-6 w-6" />
+          <button onClick={onClose} className="text-gray-500 transition hover:text-gray-800" aria-label="Close">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Full Name *</label>
-              <input
-                type="text"
-                name="name"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email Address *</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  onBlur={(e) => checkEmailUniqueness(e.target.value)}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 ${
-                    emailExists 
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
-                      : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
-                  }`}
-                />
-                {checkingEmail && (
-                  <div className="absolute right-3 top-3">
-                    <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full"></div>
-                  </div>
-                )}
-              </div>
-              {emailExists && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertTriangle className="h-4 w-4" />
-                  This email is already in use. Please use a different email.
-                </p>
-              )}
-              {!emailExists && formData.email && !checkingEmail && (
-                <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4" />
-                  Email is available
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Password *</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  minLength={6}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-green-500 focus:border-green-500"
-                  placeholder="Min. 6 characters"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 mt-0.5 text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  {showPassword ? (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">License Number *</label>
-              <input
-                type="text"
-                name="licenseNumber"
-                required
-                value={formData.licenseNumber}
-                onChange={handleChange}
-                placeholder="RPh-123456"
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Specialization *</label>
-              <select
-                name="specialization"
-                required
-                value={formData.specialization}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
-              >
-                {(pharmacySpecializations || []).map(spec => (
-                  <option key={spec} value={spec}>{spec}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Years of Experience</label>
-              <input
-                type="number"
-                name="experience"
-                min="0"
-                value={formData.experience}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Qualifications</label>
-            <textarea
-              name="qualifications"
-              rows={3}
-              value={formData.qualifications}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
-              placeholder="List educational qualifications, certifications, etc."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Address</label>
-            <textarea
-              name="address"
-              rows={3}
-              value={formData.address}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Emergency Contact</label>
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-6">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Full Name</label>
             <input
               type="text"
-              name="emergencyContact"
-              value={formData.emergencyContact}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
+              value={formData.name}
+              onChange={(event) => setFormData(prev => ({ ...prev, name: event.target.value }))}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              placeholder="e.g. Jane Doe"
+              required
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Additional Notes</label>
-            <textarea
-              name="notes"
-              rows={4}
-              value={formData.notes}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-green-500 focus:border-green-500"
-              placeholder="Any additional notes or special instructions..."
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(event) => setFormData(prev => ({ ...prev, email: event.target.value }))}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              placeholder="caregiver@example.com"
+              required
             />
           </div>
-
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-start">
-              <Pill className="h-5 w-5 text-green-600 mt-0.5 mr-3" />
-              <div className="text-sm text-green-800">
-                <p className="font-medium mb-1">Pharmacist Responsibilities:</p>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>Medication dispensing and management</li>
-                  <li>Patient medication counseling</li>
-                  <li>Drug interaction monitoring</li>
-                  <li>Prescription verification and processing</li>
-                  <li>Inventory management and ordering</li>
-                </ul>
-              </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Phone Number</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(event) => setFormData(prev => ({ ...prev, phone: event.target.value }))}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              placeholder="+234 000 000 0000"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Password</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(event) => setFormData(prev => ({ ...prev, password: event.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-500 transition hover:text-gray-700"
+                aria-label="Toggle password visibility"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
           </div>
-
-          <div className="flex justify-end space-x-3 pt-6 border-t">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Confirm Password</label>
+            <input
+              type="password"
+              value={formData.confirmPassword}
+              onChange={(event) => setFormData(prev => ({ ...prev, confirmPassword: event.target.value }))}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              required
+              minLength={6}
+            />
+          </div>
+          {submissionError && (
+            <p className="text-sm text-red-600 px-6">{submissionError}</p>
+          )}
+          <div className="flex justify-end gap-3 pt-3 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={emailExists || checkingEmail}
-              className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                emailExists || checkingEmail
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
-              }`}
+              className="px-5 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
             >
-              {checkingEmail ? 'Checking...' : emailExists ? 'Email Already Exists' : 'Add Pharmacist'}
+              Invite caregiver
             </button>
           </div>
         </form>
@@ -7678,6 +7432,7 @@ const AddPharmacistModal = ({ onClose, onCreate }) => {
     </div>
   );
 };
+
 
 // Assignment Modal Component
 const AssignmentModal = ({ 
@@ -12159,4 +11914,3 @@ const PaymentGatewayConfigModal = ({ gateway, existingConfig, onClose, onSave })
 };
 
 export default InstitutionAdminDashboard;
-
