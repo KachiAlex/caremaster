@@ -397,35 +397,35 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
     }
   };
 
-  const inputClass = "w-full rounded-xl border border-slate-700/60 bg-slate-900/60 px-4 py-3 text-sm text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors";
-  const labelClass = "block text-sm font-medium text-slate-300 mb-1.5";
+  const inputClass = "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
+  const labelClass = "block text-sm font-medium text-gray-700 mb-1.5";
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-4xl max-h-[90vh] rounded-3xl border border-slate-800/80 bg-slate-950/90 backdrop-blur-sm shadow-2xl shadow-black/60 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-4xl max-h-[90vh] rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800/60 px-6 py-4 bg-gradient-to-r from-blue-600/20 to-blue-600/20">
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-50">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg">
-              <Heart className="h-5 w-5 text-slate-950" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 shadow-md">
+              <Heart className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-slate-50">Register New Patient</h3>
-              <p className="text-xs text-slate-400">Step {currentStep} of 3</p>
+              <h3 className="text-lg font-semibold text-gray-900">Register New Patient</h3>
+              <p className="text-xs text-gray-500">Step {currentStep} of 3</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl border border-slate-700/60 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-400 hover:border-blue-400/60 hover:text-blue-200 transition-colors"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Progress Steps */}
-        <div className="px-6 py-4 border-b border-slate-800/60 bg-slate-900/40">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
             {[1, 2, 3].map((step) => (
               <React.Fragment key={step}>
@@ -433,7 +433,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
                     currentStep >= step 
                       ? 'bg-blue-600 text-white' 
-                      : 'bg-slate-800 text-slate-400'
+                      : 'bg-gray-200 text-gray-500'
                   } transition-colors`}>
                     {currentStep > step ? (
                       <CheckCircle className="h-4 w-4" />
@@ -442,14 +442,14 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     )}
                   </div>
                   <span className={`ml-2 text-xs font-medium ${
-                    currentStep >= step ? 'text-blue-300' : 'text-slate-400'
+                    currentStep >= step ? 'text-blue-600' : 'text-gray-500'
                   }`}>
                     {step === 1 ? 'Personal Info' : step === 2 ? 'Emergency Contact' : 'Medical Info'}
                   </span>
                 </div>
                 {step < 3 && (
                   <div className={`flex-1 h-0.5 mx-4 ${
-                    currentStep > step ? 'bg-blue-600' : 'bg-slate-800'
+                    currentStep > step ? 'bg-blue-600' : 'bg-gray-200'
                   } transition-colors`} />
                 )}
               </React.Fragment>
@@ -462,21 +462,21 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
           {createdPatientId ? (
             <div className="text-center py-8">
               <div className="flex items-center justify-center mb-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600/20">
-                  <CheckCircle className="h-8 w-8 text-blue-400" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                  <CheckCircle className="h-8 w-8 text-blue-600" />
                 </div>
               </div>
-              <h3 className="text-xl font-semibold text-slate-50 mb-2">Patient Registered Successfully!</h3>
-              <p className="text-sm text-slate-400 mb-1">Registration Number</p>
-              <div className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600/20 to-blue-600/20 border-2 border-blue-500/50 mb-6">
-                <span className="font-mono font-bold text-blue-300 text-2xl tracking-wider">{createdPatientId}</span>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Patient Registered Successfully!</h3>
+              <p className="text-sm text-gray-600 mb-1">Registration Number</p>
+              <div className="inline-block px-6 py-3 rounded-lg bg-blue-50 border-2 border-blue-200 mb-6">
+                <span className="font-mono font-bold text-blue-600 text-2xl tracking-wider">{createdPatientId}</span>
               </div>
               
               {/* QR Code Display */}
-              <div className="flex flex-col items-center gap-4 mb-6 p-6 rounded-xl bg-slate-900/60 border border-slate-700/60">
-                <QrCode className="h-6 w-6 text-blue-400" />
-                <p className="text-sm font-medium text-slate-300">Patient QR Code</p>
-                <div className="p-4 bg-white rounded-lg">
+              <div className="flex flex-col items-center gap-4 mb-6 p-6 rounded-xl bg-gray-50 border border-gray-200">
+                <QrCode className="h-6 w-6 text-blue-600" />
+                <p className="text-sm font-medium text-gray-700">Patient QR Code</p>
+                <div className="p-4 bg-white rounded-lg border border-gray-200">
                   <QRCode
                     value={generatePatientQRCodeData(
                       createdPatientId,
@@ -488,12 +488,12 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     includeMargin={true}
                   />
                 </div>
-                <p className="text-xs text-slate-400 max-w-xs">
+                <p className="text-xs text-gray-500 max-w-xs">
                   Scan this QR code to quickly access patient information
                 </p>
               </div>
 
-              <p className="text-xs text-slate-400 mt-4 max-w-md mx-auto">
+              <p className="text-xs text-gray-500 mt-4 max-w-md mx-auto">
                 This registration number will be used to identify the patient throughout the system. 
                 All activities will be logged with this number.
               </p>
@@ -504,15 +504,15 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-4">
-                    <User className="h-5 w-5 text-blue-400" />
-                    <h4 className="text-base font-semibold text-slate-50">Personal Information</h4>
+                    <User className="h-5 w-5 text-blue-600" />
+                    <h4 className="text-base font-semibold text-gray-900">Personal Information</h4>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>Full Name *</label>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
                           type="text"
                           name="name"
@@ -528,7 +528,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     <div>
                       <label className={labelClass}>Email Address</label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
                           type="email"
                           name="email"
@@ -543,7 +543,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     <div>
                       <label className={labelClass}>Phone Number *</label>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
                           type="tel"
                           name="phone"
@@ -559,7 +559,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     <div>
                       <label className={labelClass}>Date of Birth</label>
                       <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
                           type="date"
                           name="dateOfBirth"
@@ -619,10 +619,10 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     </div>
                   </div>
 
-                  <div>
-                    <label className={labelClass}>Address</label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                    <div>
+                      <label className={labelClass}>Address</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                       <input
                         type="text"
                         name="address"
@@ -676,8 +676,8 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
               {currentStep === 2 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-4">
-                    <AlertCircle className="h-5 w-5 text-blue-400" />
-                    <h4 className="text-base font-semibold text-slate-50">Emergency Contact Information</h4>
+                    <AlertCircle className="h-5 w-5 text-blue-600" />
+                    <h4 className="text-base font-semibold text-gray-900">Emergency Contact Information</h4>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -697,7 +697,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     <div>
                       <label className={labelClass}>Contact Phone *</label>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
                           type="tel"
                           name="emergencyContactPhone"
@@ -735,8 +735,8 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
               {currentStep === 3 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <Activity className="h-5 w-5 text-blue-400" />
-                    <h4 className="text-base font-semibold text-slate-50">Medical Information</h4>
+                    <Activity className="h-5 w-5 text-blue-600" />
+                    <h4 className="text-base font-semibold text-gray-900">Medical Information</h4>
                   </div>
 
                   <div>
@@ -745,10 +745,10 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                       {careLevels.map((level) => (
                         <label
                           key={level.value}
-                          className={`relative flex cursor-pointer rounded-xl border p-4 transition-colors ${
+                          className={`relative flex cursor-pointer rounded-lg border p-4 transition-colors ${
                             formData.careLevel === level.value
-                              ? 'border-blue-500/50 bg-blue-600/10'
-                              : 'border-slate-700/60 bg-slate-900/60 hover:border-slate-600'
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-300 bg-white hover:border-gray-400'
                           }`}
                         >
                           <input
@@ -760,11 +760,11 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                             className="sr-only"
                           />
                           <div className="flex-1">
-                            <div className="font-medium text-slate-50">{level.label}</div>
-                            <div className="text-xs text-slate-400 mt-1">{level.description}</div>
+                            <div className="font-medium text-gray-900">{level.label}</div>
+                            <div className="text-xs text-gray-500 mt-1">{level.description}</div>
                           </div>
                           {formData.careLevel === level.value && (
-                            <CheckCircle className="h-5 w-5 text-blue-400" />
+                            <CheckCircle className="h-5 w-5 text-blue-600" />
                           )}
                         </label>
                       ))}
@@ -795,13 +795,13 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                         {formData.medicalConditions.map((condition, index) => (
                           <span
                             key={index}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-200"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700"
                           >
                             {condition}
                             <button
                               type="button"
                               onClick={() => removeMedicalCondition(index)}
-                              className="text-red-400 hover:text-red-300"
+                              className="text-red-600 hover:text-red-800"
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -835,14 +835,14 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                         {formData.medications.map((medication, index) => (
                           <span
                             key={index}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-sm text-blue-200"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-700"
                           >
                             <Pill className="h-3 w-3" />
                             {medication}
                             <button
                               type="button"
                               onClick={() => removeMedication(index)}
-                              className="text-blue-400 hover:text-blue-300"
+                              className="text-blue-600 hover:text-blue-800"
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -876,13 +876,13 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                         {formData.allergies.map((allergy, index) => (
                           <span
                             key={index}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-sm text-amber-200"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-700"
                           >
                             {allergy}
                             <button
                               type="button"
                               onClick={() => removeAllergy(index)}
-                              className="text-blue-400 hover:text-blue-300"
+                              className="text-amber-600 hover:text-amber-800"
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -928,10 +928,10 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   </div>
 
                   {/* Document Upload Section */}
-                  <div className="border-t border-slate-700/60 pt-4 mt-4">
+                  <div className="border-t border-gray-200 pt-4 mt-4">
                     <div className="flex items-center gap-2 mb-4">
-                      <FileText className="h-5 w-5 text-blue-400" />
-                      <h4 className="text-base font-semibold text-slate-50">Documents (Optional)</h4>
+                      <FileText className="h-5 w-5 text-blue-600" />
+                      <h4 className="text-base font-semibold text-gray-900">Documents (Optional)</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {[
@@ -956,10 +956,10 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                             />
                             <label
                               htmlFor={`file-${key}`}
-                              className={`flex items-center gap-2 px-4 py-3 rounded-xl border cursor-pointer transition-colors ${
+                              className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
                                 uploadedDocuments[key]
-                                  ? 'border-green-500/50 bg-green-500/10 text-green-200'
-                                  : 'border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-blue-500/50'
+                                  ? 'border-green-500 bg-green-50 text-green-700'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-blue-500'
                               } ${uploading[key] ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                               <Icon className="h-4 w-4" />
@@ -971,14 +971,14 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                                     : `Upload ${label}`}
                               </span>
                               {uploadedDocuments[key] && (
-                                <CheckCircle className="h-4 w-4 text-green-400" />
+                                <CheckCircle className="h-4 w-4 text-green-600" />
                               )}
                             </label>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">
+                    <p className="text-xs text-gray-500 mt-2">
                       Supported formats: PDF, JPG, PNG, WebP (Max 10MB per file)
                     </p>
                   </div>
@@ -1027,11 +1027,11 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
 
         {/* Footer Actions */}
         {!createdPatientId && (
-          <div className="flex items-center justify-between border-t border-slate-800/60 px-6 py-4 bg-slate-900/40">
+          <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 bg-gray-50">
             <button
               type="button"
               onClick={currentStep === 1 ? onClose : handlePrevious}
-              className="px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-300 hover:bg-slate-800/60 transition-colors"
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
             >
               {currentStep === 1 ? 'Cancel' : 'Previous'}
             </button>
@@ -1040,7 +1040,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2"
+                  className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
                 >
                   Next
                   <UserPlus className="h-4 w-4" />
@@ -1050,7 +1050,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   type="button"
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2"
+                  className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -1071,34 +1071,34 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
 
         {/* Duplicate Warning Modal */}
         {showDuplicateModal && duplicateCheck && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 rounded-2xl border border-red-500/50 p-6 max-w-2xl w-full">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl border border-red-200 p-6 max-w-2xl w-full shadow-xl">
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20">
-                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-50">Potential Duplicate Patient</h3>
-                  <p className="text-sm text-slate-400">Exact matches found in the system</p>
+                  <h3 className="text-lg font-semibold text-gray-900">Potential Duplicate Patient</h3>
+                  <p className="text-sm text-gray-600">Exact matches found in the system</p>
                 </div>
               </div>
 
               <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
                 {duplicateCheck.exactMatches.map((match, index) => (
-                  <div key={index} className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+                  <div key={index} className="p-4 rounded-lg bg-red-50 border border-red-200">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-medium text-slate-50">{match.patientName}</p>
-                        <p className="text-sm text-slate-400">Patient ID: {match.patientId}</p>
+                        <p className="font-medium text-gray-900">{match.patientName}</p>
+                        <p className="text-sm text-gray-600">Patient ID: {match.patientId}</p>
                         <div className="flex flex-wrap gap-2 mt-2">
                           {match.matchReasons.map((reason, i) => (
-                            <span key={i} className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-200">
+                            <span key={i} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">
                               {reason}
                             </span>
                           ))}
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-red-400">
+                      <span className="text-xs font-medium text-red-600">
                         {Math.round(match.matchScore * 100)}% match
                       </span>
                     </div>
@@ -1112,7 +1112,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     setShowDuplicateModal(false);
                     setDuplicateCheck(null);
                   }}
-                  className="flex-1 px-4 py-2 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-300 hover:bg-slate-800/60"
+                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                 >
                   Cancel Registration
                 </button>
@@ -1122,7 +1122,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     // Proceed with registration anyway
                     handleSubmit(new Event('submit'));
                   }}
-                  className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700"
+                  className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
                 >
                   Proceed Anyway
                 </button>
