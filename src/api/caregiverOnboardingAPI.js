@@ -3,31 +3,77 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from './notificationsAPI';
 
-export const saveCaregiverProfile = async (uid, profile) => {
+export const saveCaregiverProfile = async (uid, profile, isDraft = false) => {
   const caregiverRef = doc(db, 'caregivers', uid);
   const current = await getDoc(caregiverRef);
+  
+  // Get existing draft data if it exists
+  const existingData = current.exists() ? current.data() : {};
+  
+  // Merge profile data, preserving existing fields if not provided
   const payload = {
     id: uid,
     userId: uid,
-    name: profile.name || '',
-    email: profile.email || '',
-    phone: profile.phone || '',
-    address: profile.address || '',
-    specializations: profile.specializations || [],
-    medicalQualification: profile.medicalQualification || '',
-    yearsOfExperience: profile.yearsOfExperience || '',
-    verificationStatus: profile.verificationStatus || 'pending',
-    onboardingComplete: !!profile.onboardingComplete,
-    createdAt: current.exists() ? current.data().createdAt : serverTimestamp(),
+    ...existingData, // Preserve existing data
+    ...profile, // Override with new data
+    name: profile.name || existingData.name || '',
+    email: profile.email || existingData.email || '',
+    phone: profile.phone || existingData.phone || '',
+    address: profile.address || existingData.address || '',
+    specializations: profile.specializations || existingData.specializations || [],
+    medicalQualification: profile.medicalQualification || existingData.medicalQualification || '',
+    yearsOfExperience: profile.yearsOfExperience || existingData.yearsOfExperience || '',
+    verificationStatus: profile.verificationStatus || existingData.verificationStatus || 'pending',
+    onboardingComplete: isDraft ? false : (!!profile.onboardingComplete),
+    onboardingDraft: isDraft ? true : (existingData.onboardingDraft || false),
+    onboardingStep: profile.onboardingStep || existingData.onboardingStep || 1,
+    createdAt: current.exists() ? existingData.createdAt : serverTimestamp(),
     updatedAt: serverTimestamp(),
-    status: profile.status || 'active'
+    status: profile.status || existingData.status || 'active'
   };
+  
   if (current.exists()) {
     await updateDoc(caregiverRef, payload);
   } else {
     await setDoc(caregiverRef, payload);
   }
+  
+  // Also save draft to users collection for easy access
+  const userRef = doc(db, 'users', uid);
+  const userCurrent = await getDoc(userRef);
+  if (userCurrent.exists()) {
+    await updateDoc(userRef, {
+      onboardingDraft: isDraft,
+      onboardingStep: profile.onboardingStep || existingData.onboardingStep || 1,
+      updatedAt: serverTimestamp()
+    });
+  }
+  
   return payload;
+};
+
+// Save draft data
+export const saveOnboardingDraft = async (uid, draftData) => {
+  return saveCaregiverProfile(uid, draftData, true);
+};
+
+// Load draft data
+export const loadOnboardingDraft = async (uid) => {
+  const caregiverRef = doc(db, 'caregivers', uid);
+  const caregiverSnap = await getDoc(caregiverRef);
+  
+  if (caregiverSnap.exists()) {
+    return caregiverSnap.data();
+  }
+  
+  // Also check users collection
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  if (userSnap.exists()) {
+    return userSnap.data();
+  }
+  
+  return null;
 };
 
 export const uploadCaregiverDocument = async (uid, file, folder = 'documents') => {
@@ -127,6 +173,8 @@ export const completeOnboarding = async (uid) => {
 
 export default {
   saveCaregiverProfile,
+  saveOnboardingDraft,
+  loadOnboardingDraft,
   uploadCaregiverDocument,
   completeOnboarding,
 };

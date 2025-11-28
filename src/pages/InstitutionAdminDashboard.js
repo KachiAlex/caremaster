@@ -66,7 +66,7 @@ import {
   Database,
   CreditCard
 } from 'lucide-react';
-import { getAllUsers, createUser } from '../api/usersAPI';
+import { getAllUsers, createUser, updateUserStatus } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
 import { emergencyAPI } from '../api/emergencyAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
@@ -100,6 +100,8 @@ import UserProfileSettings from '../components/UserProfileSettings';
 import InstitutionSettings from '../components/InstitutionSettings';
 import CreatePatientModal from '../components/CreatePatientModal';
 import InstitutionUserCreationModal from '../components/InstitutionUserCreationModal';
+import AddCaregiverModal from '../components/AddCaregiverModal';
+import ClientDetailsModal from '../components/ClientDetailsModal';
 import HelpSupport from '../components/HelpSupport';
 import { toast } from 'react-toastify';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages } from '../api/messagesAPI';
@@ -565,6 +567,7 @@ const InstitutionAdminDashboard = () => {
             institutionId: userCaregiver.institutionId,
             phone: userCaregiver.phone,
             onboardingComplete: userCaregiver.onboardingComplete,
+            onboardingStarted: userCaregiver.onboardingStarted || false,
             createdAt: userCaregiver.createdAt,
             updatedAt: userCaregiver.updatedAt,
             workingHours: userCaregiver.workingHours || [],
@@ -1617,7 +1620,7 @@ const InstitutionAdminDashboard = () => {
 
   // Client Action Handlers
   const handleArchiveClient = async (clientId) => {
-    if (!window.confirm('Are you sure you want to archive this patient? You can restore them later from the Archived Patients section.')) {
+    if (!window.confirm('Are you sure you want to archive this client? You can restore them later from the Archived Clients section.')) {
       return;
     }
     try {
@@ -1628,7 +1631,7 @@ const InstitutionAdminDashboard = () => {
         archivedAt: new Date().toISOString(),
         archivedBy
       });
-      toast.success('Patient archived successfully');
+      toast.success('Client archived successfully');
       await trackAdminEvent('client_archived', {
         clientId,
         institutionId: instId,
@@ -1638,12 +1641,12 @@ const InstitutionAdminDashboard = () => {
       setShowClientDetails(false);
     } catch (error) {
       console.error('Error archiving client:', error);
-      toast.error('Failed to archive patient');
+      toast.error('Failed to archive client');
     }
   };
 
   const handleUnarchiveClient = async (clientId) => {
-    if (!window.confirm('Are you sure you want to restore this patient? They will be moved back to the active patients list.')) {
+    if (!window.confirm('Are you sure you want to restore this client? They will be moved back to the active clients list.')) {
       return;
     }
     try {
@@ -1653,7 +1656,7 @@ const InstitutionAdminDashboard = () => {
         archivedAt: null,
         archivedBy: null
       });
-      toast.success('Patient restored successfully');
+      toast.success('Client restored successfully');
       await trackAdminEvent('client_restored', {
         clientId,
         institutionId: instId,
@@ -1663,7 +1666,7 @@ const InstitutionAdminDashboard = () => {
       setShowClientDetails(false);
     } catch (error) {
       console.error('Error restoring client:', error);
-      toast.error('Failed to restore patient');
+      toast.error('Failed to restore client');
     }
   };
 
@@ -2676,19 +2679,37 @@ const InstitutionAdminDashboard = () => {
                         <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Contact</th>
                         <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Status</th>
                         <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Joined</th>
+                        <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {clients.map((client) => (
-                        <tr key={client.id || client.uid} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => {
-                          setSelectedClient(client);
-                          setShowClientDetails(true);
-                        }}>
-                          <td className="px-6 py-4 font-medium text-gray-900">
+                        <tr key={client.id || client.uid} className="hover:bg-gray-50 transition-colors">
+                          <td 
+                            className="px-6 py-4 font-medium text-gray-900 cursor-pointer"
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setShowClientDetails(true);
+                            }}
+                          >
                             {client.name || client.fullName || 'Unnamed'}
                           </td>
-                          <td className="px-6 py-4 text-gray-600">{client.phone || client.email || '—'}</td>
-                          <td className="px-6 py-4">
+                          <td 
+                            className="px-6 py-4 text-gray-600 cursor-pointer"
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setShowClientDetails(true);
+                            }}
+                          >
+                            {client.phone || client.email || '—'}
+                          </td>
+                          <td 
+                            className="px-6 py-4 cursor-pointer"
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setShowClientDetails(true);
+                            }}
+                          >
                             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                               client.status === 'active' ? 'bg-green-100 text-green-800' :
                               client.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -2698,7 +2719,36 @@ const InstitutionAdminDashboard = () => {
                               {client.status || 'Pending'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-gray-600">{formatDateValue(client.createdAt || client.joinedAt)}</td>
+                          <td 
+                            className="px-6 py-4 text-gray-600 cursor-pointer"
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setShowClientDetails(true);
+                            }}
+                          >
+                            {formatDateValue(client.createdAt || client.joinedAt)}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => {
+                                  setSelectedClient(client);
+                                  setShowClientDetails(true);
+                                }}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="View Client Details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleArchiveClient(client.id || client.uid)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Archive Client"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -2760,30 +2810,88 @@ const InstitutionAdminDashboard = () => {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Role</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Specializations</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Active</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Onboarding</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {caregivers.map((caregiver) => (
-                        <tr key={caregiver.id || caregiver.uid} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-gray-900">{caregiver.name || 'Caregiver'}</td>
-                          <td className="px-6 py-4 text-gray-600 capitalize">{caregiver.role || caregiver.userType || 'Caregiver'}</td>
-                          <td className="px-6 py-4 text-gray-600">{(caregiver.specializations || []).slice(0, 2).join(', ') || 'General Care'}</td>
-                          <td className="px-6 py-4 text-gray-600">{formatDateValue(caregiver.lastActive)}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                              caregiver.status === 'active' ? 'bg-green-100 text-green-800' :
-                              caregiver.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              caregiver.status === 'inactive' ? 'bg-gray-100 text-gray-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {caregiver.status || 'Active'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {caregivers.map((caregiver) => {
+                        const onboardingStatus = caregiver.onboardingComplete ? 'completed' : (caregiver.onboardingStarted ? 'in-progress' : 'not-started');
+                        return (
+                          <tr key={caregiver.id || caregiver.uid} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4 font-medium text-gray-900">{caregiver.name || 'Caregiver'}</td>
+                            <td className="px-6 py-4 text-gray-600 capitalize">{caregiver.role || caregiver.userType || 'Caregiver'}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                onboardingStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                                onboardingStatus === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {onboardingStatus === 'completed' ? 'Completed' :
+                                 onboardingStatus === 'in-progress' ? 'In Progress' :
+                                 'Not Started'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                caregiver.status === 'active' ? 'bg-green-100 text-green-800' :
+                                caregiver.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                caregiver.status === 'inactive' ? 'bg-gray-100 text-gray-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {caregiver.status || 'Pending'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setSelectedCaregiver(caregiver);
+                                    setShowCaregiverDetails(true);
+                                  }}
+                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="View Caregiver Details"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </button>
+                                {caregiver.status === 'pending' && (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        // Check if this is a user from users collection or caregiver from caregivers collection
+                                        const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
+                                        if (isUser) {
+                                          // Update via Firestore directly for users collection
+                                          const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+                                          const { db } = await import('../firebase/config');
+                                          await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
+                                            status: 'active', 
+                                            active: true,
+                                            updatedAt: serverTimestamp()
+                                          });
+                                        } else {
+                                          // Update via caregiverAPI
+                                          await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'active' });
+                                        }
+                                        toast.success('Caregiver activated successfully', { autoClose: 3000 });
+                                        await loadDashboardData();
+                                      } catch (error) {
+                                        console.error('Error activating caregiver:', error);
+                                        toast.error('Failed to activate caregiver', { autoClose: 3000 });
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    title="Activate Caregiver"
+                                  >
+                                    Activate
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -3390,13 +3498,27 @@ const InstitutionAdminDashboard = () => {
         />
       )}
 
+      {showClientDetails && selectedClient && (
+        <ClientDetailsModal
+          client={selectedClient}
+          onClose={() => {
+            setShowClientDetails(false);
+            setSelectedClient(null);
+          }}
+          onAssignTask={handleAssignTaskToClient}
+          onDelete={(client) => handleArchiveClient(client.id || client.uid)}
+          onUnarchive={(client) => handleUnarchiveClient(client.id || client.uid)}
+          institutionId={effectiveInstitutionId}
+        />
+      )}
+
       {showAddCaregiver && (
-        <InstitutionUserCreationModal
+        <AddCaregiverModal
           isOpen={showAddCaregiver}
           onClose={() => setShowAddCaregiver(false)}
           institutionId={effectiveInstitutionId}
           createdBy={user?.uid}
-          onUserCreated={() => {
+          onCaregiverCreated={() => {
             loadDashboardData();
             setShowAddCaregiver(false);
           }}
