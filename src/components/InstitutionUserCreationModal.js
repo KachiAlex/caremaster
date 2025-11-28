@@ -24,9 +24,7 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
     { value: 'caregiver', label: 'Caregiver (Non-Medical)', medicalQualification: 'Caregiver (Non-Medical)', tier: null },
     { value: 'nurse', label: 'Nurse (RN/LPN)', medicalQualification: 'Registered Nurse', tier: null },
     { value: 'doctor', label: 'Doctor/Physician', medicalQualification: 'Doctor', tier: null },
-    { value: 'pharmacist', label: 'Pharmacist', medicalQualification: 'Pharmacist', tier: null },
-    { value: 'secondary-admin', label: 'Administrator (Secondary)', medicalQualification: '', tier: 'secondary' },
-    { value: 'primary-admin', label: 'Administrator (Primary)', medicalQualification: '', tier: 'primary' }
+    { value: 'pharmacist', label: 'Pharmacist', medicalQualification: 'Pharmacist', tier: null }
   ];
 
   const validate = () => {
@@ -54,7 +52,7 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
     e.preventDefault();
     
     if (!validate()) {
-      toast.error('Please fix the errors in the form');
+      toast.error('Please fix the errors in the form', { autoClose: 3000 });
       return;
     }
     
@@ -79,7 +77,7 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
         institutionId,
         createdBy,
         accountType: 'institution_created',
-        onboardingComplete: true
+        onboardingComplete: false
       });
 
       // Show success message with credentials
@@ -93,10 +91,10 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
               <div className="mt-2 text-xs opacity-80">Please share these credentials securely with the user.</div>
             </div>
           </>,
-          { autoClose: 15000, position: 'top-center' }
+          { autoClose: 5000, position: 'top-center' }
         );
       } else {
-        toast.success('User created successfully!');
+        toast.success('User created successfully!', { autoClose: 3000 });
       }
 
       // Reset form
@@ -133,7 +131,7 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
         errorMessage = error.message;
       }
       
-      toast.error(errorMessage);
+      toast.error(errorMessage, { autoClose: 4000 });
     } finally {
       setLoading(false);
     }
@@ -151,25 +149,25 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full my-8 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 sm:px-6 py-4 flex items-center justify-between z-10 flex-shrink-0">
           <div>
-            <h2 className="text-2xl font-bold text-white">Create New User</h2>
-            <p className="text-blue-100 text-sm mt-1">Add a new user to your institution</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">Create New User</h2>
+            <p className="text-blue-100 text-xs sm:text-sm mt-1">Add a new user to your institution</p>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+            className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors flex-shrink-0"
             disabled={loading}
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        {/* Form - Scrollable */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
           {/* User Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -397,19 +395,19 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-4">
+          {/* Actions - Sticky Footer */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 pt-4 mt-6 flex items-center justify-end space-x-3 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 sm:px-6 py-2 sm:py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               disabled={loading}
             >
               {loading ? (

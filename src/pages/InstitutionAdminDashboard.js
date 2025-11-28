@@ -101,6 +101,7 @@ import InstitutionSettings from '../components/InstitutionSettings';
 import CreatePatientModal from '../components/CreatePatientModal';
 import InstitutionUserCreationModal from '../components/InstitutionUserCreationModal';
 import AddCaregiverModal from '../components/AddCaregiverModal';
+import CaregiverDetailsModal from '../components/CaregiverDetailsModal';
 import ClientDetailsModal from '../components/ClientDetailsModal';
 import HelpSupport from '../components/HelpSupport';
 import { toast } from 'react-toastify';
@@ -1431,7 +1432,7 @@ const InstitutionAdminDashboard = () => {
       setCaregivers(prevCaregivers => prevCaregivers.filter(c => c.id !== caregiverId));
       console.log('✅ Removed from local state');
       
-      toast.success('Caregiver deleted successfully');
+      toast.success('Caregiver deleted successfully', { autoClose: 3000 });
       
       // Reload dashboard data in background to ensure consistency
       setTimeout(() => {
@@ -1439,7 +1440,7 @@ const InstitutionAdminDashboard = () => {
       }, 500);
     } catch (error) {
       console.error('Error deleting caregiver:', error);
-      toast.error('Failed to delete caregiver');
+      toast.error('Failed to delete caregiver', { autoClose: 3000 });
     }
   };
 
@@ -2887,6 +2888,55 @@ const InstitutionAdminDashboard = () => {
                                     Activate
                                   </button>
                                 )}
+                                {caregiver.status === 'active' && (
+                                  <button
+                                    onClick={async () => {
+                                      if (!window.confirm('Are you sure you want to suspend this caregiver?')) {
+                                        return;
+                                      }
+                                      try {
+                                        const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
+                                        if (isUser) {
+                                          const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+                                          const { db } = await import('../firebase/config');
+                                          await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
+                                            status: 'suspended', 
+                                            active: false,
+                                            updatedAt: serverTimestamp()
+                                          });
+                                        } else {
+                                          await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'suspended' });
+                                        }
+                                        toast.success('Caregiver suspended successfully', { autoClose: 3000 });
+                                        await loadDashboardData();
+                                      } catch (error) {
+                                        console.error('Error suspending caregiver:', error);
+                                        toast.error('Failed to suspend caregiver', { autoClose: 3000 });
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                                    title="Suspend Caregiver"
+                                  >
+                                    Suspend
+                                  </button>
+                                )}
+                                <button
+                                  onClick={async () => {
+                                    if (!window.confirm('Are you sure you want to delete this caregiver? This action cannot be undone.')) {
+                                      return;
+                                    }
+                                    try {
+                                      await handleDeleteCaregiver(caregiver.id || caregiver.uid);
+                                    } catch (error) {
+                                      console.error('Error deleting caregiver:', error);
+                                      toast.error('Failed to delete caregiver', { autoClose: 3000 });
+                                    }
+                                  }}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete Caregiver"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -3034,6 +3084,7 @@ const InstitutionAdminDashboard = () => {
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Caregiver</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Due</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -3053,6 +3104,79 @@ const InstitutionAdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-gray-600">{formatDateValue(assignment.dueDate || assignment.dueAt)}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedAssignment(assignment);
+                                  setShowAssignmentDetails(true);
+                                }}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="View Details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleEditAssignment(assignment)}
+                                className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                                title="Edit Assignment"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              {(assignment.status === 'pending' || assignment.status === 'active') && (
+                                <button
+                                  onClick={async () => {
+                                    if (!window.confirm(`Are you sure you want to ${assignment.status === 'pending' ? 'start' : 'complete'} this assignment?`)) {
+                                      return;
+                                    }
+                                    try {
+                                      const newStatus = assignment.status === 'pending' ? 'active' : 'completed';
+                                      await assignmentAPI.updateAssignment(assignment.id || assignment.assignmentId, {
+                                        status: newStatus,
+                                        ...(newStatus === 'completed' ? { completedAt: new Date().toISOString() } : { startedAt: new Date().toISOString() })
+                                      });
+                                      toast.success(`Assignment ${newStatus === 'active' ? 'started' : 'completed'} successfully`);
+                                      await loadDashboardData();
+                                    } catch (error) {
+                                      console.error('Error updating assignment status:', error);
+                                      toast.error(`Failed to ${assignment.status === 'pending' ? 'start' : 'complete'} assignment`);
+                                    }
+                                  }}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    assignment.status === 'pending' 
+                                      ? 'text-green-600 hover:bg-green-50' 
+                                      : 'text-blue-600 hover:bg-blue-50'
+                                  }`}
+                                  title={assignment.status === 'pending' ? 'Start Assignment' : 'Complete Assignment'}
+                                >
+                                  {assignment.status === 'pending' ? (
+                                    <CheckCircle2 className="h-4 w-4" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4" />
+                                  )}
+                                </button>
+                              )}
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(`Are you sure you want to delete assignment "${assignment.title || 'this assignment'}"? This action cannot be undone.`)) {
+                                    return;
+                                  }
+                                  try {
+                                    await assignmentAPI.deleteAssignment(assignment.id || assignment.assignmentId);
+                                    toast.success('Assignment deleted successfully');
+                                    await loadDashboardData();
+                                  } catch (error) {
+                                    console.error('Error deleting assignment:', error);
+                                    toast.error('Failed to delete assignment');
+                                  }
+                                }}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete Assignment"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -3512,6 +3636,60 @@ const InstitutionAdminDashboard = () => {
         />
       )}
 
+      {showCaregiverDetails && selectedCaregiver && (
+        <CaregiverDetailsModal
+          caregiver={selectedCaregiver}
+          onClose={() => {
+            setShowCaregiverDetails(false);
+            setSelectedCaregiver(null);
+          }}
+          onSuspend={async (caregiver) => {
+            try {
+              const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
+              if (isUser) {
+                const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+                const { db } = await import('../firebase/config');
+                await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
+                  status: 'suspended', 
+                  active: false,
+                  updatedAt: serverTimestamp()
+                });
+              } else {
+                await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'suspended' });
+              }
+              toast.success('Caregiver suspended successfully', { autoClose: 3000 });
+              await loadDashboardData();
+            } catch (error) {
+              console.error('Error suspending caregiver:', error);
+              toast.error('Failed to suspend caregiver', { autoClose: 3000 });
+            }
+          }}
+          onActivate={async (caregiver) => {
+            try {
+              const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
+              if (isUser) {
+                const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+                const { db } = await import('../firebase/config');
+                await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
+                  status: 'active', 
+                  active: true,
+                  updatedAt: serverTimestamp()
+                });
+              } else {
+                await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'active' });
+              }
+              toast.success('Caregiver activated successfully', { autoClose: 3000 });
+              await loadDashboardData();
+            } catch (error) {
+              console.error('Error activating caregiver:', error);
+              toast.error('Failed to activate caregiver', { autoClose: 3000 });
+            }
+          }}
+          onDelete={handleDeleteCaregiver}
+          institutionId={effectiveInstitutionId}
+        />
+      )}
+
       {showAddCaregiver && (
         <AddCaregiverModal
           isOpen={showAddCaregiver}
@@ -3536,6 +3714,199 @@ const InstitutionAdminDashboard = () => {
             setShowAddPharmacist(false);
           }}
         />
+      )}
+
+      {/* Assignment Details Modal */}
+      {showAssignmentDetails && selectedAssignment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Assignment Details</h3>
+                <p className="text-sm text-gray-500 mt-1">View complete assignment information</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAssignmentDetails(false);
+                  setSelectedAssignment(null);
+                }}
+                className="p-2 rounded-full hover:bg-gray-100 transition"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Header Info */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900">{selectedAssignment.title || 'Assignment'}</h4>
+                  <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
+                    selectedAssignment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    selectedAssignment.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                    selectedAssignment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {selectedAssignment.status || 'Pending'}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">Priority</p>
+                  <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                    selectedAssignment.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                    selectedAssignment.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                    selectedAssignment.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {selectedAssignment.priority || 'Normal'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Client & Caregiver Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs uppercase text-gray-500 mb-1">Client</p>
+                  <p className="text-sm font-semibold text-gray-900">{selectedAssignment.clientName || 'Unknown Client'}</p>
+                  {selectedAssignment.clientEmail && (
+                    <p className="text-xs text-gray-600 mt-1">{selectedAssignment.clientEmail}</p>
+                  )}
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs uppercase text-gray-500 mb-1">Caregiver</p>
+                  <p className="text-sm font-semibold text-gray-900">{selectedAssignment.caregiverName || 'Unknown Caregiver'}</p>
+                  {selectedAssignment.caregiverEmail && (
+                    <p className="text-xs text-gray-600 mt-1">{selectedAssignment.caregiverEmail}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-xs uppercase text-gray-500 mb-2">Due Date & Time</p>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-900">
+                      {formatDateValue(selectedAssignment.dueDate || selectedAssignment.dueAt) || 'Not specified'}
+                    </span>
+                  </div>
+                  {selectedAssignment.dueTime && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-900">{selectedAssignment.dueTime}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedAssignment.description && (
+                <div>
+                  <p className="text-xs uppercase text-gray-500 mb-2">Description</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedAssignment.description}</p>
+                </div>
+              )}
+
+              {/* Instructions */}
+              {selectedAssignment.instructions && (
+                <div>
+                  <p className="text-xs uppercase text-gray-500 mb-2">Instructions</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedAssignment.instructions}</p>
+                </div>
+              )}
+
+              {/* Assignment Type */}
+              {selectedAssignment.assignmentType && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs uppercase text-gray-500 mb-1">Assignment Type</p>
+                  <p className="text-sm font-medium text-gray-900 capitalize">
+                    {selectedAssignment.assignmentType.replace(/-/g, ' ')}
+                  </p>
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                <div>
+                  <p className="text-xs text-gray-500">Created</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {selectedAssignment.createdAt ? formatDateValue(selectedAssignment.createdAt) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Assigned By</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {selectedAssignment.assignedByName || 'Admin'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowAssignmentDetails(false);
+                    handleEditAssignment(selectedAssignment);
+                  }}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Edit
+                </button>
+                {(selectedAssignment.status === 'pending' || selectedAssignment.status === 'active') && (
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm(`Are you sure you want to ${selectedAssignment.status === 'pending' ? 'start' : 'complete'} this assignment?`)) {
+                        return;
+                      }
+                      try {
+                        const newStatus = selectedAssignment.status === 'pending' ? 'active' : 'completed';
+                        await assignmentAPI.updateAssignment(selectedAssignment.id || selectedAssignment.assignmentId, {
+                          status: newStatus,
+                          ...(newStatus === 'completed' ? { completedAt: new Date().toISOString() } : { startedAt: new Date().toISOString() })
+                        });
+                        toast.success(`Assignment ${newStatus === 'active' ? 'started' : 'completed'} successfully`);
+                        setShowAssignmentDetails(false);
+                        setSelectedAssignment(null);
+                        await loadDashboardData();
+                      } catch (error) {
+                        console.error('Error updating assignment status:', error);
+                        toast.error(`Failed to ${selectedAssignment.status === 'pending' ? 'start' : 'complete'} assignment`);
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold text-white transition ${
+                      selectedAssignment.status === 'pending' 
+                        ? 'bg-green-600 hover:bg-green-700' 
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {selectedAssignment.status === 'pending' ? 'Start Assignment' : 'Complete Assignment'}
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    if (!window.confirm(`Are you sure you want to delete assignment "${selectedAssignment.title || 'this assignment'}"? This action cannot be undone.`)) {
+                      return;
+                    }
+                    try {
+                      await assignmentAPI.deleteAssignment(selectedAssignment.id || selectedAssignment.assignmentId);
+                      toast.success('Assignment deleted successfully');
+                      setShowAssignmentDetails(false);
+                      setSelectedAssignment(null);
+                      await loadDashboardData();
+                    } catch (error) {
+                      console.error('Error deleting assignment:', error);
+                      toast.error('Failed to delete assignment');
+                    }
+                  }}
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
