@@ -38,10 +38,21 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
       newErrors.email = 'Invalid email format';
     }
     
-    if (!formData.useTemporaryPassword && !formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (!formData.useTemporaryPassword && formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    // For pharmacists, password is always required
+    const isPharmacist = formData.userType === 'pharmacist';
+    if (isPharmacist) {
+      if (!formData.password) {
+        newErrors.password = 'Password is required for pharmacists';
+      } else if (formData.password.length < 6) {
+        newErrors.password = 'Password must be at least 6 characters';
+      }
+    } else {
+      // For other user types, validate if not using temporary password
+      if (!formData.useTemporaryPassword && !formData.password) {
+        newErrors.password = 'Password is required';
+      } else if (!formData.useTemporaryPassword && formData.password.length < 6) {
+        newErrors.password = 'Password must be at least 6 characters';
+      }
     }
     
     setErrors(newErrors);
@@ -69,7 +80,7 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
         medicalQualification: formData.medicalQualification || selectedType?.medicalQualification || '',
         specialization: formData.specialization,
         licenseNumber: formData.licenseNumber,
-        password: formData.useTemporaryPassword ? undefined : formData.password
+        password: (formData.userType === 'pharmacist' || !formData.useTemporaryPassword) ? formData.password : undefined
       };
 
       // Create user with standardized fields
@@ -94,6 +105,21 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
           { 
             autoClose: 10000, 
             position: 'top-center',
+            style: { fontSize: '14px', minWidth: '400px' },
+            bodyStyle: { fontSize: '14px' }
+          }
+        );
+      } else if (formData.userType === 'pharmacist') {
+        toast.success(
+          <>
+            <div className="font-bold mb-2">Pharmacist Account Created Successfully!</div>
+            <div className="text-sm">
+              <div>Email: <strong>{result.email}</strong></div>
+              <div className="mt-2 text-xs opacity-80">The pharmacist can log in with the password you created. They can change it after their first login.</div>
+            </div>
+          </>,
+          { 
+            autoClose: 8000,
             style: { fontSize: '14px', minWidth: '400px' },
             bodyStyle: { fontSize: '14px' }
           }
@@ -151,10 +177,14 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
 
   const handleUserTypeChange = (userType) => {
     const selectedType = userTypes.find(t => t.value === userType);
+    const isPharmacist = userType === 'pharmacist';
     setFormData({
       ...formData,
       userType,
-      medicalQualification: selectedType?.medicalQualification || ''
+      medicalQualification: selectedType?.medicalQualification || '',
+      // For pharmacists, disable temporary password and require actual password
+      useTemporaryPassword: isPharmacist ? false : formData.useTemporaryPassword,
+      password: isPharmacist ? formData.password : (formData.useTemporaryPassword ? '' : formData.password)
     });
   };
 
@@ -338,22 +368,12 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
 
           {/* Password Options */}
           <div className="space-y-3">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.useTemporaryPassword}
-                onChange={(e) => setFormData({...formData, useTemporaryPassword: e.target.checked, password: ''})}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                disabled={loading}
-              />
-              <span className="text-sm text-gray-700">Generate temporary password (recommended)</span>
-            </label>
-
-            {!formData.useTemporaryPassword && (
+            {formData.userType === 'pharmacist' ? (
+              // For pharmacists, password is always required (no temporary option)
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Lock className="inline h-4 w-4 mr-1" />
-                  Password *
+                  Password * <span className="text-xs text-gray-500 font-normal">(Required - can be changed later)</span>
                 </label>
                 <input
                   type="password"
@@ -362,7 +382,7 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.password ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="Minimum 6 characters"
+                  placeholder="Enter password (minimum 6 characters)"
                   disabled={loading}
                 />
                 {errors.password && (
@@ -371,7 +391,49 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
                     {errors.password}
                   </p>
                 )}
+                <p className="mt-1 text-xs text-gray-500">
+                  The pharmacist can change this password after logging in for the first time.
+                </p>
               </div>
+            ) : (
+              // For other user types, show temporary password option
+              <>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.useTemporaryPassword}
+                    onChange={(e) => setFormData({...formData, useTemporaryPassword: e.target.checked, password: ''})}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    disabled={loading}
+                  />
+                  <span className="text-sm text-gray-700">Generate temporary password (recommended)</span>
+                </label>
+
+                {!formData.useTemporaryPassword && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Lock className="inline h-4 w-4 mr-1" />
+                      Password *
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.password ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Minimum 6 characters"
+                      disabled={loading}
+                    />
+                    {errors.password && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {errors.password}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -393,9 +455,11 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
                   <li>Access to the institution dashboard</li>
                   <li>Role: {userTypes.find(t => t.value === formData.userType)?.label}</li>
                   <li>Status: Active</li>
-                  {formData.useTemporaryPassword && (
+                  {formData.userType === 'pharmacist' ? (
+                    <li>Password set by admin (can be changed after first login)</li>
+                  ) : formData.useTemporaryPassword ? (
                     <li>Temporary password (must be changed on first login)</li>
-                  )}
+                  ) : null}
                   {formData.userType === 'primary-admin' && (
                     <li className="font-bold text-red-900">⚠️ Primary admin - Cannot be deleted by other admins</li>
                   )}
