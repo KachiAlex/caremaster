@@ -20,8 +20,13 @@ import {
   Clock,
   ArrowRight
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import ClientActivityTimeline from './ClientActivityTimeline';
+import { useUser } from '../contexts/UserContext';
+import VitalsLogModal from './VitalsLogModal';
+import ConsultationsLogModal from './ConsultationsLogModal';
+import PrescriptionsLogModal from './PrescriptionsLogModal';
+import LabTestsLogModal from './LabTestsLogModal';
 
 const ClientDetailsModal = ({ 
   client, 
@@ -33,8 +38,9 @@ const ClientDetailsModal = ({
   institutionId,
   onAssignPharmacist
 }) => {
-  const navigate = useNavigate();
+  const { userProfile } = useUser();
   const [activeTab, setActiveTab] = useState('overview');
+  const [activeModal, setActiveModal] = useState(null);
   
   // Use "patient" terminology - client prop is kept for compatibility
   const patient = client;
@@ -42,34 +48,23 @@ const ClientDetailsModal = ({
   if (!patient) return null;
 
   const handleRecordVitals = () => {
-    // Navigate to vitals recording page with patient ID
-    navigate(`/service-provider/diagnostics?patientId=${patient.id}&patientName=${encodeURIComponent(patient.name || '')}`);
-    onClose();
+    setActiveModal('vitals');
   };
 
   const handleScheduleConsultation = () => {
-    // Navigate to consultation booking with patient ID
-    navigate(`/service-provider/consultations?patientId=${patient.id}&patientName=${encodeURIComponent(patient.name || '')}`);
-    onClose();
+    setActiveModal('consultation');
   };
 
   const handleViewPrescriptions = () => {
-    // Navigate to prescriptions page
-    navigate(`/service-provider/prescriptions?patientId=${patient.id}&patientName=${encodeURIComponent(patient.name || '')}`);
-    onClose();
+    setActiveModal('prescriptions');
   };
 
   const handleOrderLabTest = () => {
-    // Navigate to diagnostics/lab ordering
-    navigate(`/service-provider/diagnostics?patientId=${patient.id}&patientName=${encodeURIComponent(patient.name || '')}&action=order`);
-    onClose();
+    setActiveModal('labTests');
   };
 
-  const handleViewPatientDashboard = () => {
-    // Navigate to patient activity dashboard
-    const patientId = patient.patientId || patient.id;
-    navigate(`/patient/${patientId}/dashboard`);
-    onClose();
+  const handleCloseModal = () => {
+    setActiveModal(null);
   };
 
   const operationalFlows = [
@@ -104,14 +99,6 @@ const ClientDetailsModal = ({
       color: 'bg-purple-500',
       description: 'Order diagnostic tests',
       action: handleOrderLabTest
-    },
-    {
-      id: 'dashboard',
-      name: 'Patient Dashboard',
-      icon: FileText,
-      color: 'bg-indigo-500',
-      description: 'View all patient activities',
-      action: handleViewPatientDashboard
     }
   ];
 
@@ -143,7 +130,8 @@ const ClientDetailsModal = ({
             {[
               { id: 'overview', label: 'Overview' },
               { id: 'operations', label: 'Operations' },
-              { id: 'medical', label: 'Medical Info' }
+              { id: 'medical', label: 'Medical Info' },
+              { id: 'activity', label: 'Activity Log' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -274,6 +262,22 @@ const ClientDetailsModal = ({
               </div>
             </div>
           )}
+
+          {activeTab === 'activity' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Client Activity Timeline</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  View all activities, interactions, and changes logged for this client. Every action by caregivers, admins, and system events is recorded here.
+                </p>
+                <ClientActivityTimeline
+                  clientId={patient.id || patient.uid || patient.patientId}
+                  clientName={patient.name || patient.fullName || 'Client'}
+                  userRole={userProfile?.role || userProfile?.userType || 'admin'}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -325,6 +329,43 @@ const ClientDetailsModal = ({
           </div>
         </div>
       </div>
+
+      {/* Log Modals */}
+      {activeModal === 'vitals' && (
+        <VitalsLogModal
+          patient={patient}
+          isOpen={true}
+          onClose={handleCloseModal}
+          institutionId={institutionId}
+        />
+      )}
+
+      {activeModal === 'consultation' && (
+        <ConsultationsLogModal
+          patient={patient}
+          isOpen={true}
+          onClose={handleCloseModal}
+          institutionId={institutionId}
+        />
+      )}
+
+      {activeModal === 'prescriptions' && (
+        <PrescriptionsLogModal
+          patient={patient}
+          isOpen={true}
+          onClose={handleCloseModal}
+          institutionId={institutionId}
+        />
+      )}
+
+      {activeModal === 'labTests' && (
+        <LabTestsLogModal
+          patient={patient}
+          isOpen={true}
+          onClose={handleCloseModal}
+          institutionId={institutionId}
+        />
+      )}
     </div>
   );
 };
