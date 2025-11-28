@@ -645,6 +645,200 @@ export const getBillsByPatient = async (patientId, options = {}) => {
 };
 
 /**
+ * Get all bills for an institution
+ */
+export const getBillsByInstitution = async (institutionId, options = {}) => {
+  try {
+    const billsRef = collection(db, BILLS_COLLECTION);
+    let q = query(
+      billsRef,
+      where('institutionId', '==', institutionId),
+      orderBy('createdAt', 'desc')
+    );
+
+    if (options.status) {
+      q = query(q, where('status', '==', options.status));
+    }
+
+    if (options.patientId) {
+      q = query(q, where('patientId', '==', options.patientId));
+    }
+
+    const querySnapshot = await getDocs(q);
+    const bills = [];
+
+    querySnapshot.forEach((doc) => {
+      const billData = doc.data();
+      bills.push({
+        id: doc.id,
+        ...billData,
+        createdAt: billData.createdAt?.toDate?.() || billData.createdAt,
+        updatedAt: billData.updatedAt?.toDate?.() || billData.updatedAt,
+        dueDate: billData.dueDate ? new Date(billData.dueDate) : null,
+        paidAt: billData.paidAt?.toDate?.() || billData.paidAt
+      });
+    });
+
+    return bills;
+  } catch (error) {
+    console.error('Error fetching institution bills:', error);
+    throw error;
+  }
+};
+
+/**
+ * Generate bills from task time tracking
+ * Automatically creates bills for clients based on completed tasks with time tracking
+ */
+export const generateBillsFromTaskTime = async (institutionId, startDate, endDate) => {
+  try {
+    const startTimestamp = Timestamp.fromDate(startDate);
+    const endTimestamp = Timestamp.fromDate(endDate);
+    
+    // Get all completed tasks with time tracking in date range
+    const tasksQuery = query(
+      collection(db, BILLS_COLLECTION.replace('bills', 'careTasks')), // Use careTasks collection
+      where('institutionId', '==', institutionId),
+      where('status', '==', 'completed'),
+      where('billed', '!=', true), // Not already billed
+      where('taskEndTime', '>=', startTimestamp),
+      where('taskEndTime', '<=', endTimestamp),
+      orderBy('taskEndTime', 'asc')
+    );
+    
+    // Try to get tasks - if collection doesn't exist or query fails, use alternative
+    let snapshot;
+    try {
+      snapshot = await getDocs(tasksQuery);
+    } catch (error) {
+      // If query fails (e.g., missing index), get all tasks and filter in memory
+      console.warn('Direct query failed, fetching all tasks and filtering:', error);
+      const allTasksQuery = query(
+        collection(db, 'careTasks'),
+        where('institutionId', '==', institutionId),
+        where('status', '==', 'completed'),
+        orderBy('taskEndTime', 'desc'),
+        limit(1000) // Limit to prevent memory issues
+      );
+      snapshot = await getDocs(allTasksQuery);
+    }
+    
+    // Group by client
+    const clientBills = {};
+    
+    snapshot.forEach(doc => {
+      const task = doc.data();
+      
+      // Skip if already billed or no time tracking
+      if (task.billed || !task.taskEndTime || !task.actualDuration) {
+        return;
+      }
+      
+      // Filter by date range in memory if needed
+      const taskEndTime = task.taskEndTime?.toDate?.() || new Date(task.taskEndTime);
+      if (taskEndTime < startDate || taskEndTime > endDate) {
+        return;
+      }
+      
+      const clientId = task.clientId || task.patientId;
+      if (!clientId) return;
+      
+      if (!clientBills[clientId]) {
+        clientBills[clientId] = {
+          clientId: clientId,
+          clientName: task.clientName || 'Unknown',
+          tasks: [],
+          totalHours: 0,
+          totalAmount: 0
+        };
+      }
+      
+      const billableAmount = task.billableAmount || (task.actualDuration * (task.hourlyRate || 0));
+      
+      clientBills[clientId].tasks.push({
+        taskId: doc.id,
+        taskName: task.taskName || task.title || task.type || 'Care Task',
+        duration: task.actualDuration,
+        billableDuration: task.billableDuration || task.actualDuration,
+        hourlyRate: task.hourlyRate || 0,
+        amount: billableAmount,
+        completedAt: taskEndTime
+      });
+      
+      clientBills[clientId].totalHours += task.actualDuration || 0;
+      clientBills[clientId].totalAmount += billableAmount;
+    });
+    
+    // Generate bills for each client
+    const bills = [];
+    const batch = writeBatch(db);
+    
+    for (const [clientId, billData] of Object.entries(clientBills)) {
+      if (billData.tasks.length === 0) continue;
+      
+      const bill = {
+        patientId: clientId,
+        patientName: billData.clientName,
+        institutionId: institutionId,
+        serviceType: SERVICE_TYPE.OTHER,
+        items: billData.tasks.map(task => ({
+          description: `Caregiver Service: ${task.taskName}`,
+          quantity: task.billableDuration,
+          unit: 'hours',
+          unitPrice: task.hourlyRate,
+          total: task.amount,
+          taskId: task.taskId
+        })),
+        subtotal: billData.totalAmount,
+        discount: 0,
+        total: billData.totalAmount,
+        currency: 'NGN',
+        status: BILL_STATUS.PENDING,
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        notes: `Auto-generated from ${billData.tasks.length} completed task${billData.tasks.length > 1 ? 's' : ''} (${billData.totalHours.toFixed(2)} hours)`,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        source: 'task_time_tracking',
+        taskIds: billData.tasks.map(t => t.taskId),
+        billingPeriod: {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString()
+        }
+      };
+      
+      const billRef = doc(collection(db, BILLS_COLLECTION));
+      batch.set(billRef, bill);
+      bills.push({ id: billRef.id, ...bill });
+      
+      // Mark tasks as billed
+      billData.tasks.forEach(task => {
+        const taskRef = doc(db, 'careTasks', task.taskId);
+        batch.update(taskRef, {
+          billed: true,
+          billingPeriod: `${startDate.toISOString()}_${endDate.toISOString()}`,
+          billId: billRef.id
+        });
+      });
+    }
+    
+    // Commit all changes
+    if (bills.length > 0) {
+      await batch.commit();
+    }
+    
+    return {
+      success: true,
+      billsGenerated: bills.length,
+      bills: bills,
+      totalAmount: bills.reduce((sum, bill) => sum + (bill.total || 0), 0)
+    };
+  } catch (error) {
+    console.error('Error generating bills from task time:', error);
+    throw error;
+  }
+};
+
+/**
  * Get outstanding payments for a patient
  */
 export const getOutstandingPayments = async (patientId) => {

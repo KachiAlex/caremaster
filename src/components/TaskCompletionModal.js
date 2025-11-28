@@ -1,15 +1,69 @@
-import React, { useState } from 'react';
-import { X, Camera, Upload, Check, Mic, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Camera, Upload, Check, Mic, AlertTriangle, Play, Clock } from 'lucide-react';
 import { completeCareTask } from '../api/careTasksAPI';
 import { completeTaskAssignment } from '../api/taskAssignmentAPI';
+import { startTask, completeTask } from '../api/taskTimeTrackingAPI';
+import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import FileUpload from './FileUpload';
 
 const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
+  const { userProfile, user } = useUser();
   const [completionNotes, setCompletionNotes] = useState('');
   const [photos, setPhotos] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [taskStarted, setTaskStarted] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [startingTask, setStartingTask] = useState(false);
+  
+  // Check if task is already started
+  useEffect(() => {
+    if (task?.status === 'in_progress' && task?.taskStartTime) {
+      setTaskStarted(true);
+      // Calculate elapsed time
+      const startTime = task.taskStartTime?.toDate?.() || new Date(task.taskStartTime);
+      const updateElapsed = () => {
+        const now = new Date();
+        const elapsed = (now - startTime) / 1000; // seconds
+        setElapsedTime(elapsed);
+      };
+      updateElapsed();
+      const interval = setInterval(updateElapsed, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [task]);
+  
+  // Format elapsed time
+  const formatElapsedTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  const handleStartTask = async () => {
+    try {
+      setStartingTask(true);
+      const caregiverId = userProfile?.id || userProfile?.uid || user?.uid;
+      if (!caregiverId) {
+        toast.error('Could not identify caregiver');
+        return;
+      }
+      
+      await startTask(task.id, caregiverId);
+      setTaskStarted(true);
+      toast.success('Task started! Timer is now running.');
+    } catch (error) {
+      console.error('Error starting task:', error);
+      toast.error(error.message || 'Failed to start task');
+    } finally {
+      setStartingTask(false);
+    }
+  };
 
   const quickNotes = [
     'Task completed successfully',
@@ -55,12 +109,24 @@ const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
 
     try {
       setSubmitting(true);
-
-      // Determine if it's a careTask or taskAssignment
-      if (task.collection === 'careTasks') {
-        await completeCareTask(task.id, completionNotes, photos);
+      
+      const caregiverId = userProfile?.id || userProfile?.uid || user?.uid;
+      
+      // If task was started with time tracking, use time tracking API
+      if (taskStarted && task?.status === 'in_progress') {
+        if (task.collection === 'careTasks' || !task.collection) {
+          await completeTask(task.id, caregiverId, completionNotes, photos);
+        } else {
+          // For task assignments, use regular completion
+          await completeTaskAssignment(task.id, completionNotes, photos);
+        }
       } else {
-        await completeTaskAssignment(task.id, completionNotes, photos);
+        // Regular completion without time tracking
+        if (task.collection === 'careTasks' || !task.collection) {
+          await completeCareTask(task.id, completionNotes, photos);
+        } else {
+          await completeTaskAssignment(task.id, completionNotes, photos);
+        }
       }
 
       toast.success('Task completed successfully!');
@@ -68,7 +134,7 @@ const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
       onClose();
     } catch (error) {
       console.error('Error completing task:', error);
-      toast.error('Failed to complete task');
+      toast.error(error.message || 'Failed to complete task');
     } finally {
       setSubmitting(false);
     }
@@ -109,6 +175,53 @@ const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
               </div>
             )}
           </div>
+
+          {/* Time Tracking Section */}
+          {!taskStarted && task?.status !== 'completed' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-900 mb-1">
+                    Start Task Timer
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    Click "Start Task" to begin time tracking for accurate billing
+                  </p>
+                </div>
+                <button
+                  onClick={handleStartTask}
+                  disabled={startingTask}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  <Play className="h-4 w-4" />
+                  <span>{startingTask ? 'Starting...' : 'Start Task'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {taskStarted && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-900 mb-1">
+                    Task In Progress
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-5 w-5 text-green-600" />
+                    <span className="text-lg font-bold text-green-700">
+                      {formatElapsedTime(elapsedTime)}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-green-700">
+                    Time will be recorded when you complete the task
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Quick Notes */}
           <div>
@@ -225,7 +338,7 @@ const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
             <button
               onClick={handleSubmit}
               disabled={submitting || !completionNotes.trim()}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center"
+              className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center"
             >
               {submitting ? (
                 <>

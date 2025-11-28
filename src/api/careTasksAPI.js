@@ -180,13 +180,7 @@ export const createCareTask = async (taskData) => {
   }
 };
 
-/**
- * Update a care task
- * @param {string} taskId - The task document ID
- * @param {Object} updateData - Object containing fields to update
- * @returns {Promise<boolean>} True if task was updated successfully
- * @throws {Error} If there's an error updating the task
- */
+// Update care task
 export const updateCareTask = async (taskId, updateData) => {
   try {
     const taskRef = doc(db, CARE_TASKS_COLLECTION, taskId);
@@ -203,17 +197,31 @@ export const updateCareTask = async (taskId, updateData) => {
   }
 };
 
-/**
- * Complete a care task
- * @param {string} taskId - The task document ID
- * @param {string} completionNotes - Notes about task completion
- * @param {Array<string>} photos - Array of photo URLs (optional)
- * @returns {Promise<boolean>} True if task was completed successfully
- * @throws {Error} If there's an error completing the task
- */
+// Complete care task
+// Note: For time tracking, use taskTimeTrackingAPI.completeTask() instead
+// This function is kept for backward compatibility
 export const completeCareTask = async (taskId, completionNotes, photos = []) => {
   try {
     const taskRef = doc(db, CARE_TASKS_COLLECTION, taskId);
+    const taskSnap = await getDoc(taskRef);
+    
+    if (!taskSnap.exists()) {
+      throw new Error('Task not found');
+    }
+    
+    const task = taskSnap.data();
+    
+    // If task has time tracking (was started), use time tracking API
+    if (task.taskStartTime && task.status === 'in_progress') {
+      // Import dynamically to avoid circular dependency
+      const { completeTask } = await import('./taskTimeTrackingAPI');
+      const caregiverId = task.caregiverId || task.assignedTo;
+      if (caregiverId) {
+        return await completeTask(taskId, caregiverId, completionNotes, photos);
+      }
+    }
+    
+    // Fallback to simple completion without time tracking
     await updateDoc(taskRef, {
       status: 'completed',
       completedAt: serverTimestamp(),
@@ -228,12 +236,7 @@ export const completeCareTask = async (taskId, completionNotes, photos = []) => 
   }
 };
 
-/**
- * Get today's care tasks for a caregiver
- * @param {string} caregiverId - The caregiver user ID
- * @returns {Promise<Array>} Array of care task objects due today
- * @throws {Error} If there's an error fetching tasks
- */
+// Get today's care tasks for a caregiver
 export const getTodaysCareTasks = async (caregiverId) => {
   try {
     const today = new Date();

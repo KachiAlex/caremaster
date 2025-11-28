@@ -43,12 +43,14 @@ import {
   Mail,
   Download,
   Receipt,
-  HelpCircle
+  HelpCircle,
+  Menu
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import { caregiverAPI } from '../api/caregiverAPI';
-import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks, completeCareTask } from '../api/careTasksAPI';
+import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
+import { getActiveTasks } from '../api/taskTimeTrackingAPI';
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
 import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
@@ -66,8 +68,8 @@ import DashboardSwitcher from '../components/DashboardSwitcher';
 import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { careLogsAPI } from '../api/careLogsAPI';
 import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
-import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, getUnreadCountForConversation } from '../api/messagesAPI';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation } from '../api/messagesAPI';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
@@ -88,8 +90,6 @@ import WebRTCService from '../services/webrtcService';
 import AdlLogger from '../components/AdlLogger';
 import UserProfileSettings from '../components/UserProfileSettings';
 import HelpSupport from '../components/HelpSupport';
-import PatientSearch from '../components/PatientSearch';
-import PatientLogViewer from '../components/PatientLogViewer';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -203,6 +203,57 @@ const InstitutionCaregiverDashboard = () => {
   const [callStartAt, setCallStartAt] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = React.useRef(null);
+  
+  // Active tasks (tasks currently in progress with time tracking)
+  const [activeTasks, setActiveTasks] = useState([]);
+  const [loadingActiveTasks, setLoadingActiveTasks] = useState(false);
+  
+  // Load active tasks
+  const loadActiveTasks = useCallback(async () => {
+    if (!user?.uid) return;
+    
+    try {
+      setLoadingActiveTasks(true);
+      const tasks = await getActiveTasks(user.uid);
+      setActiveTasks(tasks);
+    } catch (error) {
+      console.error('Error loading active tasks:', error);
+    } finally {
+      setLoadingActiveTasks(false);
+    }
+  }, [user?.uid]);
+  
+  // Load active tasks on mount and when user changes
+  useEffect(() => {
+    loadActiveTasks();
+    // Refresh active tasks every 30 seconds to update timers
+    const interval = setInterval(loadActiveTasks, 30000);
+    return () => clearInterval(interval);
+  }, [loadActiveTasks]);
+  
+  // Update elapsed time for active tasks every second
+  useEffect(() => {
+    if (activeTasks.length === 0) return;
+    
+    const interval = setInterval(() => {
+      setActiveTasks(prev => prev.map(task => {
+        if (task.taskStartTime) {
+          const startTime = task.taskStartTime?.toDate?.() || new Date(task.taskStartTime);
+          const now = new Date();
+          const elapsedMs = now - startTime;
+          const elapsedHours = elapsedMs / (1000 * 60 * 60);
+          return {
+            ...task,
+            elapsedHours: Math.round(elapsedHours * 100) / 100,
+            elapsedMinutes: Math.round(elapsedMs / (1000 * 60))
+          };
+        }
+        return task;
+      }));
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [activeTasks.length]);
 
   useEffect(() => {
     webrtc.setCallbacks({
@@ -549,12 +600,21 @@ const InstitutionCaregiverDashboard = () => {
         console.log('📅 All assignments (unfiltered):', allAdminAssignments);
         
         // Combine appointments, tasks, and admin-created assignments for the full schedule
+        // Helper function to convert date to string
+        const dateToString = (dateValue) => {
+          if (!dateValue) return '';
+          if (dateValue instanceof Date) return dateValue.toISOString();
+          if (dateValue?.toDate) return dateValue.toDate().toISOString();
+          if (typeof dateValue === 'string') return dateValue;
+          return String(dateValue);
+        };
+
         const combinedSchedule = [
           ...allAppointments.map(apt => ({
             id: apt.id,
             type: 'appointment',
             title: apt.title || 'Appointment',
-            time: apt.scheduledTime,
+            time: dateToString(apt.scheduledTime),
             client: apt.clientName || 'Client',
             status: apt.status || 'scheduled',
             description: apt.description
@@ -563,22 +623,25 @@ const InstitutionCaregiverDashboard = () => {
             id: task.id,
             type: 'task',
             title: task.title,
-            time: task.scheduledTime,
+            time: dateToString(task.scheduledTime),
             client: task.clientName || 'Client',
             status: task.status || 'pending',
             description: task.description
           })),
-          ...allAdminAssignments.map(assignment => ({
-            id: assignment.id,
-            type: 'assignment',
-            title: assignment.title || 'Assigned Task',
-            time: assignment.dueTime ? `${assignment.dueDate} ${assignment.dueTime}` : assignment.dueDate,
-            client: assignment.clientName || 'Client',
-            status: assignment.status || 'pending',
-            priority: assignment.priority,
-            description: assignment.description,
-            instructions: assignment.instructions
-          }))
+          ...allAdminAssignments.map(assignment => {
+            const dueDateStr = dateToString(assignment.dueDate);
+            return {
+              id: assignment.id,
+              type: 'assignment',
+              title: assignment.title || 'Assigned Task',
+              time: assignment.dueTime ? `${dueDateStr} ${assignment.dueTime}` : dueDateStr,
+              client: assignment.clientName || 'Client',
+              status: assignment.status || 'pending',
+              priority: assignment.priority,
+              description: assignment.description,
+              instructions: assignment.instructions
+            };
+          })
         ];
         
         // Sort by time
@@ -615,21 +678,13 @@ const InstitutionCaregiverDashboard = () => {
               dueDate: assignment.dueDate,
               dueTime: assignment.dueTime,
               instructions: assignment.instructions,
-              createdAt: assignment.createdAt,
+              createdAt: assignment.createdAt instanceof Date ? assignment.createdAt.toISOString() : (assignment.createdAt?.toDate?.()?.toISOString() || assignment.createdAt),
               assignmentType: 'clientAssignment' // Mark as admin-created assignment
             }));
             
-            // Merge both sources and deduplicate by ID
-            const allTasks = [...careTasksData, ...assignmentTasks];
-            // Deduplicate by ID - use Map to keep only unique tasks
-            const uniqueTasksMap = new Map();
-            allTasks.forEach(task => {
-              if (task.id && !uniqueTasksMap.has(task.id)) {
-                uniqueTasksMap.set(task.id, task);
-              }
-            });
-            loadedRecentTasks = Array.from(uniqueTasksMap.values());
-            console.log(`✅ Total tasks (merged and deduplicated): ${loadedRecentTasks.length}`);
+            // Merge both sources
+            loadedRecentTasks = [...careTasksData, ...assignmentTasks];
+            console.log(`✅ Total tasks (merged): ${loadedRecentTasks.length}`);
             
             // Sort by created date (most recent first)
             loadedRecentTasks.sort((a, b) => {
@@ -926,7 +981,7 @@ const InstitutionCaregiverDashboard = () => {
   // Doctor action guards and navigation helpers
   const requireClient = () => {
     if (!selectedClientId) {
-      alert('Please select a patient first.');
+      alert('Please select a client first.');
       return false;
     }
     return true;
@@ -1004,38 +1059,8 @@ const InstitutionCaregiverDashboard = () => {
   };
 
   const handleVideoConsultation = async () => {
-    if (!selectedClient) {
-      toast.warning('Please select a client first');
-      return;
-    }
-    
-    // Check if there's already a conversation with this client
-    const existingConversation = conversations.find(conv => 
-      conv.participants?.includes(selectedClient.id) || 
-      conv.participants?.includes(selectedClient.userId)
-    );
-    
-    if (existingConversation) {
-      setSelectedConversation(existingConversation);
-      setActiveTab('messages');
-      
-      // Initiate video call
-      const recipientId = selectedClient.userId || selectedClient.id;
-      const callData = {
-        callerId: user?.uid,
-        callerName: userProfile?.name || userProfile?.displayName || 'Doctor',
-        recipientId: recipientId,
-        recipientName: selectedClient.name || selectedClient.fullName || 'Client',
-        callType: 'video',
-        institutionId: effectiveInstitutionId
-      };
-      
-      await initiateCall(callData);
-      toast.success('Video call initiated');
-    } else {
-      toast.info('Starting video consultation - Please create a conversation first');
-      setActiveTab('messages');
-    }
+    // Clients don't have accounts - cannot initiate calls to clients
+    toast.warning('Clients do not have accounts. Calls can only be made to caregivers, doctors, nurses, and administrators.');
   };
 
   const handleCareLogSave = async (careLogData) => {
@@ -1167,9 +1192,9 @@ const InstitutionCaregiverDashboard = () => {
           )}
           <div className="flex flex-wrap gap-2">
             <button onClick={handleNewConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>New Consultation</button>
-            <button onClick={handleWritePrescription} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Write Prescription</button>
-            <button onClick={handleCreateCarePlan} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Create Care Plan</button>
-            <button onClick={handleVideoConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Video Consultation</button>
+            <button onClick={handleWritePrescription} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Write Prescription</button>
+            <button onClick={handleCreateCarePlan} className="px-3 py-2 bg-emerald-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Create Care Plan</button>
+            {/* Video consultation removed - clients don't have accounts */}
           </div>
         </div>
         {selectedClient && (
@@ -1234,13 +1259,34 @@ const InstitutionCaregiverDashboard = () => {
   };
 
   const formatTime = (timeString) => {
-    return timeString;
+    if (!timeString) return '';
+    // If it's a Date object, convert to string
+    if (timeString instanceof Date) {
+      return timeString.toLocaleString();
+    }
+    // If it's a Firestore Timestamp, convert to string
+    if (timeString?.toDate) {
+      return timeString.toDate().toLocaleString();
+    }
+    // If it's already a string, try to format it nicely
+    if (typeof timeString === 'string') {
+      // If it's an ISO string, format it
+      if (timeString.includes('T')) {
+        try {
+          return new Date(timeString).toLocaleString();
+        } catch (e) {
+          return timeString;
+        }
+      }
+      return timeString;
+    }
+    return String(timeString);
   };
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'in-progress':
         return 'bg-blue-100 text-blue-800';
       case 'upcoming':
@@ -1257,9 +1303,9 @@ const InstitutionCaregiverDashboard = () => {
       return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
           <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Assigned Patients</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Assigned Clients</h3>
           <p className="text-gray-600 mb-4">
-            You don't have any patients assigned to you at the moment.
+            You don't have any clients assigned to you at the moment.
           </p>
         </div>
       );
@@ -1267,17 +1313,6 @@ const InstitutionCaregiverDashboard = () => {
 
     return (
       <div className="space-y-6">
-        {/* Patient Search */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <PatientSearch
-            onSelectPatient={(patient) => {
-              setSelectedClient(patient);
-              setSelectedClientId(patient.id);
-            }}
-            placeholder="Search patients by ID, name, email, or phone..."
-          />
-        </div>
-        
         {/* Clients List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="overflow-x-auto">
@@ -1285,7 +1320,7 @@ const InstitutionCaregiverDashboard = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient
+                    Client
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Age / Gender
@@ -1317,9 +1352,7 @@ const InstitutionCaregiverDashboard = () => {
                           size="medium"
                           className="mr-4"
                         />
-                        <div className="text-sm text-gray-500">
-                          {client.patientId ? `ID: ${client.patientId}` : `ID: ${client.id.substring(0, 8)}...`}
-                        </div>
+                        <div className="text-sm text-gray-500">ID: {client.id.substring(0, 8)}...</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1340,7 +1373,7 @@ const InstitutionCaregiverDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         client.status === 'Active' || client.status === 'active'
-                          ? 'bg-blue-100 text-blue-800'
+                          ? 'bg-green-100 text-green-800'
                           : client.status === 'Critical' || client.status === 'critical'
                           ? 'bg-red-100 text-red-800'
                           : 'bg-yellow-100 text-yellow-800'
@@ -1369,48 +1402,38 @@ const InstitutionCaregiverDashboard = () => {
           <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">Total Patients</p>
+                <p className="text-sm font-medium text-blue-600">Total Clients</p>
                 <p className="text-2xl font-bold text-blue-900">{assignedClients.length}</p>
               </div>
               <Users className="h-10 w-10 text-blue-600" />
             </div>
           </div>
 
-          <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+          <div className="bg-green-50 rounded-xl border border-green-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">Active Patients</p>
+                <p className="text-sm font-medium text-green-600">Active Clients</p>
                 <p className="text-2xl font-bold text-green-900">
                   {assignedClients.filter(c => c.status === 'Active' || c.status === 'active' || !c.status).length}
                 </p>
               </div>
-              <Activity className="h-10 w-10 text-blue-600" />
+              <Activity className="h-10 w-10 text-green-600" />
             </div>
           </div>
 
           <div className="bg-red-50 rounded-xl border border-red-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-600">Critical Patients</p>
+                <p className="text-sm font-medium text-red-600">Critical Clients</p>
                 <p className="text-2xl font-bold text-red-900">
                   {assignedClients.filter(c => c.status === 'Critical' || c.status === 'critical').length}
                 </p>
               </div>
               <AlertCircle className="h-10 w-10 text-red-600" />
+              </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Patient Log Viewer - Show when a client is selected */}
-        {selectedClient && selectedClient.patientId && (
-          <div className="mt-6">
-            <PatientLogViewer
-              patientId={selectedClient.patientId}
-              patientName={selectedClient.name || selectedClient.fullName}
-            />
-          </div>
-        )}
-      </div>
     );
   };
 
@@ -1431,17 +1454,24 @@ const InstitutionCaregiverDashboard = () => {
       
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
-        // Exclude self and include caregivers, admins, doctors
-        if (doc.id !== user.uid && 
-            (userData.userType === 'caregiver' || 
-             userData.userType === 'admin' || 
-             userData.userType === 'doctor' ||
-             userData.userType === 'institutionAdmin')) {
+        // Include all users for message lookup (caregivers, admins, doctors, nurses, pharmacists)
+        // We'll filter for display purposes but need all for message sender lookup
+        const userType = userData.userType || userData.type || userData.role;
+        if (userType === 'caregiver' || 
+            userType === 'admin' || 
+            userType === 'doctor' ||
+            userType === 'nurse' ||
+            userType === 'pharmacist' ||
+            userType === 'institutionAdmin' ||
+            userData.roles?.includes('admin') ||
+            userData.roles?.includes('institutionAdmin')) {
           users.push({
             id: doc.id,
             ...userData,
-            name: userData.name || userData.displayName || userData.email,
-            role: userData.userType || 'User'
+            name: userData.name || userData.displayName || userData.fullName || userData.email || 'Unknown User',
+            role: userType || 'User',
+            photoURL: userData.photoURL || userData.profilePicture || userData.profilePictureUrl || null,
+            avatar: userData.photoURL || userData.profilePicture || userData.profilePictureUrl || null
           });
         }
       });
@@ -1468,28 +1498,25 @@ const InstitutionCaregiverDashboard = () => {
       const users = await loadPlatformUsers();
       const userMap = new Map(users.map(u => [u.id, u]));
       
-      // Enrich existing conversations with participant names and unread counts
-      const enrichedConversations = await Promise.all(
-        existingConversations.map(async (conv) => {
-          // Get the other participant(s) in the conversation
-          const otherParticipants = (conv.participants || []).filter(id => id !== user.uid);
-          const otherUser = otherParticipants.length > 0 ? userMap.get(otherParticipants[0]) : null;
-          
-          // Calculate unread count for this conversation
-          const unreadCount = await getUnreadCountForConversation(conv.id, user.uid);
-          
-          return {
-            ...conv,
-            conversationId: conv.id,
-            name: otherUser ? (otherUser.name || otherUser.displayName || otherUser.email || 'Unknown User') : 'Unknown User',
-            avatar: otherUser ? (otherUser.avatar || otherUser.photoURL || null) : null,
-            type: otherUser ? (otherUser.role || otherUser.userType || 'user') : 'user',
-            timestamp: conv.lastMessageTime || conv.updatedAt || new Date().toISOString(),
-            lastMessage: conv.lastMessage || 'Start a conversation',
-            unread: unreadCount
-          };
-        })
-      );
+      // Enrich existing conversations with participant names
+      const enrichedConversations = existingConversations.map(conv => {
+        // Get the other participant(s) in the conversation
+        const otherParticipants = (conv.participants || []).filter(id => id !== user.uid);
+        const otherUser = otherParticipants.length > 0 ? userMap.get(otherParticipants[0]) : null;
+        
+        return {
+          ...conv,
+          conversationId: conv.id,
+          name: otherUser ? (otherUser.name || otherUser.displayName || otherUser.email || 'Unknown User') : 'Unknown User',
+          avatar: otherUser ? (otherUser.avatar || otherUser.photoURL || otherUser.profilePicture || otherUser.profilePictureUrl || null) : null,
+          photoURL: otherUser ? (otherUser.photoURL || otherUser.profilePicture || otherUser.profilePictureUrl || null) : null,
+          type: otherUser ? (otherUser.role || otherUser.userType || 'user') : 'user',
+          timestamp: conv.lastMessageTime || conv.updatedAt || new Date().toISOString(),
+          lastMessage: conv.lastMessage || 'Start a conversation',
+          unread: 0, // TODO: Calculate actual unread count
+          userData: otherUser // Store full user data for reference
+        };
+      });
       
       // Create conversation entries for users who don't have existing conversations
       const existingUserIds = new Set(
@@ -1504,7 +1531,8 @@ const InstitutionCaregiverDashboard = () => {
           return {
             id: `new-${u.id}`,
             name: u.name || u.displayName || u.email || 'Unknown User',
-            avatar: u.avatar || u.photoURL || null,
+            avatar: u.avatar || u.photoURL || u.profilePicture || u.profilePictureUrl || null,
+            photoURL: u.photoURL || u.profilePicture || u.profilePictureUrl || null,
             lastMessage: 'Start a conversation',
             timestamp: new Date().toISOString(),
             unread: 0,
@@ -1521,24 +1549,8 @@ const InstitutionCaregiverDashboard = () => {
         ...newUserConversations
       ];
       
-      // Add assigned clients if they're not already in the list
-      const allUserIds = new Set(allConversations.flatMap(conv => conv.participants || []));
-      const clientConversations = assignedClients
-        .filter(client => !allUserIds.has(client.id))
-        .map(client => ({
-          id: `client-${client.id}`,
-        name: client.name || client.displayName,
-        avatar: client.avatar || null,
-          lastMessage: 'Start a conversation',
-        timestamp: new Date().toISOString(),
-        unread: 0,
-        type: 'client',
-          participants: [user.uid, client.id],
-          isNew: true
-        }));
-      
-      const finalConversations = [...allConversations, ...clientConversations];
-      setConversations(finalConversations);
+      // Don't add clients to conversations - clients don't have accounts
+      setConversations(allConversations);
       
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -1816,8 +1828,6 @@ const InstitutionCaregiverDashboard = () => {
         clientName: selectedClient.name || selectedClient.fullName,
         doctorId: user.uid,
         doctorName: userProfile?.name || userProfile?.displayName || user.email,
-        doctorRole: userProfile?.userType || userProfile?.type || 'doctor',
-        doctorEmail: userProfile?.email || user.email,
         institutionId: effectiveInstitutionId || institutionId,
         ...consultationFormData
       };
@@ -1860,7 +1870,34 @@ const InstitutionCaregiverDashboard = () => {
     try {
       const conversationMessages = await getMessagesByConversation(conversationId);
       console.log(`💬 Loaded ${conversationMessages.length} messages`);
-      setMessages(conversationMessages);
+      
+      // Enrich messages with sender names from platform users
+      const users = await loadPlatformUsers();
+      const userMap = new Map(users.map(u => [u.id, u]));
+      
+      // Also include current user in the map
+      if (user?.uid && userProfile) {
+        userMap.set(user.uid, {
+          id: user.uid,
+          name: userProfile.name || userProfile.displayName || userProfile.email || 'You',
+          photoURL: userProfile.photoURL || userProfile.profilePicture || userProfile.profilePictureUrl || null,
+          ...userProfile
+        });
+      }
+      
+      // Enrich messages with sender names and profile pictures
+      const enrichedMessages = conversationMessages.map(message => {
+        const senderId = message.senderId || message.sender;
+        const sender = senderId ? userMap.get(senderId) : null;
+        
+        return {
+          ...message,
+          senderName: message.senderName || (sender ? (sender.name || sender.displayName || sender.email || 'Unknown User') : 'Unknown User'),
+          senderPhotoURL: sender ? (sender.photoURL || sender.profilePicture || sender.profilePictureUrl || null) : null
+        };
+      });
+      
+      setMessages(enrichedMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
       setMessages([]);
@@ -1904,7 +1941,7 @@ const InstitutionCaregiverDashboard = () => {
         text: newMessage,
           senderId: user?.uid,
         senderName: userProfile?.name || 'You',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         read: false
       };
       
@@ -1928,24 +1965,13 @@ const InstitutionCaregiverDashboard = () => {
       }
       
       try {
-        // Get recipient ID from conversation
-        const recipientId = selectedConversation.participants?.find(p => p !== user?.uid) || selectedConversation.id;
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        setLocalStream(stream);
+        setCallType('voice');
+        setIsInCall(true);
+        toast.success('Voice call started');
         
-        // Initialize call using CallService
-        const callData = {
-          callerId: user?.uid,
-          recipientId: recipientId,
-          callType: 'voice',
-          institutionId: institutionId,
-        };
-        
-        const result = await initiateCall(callData);
-        
-        if (result?.callId) {
-          setCallType('voice');
-          setIsInCall(true);
-          toast.success('Voice call started');
-        }
+        // TODO: Initialize WebRTC connection
       } catch (error) {
         console.error('Error starting voice call:', error);
         toast.error('Failed to start voice call. Please check microphone permissions.');
@@ -1959,24 +1985,13 @@ const InstitutionCaregiverDashboard = () => {
       }
       
       try {
-        // Get recipient ID from conversation
-        const recipientId = selectedConversation.participants?.find(p => p !== user?.uid) || selectedConversation.id;
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        setLocalStream(stream);
+        setCallType('video');
+        setIsInCall(true);
+        toast.success('Video call started');
         
-        // Initialize call using CallService
-        const callData = {
-          callerId: user?.uid,
-          recipientId: recipientId,
-          callType: 'video',
-          institutionId: institutionId,
-        };
-        
-        const result = await initiateCall(callData);
-        
-        if (result?.callId) {
-          setCallType('video');
-          setIsInCall(true);
-          toast.success('Video call started');
-        }
+        // TODO: Initialize WebRTC connection
       } catch (error) {
         console.error('Error starting video call:', error);
         toast.error('Failed to start video call. Please check camera and microphone permissions.');
@@ -1997,18 +2012,8 @@ const InstitutionCaregiverDashboard = () => {
       toast.info('Call ended');
     };
 
-    // Use real conversations or create from assigned clients
-    const displayConversations = conversations.length > 0 ? conversations : 
-      assignedClients.length > 0 ? assignedClients.map(client => ({
-      id: client.id,
-        name: client.name || client.displayName,
-      avatar: client.avatar || null,
-        lastMessage: 'Start a conversation',
-      timestamp: new Date().toISOString(),
-      unread: 0,
-        type: 'client',
-        participants: [user.uid, client.id]
-    })) : [
+    // Use real conversations only - clients don't have accounts
+    const displayConversations = conversations.length > 0 ? conversations : [
       {
         id: 'admin-1',
         name: institutionData?.name || 'Institution Admin',
@@ -2046,8 +2051,21 @@ const InstitutionCaregiverDashboard = () => {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                      {(conversation.name || 'U').charAt(0).toUpperCase()}
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden">
+                      {conversation.photoURL || conversation.avatar ? (
+                        <img
+                          src={conversation.photoURL || conversation.avatar}
+                          alt={conversation.name || 'User'}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <span className={conversation.photoURL || conversation.avatar ? 'hidden' : 'flex'}>
+                        {(conversation.name || 'U').charAt(0).toUpperCase()}
+                      </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -2075,20 +2093,33 @@ const InstitutionCaregiverDashboard = () => {
               {/* Chat Header with Call Buttons */}
               <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-500 flex items-center justify-center text-white font-semibold">
-                    {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold overflow-hidden">
+                    {selectedConversation.photoURL || selectedConversation.avatar ? (
+                      <img
+                        src={selectedConversation.photoURL || selectedConversation.avatar}
+                        alt={selectedConversation.name || 'User'}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <span className={selectedConversation.photoURL || selectedConversation.avatar ? 'hidden' : 'flex'}>
+                      {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                    </span>
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
                     <p className="text-xs text-gray-500">
-                      {selectedConversation.type === 'client' ? 'Client' : selectedConversation.type || 'User'}
+                      {selectedConversation.type || 'User'}
                     </p>
                   </div>
                 </div>
                 
-                {/* Call Buttons */}
+                {/* Call Buttons - Only show for non-client conversations */}
                 <div className="flex items-center gap-2">
-                  {!isInCall && (
+                  {!isInCall && selectedConversation.type !== 'client' && (
                     <>
                       <button
                         onClick={startVoiceCall}
@@ -2142,7 +2173,7 @@ const InstitutionCaregiverDashboard = () => {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <Phone className="h-16 w-16 text-blue-500 mx-auto animate-pulse" />
+                        <Phone className="h-16 w-16 text-green-500 mx-auto animate-pulse" />
                         <p className="text-white text-lg font-medium">Voice Call Active</p>
                         <p className="text-gray-400">Connected with {selectedConversation.name}</p>
                       </div>
@@ -2170,8 +2201,26 @@ const InstitutionCaregiverDashboard = () => {
                         return (
                         <div
                           key={message.id}
-                            className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
+                            className={`flex items-start gap-2 ${isSentByMe ? 'justify-end' : 'justify-start'}`}
                         >
+                          {!isSentByMe && (
+                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 overflow-hidden">
+                              {message.senderPhotoURL ? (
+                                <img
+                                  src={message.senderPhotoURL}
+                                  alt={message.senderName || 'User'}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <span className={message.senderPhotoURL ? 'hidden' : 'flex'}>
+                                {(message.senderName || 'U').charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                           <div
                             className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                                 isSentByMe
@@ -2179,8 +2228,8 @@ const InstitutionCaregiverDashboard = () => {
                                 : 'bg-white text-gray-900 border border-gray-200'
                             }`}
                           >
-                              {!isSentByMe && message.senderName && (
-                                <p className="text-xs font-semibold mb-1">{message.senderName}</p>
+                              {!isSentByMe && (
+                                <p className="text-xs font-semibold mb-1">{message.senderName || 'Unknown User'}</p>
                               )}
                               <p className="text-sm">{message.text || message.content}</p>
                             <p className={`text-xs mt-1 ${
@@ -2189,6 +2238,24 @@ const InstitutionCaregiverDashboard = () => {
                                 {new Date(messageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
+                          {isSentByMe && (
+                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 overflow-hidden">
+                              {userProfile?.photoURL || userProfile?.profilePicture || userProfile?.profilePictureUrl ? (
+                                <img
+                                  src={userProfile.photoURL || userProfile.profilePicture || userProfile.profilePictureUrl}
+                                  alt={userProfile.name || 'You'}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <span className={userProfile?.photoURL || userProfile?.profilePicture || userProfile?.profilePictureUrl ? 'hidden' : 'flex'}>
+                                {(userProfile?.name || userProfile?.displayName || 'Y').charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         );
                       })
@@ -2268,7 +2335,7 @@ const InstitutionCaregiverDashboard = () => {
     return (
       <div className="space-y-6">
         {/* Shift Overview */}
-        <div className="bg-gradient-to-r from-blue-50 to-blue-50 rounded-xl shadow-sm border border-blue-100 p-6">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <Clock className="h-6 w-6 text-blue-600" />
             Current Shift Overview
@@ -2321,7 +2388,7 @@ const InstitutionCaregiverDashboard = () => {
                   key={day}
                   onClick={() => setSelectedScheduleDate(dayDate)}
                   className={`text-center p-4 rounded-lg transition-all cursor-pointer hover:shadow-md ${
-                    isSelected ? 'bg-blue-100 border-2 border-blue-600 ring-2 ring-blue-300' :
+                    isSelected ? 'bg-indigo-100 border-2 border-indigo-600 ring-2 ring-indigo-300' :
                     isToday ? 'bg-blue-100 border-2 border-blue-600' : 
                     'bg-gray-50 hover:bg-gray-100'
                   }`}
@@ -2337,8 +2404,8 @@ const InstitutionCaregiverDashboard = () => {
                             key={idx}
                             className={`text-xs text-white rounded px-2 py-1 truncate ${
                               item.type === 'appointment' ? 'bg-blue-500' :
-                              item.type === 'task' ? 'bg-blue-500' :
-                              'bg-blue-500'
+                              item.type === 'task' ? 'bg-green-500' :
+                              'bg-purple-500'
                             }`}
                             title={item.title}
                           >
@@ -2390,7 +2457,7 @@ const InstitutionCaregiverDashboard = () => {
                     </div>
                     <div className="flex-shrink-0 flex flex-col items-center">
                       <div className={`h-4 w-4 rounded-full border-2 ${
-                        item.status === 'completed' ? 'bg-blue-500 border-blue-600' : 
+                        item.status === 'completed' ? 'bg-green-500 border-green-600' : 
                         item.status === 'in_progress' ? 'bg-blue-500 border-blue-600' :
                         'bg-white border-gray-400'
                       }`}></div>
@@ -2407,7 +2474,7 @@ const InstitutionCaregiverDashboard = () => {
                             </p>
                           </div>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                            item.status === 'completed' ? 'bg-blue-100 text-blue-800' : 
+                            item.status === 'completed' ? 'bg-green-100 text-green-800' : 
                             item.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                             item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-800'
@@ -2420,8 +2487,8 @@ const InstitutionCaregiverDashboard = () => {
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
                             item.type === 'appointment' ? 'bg-blue-50 text-blue-700' :
-                            item.type === 'task' ? 'bg-blue-50 text-blue-700' :
-                            'bg-blue-50 text-blue-700'
+                            item.type === 'task' ? 'bg-purple-50 text-purple-700' :
+                            'bg-indigo-50 text-indigo-700'
                           }`}>
                             {item.type === 'appointment' && <Calendar className="h-3 w-3 mr-1" />}
                             {item.type === 'task' && <Activity className="h-3 w-3 mr-1" />}
@@ -2432,7 +2499,7 @@ const InstitutionCaregiverDashboard = () => {
                           {item.priority && (
                             <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
                               item.priority === 'urgent' ? 'bg-red-50 text-red-700' :
-                              item.priority === 'high' ? 'bg-blue-50 text-blue-700' :
+                              item.priority === 'high' ? 'bg-orange-50 text-orange-700' :
                               item.priority === 'medium' ? 'bg-yellow-50 text-yellow-700' :
                               'bg-gray-50 text-gray-700'
                             }`}>
@@ -2548,7 +2615,7 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Admissions</p>
-                  <p className="text-2xl font-bold text-blue-600">0</p>
+                  <p className="text-2xl font-bold text-green-600">0</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Discharges</p>
@@ -2560,19 +2627,19 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Medications Given</p>
-                  <p className="text-2xl font-bold text-blue-600">{todaySchedule.filter(t => t.type === 'task').length}</p>
+                  <p className="text-2xl font-bold text-purple-600">{todaySchedule.filter(t => t.type === 'task').length}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Vitals Recorded</p>
-                  <p className="text-2xl font-bold text-blue-600">{assignedClients.length}</p>
+                  <p className="text-2xl font-bold text-orange-600">{assignedClients.length}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Care Activities</p>
-                  <p className="text-2xl font-bold text-blue-600">{recentTasks.length}</p>
+                  <p className="text-2xl font-bold text-teal-600">{recentTasks.length}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Assessments</p>
-                  <p className="text-2xl font-bold text-blue-600">{assignedClients.length}</p>
+                  <p className="text-2xl font-bold text-indigo-600">{assignedClients.length}</p>
                 </div>
               </div>
             </div>
@@ -2627,7 +2694,7 @@ const InstitutionCaregiverDashboard = () => {
 
             <button
               onClick={() => toast.success('Handoff notes saved')}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
             >
               <CheckCircle className="h-5 w-5" />
               Save All Handoff Notes
@@ -2775,7 +2842,7 @@ const InstitutionCaregiverDashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                <Pill className="h-8 w-8 text-blue-600 mr-3" />
+                <Pill className="h-8 w-8 text-indigo-600 mr-3" />
                 Prescription Management
               </h2>
               <p className="text-sm text-gray-600 mt-1">
@@ -2786,7 +2853,7 @@ const InstitutionCaregiverDashboard = () => {
                   <button
                 onClick={savePharmacistMedicationData}
                 disabled={savingPharmacistData}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50"
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center disabled:opacity-50"
                   >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 {savingPharmacistData ? 'Saving...' : 'Save Changes'}
@@ -2795,7 +2862,7 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
 
           {/* Client Selector for Pharmacists */}
-          <div className="bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Select Client
             </label>
@@ -2806,7 +2873,7 @@ const InstitutionCaregiverDashboard = () => {
                 const client = assignedClients.find(c => c.id === e.target.value);
                 setSelectedClient(client || null);
               }}
-              className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              className="w-full px-4 py-3 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
             >
               <option value="">-- Select a client --</option>
               {assignedClients.map(client => (
@@ -2835,7 +2902,7 @@ const InstitutionCaregiverDashboard = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center">
-                  <User className="h-5 w-5 text-blue-600 mr-2" />
+                  <User className="h-5 w-5 text-indigo-600 mr-2" />
                   Prescriptions for {selectedClient.name || selectedClient.fullName}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
@@ -2854,12 +2921,12 @@ const InstitutionCaregiverDashboard = () => {
                       const medData = pharmacistMedData[medName] || {};
                       
                       return (
-                        <div key={index} className="bg-gradient-to-r from-blue-50 to-blue-50 rounded-lg p-5 border border-blue-200">
+                        <div key={index} className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-5 border border-indigo-200">
                           {/* Medication Info */}
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex-1">
                               <h4 className="font-bold text-lg text-gray-900 flex items-center">
-                                <Pill className="h-5 w-5 text-blue-600 mr-2" />
+                                <Pill className="h-5 w-5 text-indigo-600 mr-2" />
                                 {medName}
                               </h4>
                               {typeof med === 'object' && (
@@ -2879,7 +2946,7 @@ const InstitutionCaregiverDashboard = () => {
                           </div>
 
                           {/* Pharmacist Controls */}
-                          <div className="bg-white rounded-lg p-4 border border-blue-300 mt-4">
+                          <div className="bg-white rounded-lg p-4 border border-indigo-300 mt-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {/* Availability Checkbox */}
                               <div className="flex items-center">
@@ -2888,7 +2955,7 @@ const InstitutionCaregiverDashboard = () => {
                                   id={`available-${index}`}
                                   checked={medData.available || false}
                                   onChange={(e) => updateMedicationData(medName, 'available', e.target.checked)}
-                                  className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                                 />
                                 <label htmlFor={`available-${index}`} className="ml-3 text-sm font-medium text-gray-900">
                                   Available in Store
@@ -2907,7 +2974,7 @@ const InstitutionCaregiverDashboard = () => {
                                   placeholder="0.00"
                                   value={medData.price || ''}
                                   onChange={(e) => updateMedicationData(medName, 'price', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                 />
                               </div>
 
@@ -2922,7 +2989,7 @@ const InstitutionCaregiverDashboard = () => {
                                   placeholder="0"
                                   value={medData.quantity || ''}
                                   onChange={(e) => updateMedicationData(medName, 'quantity', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                 />
                               </div>
 
@@ -2936,7 +3003,7 @@ const InstitutionCaregiverDashboard = () => {
                                   placeholder="e.g., Generic available"
                                   value={medData.notes || ''}
                                   onChange={(e) => updateMedicationData(medName, 'notes', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                 />
                               </div>
                             </div>
@@ -2944,7 +3011,7 @@ const InstitutionCaregiverDashboard = () => {
                             {/* Status Badge */}
                             {medData.available && (
                               <div className="mt-3 flex items-center text-sm">
-                                <span className="px-3 py-1 bg-blue-100 text-blue-800 font-semibold rounded-full flex items-center">
+                                <span className="px-3 py-1 bg-green-100 text-green-800 font-semibold rounded-full flex items-center">
                                   <CheckCircle className="h-4 w-4 mr-1" />
                                   Available - ₦{medData.price || '0.00'}
                                 </span>
@@ -3068,7 +3135,7 @@ const InstitutionCaregiverDashboard = () => {
                                 </>
                               )}
                   </div>
-                            <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+                            <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
                               Active
                             </span>
                   </div>
@@ -3208,13 +3275,13 @@ const InstitutionCaregiverDashboard = () => {
             </div>
           </div>
           
-          <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+          <div className="bg-green-50 rounded-xl border border-green-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">Upcoming Tasks</p>
+                <p className="text-sm font-medium text-green-600">Upcoming Tasks</p>
                 <p className="text-2xl font-bold text-green-900">{upcomingTasks.length}</p>
               </div>
-              <Calendar className="h-10 w-10 text-blue-600" />
+              <Calendar className="h-10 w-10 text-green-600" />
             </div>
           </div>
         </div>
@@ -3246,7 +3313,7 @@ const InstitutionCaregiverDashboard = () => {
                             {task.title || task.taskTitle || task.description || 'Care Task'}
                           </h3>
                           <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                            task.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                            task.status === 'completed' ? 'bg-green-100 text-green-800' :
                             task.status === 'in-progress' || task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                             task.status === 'pending' || task.status === 'assigned' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-800'
@@ -3283,7 +3350,7 @@ const InstitutionCaregiverDashboard = () => {
                               <AlertTriangle className={`h-4 w-4 ${
                                 task.priority === 'high' ? 'text-red-500' :
                                 task.priority === 'medium' ? 'text-yellow-500' :
-                                'text-blue-500'
+                                'text-green-500'
                               }`} />
                               <span className="text-gray-700">
                                 <span className="font-medium">Priority:</span> {task.priority || 'Normal'}
@@ -3305,7 +3372,7 @@ const InstitutionCaregiverDashboard = () => {
                                 toast.error('Failed to complete task');
                               }
                             }}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center"
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Complete
@@ -3442,7 +3509,7 @@ const InstitutionCaregiverDashboard = () => {
                         <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
                           log.roleType === 'doctor' ? 'bg-blue-100 text-blue-800' :
                           log.roleType === 'nurse' ? 'bg-red-100 text-red-800' :
-                          'bg-blue-100 text-blue-800'
+                          'bg-green-100 text-green-800'
                         }`}>
                           {log.roleType?.toUpperCase() || 'CARE'}
                         </span>
@@ -3480,8 +3547,8 @@ const InstitutionCaregiverDashboard = () => {
                         )}
                         
                         {log.medications && (
-                          <div className="bg-blue-50 rounded p-3">
-                            <span className="text-xs font-medium text-blue-800 uppercase">Medications:</span>
+                          <div className="bg-green-50 rounded p-3">
+                            <span className="text-xs font-medium text-green-800 uppercase">Medications:</span>
                             <p className="text-sm text-green-900 mt-1">{log.medications}</p>
                           </div>
                         )}
@@ -3494,8 +3561,8 @@ const InstitutionCaregiverDashboard = () => {
                         )}
                         
                         {log.moodBehavior && (
-                          <div className="bg-blue-50 rounded p-3">
-                            <span className="text-xs font-medium text-blue-800 uppercase">Mood & Behavior:</span>
+                          <div className="bg-purple-50 rounded p-3">
+                            <span className="text-xs font-medium text-purple-800 uppercase">Mood & Behavior:</span>
                             <p className="text-sm text-purple-900 mt-1">{log.moodBehavior}</p>
                           </div>
                         )}
@@ -3598,13 +3665,13 @@ const InstitutionCaregiverDashboard = () => {
       <div className="space-y-6">
             <div className="text-center py-12">
               <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Patient First</h3>
-            <p className="text-gray-600 mb-4">Please go to the Patients tab and select a patient to log activities for them.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Client First</h3>
+            <p className="text-gray-600 mb-4">Please go to the Clients tab and select a client to log activities for them.</p>
               <button
               onClick={() => setActiveTab('clients')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-              Go to Patients Tab
+              Go to Clients Tab
               </button>
             </div>
                       </div>
@@ -3657,7 +3724,7 @@ const InstitutionCaregiverDashboard = () => {
                   <Heart className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <h1 className="brand-title-alt text-gray-900">UltimateCare</h1>
+                  <h1 className="brand-title-alt text-gray-900">Care Master</h1>
                   <p className="text-xs text-gray-500">{dashboardConfig.title}</p>
                 </div>
               </div>
@@ -3698,7 +3765,7 @@ const InstitutionCaregiverDashboard = () => {
                     <Heart className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="brand-title-alt text-gray-900 truncate">UltimateCare</h1>
+                    <h1 className="brand-title-alt text-gray-900 truncate">Care Master</h1>
                     <p className="text-xs text-gray-500 truncate">Care Portal</p>
                   </div>
                 </div>
@@ -3811,7 +3878,7 @@ const InstitutionCaregiverDashboard = () => {
               }`}
             >
               <Users className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Patients'}
+              {!sidebarCollapsed && 'Clients'}
             </button>
             
             <button
@@ -3951,7 +4018,7 @@ const InstitutionCaregiverDashboard = () => {
               )}
               <button 
                 onClick={() => setShowProfileSettings(true)}
-                className="flex items-center px-3 md:px-4 py-2 text-xs md:text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors touch-manipulation"
+                className="flex items-center px-3 md:px-4 py-2 text-xs md:text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors touch-manipulation"
                 title="Profile Settings"
               >
                 <User className="h-4 w-4 mr-2" />
@@ -4033,13 +4100,13 @@ const InstitutionCaregiverDashboard = () => {
                   <div className="min-w-0 flex-1">
                     <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Today's Tasks</p>
                     <p className="text-xl md:text-2xl font-bold text-gray-900">{recentTasks.length}</p>
-                    <p className="text-xs text-blue-600 mt-1 flex items-center">
+                    <p className="text-xs text-green-600 mt-1 flex items-center">
                       <Eye className="h-3 w-3 mr-1" />
                       <span className="truncate">Click to view</span>
                     </p>
                   </div>
-                  <div className="p-2 md:p-3 bg-blue-50 rounded-lg shrink-0 ml-2">
-                    <CheckSquare className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                  <div className="p-2 md:p-3 bg-green-50 rounded-lg shrink-0 ml-2">
+                    <CheckSquare className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
                   </div>
                 </div>
               </div>
@@ -4055,13 +4122,13 @@ const InstitutionCaregiverDashboard = () => {
                   <div className="min-w-0 flex-1">
                     <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Pending Tasks</p>
                     <p className="text-xl md:text-2xl font-bold text-gray-900">{recentTasks.filter(task => task.status !== 'completed').length}</p>
-                    <p className="text-xs text-blue-600 mt-1 flex items-center">
+                    <p className="text-xs text-orange-600 mt-1 flex items-center">
                       <Eye className="h-3 w-3 mr-1" />
                       <span className="truncate">Click to view</span>
                     </p>
                   </div>
-                  <div className="p-2 md:p-3 bg-blue-50 rounded-lg shrink-0 ml-2">
-                    <Clock className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                  <div className="p-2 md:p-3 bg-orange-50 rounded-lg shrink-0 ml-2">
+                    <Clock className="h-5 w-5 md:h-6 md:w-6 text-orange-600" />
                   </div>
                 </div>
               </div>
@@ -4077,13 +4144,13 @@ const InstitutionCaregiverDashboard = () => {
                   <div className="min-w-0 flex-1">
                     <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Unread Messages</p>
                     <p className="text-xl md:text-2xl font-bold text-gray-900">{conversations.filter(c => c.unread > 0).length}</p>
-                    <p className="text-xs text-blue-600 mt-1 flex items-center">
+                    <p className="text-xs text-purple-600 mt-1 flex items-center">
                       <Eye className="h-3 w-3 mr-1" />
                       <span className="truncate">Click to view</span>
                     </p>
                   </div>
-                  <div className="p-2 md:p-3 bg-blue-50 rounded-lg shrink-0 ml-2">
-                    <MessageSquare className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                  <div className="p-2 md:p-3 bg-purple-50 rounded-lg shrink-0 ml-2">
+                    <MessageSquare className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
                   </div>
                 </div>
               </div>
@@ -4131,6 +4198,71 @@ const InstitutionCaregiverDashboard = () => {
           <HelpSupport userRole={userProfile?.userType || userProfile?.type || 'caregiver'} />
         ) : (
           <div className="space-y-4 md:space-y-6 lg:space-y-8">
+            {/* Active Tasks Section */}
+            {activeTasks.length > 0 && (
+              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-green-200 p-4 sm:p-6 md:p-8">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center">
+                      <Clock className="h-5 w-5 md:h-6 md:w-6 text-green-600 mr-2" />
+                      Active Tasks ({activeTasks.length})
+                    </h2>
+                    <p className="text-sm md:text-base text-gray-600 mt-1">
+                      Tasks currently in progress with time tracking
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {activeTasks.map((task) => {
+                    const hours = Math.floor(task.elapsedHours || 0);
+                    const minutes = task.elapsedMinutes || 0;
+                    const displayTime = hours > 0 
+                      ? `${hours}:${minutes.toString().padStart(2, '0')}`
+                      : `${minutes} min`;
+                    
+                    return (
+                      <div key={task.id} className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-1">
+                              {task.title || task.taskName || task.type || 'Care Task'}
+                            </h3>
+                            {task.clientName && (
+                              <p className="text-sm text-gray-600 mb-2">
+                                Client: {task.clientName}
+                              </p>
+                            )}
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2">
+                                <Clock className="h-4 w-4 text-green-600" />
+                                <span className="text-sm font-medium text-green-700">
+                                  {displayTime}
+                                </span>
+                              </div>
+                              {task.hourlyRate > 0 && (
+                                <div className="text-xs text-gray-500">
+                                  Rate: ${task.hourlyRate}/hr
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedTask(task);
+                              setShowTaskCompletionModal(true);
+                            }}
+                            className="ml-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                          >
+                            Complete
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
             {/* General Care Provider Dashboard Section */}
             <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
               <div className="flex flex-col sm:flex-row items-start justify-between mb-4 md:mb-6 gap-4">
@@ -4206,10 +4338,10 @@ const InstitutionCaregiverDashboard = () => {
                   <div className="bg-white rounded-lg p-4 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                       <User className="h-5 w-5 text-blue-600" />
-                      <p className="text-sm font-medium text-gray-600">Patient Census</p>
+                      <p className="text-sm font-medium text-gray-600">Client Census</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
-                    <p className="text-xs text-gray-500 mt-1">Assigned patients</p>
+                    <p className="text-xs text-gray-500 mt-1">Assigned clients</p>
                   </div>
                 
                 <div className="bg-white rounded-lg p-4 shadow-sm">
@@ -4223,19 +4355,19 @@ const InstitutionCaregiverDashboard = () => {
                 
                 <div className="bg-white rounded-lg p-4 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
-                    <Pill className="h-5 w-5 text-blue-600" />
+                    <Pill className="h-5 w-5 text-green-600" />
                     <p className="text-sm font-medium text-gray-600">Medications Due</p>
                   </div>
-                  <p className="text-2xl font-bold text-blue-600">{todaySchedule.length}</p>
+                  <p className="text-2xl font-bold text-green-600">{todaySchedule.length}</p>
                   <p className="text-xs text-gray-500 mt-1">Scheduled today</p>
                 </div>
                 
                 <div className="bg-white rounded-lg p-4 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
-                    <Activity className="h-5 w-5 text-blue-600" />
+                    <Activity className="h-5 w-5 text-purple-600" />
                     <p className="text-sm font-medium text-gray-600">Assessments</p>
                   </div>
-                  <p className="text-2xl font-bold text-blue-600">{assignedClients.length}</p>
+                  <p className="text-2xl font-bold text-purple-600">{assignedClients.length}</p>
                   <p className="text-xs text-gray-500 mt-1">Due today</p>
                 </div>
               </div>
@@ -4278,8 +4410,8 @@ const InstitutionCaregiverDashboard = () => {
                   <p className="text-sm font-medium text-gray-600 mb-1">Completed Tasks</p>
                   <p className="text-3xl font-bold text-gray-900">{recentTasks.filter(t => t.status === 'completed').length}</p>
                 </div>
-                <div className="p-3 bg-blue-50 rounded-xl">
-                  <CheckCircle className="h-8 w-8 text-blue-600" />
+                <div className="p-3 bg-green-50 rounded-xl">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
               </div>
             </div>
@@ -4300,8 +4432,8 @@ const InstitutionCaregiverDashboard = () => {
                   <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
                   <p className="text-3xl font-bold text-gray-900">₦{(caregiver?.thisMonthEarnings || 0).toLocaleString()}</p>
                 </div>
-                <div className="p-3 bg-blue-50 rounded-xl">
-                  <TrendingUp className="h-8 w-8 text-blue-600" />
+                <div className="p-3 bg-purple-50 rounded-xl">
+                  <TrendingUp className="h-8 w-8 text-purple-600" />
                 </div>
               </div>
             </div>
@@ -4328,7 +4460,7 @@ const InstitutionCaregiverDashboard = () => {
                     assignedClients.slice(0, 5).map((client, index) => (
                       <div key={client.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                         <div className={`flex-shrink-0 h-2 w-2 rounded-full mt-2 ${
-                          index === 0 ? 'bg-blue-500' : 'bg-gray-300'
+                          index === 0 ? 'bg-green-500' : 'bg-gray-300'
                         }`}></div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">{client.name}</p>
@@ -4358,7 +4490,7 @@ const InstitutionCaregiverDashboard = () => {
                     recentTasks.slice(0, 5).map((task) => (
                       <div key={task.id} className="flex items-start gap-3">
                         <div className="flex-shrink-0">
-                          <CheckCircle className="h-5 w-5 text-blue-600" />
+                          <CheckCircle className="h-5 w-5 text-green-600" />
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">{task.task || task.title}</p>
@@ -4459,8 +4591,8 @@ const InstitutionCaregiverDashboard = () => {
                 {recentTasks.map((task) => (
                   <div key={task.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-blue-50 rounded-lg">
-                        <CheckCircle className="h-6 w-6 text-blue-600" />
+                      <div className="p-2 bg-green-50 rounded-lg">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
                         <h4 className="text-base font-semibold text-gray-900">{task.task}</h4>
@@ -4496,7 +4628,7 @@ const InstitutionCaregiverDashboard = () => {
                     <span className="text-base font-medium text-gray-700">Punctuality</span>
                     <div className="flex items-center">
                       <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${performance.punctuality}%` }}></div>
+                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.punctuality}%` }}></div>
                       </div>
                       <span className="text-lg font-bold text-gray-900">{performance.punctuality}%</span>
                     </div>
@@ -4528,7 +4660,7 @@ const InstitutionCaregiverDashboard = () => {
                     <span className="text-base font-medium text-gray-700">Safety Record</span>
                     <div className="flex items-center">
                       <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${performance.safety}%` }}></div>
+                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.safety}%` }}></div>
                       </div>
                       <span className="text-lg font-bold text-gray-900">{performance.safety}%</span>
                     </div>
@@ -4558,30 +4690,22 @@ const InstitutionCaregiverDashboard = () => {
                     <button 
                       onClick={handleWritePrescription}
                       disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Pill className="h-8 w-8 text-blue-600 mb-3" />
+                      <Pill className="h-8 w-8 text-indigo-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Write Prescription</span>
                       <span className="text-xs text-gray-500 mt-1">Prescribe medication</span>
                     </button>
                     <button 
                       onClick={handleCreateCarePlan}
                       disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ClipboardList className="h-8 w-8 text-blue-600 mb-3" />
+                      <ClipboardList className="h-8 w-8 text-emerald-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Create Care Plan</span>
                       <span className="text-xs text-gray-500 mt-1">Plan treatment</span>
                     </button>
-                    <button 
-                      onClick={handleVideoConsultation}
-                      disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Camera className="h-8 w-8 text-blue-600 mb-3" />
-                      <span className="text-sm font-semibold text-gray-900">Video Consultation</span>
-                      <span className="text-xs text-gray-500 mt-1">Start video call</span>
-                    </button>
+                    {/* Video consultation removed - clients don't have accounts */}
                   </div>
                 ) : (
                   // Nurse/Caregiver Quick Actions
@@ -4603,9 +4727,9 @@ const InstitutionCaregiverDashboard = () => {
                         setShowNurseReportModal(true);
                       }}
                       disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-green-50 hover:border-green-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <FileText className="h-8 w-8 text-blue-600 mb-3" />
+                      <FileText className="h-8 w-8 text-green-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Nurse Report</span>
                       <span className="text-xs text-gray-500 mt-1">Record vitals</span>
                     </button>
@@ -4618,17 +4742,17 @@ const InstitutionCaregiverDashboard = () => {
                         setShowCareLogsModal(true);
                       }}
                       disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Heart className="h-8 w-8 text-blue-600 mb-3" />
+                      <Heart className="h-8 w-8 text-purple-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Care Log</span>
                       <span className="text-xs text-gray-500 mt-1">Log care activity</span>
                     </button>
                     <button 
                       onClick={() => setActiveTab('schedule')}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all"
+                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-orange-50 hover:border-orange-300 hover:shadow-md transition-all"
                     >
-                      <Calendar className="h-8 w-8 text-blue-600 mb-3" />
+                      <Calendar className="h-8 w-8 text-orange-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Schedule</span>
                       <span className="text-xs text-gray-500 mt-1">View tasks</span>
                     </button>
@@ -4703,7 +4827,7 @@ const InstitutionCaregiverDashboard = () => {
       {showActivityModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-600 text-white p-6 rounded-t-xl">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-bold">Log Care Activity</h3>
@@ -4906,14 +5030,14 @@ const InstitutionCaregiverDashboard = () => {
       {showCarePlanModal && selectedClient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <ClipboardList className="h-8 w-8 text-white" />
                 <div>
                   <h2 className="text-2xl font-bold text-white">
                     {editingPlanId ? 'Edit Care Plan' : 'Create Care Plan'}
                   </h2>
-                  <p className="text-blue-100">For: {selectedClient.name || selectedClient.fullName}</p>
+                  <p className="text-indigo-100">For: {selectedClient.name || selectedClient.fullName}</p>
                 </div>
               </div>
               <button
@@ -4921,7 +5045,7 @@ const InstitutionCaregiverDashboard = () => {
                   setShowCarePlanModal(false);
                   setEditingPlanId(null);
                 }}
-                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
+                className="text-white hover:bg-indigo-500 rounded-lg p-2 transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -4936,7 +5060,7 @@ const InstitutionCaregiverDashboard = () => {
                       type="date"
                       value={carePlanData.startDate}
                       onChange={(e) => setCarePlanData({...carePlanData, startDate: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -4945,7 +5069,7 @@ const InstitutionCaregiverDashboard = () => {
                       type="date"
                       value={carePlanData.reviewDate}
                       onChange={(e) => setCarePlanData({...carePlanData, reviewDate: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -4957,7 +5081,7 @@ const InstitutionCaregiverDashboard = () => {
                     rows={3}
                     value={carePlanData.objectives}
                     onChange={(e) => setCarePlanData({...carePlanData, objectives: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
 
@@ -4968,7 +5092,7 @@ const InstitutionCaregiverDashboard = () => {
                     rows={4}
                     value={carePlanData.activities}
                     onChange={(e) => setCarePlanData({...carePlanData, activities: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
 
@@ -4979,7 +5103,7 @@ const InstitutionCaregiverDashboard = () => {
                     rows={3}
                     value={carePlanData.medicationSchedule}
                     onChange={(e) => setCarePlanData({...carePlanData, medicationSchedule: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
 
@@ -4990,7 +5114,7 @@ const InstitutionCaregiverDashboard = () => {
                     rows={3}
                     value={carePlanData.dietary}
                     onChange={(e) => setCarePlanData({...carePlanData, dietary: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
 
@@ -5001,7 +5125,7 @@ const InstitutionCaregiverDashboard = () => {
                     rows={3}
                     value={carePlanData.mobility}
                     onChange={(e) => setCarePlanData({...carePlanData, mobility: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
 
@@ -5012,7 +5136,7 @@ const InstitutionCaregiverDashboard = () => {
                     rows={3}
                     value={carePlanData.specialInstructions}
                     onChange={(e) => setCarePlanData({...carePlanData, specialInstructions: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                   />
                 </div>
               </div>
@@ -5041,16 +5165,7 @@ const InstitutionCaregiverDashboard = () => {
                         specialInstructions: carePlanData.specialInstructions
                       };
                       
-                      // Prepare clinician info for logging
-                      const clinicianInfo = {
-                        id: user?.uid || userProfile?.id || userProfile?.uid,
-                        name: userProfile?.name || userProfile?.displayName,
-                        role: userProfile?.userType || userProfile?.type || 'doctor',
-                        email: userProfile?.email,
-                        institutionId: effectiveInstitutionId
-                      };
-                      
-                      await updateCarePlan(editingPlanId, updatePayload, clinicianInfo);
+                      await updateCarePlan(editingPlanId, updatePayload);
                       alert('Care plan updated successfully!');
                       setEditingPlanId(null);
                     } else {
@@ -5071,16 +5186,7 @@ const InstitutionCaregiverDashboard = () => {
                         specialInstructions: carePlanData.specialInstructions
                       };
                       
-                      // Prepare clinician info for logging
-                      const clinicianInfo = {
-                        id: user?.uid || userProfile?.id || userProfile?.uid,
-                        name: userProfile?.name || userProfile?.displayName,
-                        role: userProfile?.userType || userProfile?.type || 'doctor',
-                        email: userProfile?.email,
-                        institutionId: effectiveInstitutionId
-                      };
-                      
-                      await createCarePlan(planPayload, clinicianInfo);
+                      await createCarePlan(planPayload);
                       
                       // Notify admin
                       await notifyAdmin({
@@ -5118,7 +5224,7 @@ const InstitutionCaregiverDashboard = () => {
                     alert('Failed to save care plan: ' + error.message);
                   }
                 }}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 {editingPlanId ? 'Update Care Plan' : 'Create Care Plan'}
@@ -5132,7 +5238,7 @@ const InstitutionCaregiverDashboard = () => {
       {showTaskDetailsModal && selectedTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <CheckSquare className="h-8 w-8 text-white" />
                 <div>
@@ -5159,7 +5265,7 @@ const InstitutionCaregiverDashboard = () => {
                     {selectedTask.title || selectedTask.taskTitle || 'Care Task'}
                   </h3>
                   <span className={`px-4 py-2 text-sm font-semibold rounded-full ${
-                    selectedTask.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                    selectedTask.status === 'completed' ? 'bg-green-100 text-green-800' :
                     selectedTask.status === 'in-progress' || selectedTask.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                     selectedTask.status === 'pending' || selectedTask.status === 'assigned' ? 'bg-yellow-100 text-yellow-800' :
                     'bg-gray-100 text-gray-800'
@@ -5190,9 +5296,9 @@ const InstitutionCaregiverDashboard = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
                     <p className={`flex items-center font-medium ${
                       selectedTask.priority === 'urgent' ? 'text-red-600' :
-                      selectedTask.priority === 'high' ? 'text-blue-600' :
+                      selectedTask.priority === 'high' ? 'text-orange-600' :
                       selectedTask.priority === 'medium' ? 'text-yellow-600' :
-                      'text-blue-600'
+                      'text-green-600'
                     }`}>
                       <AlertTriangle className="h-4 w-4 mr-2" />
                       {selectedTask.priority || 'Normal'}
@@ -5286,13 +5392,7 @@ const InstitutionCaregiverDashboard = () => {
                   onClick={async () => {
                     try {
                       // Mark task as completed
-                      await completeCareTask(selectedTask.id, 'Task completed successfully');
-                      
-                      // Refresh tasks list
-                      if (user?.uid) {
-                        const updatedTasks = await getTodayTasks(user.uid);
-                        setTodaysTasks(updatedTasks);
-                      }
+                      // TODO: Add actual API call to update task status
                       
                       // Notify admin
                       await notifyAdmin({
@@ -5316,7 +5416,7 @@ const InstitutionCaregiverDashboard = () => {
                       toast.error('Failed to complete task');
                     }
                   }}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Mark Complete
@@ -5438,7 +5538,7 @@ const InstitutionCaregiverDashboard = () => {
                         <span className="text-sm text-gray-600">Status:</span>
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           selectedClient.status === 'Active' || selectedClient.status === 'active'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-green-100 text-green-800'
                             : selectedClient.status === 'Critical' || selectedClient.status === 'critical'
                             ? 'bg-red-100 text-red-800'
                             : 'bg-yellow-100 text-yellow-800'
@@ -5450,9 +5550,9 @@ const InstitutionCaregiverDashboard = () => {
                   </div>
 
                   {/* Contact Information */}
-                  <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+                  <div className="bg-green-50 rounded-xl border border-green-100 p-6">
                     <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center">
-                      <Phone className="h-5 w-5 text-blue-600 mr-2" />
+                      <Phone className="h-5 w-5 text-green-600 mr-2" />
                       Contact Information
                     </h3>
                     <div className="space-y-3">
@@ -5477,9 +5577,9 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
 
                 {/* Emergency Contact */}
-                <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+                <div className="bg-orange-50 rounded-xl border border-orange-100 p-6">
                   <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center">
-                    <AlertCircle className="h-5 w-5 text-blue-600 mr-2" />
+                    <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
                     Emergency Contact
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -5545,9 +5645,9 @@ const InstitutionCaregiverDashboard = () => {
                         </div>
 
                         {/* Current Medications */}
-                        <div className="bg-blue-50 rounded-xl border border-blue-100 p-4">
+                        <div className="bg-green-50 rounded-xl border border-green-100 p-4">
                           <h4 className="text-sm font-semibold text-green-900 mb-2 flex items-center">
-                            <Pill className="h-4 w-4 text-blue-600 mr-2" />
+                            <Pill className="h-4 w-4 text-green-600 mr-2" />
                             Current Medications
                           </h4>
                           <p className="text-sm text-gray-900">
@@ -5578,16 +5678,16 @@ const InstitutionCaregiverDashboard = () => {
                             {clientPrescriptions.length > 0 && (
                               <div>
                                 <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center border-b pb-2">
-                                  <Pill className="h-4 w-4 text-blue-600 mr-2" />
+                                  <Pill className="h-4 w-4 text-purple-600 mr-2" />
                                   Prescriptions ({clientPrescriptions.length})
                                 </h4>
                                 <div className="space-y-2">
                                   {clientPrescriptions.map((prescription) => (
-                                    <div key={prescription.id} className="border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                                    <div key={prescription.id} className="border border-gray-200 rounded-lg hover:border-purple-300 transition-colors">
                                       <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(prescription.id)}>
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                            <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
                                             <p className="text-sm font-medium text-gray-900">
                                               {prescription.diagnosis || 'Prescription'}
                                             </p>
@@ -5599,12 +5699,12 @@ const InstitutionCaregiverDashboard = () => {
                                             {prescription.doctorName && ` • By: ${prescription.doctorName}`}
                                           </p>
                                         </div>
-                                        <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-purple-200 transition-colors">
+                                        <button className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors">
                                           {expandedRecords[prescription.id] ? 'Hide' : 'View Details'}
                                         </button>
                                       </div>
                                       {expandedRecords[prescription.id] && (
-                                        <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-blue-50">
+                                        <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-purple-50">
                                           <div className="space-y-2 text-sm">
                                             {prescription.medications && prescription.medications.length > 0 && (
                                               <div>
@@ -5712,21 +5812,21 @@ const InstitutionCaregiverDashboard = () => {
                             {clientDiagnostics.length > 0 && (
                               <div>
                                 <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center border-b pb-2">
-                                  <Activity className="h-4 w-4 text-blue-600 mr-2" />
+                                  <Activity className="h-4 w-4 text-green-600 mr-2" />
                                   Diagnostic Tests ({clientDiagnostics.length})
                                 </h4>
                                 <div className="space-y-2">
                                   {clientDiagnostics.map((diagnostic) => (
-                                    <div key={diagnostic.id} className="border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                                    <div key={diagnostic.id} className="border border-gray-200 rounded-lg hover:border-green-300 transition-colors">
                                       <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(diagnostic.id)}>
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                                             <p className="text-sm font-medium text-gray-900">
                                               {diagnostic.testName || diagnostic.testType || 'Diagnostic Test'}
                                             </p>
                                             <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                                              diagnostic.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+                                              diagnostic.status === 'completed' ? 'bg-green-100 text-green-700' :
                                               diagnostic.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                                               'bg-gray-100 text-gray-700'
                                             }`}>
@@ -5740,12 +5840,12 @@ const InstitutionCaregiverDashboard = () => {
                                             {diagnostic.doctorName && ` • Ordered by: ${diagnostic.doctorName}`}
                                           </p>
                                         </div>
-                                        <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-green-200 transition-colors">
+                                        <button className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors">
                                           {expandedRecords[diagnostic.id] ? 'Hide' : 'View Details'}
                                         </button>
                                       </div>
                                       {expandedRecords[diagnostic.id] && (
-                                        <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-blue-50">
+                                        <div className="px-4 pb-3 border-t border-gray-200 pt-3 bg-green-50">
                                           <div className="space-y-2 text-sm">
                                             {diagnostic.testReason && (
                                               <div>
@@ -5784,21 +5884,21 @@ const InstitutionCaregiverDashboard = () => {
                             {clientInvoices.length > 0 && (
                               <div>
                                 <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center border-b pb-2">
-                                  <Receipt className="h-4 w-4 text-blue-600 mr-2" />
+                                  <Receipt className="h-4 w-4 text-amber-600 mr-2" />
                                   Pharmacy Invoices ({clientInvoices.length})
                                 </h4>
                                 <div className="space-y-2">
                                   {clientInvoices.map((invoice) => (
-                                    <div key={invoice.id} className="border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                                    <div key={invoice.id} className="border border-gray-200 rounded-lg hover:border-amber-300 transition-colors">
                                       <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleRecordDetails(invoice.id)}>
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                            <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
                                             <p className="text-sm font-medium text-gray-900">
                                               Invoice #{invoice.invoiceNumber || invoice.id.substring(0, 8).toUpperCase()}
                                             </p>
                                             <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                                              invoice.status === 'paid' ? 'bg-blue-100 text-blue-700' :
+                                              invoice.status === 'paid' ? 'bg-green-100 text-green-700' :
                                               invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                                               'bg-gray-100 text-gray-700'
                                             }`}>
@@ -5813,7 +5913,7 @@ const InstitutionCaregiverDashboard = () => {
                                             {invoice.total && ` • Total: ₦${invoice.total.toLocaleString()}`}
                                           </p>
                                         </div>
-                                        <button className="px-3 py-1 text-xs bg-amber-100 text-blue-700 rounded hover:bg-amber-200 transition-colors">
+                                        <button className="px-3 py-1 text-xs bg-amber-100 text-amber-700 rounded hover:bg-amber-200 transition-colors">
                                           {expandedRecords[invoice.id] ? 'Hide' : 'View Details'}
                                         </button>
                                       </div>
@@ -5853,7 +5953,7 @@ const InstitutionCaregiverDashboard = () => {
                                                 </div>
                                               )}
                                               {invoice.discount > 0 && (
-                                                <div className="flex justify-between text-blue-700">
+                                                <div className="flex justify-between text-green-700">
                                                   <span>Discount:</span>
                                                   <span>-₦{invoice.discount?.toLocaleString() || '0'}</span>
                                                 </div>
@@ -5904,13 +6004,13 @@ const InstitutionCaregiverDashboard = () => {
                       <div className="bg-white rounded-xl border border-gray-100 p-6">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                            <ClipboardList className="h-5 w-5 text-blue-600 mr-2" />
+                            <ClipboardList className="h-5 w-5 text-indigo-600 mr-2" />
                             Care Plans ({carePlans.length})
                           </h3>
                           {isDoctor && (
                             <button
                               onClick={() => setShowCarePlanModal(true)}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm"
+                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-sm"
                             >
                               <Plus className="h-4 w-4 mr-2" />
                               New Plan
@@ -5925,7 +6025,7 @@ const InstitutionCaregiverDashboard = () => {
                             {isDoctor && (
                               <button
                                 onClick={() => setShowCarePlanModal(true)}
-                                className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                className="mt-3 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
                               >
                                 Create First Plan
                               </button>
@@ -5934,13 +6034,13 @@ const InstitutionCaregiverDashboard = () => {
                         ) : (
                           <div className="space-y-3">
                             {carePlans.map((plan) => (
-                              <div key={plan.id} className="bg-gradient-to-r from-blue-50 to-blue-50 rounded-lg p-4 border border-blue-100">
+                              <div key={plan.id} className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
                                 <div className="flex items-start justify-between mb-3">
                                   <div className="flex-1">
                                     <div className="flex items-center space-x-3 mb-2">
                                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                                         plan.status === 'active' 
-                                          ? 'bg-blue-100 text-blue-800' 
+                                          ? 'bg-green-100 text-green-800' 
                                           : 'bg-gray-100 text-gray-800'
                                       }`}>
                                         {plan.status || 'Active'}
@@ -5968,7 +6068,7 @@ const InstitutionCaregiverDashboard = () => {
                                         // View full plan details
                                         alert(`Care Plan Details:\n\nObjectives: ${plan.careObjectives}\n\nDaily Activities: ${plan.dailyCareActivities}\n\nMedication Schedule: ${plan.medicationSchedule}\n\nDietary: ${plan.dietaryRequirements}\n\nMobility: ${plan.mobilityPlan}\n\nSpecial Instructions: ${plan.specialInstructions || 'None'}`);
                                       }}
-                                      className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center"
+                                      className="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center"
                                     >
                                       <Eye className="h-4 w-4 mr-1" />
                                       View
@@ -5983,7 +6083,7 @@ const InstitutionCaregiverDashboard = () => {
                                           toast.error('Failed to export PDF');
                                         }
                                       }}
-                                      className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center"
+                                      className="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center"
                                     >
                                       <Download className="h-4 w-4 mr-1" />
                                       PDF
@@ -6010,7 +6110,7 @@ const InstitutionCaregiverDashboard = () => {
                                             });
                                             setShowCarePlanModal(true);
                                           }}
-                                          className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center"
+                                          className="px-3 py-1 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors flex items-center"
                                         >
                                           <Edit className="h-4 w-4 mr-1" />
                                           Edit
@@ -6060,9 +6160,9 @@ const InstitutionCaregiverDashboard = () => {
 
                   {/* Role-Specific Medical Actions */}
                   {(isDoctor || isNurse || !isNonMedicalCaregiver) && (
-                    <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+                    <div className="bg-purple-50 rounded-xl border border-purple-100 p-6">
                       <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
-                        <Activity className="h-5 w-5 text-blue-600 mr-2" />
+                        <Activity className="h-5 w-5 text-purple-600 mr-2" />
                         {isDoctor ? 'Doctor Actions' : isNurse ? 'Nurse Actions' : 'Medical Actions'}
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -6083,9 +6183,9 @@ const InstitutionCaregiverDashboard = () => {
                               onClick={() => {
                                 setShowCarePlanModal(true);
                               }}
-                              className="flex flex-col items-center p-4 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                              className="flex flex-col items-center p-4 bg-white border-2 border-indigo-200 rounded-lg hover:border-indigo-300 hover:shadow-md transition-all"
                             >
-                              <ClipboardList className="h-6 w-6 text-blue-600 mb-2" />
+                              <ClipboardList className="h-6 w-6 text-indigo-600 mb-2" />
                               <span className="text-xs font-medium text-gray-700">Create Care Plan</span>
                             </button>
 
@@ -6093,9 +6193,9 @@ const InstitutionCaregiverDashboard = () => {
                               onClick={() => {
                                 setShowMedicationModal(true);
                               }}
-                              className="flex flex-col items-center p-4 bg-white border-2 border-green-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                              className="flex flex-col items-center p-4 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
                             >
-                              <Pill className="h-6 w-6 text-blue-600 mb-2" />
+                              <Pill className="h-6 w-6 text-green-600 mb-2" />
                               <span className="text-xs font-medium text-gray-700">Prescribe Medications</span>
                             </button>
                           </>
@@ -6118,9 +6218,9 @@ const InstitutionCaregiverDashboard = () => {
                               onClick={() => {
                                 setShowNurseReportModal(true);
                               }}
-                              className="flex flex-col items-center p-4 bg-white border-2 border-orange-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                              className="flex flex-col items-center p-4 bg-white border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all"
                             >
-                              <FileText className="h-6 w-6 text-blue-600 mb-2" />
+                              <FileText className="h-6 w-6 text-orange-600 mb-2" />
                               <span className="text-xs font-medium text-gray-700">Write Nurse Report</span>
                             </button>
 
@@ -6128,9 +6228,9 @@ const InstitutionCaregiverDashboard = () => {
                               onClick={() => {
                                 setShowMedicationModal(true);
                               }}
-                              className="flex flex-col items-center p-4 bg-white border-2 border-green-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                              className="flex flex-col items-center p-4 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
                             >
-                              <Pill className="h-6 w-6 text-blue-600 mb-2" />
+                              <Pill className="h-6 w-6 text-green-600 mb-2" />
                               <span className="text-xs font-medium text-gray-700">Manage Medications</span>
                             </button>
                           </>
@@ -6201,9 +6301,9 @@ const InstitutionCaregiverDashboard = () => {
 
                         <button
                           onClick={() => setShowCarePlanModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-6 bg-white border-2 border-indigo-200 rounded-lg hover:border-indigo-300 hover:shadow-md transition-all"
                         >
-                          <ClipboardList className="h-8 w-8 text-blue-600 mb-3" />
+                          <ClipboardList className="h-8 w-8 text-indigo-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">Care Plan</span>
                         </button>
                         
@@ -6216,17 +6316,17 @@ const InstitutionCaregiverDashboard = () => {
                             }
                             setShowCareLogForm(true);
                           }}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
                         >
-                          <FileText className="h-8 w-8 text-blue-600 mb-3" />
+                          <FileText className="h-8 w-8 text-green-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">View Care Logs</span>
                         </button>
 
                         <button
                           onClick={() => setShowCareLogsModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-purple-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-6 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:shadow-md transition-all"
                         >
-                          <BarChart3 className="h-8 w-8 text-blue-600 mb-3" />
+                          <BarChart3 className="h-8 w-8 text-purple-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">All Records</span>
                         </button>
                       </div>
@@ -6260,9 +6360,9 @@ const InstitutionCaregiverDashboard = () => {
                         
                         <button
                           onClick={() => setShowNurseReportModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-orange-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-6 bg-white border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all"
                         >
-                          <FileText className="h-8 w-8 text-blue-600 mb-3" />
+                          <FileText className="h-8 w-8 text-orange-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">Nurse Report</span>
                         </button>
                       </div>
@@ -6282,9 +6382,9 @@ const InstitutionCaregiverDashboard = () => {
                         
                         <button
                           onClick={() => setShowCareLogsModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
                         >
-                          <ClipboardList className="h-8 w-8 text-blue-600 mb-3" />
+                          <ClipboardList className="h-8 w-8 text-green-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">View My Logs</span>
                           <span className="text-xs text-gray-500 mt-1">See your entries</span>
                         </button>

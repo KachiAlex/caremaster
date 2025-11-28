@@ -3,8 +3,6 @@
  * 
  * Comprehensive billing management:
  * - Auto-billing from services
- * - HMO plan management
- * - HMO claims tracking
  * - Outstanding payments
  * - Invoice generation
  */
@@ -21,7 +19,6 @@ import {
   Plus,
   Eye,
   Download,
-  Search,
   Filter,
   RefreshCw,
   Users,
@@ -31,21 +28,12 @@ import {
 import { toast } from 'react-toastify';
 import {
   getBillsByPatient,
+  getBillsByInstitution,
   getOutstandingPayments,
   recordPayment,
-  getHMOClaims,
-  submitHMOClaim,
   BILL_STATUS,
   SERVICE_TYPE
 } from '../api/autoBillingAPI';
-import {
-  getHMOPlans,
-  createHMOPlan,
-  updateHMOPlan,
-  deleteHMOPlan,
-  assignHMOPlanToPatient,
-  getPatientHMOPlan
-} from '../api/hmoPlansAPI';
 import { useUser } from '../contexts/UserContext';
 
 const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients = [] }) => {
@@ -54,22 +42,18 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
 
   const [activeTab, setActiveTab] = useState('bills');
   const [bills, setBills] = useState([]);
-  const [hmoPlans, setHmoPlans] = useState([]);
-  const [hmoClaims, setHmoClaims] = useState([]);
   const [outstandingPayments, setOutstandingPayments] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [showHMOPlanModal, setShowHMOPlanModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     if (institutionId) {
       loadData();
     }
-  }, [institutionId, activeTab]);
+  }, [institutionId, activeTab, selectedPatient]);
 
   const loadData = async () => {
     try {
@@ -77,10 +61,6 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
       
       if (activeTab === 'bills') {
         await loadBills();
-      } else if (activeTab === 'hmo-plans') {
-        await loadHMOPlans();
-      } else if (activeTab === 'hmo-claims') {
-        await loadHMOClaims();
       } else if (activeTab === 'outstanding') {
         await loadOutstandingPayments();
       }
@@ -93,25 +73,17 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
   };
 
   const loadBills = async () => {
-    // Load bills for all patients or selected patient
+    // Load bills for all clients or selected client
     if (selectedPatient) {
       const patientBills = await getBillsByPatient(selectedPatient);
       setBills(patientBills);
     } else {
-      // Load all bills for institution (would need a new API function)
-      setBills([]);
+      // Load all bills for institution
+      const allBills = await getBillsByInstitution(institutionId);
+      setBills(allBills);
     }
   };
 
-  const loadHMOPlans = async () => {
-    const plans = await getHMOPlans(institutionId);
-    setHmoPlans(plans);
-  };
-
-  const loadHMOClaims = async () => {
-    const claims = await getHMOClaims(institutionId);
-    setHmoClaims(claims);
-  };
 
   const loadOutstandingPayments = async () => {
     const outstanding = {};
@@ -137,16 +109,6 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
     }
   };
 
-  const handleSubmitHMOClaim = async (claimId) => {
-    try {
-      await submitHMOClaim(claimId);
-      toast.success('HMO claim submitted successfully');
-      await loadHMOClaims();
-    } catch (error) {
-      console.error('Error submitting HMO claim:', error);
-      toast.error('Failed to submit HMO claim');
-    }
-  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -165,27 +127,12 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
     }
   };
 
-  const getClaimStatusColor = (status) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'approved':
-        return 'bg-blue-100 text-blue-800';
-      case 'submitted':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const filteredBills = bills.filter(bill => {
-    const matchesSearch = !searchTerm || 
-      bill.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bill.id?.toLowerCase().includes(searchTerm.toLowerCase());
+    // Filter by selected client if one is selected
+    const matchesClient = !selectedPatient || bill.patientId === selectedPatient || bill.clientId === selectedPatient;
     const matchesStatus = statusFilter === 'all' || bill.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesClient && matchesStatus;
   });
 
   return (
@@ -194,7 +141,7 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Billing Management</h2>
-          <p className="text-sm text-gray-600 mt-1">Manage bills, HMO plans, and claims</p>
+          <p className="text-sm text-gray-600 mt-1">Manage bills and outstanding payments</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -212,8 +159,6 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
         <div className="flex flex-wrap gap-2">
           {[
             { id: 'bills', name: 'Bills', icon: Receipt },
-            { id: 'hmo-plans', name: 'HMO Plans', icon: Building },
-            { id: 'hmo-claims', name: 'HMO Claims', icon: FileText },
             { id: 'outstanding', name: 'Outstanding', icon: AlertCircle }
           ].map((tab) => {
             const Icon = tab.icon;
@@ -243,16 +188,24 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search bills by patient name or bill ID..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search bill by Client
+                </label>
+                <select
+                  value={selectedPatient || ''}
+                  onChange={(e) => {
+                    const clientId = e.target.value;
+                    setSelectedPatient(clientId || null);
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                >
+                  <option value="">All Clients</option>
+                  {patients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name || client.fullName || 'Unknown Client'} {client.age ? `- ${client.age} yrs` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex gap-2">
                 <select
@@ -288,7 +241,6 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">HMO Covered</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -308,9 +260,6 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {bill.currency} {bill.total?.toLocaleString() || '0'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {bill.hmoCovered ? `${bill.currency} ${bill.hmoCovered.toLocaleString()}` : '—'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(bill.status)}`}>
@@ -341,118 +290,6 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
                               <Eye className="h-4 w-4" />
                             </button>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* HMO Plans Tab */}
-      {activeTab === 'hmo-plans' && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold text-gray-900">HMO Plans</h3>
-            <button
-              onClick={() => setShowHMOPlanModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add HMO Plan
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {hmoPlans.map((plan) => (
-              <div key={plan.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-gray-900">{plan.name}</h4>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    plan.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {plan.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 mb-4">{plan.description || 'No description'}</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Plan Number:</span>
-                    <span className="font-medium">{plan.planNumber}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Discount:</span>
-                    <span className="font-medium">{plan.discountPercent}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Co-pay:</span>
-                    <span className="font-medium">
-                      {plan.coPayAmount ? `${plan.coPayAmount} NGN` : `${plan.coPayPercent}%`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* HMO Claims Tab */}
-      {activeTab === 'hmo-claims' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            {loading ? (
-              <div className="text-center py-12 text-gray-500">Loading claims...</div>
-            ) : hmoClaims.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p>No HMO claims found</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Claim ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">HMO Plan</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {hmoClaims.map((claim) => (
-                      <tr key={claim.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {claim.id.substring(0, 8)}...
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {claim.hmoPlanName}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          NGN {claim.claimAmount?.toLocaleString() || '0'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getClaimStatusColor(claim.status)}`}>
-                            {claim.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {claim.submittedAt ? new Date(claim.submittedAt).toLocaleDateString() : '—'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {claim.status === 'pending' && (
-                            <button
-                              onClick={() => handleSubmitHMOClaim(claim.id)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              Submit
-                            </button>
-                          )}
                         </td>
                       </tr>
                     ))}

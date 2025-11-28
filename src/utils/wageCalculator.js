@@ -262,6 +262,96 @@ export const WageCalculator = {
   },
 
   /**
+   * Calculate wages based on task time tracking
+   * Uses task-level clock in/out data for accurate billing
+   */
+  calculateTaskBasedWages: async (caregiverId, startDate, endDate, hourlyRate) => {
+    try {
+      // Import task time tracking API
+      const { getWorkHours } = await import('../api/taskTimeTrackingAPI');
+      
+      // Get work hours from task time tracking
+      const workData = await getWorkHours(caregiverId, startDate, endDate);
+      
+      // If hourly rate not provided, try to get from caregiver profile
+      if (!hourlyRate || hourlyRate === 0) {
+        try {
+          const caregiversRef = collection(db, 'caregivers');
+          const caregiverQuery = query(caregiversRef, where('userId', '==', caregiverId));
+          const caregiverSnapshot = await getDocs(caregiverQuery);
+          
+          if (!caregiverSnapshot.empty) {
+            hourlyRate = caregiverSnapshot.docs[0].data()?.hourlyRate || 0;
+          }
+        } catch (error) {
+          console.warn('Could not fetch caregiver hourly rate:', error);
+        }
+      }
+      
+      // Calculate billable amount if not already calculated
+      let totalBillable = workData.totalBillable;
+      if (totalBillable === 0 && hourlyRate > 0) {
+        totalBillable = workData.totalHours * hourlyRate;
+      }
+      
+      // Calculate client breakdown with billable amounts
+      const clientBreakdown = {};
+      Object.keys(workData.clientBreakdown).forEach(clientId => {
+        const clientData = workData.clientBreakdown[clientId];
+        clientBreakdown[clientId] = {
+          hours: clientData.hours,
+          billableAmount: clientData.billableAmount || (clientData.hours * hourlyRate),
+          taskCount: clientData.taskCount
+        };
+      });
+      
+      // Calculate daily breakdown
+      const dailyBreakdown = {};
+      workData.taskBreakdown.forEach(task => {
+        const dateKey = task.timestamp.toISOString().split('T')[0];
+        if (!dailyBreakdown[dateKey]) {
+          dailyBreakdown[dateKey] = {
+            hours: 0,
+            billableAmount: 0,
+            taskCount: 0
+          };
+        }
+        dailyBreakdown[dateKey].hours += task.duration;
+        dailyBreakdown[dateKey].billableAmount += task.billableAmount || (task.duration * hourlyRate);
+        dailyBreakdown[dateKey].taskCount += 1;
+      });
+      
+      // Round daily breakdown values
+      Object.keys(dailyBreakdown).forEach(date => {
+        dailyBreakdown[date].hours = Math.round(dailyBreakdown[date].hours * 100) / 100;
+        dailyBreakdown[date].billableAmount = Math.round(dailyBreakdown[date].billableAmount * 100) / 100;
+      });
+      
+      return {
+        caregiverId,
+        period: {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString()
+        },
+        hours: {
+          total: workData.totalHours
+        },
+        rate: hourlyRate,
+        pay: {
+          total: Math.round(totalBillable * 100) / 100
+        },
+        clientBreakdown: clientBreakdown,
+        dailyBreakdown: dailyBreakdown,
+        taskBreakdown: workData.taskBreakdown,
+        taskCount: workData.taskCount
+      };
+    } catch (error) {
+      console.error('Error calculating task-based wages:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Calculate monthly flat rate wages
    */
   calculateMonthlyWages: async (caregiverId, year, month, monthlyRate) => {
