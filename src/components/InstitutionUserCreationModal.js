@@ -91,10 +91,18 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
               <div className="mt-2 text-xs opacity-80">Please share these credentials securely with the user.</div>
             </div>
           </>,
-          { autoClose: 5000, position: 'top-center' }
+          { 
+            autoClose: 10000, 
+            position: 'top-center',
+            style: { fontSize: '14px', minWidth: '400px' },
+            bodyStyle: { fontSize: '14px' }
+          }
         );
       } else {
-        toast.success('User created successfully!', { autoClose: 3000 });
+        toast.success('User created successfully!', { 
+          autoClose: 6000,
+          style: { fontSize: '14px', minWidth: '300px' }
+        });
       }
 
       // Reset form
@@ -120,18 +128,22 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
     } catch (error) {
       console.error('Error creating user:', error);
       
-      let errorMessage = 'Failed to create user';
+      let errorMessage = 'Failed to create user account. Please try again.';
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email is already registered in the system';
+        errorMessage = 'This email address is already registered in the system. Please use a different email or check if the user already exists.';
       } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address format';
+        errorMessage = 'Invalid email address format. Please enter a valid email address.';
       } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak (minimum 6 characters required)';
+        errorMessage = 'Password is too weak. Please use at least 6 characters.';
       } else if (error.message) {
-        errorMessage = error.message;
+        errorMessage = `Error: ${error.message}. Please check your input and try again.`;
       }
       
-      toast.error(errorMessage, { autoClose: 4000 });
+      toast.error(errorMessage, { 
+        autoClose: 8000,
+        style: { fontSize: '14px', minWidth: '350px' },
+        bodyStyle: { fontSize: '14px' }
+      });
     } finally {
       setLoading(false);
     }

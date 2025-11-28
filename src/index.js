@@ -17,7 +17,7 @@ root.render(
         <App />
         <ToastContainer
           position="top-right"
-          autoClose={3000}
+          autoClose={6000}
           hideProgressBar={false}
           newestOnTop={false}
           closeOnClick
@@ -25,6 +25,7 @@ root.render(
           pauseOnFocusLoss
           draggable
           pauseOnHover
+          style={{ fontSize: '14px', minWidth: '300px' }}
         />
       </BrowserRouter>
     </QueryClientProvider>
