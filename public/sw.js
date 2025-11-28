@@ -1,8 +1,8 @@
-// UltimateCare Service Worker for PWA functionality
-const CACHE_NAME = 'UltimateCare-v1.0.7';
-const STATIC_CACHE = 'UltimateCare-static-v8';
-const DYNAMIC_CACHE = 'UltimateCare-dynamic-v8';
-const API_CACHE = 'UltimateCare-api-v8';
+// Care Master Service Worker for PWA functionality
+const CACHE_NAME = 'Care Master-v1.0.6';
+const STATIC_CACHE = 'Care Master-static-v7';
+const DYNAMIC_CACHE = 'Care Master-dynamic-v7';
+const API_CACHE = 'Care Master-api-v7';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
@@ -146,14 +146,38 @@ async function cacheFirst(request, cacheName) {
       return cachedResponse;
     }
     
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
+    // Try to fetch from network
+    try {
+      const networkResponse = await fetch(request);
+      if (networkResponse.ok) {
+        // Only cache successful responses
+        cache.put(request, networkResponse.clone()).catch(err => {
+          console.warn('Failed to cache response:', err);
+        });
+      }
+      return networkResponse;
+    } catch (fetchError) {
+      // Network fetch failed - check cache one more time as fallback
+      const fallbackCache = await cache.match(request);
+      if (fallbackCache) {
+        return fallbackCache;
+      }
+      
+      // No cache available and network failed - return offline response
+      // Only log as warning since this is expected in offline scenarios
+      console.warn('Cache first: Network failed and no cache available for:', request.url);
+      return new Response('Offline content not available', { 
+        status: 503,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     }
-    return networkResponse;
   } catch (error) {
-    console.error('Cache first strategy failed:', error);
-    return new Response('Offline content not available', { status: 503 });
+    // Critical error - log but don't crash
+    console.warn('Cache first strategy error:', error.message);
+    return new Response('Service unavailable', { 
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' }
+    });
   }
 }
 
@@ -190,8 +214,12 @@ async function networkFirst(request) {
   try {
     return await fetch(request);
   } catch (error) {
-    console.error('Network request failed:', error);
-    return new Response('Network error', { status: 503 });
+    // Network request failed - this is expected in offline scenarios
+    console.warn('Network request failed:', error.message);
+    return new Response('Network error', { 
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' }
+    });
   }
 }
 
@@ -201,10 +229,13 @@ async function handleAPIRequest(request) {
     const response = await fetch(request);
     return response;
   } catch (error) {
-    console.error('API request failed:', error);
+    // API request failed - queue for retry (expected in offline scenarios)
+    console.warn('API request failed, queuing for retry:', error.message);
     
     // Queue request for retry when online
-    await queueRequestForRetry(request);
+    await queueRequestForRetry(request).catch(err => {
+      console.warn('Failed to queue request:', err);
+    });
     
     return new Response(JSON.stringify({
       error: 'Offline',
@@ -248,7 +279,7 @@ async function queueRequestForRetry(request) {
 // Store queued request in IndexedDB
 async function storeQueuedRequest(requestData) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('UltimateCare-offline-queue', 1);
+    const request = indexedDB.open('Care Master-offline-queue', 1);
     
     request.onerror = () => reject(request.error);
     
@@ -337,7 +368,7 @@ async function processQueuedRequests() {
 // Get queued requests from IndexedDB
 async function getQueuedRequests() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('UltimateCare-offline-queue', 1);
+    const request = indexedDB.open('Care Master-offline-queue', 1);
     
     request.onerror = () => reject(request.error);
     
@@ -356,7 +387,7 @@ async function getQueuedRequests() {
 // Remove queued request from IndexedDB
 async function removeQueuedRequest(timestamp) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('UltimateCare-offline-queue', 1);
+    const request = indexedDB.open('Care Master-offline-queue', 1);
     
     request.onerror = () => reject(request.error);
     
@@ -377,7 +408,7 @@ self.addEventListener('push', (event) => {
   console.log('Push notification received:', event);
   
   const options = {
-        body: event.data ? event.data.text() : 'New notification from UltimateCare',
+    body: event.data ? event.data.text() : 'New notification from Care Master',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',
     vibrate: [100, 50, 100],
@@ -388,7 +419,7 @@ self.addEventListener('push', (event) => {
     actions: [
       {
         action: 'open',
-        title: 'Open UltimateCare',
+        title: 'Open Care Master',
         icon: '/icons/icon-192x192.png'
       },
       {
@@ -402,7 +433,7 @@ self.addEventListener('push', (event) => {
   };
   
   event.waitUntil(
-    self.registration.showNotification('UltimateCare', options)
+    self.registration.showNotification('Care Master', options)
   );
 });
 
@@ -441,4 +472,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('UltimateCare Service Worker loaded successfully');
+console.log('Care Master Service Worker loaded successfully');

@@ -20,6 +20,7 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Shield,
   BarChart3,
   Stethoscope,
@@ -122,8 +123,6 @@ import EnhancedTriageManagement from '../components/EnhancedTriageManagement';
 import SMSWhatsAppManagement from '../components/SMSWhatsAppManagement';
 import EnhancedInventoryManagement from '../components/EnhancedInventoryManagement';
 import SecurityManagement from '../components/SecurityManagement';
-import AdvancedReporting from '../components/AdvancedReporting';
-import DataMigrationTool from '../components/DataMigrationTool';
 import BillingManagementDashboard from '../components/BillingManagementDashboard';
 import TestingQADashboard from '../components/TestingQADashboard';
 
@@ -147,6 +146,16 @@ const formatDateValue = (value) => {
   const date = value?.toDate ? value.toDate() : new Date(value);
   if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString();
+};
+
+const formatDateForInput = (value) => {
+  if (!value) return '';
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const PAYMENT_GATEWAY_PROVIDERS = [
@@ -260,6 +269,23 @@ const InstitutionAdminDashboard = () => {
   const [assignmentType, setAssignmentType] = useState('client-to-caregiver');
   const [selectedClientForAssignment, setSelectedClientForAssignment] = useState('');
   const [selectedCaregiverForAssignment, setSelectedCaregiverForAssignment] = useState('');
+  const [assignmentForm, setAssignmentForm] = useState({
+    title: '',
+    description: '',
+    instructions: '',
+    priority: 'normal',
+    dueDate: '',
+    dueTime: ''
+  });
+  const [editAssignmentForm, setEditAssignmentForm] = useState({
+    title: '',
+    description: '',
+    instructions: '',
+    priority: 'normal',
+    dueDate: '',
+    dueTime: '',
+    status: 'pending'
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showCaregiverPasswordModal, setShowCaregiverPasswordModal] = useState(false);
   const [caregiverPasswordForm, setCaregiverPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
@@ -280,6 +306,8 @@ const InstitutionAdminDashboard = () => {
   const [selectedCaregiverForWage, setSelectedCaregiverForWage] = useState(null);
   const [showEditAssignmentModal, setShowEditAssignmentModal] = useState(false);
   const [selectedAssignmentForEdit, setSelectedAssignmentForEdit] = useState(null);
+  const [editingAssignmentId, setEditingAssignmentId] = useState(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   
   // Billing Plans States
   const [billingPlans, setBillingPlans] = useState([]);
@@ -514,7 +542,7 @@ const InstitutionAdminDashboard = () => {
           setSystemAlerts(emergencies.slice(0, 5).map(e => ({
             id: e.id,
             type: 'emergency',
-            message: `${e.emergencyType}: ${e.patientName || 'Unknown'}`,
+            message: `${e.emergencyType}: ${e.clientName || 'Unknown'}`,
             time: new Date(e.triggeredAt).toLocaleTimeString(),
             severity: e.severity
           })));
@@ -776,13 +804,13 @@ const InstitutionAdminDashboard = () => {
       console.log('✅ Client created with ID:', clientId);
       
       setShowCreatePatientModal(false);
-      toast.success('Patient added successfully');
+      toast.success('Client added successfully');
       
       // Reload dashboard data to get the newly created client
       await loadDashboardData();
     } catch (error) {
       console.error('Error adding client:', error);
-      toast.error(error.message || 'Failed to add patient');
+      toast.error(error.message || 'Failed to add Client');
     }
   };
 
@@ -1205,7 +1233,7 @@ const InstitutionAdminDashboard = () => {
         
         await createCareTask({
           caregiverId: caregiverUserId, // Use Firebase Auth UID
-          patientId: selectedClientForAssignment,
+          clientId: selectedClientForAssignment,
           clientId: selectedClientForAssignment,
           title: formData.title,
           description: formData.description || formData.instructions,
@@ -1301,7 +1329,19 @@ const InstitutionAdminDashboard = () => {
 
   // Assignment Edit/Delete Handlers
   const handleEditAssignment = (assignment) => {
+    if (!assignment) return;
+
+    setShowAssignmentDetails(false);
     setSelectedAssignmentForEdit(assignment);
+    setEditAssignmentForm({
+      title: assignment.title || '',
+      description: assignment.description || '',
+      instructions: assignment.instructions || '',
+      priority: assignment.priority || 'normal',
+      dueDate: formatDateForInput(assignment.dueDate || assignment.dueAt),
+      dueTime: assignment.dueTime || '',
+      status: assignment.status || 'pending'
+    });
     setShowEditAssignmentModal(true);
   };
 
@@ -1321,20 +1361,35 @@ const InstitutionAdminDashboard = () => {
   const handleUpdateAssignment = async (formData) => {
     if (!selectedAssignmentForEdit) return;
 
+    const assignmentId = selectedAssignmentForEdit.id || selectedAssignmentForEdit.assignmentId;
+    if (!assignmentId) {
+      toast.error('Unable to determine assignment ID');
+      return;
+    }
+
     try {
-      await assignmentAPI.updateAssignment(selectedAssignmentForEdit.id, {
+      await assignmentAPI.updateAssignment(assignmentId, {
         title: formData.title,
         description: formData.description,
         instructions: formData.instructions,
         priority: formData.priority,
-        dueDate: formData.dueDate,
-        dueTime: formData.dueTime,
+        dueDate: formData.dueDate || null,
+        dueTime: formData.dueTime || '',
         status: formData.status || selectedAssignmentForEdit.status
       });
 
       toast.success('Assignment updated successfully');
       setShowEditAssignmentModal(false);
       setSelectedAssignmentForEdit(null);
+      setEditAssignmentForm({
+        title: '',
+        description: '',
+        instructions: '',
+        priority: 'normal',
+        dueDate: '',
+        dueTime: '',
+        status: 'pending'
+      });
       await loadDashboardData();
     } catch (error) {
       console.error('Error updating assignment:', error);
@@ -1449,18 +1504,47 @@ const InstitutionAdminDashboard = () => {
       return;
     }
     try {
-      // Update both users and caregivers collections
-      await updateDoc(doc(db, 'users', caregiver.id), { 
-        status: 'active',
-        approvedAt: new Date().toISOString(),
-        approvedBy: user?.uid || userProfile?.id
-      });
+      const { doc, updateDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('../firebase/config');
       
-      await updateDoc(doc(db, 'caregivers', caregiver.id), { 
+      const caregiverId = caregiver.id || caregiver.uid || caregiver.userId;
+      
+      // Update BOTH collections to keep them in sync
+      // 1. Update users collection (for User Management tab)
+      try {
+        const userRef = doc(db, 'users', caregiverId);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          await updateDoc(userRef, { 
         status: 'active',
-        approvedAt: new Date().toISOString(),
-        approvedBy: user?.uid || userProfile?.id
+            active: true,
+            approvedAt: serverTimestamp(),
+            approvedBy: user?.uid || userProfile?.id,
+            updatedAt: serverTimestamp()
+          });
+          console.log('✅ Updated users collection for approval');
+        }
+      } catch (userError) {
+        console.warn('⚠️ Could not update users collection:', userError);
+      }
+      
+      // 2. Update caregivers collection (for Caregivers tab)
+      try {
+        const caregiverRef = doc(db, 'caregivers', caregiverId);
+        const caregiverDoc = await getDoc(caregiverRef);
+        if (caregiverDoc.exists()) {
+          await updateDoc(caregiverRef, { 
+        status: 'active',
+            active: true,
+            approvedAt: serverTimestamp(),
+            approvedBy: user?.uid || userProfile?.id,
+            updatedAt: serverTimestamp()
       });
+          console.log('✅ Updated caregivers collection for approval');
+        }
+      } catch (caregiverError) {
+        console.warn('⚠️ Could not update caregivers collection:', caregiverError);
+      }
       
       // Send notification to the caregiver
       await createNotification({
@@ -1953,38 +2037,47 @@ const InstitutionAdminDashboard = () => {
         recipientName: selectedConversation.name || 'User'
       });
       
+      if (!result || !result.callId) {
+        const errorMsg = result?.error || 'Failed to initiate call';
+        toast.error(errorMsg);
+        console.error('❌ Call initiation failed:', result);
+        return;
+      }
+      
       console.log('🔧 Initializing WebRTC for admin...');
       
       // Initialize WebRTC if not already initialized
-      if (!webrtc && result?.callId) {
-        const service = new WebRTCService(
-          userId,
-          recipientId,
-          result.callId,
-          result.signalingRef
-        );
-        
-        await service.init();
-        setWebrtc(service);
-        
-        const offer = await service.createOffer();
-        console.log('📤 Created offer and sent to recipient...');
+      if (!webrtc && result.callId) {
+        try {
+          const service = new WebRTCService(
+            userId,
+            recipientId,
+            result.callId,
+            result.signalingRef || result.callData?.id
+          );
+          
+          await service.init();
+          setWebrtc(service);
+          
+          const offer = await service.createOffer();
+          console.log('📤 Created offer and sent to recipient...');
+        } catch (webrtcError) {
+          console.warn('⚠️ WebRTC initialization failed, but call is still active:', webrtcError);
+          // Don't fail the call if WebRTC fails - the call can still work
+        }
       }
       
-      if (result && result.callId) {
-        setActiveCall({
-          callId: result.callId,
-          participantId: recipientId,
-          participantName: selectedConversation.name || 'User',
-          callType: 'voice'
-        });
-        toast.success(`Voice call initiated with ${selectedConversation.name || 'User'}`);
-      } else {
-        toast.error('Failed to initiate voice call');
-      }
+      setActiveCall({
+        callId: result.callId,
+        participantId: recipientId,
+        participantName: selectedConversation.name || 'User',
+        callType: 'voice'
+      });
+      setIsInCall(true);
+      toast.success(`Voice call initiated with ${selectedConversation.name || 'User'}`);
     } catch (error) {
-      console.error('Error starting voice call:', error);
-      toast.error('Failed to start voice call. Please check microphone permissions.');
+      console.error('❌ Error starting voice call:', error);
+      toast.error(error.message || 'Failed to start voice call. Please check microphone permissions.');
     }
   };
 
@@ -1995,26 +2088,62 @@ const InstitutionAdminDashboard = () => {
     }
     
     try {
-      const userId = user?.uid || userProfile?.userId;
+      // Get the caller ID - try multiple sources
+      const userId = user?.uid || userProfile?.uid || userProfile?.userId || userProfile?.id;
       
-      // Find recipient ID
-      let recipientId = null;
-      if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
-        recipientId = selectedConversation.participants.find(p => p !== userId);
-      }
-      
-      if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
-        recipientId = selectedConversation.userId;
-      }
-      
-      if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_')) {
-        recipientId = selectedConversation.id;
-      }
-      
-      if (!recipientId) {
-        toast.error('Could not identify recipient');
+      // Validate caller ID first
+      if (!userId) {
+        toast.error('Unable to identify your user ID. Please refresh and try again.');
+        console.error('❌ Missing userId:', { user, userProfile });
         return;
       }
+      
+      // Find recipient ID - try multiple strategies
+      let recipientId = null;
+      
+      // Strategy 1: Find in participants array
+      if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
+        recipientId = selectedConversation.participants.find(p => p && p !== userId);
+        if (recipientId) {
+          console.log('✅ Found recipient in participants:', recipientId);
+        }
+      }
+      
+      // Strategy 2: Use userId field if different from caller
+      if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
+        recipientId = selectedConversation.userId;
+        console.log('✅ Found recipient in userId field:', recipientId);
+      }
+      
+      // Strategy 3: Use id field (only if it's not a conversation ID format and different from caller)
+      if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_') && selectedConversation.id !== userId) {
+        recipientId = selectedConversation.id;
+        console.log('✅ Found recipient in id field:', recipientId);
+      }
+      
+      // Strategy 4: If conversation has a direct user reference
+      if (!recipientId && selectedConversation.user && selectedConversation.user !== userId) {
+        recipientId = selectedConversation.user;
+        console.log('✅ Found recipient in user field:', recipientId);
+      }
+      
+      // Validate recipient ID
+      if (!recipientId) {
+        toast.error('Could not identify recipient. Please check conversation data.');
+        console.error('❌ Missing recipientId. Conversation data:', {
+          participants: selectedConversation.participants,
+          userId: selectedConversation.userId,
+          id: selectedConversation.id,
+          fullConversation: selectedConversation
+        });
+        return;
+      }
+      
+      console.log('📹 Initiating video call:', {
+        callerId: userId,
+        recipientId,
+        recipientName: selectedConversation.name
+      });
       
       // Initiate video call
       const result = await callService.initiateCall({
@@ -2025,35 +2154,45 @@ const InstitutionAdminDashboard = () => {
         recipientName: selectedConversation.name || 'User'
       });
       
-      // Initialize WebRTC
-      if (!webrtc && result?.callId) {
-        const service = new WebRTCService(
-          userId,
-          recipientId,
-          result.callId,
-          result.signalingRef
-        );
-        
-        await service.init();
-        setWebrtc(service);
-        
-        const offer = await service.createOffer();
+      if (!result || !result.callId) {
+        const errorMsg = result?.error || 'Failed to initiate call';
+        toast.error(errorMsg);
+        console.error('❌ Call initiation failed:', result);
+        return;
       }
       
-      if (result && result.callId) {
-        setActiveCall({
-          callId: result.callId,
-          participantId: recipientId,
-          participantName: selectedConversation.name || 'User',
-          callType: 'video'
-        });
-        toast.success(`Video call initiated with ${selectedConversation.name || 'User'}`);
-      } else {
-        toast.error('Failed to initiate video call');
+      // Initialize WebRTC
+      if (!webrtc && result.callId) {
+        try {
+          const service = new WebRTCService(
+            userId,
+            recipientId,
+            result.callId,
+            result.signalingRef || result.callData?.id
+          );
+          
+          await service.init();
+          setWebrtc(service);
+          
+          const offer = await service.createOffer();
+          console.log('📤 Created offer and sent to recipient...');
+        } catch (webrtcError) {
+          console.warn('⚠️ WebRTC initialization failed, but call is still active:', webrtcError);
+          // Don't fail the call if WebRTC fails - the call can still work
+        }
       }
+      
+      setActiveCall({
+        callId: result.callId,
+        participantId: recipientId,
+        participantName: selectedConversation.name || 'User',
+        callType: 'video'
+      });
+      setIsInCall(true);
+      toast.success(`Video call initiated with ${selectedConversation.name || 'User'}`);
     } catch (error) {
-      console.error('Error starting video call:', error);
-      toast.error('Failed to start video call. Please check camera and microphone permissions.');
+      console.error('❌ Error starting video call:', error);
+      toast.error(error.message || 'Failed to start video call. Please check camera and microphone permissions.');
     }
   };
 
@@ -2605,8 +2744,6 @@ const InstitutionAdminDashboard = () => {
     { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'enhanced-inventory', label: 'Enhanced Inventory', icon: Building },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'advanced-reporting', label: 'Advanced Reporting', icon: FileText },
-    { id: 'data-migration', label: 'Data Migration', icon: RotateCcw },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'help-support', label: 'Help & Support', icon: HelpCircle }
@@ -2653,7 +2790,7 @@ const InstitutionAdminDashboard = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-2xl font-semibold text-gray-900">Clients</h3>
-                <p className="text-sm text-gray-600">Manage active patient relationships and contact details.</p>
+                <p className="text-sm text-gray-600">Manage active Client relationships and contact details.</p>
               </div>
               <button
                 onClick={() => setShowCreatePatientModal(true)}
@@ -2765,7 +2902,7 @@ const InstitutionAdminDashboard = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-2xl font-semibold text-gray-900">Archived Clients</h3>
-                <p className="text-sm text-gray-600">View and restore archived patient records.</p>
+                <p className="text-sm text-gray-600">View and restore archived Client records.</p>
               </div>
               <button
                 onClick={() => {
@@ -2820,9 +2957,28 @@ const InstitutionAdminDashboard = () => {
                       {caregivers.map((caregiver) => {
                         const onboardingStatus = caregiver.onboardingComplete ? 'completed' : (caregiver.onboardingStarted ? 'in-progress' : 'not-started');
                         return (
-                          <tr key={caregiver.id || caregiver.uid} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 font-medium text-gray-900">{caregiver.name || 'Caregiver'}</td>
-                            <td className="px-6 py-4 text-gray-600 capitalize">{caregiver.role || caregiver.userType || 'Caregiver'}</td>
+                        <tr key={caregiver.id || caregiver.uid} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold overflow-hidden flex-shrink-0">
+                                  {caregiver.photoURL || caregiver.profilePicture ? (
+                                    <img
+                                      src={caregiver.photoURL || caregiver.profilePicture}
+                                      alt={caregiver.name || 'Caregiver'}
+                                      className="h-full w-full object-cover"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <span className={`text-white font-semibold ${caregiver.photoURL || caregiver.profilePicture ? 'hidden' : 'flex'}`}>
+                                    {(caregiver.name || 'C').charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                                <span className="font-medium text-gray-900">{caregiver.name || 'Caregiver'}</span>
+                              </div>
+                            </td>
+                          <td className="px-6 py-4 text-gray-600 capitalize">{caregiver.role || caregiver.userType || 'Caregiver'}</td>
                             <td className="px-6 py-4">
                               <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                                 onboardingStatus === 'completed' ? 'bg-green-100 text-green-800' :
@@ -2834,16 +2990,16 @@ const InstitutionAdminDashboard = () => {
                                  'Not Started'}
                               </span>
                             </td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                caregiver.status === 'active' ? 'bg-green-100 text-green-800' :
-                                caregiver.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                caregiver.status === 'inactive' ? 'bg-gray-100 text-gray-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                              caregiver.status === 'active' ? 'bg-green-100 text-green-800' :
+                              caregiver.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              caregiver.status === 'inactive' ? 'bg-gray-100 text-gray-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
                                 {caregiver.status || 'Pending'}
-                              </span>
-                            </td>
+                            </span>
+                          </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
                                 <button
@@ -2860,21 +3016,55 @@ const InstitutionAdminDashboard = () => {
                                   <button
                                     onClick={async () => {
                                       try {
-                                        // Check if this is a user from users collection or caregiver from caregivers collection
-                                        const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
-                                        if (isUser) {
-                                          // Update via Firestore directly for users collection
-                                          const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-                                          const { db } = await import('../firebase/config');
-                                          await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
-                                            status: 'active', 
-                                            active: true,
-                                            updatedAt: serverTimestamp()
-                                          });
-                                        } else {
-                                          // Update via caregiverAPI
-                                          await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'active' });
+                                        const { doc, updateDoc, serverTimestamp, getDoc } = await import('firebase/firestore');
+                                        const { db } = await import('../firebase/config');
+                                        
+                                        const caregiverId = caregiver.uid || caregiver.id || caregiver.userId;
+                                        
+                                        // Update BOTH collections to keep them in sync
+                                        // 1. Update users collection (for User Management tab)
+                                        try {
+                                          const userRef = doc(db, 'users', caregiverId);
+                                          const userDoc = await getDoc(userRef);
+                                          if (userDoc.exists()) {
+                                            await updateDoc(userRef, { 
+                                              status: 'active', 
+                                              active: true,
+                                              updatedAt: serverTimestamp()
+                                            });
+                                            console.log('✅ Updated users collection');
+                                          }
+                                        } catch (userError) {
+                                          console.warn('⚠️ Could not update users collection:', userError);
                                         }
+                                        
+                                        // 2. Update caregivers collection (for Caregivers tab)
+                                        try {
+                                          const caregiverRef = doc(db, 'caregivers', caregiverId);
+                                          const caregiverDoc = await getDoc(caregiverRef);
+                                          if (caregiverDoc.exists()) {
+                                            await updateDoc(caregiverRef, { 
+                                              status: 'active',
+                                              active: true,
+                                              updatedAt: serverTimestamp()
+                                            });
+                                            console.log('✅ Updated caregivers collection');
+                                          } else {
+                                            // If caregiver doesn't exist in caregivers collection, try using caregiverAPI
+                                            await caregiverAPI.updateCaregiver(caregiverId, { status: 'active' });
+                                            console.log('✅ Updated via caregiverAPI');
+                                          }
+                                        } catch (caregiverError) {
+                                          console.warn('⚠️ Could not update caregivers collection:', caregiverError);
+                                          // Fallback to caregiverAPI
+                                          try {
+                                            await caregiverAPI.updateCaregiver(caregiverId, { status: 'active' });
+                                            console.log('✅ Updated via caregiverAPI (fallback)');
+                                          } catch (apiError) {
+                                            console.error('❌ Failed to update via caregiverAPI:', apiError);
+                                          }
+                                        }
+                                        
                                         toast.success('Caregiver activated successfully', { autoClose: 3000 });
                                         await loadDashboardData();
                                       } catch (error) {
@@ -2939,7 +3129,7 @@ const InstitutionAdminDashboard = () => {
                                 </button>
                               </div>
                             </td>
-                          </tr>
+                        </tr>
                         );
                       })}
                     </tbody>
@@ -3066,13 +3256,6 @@ const InstitutionAdminDashboard = () => {
                 <div className="p-12 text-center">
                   <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                   <p className="text-gray-500 mb-4">No assignments scheduled.</p>
-                  <button
-                    onClick={() => setShowAssignmentModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create First Assignment
-                  </button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -3092,7 +3275,35 @@ const InstitutionAdminDashboard = () => {
                         <tr key={assignment.id || assignment.assignmentId} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 font-medium text-gray-900">{assignment.title || 'Assignment'}</td>
                           <td className="px-6 py-4 text-gray-600">{assignment.clientName || 'Client'}</td>
-                          <td className="px-6 py-4 text-gray-600">{assignment.caregiverName || 'Caregiver'}</td>
+                          <td className="px-6 py-4">
+                            {(() => {
+                              const caregiver = caregivers.find(c => 
+                                (c.id === assignment.caregiverId) || 
+                                (c.uid === assignment.caregiverId) || 
+                                (c.userId === assignment.caregiverId)
+                              );
+                              return (
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-xs overflow-hidden flex-shrink-0">
+                                    {caregiver?.photoURL || caregiver?.profilePicture ? (
+                                      <img
+                                        src={caregiver.photoURL || caregiver.profilePicture}
+                                        alt={assignment.caregiverName || 'Caregiver'}
+                                        className="h-full w-full object-cover"
+                                        onError={(e) => {
+                                          e.target.style.display = 'none';
+                                        }}
+                                      />
+                                    ) : null}
+                                    <span className={`text-white font-semibold ${caregiver?.photoURL || caregiver?.profilePicture ? 'hidden' : 'flex'}`}>
+                                      {(assignment.caregiverName || 'C').charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <span className="text-gray-600">{assignment.caregiverName || 'Caregiver'}</span>
+                                </div>
+                              );
+                            })()}
+                          </td>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                               assignment.status === 'completed' ? 'bg-green-100 text-green-800' :
@@ -3201,12 +3412,6 @@ const InstitutionAdminDashboard = () => {
       case 'wage-management':
         return (
           <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Wage Management</h3>
-                <p className="text-sm text-gray-600">Configure and manage caregiver compensation.</p>
-              </div>
-            </div>
             <CaregiverWageManagement institutionId={effectiveInstitutionId} />
           </div>
         );
@@ -3219,7 +3424,7 @@ const InstitutionAdminDashboard = () => {
                 <p className="text-sm text-gray-600">Manage subscription plans and billing configurations.</p>
               </div>
             </div>
-            <BillingManagementDashboard institutionId={effectiveInstitutionId} patients={clients} />
+            <BillingManagementDashboard institutionId={effectiveInstitutionId} clients={clients} />
           </div>
         );
       case 'payment-gateway':
@@ -3495,30 +3700,6 @@ const InstitutionAdminDashboard = () => {
             </div>
           </div>
         );
-      case 'advanced-reporting':
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Advanced Reporting</h3>
-                <p className="text-sm text-gray-600">Generate comprehensive reports and insights.</p>
-              </div>
-            </div>
-            <AdvancedReporting institutionId={effectiveInstitutionId} />
-          </div>
-        );
-      case 'data-migration':
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Data Migration</h3>
-                <p className="text-sm text-gray-600">Import and migrate data from external sources.</p>
-              </div>
-            </div>
-            <DataMigrationTool institutionId={effectiveInstitutionId} />
-          </div>
-        );
       case 'security':
         return (
           <div className="space-y-6">
@@ -3605,10 +3786,75 @@ const InstitutionAdminDashboard = () => {
 
       <main className="flex-1 ml-64 px-6 py-6">
         <div className="max-w-6xl mx-auto space-y-6">
-          <header className="flex flex-col gap-2">
+          <header className="flex items-center justify-between">
+            <div className="flex flex-col gap-2">
             <p className="text-xs uppercase tracking-[0.3em] text-blue-600">{activeTabLabel}</p>
             <h1 className="text-3xl font-semibold text-gray-900">{institutionData?.name || 'Institution Dashboard'}</h1>
             <p className="text-sm text-gray-600">Welcome back, {displayName}. Manage your institution operations from one surface.</p>
+            </div>
+            
+            {/* Profile Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold overflow-hidden">
+                  {userProfile?.photoURL || userProfile?.profilePicture ? (
+                    <img
+                      src={userProfile.photoURL || userProfile.profilePicture}
+                      alt={displayName}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <span className={`text-white font-semibold ${userProfile?.photoURL || userProfile?.profilePicture ? 'hidden' : 'flex'}`}>
+                    {(displayName || 'A').charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="hidden md:block text-left">
+                  <p className="text-sm font-medium text-gray-900">{displayName}</p>
+                  <p className="text-xs text-gray-500">Admin</p>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Dropdown Menu */}
+              {showProfileDropdown && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowProfileDropdown(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                    <div className="px-4 py-3 border-b border-gray-200">
+                      <p className="text-sm font-semibold text-gray-900">{displayName}</p>
+                      <p className="text-xs text-gray-500">{userProfile?.email || user?.email}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowProfileSettings(true);
+                        setShowProfileDropdown(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <User className="h-4 w-4" />
+                      Profile Settings
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </header>
           {renderTabContent()}
         </div>
@@ -3845,10 +4091,7 @@ const InstitutionAdminDashboard = () => {
               {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
-                  onClick={() => {
-                    setShowAssignmentDetails(false);
-                    handleEditAssignment(selectedAssignment);
-                  }}
+                  onClick={() => handleEditAssignment(selectedAssignment)}
                   className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
                 >
                   Edit
@@ -3907,6 +4150,394 @@ const InstitutionAdminDashboard = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Assignment Creation Modal */}
+      {showAssignmentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Create Assignment</h3>
+                <p className="text-sm text-gray-500 mt-1">Assign a client to a caregiver</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAssignmentModal(false);
+                  setAssignmentForm({
+                    title: '',
+                    description: '',
+                    instructions: '',
+                    priority: 'normal',
+                    dueDate: '',
+                    dueTime: ''
+                  });
+                  setSelectedClientForAssignment('');
+                  setSelectedCaregiverForAssignment('');
+                }}
+                className="p-2 rounded-full hover:bg-gray-100 transition"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+            
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!selectedClientForAssignment || !selectedCaregiverForAssignment || !assignmentForm.title) {
+                  toast.error('Please fill in all required fields');
+                  return;
+                }
+                await handleCreateAssignment(assignmentForm);
+                setAssignmentForm({
+                  title: '',
+                  description: '',
+                  instructions: '',
+                  priority: 'normal',
+                  dueDate: '',
+                  dueTime: ''
+                });
+                setSelectedClientForAssignment('');
+                setSelectedCaregiverForAssignment('');
+              }}
+              className="p-6 space-y-4"
+            >
+              {/* Client Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Client <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={selectedClientForAssignment}
+                  onChange={(e) => setSelectedClientForAssignment(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Select a client</option>
+                  {clients.filter(c => c.status !== 'archived').map((client) => (
+                    <option key={client.id || client.uid} value={client.id || client.uid}>
+                      {client.name || client.displayName || client.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Caregiver Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Caregiver <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={selectedCaregiverForAssignment}
+                  onChange={(e) => setSelectedCaregiverForAssignment(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Select a caregiver</option>
+                  {caregivers.filter(c => c.status === 'active').map((caregiver) => (
+                    <option key={caregiver.id || caregiver.uid} value={caregiver.id || caregiver.uid}>
+                      {caregiver.name || caregiver.displayName || caregiver.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={assignmentForm.title}
+                  onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Assignment title"
+                  required
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={assignmentForm.description}
+                  onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
+                  placeholder="Assignment description"
+                />
+              </div>
+
+              {/* Instructions */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Instructions</label>
+                <textarea
+                  value={assignmentForm.instructions}
+                  onChange={(e) => setAssignmentForm({ ...assignmentForm, instructions: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
+                  placeholder="Special instructions for the caregiver"
+                />
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
+                <select
+                  value={assignmentForm.priority}
+                  onChange={(e) => setAssignmentForm({ ...assignmentForm, priority: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              {/* Due Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Due Date</label>
+                  <input
+                    type="date"
+                    value={assignmentForm.dueDate}
+                    onChange={(e) => setAssignmentForm({ ...assignmentForm, dueDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Due Time</label>
+                  <input
+                    type="time"
+                    value={assignmentForm.dueTime}
+                    onChange={(e) => setAssignmentForm({ ...assignmentForm, dueTime: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAssignmentModal(false);
+                    setAssignmentForm({
+                      title: '',
+                      description: '',
+                      instructions: '',
+                      priority: 'normal',
+                      dueDate: '',
+                      dueTime: ''
+                    });
+                    setSelectedClientForAssignment('');
+                    setSelectedCaregiverForAssignment('');
+                  }}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+                >
+                  Create Assignment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditAssignmentModal && selectedAssignmentForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Edit Assignment</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Update task details for {selectedAssignmentForEdit.clientName || 'client'} and{' '}
+                  {selectedAssignmentForEdit.caregiverName || 'caregiver'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditAssignmentModal(false);
+                  setSelectedAssignmentForEdit(null);
+                  setEditAssignmentForm({
+                    title: '',
+                    description: '',
+                    instructions: '',
+                    priority: 'normal',
+                    dueDate: '',
+                    dueTime: '',
+                    status: 'pending'
+                  });
+                }}
+                className="p-2 rounded-full hover:bg-gray-100 transition"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleUpdateAssignment(editAssignmentForm);
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs uppercase text-gray-500 mb-1">Client</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {selectedAssignmentForEdit.clientName || 'Unknown Client'}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs uppercase text-gray-500 mb-1">Caregiver</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {selectedAssignmentForEdit.caregiverName || 'Unknown Caregiver'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editAssignmentForm.title}
+                  onChange={(event) =>
+                    setEditAssignmentForm((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={editAssignmentForm.description}
+                  onChange={(event) =>
+                    setEditAssignmentForm((prev) => ({ ...prev, description: event.target.value }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Instructions</label>
+                <textarea
+                  value={editAssignmentForm.instructions}
+                  onChange={(event) =>
+                    setEditAssignmentForm((prev) => ({ ...prev, instructions: event.target.value }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
+                  <select
+                    value={editAssignmentForm.priority}
+                    onChange={(event) =>
+                      setEditAssignmentForm((prev) => ({ ...prev, priority: event.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                  <select
+                    value={editAssignmentForm.status}
+                    onChange={(event) =>
+                      setEditAssignmentForm((prev) => ({ ...prev, status: event.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Due Date</label>
+                    <input
+                      type="date"
+                      value={editAssignmentForm.dueDate}
+                      onChange={(event) =>
+                        setEditAssignmentForm((prev) => ({ ...prev, dueDate: event.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Due Time</label>
+                    <input
+                      type="time"
+                      value={editAssignmentForm.dueTime}
+                      onChange={(event) =>
+                        setEditAssignmentForm((prev) => ({ ...prev, dueTime: event.target.value }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditAssignmentModal(false);
+                    setSelectedAssignmentForEdit(null);
+                    setEditAssignmentForm({
+                      title: '',
+                      description: '',
+                      instructions: '',
+                      priority: 'normal',
+                      dueDate: '',
+                      dueTime: '',
+                      status: 'pending'
+                    });
+                  }}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Settings Modal */}
+      {showProfileSettings && (
+        <UserProfileSettings
+          userId={user?.uid}
+          onClose={() => {
+            setShowProfileSettings(false);
+            loadDashboardData(); // Refresh data to show updated profile picture
+          }}
+        />
       )}
     </div>
   );
