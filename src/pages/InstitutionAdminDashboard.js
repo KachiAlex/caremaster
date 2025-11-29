@@ -2943,7 +2943,11 @@ const InstitutionAdminDashboard = () => {
                     </div>
                     <div className="space-y-2">
                       {pendingDiagnostics.slice(0, 5).map((diagnostic) => (
-                        <div key={diagnostic.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <div 
+                          key={diagnostic.id} 
+                          className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200 hover:bg-amber-100 transition cursor-pointer"
+                          onClick={() => setActiveTab('enhanced-lis')}
+                        >
                           <div className="flex-1">
                             <p className="text-sm font-medium text-gray-900">
                               {diagnostic.testName || diagnostic.testType || 'Lab Test'}
@@ -3009,7 +3013,10 @@ const InstitutionAdminDashboard = () => {
               <div className="space-y-6">
                 {/* System Alerts */}
                 {systemAlerts.length > 0 && (
-                  <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                  <section 
+                    className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer"
+                    onClick={() => setActiveTab('security')}
+                  >
                     <div className="flex items-center gap-2 mb-4">
                       <AlertTriangle className="h-5 w-5 text-red-500" />
                       <h3 className="text-lg font-semibold text-gray-900">System Alerts</h3>
@@ -3034,7 +3041,14 @@ const InstitutionAdminDashboard = () => {
                     </div>
                     <div className="space-y-3">
                       {topCaregivers.map((caregiver, index) => (
-                        <div key={caregiver.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div 
+                          key={caregiver.id} 
+                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                          onClick={() => {
+                            setSelectedCaregiver(caregiver);
+                            setShowCaregiverDetails(true);
+                          }}
+                        >
                           <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                             {index + 1}
                           </div>
@@ -3053,7 +3067,10 @@ const InstitutionAdminDashboard = () => {
                 )}
 
                 {/* Performance Metrics */}
-                <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <section 
+                  className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer"
+                  onClick={() => setActiveTab('analytics')}
+                >
                   <div className="flex items-center gap-2 mb-4">
                     <TrendingUp className="h-5 w-5 text-green-500" />
                     <h3 className="text-lg font-semibold text-gray-900">Performance</h3>

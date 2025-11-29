@@ -49,6 +49,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
     
     // Medical Information
     bloodType: '',
+    genotype: '',
     medicalConditions: '',
     medications: '',
     allergies: '',
@@ -108,6 +109,10 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
       newErrors.emergencyContactPhone = 'Emergency contact phone is required';
     }
     
+    if (!formData.careLevel) {
+      newErrors.careLevel = 'Care level is required';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -144,6 +149,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
         emergencyContactPhone: formData.emergencyContactPhone.trim(),
         emergencyContactRelationship: formData.emergencyContactRelationship.trim() || null,
         bloodType: formData.bloodType || null,
+        genotype: formData.genotype || null,
         medicalConditions: formData.medicalConditions.trim() 
           ? formData.medicalConditions.split(',').map(c => c.trim()).filter(Boolean)
           : [],
@@ -186,7 +192,22 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
       
     } catch (error) {
       console.error('Error registering Client:', error);
-      toast.error(`Failed to register Client: ${error.message || 'Unknown error'}`);
+      
+      // Provide more detailed error messages
+      let errorMessage = 'Failed to register Client. Please try again.';
+      if (error.message) {
+        errorMessage = `Failed to register Client: ${error.message}`;
+      } else if (error.code) {
+        errorMessage = `Registration error (${error.code}). Please check your input and try again.`;
+      }
+      
+      toast.error(errorMessage, { 
+        autoClose: 8000,
+        style: { fontSize: '14px', minWidth: '350px' }
+      });
+      
+      // Don't close the form on error - let user fix and retry
+      // Only reset loading state
     } finally {
       setLoading(false);
     }
@@ -356,6 +377,25 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 <option value="O-" className="bg-slate-900">O-</option>
               </select>
             </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Genotype</label>
+              <select
+                name="genotype"
+                value={formData.genotype}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
+              >
+                <option value="" className="bg-slate-900">Select genotype</option>
+                <option value="AA" className="bg-slate-900">AA</option>
+                <option value="AS" className="bg-slate-900">AS</option>
+                <option value="SS" className="bg-slate-900">SS</option>
+                <option value="AC" className="bg-slate-900">AC</option>
+                <option value="SC" className="bg-slate-900">SC</option>
+                <option value="CC" className="bg-slate-900">CC</option>
+                <option value="Unknown" className="bg-slate-900">Unknown</option>
+              </select>
+            </div>
           </div>
 
           <div className="mt-4">
@@ -503,6 +543,43 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 placeholder="Comma-separated list (e.g., Penicillin, Latex)"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Care Level */}
+        <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 p-6">
+          <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+            <Heart className="h-4 w-4" />
+            Care Level
+          </h3>
+          
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-2">
+              Care Level Category <span className="text-red-400">*</span>
+            </label>
+            <select
+              name="careLevel"
+              value={formData.careLevel}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
+                errors.careLevel ? 'border-red-500/50' : 'border-slate-700'
+              }`}
+            >
+              <option value="" className="bg-slate-900">Select care level</option>
+              <option value="basic" className="bg-slate-900">Basic Care - Minimal assistance needed</option>
+              <option value="intermediate" className="bg-slate-900">Intermediate Care - Moderate assistance required</option>
+              <option value="advanced" className="bg-slate-900">Advanced Care - Extensive assistance needed</option>
+              <option value="specialized" className="bg-slate-900">Specialized Care - Medical/specialized support required</option>
+              <option value="critical" className="bg-slate-900">Critical Care - Intensive medical monitoring</option>
+            </select>
+            {errors.careLevel && <p className="text-xs text-red-400 mt-1">{errors.careLevel}</p>}
+            <p className="text-xs text-slate-500 mt-2">
+              <strong>Basic:</strong> Assistance with daily activities, medication reminders<br/>
+              <strong>Intermediate:</strong> Help with mobility, personal care, meal preparation<br/>
+              <strong>Advanced:</strong> Extensive personal care, medical monitoring, complex medication management<br/>
+              <strong>Specialized:</strong> Disease-specific care, therapy, specialized equipment<br/>
+              <strong>Critical:</strong> 24/7 monitoring, life support, intensive medical intervention
+            </p>
           </div>
         </div>
 

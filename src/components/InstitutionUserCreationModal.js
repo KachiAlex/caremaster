@@ -130,19 +130,23 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
         }
       }
 
-      // Show success message with credentials
+      // Show success message WITHOUT revealing password (security best practice)
       if (result.temporaryPassword) {
+        // Store password securely in sessionStorage for admin to copy (not displayed in notification)
+        sessionStorage.setItem(`tempPassword_${result.uid}`, result.temporaryPassword);
+        
         toast.success(
           <>
             <div className="font-bold mb-2">User Created Successfully!</div>
             <div className="text-sm">
               <div>Email: <strong>{result.email}</strong></div>
-              <div>Temporary Password: <strong>{result.temporaryPassword}</strong></div>
-              <div className="mt-2 text-xs opacity-80">Please share these credentials securely with the user.</div>
+              <div className="mt-2 text-xs opacity-80">
+                A temporary password has been generated. Check the user details panel to view and copy it securely.
+              </div>
             </div>
           </>,
           { 
-            autoClose: 10000, 
+            autoClose: 8000, 
             position: 'top-center',
             style: { fontSize: '14px', minWidth: '400px' },
             bodyStyle: { fontSize: '14px' }

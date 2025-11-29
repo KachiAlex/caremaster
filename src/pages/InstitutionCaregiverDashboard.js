@@ -4521,7 +4521,10 @@ const InstitutionCaregiverDashboard = () => {
           {(userProfile?.medicalQualification?.includes('Nurse') || userProfile?.medicalQualification?.includes('RN')) && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Priority Alerts */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div 
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition cursor-pointer"
+                onClick={() => setActiveTab('clients')}
+              >
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-yellow-600" />
                   Priority Alerts
@@ -4551,7 +4554,10 @@ const InstitutionCaregiverDashboard = () => {
               </div>
 
               {/* Recent Activities */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div 
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition cursor-pointer"
+                onClick={() => setActiveTab('activities')}
+              >
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Activity className="h-5 w-5 text-blue-600" />
                   Recent Activities
@@ -4696,8 +4702,11 @@ const InstitutionCaregiverDashboard = () => {
 
           {/* Performance Overview */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-              <div className="px-8 py-6 border-b border-gray-100">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer">
+              <div 
+                className="px-8 py-6 border-b border-gray-100"
+                onClick={() => setActiveTab('analytics')}
+              >
                 <h2 className="text-xl font-bold text-gray-900">Performance Overview</h2>
               </div>
               <div className="p-8">

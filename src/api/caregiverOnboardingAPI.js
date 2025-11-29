@@ -100,13 +100,14 @@ export const completeOnboarding = async (uid) => {
   const caregiverName = userData.name || caregiverData.name || 'A caregiver';
   const caregiverEmail = userData.email || caregiverData.email || '';
   
-  // Update caregivers collection - set status to 'pending' awaiting admin approval
+  // Update caregivers collection - set status to 'active' automatically after onboarding
   await updateDoc(caregiverRef, { 
     onboardingComplete: true,
-    status: 'pending', // Set status to pending for admin approval
+    status: 'active', // Automatically set to active - no admin approval required
+    active: true,
     updatedAt: serverTimestamp() 
   });
-  console.log('✅ Updated caregivers collection with status: pending');
+  console.log('✅ Updated caregivers collection with status: active');
   
   // Update users collection with proper error handling
   try {
@@ -114,11 +115,12 @@ export const completeOnboarding = async (uid) => {
       onboardingComplete: true, 
       userType: 'caregiver',
       type: 'caregiver', // Also set type field for consistency
-      status: 'pending', // Set status to pending for admin approval
+      status: 'active', // Automatically set to active - no admin approval required
+      active: true,
       institutionId: institutionId, // Preserve institutionId
       updatedAt: serverTimestamp() 
     });
-    console.log('✅ Updated users collection with userType: caregiver, status: pending');
+    console.log('✅ Updated users collection with userType: caregiver, status: active');
   } catch (error) {
     console.error('❌ Failed to update users collection:', error);
     throw error; // Re-throw to catch in UI
@@ -138,20 +140,20 @@ export const completeOnboarding = async (uid) => {
       
       console.log(`📧 Notifying ${adminsSnap.size} admin(s) about new caregiver onboarding`);
       
-      // Create notifications for each admin
+      // Create notifications for each admin (informational - no action required)
       const notificationPromises = adminsSnap.docs.map(adminDoc => {
         return createNotification({
           userId: adminDoc.id,
           type: NOTIFICATION_TYPES.CAREGIVER_ONBOARDING,
-          priority: NOTIFICATION_PRIORITIES.HIGH,
-          title: 'New Caregiver Awaiting Approval',
-          message: `${caregiverName} (${caregiverEmail}) has completed onboarding and is awaiting your approval.`,
+          priority: NOTIFICATION_PRIORITIES.MEDIUM,
+          title: 'New Caregiver Onboarded',
+          message: `${caregiverName} (${caregiverEmail}) has completed onboarding and is now active.`,
           data: {
             caregiverId: uid,
             caregiverName: caregiverName,
             caregiverEmail: caregiverEmail,
             institutionId: institutionId,
-            action: 'review_caregiver'
+            action: 'view_caregiver'
           }
         });
       });
