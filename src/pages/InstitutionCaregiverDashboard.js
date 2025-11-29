@@ -44,7 +44,8 @@ import {
   Download,
   Receipt,
   HelpCircle,
-  Menu
+  Menu,
+  Play
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
@@ -90,6 +91,7 @@ import WebRTCService from '../services/webrtcService';
 import AdlLogger from '../components/AdlLogger';
 import UserProfileSettings from '../components/UserProfileSettings';
 import HelpSupport from '../components/HelpSupport';
+import TaskCompletionModal from '../components/TaskCompletionModal';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -124,6 +126,7 @@ const InstitutionCaregiverDashboard = () => {
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [showCareLogForm, setShowCareLogForm] = useState(false);
   const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
+  const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [clientModalTab, setClientModalTab] = useState('info'); // 'info', 'medical', 'carelog'
 
@@ -453,7 +456,64 @@ const InstitutionCaregiverDashboard = () => {
 
   const dashboardConfig = getDashboardConfig();
 
+  // Function to reload tasks from both careTasks and clientAssignments collections
+  const reloadTasks = async (caregiverId) => {
+    try {
+      // Load from careTasks collection (old way)
+      const careTasksData = await getCareTasksByCaregiver(caregiverId).catch(() => []);
+      console.log(`📋 Loaded ${careTasksData.length} tasks from careTasks collection`);
+      
+      // Load from clientAssignments collection (admin-created assignments)
+      const assignments = await assignmentAPI.getAssignmentsByCaregiver(caregiverId).catch(() => []);
+      console.log(`📋 Loaded ${assignments.length} assignments from clientAssignments collection`);
+      
+      // Convert assignments to task format for display
+      const assignmentTasks = assignments.map(assignment => ({
+        id: assignment.id,
+        task: assignment.title || 'Assigned Task',
+        title: assignment.title || 'Assigned Task',
+        description: assignment.description,
+        clientId: assignment.clientId,
+        clientName: assignment.clientName || 'Client',
+        caregiverId: assignment.caregiverId,
+        status: assignment.status || 'pending',
+        priority: assignment.priority || 'normal',
+        dueDate: assignment.dueDate,
+        dueTime: assignment.dueTime,
+        scheduledTime: assignment.dueDate, // Map dueDate to scheduledTime for compatibility
+        instructions: assignment.instructions,
+        createdAt: assignment.createdAt instanceof Date ? assignment.createdAt.toISOString() : (assignment.createdAt?.toDate?.()?.toISOString() || assignment.createdAt),
+        collection: 'clientAssignments', // Mark which collection this came from
+        assignmentType: 'clientAssignment' // Mark as admin-created assignment
+      }));
+      
+      // Merge both sources and normalize careTasks format
+      const normalizedCareTasks = careTasksData.map(task => ({
+        ...task,
+        collection: 'careTasks' // Mark which collection this came from
+      }));
+      
+      const allTasks = [...normalizedCareTasks, ...assignmentTasks];
+      console.log(`✅ Total tasks (merged): ${allTasks.length}`);
+      
+      // Sort by created date (most recent first)
+      allTasks.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.scheduledTime || 0);
+        const dateB = new Date(b.createdAt || b.scheduledTime || 0);
+        return dateB - dateA;
+      });
+      
+      setRecentTasks(allTasks);
+      return allTasks;
+    } catch (error) {
+      console.error('Error reloading tasks:', error);
+      setRecentTasks([]);
+      return [];
+    }
+  };
+
   // Define role flags at component level for use throughout
+  // Defensive checks: Default to non-medical caregiver if role is unclear
   const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor') || 
                     userProfile?.role === 'doctor' || 
                     userProfile?.userType === 'doctor' || 
@@ -465,7 +525,10 @@ const InstitutionCaregiverDashboard = () => {
   const isPharmacist = userProfile?.userType === 'pharmacist' || 
                        userProfile?.type === 'pharmacist' || 
                        userProfile?.role === 'pharmacist';
-  const isCaregiver = userProfile?.userType === 'caregiver' || userProfile?.type === 'caregiver';
+  const isCaregiver = userProfile?.userType === 'caregiver' || 
+                      userProfile?.type === 'caregiver' ||
+                      // Default to caregiver if no role is set (defensive fallback)
+                      (!userProfile?.userType && !userProfile?.type && !userProfile?.role);
   const isNonMedicalCaregiver = isCaregiver && !isDoctor && !isNurse && !isPharmacist;
 
   useEffect(() => {
@@ -670,49 +733,7 @@ const InstitutionCaregiverDashboard = () => {
         // Load recent tasks from both careTasks AND clientAssignments collections
         let loadedRecentTasks = [];
         if (user?.uid) {
-          try {
-            // Load from careTasks collection (old way)
-            const careTasksData = await getCareTasksByCaregiver(user.uid).catch(() => []);
-            console.log(`📋 Loaded ${careTasksData.length} tasks from careTasks collection`);
-            
-            // Load from clientAssignments collection (admin-created assignments)
-            const assignments = await assignmentAPI.getAssignmentsByCaregiver(user.uid).catch(() => []);
-            console.log(`📋 Loaded ${assignments.length} assignments from clientAssignments collection`);
-            
-            // Convert assignments to task format for display
-            const assignmentTasks = assignments.map(assignment => ({
-              id: assignment.id,
-              task: assignment.title || 'Assigned Task',
-              title: assignment.title || 'Assigned Task',
-              description: assignment.description,
-              clientId: assignment.clientId,
-              clientName: assignment.clientName || 'Client',
-              caregiverId: assignment.caregiverId,
-              status: assignment.status || 'pending',
-              priority: assignment.priority || 'normal',
-              dueDate: assignment.dueDate,
-              dueTime: assignment.dueTime,
-              instructions: assignment.instructions,
-              createdAt: assignment.createdAt instanceof Date ? assignment.createdAt.toISOString() : (assignment.createdAt?.toDate?.()?.toISOString() || assignment.createdAt),
-              assignmentType: 'clientAssignment' // Mark as admin-created assignment
-            }));
-            
-            // Merge both sources
-            loadedRecentTasks = [...careTasksData, ...assignmentTasks];
-            console.log(`✅ Total tasks (merged): ${loadedRecentTasks.length}`);
-            
-            // Sort by created date (most recent first)
-            loadedRecentTasks.sort((a, b) => {
-              const dateA = new Date(a.createdAt || 0);
-              const dateB = new Date(b.createdAt || 0);
-              return dateB - dateA;
-            });
-            
-            setRecentTasks(loadedRecentTasks); // Show all tasks
-          } catch (error) {
-            console.log('No recent tasks found - this is normal for new users');
-            setRecentTasks([]);
-          }
+          loadedRecentTasks = await reloadTasks(user.uid);
         } else {
           setRecentTasks([]);
         }
@@ -3371,21 +3392,44 @@ const InstitutionCaregiverDashboard = () => {
                       
                       <div className="flex flex-col space-y-2">
                         {task.status !== 'completed' && (
-                          <button
-                            onClick={async () => {
-                              try {
-                                // Mark task as completed
-                                toast.success('Task marked as completed!');
-                              } catch (error) {
-                                console.error('Error completing task:', error);
-                                toast.error('Failed to complete task');
-                              }
-                            }}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Complete
-                          </button>
+                          <>
+                            {task.status !== 'in_progress' && task.status !== 'in-progress' && (
+                              <button
+                                onClick={async () => {
+                                  // Find client for this task
+                                  const taskClient = assignedClients.find(c => c.id === task.clientId) || 
+                                                    selectedClient || 
+                                                    { name: task.clientName || 'Client' };
+                                  setSelectedTask({
+                                    ...task,
+                                    Client: taskClient
+                                  });
+                                  setShowTaskCompletionModal(true);
+                                }}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center"
+                              >
+                                <Play className="h-4 w-4 mr-2" />
+                                Start Task
+                              </button>
+                            )}
+                            <button
+                              onClick={async () => {
+                                // Find client for this task
+                                const taskClient = assignedClients.find(c => c.id === task.clientId) || 
+                                                  selectedClient || 
+                                                  { name: task.clientName || 'Client' };
+                                setSelectedTask({
+                                  ...task,
+                                  Client: taskClient
+                                });
+                                setShowTaskCompletionModal(true);
+                              }}
+                              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              {task.status === 'in_progress' || task.status === 'in-progress' ? 'Complete Task' : 'Complete'}
+                            </button>
+                          </>
                         )}
                         
                         <button
@@ -5397,36 +5441,22 @@ const InstitutionCaregiverDashboard = () => {
               {selectedTask.status !== 'completed' && (
                 <button
                   onClick={async () => {
-                    try {
-                      // Mark task as completed
-                      // TODO: Add actual API call to update task status
-                      
-                      // Notify admin
-                      await notifyAdmin({
-                        type: NOTIFICATION_TYPES.TASK,
-                        priority: NOTIFICATION_PRIORITIES.MEDIUM,
-                        title: 'Task Completed',
-                        message: `${userProfile?.name || 'A caregiver'} completed task: ${selectedTask.title || 'Care Task'} for ${selectedTask.clientName}`,
-                        data: {
-                          taskId: selectedTask.id,
-                          clientId: selectedTask.clientId,
-                          caregiverId: user?.uid,
-                          action: 'task_completed'
-                        }
-                      });
-                      
-                      toast.success('Task marked as completed!');
-                      setShowTaskDetailsModal(false);
-                      setSelectedTask(null);
-                    } catch (error) {
-                      console.error('Error completing task:', error);
-                      toast.error('Failed to complete task');
-                    }
+                    // Close details modal and open task completion modal
+                    setShowTaskDetailsModal(false);
+                    // Find client for this task
+                    const taskClient = assignedClients.find(c => c.id === selectedTask.clientId) || 
+                                      selectedClient || 
+                                      { name: selectedTask.clientName || 'Client' };
+                    setSelectedTask({
+                      ...selectedTask,
+                      Client: taskClient
+                    });
+                    setShowTaskCompletionModal(true);
                   }}
                   className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Mark Complete
+                  {selectedTask.status === 'in_progress' || selectedTask.status === 'in-progress' ? 'Complete Task' : 'Start & Complete Task'}
                 </button>
               )}
             </div>
@@ -6537,6 +6567,81 @@ const InstitutionCaregiverDashboard = () => {
           onClose={() => setShowProfileSettings(false)}
         />
       )}
+
+      {/* Task Completion Modal */}
+      {showTaskCompletionModal && selectedTask && (
+        <TaskCompletionModal
+          task={selectedTask}
+          Client={selectedTask.Client || assignedClients.find(c => c.id === selectedTask.clientId) || selectedClient || { name: selectedTask.clientName || 'Client' }}
+          onClose={() => {
+            setShowTaskCompletionModal(false);
+            setSelectedTask(null);
+          }}
+          onComplete={async () => {
+            // Reload tasks after completion
+            if (user?.uid) {
+              await reloadTasks(user.uid);
+              // Also reload schedule
+              try {
+                const [allAppointments, allTasks, allAssignments] = await Promise.all([
+                  getTodaysAppointments(user?.uid, 'caregiver').catch(() => []),
+                  getTodayTasks(user?.uid).catch(() => []),
+                  assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
+                ]);
+                
+                const dateToString = (dateValue) => {
+                  if (!dateValue) return '';
+                  if (dateValue instanceof Date) return dateValue.toISOString();
+                  if (dateValue?.toDate) return dateValue.toDate().toISOString();
+                  if (typeof dateValue === 'string') return dateValue;
+                  return String(dateValue);
+                };
+
+                const combinedSchedule = [
+                  ...allAppointments.map(apt => ({
+                    id: apt.id,
+                    type: 'appointment',
+                    title: apt.title || 'Appointment',
+                    time: dateToString(apt.scheduledTime),
+                    client: apt.clientName || 'Client',
+                    status: apt.status || 'scheduled',
+                    description: apt.description
+                  })),
+                  ...allTasks.map(task => ({
+                    id: task.id,
+                    type: 'task',
+                    title: task.title,
+                    time: dateToString(task.scheduledTime),
+                    client: task.clientName || 'Client',
+                    status: task.status || 'pending',
+                    description: task.description
+                  })),
+                  ...allAssignments.map(assignment => {
+                    const dueDateStr = dateToString(assignment.dueDate);
+                    return {
+                      id: assignment.id,
+                      type: 'assignment',
+                      title: assignment.title || 'Assigned Task',
+                      time: assignment.dueTime ? `${dueDateStr} ${assignment.dueTime}` : dueDateStr,
+                      client: assignment.clientName || 'Client',
+                      status: assignment.status || 'pending',
+                      priority: assignment.priority,
+                      description: assignment.description,
+                      instructions: assignment.instructions
+                    };
+                  })
+                ];
+                
+                combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
+                setTodaySchedule(combinedSchedule);
+              } catch (error) {
+                console.error('Error reloading schedule:', error);
+              }
+            }
+          }}
+        />
+      )}
+
         </div>
       </div>
     </InstitutionCaregiverGuard>
