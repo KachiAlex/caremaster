@@ -15,6 +15,7 @@ import {
 import { db } from '../firebase/config';
 import { logClientActivity } from './clientActivitiesAPI';
 import { notificationsAPI } from './notificationsAPI';
+import { logConsultation } from '../utils/patientLogger';
 
 const CONSULTATIONS_COLLECTION = 'consultations';
 
@@ -80,6 +81,41 @@ export const createConsultation = async (consultationData) => {
 
     const docRef = await addDoc(consultationsRef, newConsultation);
     console.log('✅ Consultation created with ID:', docRef.id);
+    
+    // Log consultation to patient logs
+    try {
+      // Get client document to extract patientSimpleId (clientId field)
+      const clientDocRef = doc(db, 'clients', consultationData.clientId);
+      const clientDoc = await getDoc(clientDocRef);
+      
+      if (clientDoc.exists()) {
+        const clientData = clientDoc.data();
+        const patientSimpleId = clientData.clientId || consultationData.clientId;
+        
+        // Prepare clinician info for logging
+        const clinicianInfo = {
+          id: consultationData.doctorId,
+          name: consultationData.doctorName,
+          role: consultationData.doctorRole || 'doctor',
+          email: consultationData.doctorEmail,
+          institutionId: consultationData.institutionId
+        };
+        
+        // Prepare consultation data for logging
+        const consultationLogData = {
+          consultationType: consultationData.consultationType,
+          chiefComplaint: consultationData.chiefComplaint,
+          assessment: consultationData.assessment,
+          plan: consultationData.plan,
+          consultationId: docRef.id
+        };
+        
+        await logConsultation(patientSimpleId, clinicianInfo, consultationLogData);
+      }
+    } catch (logError) {
+      console.error('Error logging consultation to patient logs:', logError);
+      // Don't throw - consultation was created successfully
+    }
     
     // Log activity to client's activity log
     try {

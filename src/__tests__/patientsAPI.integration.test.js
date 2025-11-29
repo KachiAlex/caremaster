@@ -180,7 +180,7 @@ describe('Client API Integration Tests', () => {
       query.mockReturnValue({});
       where.mockReturnValue({});
 
-      const Client = await getPatientByPatientId('UC-2025-0001');
+      const client = await getPatientByPatientId('UC-2025-0001');
 
       expect(client.clientId).toBe('UC-2025-0001');
       expect(client.name).toBe('John Doe');

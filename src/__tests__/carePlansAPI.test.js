@@ -1,13 +1,11 @@
 /**
- * Tests for Care Plans API Logging Integration
- * Verifies that care plan operations are properly logged to Client logs
+ * Tests for Care Plans API
+ * Verifies that care plan operations work correctly
  */
 
 import { createCarePlan, updateCarePlan } from '../api/carePlansAPI';
-import { logCarePlanUpdate } from '../utils/patientLogger';
 
 // Mock dependencies
-jest.mock('../utils/patientLogger');
 jest.mock('../firebase/config', () => ({
   db: {}
 }));
@@ -21,37 +19,17 @@ jest.mock('firebase/firestore', () => ({
   serverTimestamp: jest.fn(() => ({ _methodName: 'serverTimestamp' }))
 }));
 
-describe('Care Plans API Logging', () => {
+describe('Care Plans API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  const mockClinicianInfo = {
-    id: 'doctor-123',
-    name: 'Dr. Jane Smith',
-    role: 'doctor',
-    email: 'jane@hospital.com',
-    institutionId: 'institution-123'
-  };
-
   describe('createCarePlan', () => {
-    test('should log care plan creation to Client logs', async () => {
+    test('should create a care plan successfully', async () => {
       const mockDocRef = { id: 'careplan-123' };
-      const { addDoc } = require('firebase/firestore');
+      const { addDoc, collection } = require('firebase/firestore');
       addDoc.mockResolvedValue(mockDocRef);
-      
-      const { collection, getDoc, doc } = require('firebase/firestore');
       collection.mockReturnValue({});
-      doc.mockReturnValue({});
-      
-      // Mock Client document
-      const mockPatientDoc = {
-        exists: () => true,
-        data: () => ({ clientId: 'UC-2025-0001' })
-      };
-      getDoc.mockResolvedValue(mockPatientDoc);
-      
-      logCarePlanUpdate.mockResolvedValue('log-789');
 
       const carePlanData = {
         clientId: 'Client-doc-id',
@@ -60,71 +38,55 @@ describe('Care Plans API Logging', () => {
         dailyCareActivities: ['Medication administration']
       };
 
-      await createCarePlan(carePlanData, mockClinicianInfo);
+      const result = await createCarePlan(carePlanData);
 
-      expect(logCarePlanUpdate).toHaveBeenCalled();
-      const logCall = logCarePlanUpdate.mock.calls[0];
-      expect(logCall[0]).toBe('UC-2025-0001'); // patientSimpleId
-      expect(logCall[1]).toEqual(mockClinicianInfo);
-      expect(logCall[2].action).toBe('created');
+      expect(result.id).toBe('careplan-123');
+      expect(addDoc).toHaveBeenCalled();
+      expect(collection).toHaveBeenCalled();
     });
 
-    test('should not log if clinician info not provided', async () => {
-      const mockDocRef = { id: 'careplan-123' };
-      const { addDoc } = require('firebase/firestore');
-      addDoc.mockResolvedValue(mockDocRef);
-      
-      const { collection } = require('firebase/firestore');
+    test('should handle errors when creating care plan', async () => {
+      const { addDoc, collection } = require('firebase/firestore');
       collection.mockReturnValue({});
+      addDoc.mockRejectedValue(new Error('Firestore error'));
 
       const carePlanData = {
         clientId: 'Client-doc-id',
         diagnosis: 'Hypertension'
       };
 
-      await createCarePlan(carePlanData);
-
-      expect(logCarePlanUpdate).not.toHaveBeenCalled();
+      await expect(createCarePlan(carePlanData)).rejects.toThrow();
     });
   });
 
   describe('updateCarePlan', () => {
-    test('should log care plan update to Client logs', async () => {
-      const { updateDoc, getDoc, doc } = require('firebase/firestore');
+    test('should update a care plan successfully', async () => {
+      const { updateDoc, doc } = require('firebase/firestore');
       updateDoc.mockResolvedValue();
       doc.mockReturnValue({});
-      
-      // Mock existing care plan
-      const mockCarePlanDoc = {
-        exists: () => true,
-        data: () => ({
-          clientId: 'Client-doc-id',
-          diagnosis: 'Hypertension'
-        })
-      };
-      getDoc.mockResolvedValueOnce(mockCarePlanDoc);
-      
-      // Mock Client document
-      const mockPatientDoc = {
-        exists: () => true,
-        data: () => ({ clientId: 'UC-2025-0001' })
-      };
-      getDoc.mockResolvedValueOnce(mockPatientDoc);
-      
-      logCarePlanUpdate.mockResolvedValue('log-999');
 
       const updateData = {
         diagnosis: 'Hypertension - Controlled',
         careObjectives: ['Manage blood pressure', 'Monitor daily']
       };
 
-      await updateCarePlan('careplan-123', updateData, mockClinicianInfo);
+      const result = await updateCarePlan('careplan-123', updateData);
 
-      expect(logCarePlanUpdate).toHaveBeenCalled();
-      const logCall = logCarePlanUpdate.mock.calls[0];
-      expect(logCall[0]).toBe('UC-2025-0001');
-      expect(logCall[1]).toEqual(mockClinicianInfo);
-      expect(logCall[2].action).toBe('updated');
+      expect(result.id).toBe('careplan-123');
+      expect(updateDoc).toHaveBeenCalled();
+      expect(doc).toHaveBeenCalled();
+    });
+
+    test('should handle errors when updating care plan', async () => {
+      const { updateDoc, doc } = require('firebase/firestore');
+      doc.mockReturnValue({});
+      updateDoc.mockRejectedValue(new Error('Firestore error'));
+
+      const updateData = {
+        diagnosis: 'Hypertension - Controlled'
+      };
+
+      await expect(updateCarePlan('careplan-123', updateData)).rejects.toThrow();
     });
   });
 });

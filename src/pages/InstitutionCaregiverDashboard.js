@@ -69,7 +69,7 @@ import DashboardSwitcher from '../components/DashboardSwitcher';
 import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { careLogsAPI } from '../api/careLogsAPI';
 import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
-import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation } from '../api/messagesAPI';
+import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, markConversationAsRead } from '../api/messagesAPI';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import { db } from '../firebase/config';
@@ -1247,20 +1247,10 @@ const InstitutionCaregiverDashboard = () => {
     );
   };
 
-  const handleClockOut = (scheduleId) => {
-    // Handle clock out
-    console.log('Clock out for schedule:', scheduleId);
-  };
-
-  const handleTaskComplete = (taskId) => {
-    // Handle task completion
-    console.log('Complete task:', taskId);
-  };
-
-  const handleEmergency = (clientId) => {
-    // Handle emergency
-    console.log('Emergency for client:', clientId);
-  };
+  // Removed unused placeholder functions:
+  // - handleClockOut: Clock in/out functionality not currently implemented
+  // - handleTaskComplete: Task completion is handled by TaskCompletionModal
+  // - handleEmergency: Emergency functionality should use emergencyAPI.triggerEmergencyAlert if needed
 
   const loadProfileImage = () => {
     // Load profile image from localStorage or settings
@@ -1515,6 +1505,21 @@ const InstitutionCaregiverDashboard = () => {
     }
   }, [effectiveInstitutionId, user?.uid]);
 
+  // Helper function to get unread message count for a conversation
+  const getUnreadCountForConversation = async (conversationId, currentUserId) => {
+    try {
+      const messages = await getMessagesByConversation(conversationId, 100);
+      // Count unread messages where current user is not the sender
+      const unreadCount = messages.filter(msg => 
+        msg.senderId !== currentUserId && !msg.read
+      ).length;
+      return unreadCount;
+    } catch (error) {
+      console.error('Error getting unread count for conversation:', conversationId, error);
+      return 0;
+    }
+  };
+
   // Load real conversations and merge with platform users
   const loadConversations = useCallback(async () => {
     if (!user?.uid) return;
@@ -1528,25 +1533,30 @@ const InstitutionCaregiverDashboard = () => {
       const users = await loadPlatformUsers();
       const userMap = new Map(users.map(u => [u.id, u]));
       
-      // Enrich existing conversations with participant names
-      const enrichedConversations = existingConversations.map(conv => {
+      // Enrich existing conversations with participant names and unread counts
+      const enrichedConversations = await Promise.all(
+        existingConversations.map(async (conv) => {
         // Get the other participant(s) in the conversation
         const otherParticipants = (conv.participants || []).filter(id => id !== user.uid);
         const otherUser = otherParticipants.length > 0 ? userMap.get(otherParticipants[0]) : null;
+          
+          // Calculate unread message count for this conversation
+          const unreadCount = await getUnreadCountForConversation(conv.id, user.uid);
         
         return {
           ...conv,
           conversationId: conv.id,
           name: otherUser ? (otherUser.name || otherUser.displayName || otherUser.email || 'Unknown User') : 'Unknown User',
-          avatar: otherUser ? (otherUser.avatar || otherUser.photoURL || otherUser.profilePicture || otherUser.profilePictureUrl || null) : null,
-          photoURL: otherUser ? (otherUser.photoURL || otherUser.profilePicture || otherUser.profilePictureUrl || null) : null,
+            avatar: otherUser ? (otherUser.avatar || otherUser.photoURL || otherUser.profilePicture || otherUser.profilePictureUrl || null) : null,
+            photoURL: otherUser ? (otherUser.photoURL || otherUser.profilePicture || otherUser.profilePictureUrl || null) : null,
           type: otherUser ? (otherUser.role || otherUser.userType || 'user') : 'user',
           timestamp: conv.lastMessageTime || conv.updatedAt || new Date().toISOString(),
           lastMessage: conv.lastMessage || 'Start a conversation',
-          unread: 0, // TODO: Calculate actual unread count
-          userData: otherUser // Store full user data for reference
+            unread: unreadCount, // Calculate actual unread count
+            userData: otherUser // Store full user data for reference
         };
-      });
+        })
+      );
       
       // Create conversation entries for users who don't have existing conversations
       const existingUserIds = new Set(
@@ -1565,7 +1575,7 @@ const InstitutionCaregiverDashboard = () => {
             photoURL: u.photoURL || u.profilePicture || u.profilePictureUrl || null,
             lastMessage: 'Start a conversation',
             timestamp: new Date().toISOString(),
-            unread: 0,
+            unread: 0, // New conversations have no unread messages
             type: u.role || u.userType || 'user',
             participants: [user.uid, u.id],
             isNew: true,
@@ -1901,6 +1911,18 @@ const InstitutionCaregiverDashboard = () => {
       const conversationMessages = await getMessagesByConversation(conversationId);
       console.log(`💬 Loaded ${conversationMessages.length} messages`);
       
+      // Mark conversation as read when opening it
+      if (user?.uid && conversationId) {
+        try {
+          await markConversationAsRead(conversationId, user.uid);
+          console.log('✅ Marked conversation as read');
+          // Refresh conversations to update unread counts
+          loadConversations();
+        } catch (markReadError) {
+          console.warn('Could not mark conversation as read:', markReadError);
+        }
+      }
+      
       // Enrich messages with sender names from platform users
       const users = await loadPlatformUsers();
       const userMap = new Map(users.map(u => [u.id, u]));
@@ -1980,8 +2002,13 @@ const InstitutionCaregiverDashboard = () => {
       
         toast.success('Message sent successfully');
         
-        // Reload conversations to update last message
+        // Reload conversations to update last message and unread counts
         loadConversations();
+        
+        // Reload messages to show the new message
+        if (conversationId) {
+          loadMessagesForConversation(conversationId);
+        }
       } catch (error) {
         console.error('Error sending message:', error);
         toast.error('Failed to send message');
@@ -3394,8 +3421,8 @@ const InstitutionCaregiverDashboard = () => {
                         {task.status !== 'completed' && (
                           <>
                             {task.status !== 'in_progress' && task.status !== 'in-progress' && (
-                              <button
-                                onClick={async () => {
+                          <button
+                            onClick={async () => {
                                   // Find client for this task
                                   const taskClient = assignedClients.find(c => c.id === task.clientId) || 
                                                     selectedClient || 
@@ -3423,12 +3450,12 @@ const InstitutionCaregiverDashboard = () => {
                                   Client: taskClient
                                 });
                                 setShowTaskCompletionModal(true);
-                              }}
-                              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
+                            }}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
                               {task.status === 'in_progress' || task.status === 'in-progress' ? 'Complete Task' : 'Complete'}
-                            </button>
+                          </button>
                           </>
                         )}
                         
@@ -3652,7 +3679,7 @@ const InstitutionCaregiverDashboard = () => {
 
       await activitiesAPI.logActivity(activityData);
       toast.success(`${activityType} logged successfully!`);
-      loadActivities(); // Reload activities
+      // Note: AdlLogger component handles its own loading, so no need to reload activities here
     } catch (error) {
       console.error('Error logging activity:', error);
       toast.error('Failed to log activity');
@@ -3690,7 +3717,7 @@ const InstitutionCaregiverDashboard = () => {
         clientId: '',
         qualityRating: 5
       });
-      loadActivities();
+      // Note: AdlLogger component handles its own loading, so no need to reload activities here
     } catch (error) {
       console.error('Error logging activity:', error);
       toast.error('Failed to log activity');
@@ -5442,7 +5469,7 @@ const InstitutionCaregiverDashboard = () => {
                 <button
                   onClick={async () => {
                     // Close details modal and open task completion modal
-                    setShowTaskDetailsModal(false);
+                      setShowTaskDetailsModal(false);
                     // Find client for this task
                     const taskClient = assignedClients.find(c => c.id === selectedTask.clientId) || 
                                       selectedClient || 

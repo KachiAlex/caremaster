@@ -14,11 +14,13 @@ import {
   Timestamp,
   onSnapshot
 } from 'firebase/firestore';
+import { logCarePlanUpdate } from '../utils/patientLogger';
 
 const CARE_PLANS_COLLECTION = 'carePlans';
+const CLIENTS_COLLECTION = 'clients';
 
 // Create a new care plan (Doctor only)
-export const createCarePlan = async (carePlanData) => {
+export const createCarePlan = async (carePlanData, clinicianInfo = null) => {
   try {
     const docRef = await addDoc(collection(db, CARE_PLANS_COLLECTION), {
       ...carePlanData,
@@ -28,6 +30,30 @@ export const createCarePlan = async (carePlanData) => {
     });
     
     console.log('✅ Care plan created:', docRef.id);
+    
+    // Log to patient logs if clinician info is provided
+    if (clinicianInfo && carePlanData.clientId) {
+      try {
+        // Get client document to extract patientSimpleId (clientId field)
+        const clientDocRef = doc(db, CLIENTS_COLLECTION, carePlanData.clientId);
+        const clientDoc = await getDoc(clientDocRef);
+        
+        if (clientDoc.exists()) {
+          const clientData = clientDoc.data();
+          const patientSimpleId = clientData.clientId || carePlanData.clientId;
+          
+          await logCarePlanUpdate(patientSimpleId, clinicianInfo, {
+            ...carePlanData,
+            planId: docRef.id,
+            action: 'created'
+          });
+        }
+      } catch (logError) {
+        console.error('Error logging care plan creation:', logError);
+        // Don't throw - care plan was created successfully
+      }
+    }
+    
     return { id: docRef.id, ...carePlanData };
   } catch (error) {
     console.error('❌ Error creating care plan:', error);
@@ -145,8 +171,18 @@ export const getCarePlan = async (planId) => {
 };
 
 // Update a care plan
-export const updateCarePlan = async (planId, updateData) => {
+export const updateCarePlan = async (planId, updateData, clinicianInfo = null) => {
   try {
+    // Get existing care plan to access clientId
+    const planDocRef = doc(db, CARE_PLANS_COLLECTION, planId);
+    const planDoc = await getDoc(planDocRef);
+    
+    if (!planDoc.exists()) {
+      throw new Error('Care plan not found');
+    }
+    
+    const existingPlanData = planDoc.data();
+    
     const docRef = doc(db, CARE_PLANS_COLLECTION, planId);
     await updateDoc(docRef, {
       ...updateData,
@@ -154,6 +190,30 @@ export const updateCarePlan = async (planId, updateData) => {
     });
     
     console.log('✅ Care plan updated:', planId);
+    
+    // Log to patient logs if clinician info is provided
+    if (clinicianInfo && existingPlanData.clientId) {
+      try {
+        // Get client document to extract patientSimpleId (clientId field)
+        const clientDocRef = doc(db, CLIENTS_COLLECTION, existingPlanData.clientId);
+        const clientDoc = await getDoc(clientDocRef);
+        
+        if (clientDoc.exists()) {
+          const clientData = clientDoc.data();
+          const patientSimpleId = clientData.clientId || existingPlanData.clientId;
+          
+          await logCarePlanUpdate(patientSimpleId, clinicianInfo, {
+            ...updateData,
+            planId: planId,
+            action: 'updated'
+          });
+        }
+      } catch (logError) {
+        console.error('Error logging care plan update:', logError);
+        // Don't throw - care plan was updated successfully
+      }
+    }
+    
     return { id: planId, ...updateData };
   } catch (error) {
     console.error('❌ Error updating care plan:', error);

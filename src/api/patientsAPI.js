@@ -526,6 +526,54 @@ export const getClientStats = async () => {
   }
 };
 
+// Search patients/clients by ID, name, or email
+export const searchPatients = async (searchTerm) => {
+  try {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return [];
+    }
+    
+    const clientsRef = collection(db, CLIENTS_COLLECTION);
+    const querySnapshot = await getDocs(clientsRef);
+    
+    const searchLower = searchTerm.toLowerCase().trim();
+    const results = [];
+    
+    querySnapshot.forEach((doc) => {
+      const clientData = doc.data();
+      const client = normalizeClientDoc(doc);
+      
+      // Search in clientId, name, fullName, email, phone
+      const matches = 
+        (client.clientId && client.clientId.toLowerCase().includes(searchLower)) ||
+        (client.name && client.name.toLowerCase().includes(searchLower)) ||
+        (client.fullName && client.fullName.toLowerCase().includes(searchLower)) ||
+        (client.email && client.email.toLowerCase().includes(searchLower)) ||
+        (client.phone && client.phone.includes(searchTerm));
+      
+      if (matches) {
+        results.push(client);
+      }
+    });
+    
+    // Sort by relevance (exact matches first, then by name)
+    results.sort((a, b) => {
+      const aExact = (a.clientId && a.clientId.toLowerCase() === searchLower) ? 1 : 0;
+      const bExact = (b.clientId && b.clientId.toLowerCase() === searchLower) ? 1 : 0;
+      if (aExact !== bExact) return bExact - aExact;
+      
+      const aName = (a.name || a.fullName || '').toLowerCase();
+      const bName = (b.name || b.fullName || '').toLowerCase();
+      return aName.localeCompare(bName);
+    });
+    
+    return results;
+  } catch (error) {
+    console.error('Error searching patients:', error);
+    throw error;
+  }
+};
+
 // Real-time listener for clients
 export const subscribeToClients = (callback) => {
   const clientsRef = collection(db, CLIENTS_COLLECTION);

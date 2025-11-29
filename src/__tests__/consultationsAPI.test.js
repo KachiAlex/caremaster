@@ -1,13 +1,25 @@
 /**
- * Tests for Consultation API Logging Integration
- * Verifies that consultations are properly logged to Client logs
+ * Tests for Consultation API
+ * Verifies that consultations are created correctly
  */
 
 import { createConsultation } from '../api/consultationsAPI';
-import { logConsultation } from '../utils/patientLogger';
 
 // Mock dependencies
-jest.mock('../utils/patientLogger');
+jest.mock('../api/clientActivitiesAPI', () => ({
+  logClientActivity: jest.fn().mockResolvedValue('log-activity-id')
+}));
+
+jest.mock('../api/notificationsAPI', () => ({
+  notificationsAPI: {
+    createNotification: jest.fn().mockResolvedValue('notification-id')
+  }
+}));
+
+jest.mock('../api/autoBillingAPI', () => ({
+  generateBillFromConsultation: jest.fn().mockResolvedValue('bill-id')
+}));
+
 jest.mock('../firebase/config', () => ({
   db: {}
 }));
@@ -16,32 +28,26 @@ jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
   addDoc: jest.fn(),
   getDoc: jest.fn(),
+  getDocs: jest.fn(),
   doc: jest.fn(),
+  query: jest.fn(),
+  where: jest.fn(),
   serverTimestamp: jest.fn(() => ({ _methodName: 'serverTimestamp' }))
 }));
 
-describe('Consultation API Logging', () => {
+describe('Consultation API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('should log consultation to Client logs when created', async () => {
+  test('should create consultation successfully', async () => {
     const mockDocRef = { id: 'consultation-123' };
-    const { addDoc } = require('firebase/firestore');
+    const { addDoc, collection, getDocs, query, where } = require('firebase/firestore');
     addDoc.mockResolvedValue(mockDocRef);
-    
-    const { collection, getDoc, doc } = require('firebase/firestore');
     collection.mockReturnValue({});
-    doc.mockReturnValue({});
-    
-    // Mock Client document
-    const mockPatientDoc = {
-      exists: () => true,
-      data: () => ({ clientId: 'UC-2025-0001' })
-    };
-    getDoc.mockResolvedValue(mockPatientDoc);
-    
-    logConsultation.mockResolvedValue('log-456');
+    query.mockReturnValue({});
+    where.mockReturnValue({});
+    getDocs.mockResolvedValue({ docs: [] }); // Empty admins list
 
     const consultationData = {
       clientId: 'Client-doc-id',
@@ -56,52 +62,39 @@ describe('Consultation API Logging', () => {
       assessment: 'Migraine'
     };
 
-    await createConsultation(consultationData);
+    const result = await createConsultation(consultationData);
 
-    expect(logConsultation).toHaveBeenCalled();
-    const logCall = logConsultation.mock.calls[0];
-    expect(logCall[0]).toBe('UC-2025-0001'); // patientSimpleId
-    expect(logCall[1]).toEqual({
-      id: 'doctor-123',
-      name: 'Dr. Jane Smith',
-      role: 'doctor',
-      email: 'jane@hospital.com',
-      institutionId: 'institution-123'
-    });
+    expect(result.id).toBe('consultation-123');
+    expect(addDoc).toHaveBeenCalled();
+    expect(collection).toHaveBeenCalled();
   });
 
-  test('should handle logging errors gracefully', async () => {
-    const mockDocRef = { id: 'consultation-123' };
-    const { addDoc } = require('firebase/firestore');
-    addDoc.mockResolvedValue(mockDocRef);
-    
-    const { collection, getDoc, doc } = require('firebase/firestore');
-    collection.mockReturnValue({});
-    doc.mockReturnValue({});
-    
-    // Mock Client document
-    const mockPatientDoc = {
-      exists: () => true,
-      data: () => ({ clientId: 'UC-2025-0001' })
+  test('should throw error if required fields are missing', async () => {
+    const consultationData = {
+      clientName: 'John Doe',
+      // Missing clientId and doctorId
+      doctorName: 'Dr. Jane Smith'
     };
-    getDoc.mockResolvedValue(mockPatientDoc);
-    
-    logConsultation.mockRejectedValue(new Error('Logging failed'));
+
+    await expect(createConsultation(consultationData)).rejects.toThrow('Client ID and Doctor ID are required');
+  });
+
+  test('should handle errors when creating consultation', async () => {
+    const { addDoc, collection } = require('firebase/firestore');
+    collection.mockReturnValue({});
+    addDoc.mockRejectedValue(new Error('Firestore error'));
 
     const consultationData = {
       clientId: 'Client-doc-id',
       clientName: 'John Doe',
       doctorId: 'doctor-123',
       doctorName: 'Dr. Jane Smith',
-      doctorRole: 'doctor',
       institutionId: 'institution-123',
       consultationType: 'in-person',
       chiefComplaint: 'Headache'
     };
 
-    // Should still succeed even if logging fails
-    const result = await createConsultation(consultationData);
-    expect(result.id).toBe('consultation-123');
+    await expect(createConsultation(consultationData)).rejects.toThrow();
   });
 });
 

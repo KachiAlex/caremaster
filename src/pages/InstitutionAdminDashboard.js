@@ -106,7 +106,7 @@ import CaregiverDetailsModal from '../components/CaregiverDetailsModal';
 import ClientDetailsModal from '../components/ClientDetailsModal';
 import HelpSupport from '../components/HelpSupport';
 import { toast } from 'react-toastify';
-import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages } from '../api/messagesAPI';
+import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages, markConversationAsRead } from '../api/messagesAPI';
 import CallService from '../services/callService';
 import WebRTCService from '../services/webrtcService';
 import PortalSwitcher from '../components/PortalSwitcher';
@@ -1815,8 +1815,42 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
+  // Helper function to get unread message count for a conversation
+  // Optimized: Uses direct query instead of loading all messages
+  const getUnreadCountForConversation = useCallback(async (conversationId, currentUserId) => {
+    if (!conversationId || !currentUserId) return 0;
+    
+    try {
+      // Query directly for unread messages where current user is not the sender
+      // This is more efficient than loading all messages and filtering
+      const messagesRef = collection(db, 'messages');
+      const q = query(
+        messagesRef,
+        where('conversationId', '==', conversationId),
+        where('senderId', '!=', currentUserId),
+        where('read', '==', false)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.size;
+    } catch (error) {
+      // Fallback to the previous method if query fails (e.g., missing index)
+      console.warn('Optimized query failed, falling back to message loading:', error);
+      try {
+        const messages = await getMessagesByConversation(conversationId);
+        const unreadCount = messages.filter(msg => 
+          msg.senderId !== currentUserId && !msg.read
+        ).length;
+        return unreadCount;
+      } catch (fallbackError) {
+        console.error('Error getting unread count for conversation:', conversationId, fallbackError);
+        return 0;
+      }
+    }
+  }, []);
+
   // Messaging Functions
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     if (!user?.uid) return;
     
     try {
@@ -1826,8 +1860,21 @@ const InstitutionAdminDashboard = () => {
       // Enrich conversations with participant details and unread counts
       const enrichedConversations = await Promise.all(
         userConversations.map(async (conv) => {
+          // Early return check for invalid conversation
+          if (!conv || !conv.participants || conv.participants.length === 0) {
+            return {
+              ...conv,
+              name: 'Unknown User',
+              unread: 0,
+              missedCalls: 0,
+              conversationId: conv?.id || 'unknown',
+              lastMessage: 'No messages yet',
+              timestamp: conv?.createdAt || new Date().toISOString()
+            };
+          }
+          
           // Find the other participant (not the current user)
-          const otherParticipantId = conv.participants?.find(p => p !== user.uid);
+          const otherParticipantId = conv.participants.find(p => p && p !== user.uid);
           
           if (!otherParticipantId) {
             return {
@@ -1856,14 +1903,8 @@ const InstitutionAdminDashboard = () => {
             }
           }
           
-          // Get unread message count for this conversation
-          let unreadCount = 0;
-          try {
-            const convMessages = await getMessagesByConversation(conv.id);
-            unreadCount = convMessages.filter(m => !m.read && m.senderId !== user.uid).length;
-          } catch (error) {
-            console.error('Error getting unread count:', error);
-          }
+          // Get unread message count for this conversation using helper function
+          const unreadCount = await getUnreadCountForConversation(conv.id, user.uid);
           
           // Get missed calls count (for future implementation)
           const missedCalls = 0; // TODO: Implement call tracking
@@ -1886,12 +1927,25 @@ const InstitutionAdminDashboard = () => {
       console.error('Error loading conversations:', error);
       setConversations([]);
     }
-  };
+  }, [user?.uid, caregivers, pharmacists, getUnreadCountForConversation]);
 
   const loadMessagesForConversation = async (conversationId) => {
     try {
       const conversationMessages = await getMessagesByConversation(conversationId);
       console.log(`💬 Loaded ${conversationMessages.length} messages`);
+      
+      // Mark conversation as read when opening it
+      if (user?.uid && conversationId) {
+        try {
+          await markConversationAsRead(conversationId, user.uid);
+          console.log('✅ Marked conversation as read');
+          // Refresh conversations to update unread counts
+          loadConversations();
+        } catch (markReadError) {
+          console.warn('Could not mark conversation as read:', markReadError);
+        }
+      }
+      
       setMessages(conversationMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -1905,40 +1959,78 @@ const InstitutionAdminDashboard = () => {
       loadConversations();
       
       // Set up real-time listener for conversations
-      const unsubscribe = subscribeToUserConversations(user.uid, (updatedConversations) => {
+      const unsubscribe = subscribeToUserConversations(user.uid, async (updatedConversations) => {
+        // Early return if no conversations
+        if (!updatedConversations || updatedConversations.length === 0) {
+          setConversations([]);
+          return;
+        }
+        
         console.log(`🔄 Real-time update: ${updatedConversations.length} conversations`);
         
-        // Enrich conversations with participant details
-        const enrichedConversations = updatedConversations.map((conv) => {
-          const otherParticipantId = conv.participants?.find(p => p !== user.uid);
-          
-          let participantName = 'Unknown User';
-          let participantType = 'user';
-          
-          const caregiver = caregivers.find(c => c.id === otherParticipantId || c.userId === otherParticipantId);
-          if (caregiver) {
-            participantName = caregiver.name || caregiver.fullName;
-            participantType = 'caregiver';
-          }
-          
-          if (!caregiver) {
-            const pharmacist = pharmacists.find(p => p.id === otherParticipantId || p.userId === otherParticipantId);
-            if (pharmacist) {
-              participantName = pharmacist.name || pharmacist.fullName;
-              participantType = 'pharmacist';
+        // Enrich conversations with participant details and calculate unread counts
+        // Using Promise.all for parallel processing - already optimized
+        const enrichedConversations = await Promise.all(
+          updatedConversations.map(async (conv) => {
+            // Early return check for invalid conversation
+            if (!conv || !conv.participants || conv.participants.length === 0) {
+              return {
+                ...conv,
+                name: 'Unknown User',
+                type: 'user',
+                unread: 0,
+                conversationId: conv?.id || 'unknown',
+                lastMessage: 'No messages yet',
+                timestamp: conv?.createdAt || new Date().toISOString()
+              };
             }
-          }
-          
-          return {
-            ...conv,
-            name: participantName,
-            type: participantType,
-            unread: 0,
-            conversationId: conv.id,
-            lastMessage: conv.lastMessage || 'No messages yet',
-            timestamp: conv.lastMessageTime || conv.createdAt
-          };
-        });
+            
+            const otherParticipantId = conv.participants.find(p => p && p !== user.uid);
+            
+            // If no other participant found, return early
+            if (!otherParticipantId) {
+              return {
+                ...conv,
+                name: 'Unknown User',
+                type: 'user',
+                unread: 0,
+                conversationId: conv.id,
+                lastMessage: conv.lastMessage || 'No messages yet',
+                timestamp: conv.lastMessageTime || conv.createdAt
+              };
+            }
+            
+            let participantName = 'Unknown User';
+            let participantType = 'user';
+            
+            // Try to find participant in caregivers first
+            const caregiver = caregivers.find(c => c && (c.id === otherParticipantId || c.userId === otherParticipantId));
+            if (caregiver) {
+              participantName = caregiver.name || caregiver.fullName || 'Unknown User';
+              participantType = caregiver.role || caregiver.type || caregiver.userType || 'caregiver';
+            } else {
+              // Try pharmacists if not found in caregivers
+              const pharmacist = pharmacists.find(p => p && (p.id === otherParticipantId || p.userId === otherParticipantId));
+              if (pharmacist) {
+                participantName = pharmacist.name || pharmacist.fullName || 'Unknown User';
+                participantType = 'pharmacist';
+              }
+            }
+            
+            // Calculate unread count for this conversation (optimized query)
+            const unreadCount = await getUnreadCountForConversation(conv.id, user.uid);
+            
+            return {
+              ...conv,
+              name: participantName,
+              type: participantType,
+              unread: unreadCount,
+              conversationId: conv.id,
+              lastMessage: conv.lastMessage || 'No messages yet',
+              timestamp: conv.lastMessageTime || conv.createdAt
+            };
+          })
+        );
         
         setConversations(enrichedConversations);
       });
@@ -1947,7 +2039,7 @@ const InstitutionAdminDashboard = () => {
         if (unsubscribe) unsubscribe();
       };
     }
-  }, [activeTab, user?.uid, caregivers, pharmacists]);
+  }, [activeTab, user?.uid, caregivers, pharmacists, loadConversations, getUnreadCountForConversation]);
 
   // Set up real-time listener for messages when a conversation is selected
   useEffect(() => {

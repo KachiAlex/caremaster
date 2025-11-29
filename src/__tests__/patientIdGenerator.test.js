@@ -3,7 +3,7 @@
  * Tests the generation and validation of simple, memorable Client IDs
  */
 
-import { generateClientId, isValidPatientId, extractYearFromPatientId } from '../utils/clientIdGenerator';
+import { generateClientId, isValidPatientId, extractYearFromPatientId } from '../utils/patientIdGenerator';
 import { collection, getDocs, query, where, orderBy, limit, addDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 

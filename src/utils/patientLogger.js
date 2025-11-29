@@ -12,7 +12,7 @@
  * All logs are stored in the Client's database
  */
 
-import { collection, addDoc, query, where, orderBy, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 const PATIENT_LOGS_COLLECTION = 'patientLogs';
@@ -103,6 +103,23 @@ export async function logPatientInteraction(logData) {
  * Log vital signs recording
  */
 export async function logVitalSigns(clientId, clinicianInfo, vitalSignsData) {
+  // Build description with actual values
+  const type = vitalSignsData.type || 'Vital signs';
+  const value = vitalSignsData.value || '';
+  const unit = vitalSignsData.unit || '';
+  const status = vitalSignsData.status || '';
+  
+  let description = `${type}`;
+  if (value) {
+    description += `: ${value}`;
+    if (unit) {
+      description += ` ${unit}`;
+    }
+  }
+  if (status) {
+    description += ` (${status})`;
+  }
+  
   return await logPatientInteraction({
     clientId,
     clinicianId: clinicianInfo.id || clinicianInfo.uid,
@@ -111,7 +128,7 @@ export async function logVitalSigns(clientId, clinicianInfo, vitalSignsData) {
     clinicianEmail: clinicianInfo.email,
     action: 'vital_signs_recorded',
     category: 'vital_signs',
-    description: `Vital signs recorded: ${Object.keys(vitalSignsData).join(', ')}`,
+    description: description || 'Vital signs recorded',
     details: vitalSignsData,
     institutionId: clinicianInfo.institutionId
   });
@@ -139,6 +156,14 @@ export async function logMedicationAdministered(clientId, clinicianInfo, medicat
  * Log consultation
  */
 export async function logConsultation(clientId, clinicianInfo, consultationData) {
+  // Build description with consultation details
+  const consultationType = consultationData.consultationType || consultationData.type || 'General consultation';
+  let description = `Consultation: ${consultationType}`;
+  
+  if (consultationData.chiefComplaint) {
+    description += ` - ${consultationData.chiefComplaint}`;
+  }
+  
   return await logPatientInteraction({
     clientId,
     clinicianId: clinicianInfo.id || clinicianInfo.uid,
@@ -147,7 +172,7 @@ export async function logConsultation(clientId, clinicianInfo, consultationData)
     clinicianEmail: clinicianInfo.email,
     action: 'consultation_conducted',
     category: 'consultation',
-    description: `Consultation: ${consultationData.type || 'General consultation'}`,
+    description: description,
     details: consultationData,
     institutionId: clinicianInfo.institutionId
   });
@@ -157,6 +182,16 @@ export async function logConsultation(clientId, clinicianInfo, consultationData)
  * Log care plan update
  */
 export async function logCarePlanUpdate(clientId, clinicianInfo, carePlanData) {
+  // Build description based on action and plan details
+  const action = carePlanData.action || 'updated';
+  const planName = carePlanData.planName || carePlanData.diagnosis || 'Care plan';
+  
+  let description = `Care plan ${action}: ${planName}`;
+  
+  if (carePlanData.changes) {
+    description += ` (${carePlanData.changes})`;
+  }
+  
   return await logPatientInteraction({
     clientId,
     clinicianId: clinicianInfo.id || clinicianInfo.uid,
@@ -165,7 +200,7 @@ export async function logCarePlanUpdate(clientId, clinicianInfo, carePlanData) {
     clinicianEmail: clinicianInfo.email,
     action: 'care_plan_updated',
     category: 'care_plan',
-    description: `Care plan updated: ${carePlanData.changes || 'Changes made'}`,
+    description: description,
     details: carePlanData,
     institutionId: clinicianInfo.institutionId
   });
