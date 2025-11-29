@@ -3498,16 +3498,9 @@ const InstitutionCaregiverDashboard = () => {
               <div className="text-center py-12">
                 <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No Care Logs Yet</h3>
-                <p className="text-gray-600 mb-4">
+                <p className="text-gray-600">
                   Start documenting care activities for {selectedClient.name || selectedClient.fullName}
                 </p>
-                <button
-                  onClick={() => setShowCareLogForm(true)}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Care Log
-                </button>
               </div>
             ) : (
               <div className="space-y-4">

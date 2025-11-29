@@ -155,20 +155,11 @@ const PrescriptionsTabContent = ({
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
               <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Prescriptions Yet</h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600">
                 {isDoctor 
                   ? 'Start by writing the first prescription for this client.'
                   : 'No prescriptions have been written for this client yet.'}
               </p>
-              {isDoctor && (
-                <button
-                  onClick={onOpenPrescriptionModal}
-                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors inline-flex items-center"
-                >
-                  <Pill className="h-4 w-4 mr-2" />
-                  Write First Prescription
-                </button>
-              )}
             </div>
           ) : (
             prescriptions.map((prescription) => (

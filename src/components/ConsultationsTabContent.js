@@ -96,20 +96,11 @@ const ConsultationsTabContent = ({
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
               <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Consultations Yet</h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600">
                 {isDoctor 
                   ? 'Start by writing the first consultation note for this client.'
                   : 'No consultation notes have been recorded for this client yet.'}
               </p>
-              {isDoctor && (
-                <button
-                  onClick={onOpenConsultationModal}
-                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Write First Consultation
-                </button>
-              )}
             </div>
           ) : (
             consultations.map((consultation) => (
