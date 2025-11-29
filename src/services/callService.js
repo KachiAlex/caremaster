@@ -25,16 +25,41 @@ class CallService {
   }
 
   // Initiate a call
-  async initiateCall(callerId, recipientId, callType = 'video') {
+  // Supports both object parameter and separate parameters for backward compatibility
+  async initiateCall(callerIdOrOptions, recipientId = null, callType = 'video') {
     try {
-      console.log('🔥 CallService.initiateCall called:', { callerId, recipientId, callType });
+      let callerId, finalRecipientId, finalCallType, callerName, recipientName;
       
-      // Validation
-      if (!callerId || !recipientId) {
-        throw new Error('Caller ID and Recipient ID are required');
+      // Check if first parameter is an object (new format)
+      if (typeof callerIdOrOptions === 'object' && callerIdOrOptions !== null) {
+        callerId = callerIdOrOptions.callerId;
+        finalRecipientId = callerIdOrOptions.recipientId;
+        finalCallType = callerIdOrOptions.callType || 'video';
+        callerName = callerIdOrOptions.callerName;
+        recipientName = callerIdOrOptions.recipientName;
+      } else {
+        // Old format: separate parameters
+        callerId = callerIdOrOptions;
+        finalRecipientId = recipientId;
+        finalCallType = callType;
       }
       
-      if (callerId === recipientId) {
+      console.log('🔥 CallService.initiateCall called:', { 
+        callerId, 
+        recipientId: finalRecipientId, 
+        callType: finalCallType,
+        callerName,
+        recipientName
+      });
+      
+      // Validation
+      if (!callerId || !finalRecipientId) {
+        const errorMsg = `Caller ID and Recipient ID are required. Got callerId: ${callerId}, recipientId: ${finalRecipientId}`;
+        console.error('❌ Validation failed:', errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      if (callerId === finalRecipientId) {
         throw new Error('Cannot call yourself');
       }
       
@@ -42,8 +67,10 @@ class CallService {
       const callData = {
         callId,
         callerId,
-        recipientId,
-        callType,
+        recipientId: finalRecipientId,
+        callType: finalCallType,
+        callerName: callerName || null,
+        recipientName: recipientName || null,
         status: 'initiating',
         createdAt: serverTimestamp(),
         answeredAt: null,
@@ -57,21 +84,27 @@ class CallService {
       console.log('✅ Call document created:', callDoc.id);
 
       // Send call notification
-      console.log('🔔 Sending call notification to recipient:', recipientId);
-      await this.sendCallNotification(recipientId, {
+      console.log('🔔 Sending call notification to recipient:', finalRecipientId);
+      await this.sendCallNotification(finalRecipientId, {
         callId,
         callerId,
-        callType,
-        status: 'incoming'
+        callType: finalCallType,
+        status: 'incoming',
+        callerName: callerName || null
       });
       console.log('✅ Call notification sent successfully');
 
       this.activeCall = { ...callData, id: callDoc.id };
 
-      return { success: true, callId, callData: this.activeCall };
+      return { 
+        success: true, 
+        callId, 
+        callData: this.activeCall,
+        signalingRef: callDoc // Return doc reference for WebRTC signaling
+      };
     } catch (error) {
       console.error('❌ Error initiating call:', error);
-      return { success: false, error: error.message };
+      throw error; // Re-throw to allow caller to handle
     }
   }
 

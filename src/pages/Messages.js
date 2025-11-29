@@ -51,7 +51,7 @@ const Messages = () => {
     const message = {
       id: Date.now(),
       text: newMessage,
-      sender: 'patient',
+      sender: 'Client',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       read: false
     };
@@ -73,7 +73,7 @@ const Messages = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'online':
-        return 'bg-blue-500';
+        return 'bg-green-500';
       case 'offline':
         return 'bg-gray-400';
       default:
@@ -82,7 +82,7 @@ const Messages = () => {
   };
 
   const getReadStatus = (message) => {
-    if (message.sender === 'patient') {
+    if (message.sender === 'Client') {
       return message.read ? <CheckCheck className="h-4 w-4 text-blue-500" /> : <Check className="h-4 w-4 text-gray-400" />;
     }
     return null;
@@ -186,16 +186,16 @@ const Messages = () => {
               {selectedChat.messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.sender === 'patient' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.sender === 'Client' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    message.sender === 'patient' 
+                    message.sender === 'Client' 
                       ? 'bg-blue-600 text-white' 
                       : 'bg-gray-100 text-gray-900'
                   }`}>
                     <p className="text-sm">{message.text}</p>
                     <div className={`flex items-center justify-between mt-1 ${
-                      message.sender === 'patient' ? 'text-blue-100' : 'text-gray-500'
+                      message.sender === 'Client' ? 'text-blue-100' : 'text-gray-500'
                     }`}>
                       <span className="text-xs">{message.timestamp}</span>
                       {getReadStatus(message)}

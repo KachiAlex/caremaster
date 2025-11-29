@@ -237,7 +237,7 @@ class ErrorHandler {
     
     // Store in localStorage for persistence
     try {
-      localStorage.setItem('UltimateCare_error_log', JSON.stringify(this.errorLog));
+      localStorage.setItem('Care Master_error_log', JSON.stringify(this.errorLog));
     } catch (e) {
       console.warn('Could not save error log to localStorage:', e);
     }
@@ -283,7 +283,7 @@ class ErrorHandler {
   // Clear error log
   clearErrorLog() {
     this.errorLog = [];
-    localStorage.removeItem('UltimateCare_error_log');
+    localStorage.removeItem('Care Master_error_log');
   }
 
   // Generate unique error ID

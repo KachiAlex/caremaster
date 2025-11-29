@@ -21,12 +21,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createNurseReport } from '../api/nurseReportsAPI';
-import { getVitalSignsByPatient } from '../api/vitalSignsAPI';
+import { getVitalSignsByClient } from '../api/vitalSignsAPI';
 import { getCareLogsByClient } from '../api/careLogsAPI';
 
-const NurseReportGenerator = ({ patientId, patientName, nurseId, nurseName, onSave, onCancel }) => {
+const NurseReportGenerator = ({ clientId, clientName, nurseId, nurseName, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
-    // Patient Assessment
+    // Client Assessment
     patientCondition: 'stable',
     mentalStatus: 'alert',
     mobilityStatus: 'independent',
@@ -134,7 +134,7 @@ const NurseReportGenerator = ({ patientId, patientName, nurseId, nurseName, onSa
     'Nutrition support',
     'Hygiene assistance',
     'Safety check',
-    'Patient education',
+    'Client education',
     'Family communication',
     'Fall risk assessment',
     'Skin integrity check',
@@ -156,16 +156,16 @@ const NurseReportGenerator = ({ patientId, patientName, nurseId, nurseName, onSa
 
   useEffect(() => {
     loadRecentData();
-  }, [patientId]);
+  }, [clientId]);
 
   const loadRecentData = async () => {
     try {
       // Load recent vital signs
-      const vitals = await getVitalSignsByPatient(patientId);
+      const vitals = await getVitalSignsByClient(clientId);
       setRecentVitals(vitals.slice(0, 5)); // Last 5 readings
 
       // Load recent care logs
-      const logs = await getCareLogsByClient(patientId);
+      const logs = await getCareLogsByClient(clientId);
       setRecentCareLogs(logs.slice(0, 3)); // Last 3 logs
     } catch (error) {
       console.error('Error loading recent data:', error);
@@ -184,12 +184,12 @@ const NurseReportGenerator = ({ patientId, patientName, nurseId, nurseName, onSa
     
     try {
       const reportData = {
-        patientId,
-        patientName,
+        clientId,
+        clientName,
         nurseId,
         nurseName,
         
-        // Patient Assessment
+        // Client Assessment
         patientCondition: formData.patientCondition,
         mentalStatus: formData.mentalStatus,
         mobilityStatus: formData.mobilityStatus,
@@ -250,7 +250,7 @@ const NurseReportGenerator = ({ patientId, patientName, nurseId, nurseName, onSa
 
       await createNurseReport(reportData);
       
-      toast.success(`Nurse report generated successfully for ${patientName}`);
+      toast.success(`Nurse report generated successfully for ${clientName}`);
       
       if (onSave) {
         onSave(reportData);
@@ -290,12 +290,12 @@ const NurseReportGenerator = ({ patientId, patientName, nurseId, nurseName, onSa
     // Generate a downloadable report
     const reportContent = `
 NURSE REPORT
-Patient: ${patientName}
+Client: ${clientName}
 Date: ${new Date().toLocaleDateString()}
 Nurse: ${nurseName}
 Shift: ${shifts.find(s => s.value === formData.shift)?.label}
 
-PATIENT ASSESSMENT
+Client ASSESSMENT
 Condition: ${patientConditions.find(c => c.value === formData.patientCondition)?.label}
 Mental Status: ${mentalStatusOptions.find(m => m.value === formData.mentalStatus)?.label}
 Mobility: ${mobilityStatusOptions.find(m => m.value === formData.mobilityStatus)?.label}
@@ -331,7 +331,7 @@ ${formData.additionalNotes}
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `nurse-report-${patientName}-${new Date().toISOString().split('T')[0]}.txt`;
+    link.download = `nurse-report-${clientName}-${new Date().toISOString().split('T')[0]}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -342,12 +342,12 @@ ${formData.additionalNotes}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <FileText className="h-6 w-6 text-orange-600" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Generate Nurse Report</h2>
-                <p className="text-sm text-gray-600">Patient: {patientName}</p>
+                <p className="text-sm text-gray-600">Client: {clientName}</p>
                 <p className="text-xs text-gray-500">Nurse: {nurseName}</p>
               </div>
             </div>
@@ -380,7 +380,7 @@ ${formData.additionalNotes}
                   <select
                     value={formData.reportType}
                     onChange={(e) => setFormData(prev => ({ ...prev, reportType: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   >
                     {reportTypes.map(type => (
                       <option key={type.value} value={type.value}>{type.label}</option>
@@ -392,7 +392,7 @@ ${formData.additionalNotes}
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   >
                     {priorities.map(priority => (
                       <option key={priority.value} value={priority.value}>{priority.label}</option>
@@ -407,7 +407,7 @@ ${formData.additionalNotes}
                 <select
                   value={formData.shift}
                   onChange={(e) => setFormData(prev => ({ ...prev, shift: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 >
                   {shifts.map(shift => (
                     <option key={shift.value} value={shift.value}>{shift.label}</option>
@@ -415,20 +415,20 @@ ${formData.additionalNotes}
                 </select>
               </div>
 
-              {/* Patient Assessment */}
+              {/* Client Assessment */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                   <User className="h-5 w-5 text-blue-600 mr-2" />
-                  Patient Assessment
+                  Client Assessment
                 </h3>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Patient Condition</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Client Condition</label>
                     <select
                       value={formData.patientCondition}
                       onChange={(e) => setFormData(prev => ({ ...prev, patientCondition: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     >
                       {patientConditions.map(condition => (
                         <option key={condition.value} value={condition.value}>{condition.label}</option>
@@ -440,7 +440,7 @@ ${formData.additionalNotes}
                     <select
                       value={formData.mentalStatus}
                       onChange={(e) => setFormData(prev => ({ ...prev, mentalStatus: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     >
                       {mentalStatusOptions.map(status => (
                         <option key={status.value} value={status.value}>{status.label}</option>
@@ -455,7 +455,7 @@ ${formData.additionalNotes}
                     <select
                       value={formData.mobilityStatus}
                       onChange={(e) => setFormData(prev => ({ ...prev, mobilityStatus: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     >
                       {mobilityStatusOptions.map(status => (
                         <option key={status.value} value={status.value}>{status.label}</option>
@@ -467,7 +467,7 @@ ${formData.additionalNotes}
                     <select
                       value={formData.nutritionStatus}
                       onChange={(e) => setFormData(prev => ({ ...prev, nutritionStatus: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     >
                       {nutritionStatusOptions.map(status => (
                         <option key={status.value} value={status.value}>{status.label}</option>
@@ -489,9 +489,9 @@ ${formData.additionalNotes}
                   <textarea
                     value={formData.generalAppearance}
                     onChange={(e) => setFormData(prev => ({ ...prev, generalAppearance: e.target.value }))}
-                    placeholder="Describe patient's general appearance..."
+                    placeholder="Describe Client's general appearance..."
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
 
@@ -500,7 +500,7 @@ ${formData.additionalNotes}
                   <select
                     value={formData.skinCondition}
                     onChange={(e) => setFormData(prev => ({ ...prev, skinCondition: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   >
                     <option value="normal">Normal</option>
                     <option value="dry">Dry</option>
@@ -521,7 +521,7 @@ ${formData.additionalNotes}
                       value={formData.painLevel}
                       onChange={(e) => setFormData(prev => ({ ...prev, painLevel: e.target.value }))}
                       placeholder="0-10"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     />
                   </div>
                   <div className="col-span-2">
@@ -531,7 +531,7 @@ ${formData.additionalNotes}
                       value={formData.painLocation}
                       onChange={(e) => setFormData(prev => ({ ...prev, painLocation: e.target.value }))}
                       placeholder="Where is the pain located?"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     />
                   </div>
                 </div>
@@ -543,7 +543,7 @@ ${formData.additionalNotes}
                     onChange={(e) => setFormData(prev => ({ ...prev, painDescription: e.target.value }))}
                     placeholder="Describe the pain characteristics..."
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
               </div>
@@ -554,7 +554,7 @@ ${formData.additionalNotes}
               {/* Care Activities */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <CheckCircle className="h-5 w-5 text-blue-600 mr-2" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                   Care Activities
                 </h3>
                 <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
@@ -564,7 +564,7 @@ ${formData.additionalNotes}
                         type="checkbox"
                         checked={formData.careActivities.includes(activity)}
                         onChange={() => handleActivityToggle(activity)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                       />
                       <span className="text-sm text-gray-700">{activity}</span>
                     </label>
@@ -585,7 +585,7 @@ ${formData.additionalNotes}
                         type="checkbox"
                         checked={formData.treatmentsProvided.includes(treatment)}
                         onChange={() => handleTreatmentToggle(treatment)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                       />
                       <span className="text-sm text-gray-700">{treatment}</span>
                     </label>
@@ -599,9 +599,9 @@ ${formData.additionalNotes}
                 <textarea
                   value={formData.observations}
                   onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
-                  placeholder="Detailed observations about the patient's condition, behavior, and responses..."
+                  placeholder="Detailed observations about the Client's condition, behavior, and responses..."
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   required
                 />
               </div>
@@ -612,9 +612,9 @@ ${formData.additionalNotes}
                 <textarea
                   value={formData.concerns}
                   onChange={(e) => setFormData(prev => ({ ...prev, concerns: e.target.value }))}
-                  placeholder="Any concerns about the patient's condition or care..."
+                  placeholder="Any concerns about the Client's condition or care..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
               </div>
 
@@ -624,9 +624,9 @@ ${formData.additionalNotes}
                 <textarea
                   value={formData.improvements}
                   onChange={(e) => setFormData(prev => ({ ...prev, improvements: e.target.value }))}
-                  placeholder="Any improvements noted in the patient's condition..."
+                  placeholder="Any improvements noted in the Client's condition..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
               </div>
 
@@ -638,7 +638,7 @@ ${formData.additionalNotes}
                   onChange={(e) => setFormData(prev => ({ ...prev, recommendations: e.target.value }))}
                   placeholder="Recommendations for continued care..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
               </div>
 
@@ -649,7 +649,7 @@ ${formData.additionalNotes}
                     type="checkbox"
                     checked={formData.followUpRequired}
                     onChange={(e) => setFormData(prev => ({ ...prev, followUpRequired: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
                   <span className="text-sm font-medium text-gray-700">Follow-up Required</span>
                 </label>
@@ -659,7 +659,7 @@ ${formData.additionalNotes}
                     onChange={(e) => setFormData(prev => ({ ...prev, followUpNotes: e.target.value }))}
                     placeholder="Details about required follow-up..."
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 )}
               </div>
@@ -672,7 +672,7 @@ ${formData.additionalNotes}
                   onChange={(e) => setFormData(prev => ({ ...prev, additionalNotes: e.target.value }))}
                   placeholder="Any additional notes or comments..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
               </div>
             </div>
@@ -702,7 +702,7 @@ ${formData.additionalNotes}
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>

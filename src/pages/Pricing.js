@@ -78,7 +78,7 @@ const Pricing = () => {
               <ul className="space-y-3 mb-8">
                 {plan.features.map((feature, featureIndex) => (
                   <li key={featureIndex} className="flex items-center">
-                    <Check className="h-5 w-5 text-blue-500 mr-3 flex-shrink-0" />
+                    <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
                     <span className="text-gray-700">{feature}</span>
                   </li>
                 ))}
@@ -93,7 +93,7 @@ const Pricing = () => {
 
         {/* CTA Button */}
         <div className="text-center">
-          <button className="bg-gradient-to-r from-blue-600 to-blue-600 text-white px-8 py-4 rounded-lg font-medium hover:from-blue-700 hover:to-blue-700 transition-all">
+          <button className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-8 py-4 rounded-lg font-medium hover:from-blue-700 hover:to-green-700 transition-all">
             View All Plans & Get Started
           </button>
         </div>

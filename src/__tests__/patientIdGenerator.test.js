@@ -1,9 +1,9 @@
 /**
- * Unit Tests for Patient ID Generator
- * Tests the generation and validation of simple, memorable patient IDs
+ * Unit Tests for Client ID Generator
+ * Tests the generation and validation of simple, memorable Client IDs
  */
 
-import { generatePatientId, isValidPatientId, extractYearFromPatientId } from '../utils/patientIdGenerator';
+import { generateClientId, isValidPatientId, extractYearFromPatientId } from '../utils/clientIdGenerator';
 import { collection, getDocs, query, where, orderBy, limit, addDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -24,13 +24,13 @@ jest.mock('firebase/firestore', () => ({
   getDoc: jest.fn()
 }));
 
-describe('Patient ID Generator', () => {
+describe('Client ID Generator', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe('isValidPatientId', () => {
-    test('should validate correct patient ID format (UC-YYYY-NNNN)', () => {
+    test('should validate correct Client ID format (UC-YYYY-NNNN)', () => {
       expect(isValidPatientId('UC-2025-0001')).toBe(true);
       expect(isValidPatientId('UC-2025-1234')).toBe(true);
       expect(isValidPatientId('UC-2024-9999')).toBe(true);
@@ -73,37 +73,37 @@ describe('Patient ID Generator', () => {
     });
   });
 
-  describe('generatePatientId', () => {
-    test('should generate patient ID in correct format', async () => {
-      // Mock empty query result (no existing patients)
+  describe('generateClientId', () => {
+    test('should generate Client ID in correct format', async () => {
+      // Mock empty query result (no existing clients)
       const mockQuerySnapshot = {
-        forEach: jest.fn() // No patients, so forEach does nothing
+        forEach: jest.fn() // No clients, so forEach does nothing
       };
 
       getDocs.mockResolvedValue(mockQuerySnapshot);
       collection.mockReturnValue({});
 
-      const patientId = await generatePatientId();
+      const clientId = await generateClientId();
 
-      expect(isValidPatientId(patientId)).toBe(true);
-      expect(patientId).toMatch(/^UC-\d{4}-\d{4}$/);
-      expect(patientId.startsWith('UC-')).toBe(true);
+      expect(isValidPatientId(clientId)).toBe(true);
+      expect(clientId).toMatch(/^UC-\d{4}-\d{4}$/);
+      expect(clientId.startsWith('UC-')).toBe(true);
     });
 
     test('should generate sequential IDs', async () => {
       const currentYear = new Date().getFullYear();
       const prefix = `UC-${currentYear}`;
 
-      // Mock first call - no existing patients
+      // Mock first call - no existing clients
       const mockEmptySnapshot = {
-        forEach: jest.fn() // No patients
+        forEach: jest.fn() // No clients
       };
 
-      // Mock second call - one existing patient
+      // Mock second call - one existing Client
       const mockOnePatientSnapshot = {
         forEach: jest.fn((callback) => {
           callback({
-            data: () => ({ patientId: `${prefix}-0001` })
+            data: () => ({ clientId: `${prefix}-0001` })
           });
         })
       };
@@ -114,10 +114,10 @@ describe('Patient ID Generator', () => {
 
       collection.mockReturnValue({});
 
-      const firstId = await generatePatientId();
+      const firstId = await generateClientId();
       expect(firstId).toBe(`${prefix}-0001`);
 
-      const secondId = await generatePatientId();
+      const secondId = await generateClientId();
       expect(secondId).toBe(`${prefix}-0002`);
     });
 
@@ -135,17 +135,17 @@ describe('Patient ID Generator', () => {
 
       // Mock empty query result
       const mockQuerySnapshot = {
-        forEach: jest.fn() // No patients
+        forEach: jest.fn() // No clients
       };
 
       getDocs.mockResolvedValue(mockQuerySnapshot);
       collection.mockReturnValue({});
       doc.mockReturnValue({});
 
-      const patientId = await generatePatientId(institutionId);
+      const clientId = await generateClientId(institutionId);
 
-      expect(isValidPatientId(patientId)).toBe(true);
-      expect(patientId).toMatch(/^UC-HOSP-\d{4}-\d{4}$/);
+      expect(isValidPatientId(clientId)).toBe(true);
+      expect(clientId).toMatch(/^UC-HOSP-\d{4}-\d{4}$/);
     });
 
     test('should handle errors gracefully', async () => {
@@ -153,18 +153,18 @@ describe('Patient ID Generator', () => {
 
       collection.mockReturnValue({});
 
-      await expect(generatePatientId()).rejects.toThrow();
+      await expect(generateClientId()).rejects.toThrow();
     });
 
     test('should increment from highest existing number', async () => {
       const currentYear = new Date().getFullYear();
       const prefix = `UC-${currentYear}`;
 
-      // Mock query with existing patient ID UC-2025-0042
+      // Mock query with existing Client ID UC-2025-0042
       const mockSnapshot = {
         forEach: jest.fn((callback) => {
           callback({
-            data: () => ({ patientId: `${prefix}-0042` })
+            data: () => ({ clientId: `${prefix}-0042` })
           });
         })
       };
@@ -172,9 +172,9 @@ describe('Patient ID Generator', () => {
       getDocs.mockResolvedValue(mockSnapshot);
       collection.mockReturnValue({});
 
-      const patientId = await generatePatientId();
+      const clientId = await generateClientId();
 
-      expect(patientId).toBe(`${prefix}-0043`);
+      expect(clientId).toBe(`${prefix}-0043`);
     });
   });
 });

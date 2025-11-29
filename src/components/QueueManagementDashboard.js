@@ -3,7 +3,7 @@
  * 
  * Real-time queue management for hospital departments:
  * - View queues by department
- * - Call next patient
+ * - Call next Client
  * - Update queue status
  * - View queue statistics
  * - Digital display mode
@@ -53,7 +53,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
   const { institutionId: contextInstitutionId, userProfile } = useUser();
   const institutionId = propInstitutionId || contextInstitutionId;
   
-  // Check if user is receptionist or admin (can register patients)
+  // Check if user is receptionist or admin (can register clients)
   const canRegisterPatients = userProfile?.userType === 'receptionist' || 
                               userProfile?.userType === 'admin' ||
                               userProfile?.type === 'receptionist';
@@ -65,7 +65,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
   const [displayMode, setDisplayMode] = useState(false); // Digital display mode
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [queuePositions, setQueuePositions] = useState({}); // Track patient positions
+  const [queuePositions, setQueuePositions] = useState({}); // Track Client positions
   const [showReorderModal, setShowReorderModal] = useState(false);
   const [selectedQueueForReorder, setSelectedQueueForReorder] = useState(null);
   const [reorderPosition, setReorderPosition] = useState(1);
@@ -114,7 +114,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
     return () => clearInterval(interval);
   }, [autoRefresh, activeDepartment]);
 
-  // Update queue positions for all waiting patients
+  // Update queue positions for all waiting clients
   const updateQueuePositions = async () => {
     try {
       const waitingPatients = queues.filter(q => q.status === QUEUE_STATUS.WAITING);
@@ -123,12 +123,12 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
       for (const queue of waitingPatients) {
         try {
           const position = await getPatientQueuePosition(
-            queue.patientId,
+            queue.clientId,
             institutionId,
             activeDepartment
           );
           if (position) {
-            positions[queue.patientId] = position;
+            positions[queue.clientId] = position;
           }
         } catch (error) {
           console.warn('Error getting queue position:', error);
@@ -174,14 +174,14 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
     try {
       const result = await callNextPatient(institutionId, activeDepartment);
       if (result.success) {
-        toast.success(`Called patient #${result.queue.queueNumber}`);
+        toast.success(`Called Client #${result.queue.queueNumber}`);
         loadQueueStats();
       } else {
-        toast.info(result.message || 'No patients in queue');
+        toast.info(result.message || 'No clients in queue');
       }
     } catch (error) {
-      console.error('Error calling next patient:', error);
-      toast.error('Failed to call next patient');
+      console.error('Error calling next Client:', error);
+      toast.error('Failed to call next Client');
     }
   };
 
@@ -197,16 +197,16 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
   };
 
   const handleSkip = async (queueId) => {
-    if (!window.confirm('Are you sure you want to skip this patient?')) {
+    if (!window.confirm('Are you sure you want to skip this Client?')) {
       return;
     }
     try {
       await skipPatient(queueId, 'Skipped by staff');
-      toast.info('Patient skipped');
+      toast.info('Client skipped');
       loadQueueStats();
     } catch (error) {
-      console.error('Error skipping patient:', error);
-      toast.error('Failed to skip patient');
+      console.error('Error skipping Client:', error);
+      toast.error('Failed to skip Client');
     }
   };
 
@@ -347,11 +347,11 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
                 <div className="text-9xl font-bold text-yellow-300 mb-4">
                   #{activeQueues[0].queueNumber}
                 </div>
-                <div className="text-3xl text-blue-200">{activeQueues[0].patientName}</div>
+                <div className="text-3xl text-blue-200">{activeQueues[0].clientName}</div>
               </div>
             ) : (
               <div className="text-center text-4xl text-blue-200 py-12">
-                No active patients
+                No active clients
               </div>
             )}
 
@@ -360,7 +360,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
                 <h3 className="text-2xl font-semibold mb-4 text-center">Next in Queue</h3>
                 <div className="grid grid-cols-5 gap-4">
                   {waitingQueues.slice(0, 10).map((queue) => {
-                    const position = queuePositions[queue.patientId];
+                    const position = queuePositions[queue.clientId];
                     return (
                       <div
                         key={queue.id}
@@ -370,7 +370,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
                           #{queue.queueNumber}
                         </div>
                         <div className="text-sm text-blue-200 truncate mb-1">
-                          {queue.patientName}
+                          {queue.clientName}
                         </div>
                         {position && (
                           <div className="text-xs text-blue-300">
@@ -391,12 +391,12 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
 
   return (
     <div className="space-y-6">
-      {/* Patient Registration (for Receptionist/Admin) */}
+      {/* Client Registration (for Receptionist/Admin) */}
       {canRegisterPatients && (
         <PatientRegistrationToQueue
           institutionId={institutionId}
           onPatientAdded={(queueEntry) => {
-            toast.success(`Patient #${queueEntry.queueNumber} added to queue`);
+            toast.success(`Client #${queueEntry.queueNumber} added to queue`);
             loadQueueData();
           }}
         />
@@ -406,7 +406,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Queue Management</h2>
-          <p className="text-sm text-gray-600 mt-1">Manage patient queues across departments</p>
+          <p className="text-sm text-gray-600 mt-1">Manage Client queues across departments</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -524,7 +524,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
           >
             <Bell className="h-4 w-4" />
-            Call Next Patient
+            Call Next Client
           </button>
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
@@ -561,7 +561,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
             {loading ? (
               <div className="text-center py-8 text-gray-500">Loading...</div>
             ) : waitingQueues.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No patients waiting</div>
+              <div className="text-center py-8 text-gray-500">No clients waiting</div>
             ) : (
               waitingQueues.map((queue) => (
                 <div
@@ -579,14 +579,14 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
                       {queue.priority}
                     </span>
                   </div>
-                  <p className="text-sm font-medium text-gray-900 mb-1">{queue.patientName}</p>
+                  <p className="text-sm font-medium text-gray-900 mb-1">{queue.clientName}</p>
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <div>
                       <div>Wait: {formatWaitTime(queue.addedAt)}</div>
-                      {queuePositions[queue.patientId] && (
+                      {queuePositions[queue.clientId] && (
                         <div className="text-blue-600 font-medium">
-                          Position: {queuePositions[queue.patientId].position} • 
-                          Est: {queuePositions[queue.patientId].estimatedWaitTime}m
+                          Position: {queuePositions[queue.clientId].position} • 
+                          Est: {queuePositions[queue.clientId].estimatedWaitTime}m
                         </div>
                       )}
                     </div>
@@ -626,7 +626,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
           </div>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {activeQueues.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No active patients</div>
+              <div className="text-center py-8 text-gray-500">No active clients</div>
             ) : (
               activeQueues.map((queue) => (
                 <div
@@ -641,7 +641,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
                       {queue.status.replace('_', ' ')}
                     </span>
                   </div>
-                  <p className="text-sm font-medium text-gray-900 mb-3">{queue.patientName}</p>
+                  <p className="text-sm font-medium text-gray-900 mb-3">{queue.clientName}</p>
                   <div className="flex gap-2">
                     {queue.status === QUEUE_STATUS.CALLED && (
                       <button
@@ -674,7 +674,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
           </div>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {completedQueues.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No completed patients</div>
+              <div className="text-center py-8 text-gray-500">No completed clients</div>
             ) : (
               completedQueues.slice(0, 10).map((queue) => (
                 <div
@@ -687,7 +687,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
                     </span>
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   </div>
-                  <p className="text-xs text-gray-600">{queue.patientName}</p>
+                  <p className="text-xs text-gray-600">{queue.clientName}</p>
                 </div>
               ))
             )}
@@ -703,7 +703,7 @@ const QueueManagementDashboard = ({ institutionId: propInstitutionId }) => {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-600 mb-2">
-                  Patient: <span className="font-medium">{selectedQueueForReorder.patientName}</span>
+                  Client: <span className="font-medium">{selectedQueueForReorder.clientName}</span>
                 </p>
                 <p className="text-sm text-gray-600 mb-4">
                   Current Queue: <span className="font-medium">#{selectedQueueForReorder.queueNumber}</span>

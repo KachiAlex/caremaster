@@ -10,7 +10,7 @@ const Header = () => {
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
               <Heart className="h-8 w-8 text-blue-500 mr-3" />
-              <h1 className="text-xl font-bold text-blue-900">UltimateCare</h1>
+              <h1 className="text-xl font-bold text-blue-900">Care Master</h1>
             </div>
           </div>
 

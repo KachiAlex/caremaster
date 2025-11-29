@@ -55,9 +55,6 @@ const CallInterface = ({
   const [webrtcService, setWebrtcService] = useState(null);
   const [localStream, setLocalStream] = useState(externalLocalStream);
   const [remoteStream, setRemoteStream] = useState(externalRemoteStream);
-  const [availableDevices, setAvailableDevices] = useState({ audioInput: [], videoInput: [] });
-  const [selectedDevices, setSelectedDevices] = useState({ audio: null, video: null });
-  const [showDeviceSettings, setShowDeviceSettings] = useState(false);
   
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -125,17 +122,6 @@ const CallInterface = ({
 
       const service = new WebRTCService();
       await service.initialize();
-      
-      // Load available devices
-      try {
-        const devices = await WebRTCService.getMediaDevices();
-        setAvailableDevices({
-          audioInput: devices.audioInput,
-          videoInput: devices.videoInput
-        });
-      } catch (error) {
-        console.warn('Could not load devices:', error);
-      }
       
       // Set up callbacks
       service.setCallbacks({
@@ -264,18 +250,6 @@ const CallInterface = ({
     }
   };
 
-  const handleDeviceChange = async (deviceType, deviceId) => {
-    if (webrtcService) {
-      const success = await webrtcService.switchDevice(deviceType, deviceId);
-      if (success) {
-        setSelectedDevices(prev => ({ ...prev, [deviceType]: deviceId }));
-        toast.success(`${deviceType === 'audio' ? 'Microphone' : 'Camera'} changed`);
-      } else {
-        toast.error(`Failed to switch ${deviceType === 'audio' ? 'microphone' : 'camera'}`);
-      }
-    }
-  };
-
   const handleScreenShare = async () => {
     if (!webrtcService) return;
 
@@ -375,7 +349,7 @@ const CallInterface = ({
                   }}
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-900 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-blue-900 to-purple-900 flex items-center justify-center">
                   <div className="text-center text-white">
                     <div className="w-32 h-32 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-4xl font-bold">
@@ -396,7 +370,7 @@ const CallInterface = ({
               <div className="absolute top-4 left-4 bg-black bg-opacity-50 rounded-lg px-3 py-2">
                 <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${
-                    connectionQuality === 'good' ? 'bg-blue-500' : 
+                    connectionQuality === 'good' ? 'bg-green-500' : 
                     connectionQuality === 'fair' ? 'bg-yellow-500' : 'bg-red-500'
                 }`} />
                   <span className="text-white text-sm font-medium">
@@ -466,7 +440,7 @@ const CallInterface = ({
                   
                   {callState === 'ringing' && (
                     <>
-                      <div className="w-24 h-24 md:w-24 md:h-24 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                      <div className="w-24 h-24 md:w-24 md:h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                         <Phone className="text-white" size={32} />
                       </div>
                       <h2 className="text-xl md:text-2xl font-semibold mb-2">Incoming Call</h2>
@@ -480,7 +454,7 @@ const CallInterface = ({
                         </button>
                         <button
                           onClick={handleAcceptCall}
-                          className="w-20 h-20 md:w-16 md:h-16 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 active:bg-blue-700 transition-colors touch-manipulation"
+                          className="w-20 h-20 md:w-16 md:h-16 bg-green-500 rounded-full flex items-center justify-center hover:bg-green-600 active:bg-green-700 transition-colors touch-manipulation"
                         >
                           <Check className="text-white" size={28} />
                         </button>
@@ -566,15 +540,6 @@ const CallInterface = ({
                     {isSpeakerEnabled ? <Volume2 className="text-white" size={24} /> : <VolumeX className="text-white" size={24} />}
                   </button>
 
-                  {/* Device Settings */}
-                  <button
-                    onClick={() => setShowDeviceSettings(!showDeviceSettings)}
-                    className="w-14 h-14 md:w-12 md:h-12 rounded-full bg-gray-600 hover:bg-gray-700 active:bg-gray-800 flex items-center justify-center transition-colors touch-manipulation"
-                    title="Device Settings"
-                  >
-                    <Settings className="text-white" size={24} />
-                  </button>
-
                   {/* Minimize - hidden on mobile */}
                   <button
                     onClick={() => setIsMinimized(!isMinimized)}
@@ -612,57 +577,6 @@ const CallInterface = ({
                   <p className="text-sm font-medium">{participantInfo?.name}</p>
                   <p className="text-xs text-gray-300">{participantInfo?.role}</p>
                 </div>
-              </div>
-            )}
-
-            {/* Device Settings Panel */}
-            {showDeviceSettings && callState === 'connected' && (
-              <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-90 rounded-lg p-4 min-w-[280px] z-50">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-white font-semibold">Device Settings</h3>
-                  <button
-                    onClick={() => setShowDeviceSettings(false)}
-                    className="text-gray-400 hover:text-white"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                {/* Microphone Selection */}
-                {availableDevices.audioInput.length > 0 && (
-                  <div className="mb-3">
-                    <label className="text-white text-sm mb-1 block">Microphone</label>
-                    <select
-                      value={selectedDevices.audio || ''}
-                      onChange={(e) => handleDeviceChange('audio', e.target.value)}
-                      className="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm"
-                    >
-                      {availableDevices.audioInput.map(device => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Microphone ${device.deviceId.slice(0, 8)}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Camera Selection */}
-                {callType === 'video' && availableDevices.videoInput.length > 0 && (
-                  <div>
-                    <label className="text-white text-sm mb-1 block">Camera</label>
-                    <select
-                      value={selectedDevices.video || ''}
-                      onChange={(e) => handleDeviceChange('video', e.target.value)}
-                      className="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm"
-                    >
-                      {availableDevices.videoInput.map(device => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
             )}
           </div>

@@ -121,7 +121,7 @@ const SystemStatus = () => {
   const checkUserSystem = async () => {
     try {
       const users = await getAllUsers();
-      const clients = users.filter(u => u.userType === 'client' || u.userType === 'patient');
+      const clients = users.filter(u => u.userType === 'client' || u.userType === 'elderly' || u.userType === 'Client');
       const caregivers = users.filter(u => u.userType === 'caregiver');
       const admins = users.filter(u => u.userType === 'admin');
       
@@ -215,7 +215,7 @@ const SystemStatus = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `UltimateCare-system-report-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `Care Master-system-report-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -224,11 +224,11 @@ const SystemStatus = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'healthy': return 'text-blue-600 bg-blue-100';
+      case 'healthy': return 'text-green-600 bg-green-100';
       case 'warning': return 'text-yellow-600 bg-yellow-100';
-      case 'degraded': return 'text-blue-600 bg-blue-100';
+      case 'degraded': return 'text-orange-600 bg-orange-100';
       case 'critical': return 'text-red-600 bg-red-100';
-      case 'operational': return 'text-blue-600 bg-blue-100';
+      case 'operational': return 'text-green-600 bg-green-100';
       case 'error': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
     }
@@ -238,7 +238,7 @@ const SystemStatus = () => {
     switch (status) {
       case 'healthy':
       case 'operational':
-        return <CheckCircle className="h-5 w-5 text-blue-600" />;
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'warning':
       case 'degraded':
         return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
@@ -362,7 +362,7 @@ const SystemStatus = () => {
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   {result.success ? (
-                    <CheckCircle className="h-5 w-5 text-blue-600 mr-3" />
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
                   ) : (
                     <XCircle className="h-5 w-5 text-red-600 mr-3" />
                   )}
@@ -413,8 +413,8 @@ const SystemStatus = () => {
         
         <div className="card">
           <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Shield className="h-6 w-6 text-blue-600" />
+            <div className="p-3 bg-green-100 rounded-lg">
+              <Shield className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Assignments</p>
@@ -427,8 +427,8 @@ const SystemStatus = () => {
         
         <div className="card">
           <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Database className="h-6 w-6 text-blue-600" />
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <Database className="h-6 w-6 text-purple-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Database Health</p>

@@ -1,13 +1,13 @@
 /**
  * Discharge & Follow-up API
  * 
- * Phase 2 Implementation - Complete patient discharge workflow:
+ * Phase 2 Implementation - Complete Client discharge workflow:
  * - Discharge planning
  * - Discharge summary generation
  * - Follow-up appointment scheduling
  * - Post-discharge care plans
  * - Discharge medication reconciliation
- * - Patient discharge checklist
+ * - Client discharge checklist
  */
 
 import { 
@@ -54,8 +54,8 @@ export const DISCHARGE_TYPE = {
 export const createDischargePlan = async (planData) => {
   try {
     const {
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       admissionId,
       doctorId,
@@ -70,13 +70,13 @@ export const createDischargePlan = async (planData) => {
       notes = ''
     } = planData;
 
-    if (!patientId || !institutionId || !doctorId) {
-      throw new Error('Missing required fields: patientId, institutionId, doctorId');
+    if (!clientId || !institutionId || !doctorId) {
+      throw new Error('Missing required fields: clientId, institutionId, doctorId');
     }
 
     const dischargePlan = {
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       admissionId,
       doctorId,
@@ -103,11 +103,11 @@ export const createDischargePlan = async (planData) => {
         userId: 'nursing-staff', // Would be sent to all nursing staff
         type: 'discharge_planning',
         title: 'New Discharge Plan',
-        message: `Discharge plan created for ${patientName}`,
+        message: `Discharge plan created for ${clientName}`,
         priority: 'medium',
         data: {
           planId: planRef.id,
-          patientId,
+          clientId,
           plannedDischargeDate
         },
         institutionId
@@ -159,8 +159,8 @@ export const generateDischargeSummary = async (dischargeId, summaryData) => {
     // Create discharge summary
     const summary = {
       dischargeId,
-      patientId: discharge.patientId,
-      patientName: discharge.patientName,
+      clientId: discharge.clientId,
+      clientName: discharge.clientName,
       institutionId: discharge.institutionId,
       admissionId: discharge.admissionId,
       doctorId: discharge.doctorId,
@@ -196,8 +196,8 @@ export const generateDischargeSummary = async (dischargeId, summaryData) => {
     if (discharge.followUpRequired && discharge.followUpDate) {
       try {
         await createAppointment({
-          patientId: discharge.patientId,
-          patientName: discharge.patientName,
+          clientId: discharge.clientId,
+          clientName: discharge.clientName,
           doctorId: discharge.doctorId,
           doctorName: discharge.doctorName,
           institutionId: discharge.institutionId,
@@ -211,10 +211,10 @@ export const generateDischargeSummary = async (dischargeId, summaryData) => {
       }
     }
 
-    // Send notification to patient/caregiver
+    // Send notification to Client/caregiver
     try {
       await notificationsAPI.createNotification({
-        userId: discharge.patientId,
+        userId: discharge.clientId,
         type: 'discharge_completed',
         title: 'Discharge Summary Ready',
         message: `Your discharge summary is ready. Please collect it from the hospital.`,
@@ -244,7 +244,7 @@ export const generateDischargeSummary = async (dischargeId, summaryData) => {
  */
 export const getDischargePlans = async (institutionId, options = {}) => {
   try {
-    const { status, patientId, limitCount = 100 } = options;
+    const { status, clientId, limitCount = 100 } = options;
     
     let plansQuery = query(
       collection(db, DISCHARGES_COLLECTION),
@@ -256,8 +256,8 @@ export const getDischargePlans = async (institutionId, options = {}) => {
       plansQuery = query(plansQuery, where('status', '==', status));
     }
 
-    if (patientId) {
-      plansQuery = query(plansQuery, where('patientId', '==', patientId));
+    if (clientId) {
+      plansQuery = query(plansQuery, where('clientId', '==', clientId));
     }
 
     if (limitCount) {
@@ -338,11 +338,11 @@ export const updateDischargePlan = async (dischargeId, updates) => {
 };
 
 /**
- * Get patient discharge history
+ * Get Client discharge history
  */
-export const getPatientDischargeHistory = async (patientId, institutionId) => {
+export const getPatientDischargeHistory = async (clientId, institutionId) => {
   try {
-    const plans = await getDischargePlans(institutionId, { patientId });
+    const plans = await getDischargePlans(institutionId, { clientId });
     
     // Get summaries for completed discharges
     const history = await Promise.all(
@@ -357,7 +357,7 @@ export const getPatientDischargeHistory = async (patientId, institutionId) => {
 
     return history;
   } catch (error) {
-    console.error('Error fetching patient discharge history:', error);
+    console.error('Error fetching Client discharge history:', error);
     throw error;
   }
 };
@@ -379,8 +379,8 @@ export const createFollowUpAppointment = async (dischargeId, appointmentData) =>
 
     // Create appointment
     const appointment = await createAppointment({
-      patientId: discharge.patientId,
-      patientName: discharge.patientName,
+      clientId: discharge.clientId,
+      clientName: discharge.clientName,
       doctorId: appointmentData.doctorId || discharge.doctorId,
       doctorName: appointmentData.doctorName || discharge.doctorName,
       institutionId: discharge.institutionId,

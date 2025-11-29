@@ -6,7 +6,7 @@ import { getClientsByCaregiver } from '../api/patientsAPI';
 const RouteOptimization = () => {
   const { userProfile } = useUser();
   const [loading, setLoading] = useState(true);
-  const [patients, setPatients] = useState([]);
+  const [clients, setPatients] = useState([]);
 
   useEffect(() => {
     const load = async () => {
@@ -22,9 +22,9 @@ const RouteOptimization = () => {
     load();
   }, [userProfile?.id, userProfile?.uid]);
 
-  const buildMapsUrl = (patient) => {
+  const buildMapsUrl = (Client) => {
     const destination = encodeURIComponent(
-      patient.address || patient.location || `${patient.city || ''} ${patient.state || ''}`.trim()
+      client.address || client.location || `${client.city || ''} ${client.state || ''}`.trim()
     );
     if (!destination) return null;
     return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
@@ -51,20 +51,20 @@ const RouteOptimization = () => {
           </div>
           <div className="text-sm text-gray-600 flex items-center space-x-2">
             <Users className="h-4 w-4" />
-            <span>{patients.length} assigned patients</span>
+            <span>{clients.length} assigned clients</span>
           </div>
         </div>
-        <p className="text-gray-600 mt-2">Tap a patient to open turn-by-turn navigation in your maps app.</p>
+        <p className="text-gray-600 mt-2">Tap a Client to open turn-by-turn navigation in your maps app.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {patients.map((p) => {
+        {clients.map((p) => {
           const mapsUrl = buildMapsUrl(p);
           return (
             <div key={p.id} className="bg-white rounded-lg shadow p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-lg font-semibold text-gray-900">{p.name || 'Patient'}</div>
+                  <div className="text-lg font-semibold text-gray-900">{p.name || 'Client'}</div>
                   <div className="text-sm text-gray-600">{p.address || p.location || p.city || 'Address unavailable'}</div>
                   <div className="text-xs text-gray-500 mt-1">{p.phone || p.contactPhone || ''}</div>
                 </div>

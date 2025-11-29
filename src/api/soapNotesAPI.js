@@ -92,14 +92,14 @@ export const createSOAPNote = async (consultationId, soapData) => {
       referrals,
       
       // Metadata
-      patientId,
+      clientId,
       doctorId,
       institutionId
     } = soapData;
 
     const soapNote = {
       consultationId,
-      patientId,
+      clientId,
       doctorId,
       institutionId,
       
@@ -215,13 +215,13 @@ export const getSOAPNoteByConsultation = async (consultationId) => {
 };
 
 /**
- * Get SOAP notes by patient
+ * Get SOAP notes by Client
  */
-export const getSOAPNotesByPatient = async (patientId, limitCount = 50) => {
+export const getSOAPNotesByPatient = async (clientId, limitCount = 50) => {
   try {
     const soapNotesQuery = query(
       collection(db, SOAP_NOTES_COLLECTION),
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('createdAt', 'desc'),
       limit(limitCount)
     );

@@ -22,7 +22,7 @@ const COLLECTIONS = {
   CALLS: 'telemedicine_calls',
   RECORDINGS: 'telemedicine_recordings',
   DOCTORS: 'doctors',
-  PATIENTS: 'patients'
+  clients: 'clients'
 };
 
 class TelemedicineAPI {
@@ -47,9 +47,9 @@ class TelemedicineAPI {
   }
 
   // Get appointments for a user
-  async getAppointments(userId, userType = 'patient') {
+  async getAppointments(userId, userType = 'Client') {
     try {
-      const field = userType === 'patient' ? 'patientId' : 'doctorId';
+      const field = userType === 'Client' ? 'clientId' : 'doctorId';
       const q = query(
         collection(db, COLLECTIONS.APPOINTMENTS),
         where(field, '==', userId),
@@ -74,10 +74,10 @@ class TelemedicineAPI {
   }
 
   // Get upcoming appointments
-  async getUpcomingAppointments(userId, userType = 'patient') {
+  async getUpcomingAppointments(userId, userType = 'Client') {
     try {
       const now = new Date();
-      const field = userType === 'patient' ? 'patientId' : 'doctorId';
+      const field = userType === 'Client' ? 'clientId' : 'doctorId';
       
       const q = query(
         collection(db, COLLECTIONS.APPOINTMENTS),
@@ -175,9 +175,9 @@ class TelemedicineAPI {
   }
 
   // Get call history
-  async getCallHistory(userId, userType = 'patient') {
+  async getCallHistory(userId, userType = 'Client') {
     try {
-      const field = userType === 'patient' ? 'patientId' : 'doctorId';
+      const field = userType === 'Client' ? 'clientId' : 'doctorId';
       const q = query(
         collection(db, COLLECTIONS.CALLS),
         where(field, '==', userId),
@@ -307,7 +307,7 @@ class TelemedicineAPI {
   
   // Listen to appointment updates
   subscribeToAppointments(userId, userType, callback) {
-    const field = userType === 'patient' ? 'patientId' : 'doctorId';
+    const field = userType === 'Client' ? 'clientId' : 'doctorId';
     const q = query(
       collection(db, COLLECTIONS.APPOINTMENTS),
       where(field, '==', userId),
@@ -328,7 +328,7 @@ class TelemedicineAPI {
 
   // Listen to call updates
   subscribeToCalls(userId, userType, callback) {
-    const field = userType === 'patient' ? 'patientId' : 'doctorId';
+    const field = userType === 'Client' ? 'clientId' : 'doctorId';
     const q = query(
       collection(db, COLLECTIONS.CALLS),
       where(field, '==', userId),

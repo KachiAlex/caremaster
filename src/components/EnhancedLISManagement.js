@@ -158,8 +158,8 @@ const EnhancedLISManagement = ({ institutionId: propInstitutionId }) => {
       setLoading(true);
       const sample = await createLabSample({
         testId: selectedTest.id,
-        patientId: selectedTest.clientId || selectedTest.patientId,
-        patientName: selectedTest.clientName || selectedTest.patientName,
+        clientId: selectedTest.clientId || selectedTest.clientId,
+        clientName: selectedTest.clientName || selectedTest.clientName,
         institutionId,
         testType: selectedTest.testType,
         testName: selectedTest.testName || selectedTest.testType,
@@ -236,7 +236,7 @@ const EnhancedLISManagement = ({ institutionId: propInstitutionId }) => {
 
       await createLabResult(selectedSample.id, {
         testId: selectedSample.testId,
-        patientId: selectedSample.patientId,
+        clientId: selectedSample.clientId,
         institutionId,
         testName: selectedSample.testName,
         results: resultsWithComparison,
@@ -437,7 +437,7 @@ const EnhancedLISManagement = ({ institutionId: propInstitutionId }) => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">
-                      {test.testName || test.testType} - {test.clientName || test.patientName}
+                      {test.testName || test.testType} - {test.clientName || test.clientName}
                     </p>
                     <p className="text-xs text-gray-600">{test.reason || 'No reason provided'}</p>
                   </div>
@@ -502,7 +502,7 @@ const EnhancedLISManagement = ({ institutionId: propInstitutionId }) => {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Barcode</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Patient</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Client</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Test</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Sample Type</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
@@ -530,7 +530,7 @@ const EnhancedLISManagement = ({ institutionId: propInstitutionId }) => {
                       {sample.barcode}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-900">
-                      {sample.patientName || sample.patientId?.substring(0, 8)}
+                      {sample.clientName || sample.clientId?.substring(0, 8)}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
                       {sample.testName || sample.testType}
@@ -621,7 +621,7 @@ const EnhancedLISManagement = ({ institutionId: propInstitutionId }) => {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-600 mb-2">Test: {selectedTest.testName || selectedTest.testType}</p>
-                <p className="text-sm text-gray-600">Patient: {selectedTest.clientName || selectedTest.patientName}</p>
+                <p className="text-sm text-gray-600">Client: {selectedTest.clientName || selectedTest.clientName}</p>
               </div>
 
               <div>
@@ -758,7 +758,7 @@ const EnhancedLISManagement = ({ institutionId: propInstitutionId }) => {
               <div>
                 <p className="text-sm text-gray-600">Sample: {selectedSample.barcode}</p>
                 <p className="text-sm text-gray-600">Test: {selectedSample.testName || selectedSample.testType}</p>
-                <p className="text-sm text-gray-600">Patient: {selectedSample.patientName}</p>
+                <p className="text-sm text-gray-600">Client: {selectedSample.clientName}</p>
               </div>
 
               <div>
@@ -874,7 +874,7 @@ const EnhancedLISManagement = ({ institutionId: propInstitutionId }) => {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-600">Test: {selectedResult.testName}</p>
-                <p className="text-sm text-gray-600">Patient: {selectedResult.patientName}</p>
+                <p className="text-sm text-gray-600">Client: {selectedResult.clientName}</p>
                 {selectedResult.hasAbnormal && (
                   <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-sm font-semibold text-red-800">

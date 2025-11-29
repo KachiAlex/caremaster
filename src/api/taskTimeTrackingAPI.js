@@ -76,7 +76,7 @@ export const startTask = async (taskId, caregiverId) => {
     const trackingRef = await addDoc(collection(db, TASK_TIME_TRACKING_COLLECTION), {
       taskId,
       caregiverId,
-      clientId: task.clientId || task.patientId,
+      clientId: task.clientId || task.clientId,
       taskType: 'careTask',
       action: 'start',
       timestamp: serverTimestamp(),
@@ -150,7 +150,7 @@ export const completeTask = async (taskId, caregiverId, completionNotes = '', ph
     await addDoc(collection(db, TASK_TIME_TRACKING_COLLECTION), {
       taskId,
       caregiverId,
-      clientId: task.clientId || task.patientId,
+      clientId: task.clientId || task.clientId,
       taskType: 'careTask',
       action: 'complete',
       timestamp: serverTimestamp(),
@@ -337,7 +337,7 @@ export const cancelTask = async (taskId, caregiverId, reason = '') => {
     await addDoc(collection(db, TASK_TIME_TRACKING_COLLECTION), {
       taskId,
       caregiverId,
-      clientId: task.clientId || task.patientId,
+      clientId: task.clientId || task.clientId,
       taskType: 'careTask',
       action: 'cancel',
       timestamp: serverTimestamp(),

@@ -6,9 +6,9 @@
  * and detects when auth state conflicts with the current tab's role.
  */
 
-const SESSION_ROLE_KEY = 'UltimateCare_tab_role';
-const SESSION_USER_ID_KEY = 'UltimateCare_tab_user_id';
-const SESSION_INSTITUTION_KEY = 'UltimateCare_tab_institution';
+const SESSION_ROLE_KEY = 'Care Master_tab_role';
+const SESSION_USER_ID_KEY = 'Care Master_tab_user_id';
+const SESSION_INSTITUTION_KEY = 'Care Master_tab_institution';
 
 /**
  * Set the current tab's role session
@@ -192,7 +192,7 @@ export const navigateToRoleDashboard = (role, userId, institutionId, navigate) =
  */
 export const shouldBypassSessionValidation = () => {
   // Check for bypass flag in sessionStorage (for development)
-  const bypassFlag = sessionStorage.getItem('UltimateCare_bypass_session_validation');
+  const bypassFlag = sessionStorage.getItem('Care Master_bypass_session_validation');
   return bypassFlag === 'true';
 };
 
@@ -201,10 +201,10 @@ export const shouldBypassSessionValidation = () => {
  */
 export const setSessionValidationBypass = (bypass = true) => {
   if (bypass) {
-    sessionStorage.setItem('UltimateCare_bypass_session_validation', 'true');
+    sessionStorage.setItem('Care Master_bypass_session_validation', 'true');
     console.log('🔧 Session validation bypass enabled');
   } else {
-    sessionStorage.removeItem('UltimateCare_bypass_session_validation');
+    sessionStorage.removeItem('Care Master_bypass_session_validation');
     console.log('🔧 Session validation bypass disabled');
   }
 };

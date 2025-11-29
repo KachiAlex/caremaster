@@ -155,7 +155,7 @@ const DiagnosticsTab = ({
   const getStatusIcon = (status) => {
     switch (status) {
       case 'pending': return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'completed': return <CheckCircle className="w-4 h-4 text-blue-500" />;
+      case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'cancelled': return <X className="w-4 h-4 text-red-500" />;
       default: return <AlertCircle className="w-4 h-4 text-gray-500" />;
     }
@@ -165,7 +165,7 @@ const DiagnosticsTab = ({
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -224,9 +224,9 @@ const DiagnosticsTab = ({
       )}
 
       {isNurse && (
-        <div className="bg-blue-50 border border-purple-200 rounded-lg p-5 mb-6">
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-5 mb-6">
           <div className="flex items-start space-x-3">
-            <Upload className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <Upload className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
             <div>
               <h3 className="text-sm font-bold text-purple-900 mb-1">💉 Nurse Role</h3>
               <p className="text-sm text-purple-800">
@@ -239,12 +239,12 @@ const DiagnosticsTab = ({
       )}
 
       {isDoctor && (
-        <div className="bg-blue-50 border border-green-200 rounded-lg p-5 mb-6">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-5 mb-6">
           <div className="flex items-start space-x-3">
-            <Stethoscope className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <Stethoscope className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
             <div>
               <h3 className="text-sm font-bold text-green-900 mb-1">🩺 Doctor Role</h3>
-              <p className="text-sm text-blue-800">
+              <p className="text-sm text-green-800">
                 You can order diagnostic tests and add clinical notes based on lab results. Review uploaded results 
                 and provide diagnosis, interpretation, and treatment recommendations.
               </p>
@@ -344,7 +344,7 @@ const DiagnosticsTab = ({
                           setSelectedDiagnostic(diagnostic);
                           setActiveModal('addNotes');
                         }}
-                        className="p-2 text-blue-400 hover:text-blue-600 transition-colors"
+                        className="p-2 text-green-400 hover:text-green-600 transition-colors"
                         title="Add Doctor Notes"
                       >
                         <Edit className="w-4 h-4" />
@@ -361,7 +361,7 @@ const DiagnosticsTab = ({
                   <span>Uploaded by: {diagnostic.uploadedByName}</span>
                 )}
                 {diagnostic.doctorNotes && (
-                  <span className="text-blue-600">✓ Doctor notes added</span>
+                  <span className="text-green-600">✓ Doctor notes added</span>
                 )}
               </div>
             </div>
@@ -549,7 +549,7 @@ const ViewDetailsModal = ({
               <label className="block text-sm font-medium text-gray-700">Status</label>
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                 diagnostic.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                diagnostic.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                diagnostic.status === 'completed' ? 'bg-green-100 text-green-800' :
                 'bg-red-100 text-red-800'
               }`}>
                 {diagnostic.status}
@@ -639,7 +639,7 @@ const ViewDetailsModal = ({
             {canAddNotes && diagnostic.status === 'completed' && !diagnostic.doctorNotes && (
               <button
                 onClick={onAddNotes}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
                 <Edit className="w-4 h-4 mr-2" />
                 Add Doctor Notes
@@ -812,12 +812,12 @@ const AddNotesModal = ({ diagnostic, onSubmit, onClose }) => {
           </button>
         </div>
 
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-800">
+        <div className="mb-4 p-3 bg-green-50 rounded-lg">
+          <p className="text-sm text-green-800">
             <strong>Test:</strong> {diagnostic.testType}
           </p>
           {diagnostic.results && (
-            <p className="text-sm text-blue-700 mt-1">
+            <p className="text-sm text-green-700 mt-1">
               <strong>Results:</strong> {diagnostic.results.substring(0, 100)}...
             </p>
           )}
@@ -900,7 +900,7 @@ const AddNotesModal = ({ diagnostic, onSubmit, onClose }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
               Add Notes
             </button>

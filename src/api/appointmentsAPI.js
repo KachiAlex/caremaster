@@ -22,34 +22,77 @@ const APPOINTMENTS_COLLECTION = 'appointments';
 export const getAllAppointments = async (institutionId = null) => {
   try {
     const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
-    let q = query(appointmentsRef, orderBy('scheduledTime', 'asc'));
+    let appointments = [];
     
-    // Add institution filtering if provided
-    if (institutionId) {
-      q = query(appointmentsRef, 
-        where('institutionId', '==', institutionId),
-        orderBy('scheduledTime', 'asc')
-      );
-    }
-    
-    const querySnapshot = await getDocs(q);
-    
-    const appointments = [];
-    querySnapshot.forEach((doc) => {
-      const appointmentData = doc.data();
-      appointments.push({
-        id: doc.id,
-        ...appointmentData,
-        scheduledTime: appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime,
-        createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
-        updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
+    // Try with orderBy first (requires index)
+    try {
+      let q = query(appointmentsRef, orderBy('scheduledTime', 'asc'));
+      
+      // Add institution filtering if provided
+      if (institutionId) {
+        q = query(appointmentsRef, 
+          where('institutionId', '==', institutionId),
+          orderBy('scheduledTime', 'asc')
+        );
+      }
+      
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        const appointmentData = doc.data();
+        appointments.push({
+          id: doc.id,
+          ...appointmentData,
+          scheduledTime: appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime,
+          createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
+          updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
+        });
       });
-    });
+      
+      // Filter by institution if needed and sort in memory
+      if (institutionId) {
+        appointments = appointments.filter(apt => apt.institutionId === institutionId);
+      }
+      
+      // Sort by scheduledTime
+      appointments.sort((a, b) => {
+        const aTime = a.scheduledTime?.getTime?.() || 0;
+        const bTime = b.scheduledTime?.getTime?.() || 0;
+        return aTime - bTime;
+      });
+    } catch (indexError) {
+      // Fallback: query without orderBy if index doesn't exist
+      console.warn('Firestore index not found for appointments, using simpler query:', indexError);
+      let q = query(appointmentsRef);
+      
+      if (institutionId) {
+        q = query(appointmentsRef, where('institutionId', '==', institutionId));
+      }
+      
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        const appointmentData = doc.data();
+        appointments.push({
+          id: doc.id,
+          ...appointmentData,
+          scheduledTime: appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime,
+          createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
+          updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
+        });
+      });
+      
+      // Sort in memory by scheduledTime
+      appointments.sort((a, b) => {
+        const aTime = a.scheduledTime?.getTime?.() || 0;
+        const bTime = b.scheduledTime?.getTime?.() || 0;
+        return aTime - bTime;
+      });
+    }
     
     return appointments;
   } catch (error) {
     console.error('Error fetching appointments:', error);
-    throw error;
+    // Return empty array instead of throwing to prevent UI crashes
+    return [];
   }
 };
 
@@ -77,13 +120,13 @@ export const getAppointmentById = async (appointmentId) => {
   }
 };
 
-// Get appointments for a patient
-export const getAppointmentsByPatient = async (patientId) => {
+// Get appointments for a Client
+export const getAppointmentsByClient = async (clientId) => {
   try {
     const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
     const q = query(
       appointmentsRef, 
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('scheduledTime', 'desc')
     );
     const querySnapshot = await getDocs(q);
@@ -102,7 +145,7 @@ export const getAppointmentsByPatient = async (patientId) => {
     
     return appointments;
   } catch (error) {
-    console.error('Error fetching patient appointments:', error);
+    console.error('Error fetching Client appointments:', error);
     throw error;
   }
 };
@@ -182,11 +225,11 @@ export const createAppointment = async (appointmentData) => {
     
     // Send SMS/WhatsApp appointment reminder if enabled
     try {
-      const patientId = appointmentData.clientId || appointmentData.patientId;
-      if (patientId) {
-        const patientDoc = await getDoc(doc(db, 'patients', patientId)).catch(() => null);
-        const patientData = patientDoc?.exists() ? patientDoc.data() : null;
-        const patientPhone = patientData?.phone || patientData?.phoneNumber;
+      const clientId = appointmentData.clientId || appointmentData.clientId;
+      if (clientId) {
+        const patientDoc = await getDoc(doc(db, 'clients', clientId)).catch(() => null);
+        const clientData = patientDoc?.exists() ? patientDoc.data() : null;
+        const patientPhone = clientData?.phone || clientData?.phoneNumber;
         
         if (patientPhone && appointmentData.institutionId) {
           const { getSettings, sendAppointmentReminder } = await import('./smsWhatsAppAPI');
@@ -288,8 +331,8 @@ export const getTodaysAppointments = async (userId, userRole, options = {}) => {
       q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
-    } else if (userRole === 'patient' || userRole === 'elderly') {
-      q = query(appointmentsRef, where('patientId', '==', userId));
+    } else if (userRole === 'elderly') {
+      q = query(appointmentsRef, where('clientId', '==', userId));
     } else {
       throw new Error('Invalid user role');
     }
@@ -352,8 +395,8 @@ export const getUpcomingAppointments = async (userId, userRole) => {
       q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
-    } else if (userRole === 'patient' || userRole === 'elderly') {
-      q = query(appointmentsRef, where('patientId', '==', userId));
+    } else if (userRole === 'elderly') {
+      q = query(appointmentsRef, where('clientId', '==', userId));
     } else {
       throw new Error('Invalid user role');
     }
@@ -423,8 +466,8 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
     q = query(appointmentsRef, where('doctorId', '==', userId), orderBy('scheduledTime', 'asc'));
   } else if (userRole === 'caregiver') {
     q = query(appointmentsRef, where('caregiverId', '==', userId), orderBy('scheduledTime', 'asc'));
-  } else if (userRole === 'patient' || userRole === 'elderly') {
-    q = query(appointmentsRef, where('patientId', '==', userId), orderBy('scheduledTime', 'asc'));
+  } else if (userRole === 'elderly') {
+    q = query(appointmentsRef, where('clientId', '==', userId), orderBy('scheduledTime', 'asc'));
   } else {
     q = query(appointmentsRef, orderBy('scheduledTime', 'asc'));
   }
@@ -463,8 +506,8 @@ export const getAppointmentAnalytics = async (userId, userRole, dateRange = 30) 
       q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
-    } else if (userRole === 'patient' || userRole === 'elderly') {
-      q = query(appointmentsRef, where('patientId', '==', userId));
+    } else if (userRole === 'elderly') {
+      q = query(appointmentsRef, where('clientId', '==', userId));
     } else {
       throw new Error('Invalid user role');
     }

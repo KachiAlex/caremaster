@@ -51,59 +51,10 @@ export async function assignInstitutionAdmin(payload) {
 }
 
 export async function getInstitutions() {
-  try {
-    console.log('🔍 Frontend: Calling getInstitutionsFunction...');
-    const functions = getFunctions(getApp(), 'us-central1');
-    const callable = httpsCallable(functions, 'getInstitutionsFunction');
-    console.log('🔍 Frontend: Function callable created, calling...');
-    const res = await callable();
-    console.log('🔍 Frontend: Function returned, res object:', res);
-    console.log('🔍 Frontend: Function returned, res.data:', res.data);
-    console.log('🔍 Frontend: res.data type:', typeof res.data);
-    console.log('🔍 Frontend: res.data is array?', Array.isArray(res.data));
-    
-    let institutions = res.data;
-    
-    if (institutions && Array.isArray(institutions) && institutions.length > 0) {
-      const firstInst = institutions[0];
-      console.log('🔍 Frontend: First institution RAW:', JSON.stringify(firstInst, null, 2));
-      console.log('🔍 Frontend: First institution accessLink:', firstInst.accessLink);
-      console.log('🔍 Frontend: First institution loginLink:', firstInst.loginLink);
-      console.log('🔍 Frontend: accessLink contains elderx?', firstInst.accessLink?.includes('elderx'));
-      console.log('🔍 Frontend: accessLink contains ultimatecare?', firstInst.accessLink?.includes('ultimatecare'));
-      
-      // ALWAYS fix ALL links - don't just check the first one
-      const hasOldDomain = institutions.some(inst => 
-        inst.accessLink?.includes('elderx') || inst.loginLink?.includes('elderx')
-      );
-      
-      if (hasOldDomain) {
-        console.error('❌ Frontend: DETECTED OLD DOMAIN IN RESPONSE! Forcing fix on ALL institutions...');
-        institutions = institutions.map(inst => {
-          const fixed = {
-            ...inst,
-            accessLink: `https://ultimatecare-2025.web.app/onboard?institution=${inst.id}`,
-            loginLink: `https://ultimatecare-2025.web.app/institution/login?institution=${inst.id}`
-          };
-          console.log(`🔧 Frontend: Fixed ${inst.id}:`, {
-            oldAccessLink: inst.accessLink,
-            newAccessLink: fixed.accessLink,
-            oldLoginLink: inst.loginLink,
-            newLoginLink: fixed.loginLink
-          });
-          return fixed;
-        });
-        console.log('✅ Frontend: Fixed all links in response');
-        console.log('✅ Frontend: After fix, first institution:', institutions[0]);
-      }
-    }
-    
-    return institutions;
-  } catch (error) {
-    console.error('❌ Frontend: Error calling getInstitutionsFunction:', error);
-    console.error('❌ Frontend: Error details:', error.message, error.code, error.details);
-    throw error;
-  }
+  const functions = getFunctions(getApp(), 'us-central1');
+  const callable = httpsCallable(functions, 'getInstitutionsFunction');
+  const res = await callable();
+  return res.data;
 }
 
 export async function getLicenses() {
@@ -152,15 +103,6 @@ export async function migrateInstitutionLinks(options = {}) {
   const functions = getFunctions(getApp(), 'us-central1');
   const callable = httpsCallable(functions, 'migrateInstitutionLinksFunction');
   const res = await callable(options);
-  return res.data;
-}
-
-export async function forceUpdateAllInstitutionLinks() {
-  console.log('🚀 Frontend: Calling forceUpdateAllInstitutionLinksFunction...');
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'forceUpdateAllInstitutionLinksFunction');
-  const res = await callable();
-  console.log('🚀 Frontend: Force update result:', res.data);
   return res.data;
 }
 

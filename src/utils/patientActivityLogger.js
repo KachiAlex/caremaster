@@ -1,14 +1,14 @@
 /**
- * Enhanced Patient Activity Logger
+ * Enhanced Client Activity Logger
  * 
- * Comprehensive logging system that stores ALL patient activities
- * directly in the patient's database/document with:
+ * Comprehensive logging system that stores ALL Client activities
+ * directly in the Client's database/document with:
  * - Time and date
  * - Staff member details (name, role, ID)
  * - Activity description
  * - Activity details
  * 
- * This connects the entire patient database through the registration number.
+ * This connects the entire Client database through the registration number.
  */
 
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -18,14 +18,14 @@ import { collection, addDoc, query, where, orderBy, getDocs, limit } from 'fireb
 const PATIENT_ACTIVITIES_COLLECTION = 'patientActivities';
 
 /**
- * Log a patient activity
+ * Log a Client activity
  * Stores activity in both:
- * 1. Patient document's activities array (for quick access)
+ * 1. Client document's activities array (for quick access)
  * 2. Separate patientActivities collection (for querying and analytics)
  * 
  * @param {Object} activityData
- * @param {string} activityData.patientId - Patient registration number (e.g., UC-2025-0001)
- * @param {string} activityData.patientDocId - Patient Firestore document ID
+ * @param {string} activityData.clientId - Client registration number (e.g., UC-2025-0001)
+ * @param {string} activityData.patientDocId - Client Firestore document ID
  * @param {string} activityData.activityType - Type of activity (e.g., 'profile_updated', 'medication_administered')
  * @param {string} activityData.activityDescription - Human-readable description
  * @param {Object} activityData.activityDetails - Additional details about the activity
@@ -40,7 +40,7 @@ const PATIENT_ACTIVITIES_COLLECTION = 'patientActivities';
 export async function logPatientActivity(activityData) {
   try {
     const {
-      patientId,
+      clientId,
       patientDocId,
       activityType,
       activityDescription,
@@ -50,16 +50,16 @@ export async function logPatientActivity(activityData) {
     } = activityData;
 
     // Validate required fields
-    if (!patientId || !patientDocId || !activityType || !staffMember) {
-      throw new Error('Missing required fields: patientId, patientDocId, activityType, staffMember');
+    if (!clientId || !patientDocId || !activityType || !staffMember) {
+      throw new Error('Missing required fields: clientId, patientDocId, activityType, staffMember');
     }
 
     const now = new Date();
     
     // Create comprehensive activity log entry
     const activityLog = {
-      // Patient identification
-      patientId, // Registration number (e.g., UC-2025-0001)
+      // Client identification
+      clientId, // Registration number (e.g., UC-2025-0001)
       patientDocId, // Firestore document ID
       
       // Activity information
@@ -100,13 +100,13 @@ export async function logPatientActivity(activityData) {
     const docRef = await addDoc(activitiesRef, activityLog);
     const activityLogId = docRef.id;
 
-    // 2. Add to patient document's activities array (for quick access)
+    // 2. Add to Client document's activities array (for quick access)
     try {
-      const patientRef = doc(db, 'patients', patientDocId);
+      const patientRef = doc(db, 'clients', patientDocId);
       const patientDoc = await getDoc(patientRef);
       
       if (patientDoc.exists()) {
-        // Add activity to patient's activities array (keep last 100 for performance)
+        // Add activity to Client's activities array (keep last 100 for performance)
         const currentActivities = patientDoc.data().activities || [];
         const updatedActivities = [
           {
@@ -126,15 +126,15 @@ export async function logPatientActivity(activityData) {
         });
       }
     } catch (patientUpdateError) {
-      console.warn('Could not update patient document activities array:', patientUpdateError);
-      // Continue even if patient document update fails
+      console.warn('Could not update Client document activities array:', patientUpdateError);
+      // Continue even if Client document update fails
     }
 
-    console.log(`✅ Patient activity logged: ${activityType} by ${staffMember.name} (${staffMember.role}) for patient ${patientId}`);
+    console.log(`✅ Client activity logged: ${activityType} by ${staffMember.name} (${staffMember.role}) for Client ${clientId}`);
     
     return activityLogId;
   } catch (error) {
-    console.error('❌ Error logging patient activity:', error);
+    console.error('❌ Error logging Client activity:', error);
     throw error;
   }
 }
@@ -202,42 +202,42 @@ function getCategoryFromActivityType(activityType) {
 }
 
 /**
- * Log patient registration
+ * Log Client registration
  */
-export async function logPatientRegistration(patientId, patientDocId, registeredBy, patientData) {
+export async function logPatientRegistration(clientId, patientDocId, registeredBy, clientData) {
   return await logPatientActivity({
-    patientId,
+    clientId,
     patientDocId,
     activityType: 'patient_registered',
-    activityDescription: `Patient ${patientData.name || patientId} registered in system`,
+    activityDescription: `Client ${clientData.name || clientId} registered in system`,
     activityDetails: {
-      patientName: patientData.name || patientData.fullName,
-      registrationMethod: patientData.registrationMethod || 'admin_created',
+      clientName: clientData.name || clientData.fullName,
+      registrationMethod: clientData.registrationMethod || 'admin_created',
       initialData: {
-        email: patientData.email,
-        phone: patientData.phone,
-        careLevel: patientData.careLevel,
-        medicalConditions: patientData.medicalConditions?.length || 0,
-        medications: patientData.medications?.length || 0,
-        allergies: patientData.allergies?.length || 0
+        email: clientData.email,
+        phone: clientData.phone,
+        careLevel: clientData.careLevel,
+        medicalConditions: clientData.medicalConditions?.length || 0,
+        medications: clientData.medications?.length || 0,
+        allergies: clientData.allergies?.length || 0
       }
     },
     staffMember: registeredBy,
-    institutionId: registeredBy.institutionId || patientData.institutionId,
+    institutionId: registeredBy.institutionId || clientData.institutionId,
     category: 'registration',
     severity: 'info'
   });
 }
 
 /**
- * Log patient profile update
+ * Log Client profile update
  */
-export async function logPatientProfileUpdate(patientId, patientDocId, updatedFields, staffMember) {
+export async function logPatientProfileUpdate(clientId, patientDocId, updatedFields, staffMember) {
   return await logPatientActivity({
-    patientId,
+    clientId,
     patientDocId,
     activityType: 'profile_updated',
-    activityDescription: `Patient profile updated: ${Object.keys(updatedFields).join(', ')}`,
+    activityDescription: `Client profile updated: ${Object.keys(updatedFields).join(', ')}`,
     activityDetails: {
       updatedFields: Object.keys(updatedFields),
       changes: updatedFields
@@ -252,9 +252,9 @@ export async function logPatientProfileUpdate(patientId, patientDocId, updatedFi
 /**
  * Log medication administration
  */
-export async function logMedicationActivity(patientId, patientDocId, medicationData, staffMember, activityType = 'medication_administered') {
+export async function logMedicationActivity(clientId, patientDocId, medicationData, staffMember, activityType = 'medication_administered') {
   return await logPatientActivity({
-    patientId,
+    clientId,
     patientDocId,
     activityType,
     activityDescription: `${activityType === 'medication_administered' ? 'Medication administered' : 'Medication prescribed'}: ${medicationData.medicationName || 'Unknown'}`,
@@ -269,9 +269,9 @@ export async function logMedicationActivity(patientId, patientDocId, medicationD
 /**
  * Log vital signs recording
  */
-export async function logVitalSignsActivity(patientId, patientDocId, vitalSignsData, staffMember) {
+export async function logVitalSignsActivity(clientId, patientDocId, vitalSignsData, staffMember) {
   return await logPatientActivity({
-    patientId,
+    clientId,
     patientDocId,
     activityType: 'vital_signs_recorded',
     activityDescription: `Vital signs recorded: ${Object.keys(vitalSignsData).join(', ')}`,
@@ -286,9 +286,9 @@ export async function logVitalSignsActivity(patientId, patientDocId, vitalSignsD
 /**
  * Log care task completion
  */
-export async function logCareTaskActivity(patientId, patientDocId, taskData, staffMember, activityType = 'care_task_completed') {
+export async function logCareTaskActivity(clientId, patientDocId, taskData, staffMember, activityType = 'care_task_completed') {
   return await logPatientActivity({
-    patientId,
+    clientId,
     patientDocId,
     activityType,
     activityDescription: `Care task ${activityType === 'care_task_completed' ? 'completed' : 'assigned'}: ${taskData.taskName || taskData.description || 'Task'}`,
@@ -303,9 +303,9 @@ export async function logCareTaskActivity(patientId, patientDocId, taskData, sta
 /**
  * Log document activity
  */
-export async function logDocumentActivity(patientId, patientDocId, documentData, staffMember, activityType = 'document_uploaded') {
+export async function logDocumentActivity(clientId, patientDocId, documentData, staffMember, activityType = 'document_uploaded') {
   return await logPatientActivity({
-    patientId,
+    clientId,
     patientDocId,
     activityType,
     activityDescription: `Document ${activityType === 'document_uploaded' ? 'uploaded' : activityType === 'document_viewed' ? 'viewed' : 'deleted'}: ${documentData.documentName || documentData.fileName || 'Document'}`,
@@ -320,9 +320,9 @@ export async function logDocumentActivity(patientId, patientDocId, documentData,
 /**
  * Log assignment activity
  */
-export async function logAssignmentActivity(patientId, patientDocId, assignmentData, staffMember, activityType = 'caregiver_assigned') {
+export async function logAssignmentActivity(clientId, patientDocId, assignmentData, staffMember, activityType = 'caregiver_assigned') {
   return await logPatientActivity({
-    patientId,
+    clientId,
     patientDocId,
     activityType,
     activityDescription: `${assignmentData.role || 'Staff'} ${activityType.includes('assigned') ? 'assigned' : 'unassigned'}: ${assignmentData.staffName || 'Staff member'}`,
@@ -335,9 +335,9 @@ export async function logAssignmentActivity(patientId, patientDocId, assignmentD
 }
 
 /**
- * Get all activities for a patient
+ * Get all activities for a Client
  */
-export async function getPatientActivities(patientId, options = {}) {
+export async function getPatientActivities(clientId, options = {}) {
   try {
     const {
       limitCount = 100,
@@ -350,7 +350,7 @@ export async function getPatientActivities(patientId, options = {}) {
     const activitiesRef = collection(db, PATIENT_ACTIVITIES_COLLECTION);
     let q = query(
       activitiesRef,
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('timestamp', 'desc'),
       limit(limitCount)
     );
@@ -359,7 +359,7 @@ export async function getPatientActivities(patientId, options = {}) {
     if (category) {
       q = query(
         activitiesRef,
-        where('patientId', '==', patientId),
+        where('clientId', '==', clientId),
         where('category', '==', category),
         orderBy('timestamp', 'desc'),
         limit(limitCount)
@@ -370,7 +370,7 @@ export async function getPatientActivities(patientId, options = {}) {
     if (activityType) {
       q = query(
         activitiesRef,
-        where('patientId', '==', patientId),
+        where('clientId', '==', clientId),
         where('activityType', '==', activityType),
         orderBy('timestamp', 'desc'),
         limit(limitCount)
@@ -406,7 +406,7 @@ export async function getPatientActivities(patientId, options = {}) {
 
     return filteredActivities;
   } catch (error) {
-    console.error('Error fetching patient activities:', error);
+    console.error('Error fetching Client activities:', error);
     throw error;
   }
 }
@@ -416,15 +416,15 @@ export async function getPatientActivities(patientId, options = {}) {
  */
 export async function getActivitiesByStaff(staffId, options = {}) {
   try {
-    const { limitCount = 100, patientId = null } = options;
+    const { limitCount = 100, clientId = null } = options;
     
     const activitiesRef = collection(db, PATIENT_ACTIVITIES_COLLECTION);
     let q;
     
-    if (patientId) {
+    if (clientId) {
       q = query(
         activitiesRef,
-        where('patientId', '==', patientId),
+        where('clientId', '==', clientId),
         where('staffMember.id', '==', staffId),
         orderBy('timestamp', 'desc'),
         limit(limitCount)

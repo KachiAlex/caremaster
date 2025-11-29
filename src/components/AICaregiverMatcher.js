@@ -24,7 +24,7 @@ import {
 import aiService from '../services/aiService';
 import hapticService from '../services/hapticService';
 
-const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
+const AICaregiverMatcher = ({ isOpen, onClose, clientData }) => {
   const [caregivers, setCaregivers] = useState([]);
   const [matchedCaregivers, setMatchedCaregivers] = useState([]);
   const [isMatching, setIsMatching] = useState(false);
@@ -53,10 +53,10 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
   }, [isOpen]);
 
   useEffect(() => {
-    if (caregivers.length > 0 && patientData) {
+    if (caregivers.length > 0 && clientData) {
       performMatching();
     }
-  }, [caregivers, patientData, filters]);
+  }, [caregivers, clientData, filters]);
 
   const loadCaregivers = async () => {
     try {
@@ -94,8 +94,8 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
       isAvailable: Math.random() > 0.3,
       completedVisits: Math.floor(Math.random() * 200) + 50,
       responseTime: Math.floor(Math.random() * 30) + 5, // minutes
-      certifications: ['CPR', 'First Aid', 'Home Health Care', 'Medication Management'].slice(0, Math.floor(Math.random() * 3) + 1),
-      bio: `Experienced caregiver with ${Math.floor(Math.random() * 10) + 1} years of experience in home and community care. Specialized in ${specialties[Math.floor(Math.random() * specialties.length)]}.`,
+      certifications: ['CPR', 'First Aid', 'Geriatric Care', 'Medication Management'].slice(0, Math.floor(Math.random() * 3) + 1),
+      bio: `Experienced caregiver with ${Math.floor(Math.random() * 10) + 1} years of experience in elderly care. Specialized in ${specialties[Math.floor(Math.random() * specialties.length)]}.`,
       aiMatchScore: 0, // Will be calculated
       aiInsights: []
     }));
@@ -109,7 +109,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
       // Simulate AI matching process
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const matched = await aiService.matchCaregivers(caregivers, patientData, filters);
+      const matched = await aiService.matchCaregivers(caregivers, clientData, filters);
       setMatchedCaregivers(matched);
       hapticService.success();
     } catch (error) {
@@ -146,7 +146,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
   };
 
   const getMatchScoreColor = (score) => {
-    if (score >= 90) return 'text-blue-600 bg-blue-100';
+    if (score >= 90) return 'text-green-600 bg-green-100';
     if (score >= 80) return 'text-blue-600 bg-blue-100';
     if (score >= 70) return 'text-yellow-600 bg-yellow-100';
     return 'text-gray-600 bg-gray-100';
@@ -154,7 +154,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
 
   const getAvailabilityColor = (availability) => {
     switch (availability) {
-      case 'flexible': return 'text-blue-600 bg-blue-100';
+      case 'flexible': return 'text-green-600 bg-green-100';
       case 'specific_hours': return 'text-yellow-600 bg-yellow-100';
       case 'weekends_only': return 'text-blue-600 bg-blue-100';
       default: return 'text-gray-600 bg-gray-100';
@@ -171,14 +171,14 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-pink-600 text-white">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Brain className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-lg font-semibold">AI Caregiver Matcher</h2>
-              <p className="text-sm opacity-90">Intelligent caregiver-patient matching</p>
+              <p className="text-sm opacity-90">Intelligent caregiver-Client matching</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -292,7 +292,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
                     onClick={() => handleLanguageToggle(language)}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                       filters.languages.includes(language)
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-green-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
@@ -318,7 +318,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
               </button>
               
               {matchedCaregivers.length > 0 && (
-                <div className="flex items-center space-x-2 text-sm text-blue-600">
+                <div className="flex items-center space-x-2 text-sm text-green-600">
                   <CheckCircle className="w-4 h-4" />
                   <span>{matchedCaregivers.length} matches found!</span>
                 </div>
@@ -326,8 +326,8 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
             </div>
             
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">Patient:</span>
-              <span className="font-medium">{patientData?.name || 'Unknown'}</span>
+              <span className="text-sm text-gray-500">Client:</span>
+              <span className="font-medium">{clientData?.name || 'Unknown'}</span>
             </div>
           </div>
         </div>
@@ -451,7 +451,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
             <div className="text-center">
               <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Finding Best Matches</h3>
-              <p className="text-gray-600">AI is analyzing caregiver profiles and patient needs...</p>
+              <p className="text-gray-600">AI is analyzing caregiver profiles and Client needs...</p>
             </div>
           </div>
         )}
@@ -492,7 +492,7 @@ const AICaregiverMatcher = ({ isOpen, onClose, patientData }) => {
                     <h5 className="font-medium text-gray-900 mb-2">Certifications</h5>
                     <div className="flex flex-wrap gap-2">
                       {selectedCaregiver.certifications.map((cert) => (
-                        <span key={cert} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
+                        <span key={cert} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded">
                           {cert}
                         </span>
                       ))}

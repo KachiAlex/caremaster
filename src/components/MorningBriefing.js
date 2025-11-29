@@ -2,7 +2,7 @@ import React from 'react';
 import { Sun, Users, ClipboardList, AlertTriangle, Calendar, MapPin, TrendingUp, X, Clock } from 'lucide-react';
 
 const MorningBriefing = ({ 
-  patients = [], 
+  clients = [], 
   todaysTasks = [], 
   todaysAppointments = [], 
   onClose, 
@@ -10,7 +10,7 @@ const MorningBriefing = ({
 }) => {
   const totalTasks = todaysTasks.length;
   const urgentTasks = todaysTasks.filter(t => t.priority === 'high' || t.priority === 'urgent').length;
-  const patientsToVisit = new Set(todaysTasks.map(t => t.patientId)).size;
+  const patientsToVisit = new Set(todaysTasks.map(t => t.clientId)).size;
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -20,7 +20,7 @@ const MorningBriefing = ({
   };
 
   const getEstimatedDuration = () => {
-    // Rough estimate: 30 min per patient + 15 min per task
+    // Rough estimate: 30 min per Client + 15 min per task
     const visitTime = patientsToVisit * 30;
     const taskTime = totalTasks * 15;
     const totalMinutes = visitTime + taskTime;
@@ -30,10 +30,10 @@ const MorningBriefing = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-600 p-8 text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className="bg-white bg-opacity-20 p-3 rounded-full">
@@ -57,7 +57,7 @@ const MorningBriefing = ({
             <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
               <Users className="h-6 w-6 mx-auto mb-2" />
               <p className="text-2xl font-bold">{patientsToVisit}</p>
-              <p className="text-xs text-blue-100">Patients</p>
+              <p className="text-xs text-blue-100">clients</p>
             </div>
             <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
               <ClipboardList className="h-6 w-6 mx-auto mb-2" />
@@ -89,14 +89,14 @@ const MorningBriefing = ({
                   .slice(0, 3)
                   .map((task, index) => (
                     <p key={index} className="text-sm text-red-800">
-                      • {task.title} - {task.patientName}
+                      • {task.title} - {task.clientName}
                     </p>
                   ))}
               </div>
             </div>
           )}
 
-          {/* First 3 Patients */}
+          {/* First 3 clients */}
           <div>
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
               <Calendar className="h-5 w-5 mr-2 text-blue-600" />
@@ -110,7 +110,7 @@ const MorningBriefing = ({
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{task.patientName || 'Patient'}</p>
+                      <p className="font-medium text-gray-900">{task.clientName || 'Client'}</p>
                       <p className="text-sm text-gray-600">{task.title || task.type}</p>
                     </div>
                   </div>
@@ -138,14 +138,14 @@ const MorningBriefing = ({
           {todaysAppointments.length > 0 && (
             <div>
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-                <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+                <Calendar className="h-5 w-5 mr-2 text-green-600" />
                 Today's Appointments
               </h3>
               <div className="space-y-2">
                 {todaysAppointments.map((apt, index) => (
-                  <div key={index} className="bg-blue-50 rounded-lg p-3 flex items-center justify-between">
+                  <div key={index} className="bg-green-50 rounded-lg p-3 flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900">{apt.patientName || apt.type}</p>
+                      <p className="font-medium text-gray-900">{apt.clientName || apt.type}</p>
                       <p className="text-sm text-gray-600">{apt.location || 'Virtual'}</p>
                     </div>
                     <p className="text-sm font-medium text-green-900">
@@ -170,7 +170,7 @@ const MorningBriefing = ({
               onStartDay?.();
               onClose();
             }}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-lg hover:from-blue-700 hover:to-blue-700 font-bold text-lg flex items-center justify-center space-x-2 shadow-lg"
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-bold text-lg flex items-center justify-center space-x-2 shadow-lg"
           >
             <TrendingUp className="h-6 w-6" />
             <span>Start My Day</span>

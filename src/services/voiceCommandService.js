@@ -1,4 +1,4 @@
-// Voice Command Service for UltimateCare
+// Voice Command Service for Care Master
 class VoiceCommandService {
   constructor() {
     this.recognition = null;
@@ -327,7 +327,7 @@ class VoiceCommandService {
       'assign task': 'Assign a new task',
       'emergency': 'Trigger emergency alert',
       'medication': 'Access medication information',
-      'vital signs': 'Check patient vital signs',
+      'vital signs': 'Check Client vital signs',
       'stop listening': 'Stop voice recognition',
       'start listening': 'Start voice recognition',
       'help': 'Show available voice commands'

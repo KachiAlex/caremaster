@@ -17,7 +17,7 @@ describe('PatientLogViewer Component', () => {
   const mockLogs = [
     {
       id: 'log-1',
-      patientId: 'UC-2025-0001',
+      clientId: 'UC-2025-0001',
       clinicianName: 'Dr. Smith',
       clinicianRole: 'doctor',
       action: 'vital_signs_recorded',
@@ -29,7 +29,7 @@ describe('PatientLogViewer Component', () => {
     },
     {
       id: 'log-2',
-      patientId: 'UC-2025-0001',
+      clientId: 'UC-2025-0001',
       clinicianName: 'Nurse Jane',
       clinicianRole: 'nurse',
       action: 'medication_administered',
@@ -48,15 +48,15 @@ describe('PatientLogViewer Component', () => {
   test('renders log viewer', () => {
     getPatientLogs.mockResolvedValue([]);
 
-    render(<PatientLogViewer patientId="UC-2025-0001" patientName="John Doe" />);
+    render(<PatientLogViewer clientId="UC-2025-0001" clientName="John Doe" />);
 
-    expect(screen.getByText(/Patient Activity Log/i)).toBeInTheDocument();
+    expect(screen.getByText(/Client Activity Log/i)).toBeInTheDocument();
   });
 
-  test('loads and displays patient logs', async () => {
+  test('loads and displays Client logs', async () => {
     getPatientLogs.mockResolvedValue(mockLogs);
 
-    render(<PatientLogViewer patientId="UC-2025-0001" patientName="John Doe" />);
+    render(<PatientLogViewer clientId="UC-2025-0001" clientName="John Doe" />);
 
     await waitFor(() => {
       expect(getPatientLogs).toHaveBeenCalledWith('UC-2025-0001', 50);
@@ -71,16 +71,16 @@ describe('PatientLogViewer Component', () => {
   test('displays loading state', () => {
     getPatientLogs.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
 
-    render(<PatientLogViewer patientId="UC-2025-0001" patientName="John Doe" />);
+    render(<PatientLogViewer clientId="UC-2025-0001" clientName="John Doe" />);
 
-    expect(screen.getByText(/Loading patient logs/i)).toBeInTheDocument();
+    expect(screen.getByText(/Loading Client logs/i)).toBeInTheDocument();
   });
 
   test('filters logs by category', async () => {
     getPatientLogs.mockResolvedValue(mockLogs);
     getLogsByCategory.mockResolvedValue([mockLogs[0]]);
 
-    render(<PatientLogViewer patientId="UC-2025-0001" patientName="John Doe" />);
+    render(<PatientLogViewer clientId="UC-2025-0001" clientName="John Doe" />);
 
     await waitFor(() => {
       expect(screen.getByText('Vital signs recorded')).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe('PatientLogViewer Component', () => {
   test('searches logs by term', async () => {
     getPatientLogs.mockResolvedValue(mockLogs);
 
-    render(<PatientLogViewer patientId="UC-2025-0001" patientName="John Doe" />);
+    render(<PatientLogViewer clientId="UC-2025-0001" clientName="John Doe" />);
 
     await waitFor(() => {
       expect(screen.getByText('Vital signs recorded')).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe('PatientLogViewer Component', () => {
   test('expands log entry on click', async () => {
     getPatientLogs.mockResolvedValue(mockLogs);
 
-    render(<PatientLogViewer patientId="UC-2025-0001" patientName="John Doe" />);
+    render(<PatientLogViewer clientId="UC-2025-0001" clientName="John Doe" />);
 
     await waitFor(() => {
       expect(screen.getByText('Vital signs recorded')).toBeInTheDocument();
@@ -133,7 +133,7 @@ describe('PatientLogViewer Component', () => {
   test('displays no logs message when empty', async () => {
     getPatientLogs.mockResolvedValue([]);
 
-    render(<PatientLogViewer patientId="UC-2025-0001" patientName="John Doe" />);
+    render(<PatientLogViewer clientId="UC-2025-0001" clientName="John Doe" />);
 
     await waitFor(() => {
       expect(screen.getByText(/No activities found/i)).toBeInTheDocument();
@@ -143,7 +143,7 @@ describe('PatientLogViewer Component', () => {
   test('handles error loading logs', async () => {
     getPatientLogs.mockRejectedValue(new Error('Failed to load logs'));
 
-    render(<PatientLogViewer patientId="UC-2025-0001" patientName="John Doe" />);
+    render(<PatientLogViewer clientId="UC-2025-0001" clientName="John Doe" />);
 
     await waitFor(() => {
       expect(screen.getByText(/No activities found/i)).toBeInTheDocument();
@@ -153,7 +153,7 @@ describe('PatientLogViewer Component', () => {
   test('displays clinician information', async () => {
     getPatientLogs.mockResolvedValue(mockLogs);
 
-    render(<PatientLogViewer patientId="UC-2025-0001" patientName="John Doe" />);
+    render(<PatientLogViewer clientId="UC-2025-0001" clientName="John Doe" />);
 
     await waitFor(() => {
       expect(screen.getByText('Dr. Smith')).toBeInTheDocument();

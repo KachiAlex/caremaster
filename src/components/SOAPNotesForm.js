@@ -27,7 +27,7 @@ import {
   formatSOAPNoteForDisplay
 } from '../api/soapNotesAPI';
 
-const SOAPNotesForm = ({ consultationId, patientId, doctorId, institutionId, onSave, onCancel }) => {
+const SOAPNotesForm = ({ consultationId, clientId, doctorId, institutionId, onSave, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [icd10SearchTerm, setIcd10SearchTerm] = useState('');
@@ -201,7 +201,7 @@ const SOAPNotesForm = ({ consultationId, patientId, doctorId, institutionId, onS
 
       const soapData = {
         ...formData,
-        patientId,
+        clientId,
         doctorId,
         institutionId
       };
@@ -253,7 +253,7 @@ const SOAPNotesForm = ({ consultationId, patientId, doctorId, institutionId, onS
               onChange={(e) => setFormData({ ...formData, chiefComplaint: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               required
-              placeholder="Patient's main complaint"
+              placeholder="Client's main complaint"
             />
           </div>
 

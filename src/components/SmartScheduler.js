@@ -58,10 +58,10 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
       const startHour = 9 + i;
       const appointment = {
         id: `apt_${i}`,
-        title: `Patient ${i + 1} - ${['Checkup', 'Consultation', 'Follow-up', 'Medication Review'][i % 4]}`,
+        title: `Client ${i + 1} - ${['Checkup', 'Consultation', 'Follow-up', 'Medication Review'][i % 4]}`,
         start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), startHour, 0),
         end: new Date(today.getFullYear(), today.getMonth(), today.getDate(), startHour + 1, 0),
-        patient: `Patient ${i + 1}`,
+        Client: `Client ${i + 1}`,
         location: ['Home Visit', 'Clinic', 'Hospital'][i % 3],
         priority: ['high', 'medium', 'low'][i % 3],
         type: ['medical', 'consultation', 'follow-up'][i % 3],
@@ -120,13 +120,13 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
     switch (priority) {
       case 'high': return 'text-red-600 bg-red-100';
       case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'low': return 'text-blue-600 bg-blue-100';
+      case 'low': return 'text-green-600 bg-green-100';
       default: return 'text-gray-600 bg-gray-100';
     }
   };
 
   const getEfficiencyColor = (efficiency) => {
-    if (efficiency >= 0.8) return 'text-blue-600';
+    if (efficiency >= 0.8) return 'text-green-600';
     if (efficiency >= 0.6) return 'text-yellow-600';
     return 'text-red-600';
   };
@@ -137,7 +137,7 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-green-500 to-blue-600 text-white">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Brain className="w-6 h-6" />
@@ -235,7 +235,7 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
               </button>
               
               {optimizationResults && (
-                <div className="flex items-center space-x-2 text-sm text-blue-600">
+                <div className="flex items-center space-x-2 text-sm text-green-600">
                   <CheckCircle className="w-4 h-4" />
                   <span>Optimization complete!</span>
                 </div>
@@ -255,12 +255,12 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
 
         {/* Optimization Results */}
         {optimizationResults && (
-          <div className="p-4 bg-blue-50 border-b border-green-200">
+          <div className="p-4 bg-green-50 border-b border-green-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center space-x-2">
-                <Clock className="w-5 h-5 text-blue-600" />
+                <Clock className="w-5 h-5 text-green-600" />
                 <div>
-                  <div className="text-sm font-medium text-blue-800">Time Saved</div>
+                  <div className="text-sm font-medium text-green-800">Time Saved</div>
                   <div className="text-lg font-semibold text-green-900">
                     {optimizationResults.improvements.timeSaved} min
                   </div>
@@ -268,9 +268,9 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
               </div>
               
               <div className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
+                <TrendingUp className="w-5 h-5 text-green-600" />
                 <div>
-                  <div className="text-sm font-medium text-blue-800">Efficiency</div>
+                  <div className="text-sm font-medium text-green-800">Efficiency</div>
                   <div className="text-lg font-semibold text-green-900">
                     +{Math.round(optimizationResults.improvements.efficiency * 100)}%
                   </div>
@@ -278,9 +278,9 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
               </div>
               
               <div className="flex items-center space-x-2">
-                <Target className="w-5 h-5 text-blue-600" />
+                <Target className="w-5 h-5 text-green-600" />
                 <div>
-                  <div className="text-sm font-medium text-blue-800">Conflicts</div>
+                  <div className="text-sm font-medium text-green-800">Conflicts</div>
                   <div className="text-lg font-semibold text-green-900">
                     -{optimizationResults.improvements.conflicts}
                   </div>
@@ -291,7 +291,7 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
             <div className="mt-4 flex space-x-2">
               <button
                 onClick={applyOptimization}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 Apply Optimization
               </button>
@@ -313,7 +313,7 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
                 key={appointment.id}
                 className={`p-4 border rounded-lg transition-all duration-200 ${
                   optimizedSchedule.length > 0 
-                    ? 'border-blue-300 bg-blue-50' 
+                    ? 'border-green-300 bg-green-50' 
                     : 'border-gray-200 bg-white'
                 }`}
               >
@@ -325,7 +325,7 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
                         {appointment.priority}
                       </span>
                       {optimizedSchedule.length > 0 && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
                           Optimized
                         </span>
                       )}
@@ -339,7 +339,7 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
                       
                       <div className="flex items-center space-x-2">
                         <Users className="w-4 h-4" />
-                        <span>{appointment.patient}</span>
+                        <span>{appointment.Client}</span>
                       </div>
                       
                       <div className="flex items-center space-x-2">
@@ -361,7 +361,7 @@ const SmartScheduler = ({ isOpen, onClose, onScheduleUpdate }) => {
                       Travel: {appointment.travelTime}min
                     </div>
                     {optimizedSchedule.length > 0 && appointment.optimized && (
-                      <div className="text-xs text-blue-600 font-medium">
+                      <div className="text-xs text-green-600 font-medium">
                         AI Optimized
                       </div>
                     )}

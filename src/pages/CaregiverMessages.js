@@ -37,8 +37,8 @@ const CaregiverMessages = () => {
           const mockConversations = [
             {
               id: 1,
-              patientName: 'Adunni Okafor',
-              patientId: 'ELD001',
+              clientName: 'Adunni Okafor',
+              clientId: 'ELD001',
               lastMessage: 'Thank you for the medication reminder',
               lastMessageTime: '2024-01-21T10:30:00Z',
               unreadCount: 2,
@@ -48,8 +48,8 @@ const CaregiverMessages = () => {
             },
             {
               id: 2,
-              patientName: 'Grace Johnson',
-              patientId: 'ELD002',
+              clientName: 'Grace Johnson',
+              clientId: 'ELD002',
               lastMessage: 'See you tomorrow for therapy session',
               lastMessageTime: '2024-01-21T09:15:00Z',
               unreadCount: 0,
@@ -59,8 +59,8 @@ const CaregiverMessages = () => {
             },
             {
               id: 3,
-              patientName: 'Michael Adebayo',
-              patientId: 'ELD003',
+              clientName: 'Michael Adebayo',
+              clientId: 'ELD003',
               lastMessage: 'Emergency alert received - all clear now',
               lastMessageTime: '2024-01-21T08:45:00Z',
               unreadCount: 1,
@@ -70,8 +70,8 @@ const CaregiverMessages = () => {
             },
             {
               id: 4,
-              patientName: 'Sarah Williams',
-              patientId: 'ELD004',
+              clientName: 'Sarah Williams',
+              clientId: 'ELD004',
               lastMessage: 'Lunch was delicious, thank you!',
               lastMessageTime: '2024-01-21T08:00:00Z',
               unreadCount: 0,
@@ -150,7 +150,7 @@ const CaregiverMessages = () => {
   };
 
   const filteredConversations = conversations.filter(conversation =>
-    conversation.patientName.toLowerCase().includes(searchTerm.toLowerCase())
+    conversation.clientName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSendMessage = () => {
@@ -180,7 +180,7 @@ const CaregiverMessages = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'online':
-        return 'bg-blue-500';
+        return 'bg-green-500';
       case 'offline':
         return 'bg-gray-400';
       default:
@@ -216,16 +216,16 @@ const CaregiverMessages = () => {
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center">
               <MessageCircle className="h-8 w-8 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-              <p className="text-gray-600">Communicate with your patients and family members</p>
+              <p className="text-gray-600">Communicate with your clients and family members</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <button className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
               <Phone className="h-5 w-5" />
             </button>
             <button className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -273,7 +273,7 @@ const CaregiverMessages = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-medium text-gray-900 truncate">
-                        {conversation.patientName}
+                        {conversation.clientName}
                       </h3>
                       <span className="text-xs text-gray-500">
                         {formatTime(conversation.lastMessageTime)}
@@ -285,7 +285,7 @@ const CaregiverMessages = () => {
                     {conversation.unreadCount > 0 && (
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-xs text-gray-500">
-                          ID: {conversation.patientId}
+                          ID: {conversation.clientId}
                         </span>
                         <span className="bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                           {conversation.unreadCount}
@@ -315,10 +315,10 @@ const CaregiverMessages = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-medium text-gray-900">
-                        {selectedConversation.patientName}
+                        {selectedConversation.clientName}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        ID: {selectedConversation.patientId} • {selectedConversation.status}
+                        ID: {selectedConversation.clientId} • {selectedConversation.status}
                       </p>
                     </div>
                   </div>

@@ -20,15 +20,15 @@ import {
   Shield,
   AlertTriangle
 } from 'lucide-react';
-import { createPatient } from '../api/patientsAPI';
+import { createClient } from '../api/patientsAPI';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
-import { checkForDuplicates, shouldBlockRegistration } from '../utils/patientDuplicateDetection';
-import { uploadPatientDocument, validateFile } from '../utils/patientDocumentUpload';
-import { generatePatientQRCodeData } from '../utils/patientQRCodeGenerator';
+import { checkForDuplicates, shouldBlockRegistration } from '../utils/clientDuplicateDetection';
+import { uploadClientDocument, validateFile } from '../utils/clientDocumentUpload';
+import { generateClientQRCodeData } from '../utils/clientQRCodeGenerator';
 import QRCode from 'qrcode.react';
 
-const CreatePatientModal = ({ open, onClose, onSuccess }) => {
+const CreateClientModal = ({ open, onClose, onSuccess }) => {
   const { userProfile, institutionId } = useUser();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -84,7 +84,6 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
   });
   const [uploading, setUploading] = useState({});
   const [nationalId, setNationalId] = useState('');
-  const [hmoPlan, setHmoPlan] = useState('');
 
   const careLevels = [
     { value: 'basic', label: 'Basic Care', description: 'Minimal assistance needed' },
@@ -153,7 +152,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
     switch (step) {
       case 1:
         if (!formData.name.trim()) {
-          toast.error('Patient name is required');
+          toast.error('Client name is required');
           return false;
         }
         if (!formData.phone.trim()) {
@@ -236,7 +235,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
 
     setUploading(prev => ({ ...prev, [documentType]: true }));
     try {
-      // We'll upload after patient is created, store file for now
+      // We'll upload after Client is created, store file for now
       setUploadedDocuments(prev => ({
         ...prev,
         [documentType]: { file, type: documentType }
@@ -250,16 +249,16 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
     }
   };
 
-  // Upload documents after patient creation
-  const uploadDocumentsAfterRegistration = async (patientId) => {
+  // Upload documents after Client creation
+  const uploadDocumentsAfterRegistration = async (clientId) => {
     const uploadPromises = [];
     
     for (const [docType, docData] of Object.entries(uploadedDocuments)) {
       if (docData && docData.file) {
         uploadPromises.push(
-          uploadPatientDocument(
+          uploadClientDocument(
             docData.file,
-            patientId,
+            clientId,
             institutionId || userProfile?.institutionId,
             docType
           ).catch(error => {
@@ -291,8 +290,8 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
 
     setLoading(true);
     try {
-      // Prepare patient data
-      const patientData = {
+      // Prepare Client data
+      const clientData = {
         name: formData.name.trim(),
         fullName: formData.fullName.trim() || formData.name.trim(),
         email: formData.email.trim().toLowerCase() || null,
@@ -313,30 +312,29 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
         careLevel: formData.careLevel,
         insuranceProvider: formData.insuranceProvider.trim() || null,
         insurancePolicyNumber: formData.insurancePolicyNumber.trim() || null,
-        hmoPlan: hmoPlan || null,
         nationalId: formData.nationalId.trim() || nationalId.trim() || null,
         primaryCarePhysician: formData.primaryCarePhysician.trim() || null,
         physicianPhone: formData.physicianPhone.trim() || null,
         notes: formData.notes.trim() || null,
         institutionId: institutionId || userProfile?.institutionId,
-        userType: 'patient',
-        type: 'patient',
+        userType: 'Client',
+        type: 'Client',
         status: 'active'
       };
 
-      const result = await createPatient(patientData, userProfile);
-      setCreatedPatientId(result.patientId);
+      const result = await createClient(clientData, userProfile);
+      setCreatedPatientId(result.clientId);
       
-      // Upload documents after patient creation
+      // Upload documents after Client creation
       if (Object.values(uploadedDocuments).some(doc => doc !== null)) {
-        await uploadDocumentsAfterRegistration(result.patientId);
+        await uploadDocumentsAfterRegistration(result.clientId);
       }
       
       toast.success(
         <div>
-          <div className="font-semibold">Patient registered successfully!</div>
+          <div className="font-semibold">Client registered successfully!</div>
           <div className="text-sm mt-1">
-            Patient ID: <span className="font-mono font-bold text-blue-400">{result.patientId}</span>
+            Client ID: <span className="font-mono font-bold text-blue-400">{result.clientId}</span>
           </div>
         </div>,
         { autoClose: 5000 }
@@ -370,7 +368,6 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
         nationalId: ''
       });
       setNationalId('');
-      setHmoPlan('');
       setUploadedDocuments({
         idCard: null,
         referralLetter: null,
@@ -390,8 +387,8 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
         setCreatedPatientId(null);
       }, 2000);
     } catch (error) {
-      console.error('Error creating patient:', error);
-      toast.error(`Failed to create patient: ${error.message || 'Unknown error'}`);
+      console.error('Error creating Client:', error);
+      toast.error(`Failed to create Client: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -412,7 +409,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
               <Heart className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Register New Patient</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Register New Client</h3>
               <p className="text-xs text-gray-500">Step {currentStep} of 3</p>
             </div>
           </div>
@@ -466,7 +463,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   <CheckCircle className="h-8 w-8 text-blue-600" />
                 </div>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Patient Registered Successfully!</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Client Registered Successfully!</h3>
               <p className="text-sm text-gray-600 mb-1">Registration Number</p>
               <div className="inline-block px-6 py-3 rounded-lg bg-blue-50 border-2 border-blue-200 mb-6">
                 <span className="font-mono font-bold text-blue-600 text-2xl tracking-wider">{createdPatientId}</span>
@@ -475,10 +472,10 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
               {/* QR Code Display */}
               <div className="flex flex-col items-center gap-4 mb-6 p-6 rounded-xl bg-gray-50 border border-gray-200">
                 <QrCode className="h-6 w-6 text-blue-600" />
-                <p className="text-sm font-medium text-gray-700">Patient QR Code</p>
+                <p className="text-sm font-medium text-gray-700">Client QR Code</p>
                 <div className="p-4 bg-white rounded-lg border border-gray-200">
                   <QRCode
-                    value={generatePatientQRCodeData(
+                    value={generateClientQRCodeData(
                       createdPatientId,
                       institutionId || userProfile?.institutionId,
                       formData
@@ -489,12 +486,12 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   />
                 </div>
                 <p className="text-xs text-gray-500 max-w-xs">
-                  Scan this QR code to quickly access patient information
+                  Scan this QR code to quickly access client information
                 </p>
               </div>
 
               <p className="text-xs text-gray-500 mt-4 max-w-md mx-auto">
-                This registration number will be used to identify the patient throughout the system. 
+                This registration number will be used to identify the client throughout the system. 
                 All activities will be logged with this number.
               </p>
             </div>
@@ -520,7 +517,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                           onChange={handleInputChange}
                           required
                           className={`${inputClass} pl-10`}
-                          placeholder="Enter patient's full name"
+                          placeholder="Enter Client's full name"
                         />
                       </div>
                     </div>
@@ -535,7 +532,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                           value={formData.email}
                           onChange={handleInputChange}
                           className={`${inputClass} pl-10`}
-                          placeholder="patient@example.com"
+                          placeholder="Client@example.com"
                         />
                       </div>
                     </div>
@@ -892,41 +889,6 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className={labelClass}>Insurance/HMO Provider</label>
-                      <input
-                        type="text"
-                        name="insuranceProvider"
-                        value={formData.insuranceProvider}
-                        onChange={handleInputChange}
-                        className={inputClass}
-                        placeholder="Insurance company or HMO name"
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Policy/Plan Number</label>
-                      <input
-                        type="text"
-                        name="insurancePolicyNumber"
-                        value={formData.insurancePolicyNumber}
-                        onChange={handleInputChange}
-                        className={inputClass}
-                        placeholder="Policy or plan number"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className={labelClass}>HMO Plan (if applicable)</label>
-                      <input
-                        type="text"
-                        value={hmoPlan}
-                        onChange={(e) => setHmoPlan(e.target.value)}
-                        className={inputClass}
-                        placeholder="e.g., Premium Plan, Standard Plan"
-                      />
-                    </div>
-                  </div>
-
                   {/* Document Upload Section */}
                   <div className="border-t border-gray-200 pt-4 mt-4">
                     <div className="flex items-center gap-2 mb-4">
@@ -1016,7 +978,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                       onChange={handleInputChange}
                       rows={4}
                       className={inputClass}
-                      placeholder="Any additional information about the patient..."
+                      placeholder="Any additional information about the client..."
                     />
                   </div>
                 </div>
@@ -1060,7 +1022,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      Register Patient
+                      Register Client
                     </>
                   )}
                 </button>
@@ -1078,7 +1040,7 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Potential Duplicate Patient</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Potential Duplicate Client</h3>
                   <p className="text-sm text-gray-600">Exact matches found in the system</p>
                 </div>
               </div>
@@ -1088,8 +1050,8 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
                   <div key={index} className="p-4 rounded-lg bg-red-50 border border-red-200">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-medium text-gray-900">{match.patientName}</p>
-                        <p className="text-sm text-gray-600">Patient ID: {match.patientId}</p>
+                        <p className="font-medium text-gray-900">{match.clientName}</p>
+                        <p className="text-sm text-gray-600">Client ID: {match.clientId}</p>
                         <div className="flex flex-wrap gap-2 mt-2">
                           {match.matchReasons.map((reason, i) => (
                             <span key={i} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">
@@ -1135,5 +1097,5 @@ const CreatePatientModal = ({ open, onClose, onSuccess }) => {
   );
 };
 
-export default CreatePatientModal;
+export default CreateClientModal;
 

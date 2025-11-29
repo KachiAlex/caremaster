@@ -71,8 +71,8 @@ const RadiologyManagement = ({ institutionId: propInstitutionId }) => {
   
   // Form states
   const [requestForm, setRequestForm] = useState({
-    patientId: '',
-    patientName: '',
+    clientId: '',
+    clientName: '',
     imagingType: IMAGING_TYPE.XRAY,
     bodyPart: '',
     clinicalIndication: '',
@@ -151,8 +151,8 @@ const RadiologyManagement = ({ institutionId: propInstitutionId }) => {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(r =>
-        r.patientName?.toLowerCase().includes(searchLower) ||
-        r.patientId?.toLowerCase().includes(searchLower) ||
+        r.clientName?.toLowerCase().includes(searchLower) ||
+        r.clientId?.toLowerCase().includes(searchLower) ||
         r.bodyPart?.toLowerCase().includes(searchLower)
       );
     }
@@ -161,7 +161,7 @@ const RadiologyManagement = ({ institutionId: propInstitutionId }) => {
   };
 
   const handleCreateRequest = async () => {
-    if (!requestForm.patientId || !requestForm.imagingType) {
+    if (!requestForm.clientId || !requestForm.imagingType) {
       toast.error('Please fill in required fields');
       return;
     }
@@ -179,8 +179,8 @@ const RadiologyManagement = ({ institutionId: propInstitutionId }) => {
       toast.success('Imaging request created');
       setShowRequestModal(false);
       setRequestForm({
-        patientId: '',
-        patientName: '',
+        clientId: '',
+        clientName: '',
         imagingType: IMAGING_TYPE.XRAY,
         bodyPart: '',
         clinicalIndication: '',
@@ -484,7 +484,7 @@ const RadiologyManagement = ({ institutionId: propInstitutionId }) => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by patient name or ID..."
+                placeholder="Search by Client name or ID..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -498,7 +498,7 @@ const RadiologyManagement = ({ institutionId: propInstitutionId }) => {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Patient</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Client</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Type</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Body Part</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Priority</th>
@@ -524,7 +524,7 @@ const RadiologyManagement = ({ institutionId: propInstitutionId }) => {
                 filteredRequests.map((request) => (
                   <tr key={request.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-sm text-gray-900">
-                      {request.patientName || request.patientId?.substring(0, 8)}
+                      {request.clientName || request.clientId?.substring(0, 8)}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
                       {request.imagingType.toUpperCase()}
@@ -604,26 +604,26 @@ const RadiologyManagement = ({ institutionId: propInstitutionId }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Patient ID *
+                    Client ID *
                   </label>
                   <input
                     type="text"
-                    value={requestForm.patientId}
-                    onChange={(e) => setRequestForm({ ...requestForm, patientId: e.target.value })}
+                    value={requestForm.clientId}
+                    onChange={(e) => setRequestForm({ ...requestForm, clientId: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter patient ID"
+                    placeholder="Enter Client ID"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Patient Name
+                    Client Name
                   </label>
                   <input
                     type="text"
-                    value={requestForm.patientName}
-                    onChange={(e) => setRequestForm({ ...requestForm, patientName: e.target.value })}
+                    value={requestForm.clientName}
+                    onChange={(e) => setRequestForm({ ...requestForm, clientName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Patient name"
+                    placeholder="Client name"
                   />
                 </div>
               </div>

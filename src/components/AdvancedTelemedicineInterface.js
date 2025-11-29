@@ -106,7 +106,7 @@ import aiService from '../services/aiService';
 
 const AdvancedTelemedicineInterface = ({ 
   appointmentId, 
-  patientId, 
+  clientId, 
   nurseId, 
   doctorId, 
   userType,
@@ -121,7 +121,7 @@ const AdvancedTelemedicineInterface = ({
   const [newMessage, setNewMessage] = useState('');
   const [showChat, setShowChat] = useState(false);
   const [callNotes, setCallNotes] = useState('');
-  const [patientData, setPatientData] = useState(null);
+  const [clientData, setPatientData] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [callHistory, setCallHistory] = useState([]);
   
@@ -242,7 +242,7 @@ const AdvancedTelemedicineInterface = ({
       
       // Generate health assessment
       const healthAssessment = await aiService.generateCareRecommendations(
-        { ...patientData, realTimeData },
+        { ...clientData, realTimeData },
         {}
       );
 
@@ -359,7 +359,7 @@ const AdvancedTelemedicineInterface = ({
 
   const loadPatientData = async () => {
     try {
-      // Load patient data for context
+      // Load Client data for context
       setPatientData({
         name: 'John Doe',
         age: 75,
@@ -370,7 +370,7 @@ const AdvancedTelemedicineInterface = ({
         emergencyContact: 'Jane Doe (555-0123)'
       });
     } catch (error) {
-      console.error('Error loading patient data:', error);
+      console.error('Error loading Client data:', error);
     }
   };
 
@@ -638,13 +638,13 @@ const AdvancedTelemedicineInterface = ({
               )}
             </div>
 
-            {/* Patient Info Overlay */}
-            {patientData && (
+            {/* Client Info Overlay */}
+            {clientData && (
               <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-3 rounded-lg">
-                <h4 className="font-bold">{patientData.name}</h4>
-                <p className="text-sm">Age: {patientData.age}</p>
-                <p className="text-sm">Conditions: {patientData.conditions.join(', ')}</p>
-                <p className="text-sm">Last Visit: {patientData.lastVisit}</p>
+                <h4 className="font-bold">{clientData.name}</h4>
+                <p className="text-sm">Age: {clientData.age}</p>
+                <p className="text-sm">Conditions: {clientData.conditions.join(', ')}</p>
+                <p className="text-sm">Last Visit: {clientData.lastVisit}</p>
               </div>
             )}
 
@@ -656,11 +656,11 @@ const AdvancedTelemedicineInterface = ({
                   <span>{realTimeData.heartRate} bpm</span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <Thermometer className="text-blue-400" size={16} />
+                  <Thermometer className="text-orange-400" size={16} />
                   <span>{realTimeData.temperature}°F</span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <Activity className="text-blue-400" size={16} />
+                  <Activity className="text-green-400" size={16} />
                   <span>{realTimeData.stressLevel}% stress</span>
                 </div>
               </div>
@@ -769,9 +769,9 @@ const AdvancedTelemedicineInterface = ({
                   )}
                   
                   {aiAnalysis.vitalSigns && (
-                    <div className="bg-blue-50 p-3 rounded-lg mb-2">
-                      <h6 className="text-sm font-medium text-blue-800">Vital Signs</h6>
-                      <div className="text-xs text-blue-600">
+                    <div className="bg-green-50 p-3 rounded-lg mb-2">
+                      <h6 className="text-sm font-medium text-green-800">Vital Signs</h6>
+                      <div className="text-xs text-green-600">
                         <div>Heart Rate: {aiAnalysis.vitalSigns.heartRate} bpm</div>
                         <div>Blood Pressure: {aiAnalysis.vitalSigns.bloodPressure}</div>
                         <div>Temperature: {aiAnalysis.vitalSigns.temperature}°F</div>
@@ -792,7 +792,7 @@ const AdvancedTelemedicineInterface = ({
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">{device.name}</span>
                           <div className={`w-2 h-2 rounded-full ${
-                            device.status === 'connected' ? 'bg-blue-500' : 'bg-red-500'
+                            device.status === 'connected' ? 'bg-green-500' : 'bg-red-500'
                           }`}></div>
                         </div>
                         <div className="text-xs text-gray-600">{device.type}</div>
@@ -814,7 +814,7 @@ const AdvancedTelemedicineInterface = ({
                         <div className="flex items-center space-x-2">
                           <span className="text-xs text-gray-600">{data.latency}ms</span>
                           <div className={`w-2 h-2 rounded-full ${
-                            data.status === 'healthy' ? 'bg-blue-500' : 'bg-red-500'
+                            data.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'
                           }`}></div>
                         </div>
                       </div>

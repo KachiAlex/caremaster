@@ -26,8 +26,8 @@ const AdminLogin = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
       // Set temporary admin session flag
-      sessionStorage.setItem('UltimateCare_admin_session', 'true');
-      sessionStorage.setItem('UltimateCare_admin_user', userCredential.user.uid);
+      sessionStorage.setItem('Care Master_admin_session', 'true');
+      sessionStorage.setItem('Care Master_admin_user', userCredential.user.uid);
       
       toast.success('Admin login successful - Redirecting to admin dashboard');
       
@@ -64,12 +64,12 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center">
-            <div className="p-3 rounded-full bg-blue-100">
-              <Shield className="h-12 w-12 text-blue-600" />
+            <div className="p-3 rounded-full bg-purple-100">
+              <Shield className="h-12 w-12 text-purple-600" />
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
@@ -94,7 +94,7 @@ const AdminLogin = () => {
                 autoComplete="email"
                 required
                 className="form-input"
-                placeholder="admin@ultimatecare.com"
+                placeholder="admin@Care Master.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -136,7 +136,7 @@ const AdminLogin = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Shield className="h-4 w-4 mr-2" />
               {loading ? 'Authenticating...' : 'Access Admin Panel'}
@@ -147,7 +147,7 @@ const AdminLogin = () => {
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="text-sm text-blue-600 hover:text-blue-500"
+              className="text-sm text-purple-600 hover:text-purple-500"
             >
               ← Back to main site
             </button>
@@ -155,10 +155,10 @@ const AdminLogin = () => {
         </form>
 
         {/* Security Notice */}
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex">
-            <Shield className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-700">
+            <Shield className="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-yellow-700">
               <p className="font-medium">Security Notice</p>
               <p className="mt-1">
                 This is a restricted area. All access attempts are logged and monitored.

@@ -6,7 +6,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { toast } from 'react-toastify';
 import PatientRegistration from '../components/PatientRegistration';
-import { createPatient } from '../api/patientsAPI';
+import { createClient } from '../api/patientsAPI';
 import { useUser } from '../contexts/UserContext';
 
 // Mock dependencies
@@ -18,7 +18,7 @@ jest.mock('react-toastify', () => ({
 }));
 
 jest.mock('../api/patientsAPI', () => ({
-  createPatient: jest.fn()
+  createClient: jest.fn()
 }));
 
 jest.mock('../contexts/UserContext', () => ({
@@ -53,7 +53,7 @@ describe('PatientRegistration Component', () => {
       />
     );
 
-    expect(screen.getByText('Register New Patient')).toBeInTheDocument();
+    expect(screen.getByText('Register New Client')).toBeInTheDocument();
     expect(screen.getByLabelText(/Full Name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Phone Number/i)).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe('PatientRegistration Component', () => {
       />
     );
 
-    const submitButton = screen.getByRole('button', { name: /Register Patient/i });
+    const submitButton = screen.getByRole('button', { name: /Register Client/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -89,7 +89,7 @@ describe('PatientRegistration Component', () => {
     const emailInput = screen.getByLabelText(/Email/i);
     fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
 
-    const submitButton = screen.getByRole('button', { name: /Register Patient/i });
+    const submitButton = screen.getByRole('button', { name: /Register Client/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -99,11 +99,11 @@ describe('PatientRegistration Component', () => {
 
   test('submits form with valid data', async () => {
     const mockPatientResult = {
-      id: 'patient-doc-id',
-      patientId: 'UC-2025-0001'
+      id: 'Client-doc-id',
+      clientId: 'UC-2025-0001'
     };
 
-    createPatient.mockResolvedValue(mockPatientResult);
+    createClient.mockResolvedValue(mockPatientResult);
 
     render(
       <PatientRegistration
@@ -122,11 +122,11 @@ describe('PatientRegistration Component', () => {
     fireEvent.change(screen.getByLabelText(/Emergency Contact Name/i), { target: { value: 'Jane Doe' } });
     fireEvent.change(screen.getByLabelText(/Emergency Contact Phone/i), { target: { value: '987-654-3210' } });
 
-    const submitButton = screen.getByRole('button', { name: /Register Patient/i });
+    const submitButton = screen.getByRole('button', { name: /Register Client/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(createPatient).toHaveBeenCalledWith(
+      expect(createClient).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'John Doe',
           email: 'john@example.com',
@@ -139,13 +139,13 @@ describe('PatientRegistration Component', () => {
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalled();
-      expect(mockOnPatientRegistered).toHaveBeenCalledWith('patient-doc-id', 'UC-2025-0001');
+      expect(mockOnPatientRegistered).toHaveBeenCalledWith('Client-doc-id', 'UC-2025-0001');
     });
   });
 
   test('handles registration error', async () => {
     const errorMessage = 'Registration failed';
-    createPatient.mockRejectedValue(new Error(errorMessage));
+    createClient.mockRejectedValue(new Error(errorMessage));
 
     render(
       <PatientRegistration
@@ -164,7 +164,7 @@ describe('PatientRegistration Component', () => {
     fireEvent.change(screen.getByLabelText(/Emergency Contact Name/i), { target: { value: 'Jane Doe' } });
     fireEvent.change(screen.getByLabelText(/Emergency Contact Phone/i), { target: { value: '987-654-3210' } });
 
-    const submitButton = screen.getByRole('button', { name: /Register Patient/i });
+    const submitButton = screen.getByRole('button', { name: /Register Client/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -188,7 +188,7 @@ describe('PatientRegistration Component', () => {
   });
 
   test('displays loading state during submission', async () => {
-    createPatient.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    createClient.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
 
     render(
       <PatientRegistration
@@ -207,11 +207,11 @@ describe('PatientRegistration Component', () => {
     fireEvent.change(screen.getByLabelText(/Emergency Contact Name/i), { target: { value: 'Jane Doe' } });
     fireEvent.change(screen.getByLabelText(/Emergency Contact Phone/i), { target: { value: '987-654-3210' } });
 
-    const submitButton = screen.getByRole('button', { name: /Register Patient/i });
+    const submitButton = screen.getByRole('button', { name: /Register Client/i });
     fireEvent.click(submitButton);
 
     // Check for loading state
-    expect(screen.getByRole('button', { name: /Register Patient/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Register Client/i })).toBeDisabled();
   });
 });
 

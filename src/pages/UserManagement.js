@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Plus, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Users,
+  Plus,
+  Search,
+  Filter,
+  MoreVertical,
+  Edit,
+  Trash2,
   Eye,
   UserPlus,
   Heart,
@@ -20,7 +20,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
-import { getAllUsers, getUserStats, updateUserStatus, deleteUser, subscribeToUsers } from '../api/usersAPI';
+import {
+  getAllUsers,
+  getUserStats,
+  updateUserStatus,
+  deleteUser,
+  subscribeToUsers
+} from '../api/usersAPI';
 import { seedUsers } from '../api/seedData';
 import UserCreationForm from '../components/UserCreationForm';
 
@@ -33,41 +39,41 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('patient');
+  const [selectedRole, setSelectedRole] = useState('elderly');
   const [stats, setStats] = useState({
     total: 0,
-    patient: 0,
+    elderly: 0,
     caregivers: 0,
     doctors: 0,
     active: 0,
     inactive: 0
   });
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
-  // Load users and stats
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        setLoading(true);
-        const [usersData, statsData] = await Promise.all([
-          getAllUsers(),
-          getUserStats()
-        ]);
-        
-        setUsers(usersData);
-        setFilteredUsers(usersData);
-        setStats(statsData);
-      } catch (error) {
-        console.error('Error loading users:', error);
-        toast.error('Failed to load users');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [usersData, statsData] = await Promise.all([
+        getAllUsers(),
+        getUserStats()
+      ]);
 
-    loadUsers();
+      setUsers(usersData);
+      setFilteredUsers(usersData);
+      setStats(statsData);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Real-time user updates
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
   useEffect(() => {
     const unsubscribe = subscribeToUsers((updatedUsers) => {
       setUsers(updatedUsers);
@@ -76,31 +82,33 @@ const UserManagement = () => {
     return unsubscribe;
   }, []);
 
-  // Filter users
   useEffect(() => {
     let filtered = users;
 
-    // Search filter
     if (searchQuery) {
-      filtered = filtered.filter(user =>
+      filtered = filtered.filter((user) =>
         user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // Role filter
     if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => user.role === roleFilter);
+      filtered = filtered.filter((user) => user.role === roleFilter);
     }
 
-    // Status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(user => user.status === statusFilter);
+      filtered = filtered.filter((user) => user.status === statusFilter);
     }
 
     setFilteredUsers(filtered);
   }, [users, searchQuery, roleFilter, statusFilter]);
+
+  useEffect(() => {
+    setSelectedUserIds((prev) =>
+      prev.filter((id) => filteredUsers.some((user) => user.id === id))
+    );
+  }, [filteredUsers]);
 
   const handleCreateUser = (role) => {
     setSelectedRole(role);
@@ -113,6 +121,7 @@ const UserManagement = () => {
         if (window.confirm('Are you sure you want to delete this user?')) {
           await deleteUser(userId);
           toast.success('User deleted successfully');
+          setSelectedUserIds((prev) => prev.filter((id) => id !== userId));
         }
       } else if (action === 'suspend') {
         await updateUserStatus(userId, 'inactive');
@@ -139,12 +148,12 @@ const UserManagement = () => {
 
   const getRoleIcon = (role) => {
     switch (role) {
-      case 'patient':
+      case 'elderly':
         return <Heart size={16} className="text-blue-600" />;
       case 'caregiver':
-        return <Users size={16} className="text-blue-600" />;
+        return <Users size={16} className="text-green-600" />;
       case 'doctor':
-        return <Stethoscope size={16} className="text-blue-600" />;
+        return <Stethoscope size={16} className="text-purple-600" />;
       case 'admin':
         return <Shield size={16} className="text-red-600" />;
       default:
@@ -156,7 +165,7 @@ const UserManagement = () => {
     switch (status) {
       case 'active':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle size={12} className="mr-1" />
             Active
           </span>
@@ -190,6 +199,51 @@ const UserManagement = () => {
     return new Date(date).toLocaleDateString();
   };
 
+  const filteredUserIds = filteredUsers.map((user) => user.id);
+  const areAllFilteredSelected =
+    filteredUserIds.length > 0 &&
+    filteredUserIds.every((id) => selectedUserIds.includes(id));
+  const isAnyUserSelected = selectedUserIds.length > 0;
+
+  const handleToggleUserSelection = (userId) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleSelectAllChange = () => {
+    if (areAllFilteredSelected) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(filteredUserIds);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+
+    if (
+      !window.confirm(
+        `Are you sure you want to delete ${selectedUserIds.length} selected user(s)? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setBulkDeleting(true);
+    try {
+      await Promise.all(selectedUserIds.map((userId) => deleteUser(userId)));
+      toast.success(`Deleted ${selectedUserIds.length} user(s)`);
+      setSelectedUserIds([]);
+      await loadUsers();
+    } catch (error) {
+      console.error('Error deleting selected users:', error);
+      toast.error('Failed to delete selected users');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -205,14 +259,12 @@ const UserManagement = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
-              <p className="text-slate-300 mt-2">Manage users across all roles in the UltimateCare platform</p>
+              <p className="text-gray-600 mt-2">Manage users across all roles in the Care Master platform</p>
             </div>
-            
             <div className="flex space-x-3">
               <button
                 onClick={handleSeedData}
@@ -225,7 +277,6 @@ const UserManagement = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center">
@@ -238,23 +289,21 @@ const UserManagement = () => {
               </div>
             </div>
           </div>
-
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Heart className="text-blue-600" size={24} />
+              <div className="p-3 bg-green-100 rounded-full">
+                <Heart className="text-green-600" size={24} />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Elderly</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.patient}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.elderly}</p>
               </div>
             </div>
           </div>
-
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Stethoscope className="text-blue-600" size={24} />
+              <div className="p-3 bg-purple-100 rounded-full">
+                <Stethoscope className="text-purple-600" size={24} />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Doctors</p>
@@ -262,11 +311,10 @@ const UserManagement = () => {
               </div>
             </div>
           </div>
-
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Users className="text-blue-600" size={24} />
+              <div className="p-3 bg-orange-100 rounded-full">
+                <Users className="text-orange-600" size={24} />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Caregivers</p>
@@ -276,34 +324,30 @@ const UserManagement = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button
-              onClick={() => handleCreateUser('patient')}
+              onClick={() => handleCreateUser('elderly')}
               className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
             >
               <Heart size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-blue-600" />
               <p className="text-sm font-medium text-gray-600 group-hover:text-blue-800">Add Elderly User</p>
             </button>
-
             <button
               onClick={() => handleCreateUser('caregiver')}
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors group"
             >
-              <Users size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-blue-600" />
-              <p className="text-sm font-medium text-gray-600 group-hover:text-blue-800">Add Caregiver</p>
+              <Users size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-green-600" />
+              <p className="text-sm font-medium text-gray-600 group-hover:text-green-800">Add Caregiver</p>
             </button>
-
             <button
               onClick={() => handleCreateUser('doctor')}
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors group"
             >
-              <Stethoscope size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-blue-600" />
-              <p className="text-sm font-medium text-gray-600 group-hover:text-blue-800">Add Doctor</p>
+              <Stethoscope size={32} className="mx-auto mb-2 text-gray-400 group-hover:text-purple-600" />
+              <p className="text-sm font-medium text-gray-600 group-hover:text-purple-800">Add Doctor</p>
             </button>
-
             <button
               onClick={() => handleCreateUser('admin')}
               className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-red-500 hover:bg-red-50 transition-colors group"
@@ -314,7 +358,6 @@ const UserManagement = () => {
           </div>
         </div>
 
-        {/* Filters and Search */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             <div className="flex-1 max-w-md">
@@ -329,7 +372,6 @@ const UserManagement = () => {
                 />
               </div>
             </div>
-
             <div className="flex space-x-4">
               <select
                 value={roleFilter}
@@ -337,12 +379,11 @@ const UserManagement = () => {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">All Roles</option>
-                <option value="patient">Patient</option>
+                <option value="elderly">Elderly</option>
                 <option value="caregiver">Caregiver</option>
                 <option value="doctor">Doctor</option>
                 <option value="admin">Admin</option>
               </select>
-
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -357,10 +398,21 @@ const UserManagement = () => {
           </div>
         </div>
 
-        {/* Users Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold text-gray-800">Users ({filteredUsers.length})</h2>
+            {isAnyUserSelected && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">{selectedUserIds.length} selected</span>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700 transition"
+                >
+                  {bulkDeleting ? 'Deleting...' : 'Delete selected'}
+                </button>
+              </div>
+            )}
           </div>
 
           {loading ? (
@@ -378,6 +430,14 @@ const UserManagement = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <input
+                        type="checkbox"
+                        checked={areAllFilteredSelected}
+                        onChange={handleSelectAllChange}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       User
                     </th>
@@ -401,12 +461,21 @@ const UserManagement = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.includes(user.id)}
+                          onChange={() => handleToggleUserSelection(user.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
                             <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                               <span className="text-sm font-medium text-gray-700">
-                                {user.firstName?.[0]}{user.lastName?.[0]}
+                                {user.firstName?.[0]}
+                                {user.lastName?.[0]}
                               </span>
                             </div>
                           </div>
@@ -438,14 +507,14 @@ const UserManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           <button
-                            onClick={() => {/* View user details */}}
+                            onClick={() => {}}
                             className="text-blue-600 hover:text-blue-900"
                           >
                             <Eye size={16} />
                           </button>
                           <button
-                            onClick={() => {/* Edit user */}}
-                            className="text-blue-600 hover:text-green-900"
+                            onClick={() => {}}
+                            className="text-green-600 hover:text-green-900"
                           >
                             <Edit size={16} />
                           </button>
@@ -459,7 +528,7 @@ const UserManagement = () => {
                           ) : (
                             <button
                               onClick={() => handleUserAction(user.id, 'activate')}
-                              className="text-blue-600 hover:text-green-900"
+                              className="text-green-600 hover:text-green-900"
                             >
                               <CheckCircle size={16} />
                             </button>
@@ -481,13 +550,12 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* User Creation Form Modal */}
       {showCreateForm && (
         <UserCreationForm
           userRole={selectedRole}
           onClose={() => {
             setShowCreateForm(false);
-            setSelectedRole('patient');
+            setSelectedRole('elderly');
           }}
         />
       )}
@@ -496,3 +564,4 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
+

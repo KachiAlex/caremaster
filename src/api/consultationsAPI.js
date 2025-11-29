@@ -15,7 +15,6 @@ import {
 import { db } from '../firebase/config';
 import { logClientActivity } from './clientActivitiesAPI';
 import { notificationsAPI } from './notificationsAPI';
-import { logConsultation } from '../utils/patientLogger';
 
 const CONSULTATIONS_COLLECTION = 'consultations';
 
@@ -49,7 +48,7 @@ export const createConsultation = async (consultationData) => {
       chiefComplaint: consultationData.chiefComplaint || '',
       
       // Clinical findings
-      subjective: consultationData.subjective || '', // Patient's description
+      subjective: consultationData.subjective || '', // Client's description
       objective: consultationData.objective || '', // Doctor's observations
       assessment: consultationData.assessment || '', // Diagnosis/Assessment
       plan: consultationData.plan || '', // Treatment plan
@@ -82,49 +81,7 @@ export const createConsultation = async (consultationData) => {
     const docRef = await addDoc(consultationsRef, newConsultation);
     console.log('✅ Consultation created with ID:', docRef.id);
     
-    // Log to patient logs (new comprehensive logging system)
-    try {
-      // Get patient's simple patientId if available
-      const patientDoc = await getDoc(doc(db, 'patients', consultationData.clientId)).catch(() => null);
-      const patientData = patientDoc?.exists() ? patientDoc.data() : null;
-      let patientSimpleId = patientData?.patientId || consultationData.clientId;
-      
-      // Also check legacy clients collection
-      if (!patientData || patientSimpleId === consultationData.clientId) {
-        const legacyClientDoc = await getDoc(doc(db, 'clients', consultationData.clientId)).catch(() => null);
-        const legacyClientData = legacyClientDoc?.exists() ? legacyClientDoc.data() : null;
-        if (legacyClientData?.patientId) {
-          patientSimpleId = legacyClientData.patientId;
-        }
-      }
-      
-      const clinicianInfo = {
-        id: consultationData.doctorId,
-        name: consultationData.doctorName,
-        role: consultationData.doctorRole || 'doctor',
-        email: consultationData.doctorEmail || null,
-        institutionId: consultationData.institutionId
-      };
-      
-      await logConsultation(patientSimpleId, clinicianInfo, {
-        consultationId: docRef.id,
-        consultationType: consultationData.consultationType || CONSULTATION_TYPES.REVIEW,
-        chiefComplaint: consultationData.chiefComplaint || '',
-        subjective: consultationData.subjective || '',
-        objective: consultationData.objective || '',
-        assessment: consultationData.assessment || '',
-        plan: consultationData.plan || '',
-        vitalSigns: consultationData.vitalSigns || null,
-        followUpRequired: consultationData.followUpRequired || false,
-        followUpDate: consultationData.followUpDate || null,
-        notes: consultationData.notes || ''
-      });
-    } catch (logError) {
-      console.warn('Could not log consultation to patient logs:', logError);
-      // Don't fail the consultation creation if logging fails
-    }
-    
-    // Log activity to client's activity log (legacy support)
+    // Log activity to client's activity log
     try {
       await logClientActivity({
         clientId: consultationData.clientId,

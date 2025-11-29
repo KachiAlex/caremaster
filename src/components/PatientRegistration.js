@@ -1,6 +1,6 @@
 /**
- * Patient Registration Component
- * Hospital Operations - Patient Registration with Simple ID Generation
+ * Client Registration Component
+ * Hospital Operations - Client Registration with Simple ID Generation
  */
 
 import React, { useState } from 'react';
@@ -19,7 +19,7 @@ import {
   CheckCircle,
   FileText
 } from 'lucide-react';
-import { createPatient } from '../api/patientsAPI';
+import { createClient } from '../api/patientsAPI';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 
@@ -81,7 +81,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
     const newErrors = {};
     
     if (!formData.name.trim()) {
-      newErrors.name = 'Patient name is required';
+      newErrors.name = 'Client name is required';
     }
     
     if (!formData.dateOfBirth) {
@@ -121,15 +121,15 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
     }
 
     if (!institutionId) {
-      toast.error('Institution ID is required for patient registration');
+      toast.error('Institution ID is required for Client registration');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Prepare patient data
-      const patientData = {
+      // Prepare Client data
+      const clientData = {
         name: formData.name.trim(),
         fullName: formData.fullName.trim() || formData.name.trim(),
         dateOfBirth: formData.dateOfBirth,
@@ -157,24 +157,24 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
         insurancePolicyNumber: formData.insurancePolicyNumber.trim() || null,
         careLevel: formData.careLevel,
         institutionId: institutionId,
-        userType: 'patient',
-        type: 'patient'
+        userType: 'Client',
+        type: 'Client'
       };
 
-      // Register patient
-      const result = await createPatient(patientData, userProfile);
-      setCreatedPatientId(result.patientId);
+      // Register Client
+      const result = await createClient(clientData, userProfile);
+      setCreatedPatientId(result.clientId);
       
       toast.success(
         <div>
-          <div className="font-semibold">Patient registered successfully!</div>
-          <div className="text-sm mt-1">Patient ID: <span className="font-mono font-bold text-blue-600">{result.patientId}</span></div>
+          <div className="font-semibold">Client registered successfully!</div>
+          <div className="text-sm mt-1">Client ID: <span className="font-mono font-bold text-blue-600">{result.clientId}</span></div>
         </div>,
         { autoClose: 6000 }
       );
 
       if (onSuccess) {
-        onSuccess({ id: result.id, patientId: result.patientId, ...patientData });
+        onSuccess({ id: result.id, clientId: result.clientId, ...clientData });
       }
       
       // Reset form after a delay to show success
@@ -185,8 +185,8 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
       }, 2000);
       
     } catch (error) {
-      console.error('Error registering patient:', error);
-      toast.error(`Failed to register patient: ${error.message || 'Unknown error'}`);
+      console.error('Error registering Client:', error);
+      toast.error(`Failed to register Client: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -199,9 +199,9 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
           <div className="mx-auto w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-4">
             <CheckCircle className="h-8 w-8 text-blue-400" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-50 mb-2">Patient Registered Successfully!</h3>
+          <h3 className="text-2xl font-bold text-slate-50 mb-2">Client Registered Successfully!</h3>
           <div className="mt-6 p-6 bg-slate-900/60 rounded-2xl border border-slate-800/60">
-            <div className="text-sm text-slate-400 mb-2">Patient ID</div>
+            <div className="text-sm text-slate-400 mb-2">Client ID</div>
             <div className="text-3xl font-mono font-bold text-blue-400 mb-4">{createdPatientId}</div>
             <div className="text-sm text-slate-300">
               <div className="mb-1"><span className="text-slate-400">Name:</span> {formData.name}</div>
@@ -229,8 +229,8 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             <UserPlus className="h-5 w-5 text-blue-300" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-slate-50">Register New Patient</h2>
-            <p className="text-xs text-slate-400 mt-1">Hospital Operations - Patient Registration</p>
+            <h2 className="text-xl font-semibold tracking-tight text-slate-50">Register New Client</h2>
+            <p className="text-xs text-slate-400 mt-1">Hospital Operations - Client Registration</p>
           </div>
         </div>
         {onClose && (
@@ -264,7 +264,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
                   errors.name ? 'border-red-500/50' : 'border-slate-700'
                 }`}
-                placeholder="Enter patient's full name"
+                placeholder="Enter Client's full name"
               />
               {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
             </div>
@@ -332,7 +332,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
                 className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
                   errors.email ? 'border-red-500/50' : 'border-slate-700'
                 }`}
-                placeholder="patient@example.com"
+                placeholder="Client@example.com"
               />
               {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}
             </div>
@@ -564,7 +564,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                Register Patient
+                Register Client
               </>
             )}
           </button>

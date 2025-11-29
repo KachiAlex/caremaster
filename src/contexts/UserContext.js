@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, db, functions as firebaseFunctions } from '../firebase/config';
+import { auth, db } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
 import { getUserById } from '../api/usersAPI';
 
 const UserContext = createContext();
@@ -22,10 +20,8 @@ export const UserProvider = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
   const [userRoles, setUserRoles] = useState([]);
   const [licenseActive, setLicenseActive] = useState(true);
-  const [institutionId, setInstitutionId] = useState(null); // active tenantId
+  const [institutionId, setInstitutionId] = useState(null);
   const [institutionData, setInstitutionData] = useState(null);
-  const [tenantMemberships, setTenantMemberships] = useState([]);
-  const [tenantLoading, setTenantLoading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -44,7 +40,7 @@ export const UserProvider = ({ children }) => {
           });
           
           if (profile) {
-            // Handle both 'patient' and legacy 'elderly' as the same role, also check userType field and role field
+            // Handle both 'Client' and 'elderly' as the same role, also check userType field and role field
             // Support multiple roles
             let roleFromProfile;
             let userRoles = [];
@@ -86,7 +82,7 @@ export const UserProvider = ({ children }) => {
                   console.error('❌ Failed to update admin role:', updateError);
                 }
               } else {
-                roleFromProfile = possibleRole || 'patient';
+                roleFromProfile = possibleRole || 'Client';
                 userRoles = [roleFromProfile];
               }
             }
@@ -169,29 +165,7 @@ export const UserProvider = ({ children }) => {
             console.log('✅ User role set to:', roleFromProfile);
             console.log('✅ User roles:', userRoles);
 
-            // Load tenant memberships for this user (multi-tenant support)
-            setTenantLoading(true);
-            try {
-              const membershipsRef = collection(db, 'userTenants');
-              const membershipsQuery = query(
-                membershipsRef,
-                where('userId', '==', firebaseUser.uid),
-                where('status', '==', 'active')
-              );
-              const membershipsSnap = await getDocs(membershipsQuery);
-              const memberships = membershipsSnap.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-              }));
-              setTenantMemberships(memberships);
-            } catch (tenantError) {
-              console.error('Error loading tenant memberships:', tenantError);
-              setTenantMemberships([]);
-            } finally {
-              setTenantLoading(false);
-            }
-
-            // Institution and License check (uses token.claims.institutionId where available)
+            // Institution and License check
             try {
               const token = await firebaseUser.getIdTokenResult();
               // Use updatedProfile instead of profile to ensure we get the correct institutionId
@@ -283,8 +257,6 @@ export const UserProvider = ({ children }) => {
         setLicenseActive(true);
         setInstitutionId(null);
         setInstitutionData(null);
-        setTenantMemberships([]);
-        setTenantLoading(false);
       }
       setLoading(false);
     });
@@ -319,38 +291,11 @@ export const UserProvider = ({ children }) => {
   };
 
   const isElderly = () => {
-    // Legacy helper preserved for backwards compatibility with existing data
     return userRole === 'elderly';
   };
 
   const isAdmin = () => {
     return userRole === 'admin';
-  };
-
-  // Switch active tenant (institution) for the current user
-  const switchTenant = async (newInstitutionId) => {
-    if (!user) return;
-    if (!newInstitutionId || newInstitutionId === institutionId) return;
-
-    try {
-      setTenantLoading(true);
-      const callable = httpsCallable(
-        firebaseFunctions,
-        'setCurrentTenantFunction'
-      );
-      const result = await callable({ institutionId: newInstitutionId });
-
-      // Force token refresh so Firestore rules see the new institutionId/roles
-      await user.getIdToken(true);
-
-      // Update local state
-      setInstitutionId(result.data.institutionId);
-    } catch (error) {
-      console.error('Error switching tenant:', error);
-      throw error;
-    } finally {
-      setTenantLoading(false);
-    }
   };
 
   const getCaregiverOnboardingRoute = () => {
@@ -371,14 +316,23 @@ export const UserProvider = ({ children }) => {
       onboardingProfileComplete: userProfile.onboardingProfileComplete
     });
 
-    // For caregivers, STRICTLY enforce onboarding completion
+    // For caregivers, enforce onboarding completion
+    // IMPORTANT: If caregiver is activated (status: 'active'), allow access even if onboarding is incomplete
+    // Only require onboarding completion for caregivers who are not yet activated
     if (userProfile.userType === 'caregiver') {
+      // If caregiver is activated, allow access regardless of onboarding status
+      if (userProfile.status === 'active') {
+        console.log('✅ Activated caregiver - allowing access even if onboarding incomplete');
+        return false;
+      }
+      
       // Check if onboarding is explicitly complete
       const isComplete = userProfile.onboardingComplete === true;
       if (!isComplete) {
         console.log('🚫 CAREGIVER ONBOARDING INCOMPLETE - blocking access', {
           onboardingComplete: userProfile.onboardingComplete,
-          userType: userProfile.userType
+          userType: userProfile.userType,
+          status: userProfile.status
         });
         return true;
       }
@@ -392,13 +346,13 @@ export const UserProvider = ({ children }) => {
       return false;
     }
 
-    // For patient users, check if they've completed patient onboarding  
-    if (userRole === 'patient') {
+    // For elderly/clients, check if they've completed Client onboarding  
+    if (userProfile.userType === 'elderly' || userRole === 'Client') {
       if (!userProfile.onboardingProfileComplete) {
-        console.log('🚫 PATIENT ONBOARDING INCOMPLETE - blocking access');
+        console.log('🚫 Client ONBOARDING INCOMPLETE - blocking access');
         return true;
       }
-      console.log('✅ Patient onboarding complete');
+      console.log('✅ Client onboarding complete');
       return false;
     }
 
@@ -419,15 +373,15 @@ export const UserProvider = ({ children }) => {
       onboardingMedicalComplete: userProfile?.onboardingMedicalComplete
     });
     
-    // For patient users, check profile and medical completion
-    if (userRole === 'patient') {
+    // For Client/elderly users, check profile and medical completion
+    if (userRole === 'elderly' || userRole === 'Client') {
       const hasCompletionFlags = userProfile?.onboardingProfileComplete && userProfile?.onboardingMedicalComplete;
       
       // If user has basic profile data but no completion flags, consider them complete
       const hasBasicProfile = userProfile?.name || userProfile?.displayName || userProfile?.dateOfBirth;
       
       const isIncomplete = !hasCompletionFlags && !hasBasicProfile;
-      console.log('Patient onboarding incomplete:', isIncomplete, {
+      console.log('Client onboarding incomplete:', isIncomplete, {
         hasCompletionFlags,
         hasBasicProfile,
         profileData: {
@@ -475,9 +429,6 @@ export const UserProvider = ({ children }) => {
     licenseActive,
     institutionId,
     institutionData,
-    tenantMemberships,
-    tenantLoading,
-    switchTenant,
   };
 
   return (

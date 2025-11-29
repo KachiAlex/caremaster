@@ -11,12 +11,12 @@ import { db } from '../firebase/config';
 
 const NURSE_REPORTS_COLLECTION = 'nurseReports';
 
-export const getNurseReportsByPatient = async (patientId) => {
+export const getNurseReportsByPatient = async (clientId) => {
   try {
     const reportsRef = collection(db, NURSE_REPORTS_COLLECTION);
     const q = query(
       reportsRef,
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('createdAt', 'desc')
     );
     const snap = await getDocs(q);
@@ -33,7 +33,7 @@ export const getNurseReportsByPatient = async (patientId) => {
 };
 
 export const createNurseReport = async ({
-  patientId,
+  clientId,
   nurseId,
   nurseName,
   bloodPressure,
@@ -49,7 +49,7 @@ export const createNurseReport = async ({
   try {
     const reportsRef = collection(db, NURSE_REPORTS_COLLECTION);
     const payload = {
-      patientId,
+      clientId,
       nurseId,
       nurseName,
       bloodPressure,

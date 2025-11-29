@@ -1,10 +1,10 @@
 /**
- * Patient Search Component
- * Search patients by simple ID, name, email, or phone
+ * Client Search Component
+ * Search clients by simple ID, name, email, or phone
  * 
  * @component
- * @param {Function} onSelectPatient - Callback function called when a patient is selected
- * @param {string} placeholder - Placeholder text for the search input (default: "Search by Patient ID, name, email, or phone...")
+ * @param {Function} onSelectPatient - Callback function called when a Client is selected
+ * @param {string} placeholder - Placeholder text for the search input (default: "Search by Client ID, name, email, or phone...")
  */
 
 import React, { useState, useEffect } from 'react';
@@ -40,11 +40,11 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
 
       setLoading(true);
       try {
-        // If search term looks like a patient ID (UC-YYYY-NNNN format), try direct lookup first
+        // If search term looks like a Client ID (UC-YYYY-NNNN format), try direct lookup first
         if (/^UC-\d{4}-\d{4}/i.test(searchTerm.trim())) {
           try {
-            const patient = await getPatientByPatientId(searchTerm.trim().toUpperCase());
-            setResults([patient]);
+            const Client = await getPatientByPatientId(searchTerm.trim().toUpperCase());
+            setResults([Client]);
             setShowResults(true);
             setLoading(false);
             return;
@@ -61,7 +61,7 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
         setResults(searchResults);
         setShowResults(searchResults.length > 0);
       } catch (error) {
-        console.error('Error searching patients:', error);
+        console.error('Error searching clients:', error);
         setResults([]);
         setShowResults(false);
       } finally {
@@ -73,12 +73,12 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
     return () => clearTimeout(debounceTimer);
   }, [searchTerm, userProfile?.institutionId]);
 
-  const handleSelect = (patient) => {
+  const handleSelect = (Client) => {
     setSearchTerm('');
     setShowResults(false);
     setSelectedIndex(-1);
     if (onSelectPatient) {
-      onSelectPatient(patient);
+      onSelectPatient(Client);
     }
   };
 
@@ -158,10 +158,10 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
       {showResults && results.length > 0 && (
         <div className="absolute z-50 w-full mt-2 bg-slate-950 border border-slate-800/80 rounded-2xl shadow-xl shadow-black/50 max-h-96 overflow-y-auto">
           <div className="p-2">
-            {results.map((patient, index) => (
+            {results.map((Client, index) => (
               <div
-                key={patient.id}
-                onClick={() => handleSelect(patient)}
+                key={client.id}
+                onClick={() => handleSelect(Client)}
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
                   index === selectedIndex
                     ? 'bg-blue-500/20 border border-blue-500/30'
@@ -173,39 +173,39 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
                     <div className="flex items-center gap-2 mb-1">
                       <User className="h-4 w-4 text-slate-400 flex-shrink-0" />
                       <div className="font-semibold text-slate-50 truncate">
-                        {patient.name || patient.fullName || 'Unknown Patient'}
+                        {client.name || client.fullName || 'Unknown Client'}
                       </div>
-                      {patient.patientId && (
+                      {client.clientId && (
                         <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded text-xs font-mono flex-shrink-0">
-                          {patient.patientId}
+                          {client.clientId}
                         </span>
                       )}
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-2">
-                      {patient.email && (
+                      {client.email && (
                         <div className="flex items-center gap-1">
                           <Mail className="h-3 w-3" />
-                          <span className="truncate">{patient.email}</span>
+                          <span className="truncate">{client.email}</span>
                         </div>
                       )}
-                      {patient.phone && (
+                      {client.phone && (
                         <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3" />
-                          <span>{patient.phone}</span>
+                          <span>{client.phone}</span>
                         </div>
                       )}
-                      {patient.dateOfBirth && (
+                      {client.dateOfBirth && (
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          <span>{formatDate(patient.dateOfBirth)}</span>
+                          <span>{formatDate(client.dateOfBirth)}</span>
                         </div>
                       )}
                     </div>
                     
-                    {patient.gender && (
+                    {client.gender && (
                       <div className="text-xs text-slate-500 mt-1">
-                        {patient.gender} • {patient.status || 'active'}
+                        {client.gender} • {client.status || 'active'}
                       </div>
                     )}
                   </div>
@@ -220,7 +220,7 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
       {showResults && !loading && searchTerm && results.length === 0 && (
         <div className="absolute z-50 w-full mt-2 bg-slate-950 border border-slate-800/80 rounded-2xl shadow-xl shadow-black/50 p-4">
           <div className="text-center text-slate-400 text-sm">
-            No patients found matching "{searchTerm}"
+            No clients found matching "{searchTerm}"
           </div>
         </div>
       )}
@@ -234,7 +234,7 @@ PatientSearch.propTypes = {
 };
 
 PatientSearch.defaultProps = {
-  placeholder: "Search by Patient ID, name, email, or phone..."
+  placeholder: "Search by Client ID, name, email, or phone..."
 };
 
 export default PatientSearch;

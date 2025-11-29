@@ -39,8 +39,8 @@ const CaregiverNavigation = () => {
           const mockRoutes = [
             {
               id: 1,
-              patientName: 'Adunni Okafor',
-              patientId: 'ELD001',
+              clientName: 'Adunni Okafor',
+              clientId: 'ELD001',
               address: '123 Victoria Island, Lagos',
               coordinates: { lat: 6.4281, lng: 3.4219 },
               distance: 2.5,
@@ -54,8 +54,8 @@ const CaregiverNavigation = () => {
             },
             {
               id: 2,
-              patientName: 'Grace Johnson',
-              patientId: 'ELD002',
+              clientName: 'Grace Johnson',
+              clientId: 'ELD002',
               address: '456 Ikoyi, Lagos',
               coordinates: { lat: 6.4474, lng: 3.4288 },
               distance: 5.2,
@@ -69,8 +69,8 @@ const CaregiverNavigation = () => {
             },
             {
               id: 3,
-              patientName: 'Michael Adebayo',
-              patientId: 'ELD003',
+              clientName: 'Michael Adebayo',
+              clientId: 'ELD003',
               address: '789 Lekki, Lagos',
               coordinates: { lat: 6.4698, lng: 3.5852 },
               distance: 8.7,
@@ -84,8 +84,8 @@ const CaregiverNavigation = () => {
             },
             {
               id: 4,
-              patientName: 'Sarah Williams',
-              patientId: 'ELD004',
+              clientName: 'Sarah Williams',
+              clientId: 'ELD004',
               address: '321 Surulere, Lagos',
               coordinates: { lat: 6.5018, lng: 3.3584 },
               distance: 12.3,
@@ -113,7 +113,7 @@ const CaregiverNavigation = () => {
   }, []);
 
   const filteredRoutes = routes.filter(route => {
-    const matchesSearch = route.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = route.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          route.address.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterType === 'all' || route.priority === filterType;
     return matchesSearch && matchesFilter;
@@ -126,7 +126,7 @@ const CaregiverNavigation = () => {
       case 'medium':
         return 'bg-yellow-100 text-yellow-800';
       case 'low':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -139,7 +139,7 @@ const CaregiverNavigation = () => {
       case 'in-progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -187,16 +187,16 @@ const CaregiverNavigation = () => {
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-purple-600 flex items-center justify-center">
               <Navigation className="h-8 w-8 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Navigation</h1>
-              <p className="text-gray-600">Plan your routes and navigate to patient locations</p>
+              <p className="text-gray-600">Plan your routes and navigate to Client locations</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+            <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center">
               <Route className="h-5 w-5 mr-2" />
               Optimize Route
             </button>
@@ -214,14 +214,14 @@ const CaregiverNavigation = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search patients or addresses..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Search clients or addresses..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
@@ -238,14 +238,14 @@ const CaregiverNavigation = () => {
               <div
                 key={route.id}
                 className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                  selectedRoute?.id === route.id ? 'bg-blue-50 border-purple-200' : ''
+                  selectedRoute?.id === route.id ? 'bg-purple-50 border-purple-200' : ''
                 }`}
                 onClick={() => setSelectedRoute(route)}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900">{route.patientName}</h3>
-                    <p className="text-xs text-gray-600">ID: {route.patientId}</p>
+                    <h3 className="text-sm font-medium text-gray-900">{route.clientName}</h3>
+                    <p className="text-xs text-gray-600">ID: {route.clientId}</p>
                   </div>
                   <div className="flex flex-col items-end space-y-1">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(route.priority)}`}>
@@ -300,7 +300,7 @@ const CaregiverNavigation = () => {
                       <span className="font-medium">{selectedRoute.distance} km</span>
                     </div>
                     <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-2 text-blue-600" />
+                      <Clock className="h-4 w-4 mr-2 text-green-600" />
                       <span className="font-medium">{selectedRoute.estimatedTime} min</span>
                     </div>
                   </div>
@@ -312,14 +312,14 @@ const CaregiverNavigation = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-6">
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900">{selectedRoute.patientName}</h2>
-                      <p className="text-gray-600">ID: {selectedRoute.patientId}</p>
+                      <h2 className="text-xl font-bold text-gray-900">{selectedRoute.clientName}</h2>
+                      <p className="text-gray-600">ID: {selectedRoute.clientId}</p>
                     </div>
                     <div className="flex space-x-2">
                       {selectedRoute.status === 'scheduled' && (
                         <button
                           onClick={() => handleStartNavigation(selectedRoute)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
                         >
                           <NavIcon className="h-4 w-4 mr-2" />
                           Start Navigation
@@ -328,7 +328,7 @@ const CaregiverNavigation = () => {
                       {selectedRoute.status === 'in-progress' && (
                         <button
                           onClick={() => handleCompleteVisit(selectedRoute)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Complete Visit
@@ -379,9 +379,9 @@ const CaregiverNavigation = () => {
                       </div>
                     </div>
 
-                    {/* Patient Information */}
+                    {/* Client Information */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">Client Information</h3>
                       
                       <div className="space-y-3">
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -427,7 +427,7 @@ const CaregiverNavigation = () => {
               <div className="text-center">
                 <Navigation className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Select a route</h3>
-                <p className="text-gray-600">Choose a patient route from the list to view details and start navigation</p>
+                <p className="text-gray-600">Choose a Client route from the list to view details and start navigation</p>
               </div>
             </div>
           )}

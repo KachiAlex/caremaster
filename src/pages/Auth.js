@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 const Auth = () => {
-  const [mode, setMode] = useState('signin'); // 'signin', 'signup-patient', 'signup-caregiver'
+  const [mode, setMode] = useState('signin'); // 'signin', 'signup-Client', 'signup-caregiver'
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,7 +48,7 @@ const Auth = () => {
     emergencyContactName: '',
     emergencyContactPhone: '',
     
-    // Patient-specific
+    // Client-specific
     medicalConditions: '',
     medications: '',
     allergies: '',
@@ -174,7 +174,7 @@ const Auth = () => {
     }
   };
 
-  // Patient signup validation
+  // Client signup validation
   const validatePatientStep = (step) => {
     switch (step) {
       case 1: return form.email && form.password && form.password === form.confirmPassword && form.password.length >= 6;
@@ -196,7 +196,7 @@ const Auth = () => {
   };
 
   const nextStep = () => {
-    const isValid = mode === 'signup-patient' ? validatePatientStep(currentStep) : validateCaregiverStep(currentStep);
+    const isValid = mode === 'signup-Client' ? validatePatientStep(currentStep) : validateCaregiverStep(currentStep);
     if (isValid) {
       setCurrentStep(prev => prev + 1);
     } else {
@@ -208,7 +208,7 @@ const Auth = () => {
     setCurrentStep(prev => prev - 1);
   };
 
-  // Complete signup for patients
+  // Complete signup for clients
   const completePatientSignup = async () => {
     setLoading(true);
     try {
@@ -230,8 +230,8 @@ const Auth = () => {
         medicalConditions: form.medicalConditions,
         medications: form.medications,
         allergies: form.allergies,
-        userType: 'patient',
-        type: 'patient',
+        userType: 'elderly',
+        type: 'elderly',
         onboardingComplete: true,
         onboardingProfileComplete: true,
         onboardingMedicalComplete: true,
@@ -241,10 +241,10 @@ const Auth = () => {
         lastActive: new Date()
       });
 
-      toast.success('Patient account created successfully!');
+      toast.success('Client account created successfully!');
       window.location.href = '/dashboard';
     } catch (error) {
-      console.error('Patient signup error:', error);
+      console.error('Client signup error:', error);
       toast.error(error.message || 'Failed to create account');
     } finally {
       setLoading(false);
@@ -324,7 +324,7 @@ const Auth = () => {
 
   const getStepTitle = () => {
     if (mode === 'signin') return 'Caregiver Portal';
-    if (mode === 'signup-patient') {
+    if (mode === 'signup-Client') {
       const steps = ['Create Account', 'Personal Info', 'Medical Info'];
       return steps[currentStep - 1] || 'Complete';
     }
@@ -346,7 +346,7 @@ const Auth = () => {
               <Heart className="h-12 w-12 text-blue-600" />
             </div>
           </div>
-          <h2 className="brand-title text-gray-900">UltimateCare</h2>
+                <h2 className="brand-title text-gray-900">Care Master</h2>
           <p className="text-gray-600 mt-2">{getStepTitle()}</p>
         </div>
 
@@ -406,8 +406,8 @@ const Auth = () => {
           </form>
         )}
 
-        {/* Patient Signup */}
-        {mode === 'signup-patient' && (
+        {/* Client Signup */}
+        {mode === 'signup-Client' && (
           <div className="space-y-6">
             {/* Back button */}
             <button
@@ -421,7 +421,7 @@ const Auth = () => {
             {/* Step 1: Account */}
             {currentStep === 1 && (
               <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-900">Create Patient Account</h3>
+                <h3 className="text-xl font-semibold text-gray-900">Create Client Account</h3>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
@@ -519,7 +519,7 @@ const Auth = () => {
               </div>
             )}
 
-            {/* Step 3: Patient Medical Info */}
+            {/* Step 3: Client Medical Info */}
             {currentStep === 3 && (
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-gray-900">Medical Information</h3>
@@ -585,7 +585,7 @@ const Auth = () => {
               </div>
             )}
 
-            {/* Patient Navigation */}
+            {/* Client Navigation */}
             <div className="flex justify-between">
               <button
                 type="button"
@@ -610,7 +610,7 @@ const Auth = () => {
                   type="button"
                   onClick={completePatientSignup}
                   disabled={loading || !validatePatientStep(3)}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
                   {loading ? 'Creating Account...' : 'Complete Registration'}
                 </button>
@@ -625,7 +625,7 @@ const Auth = () => {
             {/* Back button */}
             <button
               onClick={() => { setMode('signin'); setCurrentStep(1); }}
-              className="flex items-center text-blue-600 hover:text-blue-800"
+              className="flex items-center text-green-600 hover:text-green-800"
             >
               <ArrowLeft size={16} className="mr-1" />
               Back to Sign In
@@ -848,7 +848,7 @@ const Auth = () => {
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-gray-900">Health Screening</h3>
                 <p className="text-sm text-gray-600">
-                  This information helps us ensure the safety of both caregivers and patients. 
+                  This information helps us ensure the safety of both caregivers and clients. 
                   All information is kept confidential and used only for care planning purposes.
                 </p>
                 
@@ -998,7 +998,7 @@ const Auth = () => {
                   type="button"
                   onClick={nextStep}
                   disabled={!validateCaregiverStep(currentStep)}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -1007,7 +1007,7 @@ const Auth = () => {
                   type="button"
                   onClick={completeCaregiverSignup}
                   disabled={loading || !validateCaregiverStep(4)}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
                   {loading ? 'Creating Account...' : 'Complete Registration'}
                 </button>

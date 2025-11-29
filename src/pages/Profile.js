@@ -73,7 +73,7 @@ const Profile = () => {
               <Shield className="h-5 w-5 text-gray-400 mr-3" />
               <div>
                 <p className="text-sm text-gray-500">Account Type</p>
-                <p className="font-medium text-gray-900 capitalize">{userProfile?.userType || 'patient'}</p>
+                <p className="font-medium text-gray-900 capitalize">{userProfile?.userType || 'elderly'}</p>
               </div>
             </div>
           </div>
@@ -151,7 +151,7 @@ const Profile = () => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Medication Adherence</span>
-              <span className="font-semibold text-blue-600">95%</span>
+              <span className="font-semibold text-green-600">95%</span>
             </div>
           </div>
           <button className="btn btn-primary mt-4">

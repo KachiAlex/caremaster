@@ -25,15 +25,15 @@ const logMedicationDose = httpsCallable(functions, 'logMedicationDose');
 const getMedicationAnalytics = httpsCallable(functions, 'getMedicationAnalytics');
 
 export const medicationAPI = {
-  // Get all medications with filtering (prefer Firestore when a patientId is provided)
+  // Get all medications with filtering (prefer Firestore when a clientId is provided)
   getMedications: async (filters = {}) => {
     try {
       logger.debug('Fetching medications', { filters });
       
-      // When a specific patientId is provided (doctor/caregiver views), use Firestore directly.
-      // Data Connect often expects a patient profile context and can fail for provider lookups.
-      if (!filters.patientId) {
-        // Try Data Connect only for current-user context (likely patient portal)
+      // When a specific clientId is provided (doctor/caregiver views), use Firestore directly.
+      // Data Connect often expects a Client profile context and can fail for provider lookups.
+      if (!filters.clientId) {
+        // Try Data Connect only for current-user context (likely Client portal)
         try {
           const result = await dataConnectService.getCurrentUserMedications();
           return result.data || [];
@@ -45,14 +45,14 @@ export const medicationAPI = {
       // Fallback to Firestore with simplified query to avoid index requirements
       let medicationsQuery;
       
-      if (filters.patientId) {
-        // Primary filter by patientId only, sort client-side
+      if (filters.clientId) {
+        // Primary filter by clientId only, sort client-side
         medicationsQuery = query(
           collection(db, 'medications'),
-          where('patientId', '==', filters.patientId)
+          where('clientId', '==', filters.clientId)
         );
       } else {
-        // If no patientId filter, get recent medications
+        // If no clientId filter, get recent medications
         medicationsQuery = query(
           collection(db, 'medications'),
           orderBy('startDate', 'desc'),
@@ -85,8 +85,8 @@ export const medicationAPI = {
         medications = medications.filter(med => med.status === filters.status);
       }
 
-      // Apply client-side sorting if patientId filter was used
-      if (filters.patientId) {
+      // Apply client-side sorting if clientId filter was used
+      if (filters.clientId) {
         medications.sort((a, b) => {
           const aDate = a.startDate || new Date(0);
           const bDate = b.startDate || new Date(0);
@@ -207,7 +207,7 @@ export const medicationAPI = {
           type: 'taken',
           timestamp: doseData.takenAt,
           notes: doseData.notes || '',
-          recordedBy: doseData.recordedBy || 'Patient'
+          recordedBy: doseData.recordedBy || 'Client'
         });
 
         return { success: true, complianceRate: newComplianceRate };
@@ -546,12 +546,12 @@ export const medicationAPI = {
   },
 
   // Get medication analytics (using Firebase Functions)
-  getAnalytics: async (patientId, dateRange = {}) => {
+  getAnalytics: async (clientId, dateRange = {}) => {
     try {
-      logger.debug('Getting medication analytics', { patientId, dateRange });
+      logger.debug('Getting medication analytics', { clientId, dateRange });
       
       const result = await getMedicationAnalytics({
-        patientId,
+        clientId,
         dateRange
       });
       
@@ -560,7 +560,7 @@ export const medicationAPI = {
     } catch (error) {
       errorHandler.handleError(error, { 
         context: 'medication_analytics', 
-        patientId, 
+        clientId, 
         dateRange 
       });
       throw error;
@@ -569,10 +569,10 @@ export const medicationAPI = {
 };
 
 // Convenience named export to maintain backwards compatibility with components
-// expecting a getMedicationsByPatient function.
-export const getMedicationsByPatient = async (patientId, limitCount) => {
-  if (!patientId) return [];
-  return medicationAPI.getMedications({ patientId, limit: limitCount });
+// expecting a getMedicationsByClient function.
+export const getMedicationsByClient = async (clientId, limitCount) => {
+  if (!clientId) return [];
+  return medicationAPI.getMedications({ clientId, limit: limitCount });
 };
 
 // Helper function to calculate next dose time

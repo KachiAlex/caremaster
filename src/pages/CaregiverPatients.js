@@ -25,7 +25,7 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { getClientsByCaregiver } from '../api/patientsAPI';
 import { getTodaysCareTasks } from '../api/careTasksAPI';
-import { getLatestVitalSigns, getVitalSignsByPatient } from '../api/vitalSignsAPI';
+import { getLatestVitalSigns, getVitalSignsByClient } from '../api/vitalSignsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { getCareLogsByClient } from '../api/careLogsAPI';
 import { getNurseReportsByPatient } from '../api/nurseReportsAPI';
@@ -117,7 +117,7 @@ const CaregiverClients = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'inactive':
         return 'bg-gray-100 text-gray-800';
       case 'critical':
@@ -141,7 +141,7 @@ const CaregiverClients = () => {
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center">
               <Heart className="h-8 w-8 text-white" />
             </div>
             <div>
@@ -150,9 +150,9 @@ const CaregiverClients = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+            <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center">
               <Plus className="h-5 w-5 mr-2" />
-              Add Patient
+              Add Client
             </button>
           </div>
         </div>
@@ -169,7 +169,7 @@ const CaregiverClients = () => {
                 <input
                   type="text"
                   placeholder="Search clients by name or condition..."
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -177,7 +177,7 @@ const CaregiverClients = () => {
             </div>
             <div className="flex gap-2">
               <select
-                className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
@@ -226,7 +226,7 @@ const CaregiverClients = () => {
                     </span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
-                    <Phone className="h-4 w-4 mr-2 text-blue-500" />
+                    <Phone className="h-4 w-4 mr-2 text-green-500" />
                     <span>{client.phone || 'No phone number available'}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
@@ -234,7 +234,7 @@ const CaregiverClients = () => {
                     <span>{client.address || 'No address available'}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
-                    <Calendar className="h-4 w-4 mr-2 text-blue-500" />
+                    <Calendar className="h-4 w-4 mr-2 text-purple-500" />
                     <span>
                       Next: {client.nextAppointment ? new Date(client.nextAppointment).toLocaleDateString() : 'No upcoming appointments'}
                     </span>
@@ -281,7 +281,7 @@ const CaregiverClients = () => {
                       setSelectedClient(client);
                       try {
                         const [vitals, reports] = await Promise.all([
-                          getVitalSignsByPatient(client.id),
+                          getVitalSignsByClient(client.id),
                           getNurseReportsByPatient(client.id)
                         ]);
                         setClientVitals(vitals);
@@ -313,7 +313,7 @@ const CaregiverClients = () => {
                         toast.error('Failed to load medications');
                       }
                     }}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-sm"
+                    className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center text-sm"
                   >
                     <Pill className="h-4 w-4 mr-1" />
                     Meds
@@ -331,7 +331,7 @@ const CaregiverClients = () => {
                         toast.error('Failed to load care logs');
                       }
                     }}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-sm"
+                    className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center text-sm"
                   >
                     <FileText className="h-4 w-4 mr-1" />
                     Logs
@@ -373,14 +373,14 @@ const CaregiverClients = () => {
             </button>
             <button 
               onClick={() => window.location.href = '/service-provider/messages?topic=assignment-request'}
-              className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-green-200 transition-colors"
+              className="flex items-center justify-center p-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
             >
               <MessageSquare className="h-5 w-5 mr-2" />
               Contact Admin
             </button>
             <button 
               onClick={() => window.location.href = '/service-provider/settings?section=availability'}
-              className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-purple-200 transition-colors"
+              className="flex items-center justify-center p-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
             >
               <Calendar className="h-5 w-5 mr-2" />
               Update Availability
@@ -463,7 +463,7 @@ const CaregiverClients = () => {
                     <h4 className="font-semibold text-gray-900">Care Logs</h4>
                     <div className="flex items-center gap-2">
                       <button
-                        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
                         onClick={async ()=>{
                           try {
                             const logs = await getCareLogsByClient(selectedClient.id);
@@ -513,7 +513,7 @@ const CaregiverClients = () => {
                         {Array.isArray(log.media) && log.media.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {log.media.map((m, idx)=> (
-                              <a key={idx} href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline">
+                              <a key={idx} href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 underline">
                                 {m.type?.startsWith('image/') ? 'View Image' : m.type?.startsWith('video/') ? 'View Video' : 'View File'}
                               </a>
                             ))}
@@ -545,7 +545,7 @@ const CaregiverClients = () => {
                     onClick={async () => {
                       try {
                         const [vitals, reports] = await Promise.all([
-                          getVitalSignsByPatient(selectedClient.id),
+                          getVitalSignsByClient(selectedClient.id),
                           getNurseReportsByPatient(selectedClient.id)
                         ]);
                         setClientVitals(vitals);
@@ -572,7 +572,7 @@ const CaregiverClients = () => {
                         toast.error('Failed to load medications');
                       }
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                   >
                     <Pill className="h-4 w-4 mr-2 inline" />
                     View Medications
@@ -693,7 +693,7 @@ const CaregiverClients = () => {
                           
                           <div className="flex items-center justify-between mt-3">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              report.status === 'stable' ? 'bg-blue-100 text-blue-800' :
+                              report.status === 'stable' ? 'bg-green-100 text-green-800' :
                               report.status === 'critical' ? 'bg-red-100 text-red-800' :
                               'bg-yellow-100 text-yellow-800'
                             }`}>
@@ -765,7 +765,7 @@ const CaregiverClients = () => {
                             <div className="text-lg font-semibold text-gray-900">{med.name || med.medicationName || 'Medication'}</div>
                             <div className="text-sm text-gray-600">{med.dosage || med.dose} {med.unit || ''} • {med.frequency || med.schedule}</div>
                           </div>
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${med.status === 'active' ? 'bg-blue-100 text-blue-800':'bg-gray-100 text-gray-800'}`}>
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${med.status === 'active' ? 'bg-green-100 text-green-800':'bg-gray-100 text-gray-800'}`}>
                             {med.status || 'active'}
                           </span>
                         </div>
@@ -844,7 +844,7 @@ const CaregiverClients = () => {
                         {Array.isArray(log.media) && log.media.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {log.media.map((m, idx)=> (
-                              <a key={idx} href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline">
+                              <a key={idx} href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 underline">
                                 {m.type?.startsWith('image/') ? 'View Image' : m.type?.startsWith('video/') ? 'View Video' : 'View File'}
                               </a>
                             ))}

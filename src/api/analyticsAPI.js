@@ -312,7 +312,7 @@ export const analyticsAPI = {
             id: doc.id,
             name: caregiverData.name,
             rating: caregiverData.rating,
-            patients: caregiverData.currentPatients || 0,
+            clients: caregiverData.currentPatients || 0,
             earnings: caregiverData.earnings?.thisMonth || 0
           });
         }
@@ -1055,7 +1055,7 @@ export const analyticsAPI = {
     }
   },
 
-  // Get patient statistics (Phase 3)
+  // Get Client statistics (Phase 3)
   getPatientStatistics: async (institutionId, dateRange = {}) => {
     try {
       const { startDate, endDate } = dateRange;
@@ -1063,14 +1063,14 @@ export const analyticsAPI = {
       start.setMonth(start.getMonth() - 12);
       const end = endDate ? new Date(endDate) : new Date();
 
-      // Get patients
+      // Get clients
       let patientsQuery = query(
-        collection(db, 'patients'),
+        collection(db, 'clients'),
         where('institutionId', '==', institutionId),
         orderBy('createdAt', 'desc')
       );
       const patientsSnapshot = await getDocs(patientsQuery);
-      const patients = patientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const clients = patientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       // Get consultations
       let consultationsQuery = query(
@@ -1083,21 +1083,21 @@ export const analyticsAPI = {
       const consultationsSnapshot = await getDocs(consultationsQuery);
       const consultations = consultationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // Calculate visit counts per patient
+      // Calculate visit counts per Client
       const patientVisits = {};
       consultations.forEach(consultation => {
-        const patientId = consultation.patientId;
-        patientVisits[patientId] = (patientVisits[patientId] || 0) + 1;
+        const clientId = consultation.clientId;
+        patientVisits[clientId] = (patientVisits[clientId] || 0) + 1;
       });
 
-      // Repeat patients (visited more than once)
+      // Repeat clients (visited more than once)
       const repeatPatients = Object.entries(patientVisits).filter(([, count]) => count > 1).length;
       const newPatients = Object.entries(patientVisits).filter(([, count]) => count === 1).length;
 
-      // Monthly patient registration
+      // Monthly Client registration
       const monthlyRegistrations = {};
-      patients.forEach(patient => {
-        const date = patient.createdAt?.toDate();
+      clients.forEach(Client => {
+        const date = client.createdAt?.toDate();
         if (date) {
           const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
           monthlyRegistrations[monthKey] = (monthlyRegistrations[monthKey] || 0) + 1;
@@ -1115,17 +1115,17 @@ export const analyticsAPI = {
       });
 
       return {
-        totalPatients: patients.length,
+        totalPatients: clients.length,
         totalVisits: consultations.length,
         repeatPatients,
         newPatients,
-        averageVisitsPerPatient: patients.length > 0 ? consultations.length / patients.length : 0,
+        averageVisitsPerPatient: clients.length > 0 ? consultations.length / clients.length : 0,
         repeatRate: consultations.length > 0 ? (repeatPatients / consultations.length) * 100 : 0,
         monthlyRegistrations: Object.entries(monthlyRegistrations).map(([month, count]) => ({ month, count })),
         monthlyVisits: Object.entries(monthlyVisits).map(([month, count]) => ({ month, count }))
       };
     } catch (error) {
-      console.error('Error fetching patient statistics:', error);
+      console.error('Error fetching Client statistics:', error);
       throw error;
     }
   }

@@ -646,15 +646,15 @@ const InstitutionCaregiverDashboard = () => {
           ...allAdminAssignments.map(assignment => {
             const dueDateStr = dateToString(assignment.dueDate);
             return {
-              id: assignment.id,
-              type: 'assignment',
-              title: assignment.title || 'Assigned Task',
+            id: assignment.id,
+            type: 'assignment',
+            title: assignment.title || 'Assigned Task',
               time: assignment.dueTime ? `${dueDateStr} ${assignment.dueTime}` : dueDateStr,
-              client: assignment.clientName || 'Client',
-              status: assignment.status || 'pending',
-              priority: assignment.priority,
-              description: assignment.description,
-              instructions: assignment.instructions
+            client: assignment.clientName || 'Client',
+            status: assignment.status || 'pending',
+            priority: assignment.priority,
+            description: assignment.description,
+            instructions: assignment.instructions
             };
           })
         ];
@@ -1114,19 +1114,8 @@ const InstitutionCaregiverDashboard = () => {
   };
 
   // --- Role-specific UI helpers ---
-  const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor') || 
-                    userProfile?.role === 'doctor' || 
-                    userProfile?.userType === 'doctor' || 
-                    userProfile?.type === 'doctor';
-  const isNurse = (userProfile?.medicalQualification || '').includes('Nurse') || 
-                   userProfile?.role === 'nurse' || 
-                   userProfile?.userType === 'nurse' || 
-                   userProfile?.type === 'nurse';
-  const isPharmacist = userProfile?.userType === 'pharmacist' || 
-                       userProfile?.type === 'pharmacist' || 
-                       userProfile?.role === 'pharmacist';
+  // Note: Role flags are already defined at component level (line 457)
   const isMedicalProfessional = isDoctor || isNurse;
-  const isNonMedicalCaregiver = !isMedicalProfessional && !isPharmacist;
 
   // Toggle expand/collapse for medical records
   const toggleRecordDetails = (recordId) => {
@@ -1295,7 +1284,7 @@ const InstitutionCaregiverDashboard = () => {
         try {
           return new Date(timeString).toLocaleString();
         } catch (e) {
-          return timeString;
+    return timeString;
         }
       }
       return timeString;
@@ -2084,7 +2073,7 @@ const InstitutionCaregiverDashboard = () => {
                         />
                       ) : null}
                       <span className={conversation.photoURL || conversation.avatar ? 'hidden' : 'flex'}>
-                        {(conversation.name || 'U').charAt(0).toUpperCase()}
+                      {(conversation.name || 'U').charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -2126,7 +2115,7 @@ const InstitutionCaregiverDashboard = () => {
                       />
                     ) : null}
                     <span className={selectedConversation.photoURL || selectedConversation.avatar ? 'hidden' : 'flex'}>
-                      {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                    {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div>
@@ -3904,41 +3893,41 @@ const InstitutionCaregiverDashboard = () => {
             {/* Medical tabs - only show for doctors, nurses, and pharmacists */}
             {(isDoctor || isNurse || isPharmacist) && (
               <>
-                <button
-                  onClick={() => setActiveTab('prescriptions')}
-                  className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'prescriptions'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Pill className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-                  {!sidebarCollapsed && 'Prescriptions'}
-                </button>
-                
-                <button
-                  onClick={() => setActiveTab('consultations')}
-                  className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'consultations'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <Stethoscope className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-                  {!sidebarCollapsed && 'Consultations'}
-                </button>
-                
-                <button
-                  onClick={() => setActiveTab('diagnostics')}
-                  className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'diagnostics'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <FileText className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-                  {!sidebarCollapsed && 'Diagnostics'}
-                </button>
+            <button
+              onClick={() => setActiveTab('prescriptions')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'prescriptions'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Pill className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Prescriptions'}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('consultations')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'consultations'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Stethoscope className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Consultations'}
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('diagnostics')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'diagnostics'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <FileText className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!sidebarCollapsed && 'Diagnostics'}
+            </button>
               </>
             )}
 
@@ -4710,7 +4699,7 @@ const InstitutionCaregiverDashboard = () => {
                     >
                       <Stethoscope className="h-8 w-8 text-blue-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">New Consultation</span>
-                      <span className="text-xs text-gray-500 mt-1">Record patient visit</span>
+                      <span className="text-xs text-gray-500 mt-1">Record Client visit</span>
                     </button>
                     <button 
                       onClick={handleWritePrescription}

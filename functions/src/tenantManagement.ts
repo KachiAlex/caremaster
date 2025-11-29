@@ -39,8 +39,8 @@ interface Institution {
     email?: string;
     address?: string;
   };
-  createdAt: FirebaseFirestore.FieldValue;
-  updatedAt: FirebaseFirestore.FieldValue;
+  createdAt: admin.firestore.FieldValue;
+  updatedAt: admin.firestore.FieldValue;
 }
 
 interface UserTenantMembership {
@@ -49,8 +49,8 @@ interface UserTenantMembership {
   roles: TenantRole[];
   primary: boolean;
   status: 'active' | 'suspended';
-  createdAt: FirebaseFirestore.FieldValue;
-  updatedAt: FirebaseFirestore.FieldValue;
+  createdAt: admin.firestore.FieldValue;
+  updatedAt: admin.firestore.FieldValue;
 }
 
 const getDb = () => admin.firestore();

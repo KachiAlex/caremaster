@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X, User, Mail, Phone, Briefcase, Lock, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createCompleteUserAccount } from '../utils/userCreationHelper';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase/config';
 
 const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdBy, onUserCreated }) => {
   const [loading, setLoading] = useState(false);
@@ -83,13 +85,50 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
         password: (formData.userType === 'pharmacist' || !formData.useTemporaryPassword) ? formData.password : undefined
       };
 
-      // Create user with standardized fields
-      const result = await createCompleteUserAccount(userData, {
-        institutionId,
-        createdBy,
-        accountType: 'institution_created',
-        onboardingComplete: false
-      });
+      let result;
+      
+      // Try to use Cloud Function first (preserves admin session)
+      try {
+        const createInstitutionUser = httpsCallable(functions, 'createInstitutionUserFunction');
+        const cloudResult = await createInstitutionUser({
+          ...userData,
+          institutionId,
+          createdBy
+        });
+        
+        // Cloud Function returns { success, uid, email, temporaryPassword, userData }
+        result = {
+          uid: cloudResult.data.uid,
+          email: cloudResult.data.email,
+          temporaryPassword: cloudResult.data.temporaryPassword,
+          userData: cloudResult.data.userData
+        };
+      } catch (cloudError) {
+        // If Cloud Function is not available or fails, fall back to client-side creation
+        console.warn('Cloud Function not available, using client-side creation:', cloudError);
+        
+        // Create user with standardized fields (client-side - will log out admin)
+        result = await createCompleteUserAccount(userData, {
+          institutionId,
+          createdBy,
+          accountType: 'institution_created',
+          onboardingComplete: false
+        });
+        
+        // If client-side creation requires reload, reload the page to restore admin session
+        if (result.requiresReload) {
+          // Store success message in sessionStorage before reload
+          sessionStorage.setItem('userCreatedMessage', JSON.stringify({
+            email: result.email,
+            temporaryPassword: result.temporaryPassword,
+            userType: formData.userType
+          }));
+          
+          // Reload page to restore admin session
+          window.location.reload();
+          return;
+        }
+      }
 
       // Show success message with credentials
       if (result.temporaryPassword) {

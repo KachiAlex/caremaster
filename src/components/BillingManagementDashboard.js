@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
-  getBillsByPatient,
+  getBillsByClient,
   getBillsByInstitution,
   getOutstandingPayments,
   recordPayment,
@@ -36,7 +36,7 @@ import {
 } from '../api/autoBillingAPI';
 import { useUser } from '../contexts/UserContext';
 
-const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients = [] }) => {
+const BillingManagementDashboard = ({ institutionId: propInstitutionId, clients = [] }) => {
   const { institutionId: contextInstitutionId } = useUser();
   const institutionId = propInstitutionId || contextInstitutionId;
 
@@ -75,7 +75,7 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
   const loadBills = async () => {
     // Load bills for all clients or selected client
     if (selectedPatient) {
-      const patientBills = await getBillsByPatient(selectedPatient);
+      const patientBills = await getBillsByClient(selectedPatient);
       setBills(patientBills);
     } else {
       // Load all bills for institution
@@ -87,10 +87,10 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
 
   const loadOutstandingPayments = async () => {
     const outstanding = {};
-    for (const patient of patients) {
-      const result = await getOutstandingPayments(patient.id);
+    for (const Client of clients) {
+      const result = await getOutstandingPayments(client.id);
       if (result.totalOutstanding > 0) {
-        outstanding[patient.id] = result;
+        outstanding[client.id] = result;
       }
     }
     setOutstandingPayments(outstanding);
@@ -130,7 +130,7 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
 
   const filteredBills = bills.filter(bill => {
     // Filter by selected client if one is selected
-    const matchesClient = !selectedPatient || bill.patientId === selectedPatient || bill.clientId === selectedPatient;
+    const matchesClient = !selectedPatient || bill.clientId === selectedPatient || bill.clientId === selectedPatient;
     const matchesStatus = statusFilter === 'all' || bill.status === statusFilter;
     return matchesClient && matchesStatus;
   });
@@ -200,7 +200,7 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 >
                   <option value="">All Clients</option>
-                  {patients.map((client) => (
+                  {clients.map((client) => (
                     <option key={client.id} value={client.id}>
                       {client.name || client.fullName || 'Unknown Client'} {client.age ? `- ${client.age} yrs` : ''}
                     </option>
@@ -238,7 +238,7 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bill ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -253,7 +253,7 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
                           {bill.id.substring(0, 8)}...
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {bill.patientName || 'Unknown'}
+                          {bill.clientName || 'Unknown'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {bill.serviceType || 'N/A'}
@@ -313,13 +313,13 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, patients
               </div>
             ) : (
               <div className="space-y-4">
-                {Object.entries(outstandingPayments).map(([patientId, data]) => {
-                  const patient = patients.find(p => p.id === patientId);
+                {Object.entries(outstandingPayments).map(([clientId, data]) => {
+                  const Client = clients.find(p => p.id === clientId);
                   return (
-                    <div key={patientId} className="border border-gray-200 rounded-lg p-4">
+                    <div key={clientId} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-gray-900">{patient?.name || 'Unknown Patient'}</p>
+                          <p className="font-medium text-gray-900">{Client?.name || 'Unknown Client'}</p>
                           <p className="text-sm text-gray-500">{data.count} outstanding bill(s)</p>
                         </div>
                         <div className="text-right">

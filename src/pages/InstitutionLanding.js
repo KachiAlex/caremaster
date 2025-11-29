@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { useUser } from '../contexts/UserContext';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import { 
   Building2, 
@@ -15,10 +15,7 @@ import {
   AlertCircle,
   Activity,
   Copy,
-  ExternalLink,
-  HeartPulse,
-  Sparkles,
-  ShieldCheck
+  ExternalLink
 } from 'lucide-react';
 
 const InstitutionLanding = () => {
@@ -98,10 +95,10 @@ const InstitutionLanding = () => {
 
   if (checkingAuth || loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader className="h-12 w-12 text-blue-400 animate-spin mx-auto mb-4" />
-          <p className="text-slate-300">{checkingAuth ? 'Checking authentication...' : 'Loading institution...'}</p>
+          <Loader className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">{checkingAuth ? 'Checking authentication...' : 'Loading institution...'}</p>
         </div>
       </div>
     );
@@ -109,18 +106,17 @@ const InstitutionLanding = () => {
 
   if (error || !institution) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center p-4">
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl p-8 max-w-md w-full text-center backdrop-blur">
-          <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-slate-50 mb-2">Access Error</h2>
-          <p className="text-slate-300 mb-6">{error || 'Institution not found'}</p>
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-400 text-slate-950 rounded-full font-semibold hover:bg-blue-300 shadow-lg shadow-blue-500/40"
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full text-center">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Error</h2>
+          <p className="text-gray-600 mb-6">{error || 'Institution not found'}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Return to Home
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          </button>
         </div>
       </div>
     );
@@ -141,106 +137,86 @@ const InstitutionLanding = () => {
       icon: Shield,
       title: 'Admin Portal',
       description: 'Full management access',
-      role: 'admin'
+      role: 'admin',
+      color: 'from-blue-500 to-blue-600',
+      hoverColor: 'hover:from-blue-600 hover:to-blue-700'
     },
     {
       icon: Users,
       title: 'Caregiver Portal',
       description: 'For Doctors, Nurses & Caregivers',
-      role: 'caregiver'
+      role: 'caregiver',
+      color: 'from-green-500 to-green-600',
+      hoverColor: 'hover:from-green-600 hover:to-green-700'
     },
     {
       icon: Activity,
       title: 'Pharmacist Portal',
       description: 'Pharmacy management access',
-      role: 'pharmacist'
+      role: 'pharmacist',
+      color: 'from-purple-500 to-purple-600',
+      hoverColor: 'hover:from-purple-600 hover:to-purple-700'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      {/* Top gradient halo */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[520px] bg-[radial-gradient(circle_at_top,_#22c55e33,_transparent_60%),radial-gradient(circle_at_20%_40%,_#38bdf833,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e533,_transparent_55%)]" />
-
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
-      <header className="relative z-10 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-xl">
+      <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-400 to-blue-500 shadow-lg shadow-blue-500/30">
-                <HeartPulse className="h-5 w-5 text-slate-950" />
+          <div className="flex items-center justify-center">
+            <div className="flex items-center space-x-3">
+              <Building2 className="h-8 w-8 text-blue-600" />
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-gray-900">{institution.name}</h1>
+                {institution.slug && (
+                  <p className="text-sm text-gray-500">{institution.slug}</p>
+                )}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold tracking-tight text-slate-50">
-                    UltimateCare
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-blue-300">
-                    <Sparkles className="h-3 w-3 text-blue-300" />
-                    Institution
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">The operating system for modern home healthcare</p>
-              </div>
-            </Link>
-            <div className="flex items-center gap-3">
-              <Link
-                to="/"
-                className="hidden rounded-full border border-slate-700 px-4 py-1.5 text-xs font-medium text-slate-200 hover:border-slate-500 hover:text-white sm:inline-flex"
-              >
-                Back to Home
-              </Link>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <main className="relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          {/* Hero Section */}
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-300 backdrop-blur mb-6">
-              <Shield className="h-3.5 w-3.5 text-blue-400" />
-              <span className="font-medium">Licensed & Active</span>
-            </div>
-            
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-slate-50 mb-4">
-              <span className="bg-gradient-to-r from-blue-300 via-blue-300 to-blue-300 bg-clip-text text-transparent">
-                {institution.name}
-              </span>
-            </h1>
-            
-            <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto mb-8">
-              Healthcare Management Portal
-            </p>
-
-            {license && (
-              <div className="inline-flex items-center gap-6 text-xs sm:text-sm text-slate-300">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-blue-400" />
-                  <span className="capitalize">{license.plan} Plan</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-blue-400" />
-                  <span>{license.seats} User Seats</span>
-                </div>
-              </div>
-            )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center px-4 py-2 bg-white rounded-full text-sm font-medium mb-6 shadow-sm">
+            <Shield className="h-4 w-4 mr-2 text-green-600" />
+            <span className="text-green-600 font-semibold">Licensed & Active</span>
           </div>
+          
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
+            {institution.name}
+          </h1>
+          
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+            Healthcare Management Portal
+          </p>
 
-          {/* Access Roles Section */}
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300 mb-3">
-                Access Portals
-              </p>
-              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-50">
-                Select Your Access Portal
-              </h2>
+          {license && (
+            <div className="inline-flex items-center space-x-6 text-sm text-gray-600">
+              <div className="flex items-center">
+                <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
+                <span className="capitalize">{license.plan} Plan</span>
+              </div>
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-1 text-blue-600" />
+                <span>{license.seats} User Seats</span>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          )}
+        </div>
+
+        {/* Access Roles Section */}
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
+            Select Your Access Portal
+          </h2>
+          
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {accessRoles.map((role, index) => (
                 <div key={index} className="space-y-3">
                   {/* Portal Box - Opens in New Tab */}
@@ -248,38 +224,38 @@ const InstitutionLanding = () => {
                     href={getPortalUrl(role.role)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group relative rounded-2xl border border-slate-800 bg-slate-900/70 p-8 shadow-lg shadow-black/40 hover:border-blue-400/50 hover:shadow-blue-500/20 transition-all duration-200 block"
+                    className={`group relative bg-gradient-to-br ${role.color} ${role.hoverColor} text-white rounded-2xl p-10 shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-200 block`}
                   >
-                    <div className="flex flex-col items-center text-center space-y-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-400/15 text-blue-300 group-hover:bg-blue-400/25 transition-colors">
-                        <role.icon className="h-6 w-6" />
+                    <div className="flex flex-col items-center text-center space-y-6">
+                      <div className="h-20 w-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-30 transition-all">
+                        <role.icon className="h-10 w-10" />
                       </div>
                       <div>
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <h3 className="text-sm font-semibold text-slate-50">{role.title}</h3>
-                          <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                        <div className="flex items-center justify-center gap-2">
+                          <h3 className="font-bold text-xl">{role.title}</h3>
+                          <ExternalLink className="h-4 w-4" />
                         </div>
-                        <p className="text-xs leading-relaxed text-slate-300">{role.description}</p>
+                        <p className="text-sm text-white text-opacity-90 leading-relaxed mt-2">{role.description}</p>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-blue-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowRight className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </a>
                   
                   {/* Copyable Link */}
-                  <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 overflow-hidden">
-                        <p className="text-[10px] text-slate-400 mb-1 uppercase tracking-wider">Direct Link:</p>
-                        <p className="text-[11px] font-mono text-slate-300 truncate">
+                        <p className="text-xs text-gray-500 mb-1">Direct Link:</p>
+                        <p className="text-xs font-mono text-gray-700 truncate">
                           {getPortalUrl(role.role)}
                         </p>
                       </div>
                       <button
                         onClick={() => copyPortalLink(role.role, role.title)}
-                        className="flex-shrink-0 p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                        className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors"
                         title="Copy link"
                       >
-                        <Copy className="h-4 w-4 text-slate-400 hover:text-blue-300" />
+                        <Copy className="h-4 w-4 text-gray-600" />
                       </button>
                     </div>
                   </div>
@@ -289,97 +265,59 @@ const InstitutionLanding = () => {
           </div>
 
           <div className="mt-12 text-center">
-            <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 max-w-2xl mx-auto">
-              <h3 className="font-semibold text-slate-50 mb-3">How to Access Your Portal</h3>
-              <ol className="text-xs text-slate-300 text-left space-y-2">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">
+              <h3 className="font-semibold text-blue-900 mb-2">How to Access Your Portal</h3>
+              <ol className="text-sm text-blue-800 text-left space-y-2">
                 <li className="flex items-start gap-2">
-                  <span className="font-semibold text-blue-300">1.</span>
+                  <span className="font-bold">1.</span>
                   <span>Click on your portal box above (opens in new tab)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-semibold text-blue-300">2.</span>
-                  <span>Or copy the direct link using the <Copy className="h-3 w-3 inline text-slate-400" /> button</span>
+                  <span className="font-bold">2.</span>
+                  <span>Or copy the direct link using the <Copy className="h-3 w-3 inline" /> button</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-semibold text-blue-300">3.</span>
+                  <span className="font-bold">3.</span>
                   <span>Share the link with your team members</span>
                 </li>
               </ol>
             </div>
             
-            <p className="text-slate-400 mt-6 text-sm">
+            <p className="text-gray-600 mt-6">
               Don't have an account? Contact your institution administrator to get access credentials.
             </p>
           </div>
         </div>
 
         {/* Features/Info Section */}
-        <div className="border-t border-slate-800/60 bg-[radial-gradient(circle_at_top,_#0f172a,_#020617)] py-14 sm:py-16">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300 mb-3">
-                Platform Features
-              </p>
-              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-50">
-                Built for modern healthcare operations
-              </h2>
+        <div className="mt-20 bg-white rounded-2xl shadow-xl p-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Shield className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Secure & Compliant</h3>
+              <p className="text-sm text-gray-600">HIPAA-compliant healthcare data management</p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center shadow-lg shadow-black/40 transition hover:border-blue-400/50 hover:shadow-blue-500/20">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400/15 text-blue-300 mx-auto mb-4">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold text-slate-50 mb-2 text-sm">Secure & Compliant</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">NDPR-ready • HIPAA-inspired healthcare data management</p>
+            <div className="text-center">
+              <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Users className="h-6 w-6 text-green-600" />
               </div>
-              
-              <div className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center shadow-lg shadow-black/40 transition hover:border-blue-400/50 hover:shadow-blue-500/20">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400/15 text-blue-300 mx-auto mb-4">
-                  <Users className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold text-slate-50 mb-2 text-sm">Staff Management</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">Manage doctors, nurses, and caregivers efficiently</p>
+              <h3 className="font-semibold text-gray-900 mb-2">Staff Management</h3>
+              <p className="text-sm text-gray-600">Manage doctors, nurses, and caregivers efficiently</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Activity className="h-6 w-6 text-purple-600" />
               </div>
-              
-              <div className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center shadow-lg shadow-black/40 transition hover:border-blue-400/50 hover:shadow-blue-500/20">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-400/15 text-blue-300 mx-auto mb-4">
-                  <Activity className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold text-slate-50 mb-2 text-sm">Real-time Updates</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">Track client care and staff activities in real-time</p>
-              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Real-time Updates</h3>
+              <p className="text-sm text-gray-600">Track client care and staff activities in real-time</p>
             </div>
           </div>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-slate-800/60 bg-slate-950 py-8">
-        <div className="max-w-7xl mx-auto flex flex-col gap-6 px-4 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <div>
-            <div className="flex items-center gap-2 text-slate-200">
-              <HeartPulse className="h-4 w-4 text-blue-300" />
-              <span className="text-sm font-semibold">UltimateCare</span>
-            </div>
-            <p className="mt-2 text-[11px]">
-              © {new Date().getFullYear()} UltimateCare. Empowering safer, smarter home healthcare
-              across Africa.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-4">
-            <Link to="/privacy" className="hover:text-blue-300">
-              Privacy
-            </Link>
-            <Link to="/terms" className="hover:text-blue-300">
-              Terms
-            </Link>
-            <Link to="/pricing" className="hover:text-blue-300">
-              Pricing
-            </Link>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 };

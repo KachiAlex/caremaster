@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { getClientDiagnostics, createDiagnosticTest } from '../api/diagnosticsAPI';
 import { useUser } from '../contexts/UserContext';
 
-const LabTestsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
+const LabTestsLogModal = ({ client, isOpen, onClose, institutionId }) => {
   const { user, userProfile } = useUser();
   const [labTests, setLabTests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,18 +17,18 @@ const LabTestsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
   });
 
   useEffect(() => {
-    if (isOpen && patient?.id) {
+    if (isOpen && client?.id) {
       loadLabTests();
     }
-  }, [isOpen, patient]);
+  }, [isOpen, client]);
 
   const loadLabTests = async () => {
-    if (!patient?.id) return;
+    if (!client?.id) return;
     
     setLoading(true);
     try {
-      const patientId = patient.id || patient.patientId || patient.uid;
-      const testsData = await getClientDiagnostics(patientId);
+      const clientId = client.id || client.clientId || client.uid;
+      const testsData = await getClientDiagnostics(clientId);
       setLabTests(testsData || []);
     } catch (error) {
       console.error('Error loading lab tests:', error);
@@ -55,14 +55,14 @@ const LabTestsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
         return;
       }
 
-      const patientId = patient.id || patient.patientId || patient.uid;
-      const patientName = patient.name || patient.fullName || 'Patient';
+      const clientId = client.id || client.clientId || client.uid;
+      const clientName = client.name || client.fullName || 'Client';
       const orderedBy = user?.uid;
       const orderedByName = userProfile?.name || userProfile?.displayName || 'Doctor';
 
       await createDiagnosticTest({
-        clientId: patientId,
-        clientName: patientName,
+        clientId: clientId,
+        clientName: clientName,
         orderedBy: orderedBy,
         orderedByName: orderedByName,
         institutionId: institutionId,
@@ -118,8 +118,8 @@ const LabTestsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
 
   if (!isOpen) return null;
 
-  const patientId = patient?.id || patient?.patientId || patient?.uid;
-  const patientName = patient?.name || patient?.fullName || 'Patient';
+  const clientId = client?.id || client?.clientId || client?.uid;
+  const clientName = client?.name || client?.fullName || 'Client';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -132,7 +132,7 @@ const LabTestsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
               Lab Tests Log
             </h2>
             <p className="text-purple-100 text-sm mt-1">
-              {patientName}
+              {clientName}
             </p>
           </div>
           <button

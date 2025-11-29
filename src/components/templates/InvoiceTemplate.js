@@ -53,13 +53,13 @@ const InvoiceTemplate = ({
       <div className="bg-blue-600 text-white p-6">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold">UltimateCare Healthcare</h1>
+            <h1 className="text-3xl font-bold">Care Master Healthcare</h1>
             <p className="text-blue-100 mt-2">Professional Healthcare Services</p>
             <div className="mt-4 text-sm">
               <p>📍 Lagos, Nigeria</p>
-              <p>📞 +234 800 ULTIMATE (353379)</p>
-              <p>✉️ billing@ultimatecare.com</p>
-              <p>🌐 www.ultimatecare.com</p>
+              <p>📞 +234 800 Care Master (353379)</p>
+              <p>✉️ billing@Care Master.com</p>
+              <p>🌐 www.Care Master.com</p>
             </div>
           </div>
           <div className="text-right">
@@ -71,7 +71,7 @@ const InvoiceTemplate = ({
               <p>Date: {formatDate(new Date())}</p>
               <p>Due Date: {formatDate(dueDate)}</p>
               {paymentStatus === 'paid' && (
-                <div className="flex items-center mt-2 text-blue-300">
+                <div className="flex items-center mt-2 text-green-300">
                   <CheckCircle className="h-4 w-4 mr-1" />
                   <span>PAID</span>
                 </div>
@@ -81,7 +81,7 @@ const InvoiceTemplate = ({
         </div>
       </div>
 
-      {/* Patient and Doctor Information */}
+      {/* Client and Doctor Information */}
       <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Bill To */}
         <div>
@@ -95,7 +95,7 @@ const InvoiceTemplate = ({
             <p className="text-gray-600">{patientInfo.phone}</p>
             <p className="text-gray-600 mt-2">{patientInfo.address}</p>
             <p className="text-sm text-gray-500 mt-2">
-              Patient ID: {patientInfo.id}
+              Client ID: {patientInfo.id}
             </p>
           </div>
         </div>
@@ -220,7 +220,7 @@ const InvoiceTemplate = ({
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span className={`font-semibold ${
-                    paymentStatus === 'paid' ? 'text-blue-600' : 
+                    paymentStatus === 'paid' ? 'text-green-600' : 
                     paymentStatus === 'pending' ? 'text-yellow-600' : 'text-red-600'
                   }`}>
                     {paymentStatus.toUpperCase()}
@@ -243,7 +243,7 @@ const InvoiceTemplate = ({
             <h3 className="text-lg font-semibold text-gray-800 mb-3">Notes</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-gray-700">
-                {notes || "Thank you for choosing UltimateCare Healthcare. Your health and well-being are our top priority."}
+                {notes || "Thank you for choosing Care Master Healthcare. Your health and well-being are our top priority."}
               </p>
             </div>
           </div>
@@ -254,16 +254,16 @@ const InvoiceTemplate = ({
       <div className="bg-gray-100 p-6 border-t">
         <div className="text-center text-sm text-gray-600">
           <p className="mb-2">
-            <strong>UltimateCare Healthcare Services</strong> - Professional Telemedicine Platform
+            <strong>Care Master Healthcare Services</strong> - Professional Telemedicine Platform
           </p>
           <p>
             This invoice is generated electronically and is valid without signature.
             For questions about this invoice, please contact our billing department.
           </p>
           <div className="mt-4 flex justify-center space-x-4">
-            <span>📞 +234 800 ULTIMATE</span>
-            <span>✉️ billing@ultimatecare.com</span>
-            <span>🌐 www.ultimatecare.com</span>
+            <span>📞 +234 800 Care Master</span>
+            <span>✉️ billing@Care Master.com</span>
+            <span>🌐 www.Care Master.com</span>
           </div>
         </div>
       </div>

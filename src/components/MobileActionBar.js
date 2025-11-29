@@ -76,8 +76,8 @@ const MobileActionBar = ({
               onClick={handleGestureToggle}
               className={`p-3 rounded-full transition-all duration-200 ${
                 isGestureActive
-                  ? 'bg-blue-100 text-blue-600 shadow-md'
-                  : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                  ? 'bg-green-100 text-green-600 shadow-md'
+                  : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
               }`}
               title={isGestureActive ? 'Disable gestures' : 'Enable gestures'}
             >
@@ -88,7 +88,7 @@ const MobileActionBar = ({
           {/* Connection Status */}
           <div className={`p-3 rounded-full ${
             isOnline 
-              ? 'text-blue-600 bg-blue-50' 
+              ? 'text-green-600 bg-green-50' 
               : 'text-red-600 bg-red-50'
           }`} title={isOnline ? 'Online' : 'Offline'}>
             {isOnline ? (

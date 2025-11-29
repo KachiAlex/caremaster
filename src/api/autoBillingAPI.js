@@ -103,18 +103,18 @@ const getServicePricing = async (institutionId, serviceType, serviceId = null) =
 };
 
 /**
- * Get HMO plan for a patient
+ * Get HMO plan for a Client
  */
-export const getHMOPlan = async (patientId) => {
+export const getHMOPlan = async (clientId) => {
   try {
-    // Check patient's HMO plan
-    const patientRef = doc(db, 'patients', patientId);
+    // Check Client's HMO plan
+    const patientRef = doc(db, 'clients', clientId);
     const patientSnap = await getDoc(patientRef);
     
     if (patientSnap.exists()) {
-      const patientData = patientSnap.data();
-      if (patientData.hmoPlanId) {
-        const hmoPlanRef = doc(db, HMO_PLANS_COLLECTION, patientData.hmoPlanId);
+      const clientData = patientSnap.data();
+      if (clientData.hmoPlanId) {
+        const hmoPlanRef = doc(db, HMO_PLANS_COLLECTION, clientData.hmoPlanId);
         const hmoPlanSnap = await getDoc(hmoPlanRef);
         
         if (hmoPlanSnap.exists()) {
@@ -136,9 +136,9 @@ export const getHMOPlan = async (patientId) => {
 /**
  * Calculate bill amount with HMO discounts and co-pays
  */
-const calculateBillAmount = async (institutionId, patientId, serviceItems) => {
+const calculateBillAmount = async (institutionId, clientId, serviceItems) => {
   try {
-    const hmoPlan = await getHMOPlan(patientId);
+    const hmoPlan = await getHMOPlan(clientId);
     let totalAmount = 0;
     let totalDiscount = 0;
     let totalCoPay = 0;
@@ -164,7 +164,7 @@ const calculateBillAmount = async (institutionId, patientId, serviceItems) => {
 
         // Calculate co-pay
         coPay = hmoPlan.coPayAmount || (finalPrice * (hmoPlan.coPayPercent || 0) / 100);
-        finalPrice = coPay; // Patient pays co-pay, HMO covers the rest
+        finalPrice = coPay; // Client pays co-pay, HMO covers the rest
       }
 
       items.push({
@@ -248,8 +248,8 @@ export const generateBillFromConsultation = async (consultationId, options = {})
     );
 
     const bill = {
-      patientId: consultation.clientId,
-      patientName: consultation.clientName || 'Unknown',
+      clientId: consultation.clientId,
+      clientName: consultation.clientName || 'Unknown',
       institutionId: consultation.institutionId,
       consultationId,
       serviceType: SERVICE_TYPE.CONSULTATION,
@@ -311,13 +311,13 @@ export const generateBillFromLabTest = async (labTestId, options = {}) => {
 
     const calculation = await calculateBillAmount(
       labTest.institutionId,
-      labTest.patientId,
+      labTest.clientId,
       serviceItems
     );
 
     const bill = {
-      patientId: labTest.patientId,
-      patientName: labTest.patientName || 'Unknown',
+      clientId: labTest.clientId,
+      clientName: labTest.clientName || 'Unknown',
       institutionId: labTest.institutionId,
       labTestId,
       serviceType: SERVICE_TYPE.LAB_TEST,
@@ -393,13 +393,13 @@ export const generateBillFromImaging = async (imagingRequestId, options = {}) =>
 
     const calculation = await calculateBillAmount(
       imaging.institutionId,
-      imaging.patientId,
+      imaging.clientId,
       serviceItems
     );
 
     const bill = {
-      patientId: imaging.patientId,
-      patientName: imaging.patientName || 'Unknown',
+      clientId: imaging.clientId,
+      clientName: imaging.clientName || 'Unknown',
       institutionId: imaging.institutionId,
       imagingRequestId,
       serviceType: SERVICE_TYPE.IMAGING,
@@ -481,8 +481,8 @@ export const generateBillFromPrescription = async (prescriptionId, options = {})
     );
 
     const bill = {
-      patientId: prescription.clientId,
-      patientName: prescription.clientName || 'Unknown',
+      clientId: prescription.clientId,
+      clientName: prescription.clientName || 'Unknown',
       institutionId: prescription.institutionId,
       prescriptionId,
       serviceType: SERVICE_TYPE.PHARMACY,
@@ -522,12 +522,12 @@ export const generateBillFromPrescription = async (prescriptionId, options = {})
 /**
  * Generate comprehensive bill from multiple services
  */
-export const generateComprehensiveBill = async (patientId, institutionId, serviceItems, options = {}) => {
+export const generateComprehensiveBill = async (clientId, institutionId, serviceItems, options = {}) => {
   try {
-    const calculation = await calculateBillAmount(institutionId, patientId, serviceItems);
+    const calculation = await calculateBillAmount(institutionId, clientId, serviceItems);
 
     const bill = {
-      patientId,
+      clientId,
       institutionId,
       items: calculation.items,
       subtotal: calculation.subtotal,
@@ -571,7 +571,7 @@ const createHMOClaim = async (billId, calculation) => {
       return null;
     }
 
-    // Get bill to get patientId and institutionId
+    // Get bill to get clientId and institutionId
     const billRef = doc(db, BILLS_COLLECTION, billId);
     const billSnap = await getDoc(billRef);
     if (!billSnap.exists()) {
@@ -583,7 +583,7 @@ const createHMOClaim = async (billId, calculation) => {
       billId,
       hmoPlanId: calculation.hmoPlan.id,
       hmoPlanName: calculation.hmoPlan.name,
-      patientId: bill.patientId,
+      clientId: bill.clientId,
       institutionId: bill.institutionId,
       claimAmount: calculation.hmoCovered,
       status: 'pending', // pending, submitted, approved, rejected, paid
@@ -607,14 +607,14 @@ const createHMOClaim = async (billId, calculation) => {
 };
 
 /**
- * Get bills for a patient
+ * Get bills for a Client
  */
-export const getBillsByPatient = async (patientId, options = {}) => {
+export const getBillsByClient = async (clientId, options = {}) => {
   try {
     const billsRef = collection(db, BILLS_COLLECTION);
     let q = query(
       billsRef,
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('createdAt', 'desc')
     );
 
@@ -660,8 +660,8 @@ export const getBillsByInstitution = async (institutionId, options = {}) => {
       q = query(q, where('status', '==', options.status));
     }
 
-    if (options.patientId) {
-      q = query(q, where('patientId', '==', options.patientId));
+    if (options.clientId) {
+      q = query(q, where('clientId', '==', options.clientId));
     }
 
     const querySnapshot = await getDocs(q);
@@ -740,7 +740,7 @@ export const generateBillsFromTaskTime = async (institutionId, startDate, endDat
         return;
       }
       
-      const clientId = task.clientId || task.patientId;
+      const clientId = task.clientId || task.clientId;
       if (!clientId) return;
       
       if (!clientBills[clientId]) {
@@ -777,8 +777,8 @@ export const generateBillsFromTaskTime = async (institutionId, startDate, endDat
       if (billData.tasks.length === 0) continue;
       
       const bill = {
-        patientId: clientId,
-        patientName: billData.clientName,
+        clientId: clientId,
+        clientName: billData.clientName,
         institutionId: institutionId,
         serviceType: SERVICE_TYPE.OTHER,
         items: billData.tasks.map(task => ({
@@ -839,11 +839,11 @@ export const generateBillsFromTaskTime = async (institutionId, startDate, endDat
 };
 
 /**
- * Get outstanding payments for a patient
+ * Get outstanding payments for a Client
  */
-export const getOutstandingPayments = async (patientId) => {
+export const getOutstandingPayments = async (clientId) => {
   try {
-    const allBills = await getBillsByPatient(patientId);
+    const allBills = await getBillsByClient(clientId);
     const bills = allBills.filter(bill => 
       [BILL_STATUS.PENDING, BILL_STATUS.PARTIALLY_PAID, BILL_STATUS.OVERDUE].includes(bill.status)
     );
@@ -904,7 +904,7 @@ export const recordPayment = async (billId, paymentData) => {
     // Send notification
     try {
       await notificationsAPI.createNotification({
-        userId: bill.patientId,
+        userId: bill.clientId,
         type: 'payment',
         title: 'Payment Recorded',
         message: `Payment of ${amount} ${bill.currency} recorded for bill ${billId}`,

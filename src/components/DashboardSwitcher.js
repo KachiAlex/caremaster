@@ -154,7 +154,7 @@ const DashboardSwitcher = ({ userRoles = [], currentDashboard, institutionId, on
             </div>
 
             {/* Footer Info */}
-            <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-50 border-t border-gray-100">
+            <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 border-t border-gray-100">
               <div className="flex items-center space-x-2">
                 <LayoutDashboard className="h-4 w-4 text-gray-500" />
                 <p className="text-xs text-gray-600">

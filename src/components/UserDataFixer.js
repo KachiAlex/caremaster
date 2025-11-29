@@ -107,7 +107,7 @@ const UserDataFixer = ({ institutionId }) => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-blue-50 rounded-xl border-2 border-blue-200 p-6">
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-blue-600 rounded-lg">
@@ -135,10 +135,10 @@ const UserDataFixer = ({ institutionId }) => {
               <p className="text-sm text-gray-600">Total Users</p>
               <p className="text-2xl font-bold text-gray-900">{results.total}</p>
             </div>
-            <div className="bg-blue-50 rounded-lg p-4 border border-green-200">
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
               <div className="flex items-center space-x-2 mb-1">
-                <CheckCircle className="h-4 w-4 text-blue-600" />
-                <p className="text-sm text-blue-700">Fixed</p>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <p className="text-sm text-green-700">Fixed</p>
               </div>
               <p className="text-2xl font-bold text-green-900">{results.fixed}</p>
             </div>

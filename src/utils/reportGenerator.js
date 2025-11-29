@@ -1,21 +1,21 @@
 /**
- * Patient Reports Generator
- * Generates reports based on patient logs and data
+ * Client Reports Generator
+ * Generates reports based on Client logs and data
  */
 
 import { getPatientLogs, getLogsByCategory, getLogsByClinician } from './patientLogger';
-import { getPatientByPatientId, getAllPatients } from '../api/patientsAPI';
+import { getPatientByPatientId, getAllClients } from '../api/patientsAPI';
 
 /**
- * Generate activity report for a patient
- * @param {string} patientId - Patient simple ID (e.g., UC-2025-0001)
+ * Generate activity report for a Client
+ * @param {string} clientId - Client simple ID (e.g., UC-2025-0001)
  * @param {Date} startDate - Start date for report
  * @param {Date} endDate - End date for report
  * @returns {Promise<Object>} Activity report data
  */
-export const generatePatientActivityReport = async (patientId, startDate, endDate) => {
+export const generatePatientActivityReport = async (clientId, startDate, endDate) => {
   try {
-    const logs = await getPatientLogs(patientId, 1000); // Get more logs for report
+    const logs = await getPatientLogs(clientId, 1000); // Get more logs for report
     
     // Filter by date range
     const filteredLogs = logs.filter(log => {
@@ -70,7 +70,7 @@ export const generatePatientActivityReport = async (patientId, startDate, endDat
     };
 
     return {
-      patientId,
+      clientId,
       reportDate: new Date().toISOString(),
       dateRange: {
         start: startDate,
@@ -82,7 +82,7 @@ export const generatePatientActivityReport = async (patientId, startDate, endDat
       byClinician
     };
   } catch (error) {
-    console.error('Error generating patient activity report:', error);
+    console.error('Error generating Client activity report:', error);
     throw error;
   }
 };
@@ -104,19 +104,19 @@ export const generateClinicianActivityReport = async (clinicianId, startDate, en
       return logDate >= startDate && logDate <= endDate;
     });
 
-    // Group by patient
+    // Group by Client
     const byPatient = {};
     filteredLogs.forEach(log => {
-      const patientId = log.patientId;
-      if (!byPatient[patientId]) {
-        byPatient[patientId] = {
-          patientId,
+      const clientId = log.clientId;
+      if (!byPatient[clientId]) {
+        byPatient[clientId] = {
+          clientId,
           count: 0,
           logs: []
         };
       }
-      byPatient[patientId].count++;
-      byPatient[patientId].logs.push(log);
+      byPatient[clientId].count++;
+      byPatient[clientId].logs.push(log);
     });
 
     // Group by activity type
@@ -159,21 +159,21 @@ export const generateClinicianActivityReport = async (clinicianId, startDate, en
  */
 export const generateInstitutionActivityReport = async (institutionId, startDate, endDate) => {
   try {
-    const patients = await getAllPatients(institutionId);
+    const clients = await getAllClients(institutionId);
     
-    // Get logs for all patients
+    // Get logs for all clients
     const allLogs = [];
-    for (const patient of patients) {
+    for (const Client of clients) {
       try {
-        const patientId = patient.patientId || patient.id;
-        const logs = await getPatientLogs(patientId, 500);
+        const clientId = client.clientId || client.id;
+        const logs = await getPatientLogs(clientId, 500);
         const filteredLogs = logs.filter(log => {
           const logDate = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.dateTime || log.timestamp);
           return logDate >= startDate && logDate <= endDate;
         });
         allLogs.push(...filteredLogs);
       } catch (error) {
-        console.warn(`Could not fetch logs for patient ${patient.id}:`, error);
+        console.warn(`Could not fetch logs for Client ${client.id}:`, error);
       }
     }
 
@@ -210,7 +210,7 @@ export const generateInstitutionActivityReport = async (institutionId, startDate
       },
       statistics: {
         totalActivities: allLogs.length,
-        totalPatients: patients.length,
+        totalPatients: clients.length,
         byCategory,
         byClinician: Object.values(byClinician)
       },
@@ -227,7 +227,7 @@ export const generateInstitutionActivityReport = async (institutionId, startDate
  * @param {Object} reportData - Report data object
  * @param {string} filename - Output filename
  */
-export const exportReportToCSV = (reportData, filename = 'patient-report.csv') => {
+export const exportReportToCSV = (reportData, filename = 'Client-report.csv') => {
   try {
     if (!reportData.logs || reportData.logs.length === 0) {
       throw new Error('No log data to export');
@@ -237,7 +237,7 @@ export const exportReportToCSV = (reportData, filename = 'patient-report.csv') =
     const headers = [
       'Date',
       'Time',
-      'Patient ID',
+      'Client ID',
       'Clinician Name',
       'Clinician Role',
       'Activity Type',
@@ -252,7 +252,7 @@ export const exportReportToCSV = (reportData, filename = 'patient-report.csv') =
       return [
         logDate.toISOString().split('T')[0],
         logDate.toTimeString().split(' ')[0],
-        log.patientId || '',
+        log.clientId || '',
         log.clinicianName || '',
         log.clinicianRole || '',
         log.action || '',
@@ -292,7 +292,7 @@ export const exportReportToCSV = (reportData, filename = 'patient-report.csv') =
  * @param {Object} reportData - Report data object
  * @param {string} filename - Output filename
  */
-export const exportReportToJSON = (reportData, filename = 'patient-report.json') => {
+export const exportReportToJSON = (reportData, filename = 'Client-report.json') => {
   try {
     const jsonContent = JSON.stringify(reportData, null, 2);
     const blob = new Blob([jsonContent], { type: 'application/json' });

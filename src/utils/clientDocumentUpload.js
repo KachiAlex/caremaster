@@ -2,14 +2,14 @@
 // Stub functions for document upload functionality
 
 /**
- * Upload patient document
+ * Upload client document
  * @param {File} file - The file to upload
  * @param {string} clientId - The client ID
  * @returns {Promise<string>} - URL of uploaded document
  */
-export const uploadPatientDocument = async (file, clientId) => {
+export const uploadClientDocument = async (file, clientId) => {
   // TODO: Implement document upload to Firebase Storage
-  console.warn('uploadPatientDocument not yet implemented');
+  console.warn('uploadClientDocument not yet implemented');
   return Promise.resolve(null);
 };
 

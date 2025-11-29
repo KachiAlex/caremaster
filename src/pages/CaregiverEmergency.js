@@ -38,16 +38,16 @@ const CaregiverEmergency = () => {
           const mockEmergencies = [
             {
               id: 1,
-              patientName: 'Adunni Okafor',
-              patientId: 'ELD001',
+              clientName: 'Adunni Okafor',
+              clientId: 'ELD001',
               type: 'medical',
               severity: 'critical',
-              description: 'Patient experiencing chest pain and difficulty breathing',
+              description: 'Client experiencing chest pain and difficulty breathing',
               location: '123 Victoria Island, Lagos',
               coordinates: { lat: 6.4281, lng: 3.4219 },
               reportedAt: '2024-01-21T14:30:00Z',
               status: 'active',
-              reportedBy: 'Patient',
+              reportedBy: 'Client',
               contactNumber: '+234 801 234 5678',
               emergencyContacts: [
                 { name: 'Dr. Adebayo', number: '+234 805 123 4567', type: 'doctor' },
@@ -56,17 +56,17 @@ const CaregiverEmergency = () => {
               actions: [
                 { timestamp: '2024-01-21T14:30:00Z', action: 'Emergency reported', user: 'System' },
                 { timestamp: '2024-01-21T14:31:00Z', action: 'Caregiver notified', user: 'System' },
-                { timestamp: '2024-01-21T14:32:00Z', action: 'En route to patient', user: 'You' }
+                { timestamp: '2024-01-21T14:32:00Z', action: 'En route to Client', user: 'You' }
               ],
-              notes: 'Patient has diabetes and hypertension. Last medication taken at 9 AM.'
+              notes: 'Client has diabetes and hypertension. Last medication taken at 9 AM.'
             },
             {
               id: 2,
-              patientName: 'Grace Johnson',
-              patientId: 'ELD002',
+              clientName: 'Grace Johnson',
+              clientId: 'ELD002',
               type: 'fall',
               severity: 'high',
-              description: 'Patient fell in bathroom and cannot get up',
+              description: 'Client fell in bathroom and cannot get up',
               location: '456 Ikoyi, Lagos',
               coordinates: { lat: 6.4474, lng: 3.4288 },
               reportedAt: '2024-01-21T12:15:00Z',
@@ -79,20 +79,20 @@ const CaregiverEmergency = () => {
               ],
               actions: [
                 { timestamp: '2024-01-21T12:15:00Z', action: 'Fall reported', user: 'Caregiver' },
-                { timestamp: '2024-01-21T12:20:00Z', action: 'Patient assessed', user: 'You' },
-                { timestamp: '2024-01-21T12:25:00Z', action: 'Patient assisted to bed', user: 'You' },
+                { timestamp: '2024-01-21T12:20:00Z', action: 'Client assessed', user: 'You' },
+                { timestamp: '2024-01-21T12:25:00Z', action: 'Client assisted to bed', user: 'You' },
                 { timestamp: '2024-01-21T12:30:00Z', action: 'Doctor contacted', user: 'You' },
                 { timestamp: '2024-01-21T12:35:00Z', action: 'Emergency resolved', user: 'You' }
               ],
-              notes: 'No serious injuries. Patient is comfortable and resting.'
+              notes: 'No serious injuries. Client is comfortable and resting.'
             },
             {
               id: 3,
-              patientName: 'Michael Adebayo',
-              patientId: 'ELD003',
+              clientName: 'Michael Adebayo',
+              clientId: 'ELD003',
               type: 'medication',
               severity: 'medium',
-              description: 'Patient missed critical medication and showing symptoms',
+              description: 'Client missed critical medication and showing symptoms',
               location: '789 Lekki, Lagos',
               coordinates: { lat: 6.4698, lng: 3.5852 },
               reportedAt: '2024-01-21T10:45:00Z',
@@ -106,10 +106,10 @@ const CaregiverEmergency = () => {
               actions: [
                 { timestamp: '2024-01-21T10:45:00Z', action: 'Medication emergency reported', user: 'Family' },
                 { timestamp: '2024-01-21T10:50:00Z', action: 'Caregiver dispatched', user: 'System' },
-                { timestamp: '2024-01-21T11:00:00Z', action: 'Arrived at patient location', user: 'You' },
+                { timestamp: '2024-01-21T11:00:00Z', action: 'Arrived at Client location', user: 'You' },
                 { timestamp: '2024-01-21T11:05:00Z', action: 'Medication administered', user: 'You' }
               ],
-              notes: 'Patient feeling better after medication. Monitoring for any adverse effects.'
+              notes: 'Client feeling better after medication. Monitoring for any adverse effects.'
             }
           ];
 
@@ -127,7 +127,7 @@ const CaregiverEmergency = () => {
   }, []);
 
   const filteredEmergencies = emergencies.filter(emergency => {
-    const matchesSearch = emergency.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = emergency.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          emergency.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || emergency.status === filterStatus;
     return matchesSearch && matchesStatus;
@@ -138,11 +138,11 @@ const CaregiverEmergency = () => {
       case 'critical':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'high':
-        return 'bg-blue-100 text-blue-800 border-orange-200';
+        return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'medium':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'low':
-        return 'bg-blue-100 text-blue-800 border-green-200';
+        return 'bg-green-100 text-green-800 border-green-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -155,7 +155,7 @@ const CaregiverEmergency = () => {
       case 'in-progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'resolved':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'cancelled':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -168,7 +168,7 @@ const CaregiverEmergency = () => {
       case 'medical':
         return <Heart className="h-5 w-5 text-red-600" />;
       case 'fall':
-        return <User className="h-5 w-5 text-blue-600" />;
+        return <User className="h-5 w-5 text-orange-600" />;
       case 'medication':
         return <FileText className="h-5 w-5 text-blue-600" />;
       case 'fire':
@@ -239,7 +239,7 @@ const CaregiverEmergency = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Emergency Response</h1>
-              <p className="text-gray-600">Manage emergency situations and patient safety</p>
+              <p className="text-gray-600">Manage emergency situations and Client safety</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -297,8 +297,8 @@ const CaregiverEmergency = () => {
                   <div className="flex items-center space-x-2">
                     {getTypeIcon(emergency.type)}
                     <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-900">{emergency.patientName}</h3>
-                      <p className="text-xs text-gray-600">ID: {emergency.patientId}</p>
+                      <h3 className="text-sm font-medium text-gray-900">{emergency.clientName}</h3>
+                      <p className="text-xs text-gray-600">ID: {emergency.clientId}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end space-y-1">
@@ -337,9 +337,9 @@ const CaregiverEmergency = () => {
                       {getTypeIcon(activeEmergency.type)}
                     </div>
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900">{activeEmergency.patientName}</h3>
+                      <h3 className="text-lg font-medium text-gray-900">{activeEmergency.clientName}</h3>
                       <p className="text-sm text-gray-600">
-                        ID: {activeEmergency.patientId} • {activeEmergency.type} emergency
+                        ID: {activeEmergency.clientId} • {activeEmergency.type} emergency
                       </p>
                     </div>
                   </div>
@@ -410,7 +410,7 @@ const CaregiverEmergency = () => {
                             </div>
                             <button
                               onClick={() => handleCallEmergencyContact(contact)}
-                              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                             >
                               <Phone className="h-4 w-4" />
                             </button>
@@ -465,7 +465,7 @@ const CaregiverEmergency = () => {
                           </button>
                           <button
                             onClick={() => handleEmergencyAction(activeEmergency.id, 'Emergency resolved')}
-                            className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                            className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                           >
                             <CheckCircle className="h-5 w-5 mx-auto mb-1" />
                             Resolve
@@ -477,7 +477,7 @@ const CaregiverEmergency = () => {
                         <MessageCircle className="h-5 w-5 mx-auto mb-1" />
                         Message
                       </button>
-                      <button className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                      <button className="p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
                         <Camera className="h-5 w-5 mx-auto mb-1" />
                         Photo
                       </button>
@@ -505,7 +505,7 @@ const CaregiverEmergency = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Report Emergency</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Patient</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Client</label>
                 <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent">
                   <option>Adunni Okafor</option>
                   <option>Grace Johnson</option>

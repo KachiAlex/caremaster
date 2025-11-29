@@ -135,8 +135,8 @@ export const hospitalOperationsAPI = {
       const staffSnapshot = await getDocs(staffQuery);
       const staffOnDuty = staffSnapshot.size;
 
-      // Get patient census
-      const patientsRef = collection(db, 'patients');
+      // Get Client census
+      const patientsRef = collection(db, 'clients');
       const patientsQuery = query(
         patientsRef,
         where('institutionId', '==', hospitalId),
@@ -217,7 +217,7 @@ export const hospitalOperationsAPI = {
   /**
    * Update bed status (occupy, vacate, reserve, etc.)
    * @param {string} bedId
-   * @param {Object} updateData - { status, patientId, patientName, notes }
+   * @param {Object} updateData - { status, clientId, clientName, notes }
    */
   async updateBedStatus(bedId, updateData) {
     try {
@@ -231,8 +231,8 @@ export const hospitalOperationsAPI = {
         updatePayload.occupiedAt = serverTimestamp();
       } else if (updateData.status === 'available') {
         updatePayload.vacatedAt = serverTimestamp();
-        updatePayload.patientId = null;
-        updatePayload.patientName = null;
+        updatePayload.clientId = null;
+        updatePayload.clientName = null;
       }
 
       await updateDoc(bedRef, updatePayload);

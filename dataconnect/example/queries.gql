@@ -11,11 +11,11 @@ query GetMyMedications @auth(level: USER) {
   }
 }
 
-mutation UpdateMedicationNotes($id: UUID!, $notes: String) @auth(level: USER) {
+mutation UpdateMedicationNotes($id: UUID!, $notes: String) @auth(level: USER, insecureReason: "Allows updating notes for a specific medication record identified by its ID.") {
   medication_update(key: {id: $id}, data: {notes: $notes})
 }
 
-query ListCaregiversForClientProfile($clientProfileId: UUID!) @auth(level: USER) {
+query ListCaregiversForClientProfile($clientProfileId: UUID!) @auth(level: USER, insecureReason: "Exposes caregivers tied to the supplied client profile ID for authorized users.") {
   caregiverRelationships(where: {clientProfileId: {eq: $clientProfileId}}) {
     caregiver {
       id
@@ -27,7 +27,7 @@ query ListCaregiversForClientProfile($clientProfileId: UUID!) @auth(level: USER)
 }
 
 # User Profile Queries
-query GetUserProfile($firebaseUid: String!) @auth(level: USER) {
+query GetUserProfile($firebaseUid: String!) @auth(level: USER, insecureReason: "Fetches a specific user by Firebase UID for administrative or self-service lookups.") {
   users(where: {firebaseUid: {eq: $firebaseUid}}) {
     id
     firebaseUid
@@ -54,7 +54,7 @@ query GetCurrentUser @auth(level: USER) {
 }
 
 # Client Profile Queries
-query GetClientProfile($clientId: UUID!) @auth(level: USER) {
+query GetClientProfile($clientId: UUID!) @auth(level: USER, insecureReason: "Returns a single client profile for the provided client ID; callers must supply an ID.") {
   clientProfiles(where: {id: {eq: $clientId}}) {
     id
     user {
@@ -71,7 +71,7 @@ query GetClientProfile($clientId: UUID!) @auth(level: USER) {
 }
 
 # Medication Queries
-query GetClientMedications($clientProfileId: UUID!) @auth(level: USER) {
+query GetClientMedications($clientProfileId: UUID!) @auth(level: USER, insecureReason: "Lists medications only for the requested client profile ID.") {
   medications(where: {clientProfileId: {eq: $clientProfileId}}) {
     id
     name
@@ -85,7 +85,7 @@ query GetClientMedications($clientProfileId: UUID!) @auth(level: USER) {
 }
 
 # Vital Signs Queries
-query GetClientVitalSigns($clientProfileId: UUID!) @auth(level: USER) {
+query GetClientVitalSigns($clientProfileId: UUID!) @auth(level: USER, insecureReason: "Retrieves vital signs scoped to the provided client profile ID.") {
   vitalSigns(where: {clientProfileId: {eq: $clientProfileId}}) {
     id
     type
@@ -97,7 +97,7 @@ query GetClientVitalSigns($clientProfileId: UUID!) @auth(level: USER) {
 }
 
 # Appointment Queries
-query GetClientAppointments($clientProfileId: UUID!) @auth(level: USER) {
+query GetClientAppointments($clientProfileId: UUID!) @auth(level: USER, insecureReason: "Returns appointments only for the specified client profile ID.") {
   appointments(where: {clientProfileId: {eq: $clientProfileId}}) {
     id
     dateTime
@@ -109,7 +109,7 @@ query GetClientAppointments($clientProfileId: UUID!) @auth(level: USER) {
 }
 
 # Caregiver Relationship Queries
-query GetCaregiverClients($caregiverId: UUID!) @auth(level: USER) {
+query GetCaregiverClients($caregiverId: UUID!) @auth(level: USER, insecureReason: "Provides client relationships only for the supplied caregiver ID.") {
   caregiverRelationships(where: {caregiverId: {eq: $caregiverId}}) {
     clientProfile {
       id

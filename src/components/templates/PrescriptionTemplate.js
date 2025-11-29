@@ -53,20 +53,20 @@ const PrescriptionTemplate = ({
   return (
     <div className="max-w-4xl mx-auto bg-white shadow-lg" id="prescription-template">
       {/* Header */}
-      <div className="bg-blue-600 text-white p-6">
+      <div className="bg-green-600 text-white p-6">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold">UltimateCare Healthcare</h1>
-            <p className="text-blue-100 mt-2">Professional Medical Prescription</p>
+            <h1 className="text-3xl font-bold">Care Master Healthcare</h1>
+            <p className="text-green-100 mt-2">Professional Medical Prescription</p>
             <div className="mt-4 text-sm">
               <p>📍 Lagos, Nigeria</p>
-              <p>📞 +234 800 ULTIMATE (353379)</p>
-              <p>✉️ prescriptions@ultimatecare.com</p>
-              <p>🌐 www.ultimatecare.com</p>
+              <p>📞 +234 800 Care Master (353379)</p>
+              <p>✉️ prescriptions@Care Master.com</p>
+              <p>🌐 www.Care Master.com</p>
             </div>
           </div>
           <div className="text-right">
-            <div className="bg-white text-blue-600 px-4 py-2 rounded-lg">
+            <div className="bg-white text-green-600 px-4 py-2 rounded-lg">
               <h2 className="text-xl font-bold">PRESCRIPTION</h2>
               <p className="text-sm">#{prescriptionNumber}</p>
             </div>
@@ -85,17 +85,17 @@ const PrescriptionTemplate = ({
           <Stethoscope className="h-5 w-5 mr-2" />
           Prescribing Physician
         </h3>
-        <div className="bg-blue-50 p-4 rounded-lg">
+        <div className="bg-green-50 p-4 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="font-bold text-lg text-blue-800">{doctorInfo.name}</p>
-              <p className="text-blue-700">{doctorInfo.specialty}</p>
+              <p className="font-bold text-lg text-green-800">{doctorInfo.name}</p>
+              <p className="text-green-700">{doctorInfo.specialty}</p>
               <p className="text-gray-600 mt-2">{doctorInfo.qualifications?.join(', ')}</p>
             </div>
             <div>
               <p className="text-gray-600">📧 {doctorInfo.email}</p>
               <p className="text-gray-600">📞 {doctorInfo.phone}</p>
-              <p className="text-gray-600">🏥 {doctorInfo.hospital || 'UltimateCare Telemedicine'}</p>
+              <p className="text-gray-600">🏥 {doctorInfo.hospital || 'Care Master Telemedicine'}</p>
               <p className="text-sm text-gray-500 mt-2">
                 Medical License: {doctorInfo.licenseNumber}
               </p>
@@ -104,11 +104,11 @@ const PrescriptionTemplate = ({
         </div>
       </div>
 
-      {/* Patient Information */}
+      {/* Client Information */}
       <div className="px-6 py-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <User className="h-5 w-5 mr-2" />
-          Patient Information
+          Client Information
         </h3>
         <div className="bg-blue-50 p-4 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -122,7 +122,7 @@ const PrescriptionTemplate = ({
               <p className="text-gray-600">📧 {patientInfo.email}</p>
               <p className="text-gray-600">📍 {patientInfo.address}</p>
               <p className="text-sm text-gray-500 mt-2">
-                Patient ID: {patientInfo.id}
+                Client ID: {patientInfo.id}
               </p>
               <p className="text-sm text-gray-500">
                 Appointment: {appointmentId}
@@ -160,7 +160,7 @@ const PrescriptionTemplate = ({
           {vitalSigns && (
             <div className="md:col-span-2">
               <h4 className="font-semibold text-gray-700 mb-2">Vital Signs</h4>
-              <div className="bg-blue-50 p-3 rounded-lg">
+              <div className="bg-green-50 p-3 rounded-lg">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Blood Pressure</p>
@@ -256,7 +256,7 @@ const PrescriptionTemplate = ({
               <Calendar className="h-5 w-5 mr-2" />
               Follow-up Care
             </h3>
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="bg-green-50 p-4 rounded-lg">
               <p className="font-semibold">Next Appointment</p>
               <p className="text-gray-700">{formatDate(followUpDate)}</p>
               <p className="text-sm text-gray-600 mt-2">
@@ -277,7 +277,7 @@ const PrescriptionTemplate = ({
                 🚨 Call Emergency: 199 or 112
               </p>
               <p className="text-red-700">
-                📞 UltimateCare 24/7 Hotline: +234 800 ULTIMATE
+                📞 Care Master 24/7 Hotline: +234 800 Care Master
               </p>
               <p className="text-sm text-gray-600 mt-2">
                 {emergencyInstructions || "Seek immediate medical attention for any severe adverse reactions."}
@@ -291,7 +291,7 @@ const PrescriptionTemplate = ({
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="bg-gray-100 p-4 rounded-lg">
           <div className="flex items-start space-x-3">
-            <Shield className="h-6 w-6 text-blue-600 mt-1" />
+            <Shield className="h-6 w-6 text-green-600 mt-1" />
             <div>
               <h4 className="font-semibold text-gray-800">Digital Prescription Verification</h4>
               <p className="text-sm text-gray-600 mt-1">
@@ -311,16 +311,16 @@ const PrescriptionTemplate = ({
       <div className="bg-gray-100 p-6">
         <div className="text-center text-sm text-gray-600">
           <p className="mb-2">
-            <strong>UltimateCare Healthcare Services</strong> - Digital Health Platform
+            <strong>Care Master Healthcare Services</strong> - Digital Health Platform
           </p>
           <p className="mb-2">
             This prescription is generated electronically and is valid for medical use.
             Please present this document to your pharmacist.
           </p>
           <div className="mt-4 flex justify-center space-x-4">
-            <span>📞 +234 800 ULTIMATE</span>
-            <span>✉️ prescriptions@ultimatecare.com</span>
-            <span>🌐 www.ultimatecare.com</span>
+            <span>📞 +234 800 Care Master</span>
+            <span>✉️ prescriptions@Care Master.com</span>
+            <span>🌐 www.Care Master.com</span>
           </div>
           <p className="text-xs text-gray-500 mt-4">
             ⚠️ Important: Do not share this prescription with others. 
@@ -335,7 +335,7 @@ const PrescriptionTemplate = ({
           <div className="flex justify-center">
             <button
               onClick={onDownload}
-              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Download className="h-5 w-5 mr-2" />
               Download Prescription PDF

@@ -71,9 +71,9 @@ import CallInterface from '../components/CallInterface';
 const DashboardHeader = ({ userProfile, userRole }) => {
   const getRoleIcon = () => {
     switch (userRole) {
-      case 'doctor': return <Stethoscope className="h-5 w-5 text-slate-950" />;
-      case 'caregiver': return <UserCheck className="h-5 w-5 text-slate-950" />;
-      default: return <Users className="h-5 w-5 text-slate-950" />;
+      case 'doctor': return <Stethoscope className="h-6 w-6 text-blue-600" />;
+      case 'caregiver': return <UserCheck className="h-6 w-6 text-green-600" />;
+      default: return <Users className="h-6 w-6 text-gray-600" />;
     }
   };
 
@@ -99,38 +99,27 @@ const DashboardHeader = ({ userProfile, userRole }) => {
     return 'Service Provider Dashboard';
   };
 
-  const getIconColor = () => {
-    switch (userRole) {
-      case 'doctor': return 'from-blue-400 to-blue-500';
-      case 'caregiver': return 'from-blue-400 to-blue-500';
-      default: return 'from-blue-400 to-blue-500';
-    }
-  };
-
   return (
-    <div className="relative z-10 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-sm px-6 py-4">
+    <div className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${getIconColor()} shadow-lg shadow-blue-500/40`}>
+        <div className="flex items-center space-x-4">
+          <div className="p-3 bg-blue-100 rounded-lg">
             {getRoleIcon()}
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300 capitalize">
-              {userRole}
-            </p>
-            <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">{getRoleTitle()}</h1>
-            <p className="text-xs text-slate-400">
+            <h1 className="text-2xl font-bold text-gray-900">{getRoleTitle()}</h1>
+            <p className="text-gray-600">
               Welcome back, {userProfile?.name || 'User'}
             </p>
             {userProfile?.specializations && userProfile.specializations.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {userProfile.specializations.slice(0, 3).map((spec, index) => (
-                  <span key={index} className="px-2 py-0.5 bg-blue-400/10 text-blue-300 border border-blue-400/30 text-xs rounded-full">
+                  <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                     {spec}
                   </span>
                 ))}
                 {userProfile.specializations.length > 3 && (
-                  <span className="px-2 py-0.5 bg-slate-800/60 text-slate-400 border border-slate-700 text-xs rounded-full">
+                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
                     +{userProfile.specializations.length - 3} more
                   </span>
                 )}
@@ -138,20 +127,20 @@ const DashboardHeader = ({ userProfile, userRole }) => {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center space-x-4">
           <button
             onClick={() => window.location.reload()}
-            className="px-3 py-1.5 bg-slate-800/60 text-slate-300 rounded-lg hover:bg-slate-800/80 transition-colors flex items-center gap-2 text-xs font-medium border border-slate-700"
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
           </button>
           <div className="text-right">
-            <p className="text-xs font-medium text-slate-50">{userProfile?.name}</p>
-            <p className="text-[11px] text-slate-400 capitalize">{userRole}</p>
+            <p className="text-sm font-medium text-gray-900">{userProfile?.name}</p>
+            <p className="text-xs text-gray-500 capitalize">{userRole}</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-400 flex items-center justify-center ring-2 ring-slate-800">
-            <span className="text-sm font-medium text-slate-950">
+          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+            <span className="text-sm font-medium text-gray-700">
               {userProfile?.name?.split(' ').map(n => n[0]).join('') || 'U'}
             </span>
           </div>
@@ -167,14 +156,14 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
   const getStatsForRole = () => {
     if (userRole === 'doctor') {
       return [
-        { label: 'Patients', value: stats.patients || 0, icon: Users, color: 'blue', action: () => navigate('/service-provider/medical-records') },
+        { label: 'clients', value: stats.clients || 0, icon: Users, color: 'blue', action: () => navigate('/service-provider/medical-records') },
         { label: 'Today\'s Appointments', value: stats.todaysAppointments || 0, icon: Calendar, color: 'green', action: onShowAppointments },
         { label: 'Upcoming', value: stats.upcomingAppointments || 0, icon: Clock, color: 'purple', action: () => navigate('/service-provider/consultations') },
         { label: 'Unread Messages', value: stats.unreadMessages || 0, icon: MessageSquare, color: 'orange', action: onShowMessages },
       ];
     } else if (userRole === 'caregiver') {
       return [
-        { label: 'Assigned Patients', value: stats.patients || 0, icon: Users, color: 'blue', action: () => navigate('/service-provider/medical-records') },
+        { label: 'Assigned clients', value: stats.clients || 0, icon: Users, color: 'blue', action: () => navigate('/service-provider/medical-records') },
         { label: 'Today\'s Tasks', value: stats.todaysTasks || 0, icon: ClipboardList, color: 'green', action: onShowTasks },
         { label: 'Pending Tasks', value: stats.pendingTasks || 0, icon: Clock, color: 'purple', action: onShowTasks },
         { label: 'Unread Messages', value: stats.unreadMessages || 0, icon: MessageSquare, color: 'orange', action: onShowMessages },
@@ -185,20 +174,16 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
 
   const roleStats = getStatsForRole();
 
-  const getAccentColor = (color) => {
-    const accents = {
-      blue: 'from-blue-400 to-blue-300',
-      green: 'from-blue-400 to-blue-300',
-      purple: 'from-blue-400 to-blue-300',
-      orange: 'from-blue-400 to-blue-300',
-    };
-    return accents[color] || accents.blue;
-  };
-
   return (
-    <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
       {roleStats.map((stat, index) => {
         const Icon = stat.icon;
+        const colorClasses = {
+          blue: 'bg-blue-100 text-blue-600',
+          green: 'bg-green-100 text-green-600',
+          purple: 'bg-purple-100 text-purple-600',
+          orange: 'bg-orange-100 text-orange-600',
+        };
 
         const handleClick = () => {
           if (stat.action) {
@@ -209,16 +194,16 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
         return (
           <div 
             key={index} 
-            className="rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 shadow-lg shadow-black/40 hover:bg-slate-950/80 transition-all cursor-pointer" 
+            className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow cursor-pointer" 
             onClick={handleClick}
           >
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">{stat.label}</p>
-                <p className="mt-2 text-lg font-semibold text-slate-50">{stat.value}</p>
+                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
               </div>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${getAccentColor(stat.color)}`}>
-                <Icon className="h-4 w-4 text-slate-950" />
+              <div className={`p-3 rounded-full ${colorClasses[stat.color]}`}>
+                <Icon className="h-6 w-6" />
               </div>
             </div>
           </div>
@@ -234,38 +219,38 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-      {/* Recent Patients */}
+      {/* Recent clients */}
       <div 
         className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
         onClick={() => navigate('/service-provider/medical-records')}
       >
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Patients</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Recent clients</h3>
             <Users className="h-5 w-5 text-gray-400" />
           </div>
         </div>
         <div className="p-6">
           <div className="space-y-4">
             {assignedPatients.length > 0 ? (
-              assignedPatients.slice(0, 5).map((patient) => (
-                <div key={patient.id} className="flex items-center justify-between">
+              assignedPatients.slice(0, 5).map((Client) => (
+                <div key={client.id} className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{patient.name}</p>
-                    <p className="text-xs text-gray-500">{patient.medicalConditions || 'General care'}</p>
+                    <p className="text-sm font-medium text-gray-900">{client.name}</p>
+                    <p className="text-xs text-gray-500">{client.medicalConditions || 'General care'}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500">{patient.lastVisit ? new Date(patient.lastVisit).toLocaleDateString() : 'No visits'}</p>
+                    <p className="text-xs text-gray-500">{client.lastVisit ? new Date(client.lastVisit).toLocaleDateString() : 'No visits'}</p>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      patient.status === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                      client.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {patient.status || 'active'}
+                      {client.status || 'active'}
                     </span>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-sm text-center">No patients assigned yet</p>
+              <p className="text-gray-500 text-sm text-center">No clients assigned yet</p>
             )}
           </div>
         </div>
@@ -288,7 +273,7 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
               upcomingAppointments.slice(0, 5).map((consultation) => (
                 <div key={consultation.id} className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{consultation.patientName || 'Patient'}</p>
+                    <p className="text-sm font-medium text-gray-900">{consultation.clientName || 'Client'}</p>
                     <p className="text-xs text-gray-500">{consultation.type || 'Consultation'}</p>
                   </div>
                   <div className="text-right">
@@ -341,7 +326,7 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
                   />
                   <div>
                     <p className="text-sm font-medium text-gray-900">{task.title}</p>
-                    <p className="text-xs text-gray-500">{task.patient}</p>
+                    <p className="text-xs text-gray-500">{task.Client}</p>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">
@@ -367,7 +352,7 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
               <div key={task.id} className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-900">{task.title}</p>
-                  <p className="text-xs text-gray-500">{task.patient} - {task.priority} priority</p>
+                  <p className="text-xs text-gray-500">{task.Client} - {task.priority} priority</p>
                 </div>
                 <p className="text-xs text-gray-500">
                   {task.scheduledTime ? new Date(task.scheduledTime).toLocaleDateString() : 'No date set'}
@@ -406,7 +391,7 @@ const ServiceProviderDashboard = () => {
            qual.includes('lpn');
   };
   const [stats, setStats] = useState({
-    patients: 0,
+    clients: 0,
     todaysAppointments: 0,
     upcomingAppointments: 0,
     todaysTasks: 0,
@@ -477,16 +462,16 @@ const ServiceProviderDashboard = () => {
       // Use uid if id is not available (Firebase Auth users)
       const userId = userProfile.id || userProfile.uid;
       
-      // Load patients with error handling
+      // Load clients with error handling
       if (isDoctor) {
         promises.push(getClientsByDoctor(userId).catch(error => {
-          console.log('Could not load patients by doctor - this is normal for new users');
+          console.log('Could not load clients by doctor - this is normal for new users');
           return [];
         }));
       } else if (isCaregiver) {
         console.log('🔍 About to call getClientsByCaregiver with userId:', userId);
         promises.push(getClientsByCaregiver(userId).catch(error => {
-          console.log('❌ Could not load caregiver patients:', error);
+          console.log('❌ Could not load caregiver clients:', error);
           return [];
         }));
       } else {
@@ -531,7 +516,7 @@ const ServiceProviderDashboard = () => {
       }));
       
       const [
-        patients,
+        clients,
         todaysAppointments,
         upcomingAppointments,
         todaysTasks,
@@ -540,10 +525,10 @@ const ServiceProviderDashboard = () => {
         unreadMessages
       ] = await Promise.all(promises);
       
-      console.log('🔍 Raw patients data from API:');
-      console.log('  - patientsCount:', patients?.length || 0);
-      console.log('  - isArray:', Array.isArray(patients));
-      console.log('  - patients data:', patients);
+      console.log('🔍 Raw clients data from API:');
+      console.log('  - patientsCount:', clients?.length || 0);
+      console.log('  - isArray:', Array.isArray(clients));
+      console.log('  - clients data:', clients);
       
       const mergedPending = [...(pendingTasks || []), ...(taskAssignments || [])].filter(Boolean);
       const mergedToday = [...(todaysTasks || []), ...(taskAssignments || []).filter(t => {
@@ -554,26 +539,26 @@ const ServiceProviderDashboard = () => {
       })];
 
       // Update stats with actual data
-      const actualPatients = patients || [];
+      const actualPatients = clients || [];
       const actualTodaysAppointments = todaysAppointments || [];
       const actualUpcomingAppointments = upcomingAppointments || [];
       
       console.log('📊 Dashboard stats update:');
-      console.log('  - patients:', actualPatients.length);
+      console.log('  - clients:', actualPatients.length);
       console.log('  - todaysAppointments:', actualTodaysAppointments.length);
       console.log('  - upcomingAppointments:', actualUpcomingAppointments.length);
       console.log('  - todaysTasks:', mergedToday.length);
       console.log('  - pendingTasks:', mergedPending.length);
       console.log('  - unreadMessages:', unreadMessages);
       
-      console.log('🔍 Detailed patient data:');
+      console.log('🔍 Detailed Client data:');
       console.log('  - patientsArray length:', actualPatients.length);
       console.log('  - patientNames:', actualPatients.map(p => p.name));
       console.log('  - patientIds:', actualPatients.map(p => p.id));
-      console.log('  - full patients array:', actualPatients);
+      console.log('  - full clients array:', actualPatients);
 
       setStats({
-        patients: actualPatients.length,
+        clients: actualPatients.length,
         todaysAppointments: actualTodaysAppointments.length,
         upcomingAppointments: actualUpcomingAppointments.length,
         todaysTasks: mergedToday.length,
@@ -581,12 +566,12 @@ const ServiceProviderDashboard = () => {
         unreadMessages,
       });
       
-      console.log('✅ Stats set with patients count:', actualPatients.length);
+      console.log('✅ Stats set with clients count:', actualPatients.length);
       
       // Store actual task data for caregiver sections (merged)
       setTodaysTasksData(mergedToday);
       setPendingTasksData(mergedPending);
-      setAssignedPatientsData(patients || []);
+      setAssignedPatientsData(clients || []);
       setUpcomingAppointmentsData(upcomingAppointments || []);
       setTodaysAppointmentsData(todaysAppointments || []);
       
@@ -706,14 +691,14 @@ const ServiceProviderDashboard = () => {
     );
   }
 
-  // Patient modal handlers
-  const handlePatientClick = (patient) => {
-    setSelectedPatient(patient);
+  // Client modal handlers
+  const handlePatientClick = (Client) => {
+    setSelectedPatient(Client);
     setShowPatientModal(true);
     
     // Load nurse reports from Firestore (for doctors view)
-    if (isDoctor && patient?.id) {
-      getNurseReportsByPatient(patient.id)
+    if (isDoctor && Client?.id) {
+      getNurseReportsByPatient(client.id)
         .then((reports) => setNurseReports(reports))
         .catch(() => setNurseReports([]));
     }
@@ -742,11 +727,11 @@ const ServiceProviderDashboard = () => {
   const handleSubmitNurseReport = async () => {
     try {
       if (!selectedPatient?.id) {
-        toast.error('No patient selected');
+        toast.error('No Client selected');
         return;
       }
       await createNurseReport({
-        patientId: selectedPatient.id,
+        clientId: selectedPatient.id,
         nurseId: userProfile.id,
         nurseName: userProfile.name,
         ...nurseReport,
@@ -762,11 +747,11 @@ const ServiceProviderDashboard = () => {
   const handleSubmitCarePlan = async () => {
     try {
       if (!selectedPatient?.id) {
-        toast.error('No patient selected');
+        toast.error('No Client selected');
         return;
       }
       await carePlansAPI.createCarePlan({
-        patientId: selectedPatient.id,
+        clientId: selectedPatient.id,
         doctorId: userProfile.id,
         doctorName: userProfile.name,
         ...carePlan,
@@ -849,10 +834,7 @@ const ServiceProviderDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      {/* Top halo */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top,_#22c55e33,_transparent_60%),radial-gradient(circle_at_30%_20%,_#0ea5e933,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e533,_transparent_55%)]" />
-      
+    <div className="min-h-screen bg-gray-50">
       <DashboardHeader userProfile={userProfile} userRole={effectiveRole} />
       <QuickStats 
         userRole={effectiveRole} 
@@ -863,10 +845,10 @@ const ServiceProviderDashboard = () => {
         onShowAppointments={handleShowAppointments}
         onShowMessages={handleShowMessages}
       />
-      <div className="relative z-10 px-6 -mt-4 mb-2 flex items-center justify-end">
+      <div className="px-6 -mt-4 mb-2 flex items-center justify-end">
         <button
           onClick={() => setShowWeeklyCalendar(true)}
-          className="px-3 py-1.5 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30 border border-blue-500/30 transition-colors text-xs font-medium"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
           Weekly Overview
         </button>
@@ -881,7 +863,7 @@ const ServiceProviderDashboard = () => {
       )}
       
       {isCaregiver && (
-        <div className="relative z-10 p-6">
+        <div className="p-6">
           <SpecializedCaregiverDashboard 
             onPatientClick={handlePatientClick}
             assignedPatients={assignedPatientsData}
@@ -896,25 +878,25 @@ const ServiceProviderDashboard = () => {
         </div>
       )}
 
-      {/* Patient Details Modal */}
+      {/* Client Details Modal */}
       {showPatientModal && selectedPatient && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="rounded-3xl border border-slate-800/80 bg-slate-950/95 backdrop-blur-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-slate-800/60">
-              <h2 className="text-xl font-semibold text-slate-50">Patient Details</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Client Details</h2>
               <button
                 onClick={handleCloseModal}
-                className="text-slate-400 hover:text-slate-50 transition-colors p-1 rounded-lg hover:bg-slate-800/80"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               </button>
             </div>
 
             <div className="p-6">
-              {/* Patient Information */}
+              {/* Client Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Client Information</h3>
                   <div className="space-y-3">
                     <div className="flex items-center">
                       <Users className="h-5 w-5 text-gray-400 mr-3" />
@@ -956,7 +938,7 @@ const ServiceProviderDashboard = () => {
                       <Activity className="h-5 w-5 text-gray-400 mr-3" />
                       <span className="text-gray-600">Status:</span>
                       <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedPatient.status === 'stable' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                        selectedPatient.status === 'stable' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                       }`}>
                         {selectedPatient.status || 'Unknown'}
                       </span>
@@ -984,7 +966,7 @@ const ServiceProviderDashboard = () => {
                               <span className="ml-2 text-sm text-gray-500">• {report.date}</span>
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              report.status === 'stable' ? 'bg-blue-100 text-blue-800' : 
+                              report.status === 'stable' ? 'bg-green-100 text-green-800' : 
                               report.status === 'improving' ? 'bg-blue-100 text-blue-800' : 
                               'bg-yellow-100 text-yellow-800'
                             }`}>
@@ -1022,7 +1004,7 @@ const ServiceProviderDashboard = () => {
                   {/* Care Plan Section */}
                   <div className="border-t border-gray-200 pt-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <FileText className="h-5 w-5 text-blue-600 mr-2" />
+                      <FileText className="h-5 w-5 text-green-600 mr-2" />
                       Care Plan Preparation
                     </h3>
                     
@@ -1037,7 +1019,7 @@ const ServiceProviderDashboard = () => {
                           value={carePlan.diagnosis}
                           onChange={(e) => handleCarePlanChange('diagnosis', e.target.value)}
                           placeholder="Enter primary diagnosis..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                       </div>
 
@@ -1051,7 +1033,7 @@ const ServiceProviderDashboard = () => {
                           onChange={(e) => handleCarePlanChange('treatmentPlan', e.target.value)}
                           placeholder="Describe the treatment approach..."
                           rows="3"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                       </div>
 
@@ -1065,7 +1047,7 @@ const ServiceProviderDashboard = () => {
                           onChange={(e) => handleCarePlanChange('medications', e.target.value)}
                           placeholder="List prescribed medications..."
                           rows="2"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                       </div>
 
@@ -1078,7 +1060,7 @@ const ServiceProviderDashboard = () => {
                           type="date"
                           value={carePlan.followUpDate}
                           onChange={(e) => handleCarePlanChange('followUpDate', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                       </div>
 
@@ -1090,7 +1072,7 @@ const ServiceProviderDashboard = () => {
                         <select
                           value={carePlan.priority}
                           onChange={(e) => handleCarePlanChange('priority', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         >
                           <option value="low">Low</option>
                           <option value="medium">Medium</option>
@@ -1109,7 +1091,7 @@ const ServiceProviderDashboard = () => {
                           onChange={(e) => handleCarePlanChange('specialInstructions', e.target.value)}
                           placeholder="Any special instructions for caregivers..."
                           rows="3"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                       </div>
                     </div>
@@ -1124,7 +1106,7 @@ const ServiceProviderDashboard = () => {
                       </button>
                       <button
                         onClick={handleSubmitCarePlan}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+                        className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
                       >
                         <FileText className="h-4 w-4 mr-2" />
                         Create Care Plan
@@ -1293,7 +1275,7 @@ const ServiceProviderDashboard = () => {
       {/* Morning Briefing Modal */}
       {showMorningBriefing && (
         <MorningBriefing
-          patients={assignedPatientsData}
+          clients={assignedPatientsData}
           todaysTasks={todaysTasksData}
           todaysAppointments={todaysAppointmentsData}
           onClose={() => setShowMorningBriefing(false)}
@@ -1305,7 +1287,7 @@ const ServiceProviderDashboard = () => {
       {showTaskCompletion && selectedTask && (
         <TaskCompletionModal
           task={selectedTask}
-          patient={selectedPatient}
+          Client={selectedPatient}
           onClose={() => {
             setShowTaskCompletion(false);
             setSelectedTask(null);
@@ -1317,7 +1299,7 @@ const ServiceProviderDashboard = () => {
       {/* Vitals Quick Entry */}
       {showVitalsEntry && selectedPatient && (
         <VitalsQuickEntry
-          patient={selectedPatient}
+          Client={selectedPatient}
           onClose={() => {
             setShowVitalsEntry(false);
             setSelectedPatient(null);

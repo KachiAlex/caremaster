@@ -70,13 +70,13 @@ export const getCareTaskById = async (taskId) => {
   }
 };
 
-// Get care tasks for a patient
-export const getCareTasksByPatient = async (patientId) => {
+// Get care tasks for a Client
+export const getCareTasksByClient = async (clientId) => {
   try {
     const tasksRef = collection(db, CARE_TASKS_COLLECTION);
     const q = query(
       tasksRef, 
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('scheduledTime', 'desc')
     );
     const querySnapshot = await getDocs(q);
@@ -96,7 +96,7 @@ export const getCareTasksByPatient = async (patientId) => {
     
     return tasks;
   } catch (error) {
-    console.error('Error fetching patient care tasks:', error);
+    console.error('Error fetching Client care tasks:', error);
     throw error;
   }
 };

@@ -47,7 +47,7 @@ const AdvancedReporting = ({ institutionId: propInstitutionId }) => {
   const [reportForm, setReportForm] = useState({
     name: '',
     description: '',
-    dataSource: 'patients',
+    dataSource: 'clients',
     fields: [],
     filters: [],
     groupBy: [],
@@ -56,9 +56,9 @@ const AdvancedReporting = ({ institutionId: propInstitutionId }) => {
 
   // Available data sources and their fields
   const dataSources = {
-    patients: [
-      { key: 'name', label: 'Patient Name', type: 'string' },
-      { key: 'patientId', label: 'Patient ID', type: 'string' },
+    clients: [
+      { key: 'name', label: 'Client Name', type: 'string' },
+      { key: 'clientId', label: 'Client ID', type: 'string' },
       { key: 'dateOfBirth', label: 'Date of Birth', type: 'date' },
       { key: 'gender', label: 'Gender', type: 'string' },
       { key: 'phoneNumber', label: 'Phone', type: 'string' },
@@ -66,20 +66,20 @@ const AdvancedReporting = ({ institutionId: propInstitutionId }) => {
       { key: 'createdAt', label: 'Registration Date', type: 'date' }
     ],
     appointments: [
-      { key: 'patientName', label: 'Patient Name', type: 'string' },
+      { key: 'clientName', label: 'Client Name', type: 'string' },
       { key: 'appointmentDate', label: 'Date', type: 'date' },
       { key: 'appointmentTime', label: 'Time', type: 'string' },
       { key: 'status', label: 'Status', type: 'string' },
       { key: 'type', label: 'Type', type: 'string' }
     ],
     consultations: [
-      { key: 'patientName', label: 'Patient Name', type: 'string' },
+      { key: 'clientName', label: 'Client Name', type: 'string' },
       { key: 'doctorName', label: 'Doctor', type: 'string' },
       { key: 'chiefComplaint', label: 'Chief Complaint', type: 'string' },
       { key: 'createdAt', label: 'Date', type: 'date' }
     ],
     billing: [
-      { key: 'patientName', label: 'Patient Name', type: 'string' },
+      { key: 'clientName', label: 'Client Name', type: 'string' },
       { key: 'total', label: 'Total Amount', type: 'number' },
       { key: 'status', label: 'Status', type: 'string' },
       { key: 'createdAt', label: 'Date', type: 'date' }
@@ -234,7 +234,7 @@ const AdvancedReporting = ({ institutionId: propInstitutionId }) => {
     setReportForm({
       name: '',
       description: '',
-      dataSource: 'patients',
+      dataSource: 'clients',
       fields: [],
       filters: [],
       groupBy: [],
@@ -444,7 +444,7 @@ const AdvancedReporting = ({ institutionId: propInstitutionId }) => {
                   value={reportForm.name}
                   onChange={(e) => setReportForm(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., Patient Registration Report"
+                  placeholder="e.g., Client Registration Report"
                 />
               </div>
 

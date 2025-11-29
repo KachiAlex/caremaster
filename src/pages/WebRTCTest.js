@@ -223,7 +223,7 @@ const WebRTCTest = () => {
 
   const getTestIcon = (result) => {
     if (result === null) return <Clock className="text-gray-400" size={20} />;
-    if (result === true) return <CheckCircle className="text-blue-500" size={20} />;
+    if (result === true) return <CheckCircle className="text-green-500" size={20} />;
     return <AlertCircle className="text-red-500" size={20} />;
   };
 
@@ -246,11 +246,11 @@ const WebRTCTest = () => {
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className={`w-4 h-4 rounded-full ${webrtcSupported ? 'bg-blue-500' : 'bg-red-500'}`} />
+              <div className={`w-4 h-4 rounded-full ${webrtcSupported ? 'bg-green-500' : 'bg-red-500'}`} />
               <h2 className="text-xl font-semibold text-gray-800">WebRTC Support</h2>
             </div>
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-              webrtcSupported ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'
+              webrtcSupported ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
             }`}>
               {webrtcSupported ? 'Supported' : 'Not Supported'}
             </span>
@@ -351,7 +351,7 @@ const WebRTCTest = () => {
               <button
                 onClick={runAllTests}
                 disabled={testInProgress}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
                 {testInProgress ? 'Testing...' : 'Run All Tests'}
               </button>
@@ -372,7 +372,7 @@ const WebRTCTest = () => {
           <div className="flex flex-wrap gap-4">
             <button
               onClick={() => startTestCall('audio')}
-              className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
               <Phone size={20} />
               <span>Test Voice Call</span>
@@ -396,23 +396,23 @@ const WebRTCTest = () => {
               <h3 className="font-semibold text-gray-700 mb-3">Enhanced Features</h3>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-blue-500" />
+                  <CheckCircle size={16} className="text-green-500" />
                   <span>Real-time network quality monitoring</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-blue-500" />
+                  <CheckCircle size={16} className="text-green-500" />
                   <span>Screen sharing for consultations</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-blue-500" />
+                  <CheckCircle size={16} className="text-green-500" />
                   <span>TURN server configuration for NAT traversal</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-blue-500" />
+                  <CheckCircle size={16} className="text-green-500" />
                   <span>Adaptive call quality indicators</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-blue-500" />
+                  <CheckCircle size={16} className="text-green-500" />
                   <span>Firebase authentication integration</span>
                 </li>
               </ul>
@@ -456,7 +456,7 @@ const WebRTCTest = () => {
           participantInfo={{
             id: 'test-user',
             name: 'Test User',
-            role: 'Patient'
+            role: 'Client'
           }}
           isIncoming={false}
         />

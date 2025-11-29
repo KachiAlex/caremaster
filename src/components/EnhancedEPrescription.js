@@ -24,7 +24,7 @@ import { toast } from 'react-toastify';
 import { createPrescription } from '../api/prescriptionsAPI';
 import drugInteractionService, { INTERACTION_SEVERITY } from '../services/drugInteractionService';
 
-const EnhancedEPrescription = ({ patientId, patientName, doctorId, doctorName, institutionId, onSave, onCancel }) => {
+const EnhancedEPrescription = ({ clientId, clientName, doctorId, doctorName, institutionId, onSave, onCancel }) => {
   const [medications, setMedications] = useState([]);
   const [currentMedication, setCurrentMedication] = useState({
     name: '',
@@ -58,10 +58,10 @@ const EnhancedEPrescription = ({ patientId, patientName, doctorId, doctorName, i
   ];
 
   useEffect(() => {
-    // Load patient allergies (would fetch from patient record)
+    // Load Client allergies (would fetch from Client record)
     // For now, using placeholder
     setPatientAllergies(['Penicillin', 'Sulfa']);
-  }, [patientId]);
+  }, [clientId]);
 
   useEffect(() => {
     // Check for drug interactions whenever medications change
@@ -147,7 +147,7 @@ const EnhancedEPrescription = ({ patientId, patientName, doctorId, doctorName, i
 
     // Check for allergies
     if (!checkAllergies(currentMedication.name)) {
-      toast.error(`⚠️ WARNING: ${currentMedication.name} may interact with patient's known allergies!`);
+      toast.error(`⚠️ WARNING: ${currentMedication.name} may interact with Client's known allergies!`);
       // Still allow adding but with warning
     }
 
@@ -217,8 +217,8 @@ const EnhancedEPrescription = ({ patientId, patientName, doctorId, doctorName, i
     try {
       setSaving(true);
       const prescription = await createPrescription({
-        clientId: patientId,
-        clientName: patientName,
+        clientId: clientId,
+        clientName: clientName,
         doctorId,
         doctorName,
         institutionId,

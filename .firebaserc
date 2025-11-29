@@ -1,12 +1,12 @@
 {
   "projects": {
-    "default": "ultimatecare-2025"
+    "default": "elderx-f5c2b"
   },
   "targets": {
-    "ultimatecare-2025": {
+    "elderx-f5c2b": {
       "hosting": {
         "site": [
-          "ultimatecare-2025"
+          "elderx-f5c2b"
         ]
       }
     }

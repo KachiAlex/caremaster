@@ -152,9 +152,9 @@ const EnhancedCallsInterface = () => {
       case 'doctor':
         return <Stethoscope className="h-4 w-4 text-blue-600" />;
       case 'caregiver':
-        return <Heart className="h-4 w-4 text-blue-600" />;
+        return <Heart className="h-4 w-4 text-green-600" />;
       case 'admin':
-        return <Shield className="h-4 w-4 text-blue-600" />;
+        return <Shield className="h-4 w-4 text-purple-600" />;
       default:
         return <User className="h-4 w-4 text-gray-600" />;
     }
@@ -237,7 +237,7 @@ const EnhancedCallsInterface = () => {
                       <User className="h-6 w-6 text-gray-600" />
                     </div>
                     <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${
-                      getUserStatus(user) === 'online' ? 'bg-blue-500' : 'bg-gray-400'
+                      getUserStatus(user) === 'online' ? 'bg-green-500' : 'bg-gray-400'
                     }`}></div>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -255,7 +255,7 @@ const EnhancedCallsInterface = () => {
                     <button
                       onClick={() => handleStartCall(user, 'audio')}
                       disabled={loading}
-                      className="p-1 hover:bg-blue-100 rounded text-blue-600 hover:text-blue-700"
+                      className="p-1 hover:bg-green-100 rounded text-green-600 hover:text-green-700"
                       title="Voice Call"
                     >
                       <Phone className="h-4 w-4" />
@@ -292,7 +292,7 @@ const EnhancedCallsInterface = () => {
                 <button
                   onClick={() => handleStartCall(selectedUser, 'audio')}
                   disabled={loading}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 flex items-center space-x-2"
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 disabled:opacity-50 flex items-center space-x-2"
                 >
                   <Phone className="h-5 w-5" />
                   <span>Voice Call</span>

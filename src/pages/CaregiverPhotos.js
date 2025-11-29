@@ -42,8 +42,8 @@ const CaregiverPhotos = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
-    patientId: '',
-    patientName: '',
+    clientId: '',
+    clientName: '',
     category: 'care',
     title: '',
     description: '',
@@ -67,14 +67,14 @@ const CaregiverPhotos = () => {
       try {
         if (!userProfile) return;
         const caregiverId = userProfile.id || userProfile.uid;
-        const [logs, patients] = await Promise.all([
+        const [logs, clients] = await Promise.all([
           getCareLogsByCaregiver(caregiverId),
           getClientsByCaregiver(caregiverId).catch(() => [])
         ]);
         setPhotos(logs);
-        setAssignedPatients(patients || []);
+        setAssignedPatients(clients || []);
       } catch (error) {
-        console.error('Error loading care logs/patients:', error);
+        console.error('Error loading care logs/clients:', error);
       } finally {
         setLoading(false);
       }
@@ -97,9 +97,9 @@ const CaregiverPhotos = () => {
 
   const filteredPhotos = photos.filter(photo => {
     const matchesSearch = photo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         photo.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         photo.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          photo.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPatient = filterPatient === 'all' || photo.patientId === filterPatient;
+    const matchesPatient = filterPatient === 'all' || photo.clientId === filterPatient;
     const matchesCategory = filterCategory === 'all' || photo.category === filterCategory;
     const createdTime = photo.uploadedAt ? new Date(photo.uploadedAt).getTime() : 0;
     const startOk = filters.startDate ? createdTime >= new Date(filters.startDate).getTime() : true;
@@ -110,7 +110,7 @@ const CaregiverPhotos = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'approved':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'rejected':
@@ -125,11 +125,11 @@ const CaregiverPhotos = () => {
       case 'medication':
         return <FileText className="h-5 w-5 text-blue-600" />;
       case 'therapy':
-        return <Heart className="h-5 w-5 text-blue-600" />;
+        return <Heart className="h-5 w-5 text-green-600" />;
       case 'meal':
-        return <FileText className="h-5 w-5 text-blue-600" />;
+        return <FileText className="h-5 w-5 text-orange-600" />;
       case 'care':
-        return <User className="h-5 w-5 text-blue-600" />;
+        return <User className="h-5 w-5 text-purple-600" />;
       case 'health':
         return <Heart className="h-5 w-5 text-red-600" />;
       default:
@@ -207,8 +207,8 @@ const CaregiverPhotos = () => {
     console.log('Edit photo clicked:', photo);
     setSelectedPhoto(photo);
     setForm({
-      patientId: photo.patientId || '',
-      patientName: photo.patientName || '',
+      clientId: photo.clientId || '',
+      clientName: photo.clientName || '',
       category: photo.category || 'care',
       title: photo.title || '',
       description: photo.description || photo.content || '',
@@ -229,7 +229,7 @@ const CaregiverPhotos = () => {
         title: form.title,
         content: `Date: ${form.activityDate || 'Not specified'}\nTime: ${form.activityTime || 'Not specified'}\n\nDescription: ${form.description}`,
         category: form.category,
-        patientName: form.patientName
+        clientName: form.clientName
       };
 
       console.log('Updating with data:', updateData);
@@ -267,7 +267,7 @@ const CaregiverPhotos = () => {
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-indigo-600 flex items-center justify-center">
               <Camera className="h-8 w-8 text-white" />
             </div>
             <div>
@@ -278,7 +278,7 @@ const CaregiverPhotos = () => {
           <div className="flex items-center space-x-4">
             <button
               onClick={handleUploadPhoto}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
             >
               <Plus className="h-5 w-5 mr-2" />
               Add Care Log
@@ -297,8 +297,8 @@ const CaregiverPhotos = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search photos by title, patient, or description..."
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Search photos by title, Client, or description..."
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -306,14 +306,14 @@ const CaregiverPhotos = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               <select
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 value={filterPatient}
                 onChange={(e) => setFilterPatient(e.target.value)}
               >
-                <option value="all">All Patients</option>
+                <option value="all">All clients</option>
               </select>
               <select
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
               >
@@ -326,21 +326,21 @@ const CaregiverPhotos = () => {
               </select>
               <input 
                 type="date"
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 value={filters.startDate}
                 onChange={(e)=>setFilters({...filters, startDate:e.target.value})}
                 placeholder="Start date"
               />
               <input 
                 type="date"
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 value={filters.endDate}
                 onChange={(e)=>setFilters({...filters, endDate:e.target.value})}
                 placeholder="End date"
               />
               <input 
                 type="text"
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 value={filters.keyword}
                 onChange={(e)=>setFilters({...filters, keyword:e.target.value})}
                 placeholder="Keyword"
@@ -359,7 +359,7 @@ const CaregiverPhotos = () => {
                     Care Log
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient
+                    Client
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
@@ -397,12 +397,12 @@ const CaregiverPhotos = () => {
                       </div>
                     </td>
 
-                    {/* Patient Info */}
+                    {/* Client Info */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <UserNameWithAvatar
-                          userId={photo.patientId}
-                          userName={photo.patientName || 'Unknown Patient'}
+                          userId={photo.clientId}
+                          userName={photo.clientName || 'Unknown Client'}
                           userType="client"
                           profilePictureUrl={photo.patientProfilePicture}
                           size="small"
@@ -443,7 +443,7 @@ const CaregiverPhotos = () => {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => setSelectedPhoto(photo)}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           View Details
@@ -526,17 +526,17 @@ const CaregiverPhotos = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Care Log</h3>
               <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Patient</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Client</label>
                 <select 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={form.patientId}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  value={form.clientId}
                   onChange={(e)=>{
                     const pid = e.target.value;
                     const p = assignedPatients.find(x=>x.id===pid);
-                    setForm({...form, patientId: pid, patientName: p?.name || ''});
+                    setForm({...form, clientId: pid, clientName: p?.name || ''});
                   }}
                 >
-                  <option value="">Select a patient</option>
+                  <option value="">Select a Client</option>
                   {assignedPatients.map(p=> (
                     <option key={p.id} value={p.id}>{p.name || p.id}</option>
                   ))}
@@ -545,7 +545,7 @@ const CaregiverPhotos = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <select 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   value={form.category}
                   onChange={(e)=>setForm({...form, category:e.target.value})}
                 >
@@ -561,13 +561,13 @@ const CaregiverPhotos = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <input
                     type="date"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     value={form.activityDate || ''}
                     onChange={(e)=>setForm({...form, activityDate:e.target.value})}
                   />
                   <input
                     type="time"
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     value={form.activityTime || ''}
                     onChange={(e)=>setForm({...form, activityTime:e.target.value})}
                   />
@@ -577,8 +577,8 @@ const CaregiverPhotos = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Location <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter location (e.g., Patient's home, Hospital, Clinic)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Enter location (e.g., Client's home, Hospital, Clinic)"
                   value={form.location}
                   onChange={(e)=>setForm({...form, location:e.target.value})}
                   required
@@ -588,7 +588,7 @@ const CaregiverPhotos = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Activity Title</label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   placeholder="Enter activity title"
                   value={form.title}
                   onChange={(e)=>setForm({...form, title:e.target.value})}
@@ -597,7 +597,7 @@ const CaregiverPhotos = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   rows="3"
                   placeholder="Describe the activities performed with the client"
                   value={form.description}
@@ -645,8 +645,8 @@ const CaregiverPhotos = () => {
                       media = uploads.map(u=>({ url: u.downloadURL, path: u.path, type: u.type }));
                     }
                      await createCareLog({
-                       patientId: form.patientId,
-                       patientName: form.patientName,
+                       clientId: form.clientId,
+                       clientName: form.clientName,
                        caregiverId,
                        category: form.category,
                        title: form.title,
@@ -655,7 +655,7 @@ const CaregiverPhotos = () => {
                        media
                      });
                     setShowUploadModal(false);
-                    setForm({ patientId:'', patientName:'', category:'care', title:'', description:'', files:[], activityDate:'', activityTime:'', location:'' });
+                    setForm({ clientId:'', clientName:'', category:'care', title:'', description:'', files:[], activityDate:'', activityTime:'', location:'' });
                     // reload
                     const logs = await getCareLogsByCaregiver(caregiverId);
                     setPhotos(logs);
@@ -665,7 +665,7 @@ const CaregiverPhotos = () => {
                     setUploading(false);
                   }
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 {uploading? 'Saving...' : 'Send Report'}
               </button>
@@ -713,7 +713,7 @@ const CaregiverPhotos = () => {
                       
                       <div className="flex items-center text-sm text-gray-600">
                         <User className="h-4 w-4 mr-2" />
-                        <span><strong>Patient:</strong> {selectedPhoto.patientName || 'Unknown Patient'}</span>
+                        <span><strong>Client:</strong> {selectedPhoto.clientName || 'Unknown Client'}</span>
                       </div>
                       
                       <div className="flex items-center text-sm text-gray-600">
@@ -837,7 +837,7 @@ const CaregiverPhotos = () => {
                     console.log('Modal edit button clicked for photo:', selectedPhoto);
                     handleEditPhoto(selectedPhoto);
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                 >
                   <Edit className="h-4 w-4 mr-2 inline" />
                   Edit Log
@@ -870,7 +870,7 @@ const CaregiverPhotos = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                   <select 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     value={form.category}
                     onChange={(e)=>setForm({...form, category:e.target.value})}
                   >
@@ -886,13 +886,13 @@ const CaregiverPhotos = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <input
                       type="date"
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       value={form.activityDate || ''}
                       onChange={(e)=>setForm({...form, activityDate:e.target.value})}
                     />
                     <input
                       type="time"
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       value={form.activityTime || ''}
                       onChange={(e)=>setForm({...form, activityTime:e.target.value})}
                     />
@@ -902,7 +902,7 @@ const CaregiverPhotos = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Activity Title</label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Enter activity title"
                     value={form.title}
                     onChange={(e)=>setForm({...form, title:e.target.value})}
@@ -911,7 +911,7 @@ const CaregiverPhotos = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                   <textarea
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     rows="3"
                     placeholder="Describe the activities performed with the client"
                     value={form.description}
@@ -933,7 +933,7 @@ const CaregiverPhotos = () => {
               <button 
                 disabled={uploading}
                 onClick={handleUpdatePhoto}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
                 {uploading ? 'Updating...' : 'Update Log'}
               </button>

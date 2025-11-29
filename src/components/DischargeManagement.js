@@ -38,7 +38,7 @@ import {
   DISCHARGE_STATUS,
   DISCHARGE_TYPE
 } from '../api/dischargeAPI';
-import { getAllPatients } from '../api/patientsAPI';
+import { getAllClients } from '../api/patientsAPI';
 
 const DischargeManagement = ({ institutionId: propInstitutionId }) => {
   const { institutionId: contextInstitutionId, userProfile } = useUser();
@@ -47,7 +47,7 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState([]);
   const [stats, setStats] = useState(null);
-  const [patients, setPatients] = useState([]);
+  const [clients, setPatients] = useState([]);
   const [filteredPlans, setFilteredPlans] = useState([]);
   
   // Filter states
@@ -65,8 +65,8 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
   
   // Form states
   const [planForm, setPlanForm] = useState({
-    patientId: '',
-    patientName: '',
+    clientId: '',
+    clientName: '',
     dischargeType: DISCHARGE_TYPE.ROUTINE,
     plannedDischargeDate: '',
     dischargeDestination: 'Home',
@@ -134,10 +134,10 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
     if (!institutionId) return;
     
     try {
-      const patientsData = await getAllPatients(institutionId);
+      const patientsData = await getAllClients(institutionId);
       setPatients(patientsData);
     } catch (error) {
-      console.error('Error loading patients:', error);
+      console.error('Error loading clients:', error);
     }
   };
 
@@ -151,8 +151,8 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(p =>
-        p.patientName?.toLowerCase().includes(searchLower) ||
-        p.patientId?.toLowerCase().includes(searchLower)
+        p.clientName?.toLowerCase().includes(searchLower) ||
+        p.clientId?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -160,8 +160,8 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
   };
 
   const handleCreatePlan = async () => {
-    if (!planForm.patientId) {
-      toast.error('Please select a patient');
+    if (!planForm.clientId) {
+      toast.error('Please select a Client');
       return;
     }
 
@@ -179,8 +179,8 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
       toast.success('Discharge plan created');
       setShowPlanModal(false);
       setPlanForm({
-        patientId: '',
-        patientName: '',
+        clientId: '',
+        clientName: '',
         dischargeType: DISCHARGE_TYPE.ROUTINE,
         plannedDischargeDate: '',
         dischargeDestination: 'Home',
@@ -236,11 +236,11 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
     }
   };
 
-  const handleViewHistory = async (patientId) => {
+  const handleViewHistory = async (clientId) => {
     try {
       setLoading(true);
-      const history = await getPatientDischargeHistory(patientId, institutionId);
-      setSelectedPatient({ id: patientId, history });
+      const history = await getPatientDischargeHistory(clientId, institutionId);
+      setSelectedPatient({ id: clientId, history });
       setShowHistoryModal(true);
     } catch (error) {
       console.error('Error loading history:', error);
@@ -282,7 +282,7 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Discharge Management</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Manage patient discharge and follow-up care
+            Manage Client discharge and follow-up care
           </p>
         </div>
         <button
@@ -374,7 +374,7 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by patient name or ID..."
+                placeholder="Search by Client name or ID..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -388,7 +388,7 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Patient</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Client</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Type</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Destination</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Planned Date</th>
@@ -414,7 +414,7 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
                 filteredPlans.map((plan) => (
                   <tr key={plan.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-sm text-gray-900">
-                      {plan.patientName || plan.patientId?.substring(0, 8)}
+                      {plan.clientName || plan.clientId?.substring(0, 8)}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
                       {plan.dischargeType.replace('_', ' ').toUpperCase()}
@@ -465,7 +465,7 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
                           </button>
                         )}
                         <button
-                          onClick={() => handleViewHistory(plan.patientId)}
+                          onClick={() => handleViewHistory(plan.clientId)}
                           className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
                           title="View History"
                         >
@@ -498,24 +498,24 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Patient *
+                  Client *
                 </label>
                 <select
-                  value={planForm.patientId}
+                  value={planForm.clientId}
                   onChange={(e) => {
-                    const patient = patients.find(p => p.id === e.target.value);
+                    const Client = clients.find(p => p.id === e.target.value);
                     setPlanForm({
                       ...planForm,
-                      patientId: e.target.value,
-                      patientName: patient?.name || patient?.fullName || ''
+                      clientId: e.target.value,
+                      clientName: Client?.name || Client?.fullName || ''
                     });
                   }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">Select patient...</option>
-                  {patients.map(patient => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.name || patient.fullName || patient.patientId} - {patient.patientId || patient.id}
+                  <option value="">Select client...</option>
+                  {clients.map(Client => (
+                    <option key={client.id} value={client.id}>
+                      {client.name || client.fullName || client.clientId} - {client.clientId || client.id}
                     </option>
                   ))}
                 </select>
@@ -751,7 +751,7 @@ const DischargeManagement = ({ institutionId: propInstitutionId }) => {
                   onChange={(e) => setSummaryForm({ ...summaryForm, conditionAtDischarge: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   rows="2"
-                  placeholder="Patient's condition at discharge..."
+                  placeholder="Client's condition at discharge..."
                 />
               </div>
 

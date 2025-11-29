@@ -396,6 +396,29 @@ const InstitutionAdminDashboard = () => {
     const userRole = userProfile.userType || userProfile.type || userProfile.role;
     const isPartner = userRole === 'admin' && (userProfile.institutionId || institutionId || effectiveInstitutionId);
     
+    // IMPORTANT: Redirect non-admin users to their appropriate dashboards
+    if (userRole === 'pharmacist' || userProfile?.medicalQualification === 'Pharmacist') {
+      console.log('🚫 Pharmacist detected in admin dashboard, redirecting to pharmacy dashboard...');
+      const instId = userProfile.institutionId || institutionId || effectiveInstitutionId;
+      if (instId) {
+        navigate(`/institution-pharmacy/dashboard?institution=${instId}`, { replace: true });
+      } else {
+        navigate('/institution-pharmacy/dashboard', { replace: true });
+      }
+      return;
+    }
+    
+    if (['caregiver', 'doctor', 'nurse'].includes(userRole)) {
+      console.log(`🚫 ${userRole} detected in admin dashboard, redirecting to caregiver dashboard...`);
+      const instId = userProfile.institutionId || institutionId || effectiveInstitutionId;
+      if (instId) {
+        navigate(`/institution-caregiver/dashboard?institution=${instId}`, { replace: true });
+      } else {
+        navigate('/institution-caregiver/dashboard', { replace: true });
+      }
+      return;
+    }
+    
     // Get institutionId from profile (partner flow) or URL params
     const instIdForSession = userProfile.institutionId || institutionId || effectiveInstitutionId || searchParams.get('institution');
     
@@ -523,12 +546,13 @@ const InstitutionAdminDashboard = () => {
       setLoading(true);
       
       // Load all data in parallel but optimized for speed
-      const [caregiversData, clientsData, assignmentsData, users, diagnosticsData] = await Promise.all([
+      const [caregiversData, clientsData, assignmentsData, users, diagnosticsData, appointmentsData] = await Promise.all([
         caregiverAPI.getCaregivers({ institutionId: instId, limit: 50 }).catch(() => []),
         getAllClients(instId).catch(() => []),
         assignmentAPI.getAssignmentsByInstitution(instId).catch(() => []),
         getAllUsers().catch(() => []),
-        getAllDiagnostics(instId).catch(() => [])
+        getAllDiagnostics(instId).catch(() => []),
+        getAllAppointments(instId).catch(() => [])
       ]);
 
       // Load non-critical data in background (don't block UI)
@@ -646,6 +670,15 @@ const InstitutionAdminDashboard = () => {
       const pendingAssignmentCount = assignmentsData.filter(a => a.status === 'pending').length;
       const completedAssignmentCount = assignmentsData.filter(a => a.status === 'completed').length;
 
+      // Filter active appointments (today and upcoming)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const activeAppointmentsCount = appointmentsData.filter(apt => {
+        if (!apt.appointmentDate) return false;
+        const aptDate = apt.appointmentDate?.toDate ? apt.appointmentDate.toDate() : new Date(apt.appointmentDate);
+        return aptDate >= today && (apt.status === 'scheduled' || apt.status === 'confirmed' || !apt.status);
+      }).length;
+
       // Build stats object
       const realStats = {
         totalUsers: institutionUsers.length,
@@ -654,7 +687,7 @@ const InstitutionAdminDashboard = () => {
         doctors: allInstitutionCaregivers.filter(c => c.userType === 'doctor' || c.type === 'doctor').length,
         nurses: allInstitutionCaregivers.filter(c => c.userType === 'nurse' || c.type === 'nurse').length,
         pharmacists: allInstitutionPharmacists.length,
-        activeAppointments: 0,
+        activeAppointments: activeAppointmentsCount,
         activeAssignments: activeAssignmentCount,
         pendingAssignments: pendingAssignmentCount,
         completedAssignments: completedAssignmentCount,
@@ -2755,34 +2788,234 @@ const InstitutionAdminDashboard = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <>
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-6">
+            {/* Primary Stats */}
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard icon={Users} label="Total Staff" value={stats.totalUsers.toLocaleString()} accent="from-blue-500 to-blue-600" />
               <StatCard icon={Heart} label="Total Clients" value={stats.clients.toLocaleString()} accent="from-green-500 to-green-600" />
               <StatCard icon={Activity} label="Active Tasks" value={stats.activeAssignments.toLocaleString()} accent="from-indigo-500 to-purple-500" />
+              <StatCard icon={ClipboardList} label="Pending Tasks" value={stats.pendingAssignments.toLocaleString()} accent="from-yellow-500 to-orange-500" />
             </section>
-            <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-                <span className="text-xs text-gray-500">{quickActions.length} tools</span>
+
+            {/* Secondary Stats */}
+            <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <StatCard icon={Stethoscope} label="Doctors" value={stats.doctors.toLocaleString()} accent="from-red-500 to-pink-500" />
+              <StatCard icon={Heart} label="Nurses" value={stats.nurses.toLocaleString()} accent="from-pink-500 to-rose-500" />
+              <StatCard icon={Pill} label="Pharmacists" value={stats.pharmacists.toLocaleString()} accent="from-purple-500 to-indigo-500" />
+              <StatCard icon={UserCheck} label="Caregivers" value={stats.caregivers.toLocaleString()} accent="from-teal-500 to-cyan-500" />
+              <StatCard icon={TestTube} label="Pending Tests" value={pendingDiagnostics.length.toLocaleString()} accent="from-amber-500 to-yellow-500" />
+              <StatCard icon={Calendar} label="Appointments" value={stats.activeAppointments.toLocaleString()} accent="from-blue-500 to-indigo-500" />
+            </section>
+
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - 2/3 width */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Quick Actions */}
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+                    <span className="text-xs text-gray-500">{quickActions.length} tools</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {quickActions.map((action, index) => {
+                      const Icon = action.icon;
+                      return (
+                        <button
+                          key={index}
+                          onClick={action.action}
+                          className={`${action.color} text-white rounded-lg p-4 flex flex-col items-center gap-2 transition hover:scale-105`}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span className="text-xs text-center font-medium">{action.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {/* Pending Diagnostics */}
+                {pendingDiagnostics.length > 0 && (
+                  <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <TestTube className="h-5 w-5 text-amber-500" />
+                        <h3 className="text-lg font-semibold text-gray-900">Pending Diagnostics</h3>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('enhanced-lis')}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        View All
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {pendingDiagnostics.slice(0, 5).map((diagnostic) => (
+                        <div key={diagnostic.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">
+                              {diagnostic.testName || diagnostic.testType || 'Lab Test'}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Client: {diagnostic.clientName || 'Unknown'} • {formatDateValue(diagnostic.orderedAt || diagnostic.createdAt)}
+                            </p>
+                          </div>
+                          <span className="px-2 py-1 text-xs font-semibold bg-amber-100 text-amber-800 rounded-full">
+                            {diagnostic.status || 'Pending'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Recent Assignments */}
+                {assignments.length > 0 && (
+                  <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <ClipboardList className="h-5 w-5 text-indigo-500" />
+                        <h3 className="text-lg font-semibold text-gray-900">Recent Assignments</h3>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('assignments')}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        View All
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {assignments
+                        .filter(a => a.status !== 'completed' && a.status !== 'cancelled')
+                        .slice(0, 5)
+                        .map((assignment) => (
+                          <div
+                            key={assignment.id}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition cursor-pointer"
+                            onClick={() => {
+                              setSelectedAssignment(assignment);
+                              setShowAssignmentDetails(true);
+                            }}
+                          >
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{assignment.title || 'Untitled Assignment'}</p>
+                              <p className="text-xs text-gray-600">
+                                {assignment.clientName || 'Unknown Client'} • {assignment.caregiverName || 'Unassigned'}
+                              </p>
+                            </div>
+                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(assignment.status)}`}>
+                              {assignment.status || 'Pending'}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </section>
+                )}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {quickActions.map((action, index) => {
-                  const Icon = action.icon;
-                  return (
+
+              {/* Right Column - 1/3 width */}
+              <div className="space-y-6">
+                {/* System Alerts */}
+                {systemAlerts.length > 0 && (
+                  <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      <h3 className="text-lg font-semibold text-gray-900">System Alerts</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {systemAlerts.slice(0, 5).map((alert, index) => (
+                        <div key={index} className="p-3 bg-red-50 rounded-lg border border-red-200">
+                          <p className="text-sm font-medium text-red-900">{alert.message}</p>
+                          <p className="text-xs text-red-600 mt-1">{alert.time}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Top Caregivers */}
+                {topCaregivers.length > 0 && (
+                  <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Award className="h-5 w-5 text-yellow-500" />
+                      <h3 className="text-lg font-semibold text-gray-900">Top Caregivers</h3>
+                    </div>
+                    <div className="space-y-3">
+                      {topCaregivers.map((caregiver, index) => (
+                        <div key={caregiver.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{caregiver.name}</p>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-xs text-gray-600">⭐ {caregiver.rating?.toFixed(1) || '0.0'}</span>
+                              <span className="text-xs text-gray-600">•</span>
+                              <span className="text-xs text-gray-600">{caregiver.clientsServed || 0} clients</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Performance Metrics */}
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="h-5 w-5 text-green-500" />
+                    <h3 className="text-lg font-semibold text-gray-900">Performance</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-gray-600">System Health</span>
+                        <span className="text-sm font-semibold text-green-600">{stats.systemHealth}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '95%' }}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-gray-600">Uptime</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.uptime}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${stats.uptime}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Completed Tasks</span>
+                        <span className="text-sm font-semibold text-gray-900">{stats.completedAssignments.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Last Updated */}
+                <section className="bg-gray-50 rounded-2xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500">Last Updated</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
                     <button
-                      key={index}
-                      onClick={action.action}
-                      className={`${action.color} text-white rounded-lg p-3 flex flex-col items-center gap-2 transition`}
+                      onClick={refreshData}
+                      disabled={refreshing}
+                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition disabled:opacity-50"
+                      title="Refresh Data"
                     >
-                      <Icon className="h-5 w-5" />
-                      <span className="text-xs text-center">{action.name}</span>
+                      <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                     </button>
-                  );
-                })}
+                  </div>
+                </section>
               </div>
-            </section>
-          </>
+            </div>
+          </div>
         );
       case 'clients':
         return (

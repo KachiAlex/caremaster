@@ -199,7 +199,7 @@ export const drugInteractionService = {
   },
 
   /**
-   * Check if medication is contraindicated with patient allergies
+   * Check if medication is contraindicated with Client allergies
    */
   checkAllergies: (medication, patientAllergies) => {
     if (!patientAllergies || patientAllergies === 'None' || patientAllergies === 'None recorded') {
@@ -215,7 +215,7 @@ export const drugInteractionService = {
       alerts.push({
         severity: INTERACTION_SEVERITY.CRITICAL,
         type: 'allergy',
-        message: `Patient is allergic to ${medication.name}!`,
+        message: `Client is allergic to ${medication.name}!`,
         recommendation: 'DO NOT DISPENSE - Find alternative medication'
       });
     }
@@ -486,7 +486,7 @@ function generateRecommendations(alerts) {
     recommendations.push(`⚠️ ${majorCount} MAJOR interaction(s) - Verify with prescribing doctor`);
   }
 
-  recommendations.push('Review all alerts with patient and doctor before dispensing');
+  recommendations.push('Review all alerts with Client and doctor before dispensing');
   recommendations.push('Document all interactions and actions taken');
   
   return recommendations;

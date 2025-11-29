@@ -151,7 +151,7 @@ const ProfilePicture = ({
         ) : null}
         
         {/* Fallback Avatar */}
-        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
           {getInitials()}
         </div>
         

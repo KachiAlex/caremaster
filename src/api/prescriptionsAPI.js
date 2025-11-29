@@ -89,53 +89,24 @@ export const createPrescription = async (prescriptionData) => {
       console.log(`✅ Created ${prescriptionData.medications.length} prescription items`);
     }
 
-    // Log activity to client's activity log (comprehensive logging)
+    // Log activity to client's activity log
     try {
       const medicationNames = prescriptionData.medications?.map(m => m.name).join(', ') || '';
-      
-      // Try comprehensive logger first
-      try {
-        const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
-        await ComprehensivePatientLogger.logMedicationPrescribed(
-          prescriptionData.clientId,
-          {
-            prescriptionId: prescriptionId,
-            prescriptionNumber: newPrescription.prescriptionNumber,
-            medications: prescriptionData.medications,
-            medicationName: medicationNames,
-            diagnosis: prescriptionData.diagnosis,
-            notes: prescriptionData.notes,
-            prescriptionDate: newPrescription.prescriptionDate
-          },
-          {
-            id: prescriptionData.doctorId,
-            name: prescriptionData.doctorName,
-            role: 'doctor',
-            userType: 'doctor',
-            type: 'doctor',
-            email: prescriptionData.doctorEmail,
-            medicalQualification: 'Physician',
-            institutionId: prescriptionData.institutionId
-          }
-        );
-      } catch (comprehensiveError) {
-        // Fallback to old logger
-        await logClientActivity({
-          clientId: prescriptionData.clientId,
-          activityType: 'prescription',
-          performedBy: prescriptionData.doctorId,
-          performerName: prescriptionData.doctorName,
-          performerRole: 'doctor',
-          description: `Prescription written: ${medicationNames}`,
-          details: {
-            prescriptionId: prescriptionId,
-            prescriptionNumber: newPrescription.prescriptionNumber,
-            diagnosis: prescriptionData.diagnosis,
-            medicationCount: prescriptionData.medications?.length || 0
-          },
-          institutionId: prescriptionData.institutionId
-        });
-      }
+      await logClientActivity({
+        clientId: prescriptionData.clientId,
+        activityType: 'prescription',
+        performedBy: prescriptionData.doctorId,
+        performerName: prescriptionData.doctorName,
+        performerRole: 'doctor',
+        description: `Prescription written: ${medicationNames}`,
+        details: {
+          prescriptionId: prescriptionId,
+          prescriptionNumber: newPrescription.prescriptionNumber,
+          diagnosis: prescriptionData.diagnosis,
+          medicationCount: prescriptionData.medications?.length || 0
+        },
+        institutionId: prescriptionData.institutionId
+      });
     } catch (activityError) {
       console.error('Error logging prescription activity:', activityError);
       // Don't throw - prescription was created successfully

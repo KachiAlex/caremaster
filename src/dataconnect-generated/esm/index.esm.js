@@ -2,7 +2,7 @@ import { queryRef, executeQuery, mutationRef, executeMutation, validateArgs } fr
 
 export const connectorConfig = {
   connector: 'example',
-  service: 'UltimateCare',
+  service: 'Care Master',
   location: 'us-central1'
 };
 

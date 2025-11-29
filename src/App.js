@@ -40,10 +40,9 @@ const SuperAdminSettings = lazy(() => import('./pages/SuperAdminSettings'));
 const InstitutionAdminDashboard = lazy(() => import('./pages/InstitutionAdminDashboard'));
 const InstitutionUserManagement = lazy(() => import('./pages/InstitutionUserManagement'));
 const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
-const HospitalOverview = lazy(() => import('./domains/hospital/pages/HospitalOverview'));
-const StaffManagement = lazy(() => import('./domains/hospital/pages/StaffManagement'));
 const InstitutionLanding = lazy(() => import('./pages/InstitutionLanding'));
 const InstitutionLogin = lazy(() => import('./pages/InstitutionLogin'));
+const UnifiedLogin = lazy(() => import('./pages/UnifiedLogin'));
 const InstitutionCaregiverOnboarding = lazy(() => import('./pages/InstitutionCaregiverOnboarding'));
 const InstitutionCaregiverPendingApproval = lazy(() => import('./pages/InstitutionCaregiverPendingApproval'));
 const InstitutionCaregiverDashboard = lazy(() => import('./pages/InstitutionCaregiverDashboard'));
@@ -69,7 +68,6 @@ const ServiceProviderDashboard = lazy(() => import('./pages/ServiceProviderDashb
 const RouteOptimization = lazy(() => import('./pages/RouteOptimization'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
 const WebRTCTest = lazy(() => import('./pages/WebRTCTest'));
-const PatientDashboard = lazy(() => import('./pages/PatientDashboard'));
 const PatientAccount = lazy(() => import('./pages/PatientAccount'));
 const InstitutionLabTechnicianDashboard = lazy(() => import('./pages/InstitutionLabTechnicianDashboard'));
 import EnhancedMessagingInterface from './components/EnhancedMessagingInterface';
@@ -350,11 +348,11 @@ function App() {
       />
       <Route 
         path="/auth" 
-        element={user ? <RoleBasedDashboardRoute /> : <Auth />} 
+        element={user ? <RoleBasedDashboardRoute /> : <UnifiedLogin />} 
       />
       <Route 
         path="/login" 
-        element={user ? <SignInRouteHandler /> : <Auth />} 
+        element={user ? <SignInRouteHandler /> : <UnifiedLogin />} 
       />
       <Route 
         path="/signup" 
@@ -393,77 +391,42 @@ function App() {
         element={<InstitutionLanding />} 
       />
       
+      {/* Legacy institution login - redirects to unified login */}
       <Route 
         path="/institution/login" 
-        element={<InstitutionLogin />} 
+        element={<UnifiedLogin />} 
       />
 
-      {/* Institution Admin Routes */}
+      {/* Institution Admin Routes - TEMPORARILY UNGUARDED FOR DEBUGGING */}
       <Route 
         path="/institution-admin/dashboard" 
-        element={
-          <InstitutionAdminGuard>
-            <InstitutionAdminDashboard />
-          </InstitutionAdminGuard>
-        } 
+        element={<InstitutionAdminDashboard />} 
       />
       
       <Route 
         path="/institution-admin/users" 
-        element={
-          <InstitutionAdminGuard>
-            <InstitutionUserManagement />
-          </InstitutionAdminGuard>
-        } 
+        element={<InstitutionUserManagement />} 
       />
       
       <Route 
         path="/institution-admin/settings" 
-        element={
-          <InstitutionAdminGuard>
-            <InstitutionSettings />
-          </InstitutionAdminGuard>
-        } 
-      />
-      
-      <Route 
-        path="/institution-admin/hospital-operations" 
-        element={
-          <InstitutionAdminGuard>
-            <HospitalOverview />
-          </InstitutionAdminGuard>
-        } 
-      />
-      
-      <Route 
-        path="/institution-admin/staff-management" 
-        element={
-          <InstitutionAdminGuard>
-            <StaffManagement />
-          </InstitutionAdminGuard>
-        } 
+        element={<InstitutionSettings />} 
       />
       
       <Route 
         path="/institution-admin" 
         element={<Navigate to="/institution-admin/dashboard" replace />} 
       />
-
-      {/* Patient Dashboard - Shows all patient activities */}
-      <Route 
-        path="/patient/:patientId/dashboard" 
-        element={<PatientDashboard />} 
-      />
       
-      {/* Patient Account - Manage patient account information */}
+      {/* Client Account - Manage Client account information */}
       <Route 
-        path="/patient/:patientId/account" 
+        path="/Client/:clientId/account" 
         element={<PatientAccount />} 
       />
       
-      {/* Patient Account without ID - uses logged-in user */}
+      {/* Client Account without ID - uses logged-in user */}
       <Route 
-        path="/patient/account" 
+        path="/Client/account" 
         element={<PatientAccount />} 
       />
       
@@ -509,17 +472,6 @@ function App() {
       <Route 
         path="/institution-pharmacist" 
         element={<Navigate to="/institution-pharmacist/dashboard" replace />} 
-      />
-
-      {/* Institution Lab Technician Routes */}
-      <Route 
-        path="/institution-lab-technician/dashboard" 
-        element={user ? <InstitutionLabTechnicianDashboard /> : <Navigate to="/institution/login" replace />} 
-      />
-
-      <Route 
-        path="/institution-lab-technician" 
-        element={<Navigate to="/institution-lab-technician/dashboard" replace />} 
       />
       
       {/* Protected routes - Dashboard removed (clients don't have accounts) */}
@@ -723,7 +675,7 @@ function SignInRouteHandler() {
   }
   
   // Check for admin session override
-  const hasAdminSession = sessionStorage.getItem('UltimateCare_admin_session') === 'true';
+  const hasAdminSession = sessionStorage.getItem('Care Master_admin_session') === 'true';
   
   // Redirect admins to admin dashboard (standalone admins without institution)
   if ((userRole === 'admin' || hasAdminSession) && !userProfile?.institutionId) {
@@ -737,8 +689,8 @@ function SignInRouteHandler() {
     return <Navigate to="/service-provider" replace />;
   }
   
-  // For other users (clients, patients), show message that this is for caregivers
-  console.log('✅ Client/patient accessing caregiver portal, redirecting to home');
+  // For other users (clients, elderly), show message that this is for caregivers
+  console.log('✅ Client/elderly accessing caregiver portal, redirecting to home');
   return <Navigate to="/" replace />;
 }
 
@@ -772,7 +724,7 @@ function RoleBasedDashboardRoute() {
   }
   
   // Check for admin session override
-  const hasAdminSession = sessionStorage.getItem('UltimateCare_admin_session') === 'true';
+  const hasAdminSession = sessionStorage.getItem('Care Master_admin_session') === 'true';
   
   // Redirect admins to admin dashboard (standalone admins without institution)
   if ((userRole === 'admin' || hasAdminSession) && !userProfile?.institutionId) {
@@ -786,7 +738,7 @@ function RoleBasedDashboardRoute() {
     return <Navigate to="/service-provider" replace />;
   }
   
-  // Default to client dashboard for client/patient users
+  // Default to client dashboard for elderly/client users
   console.log('✅ Showing client dashboard for role:', userRole);
   return <Layout />;
 }
@@ -820,8 +772,8 @@ function OnboardingGuardedLayout() {
       console.log('🔄 Redirecting CAREGIVER to:', caregiverRoute);
       return <Navigate to={caregiverRoute} replace />;
     }
-    // Redirect clients/patients to client onboarding
-    console.log('🔄 Redirecting PATIENT to onboarding, userType:', userProfile?.userType);
+    // Redirect clients/elderly to client onboarding
+    console.log('🔄 Redirecting Client to onboarding, userType:', userProfile?.userType);
     return <Navigate to="/onboarding/profile" replace />;
   }
   

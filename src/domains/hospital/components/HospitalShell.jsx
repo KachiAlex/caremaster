@@ -8,7 +8,7 @@ const HospitalShell = ({ title, subtitle, actions = null, children }) => {
         <header className="rounded-3xl border border-slate-800/80 bg-slate-950/80 backdrop-blur-sm p-6 shadow-xl shadow-black/50 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-slate-400">
-              UltimateCare Hospital Operations
+              ElderX Hospital Operations
             </p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-50">{title}</h1>
             {subtitle && (

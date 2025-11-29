@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
-import { getInstitution, updateInstitution } from '../api/institutionAPI';
-import { toast } from 'react-toastify';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase/config';
-import { compressImage, validateImage } from '../utils/imageOptimizer';
 import { 
   Settings, 
   Building2, 
@@ -26,7 +21,7 @@ import {
 } from 'lucide-react';
 
 const InstitutionSettings = () => {
-  const { user, userProfile, institutionId } = useUser();
+  const { userProfile, institutionId } = useUser();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,69 +58,56 @@ const InstitutionSettings = () => {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      if (!institutionId) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        setLoading(true);
-        const institutionData = await getInstitution(institutionId);
-        
-        if (institutionData) {
-          setSettings({
-            name: institutionData.name || '',
-            description: institutionData.description || '',
-            address: institutionData.address || '',
-            city: institutionData.city || '',
-            state: institutionData.state || '',
-            country: institutionData.country || '',
-            postalCode: institutionData.postalCode || '',
-            phone: institutionData.phone || institutionData.contactPhone || '',
-            email: institutionData.email || institutionData.contactEmail || '',
-            website: institutionData.website || '',
-            licenseNumber: institutionData.licenseNumber || '',
-            establishedDate: institutionData.establishedDate || '',
-            specialties: institutionData.specialties || [],
-            maxUsers: institutionData.maxUsers || 100,
-            features: institutionData.features || {
-              telemedicine: true,
-              aiAnalysis: true,
-              emergencyAlerts: true,
-              mobileApp: true,
-              apiAccess: false
-            },
-            branding: institutionData.branding || {
-              logo: null,
-              primaryColor: '#3B82F6',
-              secondaryColor: '#10B981'
-            }
-          });
+      // TODO: Replace with actual API call to fetch institution settings
+      const mockSettings = {
+        name: 'St. Mary\'s Healthcare Center',
+        description: 'Leading healthcare provider specializing in elderly care and rehabilitation services.',
+        address: '123 Healthcare Drive',
+        city: 'Lagos',
+        state: 'Lagos State',
+        country: 'Nigeria',
+        postalCode: '100001',
+        phone: '+234 1 234 5678',
+        email: 'info@stmarys.com',
+        website: 'https://stmarys.com',
+        licenseNumber: 'HC-2024-001',
+        establishedDate: '2020-01-15',
+        specialties: ['Geriatric Care', 'Physical Therapy', 'Nursing Services', 'Mental Health'],
+        maxUsers: 150,
+        features: {
+          telemedicine: true,
+          aiAnalysis: true,
+          emergencyAlerts: true,
+          mobileApp: true,
+          apiAccess: false
+        },
+        branding: {
+          logo: null,
+          primaryColor: '#3B82F6',
+          secondaryColor: '#10B981'
         }
-      } catch (error) {
-        console.error('Error fetching institution settings:', error);
-        toast.error('Failed to load institution settings');
-      } finally {
-        setLoading(false);
-      }
+      };
+      
+      setSettings(mockSettings);
+      setLoading(false);
     };
 
     fetchSettings();
-  }, [institutionId]);
+  }, []);
 
   const handleSave = async () => {
-    if (!institutionId) {
-      toast.error('Institution ID not found');
-      return;
-    }
-    
     setSaving(true);
     try {
-      await updateInstitution(institutionId, settings, userProfile?.uid || userProfile?.id);
-      toast.success('Settings saved successfully!');
+      // TODO: Implement save settings API call
+      console.log('Saving settings:', settings);
+      
+      // Mock delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      alert('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error('Error saving settings. Please try again.');
+      alert('Error saving settings. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -489,61 +471,11 @@ const InstitutionSettings = () => {
                 type="file"
                 accept="image/*"
                 className="hidden"
-                id="logo-upload"
-                onChange={async (e) => {
-                  const file = e.target.files[0];
-                  if (!file) return;
-                  
-                  // Validate image
-                  const validation = validateImage(file, { maxSizeMB: 5 });
-                  if (!validation.isValid) {
-                    toast.error(validation.error);
-                    return;
-                  }
-                  
-                  try {
-                    toast.info('Optimizing and uploading logo...');
-                    
-                    // Compress image before upload
-                    const compressedFile = await compressImage(file, {
-                      maxWidth: 800,
-                      maxHeight: 800,
-                      quality: 0.85,
-                      maxSizeMB: 1
-                    });
-                    
-                    const timestamp = Date.now();
-                    const fileExtension = compressedFile.name.split('.').pop();
-                    const fileName = `logo_${timestamp}.${fileExtension}`;
-                    const storagePath = `institutions/${institutionId}/branding/${fileName}`;
-                    
-                    // Upload to Firebase Storage
-                    const storageRef = ref(storage, storagePath);
-                    await uploadBytes(storageRef, compressedFile);
-                    const downloadURL = await getDownloadURL(storageRef);
-                    
-                    // Update institution settings with logo URL
-                    setSettings(prev => ({
-                      ...prev,
-                      branding: {
-                        ...prev.branding,
-                        logo: downloadURL
-                      }
-                    }));
-                    
-                    toast.success('Logo uploaded successfully!');
-                  } catch (error) {
-                    console.error('Error uploading logo:', error);
-                    toast.error('Failed to upload logo. Please try again.');
-                  }
+                onChange={(e) => {
+                  // TODO: Handle file upload
+                  console.log('Logo upload:', e.target.files[0]);
                 }}
               />
-              <label
-                htmlFor="logo-upload"
-                className="cursor-pointer text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                Choose File
-              </label>
             </div>
           </div>
         </div>

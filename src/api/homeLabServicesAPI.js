@@ -37,7 +37,7 @@ const SAMPLE_COLLECTIONS_COLLECTION = 'sampleCollections';
  */
 export const createHomeLabVisit = async (visitData) => {
   try {
-    logger.info('Creating home lab visit', { patientId: visitData.patientId });
+    logger.info('Creating home lab visit', { clientId: visitData.clientId });
 
     const visitWithTimestamp = {
       ...visitData,
@@ -53,10 +53,10 @@ export const createHomeLabVisit = async (visitData) => {
 
     const docRef = await addDoc(collection(db, HOME_LAB_VISITS_COLLECTION), visitWithTimestamp);
 
-    // Log activity to patient database
+    // Log activity to Client database
     try {
       await ComprehensivePatientLogger.logLabTestOrdered(
-        visitData.patientId,
+        visitData.clientId,
         {
           diagnosticId: docRef.id,
           testType: visitData.testType || 'Home Lab Visit',
@@ -89,11 +89,11 @@ export const createHomeLabVisit = async (visitData) => {
         userId: visitData.assignedLabTechnicianId,
         type: 'home_lab_visit_assigned',
         title: 'New Home Lab Visit Assigned',
-        message: `Home lab visit scheduled for ${visitData.patientName} on ${new Date(visitData.scheduledAt).toLocaleDateString()}`,
+        message: `Home lab visit scheduled for ${visitData.clientName} on ${new Date(visitData.scheduledAt).toLocaleDateString()}`,
         data: {
           visitId: docRef.id,
-          patientId: visitData.patientId,
-          patientName: visitData.patientName,
+          clientId: visitData.clientId,
+          clientName: visitData.clientName,
           scheduledAt: visitData.scheduledAt,
           testType: visitData.testType
         },
@@ -153,16 +153,16 @@ export const getHomeLabVisitsByTechnician = async (labTechnicianId, filters = {}
 };
 
 /**
- * Get home lab visits for a patient
- * @param {string} patientId - Patient ID
+ * Get home lab visits for a Client
+ * @param {string} clientId - Client ID
  * @returns {Promise<Array>} List of home lab visits
  */
-export const getHomeLabVisitsByPatient = async (patientId) => {
+export const getHomeLabVisitsByClient = async (clientId) => {
   try {
     const visitsRef = collection(db, HOME_LAB_VISITS_COLLECTION);
     const visitsQuery = query(
       visitsRef,
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('scheduledAt', 'desc')
     );
 
@@ -183,7 +183,7 @@ export const getHomeLabVisitsByPatient = async (patientId) => {
 
     return visits;
   } catch (error) {
-    logger.error('Error fetching patient home lab visits', { error });
+    logger.error('Error fetching Client home lab visits', { error });
     throw error;
   }
 };
@@ -230,8 +230,8 @@ export const recordSampleCollection = async (visitId, collectionData) => {
     // Create sample collection record
     const collectionRecord = {
       visitId: visitId,
-      patientId: visitData.patientId,
-      patientName: visitData.patientName,
+      clientId: visitData.clientId,
+      clientName: visitData.clientName,
       labTechnicianId: collectionData.labTechnicianId,
       labTechnicianName: collectionData.labTechnicianName,
       testType: visitData.testType,
@@ -268,10 +268,10 @@ export const recordSampleCollection = async (visitId, collectionData) => {
       updatedAt: serverTimestamp()
     });
 
-    // Log activity to patient database
+    // Log activity to Client database
     try {
       await ComprehensivePatientLogger.logLabTestResults(
-        visitData.patientId,
+        visitData.clientId,
         {
           diagnosticId: visitId,
           testName: visitData.testName || visitData.testType,
@@ -426,7 +426,7 @@ export const linkHomeLabVisitToDiagnostic = async (visitId, diagnosticId) => {
 export default {
   createHomeLabVisit,
   getHomeLabVisitsByTechnician,
-  getHomeLabVisitsByPatient,
+  getHomeLabVisitsByClient,
   updateHomeLabVisit,
   recordSampleCollection,
   updateChainOfCustody,

@@ -1,6 +1,6 @@
 /**
  * Tests for Care Plans API Logging Integration
- * Verifies that care plan operations are properly logged to patient logs
+ * Verifies that care plan operations are properly logged to Client logs
  */
 
 import { createCarePlan, updateCarePlan } from '../api/carePlansAPI';
@@ -35,7 +35,7 @@ describe('Care Plans API Logging', () => {
   };
 
   describe('createCarePlan', () => {
-    test('should log care plan creation to patient logs', async () => {
+    test('should log care plan creation to Client logs', async () => {
       const mockDocRef = { id: 'careplan-123' };
       const { addDoc } = require('firebase/firestore');
       addDoc.mockResolvedValue(mockDocRef);
@@ -44,17 +44,17 @@ describe('Care Plans API Logging', () => {
       collection.mockReturnValue({});
       doc.mockReturnValue({});
       
-      // Mock patient document
+      // Mock Client document
       const mockPatientDoc = {
         exists: () => true,
-        data: () => ({ patientId: 'UC-2025-0001' })
+        data: () => ({ clientId: 'UC-2025-0001' })
       };
       getDoc.mockResolvedValue(mockPatientDoc);
       
       logCarePlanUpdate.mockResolvedValue('log-789');
 
       const carePlanData = {
-        clientId: 'patient-doc-id',
+        clientId: 'Client-doc-id',
         diagnosis: 'Hypertension',
         careObjectives: ['Manage blood pressure'],
         dailyCareActivities: ['Medication administration']
@@ -78,7 +78,7 @@ describe('Care Plans API Logging', () => {
       collection.mockReturnValue({});
 
       const carePlanData = {
-        clientId: 'patient-doc-id',
+        clientId: 'Client-doc-id',
         diagnosis: 'Hypertension'
       };
 
@@ -89,7 +89,7 @@ describe('Care Plans API Logging', () => {
   });
 
   describe('updateCarePlan', () => {
-    test('should log care plan update to patient logs', async () => {
+    test('should log care plan update to Client logs', async () => {
       const { updateDoc, getDoc, doc } = require('firebase/firestore');
       updateDoc.mockResolvedValue();
       doc.mockReturnValue({});
@@ -98,16 +98,16 @@ describe('Care Plans API Logging', () => {
       const mockCarePlanDoc = {
         exists: () => true,
         data: () => ({
-          clientId: 'patient-doc-id',
+          clientId: 'Client-doc-id',
           diagnosis: 'Hypertension'
         })
       };
       getDoc.mockResolvedValueOnce(mockCarePlanDoc);
       
-      // Mock patient document
+      // Mock Client document
       const mockPatientDoc = {
         exists: () => true,
-        data: () => ({ patientId: 'UC-2025-0001' })
+        data: () => ({ clientId: 'UC-2025-0001' })
       };
       getDoc.mockResolvedValueOnce(mockPatientDoc);
       

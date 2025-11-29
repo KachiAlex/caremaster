@@ -36,7 +36,7 @@ const MedicalDocuments = () => {
       setLoading(true);
       
       // Load completed appointments that can have documents
-      const completedAppointments = await telemedicineAPI.getAppointmentsByPatient(userProfile.id)
+      const completedAppointments = await telemedicineAPI.getAppointmentsByClient(userProfile.id)
         .then(apts => apts.filter(apt => apt.status === 'completed'))
         .catch(err => {
           console.warn('Failed to fetch appointments:', err);
@@ -131,8 +131,8 @@ const MedicalDocuments = () => {
         </div>
         <div className="card">
           <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Pill className="h-6 w-6 text-blue-600" />
+            <div className="p-3 bg-green-100 rounded-lg">
+              <Pill className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Prescriptions</p>
@@ -153,8 +153,8 @@ const MedicalDocuments = () => {
         </div>
         <div className="card">
           <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Calendar className="h-6 w-6 text-blue-600" />
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <Calendar className="h-6 w-6 text-purple-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">This Month</p>
@@ -242,7 +242,7 @@ const MedicalDocuments = () => {
                 <div className="flex items-center space-x-3">
                   {/* Document Status Indicators */}
                   <div className="flex items-center space-x-2">
-                    <div className="flex items-center text-blue-600">
+                    <div className="flex items-center text-green-600">
                       <Pill className="h-4 w-4 mr-1" />
                       <span className="text-xs">Prescription</span>
                     </div>
@@ -282,7 +282,7 @@ const MedicalDocuments = () => {
                   <div>
                     <span className="text-gray-600">Payment:</span>
                     <span className={`ml-2 font-medium ${
-                      appointment.paymentStatus === 'paid' ? 'text-blue-600' : 'text-yellow-600'
+                      appointment.paymentStatus === 'paid' ? 'text-green-600' : 'text-yellow-600'
                     }`}>
                       {appointment.paymentStatus || 'Paid'}
                     </span>
@@ -306,7 +306,7 @@ const MedicalDocuments = () => {
             name: userProfile?.displayName || userProfile?.name,
             email: userProfile?.email,
             phone: userProfile?.phone || '+234 XXX XXX XXXX',
-            address: userProfile?.address || 'Patient Address',
+            address: userProfile?.address || 'Client Address',
             age: userProfile?.age || 65,
             gender: userProfile?.gender || 'Not specified',
             id: userProfile?.id
@@ -314,11 +314,11 @@ const MedicalDocuments = () => {
           doctorInfo={{
             name: selectedAppointment.doctorName || 'Healthcare Provider',
             specialty: selectedAppointment.doctorSpecialty || 'General Practice',
-            email: 'doctor@ultimatecare.com',
-            phone: '+234 800 ULTIMATE',
+            email: 'doctor@Care Master.com',
+            phone: '+234 800 Care Master',
             licenseNumber: 'MD-2024-001',
             qualifications: ['MBBS', 'MD'],
-            hospital: 'UltimateCare Telemedicine Platform'
+            hospital: 'Care Master Telemedicine Platform'
           }}
           onClose={() => setShowDocuments(false)}
         />

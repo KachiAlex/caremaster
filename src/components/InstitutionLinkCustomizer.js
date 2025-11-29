@@ -265,14 +265,14 @@ const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h4 className="text-md font-medium text-gray-900 flex items-center">
-                    <Globe className="h-4 w-4 mr-2 text-blue-600" />
+                    <Globe className="h-4 w-4 mr-2 text-green-600" />
                     Custom URL Slug
                   </h4>
                   <p className="text-sm text-gray-600 mt-1">
-                    Create a memorable URL like: ultimatecare.com/institution/your-company
+                    Create a memorable URL like: Care Master.com/institution/your-company
                   </p>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                   Recommended
                 </span>
               </div>
@@ -319,14 +319,14 @@ const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h4 className="text-md font-medium text-gray-900 flex items-center">
-                    <Lock className="h-4 w-4 mr-2 text-blue-600" />
+                    <Lock className="h-4 w-4 mr-2 text-purple-600" />
                     Custom Domain
                   </h4>
                   <p className="text-sm text-gray-600 mt-1">
-                    Use your own domain like: your-company.ultimatecare.com or yourcompany.com
+                    Use your own domain like: your-company.Care Master.com or yourcompany.com
                   </p>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-purple-800">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                   Premium
                 </span>
               </div>
@@ -340,7 +340,7 @@ const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
                     type="text"
                     value={customDomain}
                     onChange={(e) => handleDomainChange(e.target.value)}
-                    placeholder="your-company.ultimatecare.com or yourcompany.com"
+                    placeholder="your-company.Care Master.com or yourcompany.com"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {validationErrors.domain && (

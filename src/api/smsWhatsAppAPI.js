@@ -307,7 +307,7 @@ export const sendLabResultNotification = async (patientPhone, labData, channel =
       message = `Lab Results: Your ${testName} results show some abnormalities. Please schedule a follow-up.`;
     }
     
-    message += ` Please visit the hospital or check your patient portal.`;
+    message += ` Please visit the hospital or check your Client portal.`;
 
     return await sendMessage(patientPhone, message, channel, {
       type: MESSAGE_TYPES.LAB_RESULT,

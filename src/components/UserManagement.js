@@ -25,8 +25,6 @@ import {
   DollarSign
 } from 'lucide-react';
 import { getAllUsers, updateUser, deleteUser, createUser } from '../api/usersAPI';
-import { createPatient } from '../api/patientsAPI';
-import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import UserDataFixer from './UserDataFixer';
 import ProfilePicture from './ProfilePicture';
@@ -34,7 +32,6 @@ import UserNameWithAvatar from './UserNameWithAvatar';
 import CaregiverWageEditModal from './CaregiverWageEditModal';
 
 const UserManagement = ({ institutionId }) => {
-  const { userProfile } = useUser();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +45,6 @@ const UserManagement = ({ institutionId }) => {
   const [showAddCaregiverModal, setShowAddCaregiverModal] = useState(false);
   const [showWageModal, setShowWageModal] = useState(false);
   const [selectedCaregiverForWage, setSelectedCaregiverForWage] = useState(null);
-  const [createdPatientId, setCreatedPatientId] = useState(null);
   const [newUserForm, setNewUserForm] = useState({
     name: '',
     email: '',
@@ -72,6 +68,8 @@ const UserManagement = ({ institutionId }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const availableRoles = [
     { value: 'admin', label: 'Administrator', color: 'red', icon: Shield },
@@ -221,11 +219,64 @@ const UserManagement = ({ institutionId }) => {
 
     try {
       await deleteUser(userId);
-      toast.success('User deleted successfully');
+      toast.success('User deleted successfully', { autoClose: 3000 });
       loadUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      toast.error('Failed to delete user', { autoClose: 3000 });
+    }
+  };
+
+  const handleToggleUserSelection = (userId) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleSelectAllChange = () => {
+    const filteredUserIds = filteredUsers
+      .filter(user => !user.isPrimaryAdmin && user.adminTier !== 'primary' && !user.roles?.includes('primary-admin') && !user.cannotBeDeleted)
+      .map((user) => user.id);
+    
+    const areAllSelected = filteredUserIds.length > 0 && 
+      filteredUserIds.every((id) => selectedUserIds.includes(id));
+    
+    if (areAllSelected) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(filteredUserIds);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+
+    // Check for primary admins in selection
+    const selectedUsers = users.filter(u => selectedUserIds.includes(u.id));
+    const hasPrimaryAdmin = selectedUsers.some(u => 
+      u.isPrimaryAdmin || u.adminTier === 'primary' || u.roles?.includes('primary-admin') || u.cannotBeDeleted
+    );
+
+    if (hasPrimaryAdmin) {
+      toast.error('Cannot delete primary administrators', { autoClose: 3000 });
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedUserIds.length} selected user(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    setBulkDeleting(true);
+    try {
+      await Promise.all(selectedUserIds.map((userId) => deleteUser(userId)));
+      toast.success(`Deleted ${selectedUserIds.length} user(s) successfully`, { autoClose: 3000 });
+      setSelectedUserIds([]);
+      await loadUsers();
+    } catch (error) {
+      console.error('Error deleting selected users:', error);
+      toast.error('Failed to delete selected users', { autoClose: 3000 });
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -337,62 +388,36 @@ const UserManagement = ({ institutionId }) => {
         updatedAt: new Date()
       };
 
-      // For patients (clients), use the new hospital operations patient registration
-      if (userType === 'client' || userType === 'patient') {
-        // Use the new patient registration system with simple, memorable patient ID
-        const patientData = {
-          name: newUserForm.name.trim(),
-          fullName: newUserForm.name.trim(),
-          email: newUserForm.email.trim().toLowerCase(),
-          phone: newUserForm.phone.trim(),
+      // Add role-specific data
+      if (userType === 'client') {
+        userData.clientData = {
           address: newUserForm.address.trim(),
-          emergencyContactName: newUserForm.emergencyContact.trim(),
-          emergencyContactPhone: newUserForm.emergencyPhone.trim(),
-          medicalConditions: newUserForm.medicalConditions.trim() ? newUserForm.medicalConditions.trim().split(',').map(c => c.trim()) : [],
-          medications: newUserForm.medications.trim() ? newUserForm.medications.trim().split(',').map(m => m.trim()) : [],
-          allergies: newUserForm.allergies.trim() ? newUserForm.allergies.trim().split(',').map(a => a.trim()) : [],
-          careLevel: newUserForm.careLevel,
-          institutionId: institutionId,
-          userType: 'patient',
-          type: 'patient'
+          emergencyContact: newUserForm.emergencyContact.trim(),
+          emergencyPhone: newUserForm.emergencyPhone.trim(),
+          medicalConditions: newUserForm.medicalConditions.trim(),
+          medications: newUserForm.medications.trim(),
+          allergies: newUserForm.allergies.trim(),
+          careLevel: newUserForm.careLevel
         };
-
-        const result = await createPatient(patientData, userProfile);
-        setCreatedPatientId(result.patientId);
-        
-        toast.success(
-          <div>
-            <div className="font-semibold">Patient registered successfully!</div>
-            <div className="text-sm mt-1">Patient ID: <span className="font-mono font-bold text-blue-600">{result.patientId}</span></div>
-          </div>,
-          { autoClose: 5000 }
-        );
-        
-        resetForm();
-        setShowAddClientModal(false);
-        loadUsers();
-      } else {
-        // For other user types, use the standard user creation
-        if (userType === 'caregiver') {
-          userData.caregiverData = {
-            hourlyRate: newUserForm.hourlyRate ? parseFloat(newUserForm.hourlyRate) : null,
-            monthlyRate: newUserForm.monthlyRate ? parseFloat(newUserForm.monthlyRate) : null,
-            specializations: newUserForm.specializations.trim(),
-            experience: newUserForm.experience.trim(),
-            certifications: newUserForm.certifications.trim(),
-            availability: newUserForm.availability
-          };
-        }
-
-        // Create the user in Firestore
-        await createUser(userData);
-        
-        toast.success(`${userType === 'client' ? 'Patient' : 'Caregiver'} created successfully!`);
-        resetForm();
-        setShowAddClientModal(false);
-        setShowAddCaregiverModal(false);
-        loadUsers();
+      } else if (userType === 'caregiver') {
+        userData.caregiverData = {
+          hourlyRate: newUserForm.hourlyRate ? parseFloat(newUserForm.hourlyRate) : null,
+          monthlyRate: newUserForm.monthlyRate ? parseFloat(newUserForm.monthlyRate) : null,
+          specializations: newUserForm.specializations.trim(),
+          experience: newUserForm.experience.trim(),
+          certifications: newUserForm.certifications.trim(),
+          availability: newUserForm.availability
+        };
       }
+
+      // Create the user in Firestore
+      await createUser(userData);
+      
+      toast.success(`${userType === 'client' ? 'Client' : 'Caregiver'} created successfully!`);
+      resetForm();
+      setShowAddClientModal(false);
+      setShowAddCaregiverModal(false);
+      loadUsers();
     } catch (error) {
       console.error('Error creating user:', error);
       toast.error(`Failed to create ${userType}: ${error.message}`);
@@ -427,22 +452,41 @@ const UserManagement = ({ institutionId }) => {
           
           {/* Action Buttons */}
           <div className="flex space-x-3">
+            {selectedUserIds.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2 disabled:opacity-50"
+              >
+                {bulkDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    <span>Bulk Delete ({selectedUserIds.length})</span>
+                  </>
+                )}
+              </button>
+            )}
             <button
               onClick={() => {
                 resetForm();
                 setShowAddClientModal(true);
               }}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
             >
               <Heart className="h-4 w-4 mr-2" />
-              Add Patient
+              Add Client
             </button>
             <button
               onClick={() => {
                 resetForm();
                 setShowAddCaregiverModal(true);
               }}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
             >
               <UserPlus className="h-4 w-4 mr-2" />
               Add Caregiver
@@ -499,6 +543,21 @@ const UserManagement = ({ institutionId }) => {
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <input
+                  type="checkbox"
+                  className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
+                  checked={
+                    filteredUsers
+                      .filter(user => !user.isPrimaryAdmin && user.adminTier !== 'primary' && !user.roles?.includes('primary-admin') && !user.cannotBeDeleted)
+                      .length > 0 &&
+                    filteredUsers
+                      .filter(user => !user.isPrimaryAdmin && user.adminTier !== 'primary' && !user.roles?.includes('primary-admin') && !user.cannotBeDeleted)
+                      .every((user) => selectedUserIds.includes(user.id))
+                  }
+                  onChange={handleSelectAllChange}
+                />
+              </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">User</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Contact</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Roles</th>
@@ -510,7 +569,7 @@ const UserManagement = ({ institutionId }) => {
           <tbody className="divide-y divide-gray-200">
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
                   <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                   <p>No users found</p>
                 </td>
@@ -520,9 +579,21 @@ const UserManagement = ({ institutionId }) => {
                 const userRoles = Array.isArray(user.roles) 
                   ? user.roles 
                   : [user.userType || user.role].filter(Boolean);
+                const canBeDeleted = !user.isPrimaryAdmin && user.adminTier !== 'primary' && !user.roles?.includes('primary-admin') && !user.cannotBeDeleted;
 
                 return (
                   <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-4">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
+                          checked={selectedUserIds.includes(user.id)}
+                          onChange={() => handleToggleUserSelection(user.id)}
+                          disabled={!canBeDeleted}
+                        />
+                      </div>
+                    </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center">
                         <UserNameWithAvatar
@@ -574,7 +645,7 @@ const UserManagement = ({ institutionId }) => {
                     </td>
                     <td className="px-4 py-4">
                       <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                        user.status === 'active' ? 'bg-blue-100 text-blue-700' :
+                        user.status === 'active' ? 'bg-green-100 text-green-700' :
                         user.status === 'suspended' ? 'bg-red-100 text-red-700' :
                         'bg-yellow-100 text-yellow-700'
                       }`}>
@@ -629,7 +700,7 @@ const UserManagement = ({ institutionId }) => {
                               setSelectedCaregiverForWage(user);
                               setShowWageModal(true);
                             }}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                             title="Manage wages"
                           >
                             <DollarSign className="h-4 w-4" />
@@ -643,7 +714,7 @@ const UserManagement = ({ institutionId }) => {
                               ? 'text-gray-300 cursor-not-allowed'
                               : user.status === 'active' 
                                 ? 'text-red-600 hover:bg-red-50' 
-                                : 'text-blue-600 hover:bg-blue-50'
+                                : 'text-green-600 hover:bg-green-50'
                           }`}
                           title={
                             user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')
@@ -684,7 +755,7 @@ const UserManagement = ({ institutionId }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Shield className="h-6 w-6 text-white" />
                 <div>
@@ -799,17 +870,17 @@ const UserManagement = ({ institutionId }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Heart className="h-6 w-6 text-white" />
                 <div>
                   <h3 className="text-xl font-bold text-white">Add New Client</h3>
-                  <p className="text-blue-100 text-sm">Create a new client profile</p>
+                  <p className="text-green-100 text-sm">Create a new client profile</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddClientModal(false)}
-                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
+                className="text-white hover:bg-green-500 rounded-lg p-2 transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -853,7 +924,7 @@ const UserManagement = ({ institutionId }) => {
                     type="text"
                     value={newUserForm.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Enter full name"
                   />
                 </div>
@@ -864,7 +935,7 @@ const UserManagement = ({ institutionId }) => {
                     type="email"
                     value={newUserForm.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Enter email address"
                   />
                 </div>
@@ -875,7 +946,7 @@ const UserManagement = ({ institutionId }) => {
                     type="tel"
                     value={newUserForm.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -885,7 +956,7 @@ const UserManagement = ({ institutionId }) => {
                   <select
                     value={newUserForm.careLevel}
                     onChange={(e) => handleInputChange('careLevel', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="basic">Basic Care</option>
                     <option value="intermediate">Intermediate Care</option>
@@ -902,7 +973,7 @@ const UserManagement = ({ institutionId }) => {
                       type={showPassword ? 'text' : 'password'}
                       value={newUserForm.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Enter password"
                     />
                     <button
@@ -922,7 +993,7 @@ const UserManagement = ({ institutionId }) => {
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={newUserForm.confirmPassword}
                       onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Confirm password"
                     />
                     <button
@@ -946,7 +1017,7 @@ const UserManagement = ({ institutionId }) => {
                     type="text"
                     value={newUserForm.address}
                     onChange={(e) => handleInputChange('address', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Enter address"
                   />
                 </div>
@@ -957,7 +1028,7 @@ const UserManagement = ({ institutionId }) => {
                     type="text"
                     value={newUserForm.emergencyContact}
                     onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Emergency contact name"
                   />
                 </div>
@@ -968,7 +1039,7 @@ const UserManagement = ({ institutionId }) => {
                     type="tel"
                     value={newUserForm.emergencyPhone}
                     onChange={(e) => handleInputChange('emergencyPhone', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Emergency contact phone"
                   />
                 </div>
@@ -978,7 +1049,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.medicalConditions}
                     onChange={(e) => handleInputChange('medicalConditions', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="List medical conditions"
                     rows="2"
                   />
@@ -989,7 +1060,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.medications}
                     onChange={(e) => handleInputChange('medications', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="List current medications"
                     rows="2"
                   />
@@ -1000,7 +1071,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.allergies}
                     onChange={(e) => handleInputChange('allergies', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="List known allergies"
                     rows="2"
                   />
@@ -1018,7 +1089,7 @@ const UserManagement = ({ institutionId }) => {
               </button>
               <button
                 onClick={() => handleCreateUser('client')}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Create Client
@@ -1033,17 +1104,17 @@ const UserManagement = ({ institutionId }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <UserPlus className="h-6 w-6 text-white" />
                 <div>
                   <h3 className="text-xl font-bold text-white">Add New Caregiver</h3>
-                  <p className="text-blue-100 text-sm">Create a new caregiver profile</p>
+                  <p className="text-purple-100 text-sm">Create a new caregiver profile</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddCaregiverModal(false)}
-                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
+                className="text-white hover:bg-purple-500 rounded-lg p-2 transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -1087,7 +1158,7 @@ const UserManagement = ({ institutionId }) => {
                     type="text"
                     value={newUserForm.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Enter full name"
                   />
                 </div>
@@ -1098,7 +1169,7 @@ const UserManagement = ({ institutionId }) => {
                     type="email"
                     value={newUserForm.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Enter email address"
                   />
                 </div>
@@ -1109,7 +1180,7 @@ const UserManagement = ({ institutionId }) => {
                     type="tel"
                     value={newUserForm.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -1119,7 +1190,7 @@ const UserManagement = ({ institutionId }) => {
                   <select
                     value={newUserForm.availability}
                     onChange={(e) => handleInputChange('availability', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="full-time">Full Time</option>
                     <option value="part-time">Part Time</option>
@@ -1136,7 +1207,7 @@ const UserManagement = ({ institutionId }) => {
                       type={showPassword ? 'text' : 'password'}
                       value={newUserForm.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Enter password"
                     />
                     <button
@@ -1156,7 +1227,7 @@ const UserManagement = ({ institutionId }) => {
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={newUserForm.confirmPassword}
                       onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Confirm password"
                     />
                     <button
@@ -1181,7 +1252,7 @@ const UserManagement = ({ institutionId }) => {
                     step="0.01"
                     value={newUserForm.hourlyRate}
                     onChange={(e) => handleInputChange('hourlyRate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Enter hourly rate"
                   />
                 </div>
@@ -1193,7 +1264,7 @@ const UserManagement = ({ institutionId }) => {
                     step="0.01"
                     value={newUserForm.monthlyRate}
                     onChange={(e) => handleInputChange('monthlyRate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Enter monthly rate"
                   />
                 </div>
@@ -1203,7 +1274,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.specializations}
                     onChange={(e) => handleInputChange('specializations', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="List specializations (e.g., dementia care, mobility assistance)"
                     rows="2"
                   />
@@ -1214,7 +1285,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.experience}
                     onChange={(e) => handleInputChange('experience', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Describe relevant experience"
                     rows="2"
                   />
@@ -1225,7 +1296,7 @@ const UserManagement = ({ institutionId }) => {
                   <textarea
                     value={newUserForm.certifications}
                     onChange={(e) => handleInputChange('certifications', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="List certifications and licenses"
                     rows="2"
                   />
@@ -1243,7 +1314,7 @@ const UserManagement = ({ institutionId }) => {
               </button>
               <button
                 onClick={() => handleCreateUser('caregiver')}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Create Caregiver

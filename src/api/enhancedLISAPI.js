@@ -64,8 +64,8 @@ export const createLabSample = async (sampleData) => {
   try {
     const {
       testId,
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       testType,
       testName,
@@ -78,8 +78,8 @@ export const createLabSample = async (sampleData) => {
       notes = ''
     } = sampleData;
 
-    if (!testId || !patientId || !institutionId || !testType) {
-      throw new Error('Missing required fields: testId, patientId, institutionId, testType');
+    if (!testId || !clientId || !institutionId || !testType) {
+      throw new Error('Missing required fields: testId, clientId, institutionId, testType');
     }
 
     // Generate barcode
@@ -87,8 +87,8 @@ export const createLabSample = async (sampleData) => {
 
     const sample = {
       testId,
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       testType,
       testName,
@@ -186,7 +186,7 @@ export const createLabResult = async (sampleId, resultData) => {
   try {
     const {
       testId,
-      patientId,
+      clientId,
       institutionId,
       testName,
       results = [], // Array of { parameter, value, unit, normalRange, isAbnormal }
@@ -213,8 +213,8 @@ export const createLabResult = async (sampleId, resultData) => {
     const result = {
       sampleId,
       testId,
-      patientId,
-      patientName: sample.patientName,
+      clientId,
+      clientName: sample.clientName,
       institutionId,
       testName,
       results,
@@ -281,10 +281,10 @@ export const createLabResult = async (sampleId, resultData) => {
       }
     }
 
-    // Notify patient/caregiver of completed results
+    // Notify Client/caregiver of completed results
     try {
       await notificationsAPI.createNotification({
-        userId: patientId,
+        userId: clientId,
         type: 'lab_result_ready',
         title: 'Lab Results Ready',
         message: `Your ${testName} results are ready for review.`,

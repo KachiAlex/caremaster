@@ -211,7 +211,7 @@ const CaregiverSchedule = () => {
       case 'medium':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'low':
-        return 'bg-blue-100 text-blue-800 border-green-200';
+        return 'bg-green-100 text-green-800 border-green-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -224,7 +224,7 @@ const CaregiverSchedule = () => {
       case 'in-progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -250,7 +250,7 @@ const CaregiverSchedule = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
@@ -375,15 +375,15 @@ const CaregiverSchedule = () => {
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-600 font-medium">
-                        {appointment.patientName.split(' ').map(n => n[0]).join('')}
+                    <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                      <span className="text-green-600 font-medium">
+                        {appointment.clientName.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">{appointment.patientName}</h3>
+                      <h3 className="text-lg font-medium text-gray-900">{appointment.clientName}</h3>
                       <span className="text-sm text-gray-500">Age: {appointment.patientAge}</span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(appointment.priority)}`}>
                         {appointment.priority} priority
@@ -445,7 +445,7 @@ const CaregiverSchedule = () => {
                     Call
                   </button>
                   <button 
-                    onClick={() => window.location.href = `/service-provider/messages?client=${appointment.patientName}`}
+                    onClick={() => window.location.href = `/service-provider/messages?client=${appointment.clientName}`}
                     className="btn btn-secondary"
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
@@ -483,8 +483,8 @@ const CaregiverSchedule = () => {
         </div>
         <div className="card">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Completed</p>

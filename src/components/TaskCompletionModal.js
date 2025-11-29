@@ -7,7 +7,7 @@ import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import FileUpload from './FileUpload';
 
-const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
+const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
   const { userProfile, user } = useUser();
   const [completionNotes, setCompletionNotes] = useState('');
   const [photos, setPhotos] = useState([]);
@@ -67,9 +67,9 @@ const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
 
   const quickNotes = [
     'Task completed successfully',
-    'Patient cooperative and comfortable',
+    'Client cooperative and comfortable',
     'No issues observed',
-    'Patient requested assistance',
+    'Client requested assistance',
     'Follow-up needed',
     'Family member present'
   ];
@@ -148,7 +148,7 @@ const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Complete Task</h2>
             <p className="text-sm text-gray-600 mt-1">
-              {patient?.name} - {task?.title || task?.type}
+              {Client?.name} - {task?.title || task?.type}
             </p>
           </div>
           <button
@@ -264,7 +264,7 @@ const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
             <textarea
               value={completionNotes}
               onChange={(e) => setCompletionNotes(e.target.value)}
-              placeholder="Describe what was done, patient's response, any observations..."
+              placeholder="Describe what was done, Client's response, any observations..."
               rows="4"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
@@ -303,16 +303,16 @@ const TaskCompletionModal = ({ task, patient, onClose, onComplete }) => {
             )}
           </div>
 
-          {/* Patient Condition Check */}
+          {/* Client Condition Check */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <div className="flex items-start space-x-2">
               <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-yellow-900">Quick Patient Check</p>
+                <p className="text-sm font-medium text-yellow-900">Quick Client Check</p>
                 <div className="mt-2 space-y-1">
                   <label className="flex items-center text-sm text-yellow-800">
                     <input type="checkbox" className="mr-2" />
-                    Patient is comfortable and safe
+                    Client is comfortable and safe
                   </label>
                   <label className="flex items-center text-sm text-yellow-800">
                     <input type="checkbox" className="mr-2" />

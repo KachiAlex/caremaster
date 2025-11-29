@@ -13,15 +13,9 @@ import {
   X
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getMedicationsByPatient } from '../api/medicationAPI';
+import { getMedicationsByClient } from '../api/medicationAPI';
 
-import { logMedicationAdministered } from '../utils/patientLogger';
-import { useUser } from '../contexts/UserContext';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
-
-const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, onSave, onCancel }) => {
-  const { userProfile } = useUser();
+const NurseMedicationManager = ({ clientId, clientName, nurseId, nurseName, onSave, onCancel }) => {
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [administeringMed, setAdministeringMed] = useState(null);
@@ -60,12 +54,12 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
 
   useEffect(() => {
     loadMedications();
-  }, [patientId]);
+  }, [clientId]);
 
   const loadMedications = async () => {
     try {
       setLoading(true);
-      const meds = await getMedicationsByPatient(patientId);
+      const meds = await getMedicationsByClient(clientId);
       setMedications(meds || []);
     } catch (error) {
       console.error('Error loading medications:', error);
@@ -103,8 +97,8 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
       const administrationRecord = {
         medicationId: administerForm.medicationId,
         medicationName: administeringMed.name,
-        patientId,
-        patientName,
+        clientId,
+        clientName,
         nurseId,
         nurseName,
         administeredAt: new Date(administerForm.administeredAt),
@@ -116,37 +110,6 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
         status: 'administered'
       };
 
-      // Log medication administration to patient logs (comprehensive logging)
-      try {
-        const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
-        
-        await ComprehensivePatientLogger.logMedicationAdministered(
-          patientId,
-          {
-            medicationId: administerForm.medicationId,
-            medicationName: administeringMed.name,
-            dose: administerForm.dose,
-            route: administerForm.route,
-            administeredAt: new Date(administerForm.administeredAt).toISOString(),
-            notes: administerForm.notes,
-            sideEffects: administerForm.sideEffects,
-            patientResponse: administerForm.patientResponse,
-            status: 'administered'
-          },
-          {
-            id: nurseId || userProfile?.id || userProfile?.uid,
-            name: nurseName || userProfile?.name || userProfile?.displayName,
-            role: userProfile?.role || userProfile?.userType || userProfile?.type || 'nurse',
-            email: userProfile?.email,
-            medicalQualification: userProfile?.medicalQualification,
-            institutionId: userProfile?.institutionId
-          }
-        );
-      } catch (logError) {
-        console.warn('Could not log medication administration to patient logs:', logError);
-        // Don't fail the medication administration if logging fails
-      }
-      
       // Simulate API call
       console.log('Recording medication administration:', administrationRecord);
       
@@ -211,8 +174,8 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
     const colors = {
       'pending': 'bg-yellow-100 text-yellow-800',
       'due': 'bg-red-100 text-red-800',
-      'soon': 'bg-blue-100 text-orange-800',
-      'administered': 'bg-blue-100 text-blue-800'
+      'soon': 'bg-orange-100 text-orange-800',
+      'administered': 'bg-green-100 text-green-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
@@ -228,12 +191,12 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Pill className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Pill className="h-6 w-6 text-green-600" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Medication Management</h2>
-                <p className="text-sm text-gray-600">Patient: {patientName}</p>
+                <p className="text-sm text-gray-600">Client: {clientName}</p>
                 <p className="text-xs text-gray-500">Nurse: {nurseName}</p>
               </div>
             </div>
@@ -249,13 +212,13 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
         <div className="p-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
             </div>
           ) : medications.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Pill className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p className="text-lg font-medium">No medications prescribed</p>
-              <p className="text-sm">This patient has no current medication prescriptions.</p>
+              <p className="text-sm">This Client has no current medication prescriptions.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -319,7 +282,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                         {status.status === 'due' || status.status === 'soon' ? (
                           <button
                             onClick={() => handleAdministerMedication(medication)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Administer
@@ -349,8 +312,8 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Pill className="h-6 w-6 text-blue-600" />
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Pill className="h-6 w-6 text-green-600" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">Record Medication Administration</h3>
@@ -375,7 +338,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                         type="datetime-local"
                         value={administerForm.administeredAt}
                         onChange={(e) => setAdministerForm(prev => ({ ...prev, administeredAt: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         required
                       />
                     </div>
@@ -386,7 +349,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                         value={administerForm.dose}
                         onChange={(e) => setAdministerForm(prev => ({ ...prev, dose: e.target.value }))}
                         placeholder="e.g., 10mg, 1 tablet"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         required
                       />
                     </div>
@@ -397,7 +360,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                     <select
                       value={administerForm.route}
                       onChange={(e) => setAdministerForm(prev => ({ ...prev, route: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     >
                       {routes.map(route => (
                         <option key={route.value} value={route.value}>{route.label}</option>
@@ -406,11 +369,11 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Patient Response</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Client Response</label>
                     <select
                       value={administerForm.patientResponse}
                       onChange={(e) => setAdministerForm(prev => ({ ...prev, patientResponse: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     >
                       {patientResponses.map(response => (
                         <option key={response.value} value={response.value}>{response.label}</option>
@@ -425,7 +388,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                       onChange={(e) => setAdministerForm(prev => ({ ...prev, sideEffects: e.target.value }))}
                       placeholder="Describe any side effects observed..."
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     />
                   </div>
 
@@ -436,7 +399,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                       onChange={(e) => setAdministerForm(prev => ({ ...prev, notes: e.target.value }))}
                       placeholder="Additional notes about the administration..."
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     />
                   </div>
                 </div>
@@ -451,7 +414,7 @@ const NurseMedicationManager = ({ patientId, patientName, nurseId, nurseName, on
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center"
+                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center"
                   >
                     <Save className="h-4 w-4 mr-2" />
                     Record Administration

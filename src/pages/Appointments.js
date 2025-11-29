@@ -10,7 +10,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { getAppointmentsByPatient, createAppointment } from '../api/appointmentsAPI';
+import { getAppointmentsByClient, createAppointment } from '../api/appointmentsAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
 import { toast } from 'react-toastify';
 
@@ -52,8 +52,8 @@ const Appointments = () => {
           avatar: caregiver.avatar || null
         })));
 
-        // Fetch recent appointments for this patient
-        const appointments = await getAppointmentsByPatient(user.uid);
+        // Fetch recent appointments for this Client
+        const appointments = await getAppointmentsByClient(user.uid);
         setRecentRequests(appointments.slice(0, 5).map(appointment => ({
           id: appointment.id,
           title: appointment.careType || appointment.title || 'Care Request',
@@ -128,8 +128,8 @@ const Appointments = () => {
       console.log('Starting appointment creation...', { careType, formData, user: user?.uid });
       
       const appointmentData = {
-        patientId: user.uid,
-        patientName: userProfile?.name || userProfile?.displayName || user?.displayName || 'Patient',
+        clientId: user.uid,
+        clientName: userProfile?.name || userProfile?.displayName || user?.displayName || 'Client',
         careType: formData.careType,
         notes: formData.additionalNotes,
         priority: 'medium',
@@ -159,7 +159,7 @@ const Appointments = () => {
       });
 
       // Refresh the recent requests
-      const appointments = await getAppointmentsByPatient(user.uid);
+      const appointments = await getAppointmentsByClient(user.uid);
       setRecentRequests(appointments.slice(0, 5).map(appointment => ({
         id: appointment.id,
         title: appointment.careType || appointment.title || 'Care Request',
@@ -184,7 +184,7 @@ const Appointments = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Available':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'Busy':
         return 'bg-gray-100 text-gray-800';
       case 'In Progress':
@@ -193,7 +193,7 @@ const Appointments = () => {
       case 'Pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'Completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'Cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -206,9 +206,9 @@ const Appointments = () => {
       case 'High':
         return 'bg-red-100 text-red-800';
       case 'Medium':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-orange-100 text-orange-800';
       case 'Low':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

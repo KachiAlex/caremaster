@@ -93,7 +93,7 @@ export const PRODUCTION_SECURITY_CONFIG = {
   // API Security
   apiSecurity: {
     corsEnabled: true,
-    corsOrigins: ['https://ultimatecare-2025.web.app', 'https://ultimatecare-2025.firebaseapp.com'],
+    corsOrigins: ['https://elderx-f5c2b.web.app', 'https://elderx-f5c2b.firebaseapp.com'],
     apiKeyRequired: true,
     requestValidation: true,
     responseSanitization: true
@@ -110,16 +110,16 @@ export const PRODUCTION_SECURITY_CONFIG = {
       write: 'auth.uid == resource.data.userId'
     },
     medications: {
-      read: 'auth.uid == resource.data.patientProfileId',
-      write: 'auth.uid == resource.data.patientProfileId'
+      read: 'auth.uid == resource.data.elderlyProfileId',
+      write: 'auth.uid == resource.data.elderlyProfileId'
     },
     vitalSigns: {
-      read: 'auth.uid == resource.data.patientProfileId',
-      write: 'auth.uid == resource.data.patientProfileId'
+      read: 'auth.uid == resource.data.elderlyProfileId',
+      write: 'auth.uid == resource.data.elderlyProfileId'
     },
     appointments: {
-      read: 'auth.uid == resource.data.patientProfileId',
-      write: 'auth.uid == resource.data.patientProfileId'
+      read: 'auth.uid == resource.data.elderlyProfileId',
+      write: 'auth.uid == resource.data.elderlyProfileId'
     }
   },
 
@@ -168,9 +168,9 @@ export const PRODUCTION_SECURITY_CONFIG = {
     enabled: true,
     responseTime: 15, // minutes
     escalationLevels: [
-      { level: 1, time: 15, contacts: ['security@ultimatecare.com'] },
-      { level: 2, time: 30, contacts: ['cto@ultimatecare.com', 'security@ultimatecare.com'] },
-      { level: 3, time: 60, contacts: ['ceo@ultimatecare.com', 'cto@ultimatecare.com', 'security@ultimatecare.com'] }
+      { level: 1, time: 15, contacts: ['security@Care Master.com'] },
+      { level: 2, time: 30, contacts: ['cto@Care Master.com', 'security@Care Master.com'] },
+      { level: 3, time: 60, contacts: ['ceo@Care Master.com', 'cto@Care Master.com', 'security@Care Master.com'] }
     ],
     notificationChannels: ['email', 'sms', 'slack'],
     documentationRequired: true

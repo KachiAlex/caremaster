@@ -26,7 +26,6 @@ import { useUser } from '../contexts/UserContext';
 import { db, storage } from '../firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { resizeImage } from '../utils/profilePictureUpload';
 
 const CaregiverSettings = ({ onProfileImageUpdate }) => {
   const { user } = useUser();
@@ -56,7 +55,7 @@ const CaregiverSettings = ({ onProfileImageUpdate }) => {
             profile: {
               firstName: 'Sarah',
               lastName: 'Johnson',
-              email: user?.email || 'sarah.johnson@ultimatecare.com',
+              email: user?.email || 'sarah.johnson@Care Master.com',
               phone: '+234 805 123 4567',
               profileImage: null,
               dateOfBirth: '1985-03-15',
@@ -66,7 +65,7 @@ const CaregiverSettings = ({ onProfileImageUpdate }) => {
               specialization: 'Elderly Care',
               experience: '8 years',
               languages: ['English', 'Yoruba', 'Hausa'],
-              bio: 'Dedicated caregiver with 8 years of experience in home-based care. Specialized in diabetes management and physical therapy assistance.'
+              bio: 'Dedicated caregiver with 8 years of experience in elderly care. Specialized in diabetes management and physical therapy assistance.'
             },
             notifications: {
               emailNotifications: true,
@@ -170,13 +169,9 @@ const CaregiverSettings = ({ onProfileImageUpdate }) => {
     if (file.size > 5 * 1024 * 1024) return; // 5MB cap
     try {
       if (!user?.uid) return alert('Not signed in');
-      
-      // Automatically resize image to meet app specifications (400x400 max, 0.8 quality)
-      const resizedFile = await resizeImage(file, 400, 400, 0.8);
-      
       const path = `profileImages/${user.uid}`;
       const ref = storageRef(storage, path);
-      await uploadBytes(ref, resizedFile);
+      await uploadBytes(ref, file);
       const downloadURL = await getDownloadURL(ref);
       setProfileImagePreview(downloadURL);
       setSettings(prev => ({
@@ -519,7 +514,7 @@ const CaregiverSettings = ({ onProfileImageUpdate }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Max Patients Per Day</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Max clients Per Day</label>
                     <input
                       type="number"
                       min="1"

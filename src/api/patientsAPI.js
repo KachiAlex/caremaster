@@ -426,15 +426,15 @@ export const assignClientToDoctor = async (clientId, doctorId) => {
 };
 
 // Create new Client (hospital operations)
-export const createClient = async (patientData = {}, registeredBy = null) => {
+export const createClient = async (clientData = {}, registeredBy = null) => {
   try {
-    const clientId = await generateClientId(patientData.institutionId || null);
+    const clientId = await generateClientId(clientData.institutionId || null);
     const clientsRef = collection(db, CLIENTS_COLLECTION);
     
     const newPatient = {
-      ...patientData,
+      ...clientData,
       clientId,
-      status: patientData.status || 'active',
+      status: clientData.status || 'active',
       registrationDate: serverTimestamp(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

@@ -4,7 +4,7 @@ import { getAllUsers, updateUser } from '../api/usersAPI';
 import assignmentAPI from '../api/assignmentAPI';
 import { emergencyAPI } from '../api/emergencyAPI';
 import { medicationAPI } from '../api/medicationAPI';
-import { getVitalSignsByPatient } from '../api/vitalSignsAPI';
+import { getVitalSignsByClient } from '../api/vitalSignsAPI';
 import logger from './logger';
 
 /**
@@ -43,7 +43,7 @@ export class SystemValidator {
   // Test 1: User Registration Flow
   async testUserRegistration() {
     try {
-      const testEmail = `test-user-${Date.now()}@ultimatecare-test.com`;
+      const testEmail = `test-user-${Date.now()}@Care Master-test.com`;
       const testPassword = 'TestPassword123!';
       
       // Create test user
@@ -117,7 +117,7 @@ export class SystemValidator {
     }
   }
 
-  // Test 3: Patient Assignment Workflow
+  // Test 3: Client Assignment Workflow
   async testPatientAssignment() {
     try {
       if (!this.testUser) {
@@ -125,7 +125,7 @@ export class SystemValidator {
       }
 
       // Create a test client user
-      const clientEmail = `test-client-${Date.now()}@ultimatecare-test.com`;
+      const clientEmail = `test-client-${Date.now()}@Care Master-test.com`;
       const clientCredential = await createUserWithEmailAndPassword(auth, clientEmail, 'TestPassword123!');
       
       // Wait for profile creation
@@ -133,7 +133,7 @@ export class SystemValidator {
       
       // Create assignment
       const assignmentData = {
-        patientId: clientCredential.user.uid,
+        clientId: clientCredential.user.uid,
         caregiverId: this.testUser.uid,
         assignedBy: 'system-test',
         startDate: new Date(),
@@ -151,17 +151,17 @@ export class SystemValidator {
       const success = !!createdAssignment && createdAssignment.status === 'active';
       
       return this.logResult(
-        'Patient Assignment Workflow',
+        'Client Assignment Workflow',
         success,
         {
           assignmentId: assignment.id,
           caregiverId: this.testUser.uid,
-          patientId: clientCredential.user.uid,
+          clientId: clientCredential.user.uid,
           status: createdAssignment?.status
         }
       );
     } catch (error) {
-      return this.logResult('Patient Assignment Workflow', false, null, error);
+      return this.logResult('Client Assignment Workflow', false, null, error);
     }
   }
 
@@ -204,7 +204,7 @@ export class SystemValidator {
     try {
       // Test medication fetching
       const medications = await medicationAPI.getMedications({
-        patientId: this.testUser.uid,
+        clientId: this.testUser.uid,
         limit: 10
       });
       
@@ -227,7 +227,7 @@ export class SystemValidator {
   async testVitalSignsAPI() {
     try {
       // Test vital signs fetching
-      const vitalSigns = await getVitalSignsByPatient(this.testUser.uid);
+      const vitalSigns = await getVitalSignsByClient(this.testUser.uid);
       
       const success = Array.isArray(vitalSigns);
       

@@ -52,43 +52,71 @@ const InstitutionPharmacyDashboard = () => {
     try {
       setLoading(true);
       console.log('🔍 Pharmacy Dashboard - Loading clients for pharmacist UID:', user.uid);
+      console.log('🔍 Pharmacy Dashboard - Institution ID:', institutionId);
       console.log('🔍 Pharmacy Dashboard - User profile:', userProfile);
       
-      // First try the assignment API (new method)
-      const { assignmentAPI } = await import('../api/assignmentAPI');
-      let clients = await assignmentAPI.getAssignedClients(user.uid);
-      console.log('📋 Assignment API returned clients:', clients.length);
-      
-      // If no clients found, try the old method (direct client assignment)
-      if (clients.length === 0) {
-        console.log('🔄 No clients from assignment API, trying direct client assignment...');
-        const { collection: firestoreCollection, query, where, getDocs } = await import('firebase/firestore');
-        const { db } = await import('../firebase/config');
-        
-        const clientsQuery = query(
-          firestoreCollection(db, 'clients'),
-          where('assignedPharmacistId', '==', user.uid),
-          where('institutionId', '==', institutionId)
-        );
-        
-        const querySnapshot = await getDocs(clientsQuery);
-        clients = [];
-        
-        querySnapshot.forEach((doc) => {
-          clients.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-        console.log('📋 Direct assignment method returned clients:', clients.length);
+      // Pharmacists should see ALL clients in their institution (not just assigned ones)
+      // This allows them to access prescriptions for any client
+      if (!institutionId) {
+        console.warn('⚠️ No institutionId provided, cannot load clients');
+        setAssignedClients([]);
+        return;
       }
       
+      // Load all clients from the institution
+      // Try getClientsByInstitution first, fall back to getAllClients if needed
+      let clients = [];
+      try {
+        const { getClientsByInstitution } = await import('../api/patientsAPI');
+        clients = await getClientsByInstitution(institutionId);
+        console.log('📋 Institution clients loaded:', clients.length);
+      } catch (error) {
+        console.warn('⚠️ Error loading clients with getClientsByInstitution, trying getAllClients:', error);
+        try {
+          const { getAllClients } = await import('../api/patientsAPI');
+          clients = await getAllClients(institutionId);
+          console.log('📋 getAllClients returned clients:', clients.length);
+        } catch (fallbackError) {
+          console.error('❌ Error with getAllClients fallback:', fallbackError);
+          // Try direct query as last resort
+          const { collection: firestoreCollection, query, where, getDocs } = await import('firebase/firestore');
+          const { db } = await import('../firebase/config');
+          
+          const clientsQuery = query(
+            firestoreCollection(db, 'clients'),
+            where('institutionId', '==', institutionId)
+          );
+          
+          const querySnapshot = await getDocs(clientsQuery);
+          querySnapshot.forEach((doc) => {
+            clients.push({
+              id: doc.id,
+              ...doc.data()
+            });
+          });
+          console.log('📋 Direct query returned clients:', clients.length);
+        }
+      }
+      
+      // Filter out any archived or inactive clients if needed
+      clients = clients.filter(client => {
+        // Include active clients and those without explicit status
+        return client.status !== 'archived' && client.status !== 'inactive';
+      });
+      
       setAssignedClients(clients);
-      console.log('📋 Final loaded assigned clients for pharmacist:', clients.length);
-      console.log('📋 Client details:', clients);
+      console.log('📋 Final loaded clients for pharmacist:', clients.length);
+      console.log('📋 Client details:', clients.map(c => ({ id: c.id, name: c.name || c.fullName })));
+      
+      if (clients.length === 0) {
+        console.warn('⚠️ No clients found for institution:', institutionId);
+      }
     } catch (error) {
-      console.error('Error loading assigned clients:', error);
-      toast.error('Failed to load assigned clients');
+      console.error('Error loading clients:', error);
+      toast.error('Failed to load clients. Please try refreshing the page.');
+      
+      // Set empty array on error
+      setAssignedClients([]);
     } finally {
       setLoading(false);
     }
@@ -109,9 +137,9 @@ const InstitutionPharmacyDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading pharmacy dashboard...</p>
         </div>
       </div>
@@ -123,59 +151,70 @@ const InstitutionPharmacyDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
-          {/* Logo and Title */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-400 to-blue-500 shadow-lg shadow-blue-500/40">
-              <Pill className="h-4 w-4 text-slate-950" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-300">
-                Institution pharmacy
-              </p>
-              <h1 className="truncate text-sm font-semibold text-slate-50 sm:text-base">
-                {institutionData?.name || 'UltimateCare pharmacy workspace'}
-              </h1>
-            </div>
-          </div>
-
-          {/* User Info and Actions */}
-          <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-[11px] text-slate-300 md:flex">
-              <Building2 className="h-3.5 w-3.5 text-blue-300" />
-              <span className="truncate">{institutionData?.name || 'Institution'}</span>
-            </div>
-            <button className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900 relative">
-              <Bell className="h-4 w-4" />
-              <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-blue-400" />
-            </button>
-            <div className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-200">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-400 text-slate-950 text-xs font-semibold">
-                {(userProfile?.name || userProfile?.displayName || 'P').charAt(0).toUpperCase()}
+      <header className="bg-white shadow-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo and Title */}
+            <div className="flex items-center space-x-4">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-2 rounded-lg">
+                <Pill className="h-6 w-6 text-white" />
               </div>
-              <div className="hidden min-w-0 md:block">
-                <p className="truncate text-xs font-medium text-slate-100">
-                  {userProfile?.name || userProfile?.displayName || 'Pharmacist'}
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Pharmacy Dashboard
+                </h1>
+                <p className="text-xs text-gray-600">
+                  {institutionData?.name || 'Institution'}
                 </p>
-                <p className="text-[10px] text-slate-400">Pharmacist</p>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="hidden items-center gap-1 rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-[11px] font-medium text-slate-200 hover:bg-slate-900 sm:inline-flex"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Logout
-            </button>
+
+            {/* User Info and Actions */}
+            <div className="flex items-center space-x-4">
+              {/* Institution Info */}
+              <div className="hidden md:flex items-center space-x-2 bg-blue-50 px-3 py-2 rounded-lg">
+                <Building2 className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-gray-700">
+                  {institutionData?.name || 'Institution'}
+                </span>
+              </div>
+
+              {/* Notifications */}
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
+                <Bell className="h-5 w-5 text-gray-600" />
+                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+              </button>
+
+              {/* User Profile */}
+              <div className="flex items-center space-x-3 bg-gray-50 px-3 py-2 rounded-lg">
+                <div className="text-right hidden md:block">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {userProfile?.name || userProfile?.displayName || 'Pharmacist'}
+                  </p>
+                  <p className="text-xs text-gray-600">Pharmacist</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold">
+                  {(userProfile?.name || userProfile?.displayName || 'P').charAt(0).toUpperCase()}
+                </div>
+              </div>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden md:inline">Logout</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PharmacyTab
           user={user}
           userProfile={userProfile}
@@ -185,12 +224,12 @@ const InstitutionPharmacyDashboard = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950">
-        <div className="mx-auto max-w-6xl px-4 py-4 text-center text-[11px] text-slate-400 sm:px-6 lg:px-8">
-          <p>
-            © {new Date().getFullYear()} UltimateCare · Medication management and dispensing
-            workspace
-          </p>
+      <footer className="bg-white border-t border-gray-200 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="text-center text-sm text-gray-600">
+            <p>© {new Date().getFullYear()} Care Master - Pharmacy Management System</p>
+            <p className="mt-1">Professional medication management and dispensing</p>
+          </div>
         </div>
       </footer>
     </div>

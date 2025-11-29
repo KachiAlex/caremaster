@@ -23,7 +23,7 @@ import telemedicineAPI from '../api/telemedicineAPI';
 
 const TelemedicineInterface = ({ 
   appointmentId, 
-  patientId, 
+  clientId, 
   nurseId, 
   doctorId, 
   userType, // 'nurse' or 'doctor'
@@ -38,7 +38,7 @@ const TelemedicineInterface = ({
   const [newMessage, setNewMessage] = useState('');
   const [showChat, setShowChat] = useState(false);
   const [callNotes, setCallNotes] = useState('');
-  const [patientData, setPatientData] = useState(null);
+  const [clientData, setPatientData] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [callHistory, setCallHistory] = useState([]);
 
@@ -67,7 +67,7 @@ const TelemedicineInterface = ({
       
       // Start the call session
       const callData = {
-        patientId,
+        clientId,
         nurseId,
         doctorId,
         userType,
@@ -112,8 +112,8 @@ const TelemedicineInterface = ({
 
   const loadPatientData = async () => {
     try {
-      // Load patient data for context during the call
-      // This would typically come from your patient API
+      // Load Client data for context during the call
+      // This would typically come from your Client API
       setPatientData({
         name: 'John Doe',
         age: 75,
@@ -121,7 +121,7 @@ const TelemedicineInterface = ({
         lastVisit: '2024-01-15'
       });
     } catch (error) {
-      console.error('Error loading patient data:', error);
+      console.error('Error loading Client data:', error);
     }
   };
 
@@ -273,7 +273,7 @@ const TelemedicineInterface = ({
       <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <Users className="text-blue-400" size={20} />
+            <Users className="text-green-400" size={20} />
             <span className="font-medium">Telemedicine Session</span>
           </div>
           <div className="flex items-center space-x-2">
@@ -334,13 +334,13 @@ const TelemedicineInterface = ({
               )}
             </div>
 
-            {/* Patient Info Overlay */}
-            {patientData && (
+            {/* Client Info Overlay */}
+            {clientData && (
               <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-3 rounded-lg">
-                <h4 className="font-bold">{patientData.name}</h4>
-                <p className="text-sm">Age: {patientData.age}</p>
-                <p className="text-sm">Conditions: {patientData.conditions.join(', ')}</p>
-                <p className="text-sm">Last Visit: {patientData.lastVisit}</p>
+                <h4 className="font-bold">{clientData.name}</h4>
+                <p className="text-sm">Age: {clientData.age}</p>
+                <p className="text-sm">Conditions: {clientData.conditions.join(', ')}</p>
+                <p className="text-sm">Last Visit: {clientData.lastVisit}</p>
               </div>
             )}
 

@@ -1,7 +1,7 @@
 /**
  * Queue Management API
  * 
- * Handles patient queue management for hospital departments:
+ * Handles Client queue management for hospital departments:
  * - Queue number assignment
  * - Real-time queue tracking
  * - Departmental queues (GP, specialist, lab, pharmacy, billing)
@@ -101,13 +101,13 @@ const getNextQueueNumber = async (institutionId, department, date) => {
 };
 
 /**
- * Add patient to queue
+ * Add Client to queue
  */
 export const addToQueue = async (queueData) => {
   try {
     const {
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       department,
       priority = QUEUE_PRIORITY.NORMAL,
@@ -118,8 +118,8 @@ export const addToQueue = async (queueData) => {
       estimatedWaitTime = null
     } = queueData;
 
-    if (!patientId || !institutionId || !department) {
-      throw new Error('Missing required fields: patientId, institutionId, department');
+    if (!clientId || !institutionId || !department) {
+      throw new Error('Missing required fields: clientId, institutionId, department');
     }
 
     // Get next queue number
@@ -128,8 +128,8 @@ export const addToQueue = async (queueData) => {
 
     // Create queue entry
     const queueEntry = {
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       department,
       queueNumber,
@@ -151,9 +151,9 @@ export const addToQueue = async (queueData) => {
     const queueRef = collection(db, QUEUE_COLLECTION);
     const docRef = await addDoc(queueRef, queueEntry);
 
-    // Send notification to patient
+    // Send notification to Client
     try {
-      await sendQueueNotification(patientId, {
+      await sendQueueNotification(clientId, {
         type: 'queue_added',
         queueNumber,
         department,
@@ -223,14 +223,14 @@ export const getQueueByDepartment = async (institutionId, department, options = 
 };
 
 /**
- * Get queue position for a patient
+ * Get queue position for a Client
  */
-export const getPatientQueuePosition = async (patientId, institutionId, department) => {
+export const getPatientQueuePosition = async (clientId, institutionId, department) => {
   try {
     const queueRef = collection(db, QUEUE_COLLECTION);
     const q = query(
       queueRef,
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('institutionId', '==', institutionId),
       where('department', '==', department),
       where('status', 'in', [QUEUE_STATUS.WAITING, QUEUE_STATUS.CALLED]),
@@ -259,24 +259,24 @@ export const getPatientQueuePosition = async (patientId, institutionId, departme
       addedAt: queueData.addedAt?.toDate?.() || queueData.addedAt
     };
   } catch (error) {
-    console.error('Error getting patient queue position:', error);
+    console.error('Error getting Client queue position:', error);
     throw error;
   }
 };
 
 /**
- * Call next patient in queue
+ * Call next Client in queue
  */
 export const callNextPatient = async (institutionId, department, doctorId = null) => {
   try {
-    // Get next patient in queue (waiting status, priority first)
+    // Get next Client in queue (waiting status, priority first)
     const waitingQueue = await getQueueByDepartment(institutionId, department, {
       status: QUEUE_STATUS.WAITING,
       limitCount: 1
     });
 
     if (waitingQueue.length === 0) {
-      return { success: false, message: 'No patients in queue' };
+      return { success: false, message: 'No clients in queue' };
     }
 
     const nextPatient = waitingQueue[0];
@@ -291,7 +291,7 @@ export const callNextPatient = async (institutionId, department, doctorId = null
 
     // Send notification
     try {
-      await sendQueueNotification(nextPatient.patientId, {
+      await sendQueueNotification(nextPatient.clientId, {
         type: 'queue_called',
         queueNumber: nextPatient.queueNumber,
         department,
@@ -310,7 +310,7 @@ export const callNextPatient = async (institutionId, department, doctorId = null
       }
     };
   } catch (error) {
-    console.error('Error calling next patient:', error);
+    console.error('Error calling next Client:', error);
     throw error;
   }
 };
@@ -344,7 +344,7 @@ export const updateQueueStatus = async (queueId, status, additionalData = {}) =>
       // Send notification if completed
       if (status === QUEUE_STATUS.COMPLETED) {
         try {
-          await sendQueueNotification(queueData.patientId, {
+          await sendQueueNotification(queueData.clientId, {
             type: 'queue_completed',
             queueNumber: queueData.queueNumber,
             department: queueData.department
@@ -372,7 +372,7 @@ export const updateQueueStatus = async (queueId, status, additionalData = {}) =>
 };
 
 /**
- * Skip patient in queue
+ * Skip Client in queue
  */
 export const skipPatient = async (queueId, reason = '') => {
   try {
@@ -380,7 +380,7 @@ export const skipPatient = async (queueId, reason = '') => {
       skipReason: reason
     });
   } catch (error) {
-    console.error('Error skipping patient:', error);
+    console.error('Error skipping Client:', error);
     throw error;
   }
 };
@@ -511,7 +511,7 @@ export const subscribeToQueue = (institutionId, department, callback, options = 
 };
 
 /**
- * Transfer patient to another queue (referral system)
+ * Transfer Client to another queue (referral system)
  */
 export const transferPatientToQueue = async (queueId, targetDepartment, reason = '', transferredBy = null) => {
   try {
@@ -536,8 +536,8 @@ export const transferPatientToQueue = async (queueId, targetDepartment, reason =
 
     // Add to new queue
     const newQueueEntry = await addToQueue({
-      patientId: queueData.patientId,
-      patientName: queueData.patientName,
+      clientId: queueData.clientId,
+      clientName: queueData.clientName,
       institutionId: queueData.institutionId,
       department: targetDepartment,
       priority: queueData.priority,
@@ -549,7 +549,7 @@ export const transferPatientToQueue = async (queueId, targetDepartment, reason =
 
     // Send notification
     try {
-      await sendQueueNotification(queueData.patientId, {
+      await sendQueueNotification(queueData.clientId, {
         type: 'queue_transferred',
         queueNumber: newQueueEntry.queueNumber,
         department: targetDepartment,
@@ -566,7 +566,7 @@ export const transferPatientToQueue = async (queueId, targetDepartment, reason =
       newQueueNumber: newQueueEntry.queueNumber
     };
   } catch (error) {
-    console.error('Error transferring patient:', error);
+    console.error('Error transferring Client:', error);
     throw error;
   }
 };
@@ -616,7 +616,7 @@ export const getQueuesByStaffRole = async (institutionId, staffRole, staffId = n
 };
 
 /**
- * Reorder queue - Move patient to different position
+ * Reorder queue - Move Client to different position
  */
 export const reorderQueue = async (queueId, newPosition, reason = '') => {
   try {
@@ -666,7 +666,7 @@ export const reorderQueue = async (queueId, newPosition, reason = '') => {
 
     // Send notification
     try {
-      await sendQueueNotification(queueData.patientId, {
+      await sendQueueNotification(queueData.clientId, {
         type: 'queue_position',
         queueNumber: newQueueNumber,
         department: queueData.department,
@@ -688,9 +688,9 @@ export const reorderQueue = async (queueId, newPosition, reason = '') => {
 };
 
 /**
- * Send queue notification to patient
+ * Send queue notification to Client
  */
-const sendQueueNotification = async (patientId, notificationData) => {
+const sendQueueNotification = async (clientId, notificationData) => {
   try {
     const { type, queueNumber, department, estimatedWaitTime, message } = notificationData;
     
@@ -718,7 +718,7 @@ const sendQueueNotification = async (patientId, notificationData) => {
     }
 
     await notificationsAPI.createNotification({
-      userId: patientId,
+      userId: clientId,
       type: 'appointment',
       title,
       message: notificationMessage,
@@ -732,10 +732,10 @@ const sendQueueNotification = async (patientId, notificationData) => {
 
     // Send SMS/WhatsApp notification
     try {
-      // Get patient phone number
-      const patientDoc = await getDoc(doc(db, 'patients', patientId)).catch(() => null);
-      const patientData = patientDoc?.exists() ? patientDoc.data() : null;
-      const patientPhone = patientData?.phone || patientData?.phoneNumber;
+      // Get Client phone number
+      const patientDoc = await getDoc(doc(db, 'clients', clientId)).catch(() => null);
+      const clientData = patientDoc?.exists() ? patientDoc.data() : null;
+      const patientPhone = clientData?.phone || clientData?.phoneNumber;
       
       if (patientPhone) {
         // Get institution settings for SMS/WhatsApp
@@ -767,14 +767,14 @@ const sendQueueNotification = async (patientId, notificationData) => {
 };
 
 /**
- * Get all queues for a patient
+ * Get all queues for a Client
  */
-export const getPatientQueues = async (patientId, institutionId) => {
+export const getPatientQueues = async (clientId, institutionId) => {
   try {
     const queueRef = collection(db, QUEUE_COLLECTION);
     const q = query(
       queueRef,
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('institutionId', '==', institutionId),
       orderBy('addedAt', 'desc')
     );
@@ -796,7 +796,7 @@ export const getPatientQueues = async (patientId, institutionId) => {
 
     return queues;
   } catch (error) {
-    console.error('Error getting patient queues:', error);
+    console.error('Error getting Client queues:', error);
     throw error;
   }
 };

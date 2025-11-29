@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
+import { getAllClients } from '../api/patientsAPI';
 import {
   Calendar,
   Plus,
@@ -49,14 +50,8 @@ const SchedulingModule = ({ institutionId }) => {
     try {
       setLoading(true);
       
-      // Load clients
-      const clientsQuery = query(
-        collection(db, 'users'),
-        where('institutionId', '==', institutionId),
-        where('userType', '==', 'client')
-      );
-      const clientsSnapshot = await getDocs(clientsQuery);
-      const clientsList = clientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Load clients from clients collection
+      const clientsList = await getAllClients(institutionId);
       setClients(clientsList);
 
       // Load caregivers
@@ -819,7 +814,7 @@ const SchedulingModule = ({ institutionId }) => {
                     >
                       <option value="">Select Client</option>
                       {clients.map(client => (
-                        <option key={client.id} value={client.id}>{client.name || client.email}</option>
+                        <option key={client.id} value={client.id}>{client.name || client.fullName || client.email || 'Unnamed Client'}</option>
                       ))}
                     </select>
                   </div>

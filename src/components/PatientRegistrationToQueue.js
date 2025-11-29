@@ -1,9 +1,9 @@
 /**
- * Patient Registration to Queue Component
+ * Client Registration to Queue Component
  * 
  * Used by Receptionist to:
- * - Register new patients or find existing
- * - Add patient to Triage/Vitals queue
+ * - Register new clients or find existing
+ * - Add Client to Triage/Vitals queue
  * - Set priority level
  */
 
@@ -29,7 +29,7 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
   const [loading, setLoading] = useState(false);
   const [addingToQueue, setAddingToQueue] = useState(false);
 
-  // New patient form data
+  // New Client form data
   const [newPatientData, setNewPatientData] = useState({
     fullName: '',
     phoneNumber: '',
@@ -49,16 +49,16 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
   const searchPatients = async () => {
     try {
       setLoading(true);
-      const patients = await getAllClients(institutionId);
-      const filtered = patients.filter(p => 
+      const clients = await getAllClients(institutionId);
+      const filtered = clients.filter(p => 
         p.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.phoneNumber?.includes(searchTerm) ||
-        p.patientId?.toLowerCase().includes(searchTerm.toLowerCase())
+        p.clientId?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setSearchResults(filtered.slice(0, 10));
     } catch (error) {
-      console.error('Error searching patients:', error);
-      toast.error('Failed to search patients');
+      console.error('Error searching clients:', error);
+      toast.error('Failed to search clients');
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
 
   const handleAddToQueue = async () => {
     if (!selectedPatient) {
-      toast.error('Please select a patient');
+      toast.error('Please select a Client');
       return;
     }
 
@@ -74,15 +74,15 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
       setAddingToQueue(true);
       
       const queueEntry = await addToQueue({
-        patientId: selectedPatient.id,
-        patientName: selectedPatient.fullName || selectedPatient.name,
+        clientId: selectedPatient.id,
+        clientName: selectedPatient.fullName || selectedPatient.name,
         institutionId,
         department: DEPARTMENT_TYPES.TRIAGE, // Always start with triage
         priority,
         notes: `Registered by receptionist. Priority: ${priority}`
       });
 
-      toast.success(`Patient added to queue! Queue number: ${queueEntry.queueNumber}`);
+      toast.success(`Client added to queue! Queue number: ${queueEntry.queueNumber}`);
       
       if (onPatientAdded) {
         onPatientAdded(queueEntry);
@@ -94,16 +94,16 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
       setPriority(QUEUE_PRIORITY.NORMAL);
     } catch (error) {
       console.error('Error adding to queue:', error);
-      toast.error('Failed to add patient to queue');
+      toast.error('Failed to add Client to queue');
     } finally {
       setAddingToQueue(false);
     }
   };
 
   const handleCreateNewPatient = async () => {
-    // This would integrate with CreatePatientModal
+    // This would integrate with CreateClientModal
     // For now, just show a message
-    toast.info('Please use "Register Patient" button to create new patient first');
+    toast.info('Please use "Register Client" button to create new Client first');
     setShowNewPatientForm(false);
   };
 
@@ -111,14 +111,14 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
         <UserPlus className="h-5 w-5 text-blue-600" />
-        Register Patient to Queue
+        Register Client to Queue
       </h3>
 
-      {/* Patient Search */}
+      {/* Client Search */}
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Search Patient
+            Search Client
           </label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -126,7 +126,7 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, phone, or patient ID..."
+              placeholder="Search by name, phone, or Client ID..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -134,23 +134,23 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
           {/* Search Results */}
           {searchResults.length > 0 && (
             <div className="mt-2 border border-gray-200 rounded-lg max-h-60 overflow-y-auto">
-              {searchResults.map((patient) => (
+              {searchResults.map((Client) => (
                 <button
-                  key={patient.id}
+                  key={client.id}
                   onClick={() => {
-                    setSelectedPatient(patient);
-                    setSearchTerm(patient.fullName || patient.name);
+                    setSelectedPatient(Client);
+                    setSearchTerm(client.fullName || client.name);
                     setSearchResults([]);
                   }}
                   className={`w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 ${
-                    selectedPatient?.id === patient.id ? 'bg-blue-100' : ''
+                    selectedPatient?.id === client.id ? 'bg-blue-100' : ''
                   }`}
                 >
                   <div className="font-medium text-gray-900">
-                    {patient.fullName || patient.name}
+                    {client.fullName || client.name}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {patient.phoneNumber} • {patient.patientId || patient.id}
+                    {client.phoneNumber} • {client.clientId || client.id}
                   </div>
                 </button>
               ))}
@@ -159,18 +159,18 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
 
           {searchTerm.length >= 2 && searchResults.length === 0 && !loading && (
             <div className="mt-2 text-center py-4 text-gray-500">
-              <p className="text-sm">No patients found</p>
+              <p className="text-sm">No clients found</p>
               <button
                 onClick={() => setShowNewPatientForm(true)}
                 className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
               >
-                Create new patient
+                Create new Client
               </button>
             </div>
           )}
         </div>
 
-        {/* Selected Patient Display */}
+        {/* Selected Client Display */}
         {selectedPatient && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center justify-between">
@@ -179,7 +179,7 @@ const PatientRegistrationToQueue = ({ institutionId, onPatientAdded }) => {
                   {selectedPatient.fullName || selectedPatient.name}
                 </p>
                 <p className="text-sm text-gray-600">
-                  {selectedPatient.phoneNumber} • {selectedPatient.patientId || selectedPatient.id}
+                  {selectedPatient.phoneNumber} • {selectedPatient.clientId || selectedPatient.id}
                 </p>
               </div>
               <CheckCircle className="h-5 w-5 text-blue-600" />

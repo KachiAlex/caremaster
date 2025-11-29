@@ -5,11 +5,10 @@ import { sendMedicationReminder, processMedicationLog } from './medicationManage
 import { handleEmergencyAlert, processEmergencyResponse } from './emergencyManagement';
 import { processAIVoiceCommand, generateHealthRecommendations } from './aiProcessing';
 import { sendNotification, scheduleNotification } from './notificationService';
-import { sendPaymentLinkEmail, processEmailQueue } from './emailService';
 import { logAuditEvent, getAuditLogs } from './auditLogging';
-import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, forceUpdateAllInstitutionLinks } from './licensing';
+import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin } from './licensing';
 import { createCaregiverWithAuth, resetCaregiverPassword } from './caregiverManagement';
-import { createTenantWithAdmin, setCurrentTenant, getTenants, getTenantsHTTP } from './tenantManagement';
+import { createInstitutionUser } from './institutionUserManagement';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -41,10 +40,6 @@ export const generateHealthRecommendationsFunction = functions.https.onCall(gene
 export const sendNotificationFunction = functions.https.onCall(sendNotification);
 export const scheduleNotificationFunction = functions.https.onCall(scheduleNotification);
 
-// Email Functions
-export const sendPaymentLinkEmailFunction = functions.https.onCall(sendPaymentLinkEmail);
-export const processEmailQueueFunction = processEmailQueue;
-
 // Audit Logging Functions
 export const logAuditEventFunction = functions.https.onCall(logAuditEvent);
 export const getAuditLogsFunction = functions.https.onCall(getAuditLogs);
@@ -54,7 +49,7 @@ export const healthCheck = functions.https.onRequest((req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    service: 'UltimateCare Firebase Functions',
+    service: 'ElderX Firebase Functions',
     version: '1.0.0'
   });
 });
@@ -63,11 +58,8 @@ export const healthCheck = functions.https.onRequest((req, res) => {
 export const createCaregiverWithAuthFunction = createCaregiverWithAuth;
 export const resetCaregiverPasswordFunction = resetCaregiverPassword;
 
-// Multi-tenant (Institution) Management Functions
-export const createTenantWithAdminFunction = createTenantWithAdmin;
-export const setCurrentTenantFunction = setCurrentTenant;
-export const getTenantsFunction = getTenants;
-export const apiTenants = getTenantsHTTP;
+// Institution User Management Functions
+export const createInstitutionUserFunction = createInstitutionUser;
 
 // Licensing Functions
 export const createInstitutionFunction = createInstitution;
@@ -83,7 +75,6 @@ export const updateLicenseFunction = updateLicense;
 export const suspendLicenseFunction = suspendLicense;
 export const activateLicenseFunction = activateLicense;
 export const migrateInstitutionLinksFunction = migrateInstitutionLinks;
-export const forceUpdateAllInstitutionLinksFunction = forceUpdateAllInstitutionLinks;
 export const getInstitutionAdminsFunction = getInstitutionAdmins;
 export const removeInstitutionAdminFunction = removeInstitutionAdmin;
 
@@ -128,7 +119,7 @@ export const migrateUserRoles = functions.https.onRequest(async (req, res) => {
         // Infer role from existing data
         let inferredRole = 'caregiver';
         
-        if (userData.email === 'superadmin@ultimatecare.health') {
+        if (userData.email === 'superadmin@Care Master.com') {
           inferredRole = 'super-admin';
         } else if (userData.role) {
           inferredRole = userData.role;

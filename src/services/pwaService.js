@@ -1,4 +1,4 @@
-// PWA Service for UltimateCare
+// PWA Service for Care Master
 import { toast } from 'react-toastify';
 
 class PWAService {
@@ -67,7 +67,7 @@ class PWAService {
       console.log('PWA installed successfully');
       this.isInstalled = true;
       this.deferredPrompt = null;
-      toast.success('UltimateCare has been installed successfully!');
+      toast.success('Care Master has been installed successfully!');
     });
   }
 
@@ -75,7 +75,7 @@ class PWAService {
   showInstallPrompt() {
     if (this.deferredPrompt && !this.isInstalled) {
       const installButton = document.createElement('button');
-      installButton.textContent = 'Install UltimateCare';
+      installButton.textContent = 'Install Care Master';
       installButton.className = 'pwa-install-button';
       installButton.style.cssText = `
         position: fixed;
@@ -234,7 +234,7 @@ class PWAService {
           " title="Close">✕</button>
         </div>
         <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 12px; line-height: 1.4;">
-          A new version of UltimateCare is available. Refresh to update.
+          A new version of Care Master is available. Refresh to update.
         </p>
         <div style="display: flex; gap: 8px;">
           <button id="update-now" style="
@@ -367,7 +367,7 @@ class PWAService {
   // Get Queued Requests
   async getQueuedRequests() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('UltimateCare-offline-queue', 1);
+      const request = indexedDB.open('Care Master-offline-queue', 1);
       
       request.onerror = () => reject(request.error);
       
@@ -413,7 +413,7 @@ class PWAService {
   // Remove Queued Request
   async removeQueuedRequest(timestamp) {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('UltimateCare-offline-queue', 1);
+      const request = indexedDB.open('Care Master-offline-queue', 1);
       
       request.onerror = () => reject(request.error);
       

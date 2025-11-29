@@ -20,13 +20,10 @@ import {
   Clock,
   ArrowRight
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ClientActivityTimeline from './ClientActivityTimeline';
 import { useUser } from '../contexts/UserContext';
-import VitalsLogModal from './VitalsLogModal';
-import ConsultationsLogModal from './ConsultationsLogModal';
-import PrescriptionsLogModal from './PrescriptionsLogModal';
-import LabTestsLogModal from './LabTestsLogModal';
 
 const ClientDetailsModal = ({ 
   client, 
@@ -38,33 +35,34 @@ const ClientDetailsModal = ({
   institutionId,
   onAssignPharmacist
 }) => {
+  const navigate = useNavigate();
   const { userProfile } = useUser();
   const [activeTab, setActiveTab] = useState('overview');
-  const [activeModal, setActiveModal] = useState(null);
   
-  // Use "patient" terminology - client prop is kept for compatibility
-  const patient = client;
-
-  if (!patient) return null;
+  if (!client) return null;
 
   const handleRecordVitals = () => {
-    setActiveModal('vitals');
+    // Navigate to vitals recording page with Client ID
+    navigate(`/service-provider/diagnostics?clientId=${client.id}&clientName=${encodeURIComponent(client.name || '')}`);
+    onClose();
   };
 
   const handleScheduleConsultation = () => {
-    setActiveModal('consultation');
+    // Navigate to consultation booking with Client ID
+    navigate(`/service-provider/consultations?clientId=${client.id}&clientName=${encodeURIComponent(client.name || '')}`);
+    onClose();
   };
 
   const handleViewPrescriptions = () => {
-    setActiveModal('prescriptions');
+    // Navigate to prescriptions page
+    navigate(`/service-provider/prescriptions?clientId=${client.id}&clientName=${encodeURIComponent(client.name || '')}`);
+    onClose();
   };
 
   const handleOrderLabTest = () => {
-    setActiveModal('labTests');
-  };
-
-  const handleCloseModal = () => {
-    setActiveModal(null);
+    // Navigate to diagnostics/lab ordering
+    navigate(`/service-provider/diagnostics?clientId=${client.id}&clientName=${encodeURIComponent(client.name || '')}&action=order`);
+    onClose();
   };
 
   const operationalFlows = [
@@ -73,7 +71,7 @@ const ClientDetailsModal = ({
       name: 'Record Vitals',
       icon: Activity,
       color: 'bg-red-500',
-      description: 'Record patient vital signs',
+      description: 'Record client vital signs',
       action: handleRecordVitals
     },
     {
@@ -99,6 +97,8 @@ const ClientDetailsModal = ({
       color: 'bg-purple-500',
       description: 'Order diagnostic tests',
       action: handleOrderLabTest
+    },
+    {
     }
   ];
 
@@ -112,8 +112,8 @@ const ClientDetailsModal = ({
               <Heart className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold">{patient.name || 'Unknown Patient'}</h2>
-              <p className="text-sm text-blue-100">{patient.email || 'No email'}</p>
+              <h2 className="text-xl font-bold">{client.name || 'Unknown Client'}</h2>
+              <p className="text-sm text-blue-100">{client.email || 'No email'}</p>
             </div>
           </div>
           <button
@@ -152,28 +152,28 @@ const ClientDetailsModal = ({
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* Patient Info */}
+              {/* Client Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Age</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{patient.age || 'N/A'}</p>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{client.age || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Gender</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{patient.gender || 'N/A'}</p>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{client.gender || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Phone</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{patient.phone || 'N/A'}</p>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{client.phone || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase">Status</label>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                    patient.status === 'active' 
+                    client.status === 'active' 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {patient.status || 'active'}
+                    {client.status || 'active'}
                   </span>
                 </div>
               </div>
@@ -239,24 +239,24 @@ const ClientDetailsModal = ({
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Medical Conditions</h3>
                 <p className="text-sm text-gray-600">
-                  {patient.medicalConditions?.length > 0 
-                    ? patient.medicalConditions.join(', ')
+                  {client.medicalConditions?.length > 0 
+                    ? client.medicalConditions.join(', ')
                     : 'No medical conditions recorded'}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Allergies</h3>
                 <p className="text-sm text-gray-600">
-                  {patient.allergies?.length > 0 
-                    ? patient.allergies.join(', ')
+                  {client.allergies?.length > 0 
+                    ? client.allergies.join(', ')
                     : 'No known allergies'}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Current Medications</h3>
                 <p className="text-sm text-gray-600">
-                  {patient.medications?.length > 0 
-                    ? patient.medications.join(', ')
+                  {client.medications?.length > 0 
+                    ? client.medications.join(', ')
                     : 'No current medications'}
                 </p>
               </div>
@@ -271,8 +271,8 @@ const ClientDetailsModal = ({
                   View all activities, interactions, and changes logged for this client. Every action by caregivers, admins, and system events is recorded here.
                 </p>
                 <ClientActivityTimeline
-                  clientId={patient.id || patient.uid || patient.patientId}
-                  clientName={patient.name || patient.fullName || 'Client'}
+                  clientId={client.id || client.uid || client.clientId}
+                  clientName={client.name || client.fullName || 'Client'}
                   userRole={userProfile?.role || userProfile?.userType || 'admin'}
                 />
               </div>
@@ -286,7 +286,7 @@ const ClientDetailsModal = ({
             {onAssignTask && (
               <button
                 onClick={() => {
-                  onAssignTask(patient);
+                  onAssignTask(client);
                   onClose();
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
@@ -296,28 +296,28 @@ const ClientDetailsModal = ({
             )}
           </div>
           <div className="flex gap-2">
-            {onUnarchive && patient.status === 'archived' && (
+            {onUnarchive && client.status === 'archived' && (
               <button
                 onClick={() => {
-                  onUnarchive(patient);
+                  onUnarchive(client);
                   onClose();
                 }}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
               >
-                Unarchive Patient
+                Unarchive Client
               </button>
             )}
-            {onDelete && patient.status !== 'archived' && (
+            {onDelete && client.status !== 'archived' && (
               <button
                 onClick={() => {
-                  if (window.confirm('Are you sure you want to archive this patient?')) {
-                    onDelete(patient);
+                  if (window.confirm('Are you sure you want to archive this client?')) {
+                    onDelete(client);
                     onClose();
                   }
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
               >
-                Archive Patient
+                Archive Client
               </button>
             )}
             <button
@@ -329,43 +329,6 @@ const ClientDetailsModal = ({
           </div>
         </div>
       </div>
-
-      {/* Log Modals */}
-      {activeModal === 'vitals' && (
-        <VitalsLogModal
-          patient={patient}
-          isOpen={true}
-          onClose={handleCloseModal}
-          institutionId={institutionId}
-        />
-      )}
-
-      {activeModal === 'consultation' && (
-        <ConsultationsLogModal
-          patient={patient}
-          isOpen={true}
-          onClose={handleCloseModal}
-          institutionId={institutionId}
-        />
-      )}
-
-      {activeModal === 'prescriptions' && (
-        <PrescriptionsLogModal
-          patient={patient}
-          isOpen={true}
-          onClose={handleCloseModal}
-          institutionId={institutionId}
-        />
-      )}
-
-      {activeModal === 'labTests' && (
-        <LabTestsLogModal
-          patient={patient}
-          isOpen={true}
-          onClose={handleCloseModal}
-          institutionId={institutionId}
-        />
-      )}
     </div>
   );
 };

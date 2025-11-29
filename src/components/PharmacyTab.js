@@ -253,7 +253,7 @@ const PharmacyTab = ({
     const badges = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
       partially_filled: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Partially Filled' },
-      filled: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Filled' },
+      filled: { bg: 'bg-green-100', text: 'text-green-800', label: 'Filled' },
       unavailable: { bg: 'bg-red-100', text: 'text-red-800', label: 'Unavailable' }
     };
 
@@ -290,20 +290,20 @@ const PharmacyTab = ({
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm font-medium">Filled</p>
+                <p className="text-green-100 text-sm font-medium">Filled</p>
                 <p className="text-3xl font-bold mt-2">{pharmacyStats.filledPrescriptions}</p>
               </div>
               <CheckCircle className="h-12 w-12 text-green-200" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm font-medium">Total Revenue</p>
+                <p className="text-purple-100 text-sm font-medium">Total Revenue</p>
                 <p className="text-3xl font-bold mt-2">₦{pharmacyStats.totalRevenue.toLocaleString()}</p>
               </div>
               <DollarSign className="h-12 w-12 text-purple-200" />
@@ -371,7 +371,7 @@ const PharmacyTab = ({
             ? 'bg-red-50 border-red-200' 
             : safetyCheck.interactions.hasMajorInteractions
             ? 'bg-yellow-50 border-yellow-200'
-            : 'bg-blue-50 border-green-200'
+            : 'bg-green-50 border-green-200'
         }`}>
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -380,7 +380,7 @@ const PharmacyTab = ({
                   ? 'text-red-600' 
                   : safetyCheck.interactions.hasMajorInteractions
                   ? 'text-yellow-600'
-                  : 'text-blue-600'
+                  : 'text-green-600'
               }`} />
               <div>
                 <h3 className={`text-lg font-semibold ${
@@ -397,7 +397,7 @@ const PharmacyTab = ({
                     ? 'text-red-700' 
                     : safetyCheck.interactions.hasMajorInteractions
                     ? 'text-yellow-700'
-                    : 'text-blue-700'
+                    : 'text-green-700'
                 }`}>
                   {safetyCheck.isSafe 
                     ? 'No critical issues detected' 
@@ -447,7 +447,7 @@ const PharmacyTab = ({
                         interaction.severity === 'critical' 
                           ? 'bg-red-50 border-red-200' 
                           : interaction.severity === 'major'
-                          ? 'bg-blue-50 border-orange-200'
+                          ? 'bg-orange-50 border-orange-200'
                           : 'bg-yellow-50 border-yellow-200'
                       }`}>
                         <div className="flex items-start justify-between">
@@ -768,7 +768,7 @@ const PrescriptionRow = ({
               onClick={() => setFormData({ ...formData, available: true })}
               className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                 formData.available === true 
-                  ? 'bg-blue-600 text-white' 
+                  ? 'bg-green-600 text-white' 
                   : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
               }`}
             >
@@ -815,7 +815,7 @@ const PrescriptionRow = ({
           <div className="flex gap-2">
             <button
               onClick={handleSave}
-              className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
             >
               Save
             </button>
@@ -881,7 +881,7 @@ const PrescriptionRow = ({
             Pending
           </span>
         ) : prescription.pharmacyStatus === 'filled' ? (
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
             Filled
           </span>
         ) : prescription.pharmacyStatus === 'unavailable' ? (
@@ -896,7 +896,7 @@ const PrescriptionRow = ({
       </td>
       <td className="px-6 py-4">
         {prescription.pharmacyData?.available === true ? (
-          <div className="flex items-center text-blue-600">
+          <div className="flex items-center text-green-600">
             <CheckCircle className="h-5 w-5 mr-1" />
             <span className="text-sm font-medium">
               Available ({prescription.pharmacyData?.stockQuantity || 0})

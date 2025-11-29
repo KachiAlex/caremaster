@@ -28,7 +28,7 @@ const CallLogsPanel = ({ userId }) => {
 
   const iconFor = (c) => {
     if (c.direction === 'incoming' && (c.status === 'initiating' || c.status === 'rejected')) return <PhoneMissed className="h-4 w-4 text-red-600"/>;
-    if (c.direction === 'incoming') return <PhoneIncoming className="h-4 w-4 text-blue-600"/>;
+    if (c.direction === 'incoming') return <PhoneIncoming className="h-4 w-4 text-green-600"/>;
     return <PhoneOutgoing className="h-4 w-4 text-blue-600"/>;
   };
 

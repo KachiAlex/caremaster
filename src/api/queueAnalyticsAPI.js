@@ -6,7 +6,7 @@
  * - Throughput analysis
  * - Peak hours identification
  * - Department performance
- * - Patient flow analytics
+ * - Client flow analytics
  */
 
 import {
@@ -124,7 +124,7 @@ export const getQueueAnalytics = async (institutionId, department, startDate, en
       const avgWait = data.count > 0 ? data.waitTime / data.count : 0;
       analytics.hourlyDistribution[hour].averageWaitTime = avgWait;
       
-      if (data.total > 5) { // Peak if more than 5 patients
+      if (data.total > 5) { // Peak if more than 5 clients
         analytics.peakHours[hour] = {
           patientCount: data.total,
           averageWaitTime: avgWait
@@ -177,16 +177,16 @@ export const getQueueAnalytics = async (institutionId, department, startDate, en
 };
 
 /**
- * Get queue position for a patient with real-time updates
+ * Get queue position for a Client with real-time updates
  */
-export const getPatientQueuePosition = async (patientId, institutionId, department) => {
+export const getPatientQueuePosition = async (clientId, institutionId, department) => {
   try {
     const { getQueueByDepartment } = await import('./queueAPI');
     const waitingQueues = await getQueueByDepartment(institutionId, department, {
       status: 'waiting'
     });
 
-    const patientQueue = waitingQueues.find(q => q.patientId === patientId);
+    const patientQueue = waitingQueues.find(q => q.clientId === clientId);
     if (!patientQueue) {
       return null;
     }
@@ -200,7 +200,7 @@ export const getPatientQueuePosition = async (patientId, institutionId, departme
     const stats = await getQueueStats(institutionId, department);
     const estimatedWaitTime = stats.averageServiceTime 
       ? (position - 1) * stats.averageServiceTime 
-      : (position - 1) * 15; // Default 15 minutes per patient
+      : (position - 1) * 15; // Default 15 minutes per Client
 
     return {
       queueNumber: patientQueue.queueNumber,
@@ -209,7 +209,7 @@ export const getPatientQueuePosition = async (patientId, institutionId, departme
       department
     };
   } catch (error) {
-    console.error('Error getting patient queue position:', error);
+    console.error('Error getting Client queue position:', error);
     throw error;
   }
 };

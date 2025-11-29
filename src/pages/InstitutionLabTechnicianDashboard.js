@@ -3,7 +3,7 @@
  * 
  * Mobile lab technician interface for home laboratory services:
  * - View assigned home visits
- * - Navigate to patient locations
+ * - Navigate to Client locations
  * - Collect samples
  * - Upload collection photos
  * - Track sample chain of custody
@@ -178,7 +178,7 @@ const InstitutionLabTechnicianDashboard = () => {
       const encodedAddress = encodeURIComponent(address);
       window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
     } else {
-      toast.error('Patient address not available');
+      toast.error('Client address not available');
     }
   };
 
@@ -245,7 +245,7 @@ const InstitutionLabTechnicianDashboard = () => {
               <div>
                 <h1 className="text-xl font-semibold text-slate-50">Lab Technician Dashboard</h1>
                 <p className="text-sm text-slate-400">
-                  {institutionData?.name || 'UltimateCare'} • Home Laboratory Services
+                  {institutionData?.name || 'ElderX'} • Home Laboratory Services
                 </p>
               </div>
             </div>
@@ -318,7 +318,7 @@ const InstitutionLabTechnicianDashboard = () => {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-slate-50 mb-2">
-                        {visit.patientName}
+                        {visit.clientName}
                       </h3>
                       <div className="flex items-center gap-4 text-sm text-slate-400">
                         <span className="flex items-center gap-1">
@@ -341,7 +341,7 @@ const InstitutionLabTechnicianDashboard = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Patient Address</p>
+                      <p className="text-xs text-slate-400 mb-1">Client Address</p>
                       <p className="text-sm text-slate-300 flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
                         {visit.patientAddress || 'Address not provided'}
@@ -405,7 +405,7 @@ const InstitutionLabTechnicianDashboard = () => {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-slate-50 mb-2">
-                        {collection.patientName}
+                        {collection.clientName}
                       </h3>
                       <div className="flex items-center gap-4 text-sm text-slate-400">
                         <span className="flex items-center gap-1">

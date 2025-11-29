@@ -42,7 +42,6 @@ import {
 import { useUser } from '../contexts/UserContext';
 import caregiverSettingsService from '../services/caregiverSettingsService';
 import { toast } from 'react-toastify';
-import { resizeImage } from '../utils/profilePictureUpload';
 
 const CaregiverSettings = () => {
   // Build tag to verify latest deploy
@@ -167,22 +166,16 @@ const CaregiverSettings = () => {
 
         console.log('✅ File validation passed');
         // Show loading state
-        toast.info('Processing and uploading profile image...');
+        toast.info('Uploading profile image...');
         
-        // Automatically resize image to meet app specifications (400x400 max, 0.8 quality)
-        console.log('🔄 Resizing image to meet specifications...');
-        const resizedFile = await resizeImage(file, 400, 400, 0.8);
-        console.log('✅ Image resized:', resizedFile.name, resizedFile.size);
+        // Set preview immediately for better UX
+        setProfileImage(file);
+        setProfileImagePreview(URL.createObjectURL(file));
+        console.log('🖼️ Preview set:', URL.createObjectURL(file));
         
-        // Set preview with resized image for better UX
-        const previewUrl = URL.createObjectURL(resizedFile);
-        setProfileImage(resizedFile);
-        setProfileImagePreview(previewUrl);
-        console.log('🖼️ Preview set:', previewUrl);
-        
-        // Upload resized image
+        // Upload image
         console.log('🔄 Starting image upload...');
-        const imageUrl = await caregiverSettingsService.uploadProfileImage(user?.uid, resizedFile);
+        const imageUrl = await caregiverSettingsService.uploadProfileImage(user?.uid, file);
         console.log('✅ Image upload successful:', imageUrl);
         handleSettingChange('profile', 'profileImage', imageUrl);
         
@@ -302,7 +295,7 @@ const CaregiverSettings = () => {
       <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center">
               <Settings className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -319,7 +312,7 @@ const CaregiverSettings = () => {
               <Download className="h-4 w-4 mr-2" />
               Export
             </button>
-            <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm cursor-pointer">
+            <label className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center text-sm cursor-pointer">
               <Upload className="h-4 w-4 mr-2" />
               Import
               <input
@@ -332,7 +325,7 @@ const CaregiverSettings = () => {
             <button
               onClick={handleSaveSettings}
               disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold"
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold"
             >
               {saving ? (
                 <>
@@ -351,13 +344,13 @@ const CaregiverSettings = () => {
       </div>
 
       {/* Success Banner */}
-      <div className="bg-blue-100 border-l-4 border-blue-500 p-4 mx-4 mt-4">
+      <div className="bg-green-100 border-l-4 border-green-500 p-4 mx-4 mt-4">
         <div className="flex">
           <div className="flex-shrink-0">
-            <CheckCircle className="h-5 w-5 text-blue-400" />
+            <CheckCircle className="h-5 w-5 text-green-400" />
           </div>
           <div className="ml-3">
-            <p className="text-sm text-blue-700 font-bold">
+            <p className="text-sm text-green-700 font-bold">
               🎉 SETTINGS TAB REBUILT SUCCESSFULLY! 
               <br />
               ✅ Responsive design • ✅ All buttons functional • ✅ No horizontal scrolling • ✅ Better screen fit
@@ -779,7 +772,7 @@ const CaregiverSettings = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Max Patients Per Day</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Max clients Per Day</label>
                       <input
                         type="number"
                         min="1"
@@ -977,7 +970,7 @@ const getNotificationDescription = (key) => {
     appointmentReminders: 'Get reminded about appointments',
     medicationAlerts: 'Get reminded about medication schedules',
     weeklyReports: 'Receive weekly performance reports',
-    patientUpdates: 'Get notified about patient updates',
+    patientUpdates: 'Get notified about Client updates',
     systemUpdates: 'Receive system update notifications'
   };
   return descriptions[key] || '';
@@ -985,7 +978,7 @@ const getNotificationDescription = (key) => {
 
 const getPrivacyDescription = (key) => {
   const descriptions = {
-    locationSharing: 'Allow sharing your location with patients',
+    locationSharing: 'Allow sharing your location with clients',
     dataCollection: 'Allow collection of usage data for improvement',
     analytics: 'Allow analytics tracking for better experience',
     marketingEmails: 'Receive marketing emails and promotions'

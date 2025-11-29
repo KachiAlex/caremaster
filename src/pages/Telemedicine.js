@@ -58,7 +58,7 @@ const Telemedicine = () => {
   const [error, setError] = useState(null);
   const [availableDevices, setAvailableDevices] = useState({ cameras: [], microphones: [] });
   const [isInitializing, setIsInitializing] = useState(false);
-  const [userType, setUserType] = useState('patient'); // 'patient' or 'doctor'
+  const [userType, setUserType] = useState('Client'); // 'Client' or 'doctor'
   const [showDocuments, setShowDocuments] = useState(false);
   const [selectedAppointmentForDocs, setSelectedAppointmentForDocs] = useState(null);
 
@@ -81,8 +81,8 @@ const Telemedicine = () => {
   useEffect(() => {
     if (user) {
       // In a real app, you'd check user roles from Firestore
-      // For now, we'll use a simple check or default to patient
-      const userRole = user.displayName?.includes('Dr.') ? 'doctor' : 'patient';
+      // For now, we'll use a simple check or default to Client
+      const userRole = user.displayName?.includes('Dr.') ? 'doctor' : 'Client';
       setUserType(userRole);
     }
   }, [user]);
@@ -234,7 +234,7 @@ const Telemedicine = () => {
       try {
         const callData = {
           appointmentId: appointment.id,
-          patientId: userType === 'patient' ? user.uid : appointment.patientId,
+          clientId: userType === 'Client' ? user.uid : appointment.clientId,
           doctorId: userType === 'doctor' ? user.uid : appointment.doctorId,
           channelName,
           uid,
@@ -293,41 +293,6 @@ const Telemedicine = () => {
           };
           
           await telemedicineAPI.endCall(activeCall.callId, callEndData);
-          
-          // Log telemedicine consultation to patient activity database
-          try {
-            const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
-            const patientId = userType === 'patient' ? user.uid : activeCall.patientId;
-            const doctorId = userType === 'doctor' ? user.uid : activeCall.doctorId;
-            
-            if (patientId && doctorId) {
-              await ComprehensivePatientLogger.logConsultation(
-                patientId,
-                {
-                  consultationType: 'telemedicine',
-                  appointmentId: activeCall.appointmentId,
-                  callId: activeCall.callId,
-                  duration: callDuration,
-                  callType: activeCall.callType || 'video',
-                  hasRecording: isRecording,
-                  endReason: 'user_ended'
-                },
-                {
-                  id: doctorId,
-                  name: userProfile?.name || userProfile?.displayName || 'Doctor',
-                  role: 'doctor',
-                  userType: 'doctor',
-                  type: 'doctor',
-                  email: userProfile?.email,
-                  medicalQualification: 'Physician',
-                  institutionId: userProfile?.institutionId
-                }
-              );
-            }
-          } catch (logError) {
-            console.warn('Failed to log telemedicine consultation:', logError);
-            // Don't fail the call end if logging fails
-          }
         } catch (firebaseError) {
           console.warn('Failed to save call end to Firebase:', firebaseError);
         }
@@ -461,7 +426,7 @@ const Telemedicine = () => {
       // For demo purposes, create a sample appointment
       // In a real app, this would open a form or modal
       const newAppointment = {
-        patientId: userType === 'patient' ? user.uid : 'sample-patient-id',
+        clientId: userType === 'Client' ? user.uid : 'sample-Client-id',
         doctorId: userType === 'doctor' ? user.uid : null,
         appointmentDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
         duration: 30,
@@ -513,7 +478,7 @@ const Telemedicine = () => {
       case 'in-progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -651,7 +616,7 @@ const Telemedicine = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <div className={`w-3 h-3 rounded-full mr-2 ${
-                  connectionState === 'CONNECTED' ? 'bg-blue-500' : 
+                  connectionState === 'CONNECTED' ? 'bg-green-500' : 
                   connectionState === 'CONNECTING' ? 'bg-yellow-500' : 
                   'bg-red-500'
                 }`}></div>
@@ -884,7 +849,7 @@ const Telemedicine = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                       <div className="flex items-center">
                         <User className="h-4 w-4 mr-2" />
-                        <span>Patient: {appointment.patientName || 'Patient'} ({appointment.patientAge || 'N/A'}y)</span>
+                        <span>Client: {appointment.clientName || 'Client'} ({appointment.patientAge || 'N/A'}y)</span>
                       </div>
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2" />
@@ -952,7 +917,7 @@ const Telemedicine = () => {
                   Doctor
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
+                  Client
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date & Time
@@ -985,7 +950,7 @@ const Telemedicine = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{appointment.patientName || 'Patient'}</div>
+                    <div className="text-sm text-gray-900">{appointment.clientName || 'Client'}</div>
                     <div className="text-sm text-gray-500">Age: {appointment.patientAge || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -994,7 +959,7 @@ const Telemedicine = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      {appointment.type === 'video' ? <Video className="h-4 w-4 text-blue-600 mr-1" /> : <Phone className="h-4 w-4 text-blue-600 mr-1" />}
+                      {appointment.type === 'video' ? <Video className="h-4 w-4 text-blue-600 mr-1" /> : <Phone className="h-4 w-4 text-green-600 mr-1" />}
                       <span className="text-sm text-gray-900 capitalize">{appointment.type}</span>
                     </div>
                   </td>
@@ -1013,11 +978,11 @@ const Telemedicine = () => {
                         <FileText className="h-4 w-4" />
                       </button>
                       {appointment.recording && (
-                        <button className="text-blue-600 hover:text-green-900">
+                        <button className="text-green-600 hover:text-green-900">
                           <Download className="h-4 w-4" />
                         </button>
                       )}
-                      <button className="text-blue-600 hover:text-purple-900">
+                      <button className="text-purple-600 hover:text-purple-900">
                         <MoreVertical className="h-4 w-4" />
                       </button>
                     </div>
@@ -1034,10 +999,10 @@ const Telemedicine = () => {
         <DocumentManager
           appointment={selectedAppointmentForDocs}
           patientInfo={{
-            name: user?.displayName || 'Patient Name',
+            name: user?.displayName || 'Client Name',
             email: user?.email,
-            phone: user?.phoneNumber || userProfile?.phone || 'Not provided',
-            address: 'Patient Address',
+            phone: user?.phoneNumber || '+234 XXX XXX XXXX',
+            address: 'Client Address',
             age: 65,
             gender: 'Not specified',
             id: user?.uid
@@ -1045,11 +1010,11 @@ const Telemedicine = () => {
           doctorInfo={{
             name: selectedAppointmentForDocs.doctorName || 'Healthcare Provider',
             specialty: selectedAppointmentForDocs.doctorSpecialty || 'General Practice',
-            email: 'doctor@ultimatecare.com',
-            phone: '+234 800 ULTIMATE',
+            email: 'doctor@Care Master.com',
+            phone: '+234 800 Care Master',
             licenseNumber: 'MD-2024-001',
             qualifications: ['MBBS', 'MD'],
-            hospital: 'UltimateCare Telemedicine Platform'
+            hospital: 'Care Master Telemedicine Platform'
           }}
           onClose={() => setShowDocuments(false)}
         />

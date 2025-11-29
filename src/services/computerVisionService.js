@@ -1,4 +1,4 @@
-// Computer Vision AI Service for UltimateCare
+// Computer Vision AI Service for Care Master
 import aiService from './aiService';
 
 class ComputerVisionService {

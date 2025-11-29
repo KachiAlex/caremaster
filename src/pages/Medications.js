@@ -33,7 +33,7 @@ const Medications = () => {
   const [loading, setLoading] = useState(true);
   const [showCaregiverContact, setShowCaregiverContact] = useState(false);
 
-  // Patient selection (for doctors/caregivers writing prescriptions)
+  // Client selection (for doctors/caregivers writing prescriptions)
   const [assignedPatients, setAssignedPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState('');
 
@@ -46,29 +46,29 @@ const Medications = () => {
     endDate: ''
   });
 
-  // Initial load: parse patient from URL and load assigned patients if service provider
+  // Initial load: parse Client from URL and load assigned clients if service provider
   useEffect(() => {
-    // Parse patient from query (?patientId=... or ?client=...)
+    // Parse Client from query (?clientId=... or ?client=...)
     const params = new URLSearchParams(location.search);
-    const pid = params.get('patientId') || params.get('client') || '';
+    const pid = params.get('clientId') || params.get('client') || '';
     if (pid) setSelectedPatientId(pid);
 
-    // Load assigned patients for doctors/caregivers
+    // Load assigned clients for doctors/caregivers
     const loadAssignedPatients = async () => {
       try {
         if (!userProfile) return;
         const isServiceProvider = ['doctor', 'caregiver', 'admin'].includes((userProfile.userType || '').toLowerCase());
         if (!isServiceProvider) return;
-        const patients = await getClientsByCaregiver(userProfile.id || userProfile.uid);
-        setAssignedPatients(patients || []);
+        const clients = await getClientsByCaregiver(userProfile.id || userProfile.uid);
+        setAssignedPatients(clients || []);
       } catch (e) {
-        console.warn('Failed to load assigned patients', e);
+        console.warn('Failed to load assigned clients', e);
       }
     };
     loadAssignedPatients();
   }, [location.search, userProfile]);
 
-  // Fetch medications when user or selected patient changes
+  // Fetch medications when user or selected Client changes
   useEffect(() => {
     const fetchMedications = async () => {
       const pid = selectedPatientId || user?.uid;
@@ -77,7 +77,7 @@ const Medications = () => {
       try {
         setLoading(true);
         const userMedications = await medicationAPI.getMedications({ 
-          patientId: pid 
+          clientId: pid 
         });
         
         // Transform API data to match component structure
@@ -133,7 +133,7 @@ const Medications = () => {
 
     try {
       const medicationData = {
-        patientId: pid,
+        clientId: pid,
         name: newMedication.name,
         dosage: newMedication.dosage,
         frequency: newMedication.frequency,
@@ -149,7 +149,7 @@ const Medications = () => {
         // Also write to care logs for unified medical history
         try {
           await createCareLog({
-            patientId: pid,
+            clientId: pid,
             caregiverId: (userProfile && (userProfile.id || userProfile.uid)) || user?.uid,
             category: 'medication',
             title: `Prescription: ${newMedication.name}`,
@@ -222,16 +222,16 @@ const Medications = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Add New Medication</h2>
           <form onSubmit={handleAddMedication} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Patient selector (required when acting as doctor/caregiver) */}
+              {/* Client selector (required when acting as doctor/caregiver) */}
               <div className="md:col-span-2">
-                <label className="form-label">Patient</label>
+                <label className="form-label">Client</label>
                 <select
                   className="form-input"
                   value={selectedPatientId}
                   onChange={(e) => setSelectedPatientId(e.target.value)}
                   required
                 >
-                  <option value="">{assignedPatients.length ? 'Select patient...' : (user?.uid ? 'Self' : 'Select patient...')}</option>
+                  <option value="">{assignedPatients.length ? 'Select client...' : (user?.uid ? 'Self' : 'Select client...')}</option>
                   {assignedPatients.map(p => (
                     <option key={p.id} value={p.id}>{p.name || p.fullName || p.email || p.id}</option>
                   ))}
@@ -345,7 +345,7 @@ const Medications = () => {
                   <p className="font-medium text-gray-900">{medication.nextDose}</p>
                   <div className="flex items-center mt-1">
                     {medication.taken ? (
-                      <CheckCircle className="h-4 w-4 text-blue-500 mr-1" />
+                      <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
                     ) : (
                       <XCircle className="h-4 w-4 text-red-500 mr-1" />
                     )}
@@ -410,14 +410,14 @@ const Medications = () => {
           </button>
           <button 
             onClick={() => navigate('/telemedicine?type=medication-consult')}
-            className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-purple-200 transition-colors"
+            className="flex items-center justify-center p-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
           >
             <User className="h-5 w-5 mr-2" />
             Video Consultation
           </button>
           <button 
             onClick={() => navigate('/appointments?type=medication-review')}
-            className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-green-200 transition-colors"
+            className="flex items-center justify-center p-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
           >
             <Calendar className="h-5 w-5 mr-2" />
             Schedule Review

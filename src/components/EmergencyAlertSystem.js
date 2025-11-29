@@ -20,7 +20,7 @@ import {
 import { toast } from 'react-toastify';
 import { emergencyAPI } from '../api/emergencyAPI';
 
-const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientName }) => {
+const EmergencyAlertSystem = ({ userRole, userId, userName, clientId, clientName }) => {
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [activeEmergencies, setActiveEmergencies] = useState([]);
   const [emergencyForm, setEmergencyForm] = useState({
@@ -39,19 +39,19 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
 
   const emergencyTypes = [
     { value: 'medical', label: 'Medical Emergency', icon: Heart, color: 'text-red-600' },
-    { value: 'fall', label: 'Fall Incident', icon: AlertTriangle, color: 'text-blue-600' },
+    { value: 'fall', label: 'Fall Incident', icon: AlertTriangle, color: 'text-orange-600' },
     { value: 'cardiac', label: 'Cardiac Emergency', icon: Activity, color: 'text-red-700' },
     { value: 'respiratory', label: 'Respiratory Distress', icon: Activity, color: 'text-red-600' },
     { value: 'medication', label: 'Medication Error', icon: Shield, color: 'text-yellow-600' },
-    { value: 'behavioral', label: 'Behavioral Emergency', icon: User, color: 'text-blue-600' },
+    { value: 'behavioral', label: 'Behavioral Emergency', icon: User, color: 'text-purple-600' },
     { value: 'environmental', label: 'Environmental Hazard', icon: MapPin, color: 'text-gray-600' },
     { value: 'other', label: 'Other Emergency', icon: AlertTriangle, color: 'text-gray-600' }
   ];
 
   const severityLevels = [
-    { value: 'low', label: 'Low Priority', color: 'bg-blue-100 text-blue-800' },
+    { value: 'low', label: 'Low Priority', color: 'bg-green-100 text-green-800' },
     { value: 'medium', label: 'Medium Priority', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'high', label: 'High Priority', color: 'bg-blue-100 text-orange-800' },
+    { value: 'high', label: 'High Priority', color: 'bg-orange-100 text-orange-800' },
     { value: 'critical', label: 'Critical Emergency', color: 'bg-red-100 text-red-800' }
   ];
 
@@ -100,14 +100,14 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
       setLoading(true);
 
       const emergencyData = {
-        patientId,
-        patientName,
+        clientId,
+        clientName,
         triggeredBy: userId,
         triggeredByName: userName,
         emergencyType: emergencyForm.emergencyType,
         severity: emergencyForm.severity,
         description: emergencyForm.description,
-        location: emergencyForm.location || 'Patient Residence',
+        location: emergencyForm.location || 'Client Residence',
         patientCondition: emergencyForm.patientCondition,
         immediateActions: emergencyForm.immediateActions,
         contactNumber: emergencyForm.contactNumber,
@@ -123,7 +123,7 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
         // Send notifications to relevant parties
         await emergencyAPI.sendEmergencyNotification(result.id, {
           recipients: ['admin', 'doctors', 'emergency_services'],
-          message: `Emergency Alert: ${emergencyForm.emergencyType} - ${patientName}`,
+          message: `Emergency Alert: ${emergencyForm.emergencyType} - ${clientName}`,
           priority: 'high'
         });
         
@@ -239,7 +239,7 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
                           {emergencyTypes.find(et => et.value === emergency.emergencyType)?.label}
                         </h4>
                         <p className="text-sm text-gray-600">
-                          Patient: {emergency.patientName || 'Unknown'}
+                          Client: {emergency.clientName || 'Unknown'}
                         </p>
                       </div>
                     </div>
@@ -258,13 +258,13 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => updateEmergencyStatus(emergency.id, 'in_progress', 'Emergency response initiated')}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-orange-700"
+                      className="px-3 py-1 bg-orange-600 text-white rounded text-sm hover:bg-orange-700"
                     >
                       Respond
                     </button>
                     <button
                       onClick={() => updateEmergencyStatus(emergency.id, 'resolved', 'Emergency resolved')}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                      className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                     >
                       Resolve
                     </button>
@@ -291,7 +291,7 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
                     Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient
+                    Client
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Severity
@@ -321,7 +321,7 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {emergency.patientName || 'Unknown'}
+                        {emergency.clientName || 'Unknown'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${severityLevels.find(s => s.value === emergency.severity)?.color}`}>
@@ -331,7 +331,7 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           emergency.status === 'active' ? 'bg-red-100 text-red-800' :
-                          emergency.status === 'resolved' ? 'bg-blue-100 text-blue-800' :
+                          emergency.status === 'resolved' ? 'bg-green-100 text-green-800' :
                           'bg-yellow-100 text-yellow-800'
                         }`}>
                           {emergency.status}
@@ -430,17 +430,17 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
                   />
                 </div>
 
-                {/* Patient Condition */}
+                {/* Client Condition */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Current Patient Condition
+                    Current Client Condition
                   </label>
                   <textarea
                     value={emergencyForm.patientCondition}
                     onChange={(e) => handleInputChange('patientCondition', e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg"
                     rows={2}
-                    placeholder="Describe patient's current condition..."
+                    placeholder="Describe Client's current condition..."
                   />
                 </div>
 
@@ -482,7 +482,7 @@ const EmergencyAlertSystem = ({ userRole, userId, userName, patientId, patientNa
                       value={emergencyForm.location}
                       onChange={(e) => handleInputChange('location', e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg"
-                      placeholder="Patient location"
+                      placeholder="Client location"
                     />
                   </div>
                 </div>

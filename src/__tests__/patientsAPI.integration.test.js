@@ -1,14 +1,14 @@
 /**
- * Integration Tests for Patient API
- * Tests patient registration, updates, and logging integration
+ * Integration Tests for Client API
+ * Tests Client registration, updates, and logging integration
  */
 
-import { createPatient, updatePatient, getPatientByPatientId, searchPatients } from '../api/patientsAPI';
+import { createClient, updatePatient, getPatientByPatientId, searchPatients } from '../api/patientsAPI';
 import { logPatientRegistration, logPatientProfileUpdate } from '../utils/patientLogger';
-import { generatePatientId } from '../utils/patientIdGenerator';
+import { generateClientId } from '../utils/clientIdGenerator';
 
 // Mock dependencies
-jest.mock('../utils/patientIdGenerator');
+jest.mock('../utils/clientIdGenerator');
 jest.mock('../utils/patientLogger');
 jest.mock('../firebase/config', () => ({
   db: {}
@@ -28,7 +28,7 @@ jest.mock('firebase/firestore', () => ({
   serverTimestamp: jest.fn(() => ({ _methodName: 'serverTimestamp' }))
 }));
 
-describe('Patient API Integration Tests', () => {
+describe('Client API Integration Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -42,13 +42,13 @@ describe('Patient API Integration Tests', () => {
     institutionId: 'institution-123'
   };
 
-  describe('createPatient', () => {
-    test('should create patient with generated ID and log registration', async () => {
+  describe('createClient', () => {
+    test('should create Client with generated ID and log registration', async () => {
       const mockPatientId = 'UC-2025-0001';
       const mockDocRef = { id: 'firestore-doc-123' };
       const mockLogId = 'log-456';
 
-      generatePatientId.mockResolvedValue(mockPatientId);
+      generateClientId.mockResolvedValue(mockPatientId);
       const { addDoc } = require('firebase/firestore');
       addDoc.mockResolvedValue(mockDocRef);
       logPatientRegistration.mockResolvedValue(mockLogId);
@@ -56,18 +56,18 @@ describe('Patient API Integration Tests', () => {
       const { collection } = require('firebase/firestore');
       collection.mockReturnValue({});
 
-      const patientData = {
+      const clientData = {
         name: 'John Doe',
         email: 'john@example.com',
         phone: '+1234567890',
         institutionId: 'institution-123'
       };
 
-      const result = await createPatient(patientData, mockRegisteredBy);
+      const result = await createClient(clientData, mockRegisteredBy);
 
-      expect(result.patientId).toBe(mockPatientId);
+      expect(result.clientId).toBe(mockPatientId);
       expect(result.id).toBe('firestore-doc-123');
-      expect(generatePatientId).toHaveBeenCalledWith('institution-123');
+      expect(generateClientId).toHaveBeenCalledWith('institution-123');
       expect(logPatientRegistration).toHaveBeenCalledWith(
         mockPatientId,
         mockRegisteredBy,
@@ -82,7 +82,7 @@ describe('Patient API Integration Tests', () => {
       const mockPatientId = 'UC-2025-0001';
       const mockDocRef = { id: 'firestore-doc-123' };
 
-      generatePatientId.mockResolvedValue(mockPatientId);
+      generateClientId.mockResolvedValue(mockPatientId);
       const { addDoc } = require('firebase/firestore');
       addDoc.mockResolvedValue(mockDocRef);
       logPatientRegistration.mockRejectedValue(new Error('Logging failed'));
@@ -90,24 +90,24 @@ describe('Patient API Integration Tests', () => {
       const { collection } = require('firebase/firestore');
       collection.mockReturnValue({});
 
-      const patientData = {
+      const clientData = {
         name: 'John Doe',
         email: 'john@example.com',
         institutionId: 'institution-123'
       };
 
       // Should still succeed even if logging fails
-      const result = await createPatient(patientData, mockRegisteredBy);
-      expect(result.patientId).toBe(mockPatientId);
+      const result = await createClient(clientData, mockRegisteredBy);
+      expect(result.clientId).toBe(mockPatientId);
     });
   });
 
   describe('updatePatient', () => {
-    test('should update patient and log profile update', async () => {
+    test('should update Client and log profile update', async () => {
       const mockLogId = 'log-789';
       const mockPatientDoc = {
         exists: () => true,
-        data: () => ({ patientId: 'UC-2025-0001', name: 'John Doe' })
+        data: () => ({ clientId: 'UC-2025-0001', name: 'John Doe' })
       };
 
       const { updateDoc, getDoc, doc } = require('firebase/firestore');
@@ -132,10 +132,10 @@ describe('Patient API Integration Tests', () => {
       );
     });
 
-    test('should handle missing patientId gracefully', async () => {
+    test('should handle missing clientId gracefully', async () => {
       const mockPatientDoc = {
         exists: () => true,
-        data: () => ({ name: 'John Doe' }) // No patientId field
+        data: () => ({ name: 'John Doe' }) // No clientId field
       };
 
       const { updateDoc, getDoc, doc } = require('firebase/firestore');
@@ -159,9 +159,9 @@ describe('Patient API Integration Tests', () => {
   });
 
   describe('getPatientByPatientId', () => {
-    test('should retrieve patient by simple patient ID', async () => {
+    test('should retrieve Client by simple Client ID', async () => {
       const mockPatientData = {
-        patientId: 'UC-2025-0001',
+        clientId: 'UC-2025-0001',
         name: 'John Doe',
         email: 'john@example.com'
       };
@@ -180,14 +180,14 @@ describe('Patient API Integration Tests', () => {
       query.mockReturnValue({});
       where.mockReturnValue({});
 
-      const patient = await getPatientByPatientId('UC-2025-0001');
+      const Client = await getPatientByPatientId('UC-2025-0001');
 
-      expect(patient.patientId).toBe('UC-2025-0001');
-      expect(patient.name).toBe('John Doe');
-      expect(where).toHaveBeenCalledWith('patientId', '==', 'UC-2025-0001');
+      expect(client.clientId).toBe('UC-2025-0001');
+      expect(client.name).toBe('John Doe');
+      expect(where).toHaveBeenCalledWith('clientId', '==', 'UC-2025-0001');
     });
 
-    test('should throw error if patient not found', async () => {
+    test('should throw error if Client not found', async () => {
       const mockSnapshot = {
         empty: true,
         docs: []
@@ -204,12 +204,12 @@ describe('Patient API Integration Tests', () => {
   });
 
   describe('searchPatients', () => {
-    test('should search patients by patient ID', async () => {
+    test('should search clients by Client ID', async () => {
       const mockPatients = [
         {
           id: 'doc-1',
           data: () => ({
-            patientId: 'UC-2025-0001',
+            clientId: 'UC-2025-0001',
             name: 'John Doe',
             email: 'john@example.com'
           })
@@ -218,7 +218,7 @@ describe('Patient API Integration Tests', () => {
 
       const mockSnapshot = {
         forEach: (callback) => {
-          mockPatients.forEach(patient => callback(patient));
+          mockPatients.forEach(Client => callback(Client));
         }
       };
 
@@ -233,15 +233,15 @@ describe('Patient API Integration Tests', () => {
       const results = await searchPatients('UC-2025-0001');
 
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].patientId).toBe('UC-2025-0001');
+      expect(results[0].clientId).toBe('UC-2025-0001');
     });
 
-    test('should search patients by name', async () => {
+    test('should search clients by name', async () => {
       const mockPatients = [
         {
           id: 'doc-1',
           data: () => ({
-            patientId: 'UC-2025-0001',
+            clientId: 'UC-2025-0001',
             name: 'John Doe',
             fullName: 'John Doe',
             email: 'john@example.com'
@@ -251,7 +251,7 @@ describe('Patient API Integration Tests', () => {
 
       const mockSnapshot = {
         forEach: (callback) => {
-          mockPatients.forEach(patient => callback(patient));
+          mockPatients.forEach(Client => callback(Client));
         }
       };
 

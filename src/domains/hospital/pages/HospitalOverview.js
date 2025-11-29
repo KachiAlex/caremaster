@@ -407,13 +407,13 @@ const HospitalOverviewContent = () => {
 
         <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 shadow-lg shadow-black/40">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Patient Census</p>
+            <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Client Census</p>
             <User className="h-5 w-5 text-indigo-400" />
           </div>
           <p className="text-2xl font-semibold text-slate-50">
             {loading ? '—' : summary?.patientCensus || 0}
           </p>
-          <p className="text-xs text-slate-500 mt-1">Active patients</p>
+          <p className="text-xs text-slate-500 mt-1">Active clients</p>
         </div>
       </div>
 
@@ -470,7 +470,7 @@ const HospitalOverviewContent = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Department</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Floor/Unit</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Patient</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Client</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Last Updated</th>
                 </tr>
               </thead>
@@ -488,7 +488,7 @@ const HospitalOverviewContent = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
-                      {bed.patientName || bed.patientId || '—'}
+                      {bed.clientName || bed.clientId || '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
                       {bed.lastUpdated ? formatTime(bed.lastUpdated) : 'N/A'}

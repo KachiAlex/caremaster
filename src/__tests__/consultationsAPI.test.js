@@ -1,6 +1,6 @@
 /**
  * Tests for Consultation API Logging Integration
- * Verifies that consultations are properly logged to patient logs
+ * Verifies that consultations are properly logged to Client logs
  */
 
 import { createConsultation } from '../api/consultationsAPI';
@@ -25,7 +25,7 @@ describe('Consultation API Logging', () => {
     jest.clearAllMocks();
   });
 
-  test('should log consultation to patient logs when created', async () => {
+  test('should log consultation to Client logs when created', async () => {
     const mockDocRef = { id: 'consultation-123' };
     const { addDoc } = require('firebase/firestore');
     addDoc.mockResolvedValue(mockDocRef);
@@ -34,17 +34,17 @@ describe('Consultation API Logging', () => {
     collection.mockReturnValue({});
     doc.mockReturnValue({});
     
-    // Mock patient document
+    // Mock Client document
     const mockPatientDoc = {
       exists: () => true,
-      data: () => ({ patientId: 'UC-2025-0001' })
+      data: () => ({ clientId: 'UC-2025-0001' })
     };
     getDoc.mockResolvedValue(mockPatientDoc);
     
     logConsultation.mockResolvedValue('log-456');
 
     const consultationData = {
-      clientId: 'patient-doc-id',
+      clientId: 'Client-doc-id',
       clientName: 'John Doe',
       doctorId: 'doctor-123',
       doctorName: 'Dr. Jane Smith',
@@ -79,17 +79,17 @@ describe('Consultation API Logging', () => {
     collection.mockReturnValue({});
     doc.mockReturnValue({});
     
-    // Mock patient document
+    // Mock Client document
     const mockPatientDoc = {
       exists: () => true,
-      data: () => ({ patientId: 'UC-2025-0001' })
+      data: () => ({ clientId: 'UC-2025-0001' })
     };
     getDoc.mockResolvedValue(mockPatientDoc);
     
     logConsultation.mockRejectedValue(new Error('Logging failed'));
 
     const consultationData = {
-      clientId: 'patient-doc-id',
+      clientId: 'Client-doc-id',
       clientName: 'John Doe',
       doctorId: 'doctor-123',
       doctorName: 'Dr. Jane Smith',

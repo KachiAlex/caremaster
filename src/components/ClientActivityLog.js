@@ -61,25 +61,25 @@ const ClientActivityLog = ({ clientId, clientName, userProfile }) => {
         return <FileText className="w-4 h-4 text-blue-500" />;
       case 'prescription_created':
       case 'prescription_updated':
-        return <Pill className="w-4 h-4 text-blue-500" />;
+        return <Pill className="w-4 h-4 text-green-500" />;
       case 'diagnostic_test_ordered':
       case 'diagnostic_results_uploaded':
       case 'doctor_notes_added':
-        return <FlaskConical className="w-4 h-4 text-blue-500" />;
+        return <FlaskConical className="w-4 h-4 text-purple-500" />;
       case 'consultation_created':
       case 'consultation_updated':
         return <Stethoscope className="w-4 h-4 text-red-500" />;
       case 'task_created':
       case 'task_completed':
-        return <CheckCircle className="w-4 h-4 text-blue-500" />;
+        return <CheckCircle className="w-4 h-4 text-orange-500" />;
       case 'message_sent':
-        return <MessageSquare className="w-4 h-4 text-blue-500" />;
+        return <MessageSquare className="w-4 h-4 text-indigo-500" />;
       case 'vital_signs_recorded':
-        return <Heart className="w-4 h-4 text-blue-500" />;
+        return <Heart className="w-4 h-4 text-pink-500" />;
       case 'photo_uploaded':
         return <Camera className="w-4 h-4 text-gray-500" />;
       case 'visit_completed':
-        return <Home className="w-4 h-4 text-blue-500" />;
+        return <Home className="w-4 h-4 text-teal-500" />;
       default:
         return <Activity className="w-4 h-4 text-gray-500" />;
     }
@@ -93,25 +93,25 @@ const ClientActivityLog = ({ clientId, clientName, userProfile }) => {
         return 'bg-blue-100 text-blue-800';
       case 'prescription_created':
       case 'prescription_updated':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'diagnostic_test_ordered':
       case 'diagnostic_results_uploaded':
       case 'doctor_notes_added':
-        return 'bg-blue-100 text-purple-800';
+        return 'bg-purple-100 text-purple-800';
       case 'consultation_created':
       case 'consultation_updated':
         return 'bg-red-100 text-red-800';
       case 'task_created':
       case 'task_completed':
-        return 'bg-blue-100 text-orange-800';
+        return 'bg-orange-100 text-orange-800';
       case 'message_sent':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-indigo-100 text-indigo-800';
       case 'vital_signs_recorded':
         return 'bg-pink-100 text-pink-800';
       case 'photo_uploaded':
         return 'bg-gray-100 text-gray-800';
       case 'visit_completed':
-        return 'bg-blue-100 text-teal-800';
+        return 'bg-teal-100 text-teal-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

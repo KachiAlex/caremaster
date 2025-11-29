@@ -116,12 +116,12 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
     }
   };
 
-  const handleSelectPatient = async (patient) => {
-    setSelectedPatient(patient);
+  const handleSelectPatient = async (Client) => {
+    setSelectedPatient(Client);
     
     // Load existing triage assessment if any
     try {
-      const existingAssessment = await getTriageAssessmentByPatient(patient.patientId, institutionId);
+      const existingAssessment = await getTriageAssessmentByPatient(client.clientId, institutionId);
       if (existingAssessment) {
         setTriageForm({
           chiefComplaint: existingAssessment.chiefComplaint || '',
@@ -140,7 +140,7 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
         });
       } else {
         // Load latest vital signs
-        const latestVitals = await getLatestVitalSigns(patient.patientId);
+        const latestVitals = await getLatestVitalSigns(client.clientId);
         if (latestVitals) {
           setVitalSigns([latestVitals]);
           // Calculate severity
@@ -155,7 +155,7 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
         }
       }
     } catch (error) {
-      console.error('Error loading patient data:', error);
+      console.error('Error loading Client data:', error);
     }
 
     setShowTriageModal(true);
@@ -186,8 +186,8 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
 
       // Create triage assessment
       const assessment = await createTriageAssessment({
-        patientId: selectedPatient.patientId,
-        patientName: selectedPatient.patientName,
+        clientId: selectedPatient.clientId,
+        clientName: selectedPatient.clientName,
         institutionId,
         nurseId: userProfile?.id || userProfile?.uid,
         nurseName: userProfile?.name || userProfile?.displayName || 'Nurse',
@@ -204,7 +204,7 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
         recommendedPriority: triageForm.recommendedPriority
       });
 
-      // Complete triage and route patient
+      // Complete triage and route Client
       await completeTriageAndRoute(assessment.id, {
         routeToQueue: true,
         overrideQueue: triageForm.recommendedQueue,
@@ -212,12 +212,12 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
       });
 
       // Update triage queue status
-      const triageEntry = triageQueue.find(q => q.patientId === selectedPatient.patientId);
+      const triageEntry = triageQueue.find(q => q.clientId === selectedPatient.clientId);
       if (triageEntry) {
         await updateQueueStatus(triageEntry.id, QUEUE_STATUS.COMPLETED);
       }
 
-      toast.success(`Patient routed to ${triageForm.recommendedQueue.toUpperCase()} queue with ${triageForm.severity} priority`);
+      toast.success(`Client routed to ${triageForm.recommendedQueue.toUpperCase()} queue with ${triageForm.severity} priority`);
       
       // Reset and close
       setShowTriageModal(false);
@@ -304,19 +304,19 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
         {triageQueue.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <Clock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p>No patients in triage queue</p>
+            <p>No clients in triage queue</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {triageQueue.map((patient) => {
-              const queueNumber = patient.queueNumber;
-              const priority = patient.priority;
+            {triageQueue.map((Client) => {
+              const queueNumber = client.queueNumber;
+              const priority = client.priority;
               
               return (
                 <div
-                  key={patient.id}
+                  key={client.id}
                   className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleSelectPatient(patient)}
+                  onClick={() => handleSelectPatient(Client)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 flex-1">
@@ -327,7 +327,7 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <h4 className="font-semibold text-gray-900">{patient.patientName}</h4>
+                          <h4 className="font-semibold text-gray-900">{client.clientName}</h4>
                           {priority === 'emergency' && (
                             <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Emergency</span>
                           )}
@@ -335,9 +335,9 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
                             <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">Urgent</span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600">Patient ID: {patient.patientId}</p>
-                        {patient.notes && (
-                          <p className="text-xs text-gray-500 mt-1">{patient.notes}</p>
+                        <p className="text-sm text-gray-600">Client ID: {client.clientId}</p>
+                        {client.notes && (
+                          <p className="text-xs text-gray-500 mt-1">{client.notes}</p>
                         )}
                       </div>
                     </div>
@@ -345,7 +345,7 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSelectPatient(patient);
+                          handleSelectPatient(Client);
                         }}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
@@ -372,7 +372,7 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">Triage Assessment</h2>
-                    <p className="text-sm text-gray-600">Patient: {selectedPatient.patientName}</p>
+                    <p className="text-sm text-gray-600">Client: {selectedPatient.clientName}</p>
                   </div>
                 </div>
                 <button
@@ -445,7 +445,7 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
                 <textarea
                   value={triageForm.chiefComplaint}
                   onChange={(e) => setTriageForm(prev => ({ ...prev, chiefComplaint: e.target.value }))}
-                  placeholder="Enter patient's chief complaint..."
+                  placeholder="Enter Client's chief complaint..."
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -536,7 +536,7 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
                   ) : (
                     <>
                       <ArrowRight className="h-4 w-4 mr-2" />
-                      Complete & Route Patient
+                      Complete & Route Client
                     </>
                   )}
                 </button>
@@ -549,8 +549,8 @@ const EnhancedTriageManagement = ({ institutionId: propInstitutionId }) => {
       {/* Vital Signs Modal */}
       {showVitalsModal && selectedPatient && (
         <NurseVitalsInput
-          patientId={selectedPatient.patientId}
-          patientName={selectedPatient.patientName}
+          clientId={selectedPatient.clientId}
+          clientName={selectedPatient.clientName}
           nurseId={userProfile?.id || userProfile?.uid}
           nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
           onSave={handleVitalsSaved}

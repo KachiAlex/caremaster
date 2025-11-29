@@ -34,15 +34,15 @@ describe('PatientSearch Component', () => {
 
   const mockPatients = [
     {
-      id: 'patient-1',
-      patientId: 'UC-2025-0001',
+      id: 'Client-1',
+      clientId: 'UC-2025-0001',
       name: 'John Doe',
       email: 'john@example.com',
       phone: '123-456-7890'
     },
     {
-      id: 'patient-2',
-      patientId: 'UC-2025-0002',
+      id: 'Client-2',
+      clientId: 'UC-2025-0002',
       name: 'Jane Smith',
       email: 'jane@example.com',
       phone: '987-654-3210'
@@ -65,15 +65,15 @@ describe('PatientSearch Component', () => {
   test('renders search input', () => {
     render(<PatientSearch onSelectPatient={mockOnSelectPatient} />);
 
-    expect(screen.getByPlaceholderText(/Search patients/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Search clients/i)).toBeInTheDocument();
   });
 
-  test('searches patients on input change', async () => {
+  test('searches clients on input change', async () => {
     searchPatients.mockResolvedValue(mockPatients);
 
     render(<PatientSearch onSelectPatient={mockOnSelectPatient} />);
 
-    const searchInput = screen.getByPlaceholderText(/Search patients/i);
+    const searchInput = screen.getByPlaceholderText(/Search clients/i);
     fireEvent.change(searchInput, { target: { value: 'John' } });
 
     // Fast-forward debounce timer
@@ -89,7 +89,7 @@ describe('PatientSearch Component', () => {
 
     render(<PatientSearch onSelectPatient={mockOnSelectPatient} />);
 
-    const searchInput = screen.getByPlaceholderText(/Search patients/i);
+    const searchInput = screen.getByPlaceholderText(/Search clients/i);
     fireEvent.change(searchInput, { target: { value: 'John' } });
 
     jest.advanceTimersByTime(300);
@@ -100,12 +100,12 @@ describe('PatientSearch Component', () => {
     });
   });
 
-  test('calls onSelectPatient when patient is clicked', async () => {
+  test('calls onSelectPatient when Client is clicked', async () => {
     searchPatients.mockResolvedValue(mockPatients);
 
     render(<PatientSearch onSelectPatient={mockOnSelectPatient} />);
 
-    const searchInput = screen.getByPlaceholderText(/Search patients/i);
+    const searchInput = screen.getByPlaceholderText(/Search clients/i);
     fireEvent.change(searchInput, { target: { value: 'John' } });
 
     jest.advanceTimersByTime(300);
@@ -125,7 +125,7 @@ describe('PatientSearch Component', () => {
 
     render(<PatientSearch onSelectPatient={mockOnSelectPatient} />);
 
-    const searchInput = screen.getByPlaceholderText(/Search patients/i);
+    const searchInput = screen.getByPlaceholderText(/Search clients/i);
     fireEvent.change(searchInput, { target: { value: 'John' } });
 
     jest.advanceTimersByTime(300);
@@ -147,7 +147,7 @@ describe('PatientSearch Component', () => {
 
     render(<PatientSearch onSelectPatient={mockOnSelectPatient} />);
 
-    const searchInput = screen.getByPlaceholderText(/Search patients/i);
+    const searchInput = screen.getByPlaceholderText(/Search clients/i);
     fireEvent.change(searchInput, { target: { value: 'John' } });
 
     jest.advanceTimersByTime(300);
@@ -166,7 +166,7 @@ describe('PatientSearch Component', () => {
 
     render(<PatientSearch onSelectPatient={mockOnSelectPatient} />);
 
-    const searchInput = screen.getByPlaceholderText(/Search patients/i);
+    const searchInput = screen.getByPlaceholderText(/Search clients/i);
     fireEvent.change(searchInput, { target: { value: 'John' } });
 
     jest.advanceTimersByTime(300);
@@ -181,13 +181,13 @@ describe('PatientSearch Component', () => {
 
     render(<PatientSearch onSelectPatient={mockOnSelectPatient} />);
 
-    const searchInput = screen.getByPlaceholderText(/Search patients/i);
+    const searchInput = screen.getByPlaceholderText(/Search clients/i);
     fireEvent.change(searchInput, { target: { value: 'NonExistent' } });
 
     jest.advanceTimersByTime(300);
 
     await waitFor(() => {
-      expect(screen.getByText(/No patients found/i)).toBeInTheDocument();
+      expect(screen.getByText(/No clients found/i)).toBeInTheDocument();
     });
   });
 
@@ -196,13 +196,13 @@ describe('PatientSearch Component', () => {
 
     render(<PatientSearch onSelectPatient={mockOnSelectPatient} />);
 
-    const searchInput = screen.getByPlaceholderText(/Search patients/i);
+    const searchInput = screen.getByPlaceholderText(/Search clients/i);
     fireEvent.change(searchInput, { target: { value: 'John' } });
 
     jest.advanceTimersByTime(300);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('Failed to search patients.');
+      expect(toast.error).toHaveBeenCalledWith('Failed to search clients.');
     });
   });
 });

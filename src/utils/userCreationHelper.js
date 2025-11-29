@@ -62,11 +62,10 @@ const USER_TYPE_MAPPINGS = {
     roles: ['client'],
     defaultStatus: 'active'
   },
-  // Legacy mapping retained for backwards compatibility with existing "elderly" records.
   elderly: {
-    userType: 'patient',
-    type: 'patient',
-    roles: ['patient'],
+    userType: 'client',
+    type: 'client',
+    roles: ['client'],
     defaultStatus: 'active'
   }
 };
@@ -179,7 +178,9 @@ export async function createCompleteUserAccount(userData, options = {}) {
     // Generate password if not provided
     const finalPassword = password || temporaryPassword || generateTemporaryPassword();
     
-    // Create Firebase Auth account
+    // WARNING: createUserWithEmailAndPassword automatically signs in the new user,
+    // which will log out the current admin. This is a limitation of client-side user creation.
+    // TODO: Migrate to Cloud Function with Admin SDK to avoid affecting current session.
     const userCredential = await createUserWithEmailAndPassword(auth, email, finalPassword);
     const user = userCredential.user;
     
@@ -211,11 +212,14 @@ export async function createCompleteUserAccount(userData, options = {}) {
       roles: standardizedData.roles
     });
     
+    // Return a flag indicating that a page reload is needed
+    // This is because the new user was automatically signed in, logging out the admin
     return {
       uid: user.uid,
       email,
       temporaryPassword: !password ? finalPassword : null,
-      userData: standardizedData
+      userData: standardizedData,
+      requiresReload: true // Signal that page reload is needed to restore admin session
     };
     
   } catch (error) {
@@ -231,7 +235,7 @@ export async function createCompleteUserAccount(userData, options = {}) {
 export function generateTemporaryPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
   const specialChars = '!@#$%&*';
-  let password = 'UltimateCare';
+  let password = 'Care Master';
   
   // Add 6 random characters
   for (let i = 0; i < 6; i++) {

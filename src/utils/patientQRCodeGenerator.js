@@ -1,24 +1,24 @@
 /**
- * Patient QR Code Generator Utility
+ * Client QR Code Generator Utility
  * 
- * Generates QR codes for patient identification cards
+ * Generates QR codes for Client identification cards
  */
 
 /**
- * Generate QR code data for a patient
- * @param {string} patientId - Patient ID (e.g., UC-2025-0001)
+ * Generate QR code data for a Client
+ * @param {string} clientId - Client ID (e.g., UC-2025-0001)
  * @param {string} institutionId - Institution ID
- * @param {Object} patientData - Additional patient data
+ * @param {Object} clientData - Additional Client data
  * @returns {string} QR code data URL
  */
-export const generatePatientQRCodeData = (patientId, institutionId, patientData = {}) => {
-  // Create QR code payload with patient information
+export const generateClientQRCodeData = (clientId, institutionId, clientData = {}) => {
+  // Create QR code payload with Client information
   const qrData = {
-    patientId,
+    clientId,
     institutionId,
-    name: patientData.name || patientData.fullName || '',
-    phone: patientData.phone || '',
-    dateOfBirth: patientData.dateOfBirth || '',
+    name: clientData.name || clientData.fullName || '',
+    phone: clientData.phone || '',
+    dateOfBirth: clientData.dateOfBirth || '',
     // Add timestamp for validation
     generatedAt: new Date().toISOString()
   };
@@ -28,15 +28,15 @@ export const generatePatientQRCodeData = (patientId, institutionId, patientData 
 };
 
 /**
- * Generate QR code URL for patient card
- * @param {string} patientId - Patient ID
+ * Generate QR code URL for Client card
+ * @param {string} clientId - Client ID
  * @param {string} institutionId - Institution ID
- * @param {Object} patientData - Patient data
+ * @param {Object} clientData - Client data
  * @returns {string} QR code data URL
  */
-export const generatePatientQRCodeURL = async (patientId, institutionId, patientData = {}) => {
+export const generatePatientQRCodeURL = async (clientId, institutionId, clientData = {}) => {
   try {
-    const qrData = generatePatientQRCodeData(patientId, institutionId, patientData);
+    const qrData = generateClientQRCodeData(clientId, institutionId, clientData);
     
     // Use QRCode library to generate data URL
     // Note: This is a client-side generation
@@ -53,13 +53,13 @@ export const generatePatientQRCodeURL = async (patientId, institutionId, patient
 /**
  * Parse QR code data
  * @param {string} qrData - QR code data string
- * @returns {Object} Parsed patient data
+ * @returns {Object} Parsed Client data
  */
 export const parsePatientQRCode = (qrData) => {
   try {
     const data = JSON.parse(qrData);
     return {
-      patientId: data.patientId,
+      clientId: data.clientId,
       institutionId: data.institutionId,
       name: data.name,
       phone: data.phone,
@@ -103,20 +103,20 @@ export const validatePatientQRCode = (qrData, institutionId) => {
 };
 
 /**
- * React component for displaying patient QR code
+ * React component for displaying Client QR code
  * Note: This is exported separately for React component usage
  * Import QRCode from 'qrcode.react' in the component file instead
  */
-export const PatientQRCodeComponent = ({ patientId, institutionId, patientData = {}, size = 200 }) => {
-  const qrData = generatePatientQRCodeData(patientId, institutionId, patientData);
+export const PatientQRCodeComponent = ({ clientId, institutionId, clientData = {}, size = 200 }) => {
+  const qrData = generateClientQRCodeData(clientId, institutionId, clientData);
   
   // Note: QRCode component should be imported in the component file
-  // This is just a placeholder - actual implementation in CreatePatientModal
+  // This is just a placeholder - actual implementation in CreateClientModal
   return null;
 };
 
 export default {
-  generatePatientQRCodeData,
+  generateClientQRCodeData,
   generatePatientQRCodeURL,
   parsePatientQRCode,
   validatePatientQRCode,

@@ -1,7 +1,7 @@
 /**
  * Schedule Home Lab Visit Modal
  * 
- * Allows admins/doctors to schedule home laboratory visits for patients
+ * Allows admins/doctors to schedule home laboratory visits for clients
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,14 +13,14 @@ import { getPatientsByInstitution } from '../api/patientsAPI';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initialPatientId = null }) => {
+const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, clientId: initialPatientId = null }) => {
   const { userProfile, institutionId } = useUser();
   const [loading, setLoading] = useState(false);
-  const [patients, setPatients] = useState([]);
+  const [clients, setPatients] = useState([]);
   const [labTechnicians, setLabTechnicians] = useState([]);
   const [formData, setFormData] = useState({
-    patientId: initialPatientId || '',
-    patientName: '',
+    clientId: initialPatientId || '',
+    clientName: '',
     patientAddress: '',
     assignedLabTechnicianId: '',
     assignedLabTechnicianName: '',
@@ -37,7 +37,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
       loadPatients();
       loadLabTechnicians();
       if (initialPatientId) {
-        // Load patient details if patient ID is provided
+        // Load Client details if Client ID is provided
         loadPatientDetails(initialPatientId);
       }
     }
@@ -48,8 +48,8 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
       const patientsData = await getPatientsByInstitution(institutionId);
       setPatients(patientsData);
     } catch (error) {
-      console.error('Error loading patients:', error);
-      toast.error('Failed to load patients');
+      console.error('Error loading clients:', error);
+      toast.error('Failed to load clients');
     }
   };
 
@@ -85,30 +85,30 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
     }
   };
 
-  const loadPatientDetails = async (patientId) => {
+  const loadPatientDetails = async (clientId) => {
     try {
-      const patient = patients.find(p => p.id === patientId);
-      if (patient) {
+      const Client = clients.find(p => p.id === clientId);
+      if (Client) {
         setFormData(prev => ({
           ...prev,
-          patientId: patient.id,
-          patientName: patient.name || patient.fullName,
-          patientAddress: patient.address || `${patient.city || ''}, ${patient.state || ''} ${patient.zipCode || ''}`.trim()
+          clientId: client.id,
+          clientName: client.name || client.fullName,
+          patientAddress: client.address || `${client.city || ''}, ${client.state || ''} ${client.zipCode || ''}`.trim()
         }));
       }
     } catch (error) {
-      console.error('Error loading patient details:', error);
+      console.error('Error loading Client details:', error);
     }
   };
 
-  const handlePatientChange = (patientId) => {
-    const patient = patients.find(p => p.id === patientId);
-    if (patient) {
+  const handlePatientChange = (clientId) => {
+    const Client = clients.find(p => p.id === clientId);
+    if (Client) {
       setFormData(prev => ({
         ...prev,
-        patientId: patient.id,
-        patientName: patient.name || patient.fullName,
-        patientAddress: patient.address || `${patient.city || ''}, ${patient.state || ''} ${patient.zipCode || ''}`.trim()
+        clientId: client.id,
+        clientName: client.name || client.fullName,
+        patientAddress: client.address || `${client.city || ''}, ${client.state || ''} ${client.zipCode || ''}`.trim()
       }));
     }
   };
@@ -127,7 +127,7 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.patientId || !formData.assignedLabTechnicianId || !formData.testType || !formData.scheduledAt) {
+    if (!formData.clientId || !formData.assignedLabTechnicianId || !formData.testType || !formData.scheduledAt) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -135,8 +135,8 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
     setLoading(true);
     try {
       await createHomeLabVisit({
-        patientId: formData.patientId,
-        patientName: formData.patientName,
+        clientId: formData.clientId,
+        clientName: formData.clientName,
         patientAddress: formData.patientAddress,
         assignedLabTechnicianId: formData.assignedLabTechnicianId,
         assignedLabTechnicianName: formData.assignedLabTechnicianName,
@@ -186,33 +186,33 @@ const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, patientId: initia
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Patient Selection */}
+          {/* Client Selection */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
-              Patient *
+              Client *
             </label>
             <select
-              value={formData.patientId}
+              value={formData.clientId}
               onChange={(e) => handlePatientChange(e.target.value)}
               required
               className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
-              <option value="">Select Patient</option>
-              {patients.map(patient => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name || patient.fullName} ({patient.patientId || patient.id})
+              <option value="">Select Client</option>
+              {clients.map(Client => (
+                <option key={client.id} value={client.id}>
+                  {client.name || client.fullName} ({client.clientId || client.id})
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Patient Address Display */}
+          {/* Client Address Display */}
           {formData.patientAddress && (
             <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700/30">
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
                 <div>
-                  <p className="text-xs text-slate-400 mb-1">Patient Address</p>
+                  <p className="text-xs text-slate-400 mb-1">Client Address</p>
                   <p className="text-sm text-slate-300">{formData.patientAddress}</p>
                 </div>
               </div>

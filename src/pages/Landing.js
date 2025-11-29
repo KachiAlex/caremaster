@@ -1,454 +1,562 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
 import { 
-  HeartPulse,
-  Sparkles,
-  ShieldCheck,
-  Activity,
+  Heart, 
+  Bell, 
+  User, 
+  CheckCircle, 
+  Shield, 
   Clock, 
   Phone, 
+  Video, 
   ArrowRight,
+  Star,
+  MapPin,
+  MessageCircle,
   Stethoscope,
-  Users2,
-  LineChart,
-  TabletSmartphone,
-  ChevronRight,
+  Activity,
+  Users,
+  Award,
+  Zap
 } from 'lucide-react';
 
 const Landing = () => {
-  const stats = [
-    { label: 'Elderly supported', value: '12k+' },
-    { label: 'Care sessions completed', value: '2.4M+' },
-    { label: 'Average response time', value: '< 5 min' },
+  const navigate = useNavigate();
+  const { userRole } = useUser();
+
+  React.useEffect(() => {
+    const onKeyDown = (e) => {
+      try {
+        if (e.ctrlKey && e.altKey && (e.key === 'a' || e.key === 'A')) {
+          e.preventDefault();
+          if (userRole === 'admin') {
+            navigate('/admin/dashboard');
+          } else {
+            navigate('/admin/login');
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [navigate, userRole]);
+
+  const features = [
+    {
+      icon: Heart,
+      title: "Health Monitoring",
+      description: "Continuous monitoring of vital signs and health metrics"
+    },
+    {
+      icon: Shield,
+      title: "Secure & Private",
+      description: "Your health data is protected with enterprise-grade security"
+    },
+    {
+      icon: Users,
+      title: "Caregiver Support",
+      description: "Professional caregivers available 24/7 for your needs"
+    },
+    {
+      icon: Clock,
+      title: "24/7 Access",
+      description: "Round-the-clock support and emergency response"
+    }
   ];
 
-  const pillars = [
+  const services = [
     {
       icon: Stethoscope,
-      title: 'Clinical-grade home care',
-      description:
-        'Nurses, doctors, and caregivers orchestrated around each patient with clear care plans and digital workflows.',
-      tag: 'Care delivery',
+      title: "Home Visits",
+      description: "Scheduled and on-demand home visits from qualified nurses and healthcare professionals.",
+      color: "text-blue-600",
+      bgColor: "bg-blue-100"
     },
     {
-      icon: LineChart,
-      title: 'Real-time health intelligence',
-      description:
-        'Vitals, medications, and activity streams unified in a single timeline for proactive interventions.',
-      tag: 'Intelligence',
+      icon: Activity,
+      title: "Vitals Monitoring",
+      description: "Regular monitoring of blood pressure, blood sugar, temperature, and other vital signs.",
+      color: "text-green-600",
+      bgColor: "bg-green-100"
     },
     {
-      icon: Users2,
-      title: 'Family-first collaboration',
-      description:
-        'Give families a live window into care — updates, notes, and alerts in one secure experience.',
-      tag: 'Family',
+      icon: Bell,
+      title: "Emergency Support",
+      description: "24/7 emergency response with direct hospital and ambulance dispatch coordination.",
+      color: "text-red-600",
+      bgColor: "bg-red-100"
     },
+    {
+      icon: Video,
+      title: "Telemedicine",
+      description: "Video consultations with doctors and specialists.",
+      color: "text-purple-600",
+      bgColor: "bg-purple-100"
+    },
+    {
+      icon: Users,
+      title: "Family Integration",
+      description: "Keep family members informed with real-time updates and notifications.",
+      color: "text-orange-600",
+      bgColor: "bg-orange-100"
+    },
+    {
+      icon: Shield,
+      title: "Medication Management",
+      description: "Medication reminders, administration assistance, and tracking.",
+      color: "text-blue-600",
+      bgColor: "bg-blue-100"
+    }
   ];
 
-  const personas = [
+  const testimonials = [
     {
-      title: 'Health systems & hospitals',
-      description:
-        'Extend your clinical footprint into the home with a fully managed virtual ward for post-discharge and chronic care.',
-      cta: 'Talk to our team',
+      name: "Satisfied Client",
+      location: "Lagos, Nigeria",
+      rating: 5,
+      text: "Care Master has been a blessing for my family. The caregivers are professional and caring, and the 24/7 support gives us peace of mind.",
+      photo: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2",
+      age: "72 years old"
     },
     {
-      title: 'Home-care providers',
-      description:
-        'Run high-performing field teams with routing, scheduling, documentation, and compliance in one place.',
-      cta: 'Digitise your operations',
-    },
-    {
-      title: 'Families & caregivers',
-      description:
-        'Request trusted home-care, track each visit, and stay connected to the professionals supporting your loved ones.',
-      cta: 'Explore the family app',
-    },
+      name: "Mr. Chinedu Okoro",
+      location: "Port Harcourt, Nigeria",
+      rating: 5,
+      text: "The medication management system has been incredibly helpful. I never miss a dose anymore, and my family is always informed about my health status.",
+      photo: null,
+      age: "75 years old"
+    }
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      {/* Top gradient halo */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[520px] bg-[radial-gradient(circle_at_top,_#3b82f633,_transparent_60%),radial-gradient(circle_at_20%_40%,_#3b82f633,_transparent_55%),radial-gradient(circle_at_80%_0,_#3b82f633,_transparent_55%)]" />
-
-      {/* Navigation */}
-      <header className="relative z-10 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-lg shadow-blue-500/30">
-              <HeartPulse className="h-5 w-5 text-slate-950" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-base font-semibold tracking-tight text-slate-50">
-                  UltimateCare
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-blue-300">
-                  <Sparkles className="h-3 w-3 text-blue-300" />
-                  New
-                </span>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            {/* Logo and Tagline */}
+            <div className="flex items-center">
+              <div className="flex-shrink-0 flex items-center">
+                <Heart className="h-8 w-8 text-teal-500 mr-2" />
+                <h1 className="text-2xl font-black text-gray-900">Care Master</h1>
               </div>
-              <p className="text-xs text-slate-400">The operating system for modern home healthcare</p>
+              <p className="ml-4 text-sm text-gray-600 hidden sm:block">Professional Home Healthcare</p>
             </div>
-          </div>
 
-          <nav className="hidden items-center gap-8 text-xs font-medium text-slate-300 sm:flex">
-            <a href="#platform" className="hover:text-blue-300">
-              Platform
-            </a>
-            <a href="#who-we-serve" className="hover:text-blue-300">
-              Who we serve
-            </a>
-            <a href="#security" className="hover:text-blue-300">
-              Security
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Link
-              to="/auth"
-              className="hidden rounded-full border border-slate-700 px-4 py-1.5 text-xs font-medium text-slate-200 hover:border-slate-500 hover:text-white sm:inline-flex"
-            >
-              Log in
-            </Link>
+            {/* Right side - Sign In Button */}
+            <div className="flex items-center space-x-4">
               <Link
                 to="/institution"
-              className="inline-flex items-center gap-2 rounded-full bg-blue-400 px-4 py-1.5 text-xs font-semibold text-slate-950 shadow-lg shadow-blue-500/40 hover:bg-blue-300 sm:px-5 sm:text-sm"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 shadow-sm hover:shadow-md"
               >
-              Launch institution portal
-              <ArrowRight className="h-3.5 w-3.5" />
+                <User className="h-4 w-4 mr-2" />
+                Institution Portal
               </Link>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <main className="relative z-10">
-        <section className="border-b border-slate-800/60">
-          <div className="mx-auto flex max-w-6xl flex-col gap-12 px-4 pb-16 pt-12 sm:px-6 sm:pt-16 lg:flex-row lg:px-8 lg:pb-20 lg:pt-20">
-            {/* Left column */}
-            <div className="flex-1">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-300 backdrop-blur">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                Live in Lagos, Abuja & Port Harcourt
+      {/* Hero Section with Video Background */}
+      <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
+        {/* Background (local image, no external video) */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={process.env.PUBLIC_URL + '/images/story-care-checkup-1.png'}
+            alt="African elderly receiving healthcare"
+            className="w-full h-full object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/50 to-green-900/50" />
         </div>
 
-              <h1 className="mt-6 text-balance text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl lg:text-6xl">
-                Reimagining
-                <span className="bg-gradient-to-r from-blue-300 via-blue-300 to-blue-300 bg-clip-text text-transparent">
-                  {' '}
-                  connected care
-                </span>{' '}
-                at home.
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left Content */}
+          <div className="text-center lg:text-left text-white">
+            <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-white/20 text-white backdrop-blur-sm">
+              🇳🇬 Proudly Nigerian • NDPR Compliant
+            </span>
+            <h1 className="mt-4 text-4xl font-extrabold sm:text-5xl md:text-6xl">
+              Quality <span className="text-teal-300">Healthcare</span> At Your <span className="text-green-300">Doorstep</span>
             </h1>
-
-              <p className="mt-5 max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                UltimateCare is a full-stack home-health platform that connects providers, field
-                caregivers, and families in one secure experience — from request to recovery.
-              </p>
-
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <p className="mt-6 text-lg text-blue-100 max-w-xl mx-auto lg:mx-0">
+              Care Master provides compassionate and professional home healthcare services, ensuring comfort and well-being for your loved ones.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link
                 to="/institution"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-400 px-6 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-blue-500/40 hover:bg-blue-300"
+                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 transition-colors"
               >
-                  Book a demo for your institution
-                  <ChevronRight className="h-4 w-4" />
+                Get Started
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
-                <Link
-                  to="/services"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-700 bg-slate-950/60 px-5 py-2 text-xs font-medium text-slate-200 hover:border-slate-500 hover:text-white"
-                >
-                  Explore family app
-                  <TabletSmartphone className="h-4 w-4" />
-                </Link>
+              <a
+                href="tel:0800-Care Master"
+                className="inline-flex items-center justify-center px-6 py-3 border border-white/30 text-base font-medium rounded-md text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors"
+              >
+                <Phone className="mr-2 h-5 w-5" />
+                Call: 0800-Care Master
+              </a>
+            </div>
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 text-blue-100">
+              <div className="flex items-center justify-center lg:justify-start">
+                <CheckCircle className="h-5 w-5 text-green-300 mr-2" />
+                Licensed Professionals
               </div>
-
-              <div className="mt-6 flex flex-wrap gap-6 text-xs text-slate-400">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-blue-300" />
-                  NDPR-ready • HIPAA-inspired controls
+              <div className="flex items-center justify-center lg:justify-start">
+                <Shield className="h-5 w-5 text-blue-300 mr-2" />
+                Secure & Private
               </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-300" />
-                  24/7 triage & emergency escalation
-                </div>
-              </div>
-
-              <div className="mt-8 grid max-w-md grid-cols-3 gap-4 text-xs text-slate-300 sm:text-sm">
-                {stats.map((stat) => (
-                  <div key={stat.label}>
-                    <div className="text-base font-semibold text-slate-50 sm:text-lg">
-                      {stat.value}
-                    </div>
-                    <div className="mt-1 text-[11px] text-slate-400 sm:text-xs">{stat.label}</div>
-              </div>
-                ))}
+              <div className="flex items-center justify-center lg:justify-start">
+                <Clock className="h-5 w-5 text-purple-300 mr-2" />
+                24/7 Emergency Support
               </div>
             </div>
-
-            {/* Right column – product preview */}
-            <div className="flex-1">
-              <div className="relative mx-auto max-w-md rounded-3xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950 p-4 shadow-2xl shadow-slate-950/80">
-                <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/80 px-2.5 py-1">
-                    <div className="flex h-1.5 w-5 items-center justify-between">
-                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
           </div>
-                    Live visit · Nurse Amina
-                  </div>
-                  <span>UltimateCare OS</span>
-                </div>
 
-                <div className="space-y-3 rounded-2xl bg-slate-900/80 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-medium text-slate-200">Morning home visit</p>
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        BP, medication, mobility check, family update.
+          {/* Right Content - Keep only Nurse Fatima widget */}
+          <div className="mt-12 lg:mt-0 flex lg:items-start lg:justify-start">
+            {/* Floating Chat Widget */}
+            <div className="inline-block transform origin-top-left scale-[1.6] md:scale-[1.8] lg:scale-[2] lg:-translate-y-6 transition-transform duration-300 ease-out hover:-rotate-2 hover:shadow-2xl bg-white rounded-lg shadow-xl p-4 w-72 mx-auto lg:mx-0">
+              <div className="flex items-center mb-3">
+                <img
+                  className="h-10 w-10 rounded-full object-cover"
+                  src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&v=2"
+                  alt="Nurse Fatima Abdullahi"
+                />
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-900">Nurse Fatima Abdullahi</p>
+                  <p className="text-xs text-gray-500 flex items-center">
+                    <Heart className="h-3 w-3 text-red-500 mr-1" />
+                    <span className="text-yellow-500">★</span> 4.9 (156 visits)
+                  </p>
+                </div>
+              </div>
+              <div className="bg-green-50 p-2 rounded-lg mb-3">
+                <p className="text-xs text-green-800">
+                  "Hello! I'll be arriving at your location in 15 minutes. Please ensure the gate is open."
+                </p>
+              </div>
+              <div className="flex justify-between items-center">
+                <button className="flex items-center text-blue-600 hover:text-blue-800 text-xs">
+                  <MessageCircle className="h-3 w-3 mr-1" />
+                  Reply
+                </button>
+                <button className="flex items-center text-blue-600 hover:text-blue-800 text-xs">
+                  <Video className="h-3 w-3 mr-1" />
+                  Video Call
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-black text-gray-900 mb-4">Why Choose Care Master?</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              We provide comprehensive healthcare solutions designed specifically for Nigerian families
             </p>
           </div>
-                    <div className="rounded-xl bg-blue-400/10 px-3 py-1 text-[10px] font-medium text-blue-300">
-                      In progress
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <div key={index} className="text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Icon className="h-8 w-8 text-blue-600" />
                   </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-[10px] text-slate-300">
-                    <div className="rounded-xl bg-slate-950/60 p-2">
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <Activity className="h-3 w-3 text-blue-300" />
-                        Vitals
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                  <p className="text-gray-600">{feature.description}</p>
                 </div>
-                      <p className="mt-1 text-xs font-semibold text-slate-50">118/74 · 72 bpm</p>
+              );
+            })}
           </div>
-                    <div className="rounded-xl bg-slate-950/60 p-2">
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <Clock className="h-3 w-3 text-blue-300" />
-                        Next dose
         </div>
-                      <p className="mt-1 text-xs font-semibold text-slate-50">08:30 PM</p>
+      </section>
+
+      {/* Services Section */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Comprehensive Healthcare Services</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Everything you need for quality elderly care, delivered by certified professionals.
+            </p>
           </div>
-                    <div className="rounded-xl bg-slate-950/60 p-2">
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <Users2 className="h-3 w-3 text-blue-300" />
-                        Family
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {services.map((service, index) => {
+              const Icon = service.icon;
+              return (
+                <div key={index} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                  <div className={`w-16 h-16 ${service.bgColor} rounded-lg flex items-center justify-center mb-4`}>
+                    <Icon className={`h-8 w-8 ${service.color}`} />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">{service.title}</h3>
+                  <p className="text-gray-600 leading-relaxed">{service.description}</p>
                 </div>
-                      <p className="mt-1 text-[11px] text-blue-300">Update sent</p>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Real Stories Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Real Stories from Our Community</h2>
+            <p className="text-lg text-gray-600">See how Care Master is making a difference in the lives of African families</p>
+          </div>
+          
+          {/* Image Gallery */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="relative group">
+              <img
+                src="https://images.pexels.com/photos/7551649/pexels-photo-7551649.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                alt="African elderly woman receiving home healthcare"
+                className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-center">
+                  <Heart className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Compassionate Care</p>
+                </div>
               </div>
             </div>
             
-                  <div className="rounded-xl border border-slate-800/70 bg-slate-950/70 p-3 text-[11px] text-slate-300">
-                    <p className="mb-1 font-medium text-slate-200">
-                      “UltimateCare feels like having a digital matron coordinating every visit.”
-                    </p>
-                    <p className="text-[10px] text-slate-500">
-                      — Director of Nursing, partner hospital in Lagos
-                    </p>
-                  </div>
+            <div className="relative group">
+              <img
+                src={process.env.PUBLIC_URL + '/images/story-care-checkup-1.png'}
+                alt="African elderly man with healthcare professional"
+                className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-center">
+                  <Users className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Family Connection</p>
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Platform pillars */}
-        <section
-          id="platform"
-          className="border-b border-slate-800/60 bg-[radial-gradient(circle_at_top,_#0f172a,_#020617)] py-14 sm:py-16"
-        >
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
-                  Platform
-                </p>
-                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
-                  Built for the new era of home and virtual care.
-                </h2>
-                <p className="mt-3 max-w-xl text-sm text-slate-300">
-                  UltimateCare connects clinical teams, caregivers, families, and data in a single
-                  secure spine — so every visit is coordinated, visible, and measurable.
-                </p>
               </div>
             </div>
             
-            <div className="mt-8 grid gap-6 md:grid-cols-3">
-              {pillars.map((pillar) => {
-                const Icon = pillar.icon;
-                return (
-                  <div
-                    key={pillar.title}
-                    className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-lg shadow-black/40 transition hover:border-blue-400/50 hover:shadow-blue-500/20"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/90 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400">
-                        <span className="h-1.5 w-1.5 rounded-full bg-blue-400/80" />
-                        {pillar.tag}
-                      </div>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-400/15 text-blue-300">
-                        <Icon className="h-4 w-4" />
+            <div className="relative group">
+              <img
+                src="https://images.pexels.com/photos/7551617/pexels-photo-7551617.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                alt="African elderly woman with technology"
+                className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-center">
+                  <Activity className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Health Monitoring</p>
                 </div>
               </div>
-                    <h3 className="mt-4 text-sm font-semibold text-slate-50">{pillar.title}</h3>
-                    <p className="mt-2 text-xs leading-relaxed text-slate-300">
-                      {pillar.description}
-                    </p>
-                  </div>
-                );
-              })}
             </div>
-          </div>
-        </section>
-
-        {/* Who we serve */}
-        <section
-          id="who-we-serve"
-          className="border-b border-slate-800/60 bg-slate-950 py-14 sm:py-16"
-        >
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
-                  Who we serve
-                </p>
-                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
-                  One platform, tailored journeys.
-                </h2>
-              </div>
-              <a
-                href="tel:+2340000000000"
-                className="inline-flex items-center gap-2 text-xs font-medium text-blue-300 hover:text-blue-200"
-              >
-                <Phone className="h-3.5 w-3.5" />
-                Speak with our team
-              </a>
+            
+            <div className="relative group">
+              <img
+                src={process.env.PUBLIC_URL + '/images/story-care-checkup-2.png'}
+                alt="African elderly man with family"
+                className="w-full h-64 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-center">
+                  <Award className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Trusted Care</p>
                 </div>
+              </div>
+            </div>
 
-            <div className="mt-8 grid gap-6 md:grid-cols-3">
-              {personas.map((persona) => (
-                <div
-                  key={persona.title}
-                  className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm text-slate-200"
-                >
+            {/* Note: two extra placeholders removed per request */}
+          </div>
+
+          {/* Testimonials */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <div key={index} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                <div className="flex items-center mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-gray-600 mb-4 italic">"{testimonial.text}"</p>
+                <div className="flex items-center">
+                  <img
+                    src={testimonial.photo}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-blue-100"
+                  />
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-50">{persona.title}</h3>
-                    <p className="mt-3 text-xs leading-relaxed text-slate-300">
-                      {persona.description}
+                    <p className="font-semibold text-gray-900">{testimonial.name}</p>
+                    <p className="text-sm text-gray-500 flex items-center">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {testimonial.location}
                     </p>
+                    <p className="text-xs text-blue-600 font-medium">{testimonial.age}</p>
                   </div>
-                  <button className="mt-5 inline-flex items-center gap-2 text-xs font-medium text-blue-300 hover:text-blue-200">
-                    {persona.cta}
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-        {/* Security & compliance */}
-        <section
-          id="security"
-          className="border-b border-slate-800/60 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 py-14 sm:py-16"
-        >
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <div className="grid gap-10 md:grid-cols-[minmax(0,1.1fr),minmax(0,1fr)] md:items-center">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
-                  Security & trust
-                </p>
-                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">
-                  Designed for regulated healthcare environments.
-                </h2>
-                <p className="mt-3 text-sm text-slate-300">
-                  UltimateCare ships with opinionated defaults for data protection, access control,
-                  and auditability — giving your compliance and IT teams confidence from day one.
-                </p>
-
-                <div className="mt-6 grid gap-4 text-xs text-slate-300 sm:grid-cols-2">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1 rounded-full bg-blue-400/10 p-1.5 text-blue-300">
-                      <ShieldCheck className="h-3.5 w-3.5" />
+      {/* Video Testimonial Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-black text-gray-900 mb-4">See Care Master in Action</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Watch real stories from African families who have experienced the difference our care makes
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Video */}
+            <div className="relative">
+              <div className="relative rounded-lg overflow-hidden shadow-2xl">
+                <img
+                  className="w-full h-96 object-cover"
+                  src={process.env.PUBLIC_URL + '/images/story-care-checkup-2.png'}
+                  alt="Client Story"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                <div className="absolute bottom-4 left-4 text-white">
+                  <h3 className="text-lg font-semibold">Client Success Story</h3>
+                  <p className="text-sm opacity-90">Lagos, Nigeria</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Video Content */}
+            <div className="space-y-6">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Heart className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                      <p className="font-medium text-slate-100">Fine-grained access</p>
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        Role- and institution-aware permissions for admins, clinicians, and field
-                        caregivers.
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Compassionate Care</h3>
+                  <p className="text-gray-600">
+                    Our caregivers provide not just medical care, but emotional support and companionship that makes a real difference in the lives of our clients.
                   </p>
                 </div>
               </div>
               
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1 rounded-full bg-blue-400/10 p-1.5 text-blue-300">
-                      <Activity className="h-3.5 w-3.5" />
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                      <p className="font-medium text-slate-100">End-to-end audit trails</p>
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        Every change, visit, and health event is captured with rich metadata.
-                      </p>
-                    </div>
-                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Professional Excellence</h3>
+                  <p className="text-gray-600">
+                    All our healthcare professionals are licensed, experienced, and trained to provide the highest quality care in the comfort of your home.
+                  </p>
                 </div>
               </div>
               
-              <div className="rounded-3xl border border-blue-400/30 bg-gradient-to-br from-blue-500/15 via-slate-900/90 to-slate-950 p-4 text-[11px] text-slate-100 shadow-lg shadow-blue-500/20">
-                <div className="flex items-center justify-between">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-950/70 px-3 py-1 text-[10px] text-blue-200">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Security posture · UltimateCare Cloud
-                  </div>
-                  <span className="rounded-full bg-blue-400/15 px-2 py-0.5 text-[10px] text-blue-200">
-                    Realtime monitoring
-                  </span>
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Users className="h-6 w-6 text-purple-600" />
                 </div>
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center justify-between text-slate-200">
-                    <span>Data residency</span>
-                    <span className="text-blue-300">Africa + EU options</span>
-                  </div>
-                  <div className="flex items-center justify-between text-slate-200">
-                    <span>Encryption</span>
-                    <span className="text-blue-300">In transit & at rest</span>
-                  </div>
-                  <div className="flex items-center justify-between text-slate-200">
-                    <span>Operational uptime</span>
-                    <span className="text-blue-300">&gt; 99.9% last 12 months</span>
-                  </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Family-Centered Approach</h3>
+                  <p className="text-gray-600">
+                    We work closely with families to ensure everyone is informed and involved in the care process, creating a supportive network around each client.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="pt-4">
+                <Link
+                  to="/institution"
+                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Video className="mr-2 h-5 w-5" />
+                  Get Started
+                </Link>
               </div>
             </div>
           </div>
         </div>
       </section>
-      </main>
+
+      {/* CTA Section */}
+      <section className="py-16 bg-gradient-to-r from-blue-600 to-green-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
+          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join thousands of Nigerian families who trust Care Master for their healthcare needs
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              to="/institution"
+              className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50"
+            >
+              <Zap className="mr-2 h-5 w-5" />
+              Get Started
+            </Link>
+            <Link
+              to="/pricing"
+              className="inline-flex items-center justify-center px-8 py-3 border border-white text-base font-medium rounded-md text-white hover:bg-white hover:text-blue-600"
+            >
+              <Award className="mr-2 h-5 w-5" />
+              View Our Plans
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-slate-800/60 bg-slate-950 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-            <div>
-            <div className="flex items-center gap-2 text-slate-200">
-              <HeartPulse className="h-4 w-4 text-blue-300" />
-              <span className="text-sm font-semibold">UltimateCare</span>
+      <footer className="bg-white py-8 border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center mb-4">
+                <Heart className="h-8 w-8 text-teal-500 mr-2" />
+                <h3 className="text-xl font-black text-gray-900">Care Master</h3>
+              </div>
+              <p className="text-gray-600 mb-4">
+                Professional home healthcare services for Nigerian families. 
+                Compassionate care, advanced technology, and 24/7 support.
+              </p>
+              <div className="flex space-x-4">
+                <a href="tel:0800-Care Master" className="text-blue-600 hover:text-blue-800">
+                  <Phone className="h-5 w-5" />
+                </a>
+                <a href="mailto:info@Care Master.ng" className="text-blue-600 hover:text-blue-800">
+                  <MessageCircle className="h-5 w-5" />
+                </a>
+              </div>
             </div>
-            <p className="mt-2 text-[11px]">
-              © {new Date().getFullYear()} UltimateCare. Empowering safer, smarter home healthcare
-              across Africa.
-            </p>
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Services</h4>
+              <ul className="space-y-2">
+                <li><a href="/services" className="text-gray-600 hover:text-blue-600">Home Visits</a></li>
+                <li><a href="/services" className="text-gray-600 hover:text-blue-600">Vitals Monitoring</a></li>
+                <li><a href="/services" className="text-gray-600 hover:text-blue-600">Emergency Support</a></li>
+                <li><a href="/services" className="text-gray-600 hover:text-blue-600">Telemedicine</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Company</h4>
+              <ul className="space-y-2">
+                <li><a href="/pricing" className="text-gray-600 hover:text-blue-600">Pricing</a></li>
+                <li><a href="/about" className="text-gray-600 hover:text-blue-600">About Us</a></li>
+                <li><a href="/contact" className="text-gray-600 hover:text-blue-600">Contact</a></li>
+                <li><a href="/privacy" className="text-gray-600 hover:text-blue-600">Privacy Policy</a></li>
+              </ul>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-4">
-            <a href="/privacy" className="hover:text-blue-300">
-              Privacy
-            </a>
-            <a href="/terms" className="hover:text-blue-300">
-              Terms
-            </a>
-            <a href="/pricing" className="hover:text-blue-300">
-              Pricing
-            </a>
+          <div className="border-t border-gray-200 mt-8 pt-8 text-center">
+            <p className="text-gray-500 text-sm">
+              &copy; 2024 Care Master. All rights reserved.
+            </p>
+            <p className="text-gray-500 text-sm mt-2">
+              Made by <a href="https://mgx.dev" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">MGX</a>
+            </p>
           </div>
         </div>
       </footer>

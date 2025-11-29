@@ -1,7 +1,7 @@
 /**
- * Comprehensive Patient Activity Logger
+ * Comprehensive Client Activity Logger
  * 
- * Centralized logging system for ALL patient activities across all staff types:
+ * Centralized logging system for ALL Client activities across all staff types:
  * - Physicians (Doctors)
  * - Registered Nurses (RN)
  * - Licensed Practical Nurses (LPN)
@@ -10,7 +10,7 @@
  * - Laboratory Technicians
  * - Administrators
  * 
- * All activities are logged to the patient's database with:
+ * All activities are logged to the Client's database with:
  * - Activity description
  * - Staff member (with proper medical terminology)
  * - Date and time
@@ -21,23 +21,23 @@ import { logPatientActivity } from './patientActivityLogger';
 import { getPatientById, getPatientByPatientId } from '../api/patientsAPI';
 
 /**
- * Get patient document ID from registration number or document ID
+ * Get Client document ID from registration number or document ID
  */
 async function getPatientDocInfo(patientIdentifier) {
   try {
     // Try to get by registration number first
-    const patient = await getPatientByPatientId(patientIdentifier);
+    const Client = await getPatientByPatientId(patientIdentifier);
     return {
-      docId: patient.id,
-      registrationNumber: patient.patientId || patientIdentifier
+      docId: client.id,
+      registrationNumber: client.clientId || patientIdentifier
     };
   } catch (error) {
     // If not found, assume patientIdentifier is already the doc ID
     try {
-      const patient = await getPatientById(patientIdentifier);
+      const Client = await getPatientById(patientIdentifier);
       return {
         docId: patientIdentifier,
-        registrationNumber: patient.patientId || patientIdentifier
+        registrationNumber: client.clientId || patientIdentifier
       };
     } catch (err) {
       // Fallback: use identifier as both
@@ -103,7 +103,7 @@ function prepareStaffMember(staffMember) {
 }
 
 /**
- * Comprehensive Patient Activity Logger
+ * Comprehensive Client Activity Logger
  */
 export const ComprehensivePatientLogger = {
   /**
@@ -115,7 +115,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'vital_signs_recorded',
         activityDescription: `Vital signs recorded: ${Object.keys(vitalSignsData).filter(k => vitalSignsData[k]).join(', ')}`,
@@ -140,7 +140,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'medication_administered',
         activityDescription: `Medication administered: ${medicationData.medicationName || medicationData.name || 'Unknown medication'}`,
@@ -165,7 +165,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'medication_prescribed',
         activityDescription: `Medication prescribed: ${prescriptionData.medicationName || prescriptionData.name || 'Unknown medication'}`,
@@ -190,7 +190,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'laboratory_test_ordered',
         activityDescription: `Laboratory test ordered: ${labTestData.testName || labTestData.name || 'Unknown test'}`,
@@ -217,7 +217,7 @@ export const ComprehensivePatientLogger = {
       const severity = labResultsData.abnormal ? 'warning' : 'info';
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'laboratory_test_results',
         activityDescription: `Laboratory test results: ${labResultsData.testName || labResultsData.name || 'Unknown test'} ${labResultsData.abnormal ? '(Abnormal)' : '(Normal)'}`,
@@ -242,7 +242,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'consultation_conducted',
         activityDescription: `Consultation: ${consultationData.type || consultationData.diagnosis || 'General consultation'}`,
@@ -267,7 +267,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'medical_report_created',
         activityDescription: `Medical report created: ${reportData.diagnosis || reportData.title || 'Medical assessment'}`,
@@ -292,7 +292,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'nurse_report_created',
         activityDescription: `Nurse report created: ${reportData.assessment || reportData.title || 'Nursing assessment'}`,
@@ -317,7 +317,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: activityType,
         activityDescription: `Care plan ${activityType === 'care_plan_created' ? 'created' : 'updated'}: ${carePlanData.title || 'Care plan'}`,
@@ -342,7 +342,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'care_plan_activity_executed',
         activityDescription: `Care plan activity executed: ${activityData.activityName || activityData.description || 'Activity'}`,
@@ -385,7 +385,7 @@ export const ComprehensivePatientLogger = {
       const severity = adherencePercentage < 50 ? 'warning' : adherencePercentage < 80 ? 'info' : 'info';
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'care_plan_adherence_report',
         activityDescription: `Care plan adherence: ${adherencePercentage}% (${adherenceData.totalActivities || 0} activities)`,
@@ -418,7 +418,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: activityType,
         activityDescription: `Care task ${activityType === 'care_task_completed' ? 'completed' : 'assigned'}: ${taskData.taskName || taskData.description || 'Task'}`,
@@ -443,7 +443,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'care_log_created',
         activityDescription: `Care log entry: ${careLogData.activity || careLogData.type || 'Care activity'}`,
@@ -468,7 +468,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'prescription_dispensed',
         activityDescription: `Prescription dispensed: ${prescriptionData.medicationName || prescriptionData.name || 'Unknown medication'}`,
@@ -493,7 +493,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'document_uploaded',
         activityDescription: `Document uploaded: ${documentData.documentName || documentData.fileName || 'Document'}`,
@@ -518,7 +518,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: 'profile_updated',
         activityDescription: `Profile updated: ${Object.keys(updateData).join(', ')}`,
@@ -543,7 +543,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType: activityType,
         activityDescription: `${assignmentData.role || 'Staff'} ${activityType.includes('assigned') ? 'assigned' : 'unassigned'}: ${assignmentData.staffName || 'Staff member'}`,
@@ -568,7 +568,7 @@ export const ComprehensivePatientLogger = {
       const preparedStaff = prepareStaffMember(staffMember);
       
       return await logPatientActivity({
-        patientId: registrationNumber,
+        clientId: registrationNumber,
         patientDocId: docId,
         activityType,
         activityDescription,

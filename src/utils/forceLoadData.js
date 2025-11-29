@@ -93,7 +93,7 @@ export const forceLoadCaregivers = async () => {
 };
 
 export const forceLoadPatients = async () => {
-  console.log('🔍 Force loading patients...');
+  console.log('🔍 Force loading clients...');
   
   try {
     const results = [];
@@ -107,15 +107,15 @@ export const forceLoadPatients = async () => {
         const userData = doc.data();
         const userType = userData.userType || userData.type;
         
-        // Include clients and patients (including legacy "elderly" records)
+        // Include elderly, clients, clients
         if (
+          userType === 'elderly' || 
           userType === 'client' || 
-          userType === 'patient' ||
-          userType === 'elderly'
+          userType === 'Client'
         ) {
           results.push({
             id: doc.id,
-            name: userData.displayName || userData.name || userData.email?.split('@')[0] || 'Patient',
+            name: userData.displayName || userData.name || userData.email?.split('@')[0] || 'Client',
             email: userData.email || '',
             phone: userData.phone || '',
             age: userData.age || '',
@@ -129,28 +129,28 @@ export const forceLoadPatients = async () => {
         }
       });
       
-      console.log(`✅ Found ${results.length} patients from users collection`);
+      console.log(`✅ Found ${results.length} clients from users collection`);
     } catch (error) {
-      console.error('❌ Error loading patients from users collection:', error);
+      console.error('❌ Error loading clients from users collection:', error);
     }
     
-    // Approach 2: Try patients collection
+    // Approach 2: Try clients collection
     try {
-      const patientsRef = collection(db, 'patients');
+      const patientsRef = collection(db, 'clients');
       const patientsSnapshot = await getDocs(patientsRef);
       
       patientsSnapshot.forEach((doc) => {
-        const patientData = doc.data();
+        const clientData = doc.data();
         results.push({
           id: doc.id,
-          ...patientData,
-          source: 'patients-collection'
+          ...clientData,
+          source: 'clients-collection'
         });
       });
       
-      console.log(`✅ Found ${patientsSnapshot.size} patients from patients collection`);
+      console.log(`✅ Found ${patientsSnapshot.size} clients from clients collection`);
     } catch (error) {
-      console.error('❌ Error loading from patients collection:', error);
+      console.error('❌ Error loading from clients collection:', error);
     }
     
     // Remove duplicates
@@ -158,22 +158,22 @@ export const forceLoadPatients = async () => {
     const seenIds = new Set();
     const seenEmails = new Set();
     
-    results.forEach(patient => {
-      const id = patient.id;
-      const email = (patient.email || '').toLowerCase();
+    results.forEach(Client => {
+      const id = client.id;
+      const email = (client.email || '').toLowerCase();
       
       if (!seenIds.has(id) && !seenEmails.has(email)) {
         seenIds.add(id);
         seenEmails.add(email);
-        uniquePatients.push(patient);
+        uniquePatients.push(Client);
       }
     });
     
-    console.log(`📊 Total unique patients: ${uniquePatients.length}`);
+    console.log(`📊 Total unique clients: ${uniquePatients.length}`);
     return uniquePatients;
     
   } catch (error) {
-    console.error('❌ Force load patients failed:', error);
+    console.error('❌ Force load clients failed:', error);
     return [];
   }
 };

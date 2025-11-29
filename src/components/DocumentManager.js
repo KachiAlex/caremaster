@@ -41,7 +41,7 @@ const DocumentManager = ({
         name: patientInfo.name || patientInfo.displayName,
         email: patientInfo.email,
         phone: patientInfo.phone || '+234 XXX XXX XXXX',
-        address: patientInfo.address || 'Patient Address',
+        address: patientInfo.address || 'Client Address',
         id: patientInfo.id
       },
       doctorInfo: {
@@ -62,7 +62,7 @@ const DocumentManager = ({
         },
         {
           description: 'Platform Service Fee',
-          details: 'UltimateCare telemedicine platform usage',
+          details: 'Care Master telemedicine platform usage',
           duration: 1,
           rate: platformFee,
           amount: platformFee
@@ -74,7 +74,7 @@ const DocumentManager = ({
       paymentStatus: appointment.paymentStatus || 'paid',
       paymentMethod: appointment.paymentMethod || 'Credit Card',
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      notes: 'Thank you for choosing UltimateCare Healthcare for your telemedicine consultation.'
+      notes: 'Thank you for choosing Care Master Healthcare for your telemedicine consultation.'
     };
   };
 
@@ -87,7 +87,7 @@ const DocumentManager = ({
         name: patientInfo.name || patientInfo.displayName,
         email: patientInfo.email,
         phone: patientInfo.phone || '+234 XXX XXX XXXX',
-        address: patientInfo.address || 'Patient Address',
+        address: patientInfo.address || 'Client Address',
         age: patientInfo.age || 'N/A',
         gender: patientInfo.gender || 'Not specified',
         id: patientInfo.id
@@ -99,7 +99,7 @@ const DocumentManager = ({
         phone: doctorInfo.phone || '+234 XXX XXX XXXX',
         licenseNumber: doctorInfo.licenseNumber || 'MD-2024-XXXX',
         qualifications: doctorInfo.qualifications || ['MBBS', 'MD'],
-        hospital: doctorInfo.hospital || 'UltimateCare Telemedicine Platform'
+        hospital: doctorInfo.hospital || 'Care Master Telemedicine Platform'
       },
       consultationDate: appointment.appointmentDate || new Date(),
       diagnosis: appointment.diagnosis || 'General health consultation',
@@ -240,8 +240,8 @@ Follow up as scheduled to ensure proper recovery.`,
               {/* Prescription Card */}
               <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-center mb-4">
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <Pill className="h-8 w-8 text-blue-600" />
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <Pill className="h-8 w-8 text-green-600" />
                   </div>
                   <div className="ml-4">
                     <h3 className="text-lg font-semibold text-gray-900">Medical Prescription</h3>
@@ -264,7 +264,7 @@ Follow up as scheduled to ensure proper recovery.`,
                     <span className="text-gray-600">Medications:</span>
                     <span className="font-semibold">1 prescribed</span>
                   </div>
-                  <div className="flex items-center text-sm text-blue-600">
+                  <div className="flex items-center text-sm text-green-600">
                     <CheckCircle className="h-4 w-4 mr-1" />
                     <span>Valid for 30 days</span>
                   </div>
@@ -273,7 +273,7 @@ Follow up as scheduled to ensure proper recovery.`,
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handlePreview('prescription')}
-                    className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     Preview
@@ -332,7 +332,7 @@ Follow up as scheduled to ensure proper recovery.`,
                     onClick={() => setActiveTab('prescription')}
                     className={`px-4 py-2 rounded-lg ${
                       activeTab === 'prescription' 
-                        ? 'bg-blue-600 text-white' 
+                        ? 'bg-green-600 text-white' 
                         : 'bg-white text-gray-600 hover:bg-gray-100'
                     }`}
                   >

@@ -1,29 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Activity, Clock, User, Heart, Thermometer, Droplets, Weight, Ruler, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getVitalSignsByPatient, createVitalSign } from '../api/vitalSignsAPI';
+import { getVitalSignsByClient, createVitalSign } from '../api/vitalSignsAPI';
 import { useUser } from '../contexts/UserContext';
 import NurseVitalsInput from './NurseVitalsInput';
 
-const VitalsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
+const VitalsLogModal = ({ client, isOpen, onClose, institutionId }) => {
   const { user, userProfile } = useUser();
   const [vitals, setVitals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
-    if (isOpen && patient?.id) {
+    if (isOpen && client?.id) {
       loadVitals();
     }
-  }, [isOpen, patient]);
+  }, [isOpen, client]);
 
   const loadVitals = async () => {
-    if (!patient?.id) return;
+    if (!client?.id) return;
     
     setLoading(true);
     try {
-      const patientId = patient.id || patient.patientId || patient.uid;
-      const vitalsData = await getVitalSignsByPatient(patientId, institutionId);
+      const clientId = client.id || client.clientId || client.uid;
+      const vitalsData = await getVitalSignsByClient(clientId, institutionId);
       setVitals(vitalsData || []);
     } catch (error) {
       console.error('Error loading vitals:', error);
@@ -87,8 +87,8 @@ const VitalsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
 
   if (!isOpen) return null;
 
-  const patientId = patient?.id || patient?.patientId || patient?.uid;
-  const patientName = patient?.name || patient?.fullName || 'Patient';
+  const clientId = client?.id || client?.clientId || client?.uid;
+  const clientName = client?.name || client?.fullName || 'Client';
   const performerId = user?.uid;
   const performerName = userProfile?.name || userProfile?.displayName || 'User';
 
@@ -103,7 +103,7 @@ const VitalsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
               Vital Signs Log
             </h2>
             <p className="text-red-100 text-sm mt-1">
-              {patientName}
+              {clientName}
             </p>
           </div>
           <button
@@ -123,8 +123,8 @@ const VitalsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
                 <p className="text-sm text-gray-600">Fill in the vital signs you want to record</p>
               </div>
               <NurseVitalsInput
-                patientId={patientId}
-                patientName={patientName}
+                clientId={clientId}
+                clientName={clientName}
                 nurseId={performerId}
                 nurseName={performerName}
                 onSave={handleSaveVital}

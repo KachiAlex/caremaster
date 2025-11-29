@@ -129,7 +129,7 @@ export const customReportAPI = {
       let data = [];
       
       switch (dataSource) {
-        case 'patients':
+        case 'clients':
           data = await getPatientReportData(fields, filters, dateRange);
           break;
         case 'appointments':
@@ -308,16 +308,16 @@ export const scheduledReportAPI = {
  * Helper functions for data retrieval
  */
 const getPatientReportData = async (fields, filters, dateRange) => {
-  // Implementation for patient data
-  const q = query(collection(db, 'patients'));
+  // Implementation for Client data
+  const q = query(collection(db, 'clients'));
   const snapshot = await getDocs(q);
   const data = [];
 
   snapshot.forEach((doc) => {
-    const patientData = doc.data();
+    const clientData = doc.data();
     const row = {};
     fields.forEach(field => {
-      row[field.key] = patientData[field.key] || '';
+      row[field.key] = clientData[field.key] || '';
     });
     data.push(row);
   });

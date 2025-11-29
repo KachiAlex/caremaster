@@ -1,12 +1,12 @@
 /**
- * Patient Log Viewer Component
+ * Client Log Viewer Component
  * 
- * Displays comprehensive patient logs with clinician information,
+ * Displays comprehensive Client logs with clinician information,
  * date, time, and action details
  * 
  * @component
- * @param {string} patientId - The patient's document ID
- * @param {string} patientName - The patient's name for display
+ * @param {string} clientId - The Client's document ID
+ * @param {string} clientName - The Client's name for display
  */
 
 import React, { useState, useEffect } from 'react';
@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { getPatientLogs, getLogsByCategory } from '../utils/patientLogger';
 
-const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
+const PatientLogViewer = ({ clientId, clientName = 'Client' }) => {
   const [logs, setLogs] = useState([]);
   const [filteredLogs, setFilteredLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
 
   useEffect(() => {
     loadLogs();
-  }, [patientId, selectedCategory, limit]);
+  }, [clientId, selectedCategory, limit]);
 
   useEffect(() => {
     filterLogs();
@@ -63,15 +63,15 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
       let loadedLogs;
       
       if (selectedCategory === 'all') {
-        loadedLogs = await getPatientLogs(patientId, limit);
+        loadedLogs = await getPatientLogs(clientId, limit);
       } else {
-        loadedLogs = await getLogsByCategory(patientId, selectedCategory, limit);
+        loadedLogs = await getLogsByCategory(clientId, selectedCategory, limit);
       }
       
       setLogs(loadedLogs);
       setFilteredLogs(loadedLogs);
     } catch (error) {
-      console.error('Error loading patient logs:', error);
+      console.error('Error loading Client logs:', error);
     } finally {
       setLoading(false);
     }
@@ -149,7 +149,7 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
       <div className="flex items-center justify-center h-64 bg-slate-950 rounded-3xl border border-slate-800/80">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading patient logs...</p>
+          <p className="text-slate-400">Loading Client logs...</p>
         </div>
       </div>
     );
@@ -162,10 +162,10 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-xl font-semibold tracking-tight text-slate-50">
-              Patient Logs
+              Client Logs
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              {patientName && `${patientName} • `}Complete activity history
+              {clientName && `${clientName} • `}Complete activity history
             </p>
           </div>
           <div className="text-right">
@@ -348,8 +348,8 @@ const PatientLogViewer = ({ patientId, patientName = 'Patient' }) => {
 };
 
 PatientLogViewer.propTypes = {
-  patientId: PropTypes.string.isRequired,
-  patientName: PropTypes.string
+  clientId: PropTypes.string.isRequired,
+  clientName: PropTypes.string
 };
 
 export default PatientLogViewer;

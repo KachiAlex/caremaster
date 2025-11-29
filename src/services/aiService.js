@@ -1,4 +1,4 @@
-// AI Service for UltimateCare - Advanced AI Integration
+// AI Service for Care Master - Advanced AI Integration
 class AIService {
   constructor() {
     this.isInitialized = false;
@@ -125,8 +125,8 @@ class AIService {
           messages: [
             {
               role: 'system',
-              content: `You are an AI assistant for UltimateCare, a modern home-health and care coordination platform. 
-              You help caregivers, doctors, and patients with healthcare tasks, scheduling, medication management, 
+              content: `You are an AI assistant for Care Master, a healthcare management platform for elderly care. 
+              You help caregivers, doctors, and clients with healthcare tasks, scheduling, medication management, 
               and emergency situations. Be professional, caring, and helpful. Current context: ${JSON.stringify(context)}`
             },
             ...this.conversationHistory.slice(-10).map(msg => ({
@@ -184,9 +184,9 @@ class AIService {
       actions.push('navigate_to_schedule');
       text = text.replace(/\[SCHEDULE\]/g, '');
     }
-    if (response.includes('[PATIENTS]')) {
+    if (response.includes('[clients]')) {
       actions.push('navigate_to_patients');
-      text = text.replace(/\[PATIENTS\]/g, '');
+      text = text.replace(/\[clients\]/g, '');
     }
     if (response.includes('[EMERGENCY]')) {
       actions.push('trigger_emergency');
@@ -224,20 +224,20 @@ class AIService {
   }
 
   // Advanced Predictive Care with Real AI
-  async generateCareRecommendations(patientData, careHistory) {
+  async generateCareRecommendations(clientData, careHistory) {
     const predictiveCare = this.aiModels.get('predictiveCare');
     
     try {
       // Use real AI for advanced analysis if available
       if (this.apiConfig.openai.apiKey) {
-        const recommendations = await this.generateAIHealthRecommendations(patientData, careHistory);
+        const recommendations = await this.generateAIHealthRecommendations(clientData, careHistory);
         return recommendations;
       } else {
         const recommendations = await predictiveCare.analyze({
-          patient: patientData,
+          Client: clientData,
           history: careHistory,
           context: this.context,
-          trends: await this.analyzeCareTrends(patientData.id)
+          trends: await this.analyzeCareTrends(clientData.id)
         });
         return recommendations;
       }
@@ -248,12 +248,12 @@ class AIService {
   }
 
   // AI-Powered Health Recommendations
-  async generateAIHealthRecommendations(patientData, careHistory) {
+  async generateAIHealthRecommendations(clientData, careHistory) {
     try {
       const prompt = `
-        Analyze the following patient data and provide healthcare recommendations:
+        Analyze the following Client data and provide healthcare recommendations:
         
-        Patient: ${JSON.stringify(patientData)}
+        Client: ${JSON.stringify(clientData)}
         Care History: ${JSON.stringify(careHistory)}
         
         Please provide:
@@ -294,7 +294,7 @@ class AIService {
           messages: [
             {
               role: 'system',
-              content: 'You are a medical AI assistant for multi-generational home and community care. Provide accurate, evidence-based healthcare recommendations and always prioritize patient safety.'
+              content: 'You are a medical AI assistant specializing in elderly care. Provide accurate, evidence-based healthcare recommendations. Always prioritize Client safety.'
             },
             {
               role: 'user',
@@ -591,9 +591,9 @@ class AIService {
       }
 
       const prompt = `
-        Analyze these vital signs for a patient receiving home-based care:
+        Analyze these vital signs for an elderly Client:
         
-        Patient Profile: ${JSON.stringify(patientProfile)}
+        Client Profile: ${JSON.stringify(patientProfile)}
         Vital Signs: ${JSON.stringify(vitalSignsData)}
         
         Provide analysis including:
@@ -646,7 +646,7 @@ class AIService {
           messages: [
             {
               role: 'system',
-              content: 'You are a medical AI expert specializing in vital signs analysis for patients receiving home-based and community care. Provide accurate assessments and prioritize patient safety.'
+              content: 'You are a medical AI expert specializing in vital signs analysis for elderly clients. Provide accurate assessments and prioritize Client safety.'
             },
             {
               role: 'user',
@@ -690,7 +690,7 @@ class AIService {
       nextSteps: []
     };
 
-    // Basic vital signs ranges for adults receiving home care
+    // Basic vital signs ranges for elderly
     const normalRanges = {
       blood_pressure: { systolic: [90, 140], diastolic: [60, 90] },
       heart_rate: [60, 100],
@@ -747,9 +747,9 @@ class AIService {
       }
 
       const prompt = `
-        Analyze this emergency situation for a patient receiving home-based care:
+        Analyze this emergency situation for an elderly Client:
         
-        Patient Context: ${JSON.stringify(patientContext)}
+        Client Context: ${JSON.stringify(patientContext)}
         Situation: ${JSON.stringify(situationData)}
         
         Assess:
@@ -802,7 +802,7 @@ class AIService {
           messages: [
             {
               role: 'system',
-              content: 'You are an emergency medical AI assistant. Prioritize patient safety and provide clear, actionable emergency response guidance.'
+              content: 'You are an emergency medical AI assistant. Prioritize Client safety and provide clear, actionable emergency response guidance.'
             },
             {
               role: 'user',
@@ -837,7 +837,7 @@ class AIService {
       severity,
       immediateActions: [
         {
-          action: 'Assess patient condition',
+          action: 'Assess Client condition',
           priority: 'immediate',
           estimatedTime: '2 minutes'
         },
@@ -847,7 +847,7 @@ class AIService {
           estimatedTime: '3 minutes'
         }
       ],
-      riskFactors: ['age', 'medical history'],
+      riskFactors: ['elderly', 'medical history'],
       responseProtocol: {
         level: severity === 'high' ? '1' : '2',
         description: severity === 'high' ? 'Immediate medical attention required' : 'Monitor and assess',
@@ -929,10 +929,10 @@ class AIService {
     }
   }
 
-  async analyzeCareTrends(patientId) {
-    // Analyze care trends for specific patient
+  async analyzeCareTrends(clientId) {
+    // Analyze care trends for specific Client
     try {
-      const response = await fetch(`/api/analytics/care-trends/${patientId}`);
+      const response = await fetch(`/api/analytics/care-trends/${clientId}`);
       const data = await response.json();
       return data;
     } catch (error) {
@@ -1039,21 +1039,21 @@ class AIService {
   }
 
   // AI-Powered Caregiver Matching
-  async matchCaregivers(caregivers, patientData, filters) {
+  async matchCaregivers(caregivers, clientData, filters) {
     try {
       if (!this.apiConfig.openai.apiKey) {
-        return this.performBasicCaregiverMatching(caregivers, patientData, filters);
+        return this.performBasicCaregiverMatching(caregivers, clientData, filters);
       }
 
       const prompt = `
-        Match caregivers to a patient based on their needs and preferences:
+        Match caregivers to a Client based on their needs and preferences:
         
-        Patient Data: ${JSON.stringify(patientData)}
+        Client Data: ${JSON.stringify(clientData)}
         Available Caregivers: ${JSON.stringify(caregivers.slice(0, 10))} // Limit for token efficiency
         Filters: ${JSON.stringify(filters)}
         
         For each caregiver, calculate a match score (0-100) based on:
-        1. Patient needs vs caregiver specialties
+        1. Client needs vs caregiver specialties
         2. Location and availability
         3. Experience level
         4. Language compatibility
@@ -1087,7 +1087,7 @@ class AIService {
           messages: [
             {
               role: 'system',
-              content: 'You are an AI expert in healthcare matching. Analyze caregiver-patient compatibility and provide accurate match scores with detailed reasoning.'
+              content: 'You are an AI expert in healthcare matching. Analyze caregiver-Client compatibility and provide accurate match scores with detailed reasoning.'
             },
             {
               role: 'user',
@@ -1130,11 +1130,11 @@ class AIService {
         .slice(0, 10); // Top 10 matches
     } catch (error) {
       console.error('AI caregiver matching failed:', error);
-      return this.performBasicCaregiverMatching(caregivers, patientData, filters);
+      return this.performBasicCaregiverMatching(caregivers, clientData, filters);
     }
   }
 
-  performBasicCaregiverMatching(caregivers, patientData, filters) {
+  performBasicCaregiverMatching(caregivers, clientData, filters) {
     // Basic matching algorithm without AI
     return caregivers
       .map(caregiver => {
@@ -1168,7 +1168,7 @@ class AIService {
         }
 
         // Specialty matching (10 points max)
-        const patientNeeds = patientData?.conditions || [];
+        const patientNeeds = clientData?.conditions || [];
         const specialtyMatches = caregiver.specialties.filter(specialty => 
           patientNeeds.some(need => need.toLowerCase().includes(specialty.split('_')[0]))
         );
@@ -1179,7 +1179,7 @@ class AIService {
 
         // Generate basic insights
         if (score >= 80) {
-          insights.push('Excellent match for patient needs');
+          insights.push('Excellent match for Client needs');
         } else if (score >= 70) {
           insights.push('Good match with minor considerations');
         } else if (score >= 60) {
@@ -1256,8 +1256,8 @@ class VoiceAssistantModel {
       return 'message';
     } else if (lowerText.includes('schedule') || lowerText.includes('appointment')) {
       return 'schedule';
-    } else if (lowerText.includes('patient') || lowerText.includes('care')) {
-      return 'patient';
+    } else if (lowerText.includes('Client') || lowerText.includes('care')) {
+      return 'Client';
     } else if (lowerText.includes('task') || lowerText.includes('todo')) {
       return 'task';
     } else if (lowerText.includes('emergency') || lowerText.includes('urgent')) {
@@ -1291,11 +1291,11 @@ class VoiceAssistantModel {
         confidence: 0.9,
         suggestions: ['Schedule appointment', 'Check today\'s schedule', 'Reschedule meeting']
       },
-      patient: {
-        text: "I can help you with patient care. What would you like to do?",
+      Client: {
+        text: "I can help you with Client care. What would you like to do?",
         actions: ['navigate_to_patients', 'view_patient_details'],
         confidence: 0.9,
-        suggestions: ['View patient John', 'Check patient vitals', 'Update care plan']
+        suggestions: ['View Client John', 'Check Client vitals', 'Update care plan']
       },
       task: {
         text: "I can help you with tasks. What task would you like to work on?",
@@ -1316,7 +1316,7 @@ class VoiceAssistantModel {
         suggestions: ['Check medication schedule', 'Log medication taken', 'Refill prescription']
       },
       help: {
-        text: "I'm here to help! I can assist with calls, messages, scheduling, patient care, tasks, and emergencies. What would you like to do?",
+        text: "I'm here to help! I can assist with calls, messages, scheduling, Client care, tasks, and emergencies. What would you like to do?",
         actions: ['show_help', 'show_commands'],
         confidence: 0.8,
         suggestions: ['Show available commands', 'How do I make a call?', 'How do I send a message?']
@@ -1325,7 +1325,7 @@ class VoiceAssistantModel {
         text: "I understand you're looking for assistance. Could you be more specific about what you'd like to do?",
         actions: ['show_help'],
         confidence: 0.6,
-        suggestions: ['Make a call', 'Send a message', 'Check schedule', 'View patients']
+        suggestions: ['Make a call', 'Send a message', 'Check schedule', 'View clients']
       }
     };
 
@@ -1375,21 +1375,21 @@ class SmartSchedulerModel {
 
 class PredictiveCareModel {
   async analyze(input) {
-    const { patient, history, context } = input;
+    const { Client, history, context } = input;
     
     // Simulate predictive analysis
-    const predictions = await this.generatePredictions(patient, history);
+    const predictions = await this.generatePredictions(Client, history);
     const recommendations = await this.generateRecommendations(predictions);
     
     return {
       predictions,
       recommendations,
       confidence: Math.random() * 0.3 + 0.7,
-      riskFactors: this.analyzeRiskFactors(patient, history)
+      riskFactors: this.analyzeRiskFactors(Client, history)
     };
   }
 
-  async generatePredictions(patient, history) {
+  async generatePredictions(Client, history) {
     return {
       healthTrends: ['stable', 'improving'],
       medicationAdherence: Math.random() * 0.3 + 0.7,
@@ -1420,10 +1420,10 @@ class PredictiveCareModel {
     return recommendations;
   }
 
-  analyzeRiskFactors(patient, history) {
+  analyzeRiskFactors(Client, history) {
     return {
-      age: patient.age > 80 ? 'high' : 'medium',
-      mobility: patient.mobilityIssues ? 'high' : 'low',
+      age: client.age > 80 ? 'high' : 'medium',
+      mobility: client.mobilityIssues ? 'high' : 'low',
       medication: history.medicationIssues ? 'medium' : 'low'
     };
   }
@@ -1711,7 +1711,7 @@ class ContextAnalyzerModel {
     
     if (page.includes('messages')) return 'messaging';
     if (page.includes('calls')) return 'calling';
-    if (page.includes('patients')) return 'patient_care';
+    if (page.includes('clients')) return 'patient_care';
     if (page.includes('schedule')) return 'scheduling';
     if (page.includes('tasks')) return 'task_management';
     
@@ -1741,10 +1741,10 @@ class ContextAnalyzerModel {
     const recommendations = [];
     
     if (context.role === 'caregiver') {
-      recommendations.push('Consider checking patient vitals');
+      recommendations.push('Consider checking Client vitals');
       recommendations.push('Review upcoming appointments');
     } else if (context.role === 'doctor') {
-      recommendations.push('Check new patient messages');
+      recommendations.push('Check new Client messages');
       recommendations.push('Review pending consultations');
     }
     

@@ -31,8 +31,8 @@ export const prescriptionRefillsAPI = {
       const refillRequest = {
         medicationId: refillData.medicationId,
         medicationName: refillData.medicationName,
-        patientId: refillData.patientId,
-        patientName: refillData.patientName,
+        clientId: refillData.clientId,
+        clientName: refillData.clientName,
         doctorId: refillData.doctorId || null,
         doctorName: refillData.doctorName || null,
         institutionId: refillData.institutionId,
@@ -72,13 +72,13 @@ export const prescriptionRefillsAPI = {
   },
 
   /**
-   * Get refill requests for a patient
+   * Get refill requests for a Client
    */
-  getRefillsByPatient: async (patientId, filters = {}) => {
+  getRefillsByPatient: async (clientId, filters = {}) => {
     try {
       let refillsQuery = query(
         collection(db, 'prescriptionRefills'),
-        where('patientId', '==', patientId),
+        where('clientId', '==', clientId),
         orderBy('requestedDate', 'desc')
       );
 
@@ -108,7 +108,7 @@ export const prescriptionRefillsAPI = {
 
       return refills;
     } catch (error) {
-      console.error('Error fetching patient refills:', error);
+      console.error('Error fetching Client refills:', error);
       throw error;
     }
   },
@@ -252,7 +252,7 @@ export const prescriptionRefillsAPI = {
   /**
    * Get medications due for refill
    */
-  getMedicationsDueForRefill: async (patientId, daysThreshold = 7) => {
+  getMedicationsDueForRefill: async (clientId, daysThreshold = 7) => {
     try {
       const today = new Date();
       const thresholdDate = new Date();
@@ -260,7 +260,7 @@ export const prescriptionRefillsAPI = {
 
       const refillsQuery = query(
         collection(db, 'prescriptionRefills'),
-        where('patientId', '==', patientId),
+        where('clientId', '==', clientId),
         where('status', '==', 'filled'),
         where('nextRefillDate', '<=', Timestamp.fromDate(thresholdDate))
       );
@@ -326,14 +326,14 @@ export const prescriptionRefillsAPI = {
   /**
    * Calculate refill compliance rate
    */
-  calculateComplianceRate: async (patientId, months = 6) => {
+  calculateComplianceRate: async (clientId, months = 6) => {
     try {
       const startDate = new Date();
       startDate.setMonth(startDate.getMonth() - months);
 
       const refillsQuery = query(
         collection(db, 'prescriptionRefills'),
-        where('patientId', '==', patientId),
+        where('clientId', '==', clientId),
         where('requestedDate', '>=', Timestamp.fromDate(startDate))
       );
 
@@ -374,10 +374,10 @@ export const prescriptionRefillsAPI = {
   /**
    * Subscribe to refill updates
    */
-  subscribeToRefills: (patientId, callback) => {
+  subscribeToRefills: (clientId, callback) => {
     const refillsQuery = query(
       collection(db, 'prescriptionRefills'),
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('requestedDate', 'desc')
     );
 

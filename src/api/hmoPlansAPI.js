@@ -3,7 +3,7 @@
  * 
  * Manages HMO (Health Maintenance Organization) plans:
  * - Plan creation and management
- * - Patient plan assignment
+ * - Client plan assignment
  * - Plan-based pricing and discounts
  * - Co-pay configuration
  */
@@ -166,9 +166,9 @@ export const deleteHMOPlan = async (planId) => {
 };
 
 /**
- * Assign HMO plan to patient
+ * Assign HMO plan to Client
  */
-export const assignHMOPlanToPatient = async (patientId, planId, assignmentData = {}) => {
+export const assignHMOPlanToPatient = async (clientId, planId, assignmentData = {}) => {
   try {
     const {
       planNumber = null,
@@ -183,7 +183,7 @@ export const assignHMOPlanToPatient = async (patientId, planId, assignmentData =
     // Check for existing assignment
     const existingQuery = query(
       collection(db, PATIENT_HMO_ASSIGNMENTS_COLLECTION),
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('isActive', '==', true)
     );
     const existingSnap = await getDocs(existingQuery);
@@ -203,7 +203,7 @@ export const assignHMOPlanToPatient = async (patientId, planId, assignmentData =
 
     // Create new assignment
     const assignment = {
-      patientId,
+      clientId,
       hmoPlanId: planId,
       hmoPlanName: plan.name,
       planNumber: planNumber || plan.planNumber,
@@ -219,8 +219,8 @@ export const assignHMOPlanToPatient = async (patientId, planId, assignmentData =
       assignment
     );
 
-    // Update patient record
-    const patientRef = doc(db, 'patients', patientId);
+    // Update Client record
+    const patientRef = doc(db, 'clients', clientId);
     await updateDoc(patientRef, {
       hmoPlanId: planId,
       hmoPlanName: plan.name,
@@ -233,19 +233,19 @@ export const assignHMOPlanToPatient = async (patientId, planId, assignmentData =
       ...assignment
     };
   } catch (error) {
-    console.error('Error assigning HMO plan to patient:', error);
+    console.error('Error assigning HMO plan to Client:', error);
     throw error;
   }
 };
 
 /**
- * Get patient's active HMO plan
+ * Get Client's active HMO plan
  */
-export const getPatientHMOPlan = async (patientId) => {
+export const getPatientHMOPlan = async (clientId) => {
   try {
     const assignmentQuery = query(
       collection(db, PATIENT_HMO_ASSIGNMENTS_COLLECTION),
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('isActive', '==', true),
       orderBy('createdAt', 'desc'),
       limit(1)
@@ -270,19 +270,19 @@ export const getPatientHMOPlan = async (patientId) => {
       plan
     };
   } catch (error) {
-    console.error('Error fetching patient HMO plan:', error);
+    console.error('Error fetching Client HMO plan:', error);
     throw error;
   }
 };
 
 /**
- * Remove HMO plan from patient
+ * Remove HMO plan from Client
  */
-export const removeHMOPlanFromPatient = async (patientId) => {
+export const removeHMOPlanFromPatient = async (clientId) => {
   try {
     const assignmentQuery = query(
       collection(db, PATIENT_HMO_ASSIGNMENTS_COLLECTION),
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('isActive', '==', true)
     );
 
@@ -303,8 +303,8 @@ export const removeHMOPlanFromPatient = async (patientId) => {
 
     await Promise.all(batch);
 
-    // Update patient record
-    const patientRef = doc(db, 'patients', patientId);
+    // Update Client record
+    const patientRef = doc(db, 'clients', clientId);
     await updateDoc(patientRef, {
       hmoPlanId: null,
       hmoPlanName: null,
@@ -314,13 +314,13 @@ export const removeHMOPlanFromPatient = async (patientId) => {
 
     return { success: true };
   } catch (error) {
-    console.error('Error removing HMO plan from patient:', error);
+    console.error('Error removing HMO plan from Client:', error);
     throw error;
   }
 };
 
 /**
- * Get all patients with a specific HMO plan
+ * Get all clients with a specific HMO plan
  */
 export const getPatientsByHMOPlan = async (planId) => {
   try {
@@ -331,22 +331,22 @@ export const getPatientsByHMOPlan = async (planId) => {
     );
 
     const assignmentSnap = await getDocs(assignmentQuery);
-    const patients = [];
+    const clients = [];
 
     assignmentSnap.forEach((doc) => {
       const assignment = doc.data();
-      patients.push({
+      clients.push({
         assignmentId: doc.id,
-        patientId: assignment.patientId,
+        clientId: assignment.clientId,
         planNumber: assignment.planNumber,
         effectiveDate: assignment.effectiveDate ? new Date(assignment.effectiveDate) : null,
         expiryDate: assignment.expiryDate ? new Date(assignment.expiryDate) : null
       });
     });
 
-    return patients;
+    return clients;
   } catch (error) {
-    console.error('Error fetching patients by HMO plan:', error);
+    console.error('Error fetching clients by HMO plan:', error);
     throw error;
   }
 };

@@ -15,18 +15,16 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { logVitalSigns } from '../utils/patientLogger';
-import { checkAbnormalVitalSigns } from '../utils/patientLogNotifications';
 
 const VITAL_SIGNS_COLLECTION = 'vitalSigns';
 
-// Get all vital signs for a patient
-export const getVitalSignsByPatient = async (patientId, institutionId = null) => {
+// Get all vital signs for a Client
+export const getVitalSignsByClient = async (clientId, institutionId = null) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
     let q = query(
       vitalSignsRef, 
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('recordedAt', 'desc')
     );
     
@@ -34,7 +32,7 @@ export const getVitalSignsByPatient = async (patientId, institutionId = null) =>
     if (institutionId) {
       q = query(
         vitalSignsRef, 
-        where('patientId', '==', patientId),
+        where('clientId', '==', clientId),
         where('institutionId', '==', institutionId),
         orderBy('recordedAt', 'desc')
       );
@@ -61,14 +59,14 @@ export const getVitalSignsByPatient = async (patientId, institutionId = null) =>
   }
 };
 
-// Get latest vital signs for a patient
-export const getLatestVitalSigns = async (patientId) => {
+// Get latest vital signs for a Client
+export const getLatestVitalSigns = async (clientId) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
     // Simplified query without composite index requirement
     const q = query(
       vitalSignsRef, 
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       limit(10) // Get more records and sort client-side
     );
     const querySnapshot = await getDocs(q);
@@ -99,13 +97,13 @@ export const getLatestVitalSigns = async (patientId) => {
   }
 };
 
-// Get vital signs by type for a patient
-export const getVitalSignsByType = async (patientId, vitalType) => {
+// Get vital signs by type for a Client
+export const getVitalSignsByType = async (clientId, vitalType) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
     const q = query(
       vitalSignsRef, 
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('type', '==', vitalType),
       orderBy('recordedAt', 'desc')
     );
@@ -131,7 +129,7 @@ export const getVitalSignsByType = async (patientId, vitalType) => {
 };
 
 // Create new vital sign record
-export const createVitalSign = async (vitalSignData, institutionId = null, clinicianInfo = null) => {
+export const createVitalSign = async (vitalSignData, institutionId = null) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
     const newVitalSign = {
@@ -143,48 +141,6 @@ export const createVitalSign = async (vitalSignData, institutionId = null, clini
     };
     
     const docRef = await addDoc(vitalSignsRef, newVitalSign);
-    
-    // Log to patient logs if clinician info is provided
-    if (clinicianInfo && vitalSignData.patientId) {
-      try {
-        // Get patient's simple patientId if available
-        const patientDoc = await getDoc(doc(db, 'patients', vitalSignData.patientId)).catch(() => null);
-        const patientData = patientDoc?.exists() ? patientDoc.data() : null;
-        const patientSimpleId = patientData?.patientId || vitalSignData.patientId;
-        
-        await logVitalSigns(patientSimpleId, clinicianInfo, {
-          type: vitalSignData.type,
-          value: vitalSignData.value,
-          unit: vitalSignData.unit,
-          status: vitalSignData.status,
-          notes: vitalSignData.notes,
-          recordedAt: new Date().toISOString()
-        });
-
-        // Check for abnormal vital signs and send notifications
-        try {
-          const patientName = patientData?.name || patientData?.fullName || 'Patient';
-          await checkAbnormalVitalSigns(
-            {
-              type: vitalSignData.type,
-              value: vitalSignData.value,
-              unit: vitalSignData.unit,
-              status: vitalSignData.status
-            },
-            patientSimpleId,
-            patientName,
-            institutionId || vitalSignData.institutionId
-          );
-        } catch (notificationError) {
-          console.warn('Could not check abnormal vital signs:', notificationError);
-          // Don't fail the vital sign creation if notification check fails
-        }
-      } catch (logError) {
-        console.warn('Could not log vital signs to patient logs:', logError);
-        // Don't fail the vital sign creation if logging fails
-      }
-    }
-    
     return docRef.id;
   } catch (error) {
     console.error('Error creating vital sign:', error);
@@ -222,12 +178,12 @@ export const deleteVitalSign = async (vitalSignId) => {
 };
 
 // Get vital signs within date range
-export const getVitalSignsByDateRange = async (patientId, startDate, endDate) => {
+export const getVitalSignsByDateRange = async (clientId, startDate, endDate) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
     const q = query(
       vitalSignsRef, 
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('recordedAt', '>=', Timestamp.fromDate(startDate)),
       where('recordedAt', '<=', Timestamp.fromDate(endDate)),
       orderBy('recordedAt', 'desc')
@@ -254,13 +210,13 @@ export const getVitalSignsByDateRange = async (patientId, startDate, endDate) =>
 };
 
 // Get vital signs trends (last 7 days)
-export const getVitalSignsTrends = async (patientId, vitalType) => {
+export const getVitalSignsTrends = async (clientId, vitalType) => {
   try {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 7);
     
-    const vitalSigns = await getVitalSignsByDateRange(patientId, startDate, endDate);
+    const vitalSigns = await getVitalSignsByDateRange(clientId, startDate, endDate);
     
     // Filter by type if specified
     const filteredSigns = vitalType ? 
@@ -334,11 +290,11 @@ export const getVitalSignById = async (vitalSignId) => {
 };
 
 // Real-time listener for vital signs
-export const subscribeToVitalSigns = (callback, patientId) => {
+export const subscribeToVitalSigns = (callback, clientId) => {
   const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
   const q = query(
     vitalSignsRef, 
-    where('patientId', '==', patientId),
+    where('clientId', '==', clientId),
     orderBy('recordedAt', 'desc')
   );
   
@@ -359,9 +315,9 @@ export const subscribeToVitalSigns = (callback, patientId) => {
 };
 
 // Get vital signs statistics
-export const getVitalSignsStats = async (patientId) => {
+export const getVitalSignsStats = async (clientId) => {
   try {
-    const vitalSigns = await getVitalSignsByPatient(patientId);
+    const vitalSigns = await getVitalSignsByClient(clientId);
     
     const stats = {
       total: vitalSigns.length,

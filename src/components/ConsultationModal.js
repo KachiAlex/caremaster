@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, FileText, Activity, Stethoscope, ClipboardList, Calendar, Pill, Camera, Upload, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 import EnhancedEPrescription from './EnhancedEPrescription';
-import { uploadPatientDocument } from '../utils/patientDocumentUpload';
+import { uploadClientDocument } from '../utils/clientDocumentUpload';
 import { createImagingRequest } from '../api/radiologyAPI';
 import VoiceToTextInput from './VoiceToTextInput';
 
@@ -64,7 +64,7 @@ const ConsultationModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-600 p-6 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center">
               <Stethoscope className="h-7 w-7 mr-3" />
@@ -161,7 +161,7 @@ const ConsultationModal = ({
           {activeTab === 'soap' && (
             <>
           {/* SOAP Notes Section */}
-          <div className="bg-gradient-to-r from-blue-50 to-blue-50 border-2 border-blue-200 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
               <ClipboardList className="h-5 w-5 text-blue-600 mr-2" />
               SOAP Notes
@@ -171,12 +171,12 @@ const ConsultationModal = ({
               {/* Subjective */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Subjective (Patient's Description) *
+                  Subjective (Client's Description) *
                 </label>
                 <VoiceToTextInput
                   value={consultationFormData.subjective || ''}
                   onChange={(value) => handleFieldChange('subjective', value)}
-                  placeholder="Patient's symptoms, complaints, and concerns in their own words... Click microphone to start dictation."
+                  placeholder="Client's symptoms, complaints, and concerns in their own words... Click microphone to start dictation."
                 />
               </div>
 
@@ -379,8 +379,8 @@ const ConsultationModal = ({
           {/* E-Prescription Tab */}
           {activeTab === 'prescription' && selectedClient && (
             <EnhancedEPrescription
-              patientId={selectedClient.id}
-              patientName={selectedClient.name || selectedClient.fullName}
+              clientId={selectedClient.id}
+              clientName={selectedClient.name || selectedClient.fullName}
               doctorId={doctorId}
               doctorName={doctorName}
               institutionId={institutionId}
@@ -413,7 +413,7 @@ const ConsultationModal = ({
                       setUploading(true);
                       try {
                         for (const file of files) {
-                          const result = await uploadPatientDocument(
+                          const result = await uploadClientDocument(
                             file,
                             selectedClient.id,
                             'consultation_document',
@@ -547,8 +547,8 @@ const ConsultationModal = ({
 
                       try {
                         const request = await createImagingRequest({
-                          patientId: selectedClient.id,
-                          patientName: selectedClient.name || selectedClient.fullName,
+                          clientId: selectedClient.id,
+                          clientName: selectedClient.name || selectedClient.fullName,
                           institutionId,
                           requestedByDoctorId: doctorId,
                           requestedByDoctorName: doctorName,
@@ -609,7 +609,7 @@ const ConsultationModal = ({
           </button>
           <button
             onClick={onSubmit}
-            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-lg hover:from-blue-700 hover:to-blue-700 transition-colors font-medium flex items-center"
+            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors font-medium flex items-center"
           >
             <FileText className="h-4 w-4 mr-2" />
             Save Consultation

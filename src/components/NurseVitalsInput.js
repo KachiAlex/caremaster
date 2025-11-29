@@ -16,8 +16,8 @@ import { toast } from 'react-toastify';
 import { createVitalSign } from '../api/vitalSignsAPI';
 import { useUser } from '../contexts/UserContext';
 
-const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, onCancel }) => {
-  const { institutionId, userProfile } = useUser();
+const NurseVitalsInput = ({ clientId, clientName, nurseId, nurseName, onSave, onCancel }) => {
+  const { institutionId } = useUser();
   const [formData, setFormData] = useState({
     // Blood Pressure
     systolic: '',
@@ -161,8 +161,8 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
       // Save Blood Pressure
       if (formData.systolic && formData.diastolic) {
         vitalSignsToSave.push({
-          patientId,
-          patientName,
+          clientId,
+          clientName,
           nurseId,
           nurseName,
           type: 'Blood Pressure',
@@ -177,8 +177,8 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
       // Save Heart Rate
       if (formData.heartRate) {
         vitalSignsToSave.push({
-          patientId,
-          patientName,
+          clientId,
+          clientName,
           nurseId,
           nurseName,
           type: 'Heart Rate',
@@ -193,8 +193,8 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
       // Save Temperature
       if (formData.temperature) {
         vitalSignsToSave.push({
-          patientId,
-          patientName,
+          clientId,
+          clientName,
           nurseId,
           nurseName,
           type: 'Temperature',
@@ -209,8 +209,8 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
       // Save Weight
       if (formData.weight) {
         vitalSignsToSave.push({
-          patientId,
-          patientName,
+          clientId,
+          clientName,
           nurseId,
           nurseName,
           type: 'Weight',
@@ -225,8 +225,8 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
       // Save Height
       if (formData.height) {
         vitalSignsToSave.push({
-          patientId,
-          patientName,
+          clientId,
+          clientName,
           nurseId,
           nurseName,
           type: 'Height',
@@ -241,8 +241,8 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
       // Save Oxygen Saturation
       if (formData.oxygenSaturation) {
         vitalSignsToSave.push({
-          patientId,
-          patientName,
+          clientId,
+          clientName,
           nurseId,
           nurseName,
           type: 'Oxygen Saturation',
@@ -257,8 +257,8 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
       // Save Respiratory Rate
       if (formData.respiratoryRate) {
         vitalSignsToSave.push({
-          patientId,
-          patientName,
+          clientId,
+          clientName,
           nurseId,
           nurseName,
           type: 'Respiratory Rate',
@@ -273,8 +273,8 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
       // Save Pain Level
       if (formData.painLevel !== '') {
         vitalSignsToSave.push({
-          patientId,
-          patientName,
+          clientId,
+          clientName,
           nurseId,
           nurseName,
           type: 'Pain Level',
@@ -286,48 +286,12 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
         });
       }
       
-      // Prepare clinician info for logging
-      const clinicianInfo = {
-        id: nurseId || userProfile?.id || userProfile?.uid,
-        name: nurseName || userProfile?.name || userProfile?.displayName,
-        role: userProfile?.userType || userProfile?.type || 'nurse',
-        email: userProfile?.email,
-        institutionId: institutionId
-      };
-      
-      // Save all vital signs with clinician info for logging
+      // Save all vital signs
       for (const vitalSign of vitalSignsToSave) {
-        await createVitalSign(vitalSign, institutionId, clinicianInfo);
+        await createVitalSign(vitalSign, institutionId);
       }
       
-      // Log vital signs activity to patient database (comprehensive logging)
-      try {
-        const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
-        const vitalSignsData = {
-          vitals: vitalSignsToSave.map(v => ({
-            type: v.type,
-            value: v.value,
-            unit: v.unit,
-            status: v.status
-          })),
-          assessmentTime: formData.assessmentTime,
-          notes: formData.notes
-        };
-        
-        await ComprehensivePatientLogger.logVitalSigns(
-          patientId,
-          vitalSignsData,
-          {
-            ...clinicianInfo,
-            medicalQualification: userProfile?.medicalQualification
-          }
-        );
-      } catch (logError) {
-        console.warn('Could not log vital signs to patient database:', logError);
-        // Don't fail the vital signs recording if logging fails
-      }
-      
-      toast.success(`Successfully recorded ${vitalSignsToSave.length} vital sign(s) for ${patientName}`);
+      toast.success(`Successfully recorded ${vitalSignsToSave.length} vital sign(s) for ${clientName}`);
       
       if (onSave) {
         onSave(vitalSignsToSave);
@@ -382,7 +346,7 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Record Vital Signs</h2>
-                <p className="text-sm text-gray-600">Patient: {patientName}</p>
+                <p className="text-sm text-gray-600">Client: {clientName}</p>
                 <p className="text-xs text-gray-500">Nurse: {nurseName}</p>
               </div>
             </div>
@@ -459,7 +423,7 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
             {/* Temperature */}
             <div className="space-y-2">
               <label className="flex items-center text-sm font-medium text-gray-700">
-                <Thermometer className="h-4 w-4 text-blue-600 mr-2" />
+                <Thermometer className="h-4 w-4 text-orange-600 mr-2" />
                 Temperature
               </label>
               <input
@@ -497,7 +461,7 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
             {/* Height */}
             <div className="space-y-2">
               <label className="flex items-center text-sm font-medium text-gray-700">
-                <Ruler className="h-4 w-4 text-blue-600 mr-2" />
+                <Ruler className="h-4 w-4 text-green-600 mr-2" />
                 Height
               </label>
               <input
@@ -533,7 +497,7 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
             {/* Respiratory Rate */}
             <div className="space-y-2">
               <label className="flex items-center text-sm font-medium text-gray-700">
-                <Activity className="h-4 w-4 text-blue-600 mr-2" />
+                <Activity className="h-4 w-4 text-purple-600 mr-2" />
                 Respiratory Rate
               </label>
               <input
@@ -551,7 +515,7 @@ const NurseVitalsInput = ({ patientId, patientName, nurseId, nurseName, onSave, 
             {/* Pain Level */}
             <div className="space-y-2">
               <label className="flex items-center text-sm font-medium text-gray-700">
-                <Heart className="h-4 w-4 text-blue-600 mr-2" />
+                <Heart className="h-4 w-4 text-pink-600 mr-2" />
                 Pain Level
               </label>
               <input

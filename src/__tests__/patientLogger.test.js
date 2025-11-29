@@ -1,6 +1,6 @@
 /**
- * Unit Tests for Patient Logger
- * Tests the logging of patient activities and retrieval of logs
+ * Unit Tests for Client Logger
+ * Tests the logging of Client activities and retrieval of logs
  */
 
 import {
@@ -33,7 +33,7 @@ jest.mock('firebase/firestore', () => ({
   serverTimestamp: jest.fn(() => ({ _methodName: 'serverTimestamp' }))
 }));
 
-describe('Patient Logger', () => {
+describe('Client Logger', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -47,13 +47,13 @@ describe('Patient Logger', () => {
   };
 
   describe('logPatientInteraction', () => {
-    test('should log patient interaction with all required fields', async () => {
+    test('should log Client interaction with all required fields', async () => {
       const mockDocRef = { id: 'log-123' };
       addDoc.mockResolvedValue(mockDocRef);
       collection.mockReturnValue({});
 
       const logData = {
-        patientId: 'UC-2025-0001',
+        clientId: 'UC-2025-0001',
         clinicianId: 'clinician-123',
         clinicianName: 'Dr. Jane Smith',
         clinicianRole: 'doctor',
@@ -70,7 +70,7 @@ describe('Patient Logger', () => {
       expect(collection).toHaveBeenCalledWith(db, 'patientLogs');
 
       const callArgs = addDoc.mock.calls[0][1];
-      expect(callArgs.patientId).toBe('UC-2025-0001');
+      expect(callArgs.clientId).toBe('UC-2025-0001');
       expect(callArgs.clinicianId).toBe('clinician-123');
       expect(callArgs.clinicianName).toBe('Dr. Jane Smith');
       expect(callArgs.clinicianRole).toBe('doctor');
@@ -81,22 +81,22 @@ describe('Patient Logger', () => {
 
     test('should throw error if required fields are missing', async () => {
       await expect(
-        logPatientInteraction({ patientId: null, clinicianId: '123', clinicianName: 'Test', clinicianRole: 'doctor', action: 'test' })
+        logPatientInteraction({ clientId: null, clinicianId: '123', clinicianName: 'Test', clinicianRole: 'doctor', action: 'test' })
       ).rejects.toThrow('Missing required log fields');
 
       await expect(
-        logPatientInteraction({ patientId: 'UC-2025-0001', clinicianId: null, clinicianName: 'Test', clinicianRole: 'doctor', action: 'test' })
+        logPatientInteraction({ clientId: 'UC-2025-0001', clinicianId: null, clinicianName: 'Test', clinicianRole: 'doctor', action: 'test' })
       ).rejects.toThrow('Missing required log fields');
     });
   });
 
   describe('logPatientRegistration', () => {
-    test('should log patient registration', async () => {
+    test('should log Client registration', async () => {
       const mockDocRef = { id: 'log-456' };
       addDoc.mockResolvedValue(mockDocRef);
       collection.mockReturnValue({});
 
-      const patientData = {
+      const clientData = {
         name: 'John Doe',
         email: 'john@example.com'
       };
@@ -104,7 +104,7 @@ describe('Patient Logger', () => {
       const logId = await logPatientRegistration(
         'UC-2025-0001',
         mockClinicianInfo,
-        patientData
+        clientData
       );
 
       expect(logId).toBe('log-456');
@@ -114,7 +114,7 @@ describe('Patient Logger', () => {
       expect(callArgs.action).toBe('patient_registered');
       expect(callArgs.category).toBe('registration');
       expect(callArgs.description).toContain('John Doe');
-      expect(callArgs.details.patientName).toBe('John Doe');
+      expect(callArgs.details.clientName).toBe('John Doe');
     });
   });
 
@@ -263,11 +263,11 @@ describe('Patient Logger', () => {
   });
 
   describe('getPatientLogs', () => {
-    test('should retrieve patient logs', async () => {
+    test('should retrieve Client logs', async () => {
       const mockLogs = [
         {
           id: 'log-1',
-          patientId: 'UC-2025-0001',
+          clientId: 'UC-2025-0001',
           action: 'vital_signs_recorded',
           category: 'vital_signs',
           description: 'Vital signs recorded',
@@ -276,7 +276,7 @@ describe('Patient Logger', () => {
         },
         {
           id: 'log-2',
-          patientId: 'UC-2025-0001',
+          clientId: 'UC-2025-0001',
           action: 'medication_administered',
           category: 'medication',
           description: 'Medication administered',
@@ -312,7 +312,7 @@ describe('Patient Logger', () => {
           callback({
             id: 'log-1',
             data: () => ({
-              patientId: 'UC-2025-0001',
+              clientId: 'UC-2025-0001',
               action: 'vital_signs_recorded',
               category: 'vital_signs',
               description: 'Vital signs recorded',

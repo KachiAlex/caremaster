@@ -30,9 +30,9 @@ const PortalSwitcher = () => {
     }
   }
 
-  // Patient
-  if ((role||'').toLowerCase() === 'patient' || (userProfile?.isElderly)) {
-    portals.push({ label: 'Patient', to: '/dashboard', icon: Users });
+  // Client
+  if ((role||'').toLowerCase() === 'Client' || (userProfile?.isElderly)) {
+    portals.push({ label: 'Client', to: '/dashboard', icon: Users });
   }
 
   // Super admin

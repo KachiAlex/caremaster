@@ -1,5 +1,5 @@
 // Client ID Generator Utility
-// Generates unique client IDs for new patient registrations
+// Generates unique client IDs for new client registrations
 
 /**
  * Generate a unique client ID

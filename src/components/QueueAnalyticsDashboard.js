@@ -6,7 +6,7 @@
  * - Throughput analysis
  * - Peak hours identification
  * - Department performance comparison
- * - Patient flow analytics
+ * - Client flow analytics
  */
 
 import React, { useState, useEffect } from 'react';
@@ -163,7 +163,7 @@ const QueueAnalyticsDashboard = ({ institutionId: propInstitutionId }) => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Patients</p>
+                  <p className="text-sm text-gray-600">Total clients</p>
                   <p className="text-3xl font-bold text-gray-900">{analytics.totalPatients}</p>
                 </div>
                 <Users className="h-8 w-8 text-blue-600" />
@@ -227,7 +227,7 @@ const QueueAnalyticsDashboard = ({ institutionId: propInstitutionId }) => {
                   .map(([hour, data]) => (
                     <div key={hour} className="text-center p-3 bg-blue-50 rounded-lg">
                       <div className="text-lg font-bold text-blue-900">{hour}:00</div>
-                      <div className="text-sm text-blue-700">{data.patientCount} patients</div>
+                      <div className="text-sm text-blue-700">{data.patientCount} clients</div>
                       <div className="text-xs text-blue-600">
                         Avg: {Math.round(data.averageWaitTime)}m
                       </div>
@@ -265,7 +265,7 @@ const QueueAnalyticsDashboard = ({ institutionId: propInstitutionId }) => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left">Department</th>
-                  <th className="px-4 py-2 text-right">Total Patients</th>
+                  <th className="px-4 py-2 text-right">Total clients</th>
                   <th className="px-4 py-2 text-right">Avg Wait Time</th>
                   <th className="px-4 py-2 text-right">Avg Service Time</th>
                   <th className="px-4 py-2 text-right">Throughput/Day</th>

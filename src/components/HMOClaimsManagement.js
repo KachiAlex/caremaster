@@ -39,7 +39,7 @@ import {
   BILL_STATUS
 } from '../api/autoBillingAPI';
 import { getHMOPlans } from '../api/hmoPlansAPI';
-import { getBillsByPatient } from '../api/autoBillingAPI';
+import { getBillsByClient } from '../api/autoBillingAPI';
 
 const HMO_CLAIM_STATUS = {
   PENDING: 'pending',
@@ -131,7 +131,7 @@ const HMOClaimsManagement = ({ institutionId: propInstitutionId }) => {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(claim =>
         claim.hmoPlanName?.toLowerCase().includes(searchLower) ||
-        claim.patientId?.toLowerCase().includes(searchLower) ||
+        claim.clientId?.toLowerCase().includes(searchLower) ||
         claim.claimAmount?.toString().includes(searchTerm)
       );
     }
@@ -196,7 +196,7 @@ const HMOClaimsManagement = ({ institutionId: propInstitutionId }) => {
   const handleViewClaimDetails = async (claim) => {
     try {
       // Load bill details
-      const bills = await getBillsByPatient(claim.patientId);
+      const bills = await getBillsByClient(claim.clientId);
       const relatedBill = bills.find(b => b.id === claim.billId);
       
       setSelectedClaim({
@@ -447,7 +447,7 @@ const HMOClaimsManagement = ({ institutionId: propInstitutionId }) => {
               <tr>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Claim ID</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">HMO Plan</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Patient</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Client</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Amount</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Created</th>
@@ -477,7 +477,7 @@ const HMOClaimsManagement = ({ institutionId: propInstitutionId }) => {
                       {claim.hmoPlanName || 'N/A'}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
-                      {claim.patientId?.substring(0, 8)}...
+                      {claim.clientId?.substring(0, 8)}...
                     </td>
                     <td className="py-3 px-4 text-sm font-semibold text-gray-900">
                       {formatCurrency(claim.claimAmount)}

@@ -69,8 +69,8 @@ export const IMAGING_PRIORITY = {
 export const createImagingRequest = async (requestData) => {
   try {
     const {
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       doctorId,
       doctorName,
@@ -83,13 +83,13 @@ export const createImagingRequest = async (requestData) => {
       relatedConsultationId = null
     } = requestData;
 
-    if (!patientId || !institutionId || !doctorId || !imagingType) {
-      throw new Error('Missing required fields: patientId, institutionId, doctorId, imagingType');
+    if (!clientId || !institutionId || !doctorId || !imagingType) {
+      throw new Error('Missing required fields: clientId, institutionId, doctorId, imagingType');
     }
 
     const imagingRequest = {
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       doctorId,
       doctorName,
@@ -118,11 +118,11 @@ export const createImagingRequest = async (requestData) => {
         userId: 'radiology-staff', // Would be sent to all radiology staff
         type: 'imaging_request',
         title: 'New Imaging Request',
-        message: `${imagingType.toUpperCase()} requested for ${patientName}`,
+        message: `${imagingType.toUpperCase()} requested for ${clientName}`,
         priority: priority === IMAGING_PRIORITY.EMERGENCY || priority === IMAGING_PRIORITY.STAT ? 'high' : 'medium',
         data: {
           requestId: requestRef.id,
-          patientId,
+          clientId,
           imagingType,
           priority
         },
@@ -233,7 +233,7 @@ export const completeImaging = async (requestId, imageUrls = [], technicianNotes
       for (const imageUrl of imageUrls) {
         await addDoc(imagesRef, {
           requestId,
-          patientId: requestData.patientId,
+          clientId: requestData.clientId,
           institutionId: requestData.institutionId,
           imageUrl,
           uploadedAt: serverTimestamp()
@@ -255,11 +255,11 @@ export const completeImaging = async (requestId, imageUrls = [], technicianNotes
           userId: requestData.radiologistId,
           type: 'imaging_completed',
           title: 'Imaging Completed',
-          message: `${requestData.imagingType.toUpperCase()} for ${requestData.patientName} is ready for review`,
+          message: `${requestData.imagingType.toUpperCase()} for ${requestData.clientName} is ready for review`,
           priority: 'medium',
           data: {
             requestId,
-            patientId: requestData.patientId,
+            clientId: requestData.clientId,
             imagingType: requestData.imagingType
           },
           institutionId: requestData.institutionId
@@ -308,8 +308,8 @@ export const createRadiologistReport = async (requestId, reportData) => {
     // Create report
     const report = {
       requestId,
-      patientId: requestData.patientId,
-      patientName: requestData.patientName,
+      clientId: requestData.clientId,
+      clientName: requestData.clientName,
       institutionId: requestData.institutionId,
       imagingType: requestData.imagingType,
       bodyPart: requestData.bodyPart,
@@ -340,12 +340,12 @@ export const createRadiologistReport = async (requestId, reportData) => {
         userId: requestData.doctorId,
         type: 'imaging_report_ready',
         title: 'Imaging Report Ready',
-        message: `Radiology report for ${requestData.imagingType.toUpperCase()} is ready for ${requestData.patientName}`,
+        message: `Radiology report for ${requestData.imagingType.toUpperCase()} is ready for ${requestData.clientName}`,
         priority: 'medium',
         data: {
           requestId,
           reportId: reportRef.id,
-          patientId: requestData.patientId
+          clientId: requestData.clientId
         },
         institutionId: requestData.institutionId
       });
@@ -368,7 +368,7 @@ export const createRadiologistReport = async (requestId, reportData) => {
  */
 export const getImagingRequests = async (institutionId, options = {}) => {
   try {
-    const { status, patientId, doctorId, imagingType, limitCount = 100 } = options;
+    const { status, clientId, doctorId, imagingType, limitCount = 100 } = options;
     
     let requestsQuery = query(
       collection(db, IMAGING_REQUESTS_COLLECTION),
@@ -380,8 +380,8 @@ export const getImagingRequests = async (institutionId, options = {}) => {
       requestsQuery = query(requestsQuery, where('status', '==', status));
     }
 
-    if (patientId) {
-      requestsQuery = query(requestsQuery, where('patientId', '==', patientId));
+    if (clientId) {
+      requestsQuery = query(requestsQuery, where('clientId', '==', clientId));
     }
 
     if (doctorId) {

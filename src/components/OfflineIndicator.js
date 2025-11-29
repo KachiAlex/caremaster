@@ -70,7 +70,7 @@ const OfflineIndicator = () => {
     <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-sm w-full mx-4">
       <div className={`rounded-lg shadow-lg p-3 transition-all duration-300 ${
         isOnline 
-          ? 'bg-blue-100 border border-green-200' 
+          ? 'bg-green-100 border border-green-200' 
           : 'bg-red-100 border border-red-200'
       }`}>
         <div className="flex items-center justify-between">
@@ -79,19 +79,19 @@ const OfflineIndicator = () => {
               isOnline ? 'bg-green-200' : 'bg-red-200'
             }`}>
               {isOnline ? (
-                <Wifi className="w-3 h-3 text-blue-600" />
+                <Wifi className="w-3 h-3 text-green-600" />
               ) : (
                 <WifiOff className="w-3 h-3 text-red-600" />
               )}
             </div>
             <div>
               <p className={`text-sm font-medium ${
-                isOnline ? 'text-blue-800' : 'text-red-800'
+                isOnline ? 'text-green-800' : 'text-red-800'
               }`}>
                 {isOnline ? 'Back Online' : 'You\'re Offline'}
               </p>
               <p className={`text-xs ${
-                isOnline ? 'text-blue-600' : 'text-red-600'
+                isOnline ? 'text-green-600' : 'text-red-600'
               }`}>
                 {isOnline 
                   ? 'Syncing your data...' 

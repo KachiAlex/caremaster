@@ -15,7 +15,7 @@ class TelemedicineService {
     // Agora configuration - removed expired token
     this.config = {
       appId: agoraTokenService.getAppId(),
-      channel: process.env.REACT_APP_AGORA_CHANNEL || 'UltimateCare_dev',
+      channel: process.env.REACT_APP_AGORA_CHANNEL || 'Care Master_dev',
       token: null, // Will be generated dynamically
       uid: null, // Will be set when joining
       mode: 'rtc',

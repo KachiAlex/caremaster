@@ -24,7 +24,7 @@ import {
 import aiService from '../services/aiService';
 import hapticService from '../services/hapticService';
 
-const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
+const AICarePlanGenerator = ({ isOpen, onClose, clientData }) => {
   const [carePlan, setCarePlan] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -34,10 +34,10 @@ const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
   const [newGoal, setNewGoal] = useState({ title: '', description: '', priority: 'medium', category: 'health' });
 
   useEffect(() => {
-    if (isOpen && patientData) {
+    if (isOpen && clientData) {
       generateCarePlan();
     }
-  }, [isOpen, patientData, planType, timeframe]);
+  }, [isOpen, clientData, planType, timeframe]);
 
   const generateCarePlan = async () => {
     setIsGenerating(true);
@@ -62,7 +62,7 @@ const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
     
     return {
       id: `plan_${Date.now()}`,
-      patientId: patientData?.id || 'unknown',
+      clientId: clientData?.id || 'unknown',
       generatedAt: new Date(),
       type: planType,
       timeframe: timeframe,
@@ -226,7 +226,7 @@ const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
     switch (priority) {
       case 'high': return 'text-red-600 bg-red-100';
       case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'low': return 'text-blue-600 bg-blue-100';
+      case 'low': return 'text-green-600 bg-green-100';
       default: return 'text-gray-600 bg-gray-100';
     }
   };
@@ -253,7 +253,7 @@ const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-green-500 to-blue-600 text-white">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Brain className="w-6 h-6" />
@@ -326,7 +326,7 @@ const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
               </button>
               
               {carePlan && (
-                <div className="flex items-center space-x-2 text-sm text-blue-600">
+                <div className="flex items-center space-x-2 text-sm text-green-600">
                   <CheckCircle className="w-4 h-4" />
                   <span>Care plan ready!</span>
                 </div>
@@ -334,8 +334,8 @@ const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
             </div>
             
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">Patient:</span>
-              <span className="font-medium">{patientData?.name || 'Unknown'}</span>
+              <span className="text-sm text-gray-500">Client:</span>
+              <span className="font-medium">{clientData?.name || 'Unknown'}</span>
             </div>
           </div>
         </div>
@@ -432,7 +432,7 @@ const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
                   <div className="flex space-x-2 mt-4">
                     <button
                       onClick={addGoal}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                       Add Goal
                     </button>
@@ -550,11 +550,11 @@ const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
 
             {/* AI Insights */}
             {carePlan.aiInsights.length > 0 && (
-              <div className="p-4 bg-blue-50 rounded-lg border border-green-200">
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                 <h4 className="font-medium text-green-900 mb-2">AI Insights</h4>
                 <ul className="space-y-1">
                   {carePlan.aiInsights.map((insight, index) => (
-                    <li key={index} className="text-sm text-blue-800 flex items-start space-x-2">
+                    <li key={index} className="text-sm text-green-800 flex items-start space-x-2">
                       <TrendingUp className="w-3 h-3 mt-1 flex-shrink-0" />
                       <span>{insight}</span>
                     </li>
@@ -582,7 +582,7 @@ const AICarePlanGenerator = ({ isOpen, onClose, patientData }) => {
             <div className="text-center">
               <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Generating Care Plan</h3>
-              <p className="text-gray-600">AI is analyzing patient data and creating personalized recommendations...</p>
+              <p className="text-gray-600">AI is analyzing Client data and creating personalized recommendations...</p>
             </div>
           </div>
         )}

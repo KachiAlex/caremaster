@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { getConsultationsByClient, createConsultation } from '../api/consultationsAPI';
 import { useUser } from '../contexts/UserContext';
 
-const ConsultationsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
+const ConsultationsLogModal = ({ client, isOpen, onClose, institutionId }) => {
   const { user, userProfile } = useUser();
   const [consultations, setConsultations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -23,18 +23,18 @@ const ConsultationsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
   });
 
   useEffect(() => {
-    if (isOpen && patient?.id) {
+    if (isOpen && client?.id) {
       loadConsultations();
     }
-  }, [isOpen, patient]);
+  }, [isOpen, client]);
 
   const loadConsultations = async () => {
-    if (!patient?.id) return;
+    if (!client?.id) return;
     
     setLoading(true);
     try {
-      const patientId = patient.id || patient.patientId || patient.uid;
-      const consultationsData = await getConsultationsByClient(patientId);
+      const clientId = client.id || client.clientId || client.uid;
+      const consultationsData = await getConsultationsByClient(clientId);
       setConsultations(consultationsData || []);
     } catch (error) {
       console.error('Error loading consultations:', error);
@@ -62,14 +62,14 @@ const ConsultationsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
 
   const handleSubmitConsultation = async () => {
     try {
-      const patientId = patient.id || patient.patientId || patient.uid;
-      const patientName = patient.name || patient.fullName || 'Patient';
+      const clientId = client.id || client.clientId || client.uid;
+      const clientName = client.name || client.fullName || 'Client';
       const doctorId = user?.uid;
       const doctorName = userProfile?.name || userProfile?.displayName || 'Doctor';
 
       await createConsultation({
-        clientId: patientId,
-        clientName: patientName,
+        clientId: clientId,
+        clientName: clientName,
         doctorId: doctorId,
         doctorName: doctorName,
         institutionId: institutionId,
@@ -106,8 +106,8 @@ const ConsultationsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
 
   if (!isOpen) return null;
 
-  const patientId = patient?.id || patient?.patientId || patient?.uid;
-  const patientName = patient?.name || patient?.fullName || 'Patient';
+  const clientId = client?.id || client?.clientId || client?.uid;
+  const clientName = client?.name || client?.fullName || 'Client';
 
   return (
     <>
@@ -121,7 +121,7 @@ const ConsultationsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
                 Consultations Log
               </h2>
               <p className="text-blue-100 text-sm mt-1">
-                {patientName}
+                {clientName}
               </p>
             </div>
             <button
@@ -171,12 +171,12 @@ const ConsultationsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Subjective (Patient's Description)
+                      Subjective (Client's Description)
                     </label>
                     <textarea
                       value={consultationFormData.subjective}
                       onChange={(e) => setConsultationFormData(prev => ({ ...prev, subjective: e.target.value }))}
-                      placeholder="Patient's description of symptoms"
+                      placeholder="Client's description of symptoms"
                       rows={3}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />

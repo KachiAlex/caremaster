@@ -17,12 +17,8 @@ import {
   Phone,
   MapPin
 } from 'lucide-react';
-import { useUser } from '../contexts/UserContext';
-import { getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
-import { getTaskAssignmentsByCaregiver } from '../api/taskAssignmentAPI';
 
 const CaregiverTasks = () => {
-  const { user, userProfile } = useUser();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,41 +27,9 @@ const CaregiverTasks = () => {
 
   useEffect(() => {
     const loadTasks = async () => {
-      if (!user?.uid) {
-        setLoading(false);
-        return;
-      }
-      
       try {
-        setLoading(true);
-        // Load today's tasks and upcoming tasks
-        const [todayTasks, upcomingTasks, assignments] = await Promise.all([
-          getTodayTasks(user.uid).catch(() => []),
-          getUpcomingTasks(user.uid).catch(() => []),
-          getTaskAssignmentsByCaregiver(user.uid).catch(() => [])
-        ]);
-        
-        // Combine and format tasks
-        const allTasks = [
-          ...todayTasks.map(task => ({ ...task, source: 'careTasks' })),
-          ...upcomingTasks.map(task => ({ ...task, source: 'careTasks' })),
-          ...assignments.map(assignment => ({
-            id: assignment.id,
-            title: assignment.taskTitle || assignment.title || 'Care Task',
-            patientName: assignment.patientName || assignment.clientName || 'Unknown',
-            status: assignment.status || 'pending',
-            priority: assignment.priority || 'medium',
-            dueDate: assignment.dueDate || assignment.scheduledTime,
-            source: 'assignments'
-          }))
-        ];
-        
-        // Remove duplicates based on task ID
-        const uniqueTasks = Array.from(
-          new Map(allTasks.map(task => [task.id, task])).values()
-        );
-        
-        setTasks(uniqueTasks);
+        // TODO: Integrate with real API: getPendingCareTasks(userId) or taskAssignments
+        setTasks([]);
       } catch (error) {
         console.error('Error loading tasks:', error);
       } finally {
@@ -74,11 +38,11 @@ const CaregiverTasks = () => {
     };
 
     loadTasks();
-  }, [user?.uid]);
+  }, []);
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.patientName.toLowerCase().includes(searchTerm.toLowerCase());
+                         task.clientName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
     const matchesPriority = filterPriority === 'all' || task.priority === filterPriority;
     return matchesSearch && matchesStatus && matchesPriority;
@@ -87,7 +51,7 @@ const CaregiverTasks = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'in-progress':
         return 'bg-blue-100 text-blue-800';
       case 'pending':
@@ -104,11 +68,11 @@ const CaregiverTasks = () => {
       case 'critical':
         return 'bg-red-100 text-red-800';
       case 'high':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-orange-100 text-orange-800';
       case 'medium':
         return 'bg-yellow-100 text-yellow-800';
       case 'low':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -119,13 +83,13 @@ const CaregiverTasks = () => {
       case 'medication':
         return <FileText className="h-5 w-5 text-blue-600" />;
       case 'therapy':
-        return <Heart className="h-5 w-5 text-blue-600" />;
+        return <Heart className="h-5 w-5 text-green-600" />;
       case 'meal':
-        return <FileText className="h-5 w-5 text-blue-600" />;
+        return <FileText className="h-5 w-5 text-orange-600" />;
       case 'emergency':
         return <AlertTriangle className="h-5 w-5 text-red-600" />;
       case 'care':
-        return <User className="h-5 w-5 text-blue-600" />;
+        return <User className="h-5 w-5 text-purple-600" />;
       default:
         return <FileText className="h-5 w-5 text-gray-600" />;
     }
@@ -188,7 +152,7 @@ const CaregiverTasks = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search tasks by title or patient name..."
+                  placeholder="Search tasks by title or Client name..."
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -243,7 +207,7 @@ const CaregiverTasks = () => {
                         <div className="flex items-center space-x-4 text-sm text-gray-600">
                           <span className="flex items-center">
                             <User className="h-4 w-4 mr-1" />
-                            {task.patientName}
+                            {task.clientName}
                           </span>
                           <span className="flex items-center">
                             <MapPin className="h-4 w-4 mr-1" />
@@ -296,7 +260,7 @@ const CaregiverTasks = () => {
                         </button>
                         <button
                           onClick={() => handleTaskComplete(task.id)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                         >
                           Complete
                         </button>
@@ -305,13 +269,13 @@ const CaregiverTasks = () => {
                     {task.status === 'in-progress' && (
                       <button
                         onClick={() => handleTaskComplete(task.id)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                       >
                         Mark Complete
                       </button>
                     )}
                     {task.status === 'completed' && (
-                      <div className="flex items-center text-blue-600 text-sm">
+                      <div className="flex items-center text-green-600 text-sm">
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Completed
                       </div>

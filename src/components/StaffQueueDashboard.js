@@ -2,7 +2,7 @@
  * Staff Queue Dashboard
  * 
  * Role-based queue view for different staff members:
- * - Receptionist: Can add patients, see all queues
+ * - Receptionist: Can add clients, see all queues
  * - Nurse: Sees Triage queue
  * - Doctor: Sees GP/Specialist queue
  * - Lab Tech: Sees Lab queue
@@ -95,13 +95,13 @@ const StaffQueueDashboard = ({ institutionId: propInstitutionId }) => {
     try {
       const result = await callNextPatient(institutionId, department);
       if (result.success) {
-        toast.success(`Called patient #${result.queue.queueNumber}`);
+        toast.success(`Called Client #${result.queue.queueNumber}`);
       } else {
-        toast.info(result.message || 'No patients in queue');
+        toast.info(result.message || 'No clients in queue');
       }
     } catch (error) {
-      console.error('Error calling next patient:', error);
-      toast.error('Failed to call next patient');
+      console.error('Error calling next Client:', error);
+      toast.error('Failed to call next Client');
     }
   };
 
@@ -130,12 +130,12 @@ const StaffQueueDashboard = ({ institutionId: propInstitutionId }) => {
 
     try {
       await transferPatientToQueue(selectedQueue.id, targetDepartment, reason, userProfile?.id);
-      toast.success(`Patient transferred to ${targetDepartment}`);
+      toast.success(`Client transferred to ${targetDepartment}`);
       setShowTransferModal(false);
       setSelectedQueue(null);
     } catch (error) {
-      console.error('Error transferring patient:', error);
-      toast.error('Failed to transfer patient');
+      console.error('Error transferring Client:', error);
+      toast.error('Failed to transfer Client');
     }
   };
 
@@ -186,7 +186,7 @@ const StaffQueueDashboard = ({ institutionId: propInstitutionId }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold">#{queue.queueNumber}</div>
-                  <div className="text-sm opacity-90">{queue.patientName}</div>
+                  <div className="text-sm opacity-90">{queue.clientName}</div>
                 </div>
                 <div className="flex gap-2">
                   {queue.status === QUEUE_STATUS.CALLED && (
@@ -232,7 +232,7 @@ const StaffQueueDashboard = ({ institutionId: propInstitutionId }) => {
         ) : waitingQueues.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <Clock className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p>No patients waiting</p>
+            <p>No clients waiting</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -247,7 +247,7 @@ const StaffQueueDashboard = ({ institutionId: propInstitutionId }) => {
                       #{queue.queueNumber}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{queue.patientName}</p>
+                      <p className="font-medium text-gray-900">{queue.clientName}</p>
                       <p className="text-xs text-gray-500">
                         {queue.department} • {queue.priority}
                       </p>
@@ -321,7 +321,7 @@ const TransferModal = ({ queue, onTransfer, onClose }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Refer Patient</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Refer Client</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             ×
           </button>
@@ -329,7 +329,7 @@ const TransferModal = ({ queue, onTransfer, onClose }) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Patient: {queue.patientName} (#{queue.queueNumber})
+              Client: {queue.clientName} (#{queue.queueNumber})
             </label>
           </div>
           <div>

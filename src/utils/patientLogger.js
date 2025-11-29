@@ -1,7 +1,7 @@
 /**
- * Patient Logger Utility
+ * Client Logger Utility
  * 
- * Comprehensive logging system for all patient interactions
+ * Comprehensive logging system for all Client interactions
  * Every log includes:
  * - Date and time
  * - Clinician name
@@ -9,7 +9,7 @@
  * - Action performed
  * - Details
  * 
- * All logs are stored in the patient's database
+ * All logs are stored in the Client's database
  */
 
 import { collection, addDoc, query, where, orderBy, getDocs, serverTimestamp } from 'firebase/firestore';
@@ -18,9 +18,9 @@ import { db } from '../firebase/config';
 const PATIENT_LOGS_COLLECTION = 'patientLogs';
 
 /**
- * Log a patient interaction
+ * Log a Client interaction
  * @param {Object} logData - Log data
- * @param {string} logData.patientId - Patient ID
+ * @param {string} logData.clientId - Client ID
  * @param {string} logData.clinicianId - Clinician user ID
  * @param {string} logData.clinicianName - Clinician full name
  * @param {string} logData.clinicianRole - Clinician role (doctor, nurse, caregiver, etc.)
@@ -34,7 +34,7 @@ const PATIENT_LOGS_COLLECTION = 'patientLogs';
 export async function logPatientInteraction(logData) {
   try {
     const {
-      patientId,
+      clientId,
       clinicianId,
       clinicianName,
       clinicianRole,
@@ -46,15 +46,15 @@ export async function logPatientInteraction(logData) {
     } = logData;
 
     // Validate required fields
-    if (!patientId || !clinicianId || !clinicianName || !clinicianRole || !action) {
-      throw new Error('Missing required log fields: patientId, clinicianId, clinicianName, clinicianRole, action');
+    if (!clientId || !clinicianId || !clinicianName || !clinicianRole || !action) {
+      throw new Error('Missing required log fields: clientId, clinicianId, clinicianName, clinicianRole, action');
     }
 
     const now = new Date();
     
     const logEntry = {
-      // Patient reference
-      patientId,
+      // Client reference
+      clientId,
       
       // Clinician information (required for all logs)
       clinicianId,
@@ -86,15 +86,15 @@ export async function logPatientInteraction(logData) {
       source: logData.source || 'web_app'
     };
 
-    // Add log to patient logs collection
+    // Add log to Client logs collection
     const logsRef = collection(db, PATIENT_LOGS_COLLECTION);
     const docRef = await addDoc(logsRef, logEntry);
     
-    console.log(`✅ Patient log created: ${action} by ${clinicianName} (${clinicianRole}) for patient ${patientId}`);
+    console.log(`✅ Client log created: ${action} by ${clinicianName} (${clinicianRole}) for Client ${clientId}`);
     
     return docRef.id;
   } catch (error) {
-    console.error('❌ Error logging patient interaction:', error);
+    console.error('❌ Error logging Client interaction:', error);
     throw error;
   }
 }
@@ -102,9 +102,9 @@ export async function logPatientInteraction(logData) {
 /**
  * Log vital signs recording
  */
-export async function logVitalSigns(patientId, clinicianInfo, vitalSignsData) {
+export async function logVitalSigns(clientId, clinicianInfo, vitalSignsData) {
   return await logPatientInteraction({
-    patientId,
+    clientId,
     clinicianId: clinicianInfo.id || clinicianInfo.uid,
     clinicianName: clinicianInfo.name || clinicianInfo.displayName,
     clinicianRole: clinicianInfo.role || clinicianInfo.userType,
@@ -120,9 +120,9 @@ export async function logVitalSigns(patientId, clinicianInfo, vitalSignsData) {
 /**
  * Log medication administration
  */
-export async function logMedicationAdministered(patientId, clinicianInfo, medicationData) {
+export async function logMedicationAdministered(clientId, clinicianInfo, medicationData) {
   return await logPatientInteraction({
-    patientId,
+    clientId,
     clinicianId: clinicianInfo.id || clinicianInfo.uid,
     clinicianName: clinicianInfo.name || clinicianInfo.displayName,
     clinicianRole: clinicianInfo.role || clinicianInfo.userType,
@@ -138,9 +138,9 @@ export async function logMedicationAdministered(patientId, clinicianInfo, medica
 /**
  * Log consultation
  */
-export async function logConsultation(patientId, clinicianInfo, consultationData) {
+export async function logConsultation(clientId, clinicianInfo, consultationData) {
   return await logPatientInteraction({
-    patientId,
+    clientId,
     clinicianId: clinicianInfo.id || clinicianInfo.uid,
     clinicianName: clinicianInfo.name || clinicianInfo.displayName,
     clinicianRole: clinicianInfo.role || clinicianInfo.userType,
@@ -156,9 +156,9 @@ export async function logConsultation(patientId, clinicianInfo, consultationData
 /**
  * Log care plan update
  */
-export async function logCarePlanUpdate(patientId, clinicianInfo, carePlanData) {
+export async function logCarePlanUpdate(clientId, clinicianInfo, carePlanData) {
   return await logPatientInteraction({
-    patientId,
+    clientId,
     clinicianId: clinicianInfo.id || clinicianInfo.uid,
     clinicianName: clinicianInfo.name || clinicianInfo.displayName,
     clinicianRole: clinicianInfo.role || clinicianInfo.userType,
@@ -172,33 +172,33 @@ export async function logCarePlanUpdate(patientId, clinicianInfo, carePlanData) 
 }
 
 /**
- * Log patient registration
+ * Log Client registration
  */
-export async function logPatientRegistration(patientId, registeredBy, patientData) {
+export async function logPatientRegistration(clientId, registeredBy, clientData) {
   return await logPatientInteraction({
-    patientId,
+    clientId,
     clinicianId: registeredBy.id || registeredBy.uid,
     clinicianName: registeredBy.name || registeredBy.displayName || 'System',
     clinicianRole: registeredBy.role || registeredBy.userType || 'admin',
     clinicianEmail: registeredBy.email,
     action: 'patient_registered',
     category: 'registration',
-    description: `Patient registered: ${patientData.name || patientId}`,
+    description: `Client registered: ${clientData.name || clientId}`,
     details: {
-      patientName: patientData.name,
-      registrationMethod: patientData.registrationMethod || 'hospital_registration',
-      initialData: patientData
+      clientName: clientData.name,
+      registrationMethod: clientData.registrationMethod || 'hospital_registration',
+      initialData: clientData
     },
-    institutionId: registeredBy.institutionId || patientData.institutionId
+    institutionId: registeredBy.institutionId || clientData.institutionId
   });
 }
 
 /**
- * Log patient profile update
+ * Log Client profile update
  */
-export async function logPatientProfileUpdate(patientId, clinicianInfo, updatedFields) {
+export async function logPatientProfileUpdate(clientId, clinicianInfo, updatedFields) {
   return await logPatientInteraction({
-    patientId,
+    clientId,
     clinicianId: clinicianInfo.id || clinicianInfo.uid,
     clinicianName: clinicianInfo.name || clinicianInfo.displayName,
     clinicianRole: clinicianInfo.role || clinicianInfo.userType,
@@ -215,14 +215,14 @@ export async function logPatientProfileUpdate(patientId, clinicianInfo, updatedF
 }
 
 /**
- * Get all logs for a patient
+ * Get all logs for a Client
  */
-export async function getPatientLogs(patientId, limitCount = 100) {
+export async function getPatientLogs(clientId, limitCount = 100) {
   try {
     const logsRef = collection(db, PATIENT_LOGS_COLLECTION);
     const q = query(
       logsRef,
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       orderBy('timestamp', 'desc'),
       limit(limitCount)
     );
@@ -243,7 +243,7 @@ export async function getPatientLogs(patientId, limitCount = 100) {
     
     return logs;
   } catch (error) {
-    console.error('Error fetching patient logs:', error);
+    console.error('Error fetching Client logs:', error);
     throw error;
   }
 }
@@ -283,12 +283,12 @@ export async function getLogsByClinician(clinicianId, limitCount = 100) {
 /**
  * Get logs by category
  */
-export async function getLogsByCategory(patientId, category, limitCount = 50) {
+export async function getLogsByCategory(clientId, category, limitCount = 50) {
   try {
     const logsRef = collection(db, PATIENT_LOGS_COLLECTION);
     const q = query(
       logsRef,
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('category', '==', category),
       orderBy('timestamp', 'desc'),
       limit(limitCount)

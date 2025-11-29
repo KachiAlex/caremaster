@@ -51,18 +51,18 @@ const AIVoiceAssistant = ({ isOpen, onClose, onCommand }) => {
   const getWelcomeMessage = () => {
     const messages = {
       general: {
-        text: "Hello! I'm your AI assistant for UltimateCare. I can help you with calls, messages, scheduling, patient care, and more. How can I assist you today?",
+        text: "Hello! I'm your AI assistant for Care Master. I can help you with calls, messages, scheduling, Client care, and more. How can I assist you today?",
         suggestions: [
           "Make a call to John Smith",
           "Check my schedule for today",
           "Send a message to Dr. Johnson",
-          "Show me my patients"
+          "Show me my clients"
         ]
       },
       medical: {
-        text: "I'm here to help with medical and care-related tasks. I can assist with patient information, medication schedules, vital signs, and care coordination.",
+        text: "I'm here to help with medical and care-related tasks. I can assist with Client information, medication schedules, vital signs, and care coordination.",
         suggestions: [
-          "Check patient John's vitals",
+          "Check Client John's vitals",
           "Schedule medication reminder",
           "Update care plan for Sarah",
           "Review medical records"
@@ -237,7 +237,7 @@ const AIVoiceAssistant = ({ isOpen, onClose, onCommand }) => {
           onCommand?.('navigate', { page: '/service-provider/schedule' });
           break;
         case 'navigate_to_patients':
-          onCommand?.('navigate', { page: '/service-provider/patients' });
+          onCommand?.('navigate', { page: '/service-provider/clients' });
           break;
         case 'navigate_to_tasks':
           onCommand?.('navigate', { page: '/service-provider/tasks' });
@@ -260,8 +260,8 @@ const AIVoiceAssistant = ({ isOpen, onClose, onCommand }) => {
       text: "Here are some things I can help you with:",
       suggestions: [
         "Voice Commands: 'Call John', 'Send message to Sarah', 'Schedule appointment'",
-        "Navigation: 'Go to patients', 'Show my schedule', 'Open messages'",
-        "Care Tasks: 'Complete medication task', 'Assign new task', 'Check patient vitals'",
+        "Navigation: 'Go to clients', 'Show my schedule', 'Open messages'",
+        "Care Tasks: 'Complete medication task', 'Assign new task', 'Check Client vitals'",
         "Emergency: 'Emergency alert', 'Call doctor', 'Urgent help needed'"
       ],
       timestamp: Date.now(),
@@ -303,7 +303,7 @@ const AIVoiceAssistant = ({ isOpen, onClose, onCommand }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Brain className="w-6 h-6" />
@@ -455,7 +455,7 @@ const AIVoiceAssistant = ({ isOpen, onClose, onCommand }) => {
               {/* AI Status */}
               <div className="flex items-center space-x-1 text-xs text-gray-500">
                 <div className={`w-2 h-2 rounded-full ${
-                  aiStatus.initialized ? 'bg-blue-500' : 'bg-red-500'
+                  aiStatus.initialized ? 'bg-green-500' : 'bg-red-500'
                 }`}></div>
                 <span>AI {aiStatus.initialized ? 'Ready' : 'Loading'}</span>
               </div>

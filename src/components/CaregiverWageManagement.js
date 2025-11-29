@@ -234,7 +234,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
   if (loading && caregivers.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
         <span className="ml-3 text-gray-600">Loading caregivers...</span>
       </div>
     );
@@ -257,7 +257,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
               const [start, end] = e.target.value.split(',');
               setDateRange({ startDate: start, endDate: end });
             }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
             <option value={`${new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0]},${new Date().toISOString().split('T')[0]}`}>
               Last 7 Days
@@ -295,7 +295,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                   onClick={() => handleSelectCaregiver(caregiver)}
                   className={`w-full text-left p-3 rounded-lg border transition-all ${
                     selectedCaregiver?.id === caregiver.id
-                      ? 'bg-blue-50 border-blue-400 shadow-md'
+                      ? 'bg-purple-50 border-purple-400 shadow-md'
                       : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
                   }`}
                 >
@@ -315,7 +315,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-blue-600">
+                      <p className="text-sm font-semibold text-purple-600">
                         {caregiver.paymentType === 'monthly' 
                           ? `$${caregiver.monthlyRate || 0}/mo`
                           : `$${caregiver.hourlyRate || 15}/hr`}
@@ -365,7 +365,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                     {!editingRate ? (
                       <button
                         onClick={() => setEditingRate(true)}
-                        className="flex items-center px-3 py-2 text-sm text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        className="flex items-center px-3 py-2 text-sm text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit Rate
@@ -375,7 +375,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                         <button
                           onClick={handleSaveRate}
                           disabled={loading}
-                          className="flex items-center px-3 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300"
+                          className="flex items-center px-3 py-2 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300"
                         >
                           <Save className="h-4 w-4 mr-2" />
                           Save
@@ -409,7 +409,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                         value={rateForm.paymentType}
                         onChange={(e) => setRateForm({ ...rateForm, paymentType: e.target.value })}
                         disabled={!editingRate}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-500"
                       >
                         <option value="hourly">Hourly Rate (Activity-Based)</option>
                         <option value="monthly">Monthly Flat Rate</option>
@@ -431,7 +431,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                             value={rateForm.hourlyRate}
                             onChange={(e) => setRateForm({ ...rateForm, hourlyRate: e.target.value })}
                             disabled={!editingRate}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-semibold text-lg"
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-700 font-semibold text-lg"
                             placeholder="15.00"
                           />
                         </div>
@@ -456,7 +456,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                             value={rateForm.monthlyRate}
                             onChange={(e) => setRateForm({ ...rateForm, monthlyRate: e.target.value })}
                             disabled={!editingRate}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-700 font-semibold text-lg"
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-700 font-semibold text-lg"
                             placeholder="3000.00"
                           />
                         </div>
@@ -471,7 +471,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                 {/* Wage Calculation Results */}
                 {calculating ? (
                   <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 flex flex-col items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
                     <p className="text-gray-600">Calculating wages...</p>
                   </div>
                 ) : wageCalculation ? (
@@ -486,7 +486,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                       </div>
                       <button
                         onClick={exportWageReport}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Export CSV
@@ -495,8 +495,8 @@ const CaregiverWageManagement = ({ institutionId }) => {
 
                     {/* Summary Cards */}
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-green-200">
-                        <p className="text-sm text-blue-700 font-medium">Total Earnings</p>
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                        <p className="text-sm text-green-700 font-medium">Total Earnings</p>
                         <p className="text-3xl font-bold text-green-900 mt-1">
                           ${wageCalculation.pay.total.toFixed(2)}
                         </p>
@@ -507,8 +507,8 @@ const CaregiverWageManagement = ({ institutionId }) => {
                           {wageCalculation.hours.total.toFixed(2)}
                         </p>
                       </div>
-                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-purple-200">
-                        <p className="text-sm text-blue-700 font-medium">Hourly Rate</p>
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                        <p className="text-sm text-purple-700 font-medium">Hourly Rate</p>
                         <p className="text-3xl font-bold text-purple-900 mt-1">
                           ${wageCalculation.rate}
                         </p>
@@ -532,7 +532,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                                 <p className="text-xs text-gray-500">
                                   {activity.client} • {new Date(activity.timestamp).toLocaleString()}
                                 </p>
-                                <p className="text-xs text-blue-600 mt-1">
+                                <p className="text-xs text-purple-600 mt-1">
                                   {activity.type} Activity
                                 </p>
                               </div>
@@ -568,7 +568,7 @@ const CaregiverWageManagement = ({ institutionId }) => {
                           {Object.entries(wageCalculation.clientBreakdown).map(([clientId, hours]) => (
                             <div
                               key={clientId}
-                              className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-50 rounded-lg border border-blue-200"
+                              className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200"
                             >
                               <p className="font-medium text-gray-900">Client {clientId.substring(0, 8)}...</p>
                               <div className="text-right">

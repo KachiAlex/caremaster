@@ -18,7 +18,7 @@ import { toast } from 'react-toastify';
 import { createCareLog, getCareLogsByClient, updateCareLog, deleteCareLog } from '../api/careLogsAPI';
 import { useUser } from '../contexts/UserContext';
 
-const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onCancel }) => {
+const NurseCareLogs = ({ clientId, clientName, nurseId, nurseName, onSave, onCancel }) => {
   const { institutionId } = useUser();
   const [showForm, setShowForm] = useState(false);
   const [careLogs, setCareLogs] = useState([]);
@@ -45,7 +45,7 @@ const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onC
     { value: 'observation', label: 'Observation', icon: Eye },
     { value: 'emergency', label: 'Emergency', icon: AlertTriangle },
     { value: 'follow_up', label: 'Follow-up', icon: Calendar },
-    { value: 'education', label: 'Patient Education', icon: User },
+    { value: 'education', label: 'Client Education', icon: User },
     { value: 'other', label: 'Other', icon: FileText }
   ];
 
@@ -72,7 +72,7 @@ const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onC
     'medication compliance',
     'vital signs',
     'wound care',
-    'patient comfort',
+    'Client comfort',
     'family communication',
     'safety concerns'
   ];
@@ -86,18 +86,18 @@ const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onC
     'Nutrition support',
     'Hygiene assistance',
     'Safety check',
-    'Patient education',
+    'Client education',
     'Family communication'
   ];
 
   useEffect(() => {
     loadCareLogs();
-  }, [patientId]);
+  }, [clientId]);
 
   const loadCareLogs = async () => {
     try {
       setLoading(true);
-      const logs = await getCareLogsByClient(patientId);
+      const logs = await getCareLogsByClient(clientId);
       setCareLogs(logs || []);
     } catch (error) {
       console.error('Error loading care logs:', error);
@@ -119,8 +119,8 @@ const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onC
     
     try {
       const careLogData = {
-        patientId,
-        patientName,
+        clientId,
+        clientName,
         caregiverId: nurseId,
         caregiverName: nurseName,
         category: formData.category,
@@ -256,7 +256,7 @@ const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onC
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Care Logs</h2>
-                <p className="text-sm text-gray-600">Patient: {patientName}</p>
+                <p className="text-sm text-gray-600">Client: {clientName}</p>
                 <p className="text-xs text-gray-500">Nurse: {nurseName}</p>
               </div>
             </div>
@@ -336,16 +336,16 @@ const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onC
                   <textarea
                     value={formData.content}
                     onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                    placeholder="Detailed description of care provided, observations, and patient response..."
+                    placeholder="Detailed description of care provided, observations, and Client response..."
                     rows={4}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
 
-                {/* Patient Condition */}
+                {/* Client Condition */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Patient Condition</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Client Condition</label>
                   <select
                     value={formData.patientCondition}
                     onChange={(e) => setFormData(prev => ({ ...prev, patientCondition: e.target.value }))}
@@ -493,7 +493,7 @@ const NurseCareLogs = ({ patientId, patientName, nurseId, nurseName, onSave, onC
             ) : careLogs.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>No care logs found for this patient.</p>
+                <p>No care logs found for this client.</p>
                 <p className="text-sm">Create your first care log using the form above.</p>
               </div>
             ) : (

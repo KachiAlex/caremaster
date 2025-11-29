@@ -268,7 +268,7 @@ function generateInvoiceEmailTemplate(invoice) {
       <div class="invoice-details">
         <h2>Invoice ${invoice.invoiceNumber}</h2>
         <p><strong>Date:</strong> ${new Date(invoice.createdAt).toLocaleDateString()}</p>
-        <p><strong>Patient:</strong> ${invoice.clientName}</p>
+        <p><strong>Client:</strong> ${invoice.clientName}</p>
         <p><strong>Pharmacist:</strong> ${invoice.pharmacistName}</p>
       </div>
 
@@ -308,7 +308,7 @@ function generateInvoiceEmailTemplate(invoice) {
     </div>
 
     <div class="footer">
-      <p>UltimateCare Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>For questions, contact your pharmacist</p>
     </div>
   </div>
@@ -363,7 +363,7 @@ function generatePrescriptionReadyTemplate(clientName, prescriptions, pharmacyIn
     </div>
 
     <div class="footer">
-      <p>UltimateCare Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>Questions? Contact us at ${pharmacyInfo.phone || 'your pharmacy'}</p>
     </div>
   </div>
@@ -414,7 +414,7 @@ function generateRefillReminderTemplate(medicationName, daysRemaining) {
     </div>
 
     <div class="footer">
-      <p>UltimateCare Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>Keeping you healthy, one prescription at a time</p>
     </div>
   </div>
@@ -451,7 +451,7 @@ function generateSafetyAlertTemplate(alertDetails) {
     <div class="content">
       <div class="alert-box">
         <h3 style="color: #991b1b; margin: 0 0 10px 0;">Drug Interaction Detected</h3>
-        <p style="color: #7f1d1d;"><strong>Patient:</strong> ${alertDetails.patientName}</p>
+        <p style="color: #7f1d1d;"><strong>Client:</strong> ${alertDetails.clientName}</p>
         <p style="color: #7f1d1d;"><strong>Alert:</strong> ${alertDetails.message}</p>
         <p style="color: #7f1d1d;"><strong>Severity:</strong> ${alertDetails.severity.toUpperCase()}</p>
       </div>
@@ -461,7 +461,7 @@ function generateSafetyAlertTemplate(alertDetails) {
         <li>DO NOT DISPENSE medication</li>
         <li>Contact prescribing physician immediately</li>
         <li>Document all communications</li>
-        <li>Update patient medication record</li>
+        <li>Update Client medication record</li>
       </ul>
 
       <p style="background: #fecaca; padding: 15px; border-radius: 8px; color: #7f1d1d; font-weight: bold;">
@@ -470,8 +470,8 @@ function generateSafetyAlertTemplate(alertDetails) {
     </div>
 
     <div class="footer">
-      <p>UltimateCare Pharmacy Safety System</p>
-      <p>Patient Safety First</p>
+      <p>Care Master Pharmacy Safety System</p>
+      <p>Client Safety First</p>
     </div>
   </div>
 </body>
@@ -522,7 +522,7 @@ function generatePaymentConfirmationTemplate(invoice, payment) {
     </div>
 
     <div class="footer">
-      <p>UltimateCare Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>Receipt will be sent separately</p>
     </div>
   </div>
@@ -580,7 +580,7 @@ function generateCounselingReminderTemplate(appointmentTime, pharmacistName) {
     </div>
 
     <div class="footer">
-      <p>UltimateCare Pharmacy Services</p>
+      <p>Care Master Pharmacy Services</p>
       <p>Your health is our priority</p>
     </div>
   </div>
@@ -638,7 +638,7 @@ function generateLowStockAlertTemplate(lowStockItems) {
     </div>
 
     <div class="footer">
-      <p>UltimateCare Pharmacy Inventory System</p>
+      <p>Care Master Pharmacy Inventory System</p>
       <p>Automated Daily Alert</p>
     </div>
   </div>

@@ -275,12 +275,12 @@ export const caregiverAPI = {
     }
   },
 
-  // Assign caregiver to patient
-  assignCaregiverToPatient: async (caregiverId, patientId, assignmentData) => {
+  // Assign caregiver to Client
+  assignCaregiverToPatient: async (caregiverId, clientId, assignmentData) => {
     try {
       const assignmentRef = await addDoc(collection(db, 'caregiverAssignments'), {
         caregiverId,
-        patientId,
+        clientId,
         ...assignmentData,
         status: 'active',
         assignedAt: serverTimestamp(),
@@ -288,26 +288,26 @@ export const caregiverAPI = {
         updatedAt: serverTimestamp()
       });
 
-      // Update caregiver's current patients count
+      // Update caregiver's current clients count
       await caregiverAPI.updateCaregiver(caregiverId, {
         currentPatients: await caregiverAPI.getCurrentPatientCount(caregiverId) + 1
       });
 
       return { id: assignmentRef.id, success: true };
     } catch (error) {
-      console.error('Error assigning caregiver to patient:', error);
+      console.error('Error assigning caregiver to Client:', error);
       throw error;
     }
   },
 
-  // Remove caregiver from patient
-  removeCaregiverFromPatient: async (caregiverId, patientId, reason) => {
+  // Remove caregiver from Client
+  removeCaregiverFromPatient: async (caregiverId, clientId, reason) => {
     try {
       // Find and update the assignment
       const assignmentsQuery = query(
         collection(db, 'caregiverAssignments'),
         where('caregiverId', '==', caregiverId),
-        where('patientId', '==', patientId),
+        where('clientId', '==', clientId),
         where('status', '==', 'active')
       );
       
@@ -322,7 +322,7 @@ export const caregiverAPI = {
           updatedAt: serverTimestamp()
         });
 
-        // Update caregiver's current patients count
+        // Update caregiver's current clients count
         await caregiverAPI.updateCaregiver(caregiverId, {
           currentPatients: await caregiverAPI.getCurrentPatientCount(caregiverId) - 1
         });
@@ -332,7 +332,7 @@ export const caregiverAPI = {
       
       throw new Error('Assignment not found');
     } catch (error) {
-      console.error('Error removing caregiver from patient:', error);
+      console.error('Error removing caregiver from Client:', error);
       throw error;
     }
   },
@@ -602,7 +602,7 @@ export const caregiverAPI = {
     }
   },
 
-  // Get current patient count for caregiver
+  // Get current Client count for caregiver
   getCurrentPatientCount: async (caregiverId) => {
     try {
       const assignmentsQuery = query(
@@ -614,7 +614,7 @@ export const caregiverAPI = {
       const assignmentsSnapshot = await getDocs(assignmentsQuery);
       return assignmentsSnapshot.size;
     } catch (error) {
-      console.error('Error getting current patient count:', error);
+      console.error('Error getting current Client count:', error);
       return 0;
     }
   },

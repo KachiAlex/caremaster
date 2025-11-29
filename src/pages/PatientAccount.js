@@ -1,7 +1,7 @@
 /**
- * Patient Account Page
+ * Client Account Page
  * 
- * Comprehensive account management page for patients to:
+ * Comprehensive account management page for clients to:
  * - View and edit their profile information
  * - Manage medical information
  * - View their dashboard
@@ -37,11 +37,11 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 const PatientAccount = () => {
-  const { patientId } = useParams();
+  const { clientId } = useParams();
   const navigate = useNavigate();
   const { user, userProfile } = useUser();
   
-  const [patient, setPatient] = useState(null);
+  const [Client, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -61,47 +61,47 @@ const PatientAccount = () => {
 
   useEffect(() => {
     loadPatientData();
-  }, [patientId]);
+  }, [clientId]);
 
   const loadPatientData = async () => {
     try {
       setLoading(true);
-      let patientData;
+      let clientData;
       
-      // Try to get by patientId (registration number) first, then by document ID
-      if (patientId) {
+      // Try to get by clientId (registration number) first, then by document ID
+      if (clientId) {
         try {
-          patientData = await getPatientByPatientId(patientId);
+          clientData = await getPatientByPatientId(clientId);
         } catch (error) {
-          patientData = await getPatientById(patientId);
+          clientData = await getPatientById(clientId);
         }
-      } else if (userProfile?.patientId) {
-        // If no patientId in URL, try to get from user profile
-        patientData = await getPatientByPatientId(userProfile.patientId);
+      } else if (userProfile?.clientId) {
+        // If no clientId in URL, try to get from user profile
+        clientData = await getPatientByPatientId(userProfile.clientId);
       } else if (user?.uid) {
         // Fallback to user ID
-        patientData = await getPatientById(user.uid);
+        clientData = await getPatientById(user.uid);
       }
 
-      if (patientData) {
-        setPatient(patientData);
+      if (clientData) {
+        setPatient(clientData);
         setFormData({
-          name: patientData.name || patientData.fullName || '',
-          email: patientData.email || userProfile?.email || '',
-          phone: patientData.phone || patientData.phoneNumber || '',
-          address: patientData.address || '',
-          dateOfBirth: patientData.dateOfBirth || patientData.dob || '',
-          gender: patientData.gender || '',
-          emergencyContactName: patientData.emergencyContactName || '',
-          emergencyContactPhone: patientData.emergencyContactPhone || patientData.emergencyContact?.phone || '',
-          medicalConditions: patientData.medicalConditions || '',
-          allergies: patientData.allergies || '',
-          medications: patientData.medications || ''
+          name: clientData.name || clientData.fullName || '',
+          email: clientData.email || userProfile?.email || '',
+          phone: clientData.phone || clientData.phoneNumber || '',
+          address: clientData.address || '',
+          dateOfBirth: clientData.dateOfBirth || clientData.dob || '',
+          gender: clientData.gender || '',
+          emergencyContactName: clientData.emergencyContactName || '',
+          emergencyContactPhone: clientData.emergencyContactPhone || clientData.emergencyContact?.phone || '',
+          medicalConditions: clientData.medicalConditions || '',
+          allergies: clientData.allergies || '',
+          medications: clientData.medications || ''
         });
       }
     } catch (error) {
-      console.error('Error loading patient data:', error);
-      toast.error('Failed to load patient information');
+      console.error('Error loading Client data:', error);
+      toast.error('Failed to load Client information');
     } finally {
       setLoading(false);
     }
@@ -118,7 +118,7 @@ const PatientAccount = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      const patientIdToUse = patient?.patientId || patient?.id || patientId;
+      const patientIdToUse = Client?.clientId || Client?.id || clientId;
       
       const updateData = {
         name: formData.name,
@@ -164,7 +164,7 @@ const PatientAccount = () => {
       setEditing(false);
       await loadPatientData();
     } catch (error) {
-      console.error('Error updating patient:', error);
+      console.error('Error updating Client:', error);
       toast.error('Failed to update account information');
     } finally {
       setLoading(false);
@@ -183,7 +183,7 @@ const PatientAccount = () => {
     return age;
   };
 
-  if (loading && !patient) {
+  if (loading && !Client) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
@@ -212,18 +212,11 @@ const PatientAccount = () => {
               <div>
                 <h1 className="text-2xl font-bold text-slate-50">My Account</h1>
                 <p className="text-sm text-slate-400 mt-1">
-                  {patient?.patientId ? `Patient ID: ${patient.patientId}` : 'Manage your account information'}
+                  {Client?.clientId ? `Client ID: ${client.clientId}` : 'Manage your account information'}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate(`/patient/${patient?.patientId || patient?.id || patientId}/dashboard`)}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors flex items-center gap-2"
-              >
-                <Activity className="h-4 w-4" />
-                View Dashboard
-              </button>
               {!editing ? (
                 <button
                   onClick={() => setEditing(true)}
@@ -481,13 +474,6 @@ const PatientAccount = () => {
               <h3 className="text-lg font-semibold text-slate-50 mb-4">Quick Actions</h3>
               <div className="space-y-3">
                 <button
-                  onClick={() => navigate(`/patient/${patient?.patientId || patient?.id || patientId}/dashboard`)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 transition-colors text-left"
-                >
-                  <Activity className="h-5 w-5 text-blue-400" />
-                  <span className="text-slate-50">View Dashboard</span>
-                </button>
-                <button
                   onClick={() => navigate('/prescriptions')}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 transition-colors text-left"
                 >
@@ -521,20 +507,20 @@ const PatientAccount = () => {
               </div>
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="text-slate-400">Patient ID:</span>
-                  <p className="text-slate-50 font-medium">{patient?.patientId || patient?.id || 'N/A'}</p>
+                  <span className="text-slate-400">Client ID:</span>
+                  <p className="text-slate-50 font-medium">{Client?.clientId || Client?.id || 'N/A'}</p>
                 </div>
-                {patient?.institutionId && (
+                {Client?.institutionId && (
                   <div>
                     <span className="text-slate-400">Institution:</span>
-                    <p className="text-slate-50 font-medium">{patient.institutionName || 'N/A'}</p>
+                    <p className="text-slate-50 font-medium">{client.institutionName || 'N/A'}</p>
                   </div>
                 )}
-                {patient?.createdAt && (
+                {Client?.createdAt && (
                   <div>
                     <span className="text-slate-400">Member Since:</span>
                     <p className="text-slate-50 font-medium">
-                      {new Date(patient.createdAt).toLocaleDateString()}
+                      {new Date(client.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 )}

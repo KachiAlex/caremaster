@@ -1,13 +1,13 @@
 /**
- * Patient Duplicate Detection Utility
+ * Client Duplicate Detection Utility
  * 
- * Advanced duplicate detection for patient registration
+ * Advanced duplicate detection for Client registration
  */
 
 import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-const PATIENTS_COLLECTION = 'patients';
+const CLIENTS_COLLECTION = 'clients';
 
 /**
  * Calculate similarity score between two strings (0-1)
@@ -79,12 +79,12 @@ const normalizeDateOfBirth = (dob) => {
 };
 
 /**
- * Check for duplicate patients
- * @param {Object} patientData - New patient data
+ * Check for duplicate clients
+ * @param {Object} clientData - New Client data
  * @param {string} institutionId - Institution ID
  * @returns {Promise<Object>} Duplicate detection results
  */
-export const checkForDuplicates = async (patientData, institutionId) => {
+export const checkForDuplicates = async (clientData, institutionId) => {
   try {
     const {
       name,
@@ -93,7 +93,7 @@ export const checkForDuplicates = async (patientData, institutionId) => {
       email,
       dateOfBirth,
       nationalId
-    } = patientData;
+    } = clientData;
 
     const potentialDuplicates = [];
     const exactMatches = [];
@@ -106,9 +106,9 @@ export const checkForDuplicates = async (patientData, institutionId) => {
     if (phone) {
       const normalizedPhone = normalizePhone(phone);
       if (normalizedPhone.length >= 10) {
-        // Get all patients with similar phone numbers
+        // Get all clients with similar phone numbers
         const phoneQuery = query(
-          collection(db, PATIENTS_COLLECTION),
+          collection(db, CLIENTS_COLLECTION),
           where('institutionId', '==', institutionId)
         );
         queries.push({ type: 'phone', query: phoneQuery, value: normalizedPhone });
@@ -118,7 +118,7 @@ export const checkForDuplicates = async (patientData, institutionId) => {
     // Query by email (exact match)
     if (email) {
       const emailQuery = query(
-        collection(db, PATIENTS_COLLECTION),
+        collection(db, CLIENTS_COLLECTION),
         where('institutionId', '==', institutionId),
         where('email', '==', email.toLowerCase().trim())
       );
@@ -128,7 +128,7 @@ export const checkForDuplicates = async (patientData, institutionId) => {
     // Query by national ID (exact match)
     if (nationalId) {
       const nationalIdQuery = query(
-        collection(db, PATIENTS_COLLECTION),
+        collection(db, CLIENTS_COLLECTION),
         where('institutionId', '==', institutionId),
         where('nationalId', '==', nationalId.trim())
       );
@@ -142,9 +142,9 @@ export const checkForDuplicates = async (patientData, institutionId) => {
       try {
         const snapshot = await getDocs(q);
         snapshot.forEach(doc => {
-          const patient = { id: doc.id, ...doc.data() };
-          if (!allPatients.has(patient.id)) {
-            allPatients.set(patient.id, patient);
+          const Client = { id: doc.id, ...doc.data() };
+          if (!allPatients.has(client.id)) {
+            allPatients.set(client.id, Client);
           }
         });
       } catch (error) {
@@ -152,25 +152,25 @@ export const checkForDuplicates = async (patientData, institutionId) => {
       }
     }
 
-    // If no queries, get all patients for name/DOB comparison (limited)
+    // If no queries, get all clients for name/DOB comparison (limited)
     if (queries.length === 0 && (name || fullName || dateOfBirth)) {
       const allPatientsQuery = query(
-        collection(db, PATIENTS_COLLECTION),
+        collection(db, CLIENTS_COLLECTION),
         where('institutionId', '==', institutionId)
       );
       const snapshot = await getDocs(allPatientsQuery);
       snapshot.forEach(doc => {
-        const patient = { id: doc.id, ...doc.data() };
-        allPatients.set(patient.id, patient);
+        const Client = { id: doc.id, ...doc.data() };
+        allPatients.set(client.id, Client);
       });
     }
 
-    // Compare with all found patients
-    const patientName = name || fullName || '';
+    // Compare with all found clients
+    const clientName = name || fullName || '';
     const normalizedNewPhone = phone ? normalizePhone(phone) : '';
     const normalizedNewDOB = normalizeDateOfBirth(dateOfBirth);
 
-    for (const [patientId, existingPatient] of allPatients) {
+    for (const [clientId, existingPatient] of allPatients) {
       const existingName = existingPatient.name || existingPatient.fullName || '';
       const existingPhone = existingPatient.phone ? normalizePhone(existingPatient.phone) : '';
       const existingEmail = (existingPatient.email || '').toLowerCase().trim();
@@ -197,8 +197,8 @@ export const checkForDuplicates = async (patientData, institutionId) => {
       }
 
       // Name similarity
-      if (patientName && existingName) {
-        const nameSimilarity = calculateSimilarity(patientName, existingName);
+      if (clientName && existingName) {
+        const nameSimilarity = calculateSimilarity(clientName, existingName);
         if (nameSimilarity > 0.8) {
           matchScore += nameSimilarity * 0.3;
           matchReasons.push(`Name similarity: ${Math.round(nameSimilarity * 100)}%`);
@@ -222,11 +222,11 @@ export const checkForDuplicates = async (patientData, institutionId) => {
 
       if (matchScore > 0) {
         const match = {
-          patientId: existingPatient.patientId || patientId,
-          patientName: existingName,
+          clientId: existingPatient.clientId || clientId,
+          clientName: existingName,
           matchScore: Math.min(matchScore, 1.0),
           matchReasons,
-          patientData: existingPatient
+          clientData: existingPatient
         };
 
         if (matchScore >= 0.8) {
@@ -265,7 +265,7 @@ const getRecommendation = (exactMatches, similarMatches) => {
   if (exactMatches.length > 0) {
     return {
       action: 'block',
-      message: `Found ${exactMatches.length} exact match(es). This may be a duplicate patient.`,
+      message: `Found ${exactMatches.length} exact match(es). This may be a duplicate client.`,
       severity: 'high'
     };
   }
@@ -273,7 +273,7 @@ const getRecommendation = (exactMatches, similarMatches) => {
   if (similarMatches.length > 0) {
     return {
       action: 'warn',
-      message: `Found ${similarMatches.length} similar patient(s). Please review before proceeding.`,
+      message: `Found ${similarMatches.length} similar Client(s). Please review before proceeding.`,
       severity: 'medium'
     };
   }
@@ -286,7 +286,7 @@ const getRecommendation = (exactMatches, similarMatches) => {
 };
 
 /**
- * Check if patient should be blocked from registration
+ * Check if Client should be blocked from registration
  * @param {Object} duplicateResults - Results from checkForDuplicates
  * @returns {boolean} True if should be blocked
  */

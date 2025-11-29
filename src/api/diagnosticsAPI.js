@@ -39,54 +39,26 @@ export const createDiagnosticTest = async (diagnosticData) => {
 
     const docRef = await addDoc(collection(db, DIAGNOSTICS_COLLECTION), diagnosticWithTimestamp);
 
-    // Log activity to client database (comprehensive logging)
+    // Log activity to client database
     try {
-      // Try comprehensive logger first
-      const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
-      await ComprehensivePatientLogger.logLabTestOrdered(
-        diagnosticData.clientId,
-        {
+      await logActivity({
+        clientId: diagnosticData.clientId,
+        activityType: 'diagnostic',
+        performedBy: diagnosticData.orderedBy,
+        performerName: diagnosticData.orderedByName,
+        performerRole: 'doctor',
+        description: `Diagnostic test ordered: ${diagnosticData.testType}`,
+        details: {
           diagnosticId: docRef.id,
           testType: diagnosticData.testType,
-          testName: diagnosticData.testType,
           reason: diagnosticData.reason,
-          urgency: diagnosticData.urgency,
-          orderedBy: diagnosticData.orderedBy,
-          orderedByName: diagnosticData.orderedByName
+          urgency: diagnosticData.urgency
         },
-        {
-          id: diagnosticData.orderedBy,
-          name: diagnosticData.orderedByName,
-          role: 'doctor',
-          userType: 'doctor',
-          type: 'doctor',
-          email: diagnosticData.orderedByEmail,
-          medicalQualification: 'Physician',
-          institutionId: diagnosticData.institutionId
-        }
-      );
-    } catch (comprehensiveError) {
-      // Fallback to old logger
-      try {
-        await logActivity({
-          clientId: diagnosticData.clientId,
-          activityType: 'diagnostic',
-          performedBy: diagnosticData.orderedBy,
-          performerName: diagnosticData.orderedByName,
-          performerRole: 'doctor',
-          description: `Diagnostic test ordered: ${diagnosticData.testType}`,
-          details: {
-            diagnosticId: docRef.id,
-            testType: diagnosticData.testType,
-            reason: diagnosticData.reason,
-            urgency: diagnosticData.urgency
-          },
-          institutionId: diagnosticData.institutionId
-        });
-      } catch (activityError) {
-        logger.error('Error logging diagnostic activity', { activityError, comprehensiveError });
-        // Don't throw - diagnostic was created successfully
-      }
+        institutionId: diagnosticData.institutionId
+      });
+    } catch (activityError) {
+      logger.error('Error logging diagnostic activity', { activityError });
+      // Don't throw - diagnostic was created successfully
     }
     
     // Send notification to admin
@@ -144,59 +116,26 @@ export const uploadDiagnosticResults = async (diagnosticId, resultsData) => {
     const diagnosticDoc = await getDoc(diagnosticRef);
     const diagnostic = diagnosticDoc.data();
 
-    // Log activity to client database (comprehensive logging)
+    // Log activity to client database
     try {
-      // Try comprehensive logger first
-      const ComprehensivePatientLogger = (await import('../utils/comprehensivePatientLogger')).default;
-      const isAbnormal = resultsData.results?.abnormal || 
-                        resultsData.results?.status === 'abnormal' ||
-                        resultsData.results?.find(r => r.status === 'abnormal');
-      
-      await ComprehensivePatientLogger.logLabTestResults(
-        diagnostic.clientId,
-        {
+      await logActivity({
+        clientId: diagnostic.clientId,
+        activityType: 'diagnostic',
+        performedBy: resultsData.uploadedBy,
+        performerName: resultsData.uploadedByName,
+        performerRole: 'nurse',
+        description: `Diagnostic results uploaded for: ${diagnostic.testType}`,
+        details: {
           diagnosticId,
-          testName: diagnostic.testType,
           testType: diagnostic.testType,
-          results: resultsData.results,
-          abnormal: isAbnormal,
           documentCount: resultsData.uploadedDocuments?.length || 0,
-          uploadedBy: resultsData.uploadedBy,
-          uploadedByName: resultsData.uploadedByName
+          hasResults: !!resultsData.results
         },
-        {
-          id: resultsData.uploadedBy,
-          name: resultsData.uploadedByName,
-          role: 'nurse',
-          userType: 'nurse',
-          type: 'nurse',
-          email: resultsData.uploadedByEmail,
-          medicalQualification: 'Laboratory Technician',
-          institutionId: diagnostic.institutionId
-        }
-      );
-    } catch (comprehensiveError) {
-      // Fallback to old logger
-      try {
-        await logActivity({
-          clientId: diagnostic.clientId,
-          activityType: 'diagnostic',
-          performedBy: resultsData.uploadedBy,
-          performerName: resultsData.uploadedByName,
-          performerRole: 'nurse',
-          description: `Diagnostic results uploaded for: ${diagnostic.testType}`,
-          details: {
-            diagnosticId,
-            testType: diagnostic.testType,
-            documentCount: resultsData.uploadedDocuments?.length || 0,
-            hasResults: !!resultsData.results
-          },
-          institutionId: diagnostic.institutionId
-        });
-      } catch (activityError) {
-        logger.error('Error logging results upload activity', { activityError, comprehensiveError });
-        // Don't throw - results were uploaded successfully
-      }
+        institutionId: diagnostic.institutionId
+      });
+    } catch (activityError) {
+      logger.error('Error logging results upload activity', { activityError });
+      // Don't throw - results were uploaded successfully
     }
     
     // Send notification to admin
@@ -438,9 +377,9 @@ export const updateDiagnosticTest = async (diagnosticId, updateData) => {
     // Send SMS/WhatsApp notification when lab results are ready
     if (!wasCompleted && isNowCompleted && currentDiagnostic?.clientId) {
       try {
-        const patientDoc = await getDoc(doc(db, 'patients', currentDiagnostic.clientId)).catch(() => null);
-        const patientData = patientDoc?.exists() ? patientDoc.data() : null;
-        const patientPhone = patientData?.phone || patientData?.phoneNumber;
+        const patientDoc = await getDoc(doc(db, 'clients', currentDiagnostic.clientId)).catch(() => null);
+        const clientData = patientDoc?.exists() ? patientDoc.data() : null;
+        const patientPhone = clientData?.phone || clientData?.phoneNumber;
         
         if (patientPhone && currentDiagnostic.institutionId) {
           const { getSettings, sendLabResultNotification } = await import('./smsWhatsAppAPI');

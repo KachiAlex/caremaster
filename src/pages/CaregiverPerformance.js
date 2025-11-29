@@ -46,11 +46,11 @@ const CaregiverPerformance = () => {
       
       const caregiverId = userProfile.id || userProfile.uid;
       
-      // Load patient feedback data
+      // Load Client feedback data
       const feedback = await getClientFeedbackByCaregiver(caregiverId);
       setPatientFeedback(feedback);
       
-      // Calculate rating from patient feedback
+      // Calculate rating from Client feedback
       const calculatedRating = calculateCaregiverRating(feedback);
       const stats = getFeedbackStatistics(feedback);
       setFeedbackStats(stats);
@@ -110,8 +110,8 @@ const CaregiverPerformance = () => {
               },
               {
                 id: 3,
-                title: 'Patient Favorite',
-                description: 'Received 5-star ratings from 10+ patients',
+                title: 'Client Favorite',
+                description: 'Received 5-star ratings from 10+ clients',
                 icon: '⭐',
                 earnedDate: '2024-01-15',
                 category: 'satisfaction'
@@ -120,7 +120,7 @@ const CaregiverPerformance = () => {
             patientFeedback: [
               {
                 id: 1,
-                patientName: 'Adunni Okafor',
+                clientName: 'Adunni Okafor',
                 rating: 5,
                 comment: 'Excellent care and always on time. Very professional and caring.',
                 date: '2024-01-20',
@@ -128,7 +128,7 @@ const CaregiverPerformance = () => {
               },
               {
                 id: 2,
-                patientName: 'Grace Johnson',
+                clientName: 'Grace Johnson',
                 rating: 5,
                 comment: 'The therapy sessions have been very helpful. Thank you for your patience.',
                 date: '2024-01-19',
@@ -136,7 +136,7 @@ const CaregiverPerformance = () => {
               },
               {
                 id: 3,
-                patientName: 'Michael Adebayo',
+                clientName: 'Michael Adebayo',
                 rating: 4,
                 comment: 'Good care overall. Sometimes a bit rushed but very knowledgeable.',
                 date: '2024-01-18',
@@ -154,14 +154,14 @@ const CaregiverPerformance = () => {
       };
 
   const getRatingColor = (rating) => {
-    if (rating >= 4.5) return 'text-blue-600';
+    if (rating >= 4.5) return 'text-green-600';
     if (rating >= 3.5) return 'text-yellow-600';
     return 'text-red-600';
   };
 
   const getPerformanceColor = (value, type) => {
     if (type === 'rate') {
-      if (value >= 95) return 'text-blue-600';
+      if (value >= 95) return 'text-green-600';
       if (value >= 85) return 'text-yellow-600';
       return 'text-red-600';
     }
@@ -185,7 +185,7 @@ const CaregiverPerformance = () => {
       <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center">
               <TrendingUp className="h-8 w-8 text-white" />
             </div>
             <div>
@@ -195,7 +195,7 @@ const CaregiverPerformance = () => {
           </div>
           <div className="flex items-center space-x-4">
             <select
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
             >
@@ -203,7 +203,7 @@ const CaregiverPerformance = () => {
               <option value="monthly">This Month</option>
               <option value="overall">Overall</option>
             </select>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+            <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center">
               <Download className="h-5 w-5 mr-2" />
               Export Report
             </button>
@@ -223,11 +223,11 @@ const CaregiverPerformance = () => {
                   {performanceData.overall?.rating || 0}
                 </p>
               </div>
-              <div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Star className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <Star className="h-6 w-6 text-green-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mt-2">Based on patient feedback</p>
+            <p className="text-sm text-gray-600 mt-2">Based on Client feedback</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -250,16 +250,16 @@ const CaregiverPerformance = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Patients Served</p>
+                <p className="text-sm font-medium text-gray-600">clients Served</p>
                 <p className="text-3xl font-bold text-gray-900">
                   {currentData.patientsServed || performanceData.overall?.totalPatients || 0}
                 </p>
               </div>
-              <div className="h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Users className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Users className="h-6 w-6 text-purple-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mt-2">Active patients</p>
+            <p className="text-sm text-gray-600 mt-2">Active clients</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -278,11 +278,11 @@ const CaregiverPerformance = () => {
           </div>
         </div>
 
-        {/* Patient Feedback Section */}
+        {/* Client Feedback Section */}
         {patientFeedback.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Patient Feedback</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Recent Client Feedback</h3>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">Based on {feedbackStats.totalFeedback} feedback entries</span>
                 <div className="flex items-center">
@@ -305,7 +305,7 @@ const CaregiverPerformance = () => {
                           <Users className="h-4 w-4 text-blue-600" />
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{feedback.patientName}</div>
+                          <div className="text-sm font-medium text-gray-900">{feedback.clientName}</div>
                           <div className="text-xs text-gray-500">{new Date(feedback.weekOf).toLocaleDateString()}</div>
                         </div>
                       </div>
@@ -343,7 +343,7 @@ const CaregiverPerformance = () => {
 
             {patientFeedback.length > 6 && (
               <div className="mt-4 text-center">
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                <button className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
                   View All Feedback ({patientFeedback.length} entries)
                 </button>
               </div>
@@ -367,7 +367,7 @@ const CaregiverPerformance = () => {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
-                      className="bg-blue-600 h-2 rounded-full" 
+                      className="bg-green-600 h-2 rounded-full" 
                       style={{ width: `${performanceData.overall?.onTimeRate || 0}%` }}
                     ></div>
                   </div>
@@ -375,7 +375,7 @@ const CaregiverPerformance = () => {
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Patient Satisfaction</span>
+                    <span className="text-sm font-medium text-gray-600">Client Satisfaction</span>
                     <span className={`text-lg font-semibold ${getPerformanceColor(performanceData.overall?.patientSatisfaction || 0, 'rate')}`}>
                       {performanceData.overall?.patientSatisfaction || 0}%
                     </span>
@@ -424,7 +424,7 @@ const CaregiverPerformance = () => {
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
-                    <Heart className="h-5 w-5 text-blue-600 mr-3" />
+                    <Heart className="h-5 w-5 text-green-600 mr-3" />
                     <span className="text-sm font-medium text-gray-900">Therapy Sessions</span>
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
@@ -434,8 +434,8 @@ const CaregiverPerformance = () => {
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
-                    <Phone className="h-5 w-5 text-blue-600 mr-3" />
-                    <span className="text-sm font-medium text-gray-900">Patient Calls</span>
+                    <Phone className="h-5 w-5 text-purple-600 mr-3" />
+                    <span className="text-sm font-medium text-gray-900">Client Calls</span>
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
                     {currentData.patientCalls || 0}
@@ -476,14 +476,14 @@ const CaregiverPerformance = () => {
               </div>
             </div>
 
-            {/* Patient Feedback */}
+            {/* Client Feedback */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Feedback</h3>
               <div className="space-y-3">
                 {performanceData.patientFeedback?.map((feedback) => (
                   <div key={feedback.id} className="border-b border-gray-100 pb-3 last:border-b-0">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-medium text-gray-900">{feedback.patientName}</h4>
+                      <h4 className="text-sm font-medium text-gray-900">{feedback.clientName}</h4>
                       <div className="flex items-center">
                         {[...Array(5)].map((_, i) => (
                           <Star
@@ -516,23 +516,23 @@ const CaregiverPerformance = () => {
                   </div>
                 </div>
 
-                <div className="p-3 bg-blue-50 rounded-lg">
+                <div className="p-3 bg-green-50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-green-900">Patient Satisfaction</span>
+                    <span className="text-sm font-medium text-green-900">Client Satisfaction</span>
                     <span className="text-sm font-semibold text-green-900">98%</span>
                   </div>
                   <div className="w-full bg-green-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${performanceData.overall?.patientSatisfaction || 0}%` }}></div>
+                    <div className="bg-green-600 h-2 rounded-full" style={{ width: `${performanceData.overall?.patientSatisfaction || 0}%` }}></div>
                   </div>
                 </div>
 
-                <div className="p-3 bg-blue-50 rounded-lg">
+                <div className="p-3 bg-purple-50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-purple-900">Emergency Response</span>
                     <span className="text-sm font-semibold text-purple-900">&lt;5 min</span>
                   </div>
                   <div className="w-full bg-purple-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                    <div className="bg-purple-600 h-2 rounded-full" style={{ width: '85%' }}></div>
                   </div>
                 </div>
               </div>

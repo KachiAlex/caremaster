@@ -114,25 +114,25 @@ const Dashboard = () => {
     {
       name: 'Message Caregiver',
       icon: MessageCircle,
-      color: 'bg-blue-600 hover:bg-blue-700',
+      color: 'bg-green-600 hover:bg-green-700',
       action: () => navigate('/messages')
     },
     {
       name: 'Video Consultation',
       icon: Video,
-      color: 'bg-blue-600 hover:bg-blue-700',
+      color: 'bg-purple-600 hover:bg-purple-700',
       action: () => navigate('/telemedicine')
     },
     {
       name: 'View Medications',
       icon: Pill,
-      color: 'bg-blue-600 hover:bg-blue-700',
+      color: 'bg-orange-600 hover:bg-orange-700',
       action: () => navigate('/medications')
     },
     {
       name: 'Medical Documents',
       icon: FileText,
-      color: 'bg-blue-600 hover:bg-blue-700',
+      color: 'bg-indigo-600 hover:bg-indigo-700',
       action: () => navigate('/medical-documents')
     },
     {
@@ -153,7 +153,7 @@ const Dashboard = () => {
         
         // Fetch data in parallel
         const [appointments, vitalSigns, unreadCount, medications, assignments] = await Promise.all([
-          getUpcomingAppointments(user.uid, 'patient').catch(err => {
+          getUpcomingAppointments(user.uid, 'elderly').catch(err => {
             console.warn('Failed to fetch appointments:', err);
             return [];
           }),
@@ -277,60 +277,45 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6 text-slate-50">
-      {/* Welcome + emergency row */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr),minmax(0,1fr)]">
+    <div className="space-y-6">
+      {/* Welcome Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left - User Info */}
-        <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
-          <div className="flex items-start justify-between gap-3">
+        <div className="card">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Welcome back, {displayName}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-300">
-                Welcome back
-              </p>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-50 sm:text-xl">
-                {displayName}
-              </h2>
-              <p className="mt-1 text-xs text-slate-400">
-                Your health, care team, and next steps in one place.
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] text-slate-300">
-              <Shield className="h-3.5 w-3.5 text-blue-300" />
-              {getSubscriptionStatus()} plan
-            </span>
-          </div>
-          <div className="mt-4 grid gap-4 text-xs text-slate-300 sm:grid-cols-2">
-            <div>
-              <p className="text-[11px] text-slate-400">Age</p>
-              <p className="mt-1 text-sm font-medium text-slate-50">
-                {userProfile?.dateOfBirth
-                  ? `${calculateAge(userProfile.dateOfBirth)} years`
-                  : 'Not provided'}
+              <p className="text-sm text-gray-500">Age</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {userProfile?.dateOfBirth ? `${calculateAge(userProfile.dateOfBirth)} years` : 'Not provided'}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-slate-400">Emergency contact</p>
-              <p className="mt-1 text-sm font-medium text-slate-50">
+              <p className="text-sm text-gray-500">Emergency Contact</p>
+              <p className="text-lg font-semibold text-gray-900">
                 {userProfile?.emergencyContactName || 'Not provided'}
               </p>
-              <p className="mt-0.5 text-[11px] text-slate-400">
+              <p className="text-sm text-gray-600">
                 {userProfile?.emergencyContactPhone || 'No phone number'}
               </p>
             </div>
-            <div className="sm:col-span-2">
-              <p className="text-[11px] text-slate-400">Medical conditions</p>
-              <div className="mt-1 flex flex-wrap gap-1.5">
+            <div>
+              <p className="text-sm text-gray-500">Subscription</p>
+              <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                {getSubscriptionStatus()}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Medical Conditions</p>
+              <div className="flex flex-wrap gap-2 mt-1">
                 {formatMedicalConditions(userProfile?.medicalConditions).length > 0 ? (
                   formatMedicalConditions(userProfile.medicalConditions).map((condition, index) => (
-                    <span
-                      key={index}
-                      className="rounded-full border border-slate-800 bg-slate-900 px-2.5 py-1 text-[11px] text-slate-200"
-                    >
+                    <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
                       {condition}
                     </span>
                   ))
                 ) : (
-                  <span className="text-[11px] text-slate-500">No conditions listed</span>
+                  <span className="text-gray-500 text-xs">No conditions listed</span>
                 )}
               </div>
             </div>
@@ -338,73 +323,47 @@ const Dashboard = () => {
         </div>
 
         {/* Right - Emergency & Contact */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <button 
             onClick={handleEmergencyAlert}
-            className="flex w-full items-center justify-between gap-3 rounded-3xl border border-rose-500/40 bg-gradient-to-r from-rose-600 to-blue-500 px-4 py-3 text-left text-xs font-medium text-white shadow-lg shadow-rose-500/40 hover:from-rose-500 hover:to-blue-400"
+            className="w-full bg-red-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-700 transition-colors"
           >
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.22em]">Emergency</p>
-                <p className="text-xs">Tap if you need urgent help right now.</p>
-              </div>
-            </div>
-            <Clock className="h-4 w-4 opacity-80" />
+            <AlertTriangle className="h-6 w-6 inline mr-2" />
+            EMERGENCY - NEED HELP NOW
           </button>
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="grid grid-cols-2 gap-4">
             <button 
-              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-left text-slate-200 hover:border-blue-400/60 hover:bg-slate-900"
-              onClick={() =>
-                userProfile?.emergencyContactPhone &&
-                window.open(`tel:${userProfile.emergencyContactPhone}`)
-              }
+              className="bg-orange-100 text-orange-700 py-3 px-4 rounded-lg hover:bg-orange-200 transition-colors"
+              onClick={() => userProfile?.emergencyContactPhone && window.open(`tel:${userProfile.emergencyContactPhone}`)}
             >
-              <p className="flex items-center gap-1 text-[11px] text-slate-400">
-                <Phone className="h-3.5 w-3.5 text-blue-300" />
-                Family contact
-              </p>
-              <p className="mt-1 text-xs font-medium">
+              <Phone className="h-5 w-5 inline mr-2" />
               {userProfile?.emergencyContactName || 'Family'}
-              </p>
             </button>
             <button 
-              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2 text-left text-slate-200 hover:border-blue-400/60 hover:bg-slate-900"
-              onClick={() =>
-                userProfile?.doctorPhone && window.open(`tel:${userProfile.doctorPhone}`)
-              }
+              className="bg-blue-100 text-blue-700 py-3 px-4 rounded-lg hover:bg-blue-200 transition-colors"
+              onClick={() => userProfile?.doctorPhone && window.open(`tel:${userProfile.doctorPhone}`)}
             >
-              <p className="flex items-center gap-1 text-[11px] text-slate-400">
-                <Stethoscope className="h-3.5 w-3.5 text-blue-300" />
-                Primary doctor
-              </p>
-              <p className="mt-1 text-xs font-medium">
+              <Heart className="h-5 w-5 inline mr-2" />
               {userProfile?.primaryCareDoctor || userProfile?.doctorName || 'Doctor'}
-              </p>
             </button>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
-        <h3 className="text-sm font-semibold text-slate-50 sm:text-base">Quick actions</h3>
-        <p className="mt-1 text-[11px] text-slate-400">
-          Jump straight into the tools you use the most.
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (
               <button
                 key={index}
                 onClick={action.action}
-                className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-950 px-3 py-3 text-center text-[11px] text-slate-200 hover:border-blue-400/60 hover:bg-slate-900"
+                className={`${action.color} text-white p-4 rounded-lg transition-colors flex flex-col items-center space-y-2`}
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-blue-300">
-                  <Icon className="h-4 w-4" />
-                </div>
-                <span className="line-clamp-2">{action.name}</span>
+                <Icon className="h-6 w-6" />
+                <span className="text-sm font-medium text-center">{action.name}</span>
               </button>
             );
           })}
@@ -412,231 +371,185 @@ const Dashboard = () => {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <button 
           onClick={() => navigate('/appointments')}
-          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-blue-400/60 hover:bg-slate-900"
+          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
         >
-          <Calendar className="h-4 w-4 text-blue-300" />
-          <p className="mt-3 text-[11px] text-slate-400">Upcoming visits</p>
-          <p className="mt-1 text-xl font-semibold text-slate-50">
-            {dashboardData.loading ? '…' : dashboardData.upcomingAppointments.length}
-          </p>
+          <Calendar className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900">
+            {dashboardData.loading ? '...' : dashboardData.upcomingAppointments.length}
+          </div>
+          <div className="text-sm text-gray-500">Upcoming Visits</div>
         </button>
         <button 
           onClick={() => navigate('/vital-signs')}
-          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-blue-400/60 hover:bg-slate-900"
+          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
         >
-          <Heart className="h-4 w-4 text-rose-300" />
-          <p className="mt-3 text-[11px] text-slate-400">
-            {dashboardData.latestVitalSigns?.type || 'Last reading'}
-          </p>
-          <p className="mt-1 text-xl font-semibold text-slate-50">
-            {dashboardData.loading
-              ? '…'
-              : dashboardData.latestVitalSigns?.type === 'Blood Pressure'
+          <Heart className="h-8 w-8 text-red-600 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900">
+            {dashboardData.loading ? '...' : (
+              dashboardData.latestVitalSigns?.type === 'Blood Pressure' 
                 ? dashboardData.latestVitalSigns.value 
-              : dashboardData.latestVitalSigns?.value || '--'}
-          </p>
+                : dashboardData.latestVitalSigns?.value || '--'
+            )}
+          </div>
+          <div className="text-sm text-gray-500">
+            {dashboardData.latestVitalSigns?.type || 'Last Reading'}
+          </div>
         </button>
         <button 
           onClick={() => navigate('/messages')}
-          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-blue-400/60 hover:bg-slate-900"
+          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
         >
-          <MessageCircle className="h-4 w-4 text-blue-300" />
-          <p className="mt-3 text-[11px] text-slate-400">New messages</p>
-          <p className="mt-1 text-xl font-semibold text-slate-50">
-            {dashboardData.loading ? '…' : dashboardData.unreadMessages}
-          </p>
+          <MessageCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900">
+            {dashboardData.loading ? '...' : dashboardData.unreadMessages}
+          </div>
+          <div className="text-sm text-gray-500">New Messages</div>
         </button>
         <button 
           onClick={() => navigate('/medications')}
-          className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-3 text-left text-xs text-slate-300 hover:border-violet-400/60 hover:bg-slate-900"
+          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
         >
-          <Pill className="h-4 w-4 text-violet-300" />
-          <p className="mt-3 text-[11px] text-slate-400">Active medications</p>
-          <p className="mt-1 text-xl font-semibold text-slate-50">
-            {dashboardData.loading ? '…' : dashboardData.activeMedications.length}
-          </p>
+          <Pill className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+          <div className="text-2xl font-bold text-gray-900">
+            {dashboardData.loading ? '...' : dashboardData.activeMedications.length}
+          </div>
+          <div className="text-sm text-gray-500">Active Medications</div>
         </button>
       </div>
 
       {/* Upcoming Care Visits */}
-      <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
-        <h2 className="text-sm font-semibold text-slate-50 sm:text-base">Upcoming care visits</h2>
-        <p className="mt-1 text-[11px] text-slate-400">
-          Your next scheduled appointments and home visits.
-        </p>
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Care Visits</h2>
         {dashboardData.loading ? (
-          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
-            <div className="animate-pulse space-y-2">
-              <div className="h-3 rounded bg-slate-800" />
-              <div className="h-3 rounded bg-slate-800/80" />
-              <div className="h-3 w-1/2 rounded bg-slate-800/80" />
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
             </div>
           </div>
         ) : dashboardData.upcomingAppointments.length > 0 ? (
-          <div className="mt-4 space-y-3">
+          <div className="space-y-3">
             {dashboardData.upcomingAppointments.slice(0, 3).map((appointment) => (
-              <div
-                key={appointment.id}
-                className="rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-200"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-50">
-                      {appointment.type || 'Healthcare visit'}
+              <div key={appointment.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">
+                      {appointment.type || 'Healthcare Visit'}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {appointment.doctorName || appointment.caregiverName || 'Healthcare Provider'}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-slate-400">
-                      {appointment.doctorName ||
-                        appointment.caregiverName ||
-                        'Healthcare provider'}
-                    </p>
-                    <p className="mt-1 text-[11px] text-slate-300">
-                      {appointment.scheduledTime
-                        ? new Date(appointment.scheduledTime).toLocaleString('en-US', {
+                    <p className="text-sm text-gray-600">
+                      {appointment.scheduledTime ? 
+                        new Date(appointment.scheduledTime).toLocaleString('en-US', {
                           weekday: 'short',
                           month: 'short', 
                           day: 'numeric',
                           hour: 'numeric',
-                            minute: '2-digit',
-                          })
-                        : 'Time TBD'}
+                          minute: '2-digit'
+                        }) : 'Time TBD'
+                      }
                     </p>
                     {appointment.location && (
-                      <p className="mt-0.5 text-[11px] text-slate-500">
-                        {appointment.location}
-                      </p>
+                      <p className="text-sm text-gray-600">{appointment.location}</p>
                     )}
                   </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-[11px] font-medium ${
-                      appointment.status === 'scheduled'
-                        ? 'bg-slate-900 text-blue-300'
-                        : appointment.status === 'confirmed'
-                        ? 'bg-blue-500/10 text-blue-300'
-                        : appointment.status === 'pending'
-                        ? 'bg-blue-500/10 text-blue-300'
-                        : 'bg-slate-900 text-slate-300'
-                    }`}
-                  >
-                    {appointment.status
-                      ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)
-                      : 'Scheduled'}
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                    appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                    appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Scheduled'}
                   </span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="mt-4 rounded-2xl border border-dashed border-slate-800 bg-slate-950 p-4 text-center text-xs text-slate-400">
-            <Calendar className="mx-auto mb-2 h-8 w-8 text-slate-700" />
+          <div className="bg-white border border-gray-200 rounded-lg p-4 text-center text-gray-500">
+            <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-300" />
             <p>No upcoming appointments</p>
-            <p className="mt-1">
-              Schedule your next visit with your care team from the appointments page.
-            </p>
+            <p className="text-sm">Schedule your next visit with a caregiver</p>
           </div>
         )}
       </div>
 
       {/* Caregiver Tasks & Care Activities */}
-      <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
-        <h2 className="text-sm font-semibold text-slate-50 sm:text-base">
-          Care tasks & activities
-        </h2>
-        <p className="mt-1 text-[11px] text-slate-400">
-          What your caregivers have queued up for you.
-        </p>
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Care Tasks & Activities</h2>
         {dashboardData.loading ? (
-          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
-            <div className="animate-pulse space-y-2">
-              <div className="h-3 rounded bg-slate-800" />
-              <div className="h-3 rounded bg-slate-800/80" />
-              <div className="h-3 w-1/2 rounded bg-slate-800/80" />
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
             </div>
           </div>
         ) : dashboardData.caregiverTasks.length > 0 ? (
-          <div className="mt-4 space-y-3">
-            {dashboardData.caregiverTasks
-              .filter((task) => task.status !== 'completed' && task.status !== 'cancelled')
-              .slice(0, 5)
-              .map((task) => (
-                <div
-                  key={task.id}
-                  className="rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-200 hover:border-blue-400/60"
-                >
-                  <div className="flex items-start justify-between gap-3">
+          <div className="space-y-3">
+            {dashboardData.caregiverTasks.filter(task => task.status !== 'completed' && task.status !== 'cancelled').slice(0, 5).map((task) => (
+              <div key={task.id} className="bg-white border border-l-4 border-l-blue-500 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start">
                   <div className="flex-1">
-                      <div className="mb-1 flex items-center gap-2">
-                        <FileText className="h-3.5 w-3.5 text-blue-300" />
-                        <h3 className="text-sm font-medium text-slate-50">
-                          {task.title || 'Care task'}
-                        </h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      <h3 className="font-semibold text-gray-900">{task.title || 'Care Task'}</h3>
                     </div>
                     {task.description && (
-                        <p className="mb-1 text-[11px] text-slate-400">{task.description}</p>
+                      <p className="text-sm text-gray-600 mb-2">{task.description}</p>
                     )}
-                      <div className="flex flex-wrap gap-2 text-[11px] text-slate-400">
+                    <div className="flex flex-wrap gap-2 text-sm">
                       {task.caregiverName && (
-                          <span>
-                            <User className="mr-1 inline h-3 w-3" />
+                        <span className="text-gray-500">
+                          <User className="h-3 w-3 inline mr-1" />
                           Assigned to: {task.caregiverName}
                         </span>
                       )}
                       {task.dueDate && (
-                          <span>
-                            <Clock className="mr-1 inline h-3 w-3" />
+                        <span className="text-gray-500">
+                          <Clock className="h-3 w-3 inline mr-1" />
                           Due: {task.dueDate} {task.dueTime && `at ${task.dueTime}`}
                         </span>
                       )}
                     </div>
                   </div>
-                    <div className="ml-3 flex flex-col items-end gap-1">
-                      <span
-                        className={`rounded-full px-3 py-1 text-[10px] font-medium ${
-                          task.priority === 'urgent'
-                            ? 'bg-rose-500/15 text-rose-300'
-                            : task.priority === 'high'
-                            ? 'bg-blue-500/15 text-blue-300'
-                            : task.priority === 'normal'
-                            ? 'bg-blue-500/15 text-blue-300'
-                            : 'bg-slate-800 text-slate-300'
-                        }`}
-                      >
-                        {task.priority || 'Normal'} priority
+                  <div className="ml-4 flex flex-col items-end gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                      task.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                      task.priority === 'normal' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {task.priority || 'Normal'} Priority
                     </span>
-                      <span
-                        className={`rounded-full px-3 py-1 text-[10px] font-medium ${
-                          task.status === 'pending'
-                            ? 'bg-blue-500/15 text-blue-300'
-                            : task.status === 'in_progress' || task.status === 'active'
-                            ? 'bg-blue-500/15 text-blue-300'
-                            : task.status === 'completed'
-                            ? 'bg-blue-500/15 text-blue-300'
-                            : 'bg-slate-800 text-slate-300'
-                        }`}
-                      >
-                        {task.status
-                          ? task.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-                          : 'Pending'}
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      task.status === 'in_progress' || task.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                      task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {task.status ? task.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Pending'}
                     </span>
                   </div>
                 </div>
               </div>
             ))}
-            {dashboardData.caregiverTasks.filter((t) => t.status !== 'completed').length > 5 && (
-              <p className="mt-2 text-center text-[11px] text-slate-400">
-                +
-                {dashboardData.caregiverTasks.filter((t) => t.status !== 'completed').length - 5} more
-                tasks
+            {dashboardData.caregiverTasks.filter(t => t.status !== 'completed').length > 5 && (
+              <p className="text-sm text-gray-500 text-center mt-2">
+                + {dashboardData.caregiverTasks.filter(t => t.status !== 'completed').length - 5} more tasks
               </p>
             )}
           </div>
         ) : (
-          <div className="mt-4 rounded-2xl border border-dashed border-slate-800 bg-slate-950 p-4 text-center text-xs text-slate-400">
-            <FileText className="mx-auto mb-2 h-8 w-8 text-slate-700" />
+          <div className="bg-white border border-gray-200 rounded-lg p-4 text-center text-gray-500">
+            <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
             <p>No active care tasks</p>
-            <p className="mt-1">Your caregiver will assign tasks as needed.</p>
+            <p className="text-sm">Your caregiver will assign tasks as needed</p>
           </div>
         )}
       </div>

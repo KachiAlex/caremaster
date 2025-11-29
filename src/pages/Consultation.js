@@ -37,23 +37,23 @@ const Consultation = () => {
     priority: 'medium'
   });
 
-  // Load assigned patients
+  // Load assigned clients
   useEffect(() => {
     const loadAssignedPatients = async () => {
       if (!user?.uid) return;
       
       try {
         setLoading(true);
-        const patients = await getClientsByCaregiver(user.uid);
-        setAssignedPatients(patients);
+        const clients = await getClientsByCaregiver(user.uid);
+        setAssignedPatients(clients);
         
-        if (patients.length > 0 && !selectedPatientId) {
-          setSelectedPatientId(patients[0].id);
-          setSelectedPatient(patients[0]);
+        if (clients.length > 0 && !selectedPatientId) {
+          setSelectedPatientId(clients[0].id);
+          setSelectedPatient(clients[0]);
         }
       } catch (error) {
-        console.error('Error loading assigned patients:', error);
-        toast.error('Failed to load assigned patients');
+        console.error('Error loading assigned clients:', error);
+        toast.error('Failed to load assigned clients');
       } finally {
         setLoading(false);
       }
@@ -62,7 +62,7 @@ const Consultation = () => {
     loadAssignedPatients();
   }, [user?.uid, selectedPatientId]);
 
-  // Load care plans for selected patient
+  // Load care plans for selected Client
   useEffect(() => {
     const loadCarePlans = async () => {
       if (!selectedPatientId) return;
@@ -79,11 +79,11 @@ const Consultation = () => {
     loadCarePlans();
   }, [selectedPatientId]);
 
-  // Update selected patient when ID changes
+  // Update selected Client when ID changes
   useEffect(() => {
     if (selectedPatientId && assignedPatients.length > 0) {
-      const patient = assignedPatients.find(p => p.id === selectedPatientId);
-      setSelectedPatient(patient || null);
+      const Client = assignedPatients.find(p => p.id === selectedPatientId);
+      setSelectedPatient(Client || null);
     }
   }, [selectedPatientId, assignedPatients]);
 
@@ -91,15 +91,15 @@ const Consultation = () => {
     e.preventDefault();
     
     if (!selectedPatientId) {
-      toast.error('Please select a patient');
+      toast.error('Please select a Client');
       return;
     }
 
     try {
       const planData = {
         ...newPlan,
-        patientId: selectedPatientId,
-        patientName: selectedPatient?.name || selectedPatient?.fullName || 'Unknown Patient',
+        clientId: selectedPatientId,
+        clientName: selectedPatient?.name || selectedPatient?.fullName || 'Unknown Client',
         createdBy: user.uid,
         createdByName: userProfile?.name || userProfile?.displayName || 'Doctor',
         status: 'active',
@@ -165,7 +165,7 @@ const Consultation = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'paused':
         return 'bg-yellow-100 text-yellow-800';
       case 'completed':
@@ -182,9 +182,9 @@ const Consultation = () => {
       case 'high':
         return 'bg-red-100 text-red-800';
       case 'medium':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-orange-100 text-orange-800';
       case 'low':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -205,12 +205,12 @@ const Consultation = () => {
 
   return (
     <div className="space-y-8">
-      {/* Patient Selection */}
+      {/* Client Selection */}
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <Stethoscope className="h-6 w-6 text-gray-700 mr-3" />
-            <h1 className="text-2xl font-bold text-gray-900">Patient Consultation</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Client Consultation</h1>
           </div>
           {assignedPatients.length > 0 && (
             <select
@@ -218,10 +218,10 @@ const Consultation = () => {
               onChange={(e) => setSelectedPatientId(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="">Select patient...</option>
-              {assignedPatients.map(patient => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name || patient.fullName || patient.email || patient.id}
+              <option value="">Select client...</option>
+              {assignedPatients.map(Client => (
+                <option key={client.id} value={client.id}>
+                  {client.name || client.fullName || client.email || client.id}
                 </option>
               ))}
             </select>
@@ -231,14 +231,14 @@ const Consultation = () => {
         {assignedPatients.length === 0 ? (
           <div className="text-center py-8">
             <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No patients assigned</h3>
-            <p className="text-gray-600">Contact your administrator to get patients assigned to your care.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No clients assigned</h3>
+            <p className="text-gray-600">Contact your administrator to get clients assigned to your care.</p>
           </div>
         ) : !selectedPatientId ? (
           <div className="text-center py-8">
             <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Select a patient</h3>
-            <p className="text-gray-600">Choose a patient from the dropdown to view their care plans.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Client</h3>
+            <p className="text-gray-600">Choose a Client from the dropdown to view their care plans.</p>
           </div>
         ) : (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -246,7 +246,7 @@ const Consultation = () => {
               <User className="h-8 w-8 text-blue-600 mr-3" />
               <div>
                 <h3 className="text-lg font-semibold text-blue-900">
-                  {selectedPatient?.name || selectedPatient?.fullName || 'Unknown Patient'}
+                  {selectedPatient?.name || selectedPatient?.fullName || 'Unknown Client'}
                 </h3>
                 <p className="text-blue-700">
                   {selectedPatient?.email || selectedPatient?.id}
@@ -278,7 +278,7 @@ const Consultation = () => {
             <div className="text-center py-8">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No care plans yet</h3>
-              <p className="text-gray-600 mb-4">Create a care plan to provide structured care for this patient.</p>
+              <p className="text-gray-600 mb-4">Create a care plan to provide structured care for this client.</p>
               <button
                 onClick={() => setShowCreatePlan(true)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -351,12 +351,12 @@ const Consultation = () => {
                   <div className="border-t border-gray-200 pt-4">
                     <h4 className="font-medium text-gray-900 mb-3">Execution Timeline</h4>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-blue-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center">
-                          <CheckCircle className="h-5 w-5 text-blue-600 mr-2" />
-                          <span className="text-sm font-medium text-blue-800">Initial Assessment</span>
+                          <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                          <span className="text-sm font-medium text-green-800">Initial Assessment</span>
                         </div>
-                        <span className="text-xs text-blue-600">Completed</span>
+                        <span className="text-xs text-green-600">Completed</span>
                       </div>
                       
                       <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">

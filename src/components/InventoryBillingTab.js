@@ -251,9 +251,9 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
         <body>
           <div class="invoice">
             <div class="header">
-              <h1>UltimateCare Healthcare</h1>
+              <h1>Care Master Healthcare</h1>
               <p>Professional Healthcare Services & Elderly Care</p>
-              <p style="margin-top: 15px; font-size: 14px;">📍 Lagos, Nigeria | 📞 +234 800 ULTIMATE | ✉️ billing@ultimatecare.com</p>
+              <p style="margin-top: 15px; font-size: 14px;">📍 Lagos, Nigeria | 📞 +234 800 Care Master | ✉️ billing@Care Master.com</p>
             </div>
 
             <div style="text-align: right; margin-bottom: 20px;">
@@ -342,8 +342,8 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
 
             <div class="footer">
               <p>Thank you for your business!</p>
-              <p style="margin-top: 10px;">For inquiries, please contact billing@ultimatecare.com or call +234 800 ULTIMATE</p>
-              <p style="margin-top: 5px;">© ${new Date().getFullYear()} UltimateCare Healthcare. All rights reserved.</p>
+              <p style="margin-top: 10px;">For inquiries, please contact billing@Care Master.com or call +234 800 Care Master</p>
+              <p style="margin-top: 5px;">© ${new Date().getFullYear()} Care Master Healthcare. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -461,11 +461,11 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Low Stock</p>
-              <p className="text-2xl font-bold text-blue-600">
+              <p className="text-2xl font-bold text-orange-600">
                 {inventory.filter(i => i.quantity <= i.minStock).length}
               </p>
             </div>
-            <AlertTriangle className="h-10 w-10 text-blue-600" />
+            <AlertTriangle className="h-10 w-10 text-orange-600" />
           </div>
         </div>
 
@@ -483,11 +483,11 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Revenue (Paid)</p>
-              <p className="text-2xl font-bold text-blue-600">
+              <p className="text-2xl font-bold text-green-600">
                 ₦{stats?.paidAmount?.toLocaleString() || 0}
               </p>
             </div>
-            <DollarSign className="h-10 w-10 text-blue-600" />
+            <DollarSign className="h-10 w-10 text-green-600" />
           </div>
         </div>
       </div>
@@ -577,7 +577,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredInventory.map((item) => (
-                      <tr key={item.id} className={item.quantity <= item.minStock ? 'bg-blue-50' : ''}>
+                      <tr key={item.id} className={item.quantity <= item.minStock ? 'bg-orange-50' : ''}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
                             <div className="text-sm font-medium text-gray-900">{item.name}</div>
@@ -592,12 +592,12 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <span className={`text-sm font-medium ${
-                              item.quantity <= item.minStock ? 'text-blue-600' : 'text-gray-900'
+                              item.quantity <= item.minStock ? 'text-orange-600' : 'text-gray-900'
                             }`}>
                               {item.quantity} {item.unit}
                             </span>
                             {item.quantity <= item.minStock && (
-                              <AlertTriangle className="h-4 w-4 text-blue-600 ml-2" />
+                              <AlertTriangle className="h-4 w-4 text-orange-600 ml-2" />
                             )}
                           </div>
                         </td>
@@ -656,7 +656,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                     resetInvoiceForm();
                     setShowInvoiceModal(true);
                   }}
-                  className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                  className="ml-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Create Invoice
@@ -705,7 +705,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {invoice.status === 'paid' && (
-                            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full flex items-center w-fit">
+                            <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full flex items-center w-fit">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Paid
                             </span>
@@ -727,7 +727,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                           {invoice.status === 'pending' && (
                             <button
                               onClick={() => handleInvoiceStatusChange(invoice.id, 'paid', { method: 'cash', reference: 'CASH-' + Date.now() })}
-                              className="text-blue-600 hover:text-green-900 mr-3"
+                              className="text-green-600 hover:text-green-900 mr-3"
                             >
                               <CheckCircle className="h-4 w-4" />
                             </button>
@@ -950,7 +950,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                     required
                     value={invoiceFormData.clientId}
                     onChange={(e) => setInvoiceFormData({...invoiceFormData, clientId: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="">-- Select Client --</option>
                     {clients.map(client => (
@@ -976,7 +976,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                             e.target.value = '';
                           }
                         }}
-                        className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       >
                         <option value="">+ Add Item</option>
                         {inventory.filter(i => i.quantity > 0).map(item => (
@@ -1045,7 +1045,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                           </tr>
                           <tr>
                             <td colSpan="3" className="px-4 py-2 text-right text-sm font-medium text-gray-900">Total:</td>
-                            <td className="px-4 py-2 text-lg font-bold text-blue-600" colSpan="2">
+                            <td className="px-4 py-2 text-lg font-bold text-green-600" colSpan="2">
                               ₦{calculateInvoiceTotals(invoiceFormData.items).total.toLocaleString()}
                             </td>
                           </tr>
@@ -1072,7 +1072,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                       value={invoiceFormData.dueDate}
                       onChange={(e) => setInvoiceFormData({...invoiceFormData, dueDate: e.target.value})}
                       min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
 
@@ -1083,7 +1083,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                     <select
                       value={invoiceFormData.paymentTerms}
                       onChange={(e) => setInvoiceFormData({...invoiceFormData, paymentTerms: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
                       <option value="immediate">Due Immediately</option>
                       <option value="net7">Net 7 Days</option>
@@ -1101,7 +1101,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                     rows="3"
                     value={invoiceFormData.notes}
                     onChange={(e) => setInvoiceFormData({...invoiceFormData, notes: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Additional notes for the client..."
                   />
                 </div>
@@ -1119,7 +1119,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                   >
                     Create Invoice
                   </button>
@@ -1149,19 +1149,19 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
 
               {/* Invoice Header */}
               <div className="bg-blue-600 text-white p-6 rounded-lg mb-6">
-                <h1 className="text-3xl font-bold">UltimateCare Healthcare</h1>
+                <h1 className="text-3xl font-bold">Care Master Healthcare</h1>
                 <p className="text-blue-100 mt-2">Professional Healthcare Services & Elderly Care</p>
                 <div className="mt-4 text-sm">
                   <p>📍 Lagos, Nigeria</p>
-                  <p>📞 +234 800 ULTIMATE (353379)</p>
-                  <p>✉️ billing@ultimatecare.com</p>
+                  <p>📞 +234 800 Care Master (353379)</p>
+                  <p>✉️ billing@Care Master.com</p>
                 </div>
               </div>
 
               {/* Status Badge */}
               <div className="mb-6">
                 {viewingInvoice.status === 'paid' && (
-                  <span className="px-4 py-2 text-sm font-semibold bg-blue-100 text-blue-800 rounded-full flex items-center w-fit">
+                  <span className="px-4 py-2 text-sm font-semibold bg-green-100 text-green-800 rounded-full flex items-center w-fit">
                     <CheckCircle className="h-4 w-4 mr-2" />
                     PAID
                   </span>
@@ -1262,11 +1262,11 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
 
               {/* Payment Info */}
               {viewingInvoice.status === 'paid' && viewingInvoice.paymentDetails && (
-                <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-600 rounded">
-                  <h4 className="text-sm font-semibold text-blue-800 mb-2">Payment Information:</h4>
-                  <p className="text-blue-700"><strong>Method:</strong> {viewingInvoice.paymentDetails.method}</p>
-                  <p className="text-blue-700"><strong>Reference:</strong> {viewingInvoice.paymentDetails.reference}</p>
-                  <p className="text-blue-700"><strong>Date:</strong> {viewingInvoice.paymentDetails.date?.toLocaleDateString()}</p>
+                <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-600 rounded">
+                  <h4 className="text-sm font-semibold text-green-800 mb-2">Payment Information:</h4>
+                  <p className="text-green-700"><strong>Method:</strong> {viewingInvoice.paymentDetails.method}</p>
+                  <p className="text-green-700"><strong>Reference:</strong> {viewingInvoice.paymentDetails.reference}</p>
+                  <p className="text-green-700"><strong>Date:</strong> {viewingInvoice.paymentDetails.date?.toLocaleDateString()}</p>
                 </div>
               )}
 

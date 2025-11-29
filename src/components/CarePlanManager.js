@@ -21,7 +21,7 @@ import { toast } from 'react-toastify';
 import { carePlansAPI } from '../api/carePlansAPI';
 import { getNurseReportsByPatient } from '../api/nurseReportsAPI';
 
-const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
+const CarePlanManager = ({ clientId, doctorId, doctorName, clientName }) => {
   const [carePlans, setCarePlans] = useState([]);
   const [nurseReports, setNurseReports] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -54,22 +54,22 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
   const [newIntervention, setNewIntervention] = useState('');
 
   const priorityOptions = [
-    { value: 'low', label: 'Low Priority', color: 'text-blue-600' },
+    { value: 'low', label: 'Low Priority', color: 'text-green-600' },
     { value: 'medium', label: 'Medium Priority', color: 'text-yellow-600' },
-    { value: 'high', label: 'High Priority', color: 'text-blue-600' },
+    { value: 'high', label: 'High Priority', color: 'text-orange-600' },
     { value: 'critical', label: 'Critical Priority', color: 'text-red-600' }
   ];
 
   useEffect(() => {
-    if (patientId) {
+    if (clientId) {
       loadCarePlans();
       loadNurseReports();
     }
-  }, [patientId]);
+  }, [clientId]);
 
   const loadCarePlans = async () => {
     try {
-      const plans = await carePlansAPI.getCarePlansByPatient(patientId);
+      const plans = await carePlansAPI.getCarePlansByPatient(clientId);
       setCarePlans(plans);
     } catch (error) {
       console.error('Error loading care plans:', error);
@@ -79,7 +79,7 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
 
   const loadNurseReports = async () => {
     try {
-      const reports = await getNurseReportsByPatient(patientId);
+      const reports = await getNurseReportsByPatient(clientId);
       setNurseReports(reports);
     } catch (error) {
       console.error('Error loading nurse reports:', error);
@@ -156,7 +156,7 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
       setLoading(true);
 
       const carePlanData = {
-        patientId,
+        clientId,
         doctorId,
         doctorName,
         diagnosis: carePlanForm.diagnosis,
@@ -172,16 +172,7 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
         monitoringRequirements: carePlanForm.monitoringRequirements
       };
 
-      // Prepare clinician info for logging
-      const clinicianInfo = {
-        id: doctorId,
-        name: doctorName,
-        role: 'doctor', // CarePlanManager is used by doctors
-        email: null, // Could be passed as prop if needed
-        institutionId: null // Could be passed as prop if needed
-      };
-      
-      await carePlansAPI.createCarePlan(carePlanData, clinicianInfo);
+      await carePlansAPI.createCarePlan(carePlanData);
       
       toast.success('Care plan created successfully!');
       setShowCreateForm(false);
@@ -227,7 +218,7 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center">
           <FileText className="mr-2 text-blue-600" />
-          Care Plan Management - {patientName}
+          Care Plan Management - {clientName}
         </h2>
         <button
           onClick={() => setShowCreateForm(true)}
@@ -241,13 +232,13 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
       {/* Recent Nurse Reports */}
       <div className="mb-8">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <Eye className="mr-2 text-blue-600" />
+          <Eye className="mr-2 text-green-600" />
           Recent Nurse Reports
         </h3>
         {nurseReports.length > 0 ? (
           <div className="space-y-3">
             {nurseReports.slice(0, 3).map((report, index) => (
-              <div key={report.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+              <div key={report.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-green-500">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
                     <User className="mr-2 text-gray-600" size={16} />
@@ -275,7 +266,7 @@ const CarePlanManager = ({ patientId, doctorId, doctorName, patientName }) => {
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     report.status === 'critical' ? 'bg-red-100 text-red-800' :
                     report.status === 'concerning' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-blue-100 text-blue-800'
+                    'bg-green-100 text-green-800'
                   }`}>
                     {report.status}
                   </span>

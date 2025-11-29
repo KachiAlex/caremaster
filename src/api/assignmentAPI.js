@@ -47,7 +47,6 @@ export const assignmentAPI = {
 
       const assignment = {
         ...assignmentData,
-        clientUid: assignmentData.clientUid || assignmentData.clientId || null,
         status: 'active',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -115,118 +114,36 @@ export const assignmentAPI = {
   },
 
   // Get assignments by client (no composite index required)
-  getAssignmentsByClient: async (clientRef) => {
+  getAssignmentsByClient: async (clientId) => {
     try {
-      if (!clientRef) {
-        return [];
-      }
-
-      const searchParams = {
-        uid: null,
-        email: null,
-        docIds: new Set()
-      };
-
-      if (typeof clientRef === 'string') {
-        searchParams.uid = clientRef;
-      } else if (typeof clientRef === 'object') {
-        searchParams.uid = clientRef.uid || clientRef.clientUid || clientRef.userId || clientRef.id || null;
-        searchParams.email = (clientRef.email || clientRef.clientEmail || '').toLowerCase() || null;
-
-        if (clientRef.docId) {
-          searchParams.docIds.add(clientRef.docId);
-        }
-        if (Array.isArray(clientRef.docIds)) {
-          clientRef.docIds.filter(Boolean).forEach(id => searchParams.docIds.add(id));
-        }
-      }
-
-      const assignmentsRef = collection(db, ASSIGNMENTS_COLLECTION);
-      const queryKeys = new Set();
-      const assignmentQueries = [];
-      const addQuery = (field, value) => {
-        if (!value) return;
-        const key = `${field}:${value}`;
-        if (queryKeys.has(key)) return;
-        queryKeys.add(key);
-        assignmentQueries.push(query(assignmentsRef, where(field, '==', value)));
-      };
-
-      // Search by explicit client document IDs
-      Array.from(searchParams.docIds).forEach(id => addQuery('clientId', id));
-
-      // Search by UID (covers assignments created with auth UID)
-      if (searchParams.uid) {
-        addQuery('clientUid', searchParams.uid);
-        addQuery('clientId', searchParams.uid);
-      }
-
-      // Search by email if available
-      if (searchParams.email) {
-        addQuery('clientEmail', searchParams.email);
-      }
-
-      // If we only have an email, try to resolve corresponding client document IDs
-      if (!searchParams.docIds.size && searchParams.email) {
-        try {
-          const clientsRef = collection(db, 'clients');
-          const clientsQuery = query(clientsRef, where('email', '==', searchParams.email));
-          const clientSnapshot = await getDocs(clientsQuery);
-          clientSnapshot.forEach(clientDoc => {
-            addQuery('clientId', clientDoc.id);
-          });
-        } catch (lookupError) {
-          console.warn('Failed to resolve client document by email:', lookupError);
-        }
-      }
-
-      // Fallback query if nothing else was added
-      if (assignmentQueries.length === 0) {
-        const fallbackId = typeof clientRef === 'string' ? clientRef : clientRef?.id;
-        if (fallbackId) {
-          addQuery('clientId', fallbackId);
-        }
-      }
-
-      if (assignmentQueries.length === 0) {
-        return [];
-      }
-
-      const querySnapshots = await Promise.all(
-        assignmentQueries.map((q) =>
-          getDocs(q).catch((error) => {
-            console.warn('Assignment query failed:', error);
-            return { empty: true, docs: [] };
-          })
-        )
+      const assignmentsQuery = query(
+        collection(db, ASSIGNMENTS_COLLECTION),
+        where('clientId', '==', clientId)
       );
 
-      const assignmentsMap = new Map();
-      querySnapshots.forEach((snapshot) => {
-        snapshot.docs.forEach((docSnap) => {
-          if (!assignmentsMap.has(docSnap.id)) {
-            const assignmentData = docSnap.data();
-            assignmentsMap.set(docSnap.id, {
-              id: docSnap.id,
+      const querySnapshot = await getDocs(assignmentsQuery);
+      const assignments = [];
+
+      querySnapshot.forEach((doc) => {
+        const assignmentData = doc.data();
+        assignments.push({
+          id: doc.id,
           ...assignmentData,
           createdAt: assignmentData.createdAt?.toDate(),
           updatedAt: assignmentData.updatedAt?.toDate(),
           startDate: assignmentData.startDate?.toDate(),
           endDate: assignmentData.endDate?.toDate()
-            });
-          }
         });
       });
 
-      const assignments = Array.from(assignmentsMap.values()).sort((a, b) => {
+      // Sort client-side by createdAt desc
+      return assignments.sort((a, b) => {
         const aTime = a.createdAt?.getTime?.() ?? 0;
         const bTime = b.createdAt?.getTime?.() ?? 0;
         return bTime - aTime;
       });
-
-      return assignments;
     } catch (error) {
-      logger.error('Error fetching client assignments', { error, clientRef });
+      logger.error('Error fetching client assignments', { error, clientId });
       throw error;
     }
   },

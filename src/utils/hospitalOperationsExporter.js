@@ -75,8 +75,8 @@ export function exportBedStatus(beds, filename = null) {
     { key: 'unit', label: 'Unit' },
     { key: 'status', label: 'Status' },
     { key: 'roomType', label: 'Room Type' },
-    { key: 'patientName', label: 'Patient Name' },
-    { key: 'patientId', label: 'Patient ID' },
+    { key: 'clientName', label: 'Client Name' },
+    { key: 'clientId', label: 'Client ID' },
     { key: 'occupiedAt', label: 'Occupied At' },
     { key: 'lastUpdated', label: 'Last Updated' },
     { key: 'notes', label: 'Notes' },
@@ -178,7 +178,7 @@ Occupied Beds,${report.summary.occupiedBeds}
 Available Beds,${report.summary.availableBeds}
 Open Incidents,${report.summary.openIncidents}
 Staff On Duty,${report.summary.staffOnDuty}
-Patient Census,${report.summary.patientCensus}
+Client Census,${report.summary.patientCensus}
 
 Beds
 ${bedsCSV}

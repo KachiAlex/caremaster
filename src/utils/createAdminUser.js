@@ -35,5 +35,5 @@ export const createAdminUser = async (email, password, name) => {
 
 // For development - create default admin
 export const createDefaultAdmin = () => {
-  return createAdminUser('admin@ultimatecare.com', 'admin123456', 'UltimateCare Administrator');
+  return createAdminUser('admin@Care Master.com', 'admin123456', 'Care Master Administrator');
 };

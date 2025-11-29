@@ -4,7 +4,7 @@
  * Handles compliance workflows including:
  * - Audit trails
  * - Data retention policies
- * - Patient privacy controls
+ * - Client privacy controls
  * - Compliance reporting
  * - HIPAA/NDPR compliance tracking
  */
@@ -336,28 +336,28 @@ export const getDataRetentionRules = async (institutionId) => {
 };
 
 /**
- * Record patient privacy consent
+ * Record Client privacy consent
  */
 export const recordPrivacyConsent = async (consentData) => {
   try {
     const {
-      patientId,
+      clientId,
       institutionId,
       consentType,
       granted = true,
       grantedBy = null,
-      grantedByName = 'Patient',
+      grantedByName = 'Client',
       purpose = '',
       expiryDate = null,
       notes = ''
     } = consentData;
 
-    if (!patientId || !institutionId || !consentType) {
+    if (!clientId || !institutionId || !consentType) {
       throw new Error('Missing required consent fields');
     }
 
     const consent = {
-      patientId,
+      clientId,
       institutionId,
       consentType,
       granted,
@@ -374,9 +374,9 @@ export const recordPrivacyConsent = async (consentData) => {
 
     // Log the consent
     await createAuditLog({
-      userId: grantedBy || patientId,
+      userId: grantedBy || clientId,
       userName: grantedByName,
-      userRole: grantedBy ? 'staff' : 'patient',
+      userRole: grantedBy ? 'staff' : 'Client',
       institutionId,
       action: granted ? AUDIT_ACTIONS.CONSENT_GIVEN : AUDIT_ACTIONS.CONSENT_REVOKED,
       resourceType: 'privacy_consent',
@@ -396,13 +396,13 @@ export const recordPrivacyConsent = async (consentData) => {
 };
 
 /**
- * Get patient privacy consents
+ * Get Client privacy consents
  */
-export const getPatientConsents = async (patientId, institutionId) => {
+export const getPatientConsents = async (clientId, institutionId) => {
   try {
     const consentsQuery = query(
       collection(db, PRIVACY_CONSENTS_COLLECTION),
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('institutionId', '==', institutionId),
       orderBy('createdAt', 'desc')
     );
@@ -413,7 +413,7 @@ export const getPatientConsents = async (patientId, institutionId) => {
       ...doc.data()
     }));
   } catch (error) {
-    console.error('Error fetching patient consents:', error);
+    console.error('Error fetching Client consents:', error);
     throw error;
   }
 };

@@ -14,7 +14,7 @@ import {
   getCountFromServer
 } from 'firebase/firestore';
 
-export const UltimateCareAdminAPI = {
+export const Care MasterAdminAPI = {
   // Dashboard Statistics
   getDashboardStats: async () => {
     try {
@@ -24,7 +24,7 @@ export const UltimateCareAdminAPI = {
       
       const userStats = {
         total: 0,
-        patients: 0,
+        elderly: 0,
         caregivers: 0,
         doctors: 0
       };
@@ -32,7 +32,7 @@ export const UltimateCareAdminAPI = {
       usersSnapshot.forEach((doc) => {
         const userData = doc.data();
         userStats.total++;
-        if (userData.userType === 'patient' || userData.userType === 'elderly') userStats.patients++;
+        if (userData.userType === 'elderly') userStats.elderly++;
         else if (userData.userType === 'caregiver') userStats.caregivers++;
         else if (userData.userType === 'doctor') userStats.doctors++;
       });
@@ -300,13 +300,13 @@ export const UltimateCareAdminAPI = {
 const getReportData = async (reportType, filters) => {
   switch (reportType) {
     case 'user_activity':
-      return await UltimateCareAdminAPI.getUsers(filters);
+      return await Care MasterAdminAPI.getUsers(filters);
     case 'appointments':
-      return await UltimateCareAdminAPI.getAppointments(filters);
+      return await Care MasterAdminAPI.getAppointments(filters);
     case 'medications':
-      return await UltimateCareAdminAPI.getMedications(filters);
+      return await Care MasterAdminAPI.getMedications(filters);
     case 'system_health':
-      return await UltimateCareAdminAPI.getSystemHealth();
+      return await Care MasterAdminAPI.getSystemHealth();
     default:
       return [];
   }

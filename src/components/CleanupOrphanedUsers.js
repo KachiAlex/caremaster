@@ -176,7 +176,7 @@ const CleanupOrphanedUsers = ({ institutionId }) => {
           </div>
         ) : orphanedUsers.length === 0 ? (
           <div className="text-center py-8">
-            <CheckCircle className="h-16 w-16 text-blue-500 mx-auto mb-4" />
+            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Orphaned Users Found</h3>
             <p className="text-gray-600">All users appear to have valid data.</p>
           </div>

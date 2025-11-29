@@ -80,13 +80,6 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
     try {
       setLoading(true);
       const allActivities = [];
-      
-      // Validate clientId before proceeding
-      if (!clientId) {
-        console.warn('ClientActivityTimeline: No clientId provided');
-        setLoading(false);
-        return;
-      }
 
       // 1. Load ADL Logs
       try {
@@ -216,7 +209,6 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
         });
       } catch (error) {
         console.error('Error loading medical reports:', error);
-        // Don't throw - continue loading other activities
       }
 
       // 5. Load Assignments
@@ -262,10 +254,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
       console.log(`✅ Loaded ${allActivities.length} activities for client ${clientName}`);
     } catch (error) {
       console.error('Error loading client activities:', error);
-      // Only show toast, don't throw or navigate - this prevents logout
-      toast.error('Failed to load activity timeline. Please try again.');
-      // Set empty activities array to prevent UI errors
-      setActivities([]);
+      toast.error('Failed to load activity timeline');
     } finally {
       setLoading(false);
     }
@@ -330,7 +319,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-blue-600" />;
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'skipped':
         return <XCircle className="h-4 w-4 text-yellow-600" />;
       case 'issue':
@@ -343,7 +332,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'skipped':
         return 'bg-yellow-100 text-yellow-800';
       case 'issue':
@@ -593,7 +582,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
                                   <span className="font-medium text-gray-500">Priority:</span>
                                   <span className={`ml-2 font-medium ${
                                     activity.details.priority === 'urgent' ? 'text-red-600' :
-                                    activity.details.priority === 'high' ? 'text-blue-600' :
+                                    activity.details.priority === 'high' ? 'text-orange-600' :
                                     'text-gray-700'
                                   }`}>{activity.details.priority.toUpperCase()}</span>
                                 </div>

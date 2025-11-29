@@ -1,9 +1,9 @@
 /**
- * Patient ID Generator
+ * Client ID Generator
  * 
- * Generates simple, memorable patient IDs for hospital operations
+ * Generates simple, memorable Client IDs for hospital operations
  * Format: UC-YYYY-NNNN (e.g., UC-2025-0001)
- * - UC: UltimateCare prefix
+ * - UC: ElderX prefix
  * - YYYY: Year of registration
  * - NNNN: Sequential number (4 digits, zero-padded)
  */
@@ -12,17 +12,17 @@ import { collection, query, where, getDocs, orderBy, limit } from 'firebase/fire
 import { db } from '../firebase/config';
 
 /**
- * Generate a simple, memorable patient ID
+ * Generate a simple, memorable Client ID
  * @param {string} institutionId - Optional institution ID for institution-specific numbering
- * @returns {Promise<string>} - Generated patient ID (e.g., "UC-2025-0001")
+ * @returns {Promise<string>} - Generated Client ID (e.g., "UC-2025-0001")
  */
-export async function generatePatientId(institutionId = null) {
+export async function generateClientId(institutionId = null) {
   try {
     const currentYear = new Date().getFullYear();
     const prefix = institutionId ? `UC-${institutionId.slice(0, 4).toUpperCase()}-${currentYear}` : `UC-${currentYear}`;
     
-    // Query for existing patient IDs with this prefix
-    const patientsRef = collection(db, 'patients');
+    // Query for existing Client IDs with this prefix
+    const patientsRef = collection(db, 'clients');
     const yearPrefix = institutionId 
       ? `${institutionId.slice(0, 4).toUpperCase()}-${currentYear}`
       : currentYear.toString();
@@ -31,24 +31,24 @@ export async function generatePatientId(institutionId = null) {
     let maxNumber = 0;
     
     try {
-      // Query patients with matching prefix pattern
+      // Query clients with matching prefix pattern
       const allPatients = await getDocs(patientsRef);
       allPatients.forEach((doc) => {
         const data = doc.data();
-        const patientId = data.patientId || data.id;
+        const clientId = data.clientId || data.id;
         
-        if (patientId && typeof patientId === 'string') {
+        if (clientId && typeof clientId === 'string') {
           // Check if it matches our pattern
           if (institutionId) {
             const pattern = new RegExp(`^UC-${institutionId.slice(0, 4).toUpperCase()}-${currentYear}-(\\d+)$`);
-            const match = patientId.match(pattern);
+            const match = clientId.match(pattern);
             if (match) {
               const num = parseInt(match[1], 10);
               if (num > maxNumber) maxNumber = num;
             }
           } else {
             const pattern = new RegExp(`^UC-${currentYear}-(\\d+)$`);
-            const match = patientId.match(pattern);
+            const match = clientId.match(pattern);
             if (match) {
               const num = parseInt(match[1], 10);
               if (num > maxNumber) maxNumber = num;
@@ -57,48 +57,48 @@ export async function generatePatientId(institutionId = null) {
         }
       });
     } catch (error) {
-      console.warn('Error checking existing patient IDs, starting from 1:', error);
+      console.warn('Error checking existing Client IDs, starting from 1:', error);
     }
     
     // Generate next sequential number
     const nextNumber = maxNumber + 1;
     const paddedNumber = nextNumber.toString().padStart(4, '0');
     
-    const patientId = `${prefix}-${paddedNumber}`;
+    const clientId = `${prefix}-${paddedNumber}`;
     
-    console.log(`✅ Generated patient ID: ${patientId}`);
-    return patientId;
+    console.log(`✅ Generated Client ID: ${clientId}`);
+    return clientId;
   } catch (error) {
-    console.error('Error generating patient ID:', error);
+    console.error('Error generating Client ID:', error);
     // Fallback: use timestamp-based ID
     const fallbackId = `UC-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
-    console.warn(`⚠️ Using fallback patient ID: ${fallbackId}`);
+    console.warn(`⚠️ Using fallback Client ID: ${fallbackId}`);
     return fallbackId;
   }
 }
 
 /**
- * Validate patient ID format
- * @param {string} patientId - Patient ID to validate
+ * Validate Client ID format
+ * @param {string} clientId - Client ID to validate
  * @returns {boolean} - True if valid format
  */
-export function isValidPatientId(patientId) {
-  if (!patientId || typeof patientId !== 'string') return false;
+export function isValidPatientId(clientId) {
+  if (!clientId || typeof clientId !== 'string') return false;
   
   // Pattern: UC-YYYY-NNNN or UC-XXXX-YYYY-NNNN (with institution prefix)
   const pattern = /^UC-(\d{4}|[A-Z0-9]{4})-\d{4}-\d{4}$/;
-  return pattern.test(patientId);
+  return pattern.test(clientId);
 }
 
 /**
- * Extract year from patient ID
- * @param {string} patientId - Patient ID
+ * Extract year from Client ID
+ * @param {string} clientId - Client ID
  * @returns {number|null} - Year or null if invalid
  */
-export function extractYearFromPatientId(patientId) {
-  if (!isValidPatientId(patientId)) return null;
+export function extractYearFromPatientId(clientId) {
+  if (!isValidPatientId(clientId)) return null;
   
-  const parts = patientId.split('-');
+  const parts = clientId.split('-');
   if (parts.length === 3) {
     // UC-YYYY-NNNN format
     return parseInt(parts[1], 10);
@@ -111,7 +111,7 @@ export function extractYearFromPatientId(patientId) {
 }
 
 export default {
-  generatePatientId,
+  generateClientId,
   isValidPatientId,
   extractYearFromPatientId
 };

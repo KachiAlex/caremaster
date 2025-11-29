@@ -1,6 +1,6 @@
 /**
- * Patient Analytics Component
- * Displays analytics and visualizations based on patient logs
+ * Client Analytics Component
+ * Displays analytics and visualizations based on Client logs
  */
 
 import React, { useState, useEffect } from 'react';
@@ -18,17 +18,17 @@ import {
 import { getPatientLogs, getLogsByCategory } from '../utils/patientLogger';
 import { useUser } from '../contexts/UserContext';
 
-const PatientAnalytics = ({ patientId, patientName }) => {
+const PatientAnalytics = ({ clientId, clientName }) => {
   const { institutionId } = useUser();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('30'); // days
 
   useEffect(() => {
-    if (patientId) {
+    if (clientId) {
       loadAnalytics();
     }
-  }, [patientId, timeRange]);
+  }, [clientId, timeRange]);
 
   const loadAnalytics = async () => {
     setLoading(true);
@@ -37,7 +37,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - parseInt(timeRange));
 
-      const logs = await getPatientLogs(patientId, 1000);
+      const logs = await getPatientLogs(clientId, 1000);
       const filteredLogs = logs.filter(log => {
         const logDate = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.dateTime || log.timestamp);
         return logDate >= startDate && logDate <= endDate;
@@ -130,7 +130,7 @@ const PatientAnalytics = ({ patientId, patientName }) => {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-slate-50 flex items-center">
           <BarChart3 className="h-6 w-6 mr-3 text-blue-400" />
-          Analytics for {patientName || patientId}
+          Analytics for {clientName || clientId}
         </h3>
         <select
           value={timeRange}

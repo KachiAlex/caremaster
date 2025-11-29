@@ -123,7 +123,7 @@ const HelpSupport = ({ userRole }) => {
 
   const videoTutorials = [
     {
-      title: 'Getting Started with UltimateCare',
+      title: 'Getting Started with Care Master',
       description: 'Learn the basics of navigating the platform',
       duration: '5 min',
       url: '#',
@@ -238,7 +238,7 @@ const HelpSupport = ({ userRole }) => {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-          <HelpCircle className="h-8 w-8 mr-3 text-blue-600" />
+          <HelpCircle className="h-8 w-8 mr-3 text-purple-600" />
           Help & Support
         </h2>
         <p className="text-sm text-gray-500 mt-1">
@@ -262,7 +262,7 @@ const HelpSupport = ({ userRole }) => {
                 onClick={() => setActiveSection(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
                   activeSection === tab.id
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-purple-500 text-purple-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -285,7 +285,7 @@ const HelpSupport = ({ userRole }) => {
               placeholder="Search frequently asked questions..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
@@ -346,7 +346,7 @@ const HelpSupport = ({ userRole }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {videoTutorials.map((video, index) => (
               <div key={index} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                <div className="aspect-video bg-gradient-to-br from-blue-100 to-blue-100 flex items-center justify-center text-6xl">
+                <div className="aspect-video bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center text-6xl">
                   {video.thumbnail}
                 </div>
                 <div className="p-4">
@@ -354,7 +354,7 @@ const HelpSupport = ({ userRole }) => {
                   <p className="text-sm text-gray-600 mb-3">{video.description}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">{video.duration}</span>
-                    <button className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium">
+                    <button className="flex items-center text-sm text-purple-600 hover:text-purple-700 font-medium">
                       Watch Tutorial
                       <ExternalLink className="h-4 w-4 ml-1" />
                     </button>
@@ -384,7 +384,7 @@ const HelpSupport = ({ userRole }) => {
                     required
                     value={supportForm.subject}
                     onChange={(e) => setSupportForm({ ...supportForm, subject: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="Brief description of your issue"
                   />
                 </div>
@@ -397,7 +397,7 @@ const HelpSupport = ({ userRole }) => {
                     <select
                       value={supportForm.category}
                       onChange={(e) => setSupportForm({ ...supportForm, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     >
                       <option value="general">General Question</option>
                       <option value="technical">Technical Issue</option>
@@ -415,7 +415,7 @@ const HelpSupport = ({ userRole }) => {
                     <select
                       value={supportForm.priority}
                       onChange={(e) => setSupportForm({ ...supportForm, priority: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     >
                       <option value="low">Low</option>
                       <option value="normal">Normal</option>
@@ -434,7 +434,7 @@ const HelpSupport = ({ userRole }) => {
                     rows={6}
                     value={supportForm.message}
                     onChange={(e) => setSupportForm({ ...supportForm, message: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="Please describe your issue or question in detail..."
                   />
                 </div>
@@ -442,7 +442,7 @@ const HelpSupport = ({ userRole }) => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 font-medium"
+                  className="w-full flex items-center justify-center px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-300 font-medium"
                 >
                   {submitting ? (
                     <>
@@ -461,37 +461,37 @@ const HelpSupport = ({ userRole }) => {
 
             {/* Contact Information */}
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-50 border border-purple-200 rounded-lg p-6">
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
                 
                 <div className="space-y-3">
                   <div className="flex items-start">
-                    <Mail className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
+                    <Mail className="h-5 w-5 text-purple-600 mr-3 mt-0.5" />
                     <div>
                       <p className="font-medium text-gray-900">Email Support</p>
-                      <a href="mailto:support@ultimatecare.com" className="text-sm text-blue-600 hover:text-blue-700">
-                        support@ultimatecare.com
+                      <a href="mailto:support@Care Master.com" className="text-sm text-purple-600 hover:text-purple-700">
+                        support@Care Master.com
                       </a>
                       <p className="text-xs text-gray-500 mt-1">Response within 24 hours</p>
                     </div>
                   </div>
 
                   <div className="flex items-start">
-                    <Phone className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
+                    <Phone className="h-5 w-5 text-purple-600 mr-3 mt-0.5" />
                     <div>
                       <p className="font-medium text-gray-900">Phone Support</p>
-                      <a href="tel:+1-800-ULTIMATE" className="text-sm text-blue-600 hover:text-blue-700">
-                        +1 (800) ULTIMATE
+                      <a href="tel:+1-800-Care Master" className="text-sm text-purple-600 hover:text-purple-700">
+                        +1 (800) Care Master
                       </a>
                       <p className="text-xs text-gray-500 mt-1">Mon-Fri, 9AM-5PM EST</p>
                     </div>
                   </div>
 
                   <div className="flex items-start">
-                    <MessageCircle className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
+                    <MessageCircle className="h-5 w-5 text-purple-600 mr-3 mt-0.5" />
                     <div>
                       <p className="font-medium text-gray-900">Live Chat</p>
-                      <button className="text-sm text-blue-600 hover:text-blue-700">
+                      <button className="text-sm text-purple-600 hover:text-purple-700">
                         Start Chat
                       </button>
                       <p className="text-xs text-gray-500 mt-1">Available 24/7</p>
@@ -500,14 +500,14 @@ const HelpSupport = ({ userRole }) => {
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-green-200 rounded-lg p-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <h4 className="font-semibold text-green-900 mb-2">Need urgent help?</h4>
-                <p className="text-sm text-blue-800 mb-3">
+                <p className="text-sm text-green-800 mb-3">
                   For emergencies or urgent technical issues, call our emergency support line:
                 </p>
                 <a 
                   href="tel:+1-800-URGENT"
-                  className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                  className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                 >
                   <Phone className="h-4 w-4 mr-2" />
                   +1 (800) URGENT

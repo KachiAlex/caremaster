@@ -8,12 +8,12 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { getAllUsers } from '../api/usersAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { medicationAPI } from '../api/medicationAPI';
-import { getVitalSignsByPatient } from '../api/vitalSignsAPI';
+import { getVitalSignsByClient } from '../api/vitalSignsAPI';
 import { emergencyAPI } from '../api/emergencyAPI';
 import logger from './logger';
 
 export const runIntegrationTests = async () => {
-  console.log('🚀 Starting UltimateCare Integration Tests...\n');
+  console.log('🚀 Starting Care Master Integration Tests...\n');
   
   const results = {
     authentication: false,
@@ -71,8 +71,8 @@ export const runIntegrationTests = async () => {
     // Test 5: Vital Signs System
     console.log('📊 Testing Vital Signs System...');
     try {
-      // Test with a dummy patient ID
-      const vitalSigns = await getVitalSignsByPatient('test-patient-id');
+      // Test with a dummy Client ID
+      const vitalSigns = await getVitalSignsByClient('test-Client-id');
       results.vitalSigns = Array.isArray(vitalSigns);
       console.log(results.vitalSigns ? `✅ Vital Signs: API working` : '❌ Vital Signs: Failed');
     } catch (error) {

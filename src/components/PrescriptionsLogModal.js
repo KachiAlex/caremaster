@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { getPrescriptionsByClient, createPrescription } from '../api/prescriptionsAPI';
 import { useUser } from '../contexts/UserContext';
 
-const PrescriptionsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
+const PrescriptionsLogModal = ({ client, isOpen, onClose, institutionId }) => {
   const { user, userProfile } = useUser();
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -16,18 +16,18 @@ const PrescriptionsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
   });
 
   useEffect(() => {
-    if (isOpen && patient?.id) {
+    if (isOpen && client?.id) {
       loadPrescriptions();
     }
-  }, [isOpen, patient]);
+  }, [isOpen, client]);
 
   const loadPrescriptions = async () => {
-    if (!patient?.id) return;
+    if (!client?.id) return;
     
     setLoading(true);
     try {
-      const patientId = patient.id || patient.patientId || patient.uid;
-      const prescriptionsData = await getPrescriptionsByClient(patientId);
+      const clientId = client.id || client.clientId || client.uid;
+      const prescriptionsData = await getPrescriptionsByClient(clientId);
       setPrescriptions(prescriptionsData || []);
     } catch (error) {
       console.error('Error loading prescriptions:', error);
@@ -85,14 +85,14 @@ const PrescriptionsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
         return;
       }
 
-      const patientId = patient.id || patient.patientId || patient.uid;
-      const patientName = patient.name || patient.fullName || 'Patient';
+      const clientId = client.id || client.clientId || client.uid;
+      const clientName = client.name || client.fullName || 'Client';
       const doctorId = user?.uid;
       const doctorName = userProfile?.name || userProfile?.displayName || 'Doctor';
 
       await createPrescription({
-        clientId: patientId,
-        clientName: patientName,
+        clientId: clientId,
+        clientName: clientName,
         doctorId: doctorId,
         doctorName: doctorName,
         institutionId: institutionId,
@@ -129,8 +129,8 @@ const PrescriptionsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
 
   if (!isOpen) return null;
 
-  const patientId = patient?.id || patient?.patientId || patient?.uid;
-  const patientName = patient?.name || patient?.fullName || 'Patient';
+  const clientId = client?.id || client?.clientId || client?.uid;
+  const clientName = client?.name || client?.fullName || 'Client';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -143,7 +143,7 @@ const PrescriptionsLogModal = ({ patient, isOpen, onClose, institutionId }) => {
               Prescriptions Log
             </h2>
             <p className="text-green-100 text-sm mt-1">
-              {patientName}
+              {clientName}
             </p>
           </div>
           <button

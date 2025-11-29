@@ -62,7 +62,7 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
   const priorityColors = {
     high: 'border-l-4 border-red-500 bg-red-50',
     medium: 'border-l-4 border-yellow-500 bg-yellow-50',
-    low: 'border-l-4 border-blue-500 bg-white'
+    low: 'border-l-4 border-green-500 bg-white'
   };
 
   const nextVisit = getNextVisitTime();
@@ -95,7 +95,7 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-4">
-          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
             <span className="text-white text-2xl font-bold">
               {client.name?.split(' ').map(n => n[0]).join('') || 'P'}
             </span>
@@ -111,7 +111,7 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
               )}
               <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                 client.status === 'active' 
-                  ? 'bg-blue-100 text-blue-800' 
+                  ? 'bg-green-100 text-green-800' 
                   : 'bg-gray-100 text-gray-800'
               }`}>
                 {client.status || 'active'}
@@ -189,7 +189,7 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
           <div className="space-y-2">
             {todaysTasks.slice(0, 3).map((task, index) => (
               <div key={index} className="flex items-center space-x-2 text-sm">
-                <CheckCircle className={`h-4 w-4 ${task.status === 'completed' ? 'text-blue-600' : 'text-gray-300'}`} />
+                <CheckCircle className={`h-4 w-4 ${task.status === 'completed' ? 'text-green-600' : 'text-gray-300'}`} />
                 <span className={task.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-700'}>
                   {task.title || task.type}
                 </span>
@@ -219,7 +219,7 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
         {nextVisit && (
           <button
             onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(client.address || '')}`, '_blank')}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex items-center justify-center"
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex items-center justify-center"
           >
             <MapPin className="h-4 w-4 mr-2" />
             Navigate

@@ -1,6 +1,6 @@
 /**
- * Patient Log Notifications
- * Handles notifications based on patient log events
+ * Client Log Notifications
+ * Handles notifications based on Client log events
  */
 
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
@@ -8,12 +8,12 @@ import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '.
 /**
  * Check if vital signs are abnormal and send notification
  * @param {Object} vitalSignData - Vital sign data
- * @param {string} patientId - Patient simple ID
- * @param {string} patientName - Patient name
+ * @param {string} clientId - Client simple ID
+ * @param {string} clientName - Client name
  * @param {string} institutionId - Institution ID
  * @returns {Promise<boolean>} True if notification sent
  */
-export const checkAbnormalVitalSigns = async (vitalSignData, patientSimpleId, patientName, institutionId) => {
+export const checkAbnormalVitalSigns = async (vitalSignData, patientSimpleId, clientName, institutionId) => {
   try {
     const alerts = [];
     
@@ -101,12 +101,12 @@ export const checkAbnormalVitalSigns = async (vitalSignData, patientSimpleId, pa
               userEmail: userData.email,
               userType: userData.userType,
               type: NOTIFICATION_TYPES.ALERT,
-              title: `Abnormal Vital Signs - ${patientName}`,
+              title: `Abnormal Vital Signs - ${clientName}`,
               message: alert.message,
               priority: alert.priority,
               data: {
-                patientId: patientSimpleId,
-                patientName,
+                clientId: patientSimpleId,
+                clientName,
                 vitalSignData,
                 alertType: alert.type
               }
@@ -116,7 +116,7 @@ export const checkAbnormalVitalSigns = async (vitalSignData, patientSimpleId, pa
       });
       
       await Promise.all(notificationPromises);
-      console.log(`✅ Sent ${alerts.length} vital sign alert(s) for patient ${patientSimpleId}`);
+      console.log(`✅ Sent ${alerts.length} vital sign alert(s) for Client ${patientSimpleId}`);
       return true;
     }
     
@@ -162,7 +162,7 @@ export const notifyCriticalEvent = async (logData, institutionId) => {
     const notificationPromises = [];
     
     const titles = {
-      'patient_registered': 'New Patient Registered',
+      'patient_registered': 'New Client Registered',
       'medication_administered': 'Medication Administered',
       'consultation_conducted': 'Consultation Conducted',
       'care_plan_updated': 'Care Plan Updated'
@@ -176,11 +176,11 @@ export const notifyCriticalEvent = async (logData, institutionId) => {
           userEmail: userData.email,
           userType: 'admin',
           type: NOTIFICATION_TYPES.SYSTEM,
-          title: titles[logData.action] || 'Patient Activity',
+          title: titles[logData.action] || 'Client Activity',
           message: `${logData.clinicianName} (${logData.clinicianRole}): ${logData.description}`,
           priority: NOTIFICATION_PRIORITIES.MEDIUM,
           data: {
-            patientId: logData.patientId,
+            clientId: logData.clientId,
             logId: logData.id,
             action: logData.action,
             clinicianId: logData.clinicianId
@@ -208,7 +208,7 @@ export const notifyCriticalEvent = async (logData, institutionId) => {
  */
 export const sendDailySummary = async (userId, userEmail, userType, summaryData) => {
   try {
-    const message = `Daily Summary - ${summaryData.totalActivities || 0} activities, ${summaryData.patientsSeen || 0} patients`;
+    const message = `Daily Summary - ${summaryData.totalActivities || 0} activities, ${summaryData.patientsSeen || 0} clients`;
     
     await notificationsAPI.createNotification({
       userId,

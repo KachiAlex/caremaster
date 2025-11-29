@@ -21,6 +21,7 @@ import { toast } from 'react-toastify';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { createCompleteUserAccount } from '../utils/userCreationHelper';
 
 const UserCreationForm = ({ onClose, userRole = 'elderly' }) => {
   const [formData, setFormData] = useState({
@@ -41,7 +42,7 @@ const UserCreationForm = ({ onClose, userRole = 'elderly' }) => {
     // Role-specific fields
     role: userRole,
     
-    // Elderly/Patient specific
+    // Elderly/Client specific
     emergencyContact: {
       name: '',
       phone: '',
@@ -651,13 +652,13 @@ const UserCreationForm = ({ onClose, userRole = 'elderly' }) => {
                   {formData.medications.map((medication, index) => (
                     <span
                       key={index}
-                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                      className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
                     >
                       {medication}
                       <button
                         type="button"
                         onClick={() => handleArrayFieldChange('medications', index, 'remove')}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-green-600 hover:text-green-800"
                       >
                         ×
                       </button>

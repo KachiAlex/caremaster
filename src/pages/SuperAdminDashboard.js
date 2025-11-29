@@ -17,9 +17,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  DollarSign,
-  Sparkles,
-  ArrowUpRight
+  DollarSign
 } from 'lucide-react';
 
 const SuperAdminDashboard = () => {
@@ -37,17 +35,6 @@ const SuperAdminDashboard = () => {
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [alerts, setAlerts] = useState([]);
-
-  const complianceChecklist = [
-    { label: 'Audit logs streaming', status: 'ok' },
-    { label: 'Role policies synced', status: 'ok' },
-    { label: 'License webhooks', status: 'warning' },
-    { label: 'Regional backups', status: 'ok' },
-    { label: 'Access anomalies', status: 'info' }
-  ];
-
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
 
   useEffect(() => {
     loadDashboardData();
@@ -164,23 +151,21 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  const StatCard = ({ icon: Icon, label, value, trend, accent }) => (
-    <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 shadow-lg shadow-black/40">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
-            {label}
-          </p>
-          <p className="mt-2 text-lg font-semibold text-slate-50">{value}</p>
+  const StatCard = ({ icon: Icon, label, value, trend, color = 'blue' }) => (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-600">{label}</p>
+          <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
           {trend && (
-            <div className={`mt-1 flex items-center text-[10px] ${trend > 0 ? 'text-blue-400' : 'text-rose-400'}`}>
-              <TrendingUp className="h-3 w-3 mr-1" />
-              <span>{Math.abs(trend)}% {trend > 0 ? '↑' : '↓'}</span>
+            <div className={`mt-2 flex items-center text-sm ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <TrendingUp className="h-4 w-4 mr-1" />
+              <span>{Math.abs(trend)}% {trend > 0 ? 'increase' : 'decrease'}</span>
             </div>
           )}
         </div>
-        <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${accent}`}>
-          <Icon className="h-4 w-4 text-slate-950" />
+        <div className={`p-3 rounded-lg bg-${color}-100`}>
+          <Icon className={`h-6 w-6 text-${color}-600`} />
         </div>
       </div>
     </div>
@@ -188,29 +173,29 @@ const SuperAdminDashboard = () => {
 
   const AlertBanner = ({ type, message, action }) => {
     const styles = {
-      warning: 'bg-blue-400/10 border-blue-400/30 text-blue-300',
-      error: 'bg-rose-400/10 border-rose-400/30 text-rose-300',
-      info: 'bg-blue-400/10 border-blue-400/30 text-blue-300',
-      success: 'bg-blue-400/10 border-blue-400/30 text-blue-300'
+      warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+      error: 'bg-red-50 border-red-200 text-red-800',
+      info: 'bg-blue-50 border-blue-200 text-blue-800',
+      success: 'bg-green-50 border-green-200 text-green-800'
     };
 
     const icons = {
-      warning: <AlertCircle className="h-4 w-4" />,
-      error: <XCircle className="h-4 w-4" />,
-      info: <Activity className="h-4 w-4" />,
-      success: <CheckCircle className="h-4 w-4" />
+      warning: <AlertCircle className="h-5 w-5" />,
+      error: <XCircle className="h-5 w-5" />,
+      info: <Activity className="h-5 w-5" />,
+      success: <CheckCircle className="h-5 w-5" />
     };
 
     return (
-      <div className={`p-3 rounded-2xl border ${styles[type]} flex items-center justify-between`}>
-        <div className="flex items-center gap-2">
-          <div>{icons[type]}</div>
-          <p className="text-xs font-medium">{message}</p>
+      <div className={`p-4 rounded-lg border ${styles[type]} flex items-center justify-between`}>
+        <div className="flex items-center">
+          <div className="mr-3">{icons[type]}</div>
+          <p className="text-sm font-medium">{message}</p>
         </div>
         {action && (
           <button 
             onClick={() => navigate('/super-admin')}
-            className="text-xs font-semibold hover:opacity-80 transition-opacity"
+            className="text-sm font-semibold hover:underline"
           >
             {action} →
           </button>
@@ -221,57 +206,47 @@ const SuperAdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      {/* Top halo */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top,_#22c55e33,_transparent_60%),radial-gradient(circle_at_30%_20%,_#0ea5e933,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e533,_transparent_55%)]" />
-
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="relative z-10 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-sm sticky top-0">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-400 via-blue-400 to-orange-500 shadow-lg shadow-rose-500/40">
-                <Shield className="h-5 w-5 text-slate-950" />
-              </div>
+            <div className="flex items-center">
+              <Shield className="h-8 w-8 text-red-600 mr-3" />
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-300">
-                  Super admin
-                </p>
-                <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">
-                  UltimateCare Platform Control
-                </h1>
-                <p className="text-xs text-slate-400">System-wide management and monitoring</p>
+                <h1 className="text-2xl font-bold text-gray-900">Super Admin Portal</h1>
+                <p className="text-sm text-gray-600">System-wide management and monitoring</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigate('/super-admin/licensing')}
-                className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-50 rounded-lg hover:bg-slate-800/80 transition-colors"
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
               >
-                Licensing
+                Licensing Console
               </button>
               <button
                 onClick={() => navigate('/super-admin/settings')}
-                className="p-2 text-slate-400 hover:text-slate-50 hover:bg-slate-800/80 rounded-lg transition-colors"
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 title="Settings"
               >
-                <Settings className="h-4 w-4" />
+                <Settings className="h-5 w-5" />
               </button>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/20 text-rose-300 rounded-lg hover:bg-rose-500/30 border border-rose-500/30 transition-colors text-xs font-medium"
+                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
-                <LogOut className="h-3.5 w-3.5" />
+                <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </button>
             </div>
@@ -280,73 +255,10 @@ const SuperAdminDashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero */}
-        <section className="mb-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-          <div className="rounded-3xl border border-slate-800/70 bg-gradient-to-br from-slate-950/90 via-slate-950/70 to-slate-900/70 p-6 shadow-2xl shadow-black/50">
-            <div className="flex flex-col gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-400/10 px-4 py-1 text-[11px] font-medium uppercase tracking-[0.3em] text-blue-200">
-                <Sparkles className="h-3 w-3" />
-                Platform mission control
-              </div>
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">UltimateCare</p>
-                  <h2 className="text-2xl font-semibold text-slate-50 sm:text-3xl">
-                    Real-time network health
-                  </h2>
-                  <p className="mt-2 text-sm text-slate-300 max-w-xl">
-                    Monitor every tenant, license, and workflow from one unified control surface.
-                    Super Admin controls run on the same audit-grade infrastructure that powers UltimateCare.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-slate-400">Active tenants</p>
-                  <p className="text-3xl font-semibold text-blue-300">{stats.activeInstitutions}</p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {[
-                { label: 'Total tenants', value: stats.totalInstitutions, accent: 'text-blue-300' },
-                { label: 'Licenses live', value: stats.activeLicenses, accent: 'text-blue-300' },
-                { label: 'Support tickets', value: Math.max(2, stats.expiringLicenses), accent: 'text-blue-300' }
-              ].map(item => (
-                <div key={item.label} className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
-                  <p className="text-xs text-slate-500 uppercase tracking-[0.3em]">{item.label}</p>
-                  <p className={`mt-2 text-2xl font-semibold ${item.accent}`}>{item.value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800/70 bg-slate-950/70 p-6 shadow-2xl shadow-black/40">
-            <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Live metric pulse</p>
-            <div className="mt-4 space-y-3">
-              {[
-                { label: 'Institutions onboarded this week', value: '+4', accent: 'text-blue-300' },
-                { label: 'Licenses pending approval', value: stats.expiringLicenses, accent: 'text-blue-300' },
-                { label: 'Care team logins (24h)', value: Math.max(32, stats.activeUsers * 0.4 >> 0), accent: 'text-blue-300' }
-              ].map(item => (
-                <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
-                  <p className="text-xs text-slate-400">{item.label}</p>
-                  <p className={`text-sm font-semibold ${item.accent}`}>{item.value}</p>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={() => navigate('/super-admin/reports')}
-              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-200 hover:border-blue-400/60"
-            >
-              Launch full report
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </section>
-
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Alerts */}
         {alerts.length > 0 && (
-          <div className="mb-6 space-y-2">
+          <div className="mb-8 space-y-3">
             {alerts.map((alert, index) => (
               <AlertBanner key={index} {...alert} />
             ))}
@@ -354,293 +266,134 @@ const SuperAdminDashboard = () => {
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             icon={Building2}
             label="Active Institutions"
             value={stats.activeInstitutions}
             trend={5}
-            accent="from-blue-400 to-blue-300"
+            color="blue"
           />
           <StatCard
             icon={FileText}
             label="Active Licenses"
             value={stats.activeLicenses}
             trend={3}
-            accent="from-blue-400 to-blue-300"
+            color="green"
           />
           <StatCard
             icon={Users}
             label="Total Users"
             value={stats.totalUsers}
             trend={8}
-            accent="from-blue-400 to-blue-300"
+            color="purple"
           />
           <StatCard
             icon={DollarSign}
             label="Monthly Revenue"
-            value={formatCurrency(stats.totalRevenue)}
+            value={`$${stats.totalRevenue.toLocaleString()}`}
             trend={12}
-            accent="from-blue-400 to-orange-300"
+            color="emerald"
           />
         </div>
 
         {/* Secondary Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 shadow-lg shadow-black/40">
-            <div className="flex items-center justify-between gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Total Institutions</p>
-                <p className="mt-2 text-lg font-semibold text-slate-50">{stats.totalInstitutions}</p>
+                <p className="text-sm text-gray-600">Total Institutions</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{stats.totalInstitutions}</p>
               </div>
-              <Building2 className="h-8 w-8 text-slate-500" />
+              <Building2 className="h-8 w-8 text-gray-400" />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 shadow-lg shadow-black/40">
-            <div className="flex items-center justify-between gap-3">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Expiring Soon</p>
-                <p className="mt-2 text-lg font-semibold text-blue-400">{stats.expiringLicenses}</p>
+                <p className="text-sm text-gray-600">Expiring Soon</p>
+                <p className="mt-1 text-2xl font-bold text-yellow-600">{stats.expiringLicenses}</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-500" />
+              <Clock className="h-8 w-8 text-yellow-400" />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 px-4 py-3 shadow-lg shadow-black/40">
-            <div className="flex items-center justify-between gap-3">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Active Users</p>
-                <p className="mt-2 text-lg font-semibold text-slate-50">{stats.activeUsers}</p>
+                <p className="text-sm text-gray-600">Active Users</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{stats.activeUsers}</p>
               </div>
-              <Users className="h-8 w-8 text-slate-500" />
+              <Users className="h-8 w-8 text-gray-400" />
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[2fr_1.1fr] gap-6">
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
-              <h2 className="text-sm font-semibold text-slate-50 mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <button
-                  onClick={() => navigate('/super-admin/licensing')}
-                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-blue-400/60 hover:bg-slate-900 transition-colors"
-                >
-                  <Building2 className="h-5 w-5 text-blue-400 mb-1" />
-                  <span className="text-xs font-semibold text-slate-50">Manage Institutions</span>
-                  <span className="text-[11px] text-slate-500">View and configure all institutions</span>
-                </button>
+        {/* Quick Actions */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <button
+              onClick={() => navigate('/super-admin/licensing')}
+              className="flex flex-col items-center p-4 rounded-lg border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            >
+              <Building2 className="h-8 w-8 text-blue-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900">Manage Institutions</span>
+            </button>
 
-                <button
-                  onClick={() => navigate('/super-admin/licensing')}
-                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-blue-400/60 hover:bg-slate-900 transition-colors"
-                >
-                  <FileText className="h-5 w-5 text-blue-400 mb-1" />
-                  <span className="text-xs font-semibold text-slate-50">Issue License</span>
-                  <span className="text-[11px] text-slate-500">Create new license assignments</span>
-                </button>
+            <button
+              onClick={() => navigate('/super-admin/licensing')}
+              className="flex flex-col items-center p-4 rounded-lg border-2 border-green-200 hover:border-green-400 hover:bg-green-50 transition-colors"
+            >
+              <FileText className="h-8 w-8 text-green-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900">Issue License</span>
+            </button>
 
-                <button
-                  onClick={() => navigate('/super-admin/licensing')}
-                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-blue-400/60 hover:bg-slate-900 transition-colors"
-                >
-                  <Users className="h-5 w-5 text-blue-400 mb-1" />
-                  <span className="text-xs font-semibold text-slate-50">Assign Admin</span>
-                  <span className="text-[11px] text-slate-500">Manage administrator roles</span>
-                </button>
+            <button
+              onClick={() => navigate('/super-admin/licensing')}
+              className="flex flex-col items-center p-4 rounded-lg border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-colors"
+            >
+              <Users className="h-8 w-8 text-purple-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900">Assign Admin</span>
+            </button>
 
-                <button
-                  onClick={() => navigate('/super-admin/settings')}
-                  className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-blue-400/60 hover:bg-slate-900 transition-colors"
-                >
-                  <Settings className="h-5 w-5 text-blue-400 mb-1" />
-                  <span className="text-xs font-semibold text-slate-50">System Settings</span>
-                  <span className="text-[11px] text-slate-500">Configure platform settings</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Insights + License Health */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Institution insights</p>
-                    <h3 className="text-lg font-semibold text-slate-50">Network overview</h3>
-                  </div>
-                  <span className="text-[11px] text-slate-500">Updated just now</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
-                    <p className="text-xs text-slate-400">Active</p>
-                    <p className="text-2xl font-semibold text-blue-300">{stats.activeInstitutions}</p>
-                    <p className="text-[10px] text-slate-500">of {stats.totalInstitutions}</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
-                    <p className="text-xs text-slate-400">Licenses</p>
-                    <p className="text-2xl font-semibold text-blue-300">{stats.activeLicenses}</p>
-                    <p className="text-[10px] text-slate-500">active</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
-                    <p className="text-xs text-slate-400">Users</p>
-                    <p className="text-2xl font-semibold text-blue-300">{stats.activeUsers}</p>
-                    <p className="text-[10px] text-slate-500">active</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.28em] text-slate-400">License health</p>
-                    <h3 className="text-lg font-semibold text-slate-50">Renewal radar</h3>
-                  </div>
-                  <span className="text-[11px] text-slate-500">{stats.expiringLicenses} expiring</span>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
-                    <div>
-                      <p className="text-xs text-slate-400">Expiring 30 days</p>
-                      <p className="text-sm font-semibold text-blue-300">{stats.expiringLicenses}</p>
-                    </div>
-                    <button
-                      onClick={() => navigate('/super-admin/licensing')}
-                      className="text-xs text-blue-300 hover:text-blue-200"
-                    >
-                      Review →
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
-                    <div>
-                      <p className="text-xs text-slate-400">Expired</p>
-                      <p className="text-sm font-semibold text-rose-300">
-                        {Math.max(0, stats.totalLicenses - stats.activeLicenses - stats.expiringLicenses)}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => navigate('/super-admin/licensing')}
-                      className="text-xs text-rose-300 hover:text-rose-200"
-                    >
-                      Renew →
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Revenue Snapshot */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <div className="rounded-3xl border border-blue-400/30 bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-slate-950 p-5 shadow-xl shadow-blue-500/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-blue-200">Revenue snapshot</p>
-                    <p className="text-2xl font-semibold text-slate-50 mt-1">{formatCurrency(stats.totalRevenue)}</p>
-                    <p className="text-[11px] text-slate-200 mt-1">Current billing cycle</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-blue-200">+12% vs last month</p>
-                    <p className="text-xs text-slate-200">Projected: {formatCurrency(stats.totalRevenue * 1.12)}</p>
-                  </div>
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-slate-200">
-                  <div>
-                    <p className="text-slate-300">ARR</p>
-                    <p className="text-base font-semibold text-slate-50">{formatCurrency(stats.totalRevenue * 12)}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-300">Churn</p>
-                    <p className="text-base font-semibold text-blue-300">1.4%</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-300">Growth</p>
-                    <p className="text-base font-semibold text-blue-300">+18%</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-5 shadow-xl shadow-black/40">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Compliance monitor</p>
-                    <h3 className="text-lg font-semibold text-slate-50">Platform guardrails</h3>
-                  </div>
-                  <span className="text-[11px] text-slate-500">Auto-updated</span>
-                </div>
-                <div className="space-y-2">
-                  {complianceChecklist.map(item => (
-                    <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                      <p className="text-xs text-slate-300">{item.label}</p>
-                      <span className={`text-[11px] font-semibold ${
-                        item.status === 'ok'
-                          ? 'text-blue-300'
-                          : item.status === 'warning'
-                          ? 'text-blue-300'
-                          : 'text-blue-300'
-                      }`}>
-                        {item.status === 'ok' ? 'Healthy' : item.status === 'warning' ? 'Action' : 'Monitoring'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <button
+              onClick={() => navigate('/super-admin/settings')}
+              className="flex flex-col items-center p-4 rounded-lg border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+            >
+              <Settings className="h-8 w-8 text-gray-600 mb-2" />
+              <span className="text-sm font-medium text-gray-900">System Settings</span>
+            </button>
           </div>
+        </div>
 
-          {/* Right column */}
-          <div className="space-y-6">
-            {/* Recent Activity */}
-            <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/50">
-              <h2 className="text-sm font-semibold text-slate-50 mb-4">Recent Activity</h2>
-              <div className="space-y-2 max-h-[410px] overflow-y-auto pr-1 custom-scrollbar">
-                {recentActivity.length === 0 ? (
-                  <p className="text-center text-slate-500 py-8 text-xs">No recent activity</p>
-                ) : (
-                  recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-2xl border border-slate-800/60 bg-slate-900/60 hover:bg-slate-900 transition-colors">
-                      <div className="flex-shrink-0 mt-0.5">
-                        <Activity className="h-4 w-4 text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-50">
-                          {activity.type?.replace(/_/g, ' ').toUpperCase()}
-                        </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {activity.email || activity.userId || 'System'}
-                        </p>
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          {activity.timestamp?.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* System Pulse */}
-            <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-xl shadow-black/40">
-              <h2 className="text-sm font-semibold text-slate-50 mb-4">System Pulse</h2>
-              <div className="space-y-3 text-xs text-slate-300">
-                <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                  <span>Realtime listeners</span>
-                  <span className="text-blue-300">Stable</span>
+        {/* Recent Activity */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+          <div className="space-y-4">
+            {recentActivity.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No recent activity</p>
+            ) : (
+              recentActivity.map((activity) => (
+                <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex-shrink-0 mt-1">
+                    <Activity className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">
+                      {activity.type?.replace(/_/g, ' ').toUpperCase()}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {activity.email || activity.userId || 'System'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {activity.timestamp?.toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                  <span>Call infrastructure</span>
-                  <span className="text-blue-300">Online</span>
-                </div>
-                <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                  <span>Medication workflows</span>
-                  <span className="text-blue-300">Monitoring</span>
-                </div>
-                <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                  <span>Emergency alerts</span>
-                  <span className="text-blue-300">Ready</span>
-                </div>
-              </div>
-            </div>
+              ))
+            )}
           </div>
         </div>
       </main>

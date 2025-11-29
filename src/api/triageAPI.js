@@ -199,8 +199,8 @@ export const calculateTriageSeverity = (vitalSigns) => {
 export const createTriageAssessment = async (assessmentData) => {
   try {
     const {
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       nurseId,
       nurseName,
@@ -211,8 +211,8 @@ export const createTriageAssessment = async (assessmentData) => {
       autoCalculateSeverity = true
     } = assessmentData;
 
-    if (!patientId || !institutionId || !nurseId) {
-      throw new Error('Missing required fields: patientId, institutionId, nurseId');
+    if (!clientId || !institutionId || !nurseId) {
+      throw new Error('Missing required fields: clientId, institutionId, nurseId');
     }
 
     // Calculate severity if auto-calculate is enabled
@@ -232,8 +232,8 @@ export const createTriageAssessment = async (assessmentData) => {
     }
 
     const assessment = {
-      patientId,
-      patientName,
+      clientId,
+      clientName,
       institutionId,
       nurseId,
       nurseName,
@@ -256,7 +256,7 @@ export const createTriageAssessment = async (assessmentData) => {
 
     // Send high-risk alerts if severity is RED
     if (severityData.severity === TRIAGE_SEVERITY.RED) {
-      await sendHighRiskAlert(patientId, patientName, institutionId, severityData);
+      await sendHighRiskAlert(clientId, clientName, institutionId, severityData);
     }
 
     return {
@@ -273,18 +273,18 @@ export const createTriageAssessment = async (assessmentData) => {
 /**
  * Send high-risk alert to doctors
  */
-const sendHighRiskAlert = async (patientId, patientName, institutionId, severityData) => {
+const sendHighRiskAlert = async (clientId, clientName, institutionId, severityData) => {
   try {
     // Send notification to all doctors in the institution
     await notificationsAPI.createNotification({
       userId: institutionId, // Will be broadcast to all doctors
       type: 'triage_alert',
-      title: '🚨 High-Risk Patient Alert',
-      message: `${patientName} has critical vital signs requiring immediate attention. Severity: ${severityData.severity.toUpperCase()}`,
+      title: '🚨 High-Risk Client Alert',
+      message: `${clientName} has critical vital signs requiring immediate attention. Severity: ${severityData.severity.toUpperCase()}`,
       priority: 'high',
       data: {
-        patientId,
-        patientName,
+        clientId,
+        clientName,
         severity: severityData.severity,
         criticalVitals: severityData.criticalVitals,
         reasons: severityData.reasons
@@ -292,7 +292,7 @@ const sendHighRiskAlert = async (patientId, patientName, institutionId, severity
     });
 
     // Also create a system alert
-    console.warn(`HIGH-RISK ALERT: Patient ${patientName} (${patientId}) - ${severityData.reasons.join(', ')}`);
+    console.warn(`HIGH-RISK ALERT: Client ${clientName} (${clientId}) - ${severityData.reasons.join(', ')}`);
   } catch (error) {
     console.error('Error sending high-risk alert:', error);
     // Don't throw - alert failure shouldn't block triage assessment
@@ -300,7 +300,7 @@ const sendHighRiskAlert = async (patientId, patientName, institutionId, severity
 };
 
 /**
- * Complete triage and automatically route patient to appropriate queue
+ * Complete triage and automatically route Client to appropriate queue
  */
 export const completeTriageAndRoute = async (assessmentId, options = {}) => {
   try {
@@ -330,19 +330,19 @@ export const completeTriageAndRoute = async (assessmentId, options = {}) => {
       updatedAt: serverTimestamp()
     });
 
-    // Route patient to appropriate queue
+    // Route Client to appropriate queue
     if (routeToQueue) {
       const targetQueue = overrideQueue || assessment.recommendedQueue;
       const targetPriority = overridePriority || assessment.recommendedPriority;
 
-      // Check if patient is already in triage queue
+      // Check if Client is already in triage queue
       const triageQueue = await getQueueByDepartment(
         assessment.institutionId,
         DEPARTMENT_TYPES.TRIAGE,
         { status: QUEUE_STATUS.WAITING }
       );
 
-      const existingTriageEntry = triageQueue.find(q => q.patientId === assessment.patientId);
+      const existingTriageEntry = triageQueue.find(q => q.clientId === assessment.clientId);
 
       if (existingTriageEntry) {
         // Update existing triage queue entry to completed
@@ -351,8 +351,8 @@ export const completeTriageAndRoute = async (assessmentId, options = {}) => {
 
       // Add to target queue
       const queueEntry = await addToQueue({
-        patientId: assessment.patientId,
-        patientName: assessment.patientName,
+        clientId: assessment.clientId,
+        clientName: assessment.clientName,
         institutionId: assessment.institutionId,
         department: targetQueue,
         priority: targetPriority,
@@ -377,13 +377,13 @@ export const completeTriageAndRoute = async (assessmentId, options = {}) => {
 };
 
 /**
- * Get triage assessment by patient
+ * Get triage assessment by Client
  */
-export const getTriageAssessmentByPatient = async (patientId, institutionId) => {
+export const getTriageAssessmentByPatient = async (clientId, institutionId) => {
   try {
     const q = query(
       collection(db, TRIAGE_ASSESSMENTS_COLLECTION),
-      where('patientId', '==', patientId),
+      where('clientId', '==', clientId),
       where('institutionId', '==', institutionId),
       orderBy('createdAt', 'desc'),
       limit(1)

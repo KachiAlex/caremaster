@@ -95,7 +95,7 @@ const CaregiverOnboarding = () => {
           <h2 className="text-xl font-semibold mb-4">Submit for Verification</h2>
           <p className="text-gray-600 mb-4">Submit your profile and documents for admin verification. You'll be redirected to the dashboard.</p>
           <div className="flex justify-end">
-            <button disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded" onClick={handleComplete}>Submit</button>
+            <button disabled={saving} className="px-4 py-2 bg-green-600 text-white rounded" onClick={handleComplete}>Submit</button>
           </div>
         </div>
       )}

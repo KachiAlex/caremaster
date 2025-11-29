@@ -231,13 +231,13 @@ export const subscribeToTaskAssignments = (callback, caregiverId = null) => {
 
 // ===== NURSE ASSIGNMENT API =====
 
-// Assign nurse to patient
-export const assignNurseToPatient = async (nurseId, patientId, assignmentData = {}) => {
+// Assign nurse to Client
+export const assignNurseToPatient = async (nurseId, clientId, assignmentData = {}) => {
   try {
     const assignmentsRef = collection(db, NURSE_ASSIGNMENTS_COLLECTION);
     const assignment = {
       nurseId,
-      patientId,
+      clientId,
       status: 'active',
       assignedAt: serverTimestamp(),
       ...assignmentData
@@ -246,7 +246,7 @@ export const assignNurseToPatient = async (nurseId, patientId, assignmentData = 
     const docRef = await addDoc(assignmentsRef, assignment);
     return { id: docRef.id, ...assignment };
   } catch (error) {
-    console.error('Error assigning nurse to patient:', error);
+    console.error('Error assigning nurse to Client:', error);
     throw error;
   }
 };
@@ -287,28 +287,28 @@ export const getNurseAssignments = async (nurseId = null) => {
   }
 };
 
-// Get patients assigned to a nurse
+// Get clients assigned to a nurse
 export const getPatientsAssignedToNurse = async (nurseId) => {
   try {
     const assignments = await getNurseAssignments(nurseId);
     const activeAssignments = assignments.filter(assignment => assignment.status === 'active');
     
-    // Get patient details for each assignment
+    // Get Client details for each assignment
     const patientsWithDetails = await Promise.all(
       activeAssignments.map(async (assignment) => {
         try {
-          const patientRef = doc(db, 'patients', assignment.patientId);
+          const patientRef = doc(db, 'clients', assignment.clientId);
           const patientSnap = await getDoc(patientRef);
           
           if (patientSnap.exists()) {
             return {
               ...assignment,
-              patient: { id: patientSnap.id, ...patientSnap.data() }
+              Client: { id: patientSnap.id, ...patientSnap.data() }
             };
           }
           return assignment;
         } catch (error) {
-          console.error('Error fetching patient details:', error);
+          console.error('Error fetching Client details:', error);
           return assignment;
         }
       })
@@ -316,7 +316,7 @@ export const getPatientsAssignedToNurse = async (nurseId) => {
     
     return patientsWithDetails;
   } catch (error) {
-    console.error('Error fetching patients assigned to nurse:', error);
+    console.error('Error fetching clients assigned to nurse:', error);
     throw error;
   }
 };

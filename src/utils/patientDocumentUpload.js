@@ -1,7 +1,7 @@
 /**
- * Patient Document Upload Utility
+ * Client Document Upload Utility
  * 
- * Handles file uploads for patient documents (ID cards, referral letters, medical records)
+ * Handles file uploads for Client documents (ID cards, referral letters, medical records)
  */
 
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -45,17 +45,17 @@ export const validateFile = (file) => {
 };
 
 /**
- * Upload patient document
+ * Upload Client document
  * @param {File} file - File to upload
- * @param {string} patientId - Patient ID
+ * @param {string} clientId - Client ID
  * @param {string} institutionId - Institution ID
  * @param {string} documentType - Type of document (id_card, referral_letter, medical_record)
  * @param {Function} onProgress - Progress callback
  * @returns {Promise<Object>} Upload result with download URL
  */
-export const uploadPatientDocument = async (
+export const uploadClientDocument = async (
   file,
-  patientId,
+  clientId,
   institutionId,
   documentType,
   onProgress = null
@@ -71,7 +71,7 @@ export const uploadPatientDocument = async (
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop();
     const fileName = `${documentType}_${timestamp}.${fileExtension}`;
-    const storagePath = `patients/${institutionId}/${patientId}/documents/${fileName}`;
+    const storagePath = `clients/${institutionId}/${clientId}/documents/${fileName}`;
 
     // Create storage reference
     const storageRef = ref(storage, storagePath);
@@ -92,15 +92,15 @@ export const uploadPatientDocument = async (
       uploadedAt: new Date().toISOString()
     };
   } catch (error) {
-    console.error('Error uploading patient document:', error);
+    console.error('Error uploading Client document:', error);
     throw error;
   }
 };
 
 /**
- * Upload multiple patient documents
+ * Upload multiple Client documents
  * @param {Array<File>} files - Files to upload
- * @param {string} patientId - Patient ID
+ * @param {string} clientId - Client ID
  * @param {string} institutionId - Institution ID
  * @param {string} documentType - Type of document
  * @param {Function} onProgress - Progress callback
@@ -108,15 +108,15 @@ export const uploadPatientDocument = async (
  */
 export const uploadMultipleDocuments = async (
   files,
-  patientId,
+  clientId,
   institutionId,
   documentType,
   onProgress = null
 ) => {
   const uploadPromises = files.map((file, index) => {
-    return uploadPatientDocument(
+    return uploadClientDocument(
       file,
-      patientId,
+      clientId,
       institutionId,
       `${documentType}_${index + 1}`,
       onProgress
@@ -127,7 +127,7 @@ export const uploadMultipleDocuments = async (
 };
 
 /**
- * Delete patient document
+ * Delete Client document
  * @param {string} storagePath - Storage path of the document
  * @returns {Promise<void>}
  */
@@ -137,7 +137,7 @@ export const deletePatientDocument = async (storagePath) => {
     await deleteObject(storageRef);
     return { success: true };
   } catch (error) {
-    console.error('Error deleting patient document:', error);
+    console.error('Error deleting Client document:', error);
     throw error;
   }
 };
@@ -160,7 +160,7 @@ export const getDocumentTypeLabel = (documentType) => {
 
 export default {
   validateFile,
-  uploadPatientDocument,
+  uploadClientDocument,
   uploadMultipleDocuments,
   deletePatientDocument,
   getDocumentTypeLabel,

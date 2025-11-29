@@ -171,7 +171,7 @@ const InstitutionSettings = ({ institutionId }) => {
       await updateDoc(institutionRef, {
         ...settings,
         updatedAt: serverTimestamp(),
-        lastModifiedBy: user?.uid || userProfile?.id || 'admin'
+        lastModifiedBy: 'admin' // TODO: Add actual user ID
       });
 
       toast.success('Settings saved successfully!');
@@ -209,7 +209,7 @@ const InstitutionSettings = ({ institutionId }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
         <span className="ml-3 text-gray-600">Loading settings...</span>
       </div>
     );
@@ -228,7 +228,7 @@ const InstitutionSettings = ({ institutionId }) => {
         <button
           onClick={handleSaveSettings}
           disabled={saving}
-          className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 font-medium"
+          className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 font-medium"
         >
           {saving ? (
             <>
@@ -261,7 +261,7 @@ const InstitutionSettings = ({ institutionId }) => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-purple-500 text-purple-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -291,7 +291,7 @@ const InstitutionSettings = ({ institutionId }) => {
                     type="text"
                     value={settings.institutionName}
                     onChange={(e) => setSettings({ ...settings, institutionName: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="Healthcare Facility Name"
                   />
                 </div>
@@ -304,7 +304,7 @@ const InstitutionSettings = ({ institutionId }) => {
                 <select
                   value={settings.institutionType}
                   onChange={(e) => setSettings({ ...settings, institutionType: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="healthcare">Healthcare Facility</option>
                   <option value="hospital">Hospital</option>
@@ -325,7 +325,7 @@ const InstitutionSettings = ({ institutionId }) => {
                     type="email"
                     value={settings.contactEmail}
                     onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="contact@institution.com"
                   />
                 </div>
@@ -341,7 +341,7 @@ const InstitutionSettings = ({ institutionId }) => {
                     type="tel"
                     value={settings.contactPhone}
                     onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="+1 (555) 123-4567"
                   />
                 </div>
@@ -357,7 +357,7 @@ const InstitutionSettings = ({ institutionId }) => {
                     value={settings.address}
                     onChange={(e) => setSettings({ ...settings, address: e.target.value })}
                     rows={2}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="123 Main Street, City, State, ZIP"
                   />
                 </div>
@@ -373,7 +373,7 @@ const InstitutionSettings = ({ institutionId }) => {
                     type="url"
                     value={settings.website}
                     onChange={(e) => setSettings({ ...settings, website: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="https://www.example.com"
                   />
                 </div>
@@ -402,7 +402,7 @@ const InstitutionSettings = ({ institutionId }) => {
                       currencySymbol: selected?.symbol || '$'
                     });
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   {currencies.map(curr => (
                     <option key={curr.code} value={curr.code}>
@@ -422,7 +422,7 @@ const InstitutionSettings = ({ institutionId }) => {
                 <select
                   value={settings.currencyPosition}
                   onChange={(e) => setSettings({ ...settings, currencyPosition: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="before">Before Amount ({settings.currencySymbol}100)</option>
                   <option value="after">After Amount (100{settings.currencySymbol})</option>
@@ -436,7 +436,7 @@ const InstitutionSettings = ({ institutionId }) => {
                 <select
                   value={settings.timezone}
                   onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   {timezones.map(tz => (
                     <option key={tz} value={tz}>{tz}</option>
@@ -451,7 +451,7 @@ const InstitutionSettings = ({ institutionId }) => {
                 <select
                   value={settings.dateFormat}
                   onChange={(e) => setSettings({ ...settings, dateFormat: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="MM/DD/YYYY">MM/DD/YYYY (10/21/2025)</option>
                   <option value="DD/MM/YYYY">DD/MM/YYYY (21/10/2025)</option>
@@ -467,7 +467,7 @@ const InstitutionSettings = ({ institutionId }) => {
                 <select
                   value={settings.timeFormat}
                   onChange={(e) => setSettings({ ...settings, timeFormat: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="12h">12-hour (2:30 PM)</option>
                   <option value="24h">24-hour (14:30)</option>
@@ -481,7 +481,7 @@ const InstitutionSettings = ({ institutionId }) => {
                 <select
                   value={settings.language}
                   onChange={(e) => setSettings({ ...settings, language: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="en">English</option>
                   <option value="es">Spanish</option>
@@ -527,7 +527,7 @@ const InstitutionSettings = ({ institutionId }) => {
                         type="checkbox"
                         checked={!hours.closed}
                         onChange={(e) => updateBusinessHours(day, 'closed', !e.target.checked)}
-                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="mr-2 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                       />
                       <span className="font-medium text-gray-900 capitalize">{day}</span>
                     </label>
@@ -541,7 +541,7 @@ const InstitutionSettings = ({ institutionId }) => {
                           type="time"
                           value={hours.open}
                           onChange={(e) => updateBusinessHours(day, 'open', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
                       <span className="text-gray-400">—</span>
@@ -551,7 +551,7 @@ const InstitutionSettings = ({ institutionId }) => {
                           type="time"
                           value={hours.close}
                           onChange={(e) => updateBusinessHours(day, 'close', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
                     </>
@@ -585,7 +585,7 @@ const InstitutionSettings = ({ institutionId }) => {
                     type="checkbox"
                     checked={settings.notifications[item.key]}
                     onChange={(e) => updateNotifications(item.key, e.target.checked)}
-                    className="mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="mt-1 h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                   />
                   <div className="ml-3">
                     <p className="font-medium text-gray-900">{item.label}</p>
@@ -601,7 +601,7 @@ const InstitutionSettings = ({ institutionId }) => {
                 <select
                   value={settings.notifications.reportDigest}
                   onChange={(e) => updateNotifications('reportDigest', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="daily">Daily Summary</option>
                   <option value="weekly">Weekly Summary</option>
@@ -628,7 +628,7 @@ const InstitutionSettings = ({ institutionId }) => {
                   min="0"
                   value={settings.autoArchiveInactiveDays}
                   onChange={(e) => setSettings({ ...settings, autoArchiveInactiveDays: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Clients with no activity for this many days will be auto-archived
@@ -644,7 +644,7 @@ const InstitutionSettings = ({ institutionId }) => {
                   min="5"
                   value={settings.sessionTimeoutMinutes}
                   onChange={(e) => setSettings({ ...settings, sessionTimeoutMinutes: parseInt(e.target.value) || 480 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Users will be logged out after this period of inactivity
@@ -661,7 +661,7 @@ const InstitutionSettings = ({ institutionId }) => {
                   max="10"
                   value={settings.maxLoginAttempts}
                   onChange={(e) => setSettings({ ...settings, maxLoginAttempts: parseInt(e.target.value) || 5 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Account will be locked after this many failed attempts
@@ -677,7 +677,7 @@ const InstitutionSettings = ({ institutionId }) => {
                   min="0"
                   value={settings.passwordExpiryDays}
                   onChange={(e) => setSettings({ ...settings, passwordExpiryDays: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Users must change password after this many days (0 = never)
@@ -691,7 +691,7 @@ const InstitutionSettings = ({ institutionId }) => {
                   type="checkbox"
                   checked={settings.requireApprovalForNewUsers}
                   onChange={(e) => setSettings({ ...settings, requireApprovalForNewUsers: e.target.checked })}
-                  className="mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="mt-1 h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                 />
                 <div className="ml-3">
                   <p className="font-medium text-gray-900">Require Admin Approval for New Users</p>
@@ -704,7 +704,7 @@ const InstitutionSettings = ({ institutionId }) => {
                   type="checkbox"
                   checked={settings.allowSelfRegistration}
                   onChange={(e) => setSettings({ ...settings, allowSelfRegistration: e.target.checked })}
-                  className="mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="mt-1 h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                 />
                 <div className="ml-3">
                   <p className="font-medium text-gray-900">Allow Self-Registration</p>

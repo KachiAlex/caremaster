@@ -530,28 +530,28 @@ const CaregiverDashboard = () => {
   const renderDoctorClientSelector = () => {
     if (!isDoctor) return null;
     return (
-      <div className="rounded-2xl border border-slate-800/60 bg-slate-950/60 p-4 mb-4 shadow-lg shadow-black/40">
+      <div className="bg-white rounded-lg border p-4 mb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <div className="text-xs font-medium text-slate-400 mb-2">Assigned Clients</div>
+            <div className="text-sm text-gray-600">Assigned Clients</div>
             <select
-              className="mt-1 w-72 max-w-full px-3 py-2 border border-slate-700 bg-slate-900/60 text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+              className="mt-1 w-72 max-w-full px-3 py-2 border rounded-md"
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
             >
-              <option value="" className="bg-slate-900">Select client...</option>
+              <option value="">Select client...</option>
               {assignedClients.map(p => (
-                <option key={p.id} value={p.id} className="bg-slate-900">{p.name || p.fullName || p.email || p.id}</option>
+                <option key={p.id} value={p.id}>{p.name || p.fullName || p.email || p.id}</option>
               ))}
             </select>
           </div>
           {assignedClients.length === 0 && (
-            <div className="mt-4 p-4 bg-blue-400/10 border border-blue-400/30 rounded-lg">
-              <div className="flex items-center gap-2">
-                <User className="h-5 w-5 text-blue-400" />
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center">
+                <User className="h-5 w-5 text-blue-600 mr-2" />
                 <div>
-                  <h4 className="text-xs font-medium text-blue-300">No clients assigned yet</h4>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h4 className="text-sm font-medium text-blue-800">No clients assigned yet</h4>
+                  <p className="text-sm text-blue-600 mt-1">
                     Contact your administrator to get clients assigned to your care. Once assigned, you'll be able to create care plans, write prescriptions, and conduct consultations.
                   </p>
                 </div>
@@ -559,25 +559,25 @@ const CaregiverDashboard = () => {
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            <button onClick={handleNewConsultation} className="px-3 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg disabled:opacity-50 text-xs font-medium hover:bg-blue-500/30 transition-colors" disabled={!selectedClientId}>New Consultation</button>
-            <button onClick={handleWritePrescription} className="px-3 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg disabled:opacity-50 text-xs font-medium hover:bg-blue-500/30 transition-colors" disabled={!selectedClientId}>Write Prescription</button>
-            <button onClick={handleCreateCarePlan} className="px-3 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg disabled:opacity-50 text-xs font-medium hover:bg-blue-500/30 transition-colors" disabled={!selectedClientId}>Create Care Plan</button>
-            <button onClick={handleVideoConsultation} className="px-3 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg disabled:opacity-50 text-xs font-medium hover:bg-blue-500/30 transition-colors" disabled={!selectedClientId}>Video Consultation</button>
+            <button onClick={handleNewConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>New Consultation</button>
+            <button onClick={handleWritePrescription} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Write Prescription</button>
+            <button onClick={handleCreateCarePlan} className="px-3 py-2 bg-emerald-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Create Care Plan</button>
+            <button onClick={handleVideoConsultation} className="px-3 py-2 bg-purple-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Video Consultation</button>
           </div>
         </div>
         {selectedClient && (
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <div className="text-slate-400 mb-1">Client</div>
-              <div className="text-slate-50 font-medium">{selectedClient.name || selectedClient.fullName || '—'}</div>
+              <div className="text-gray-500">Client</div>
+              <div className="text-gray-900 font-medium">{selectedClient.name || selectedClient.fullName || '—'}</div>
             </div>
             <div>
-              <div className="text-slate-400 mb-1">Age</div>
-              <div className="text-slate-50">{selectedClient.age || '—'}</div>
+              <div className="text-gray-500">Age</div>
+              <div className="text-gray-900">{selectedClient.age || '—'}</div>
             </div>
             <div>
-              <div className="text-slate-400 mb-1">Last Visit</div>
-              <div className="text-slate-50">{selectedClient.lastVisit ? new Date(selectedClient.lastVisit).toLocaleDateString() : '—'}</div>
+              <div className="text-gray-500">Last Visit</div>
+              <div className="text-gray-900">{selectedClient.lastVisit ? new Date(selectedClient.lastVisit).toLocaleDateString() : '—'}</div>
             </div>
           </div>
         )}
@@ -633,7 +633,7 @@ const CaregiverDashboard = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-green-100 text-green-800';
       case 'in-progress':
         return 'bg-blue-100 text-blue-800';
       case 'upcoming':
@@ -764,7 +764,7 @@ const CaregiverDashboard = () => {
           {/* Emergency Contact */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Phone className="h-5 w-5 text-blue-600 mr-2" />
+              <Phone className="h-5 w-5 text-green-600 mr-2" />
               Emergency Contact
             </h3>
             <div className="space-y-3">
@@ -813,22 +813,22 @@ const CaregiverDashboard = () => {
               
               <button
                 onClick={() => setShowNurseReportModal(true)}
-                className="flex flex-col items-center p-4 border-2 border-orange-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                className="flex flex-col items-center p-4 border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors"
               >
-                <FileText className="h-8 w-8 text-blue-600 mb-2" />
+                <FileText className="h-8 w-8 text-orange-600 mb-2" />
                 <span className="text-sm font-medium text-gray-700">Generate Report</span>
               </button>
               
               <button
                 onClick={() => setShowMedicationModal(true)}
-                className="flex flex-col items-center p-4 border-2 border-green-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                className="flex flex-col items-center p-4 border-2 border-green-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors"
               >
-                <Pill className="h-8 w-8 text-blue-600 mb-2" />
+                <Pill className="h-8 w-8 text-green-600 mb-2" />
                 <span className="text-sm font-medium text-gray-700">Medications</span>
               </button>
               
-              <button className="flex flex-col items-center p-4 border-2 border-purple-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors">
-                <Camera className="h-8 w-8 text-blue-600 mb-2" />
+              <button className="flex flex-col items-center p-4 border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors">
+                <Camera className="h-8 w-8 text-purple-600 mb-2" />
                 <span className="text-sm font-medium text-gray-700">Photo Update</span>
               </button>
             </div>
@@ -894,11 +894,11 @@ const CaregiverDashboard = () => {
             </p>
             
             {selectedClient ? (
-              <div className="bg-blue-50 border border-green-200 rounded-lg p-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-green-900 mb-2">
                   Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h3>
-                <p className="text-blue-700">
+                <p className="text-green-700">
                   Consultation history, medical reports, and doctor's notes for this client would be displayed here.
                   You can review these documents to better understand the client's medical condition and care requirements.
                 </p>
@@ -938,11 +938,11 @@ const CaregiverDashboard = () => {
             </p>
             
             {selectedClient ? (
-              <div className="bg-blue-50 border border-purple-200 rounded-lg p-6">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-purple-900 mb-2">
                   Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h3>
-                <p className="text-blue-700">
+                <p className="text-purple-700">
                   Diagnostic test results, lab reports, and imaging studies for this client would be displayed here.
                   You can review these results to understand the client's medical status and any ongoing monitoring requirements.
                 </p>
@@ -976,29 +976,23 @@ const CaregiverDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 bg-slate-950">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
-          <p className="text-slate-400">Loading dashboard...</p>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
     <CaregiverGuard>
-    <div className="w-full h-full bg-slate-950 text-slate-50 dashboard-full-width dashboard-container">
-      {/* Top halo */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top,_#22c55e33,_transparent_60%),radial-gradient(circle_at_30%_20%,_#0ea5e933,_transparent_55%),radial-gradient(circle_at_80%_0,_#4f46e533,_transparent_55%)]" />
-
+    <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container">
       {/* Header */}
-      <div className="relative z-10 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-sm px-8 py-6">
+      <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-blue-400 to-blue-500 shadow-lg shadow-blue-500/40">
-              <dashboardConfig.icon className="h-5 w-5 text-slate-950" />
+          <div className="flex items-center space-x-4">
+            <div className={`p-3 bg-${dashboardConfig.color}-100 rounded-full`}>
+              <dashboardConfig.icon className={`h-8 w-8 text-${dashboardConfig.color}-600`} />
             </div>
-            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-400 flex items-center justify-center overflow-hidden ring-2 ring-slate-800">
+            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
               {profileImage ? (
                 <img
                   src={profileImage}
@@ -1008,75 +1002,73 @@ const CaregiverDashboard = () => {
                   onError={() => console.log('Profile image failed to load')}
                 />
               ) : (
-                <span className="text-slate-950 font-semibold text-lg">
+                <span className="text-white font-semibold text-lg">
                   {caregiver?.name.split(' ').map(n => n[0]).join('')}
                 </span>
               )}
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">
-                {userProfile?.medicalQualification || 'Healthcare Professional'}
-              </p>
-              <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-50 sm:text-2xl">{dashboardConfig.title}</h1>
-              <p className="text-xs text-slate-400">Welcome, {userProfile?.name || caregiver?.name}</p>
+              <h1 className="text-2xl font-bold text-gray-900">{dashboardConfig.title}</h1>
+              <p className="text-gray-600">Welcome, {userProfile?.name || caregiver?.name}</p>
+              <p className="text-sm text-gray-500">{userProfile?.medicalQualification || 'Healthcare Professional'}</p>
               {institutionId && (
-                <div className="flex items-center mt-1 gap-1">
-                  <Shield className="h-3 w-3 text-blue-400" />
-                  <span className="text-xs text-blue-300 font-medium">
+                <div className="flex items-center mt-1">
+                  <Shield className="h-3 w-3 text-green-600 mr-1" />
+                  <span className="text-xs text-green-600 font-medium">
                     {institutionData?.name || `Institution: ${institutionId.slice(0, 8)}...`}
                   </span>
                 </div>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="p-2.5 text-slate-400 hover:text-slate-50 hover:bg-slate-800/80 rounded-lg transition-colors">
-              <Bell className="h-5 w-5" />
+          <div className="flex items-center space-x-6">
+            <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+              <Bell className="h-6 w-6" />
             </button>
             <button 
               onClick={() => setShowSettings(!showSettings)}
-              className={`p-2.5 rounded-lg transition-colors ${
+              className={`p-3 rounded-full transition-colors ${
                 showSettings 
-                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' 
-                  : 'text-slate-400 hover:text-slate-50 hover:bg-slate-800/80'
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <Settings className="h-5 w-5" />
+              <Settings className="h-6 w-6" />
             </button>
-            <button className="p-2.5 text-slate-400 hover:text-slate-50 hover:bg-slate-800/80 rounded-lg transition-colors">
-              <LogOut className="h-5 w-5" />
+            <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+              <LogOut className="h-6 w-6" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Doctor Client Selector (if doctor) */}
-      <div className="relative z-10 w-full p-8 pt-6">
+      <div className="w-full p-8 pt-6">
         {renderDoctorClientSelector()}
       </div>
 
       {/* Tab Navigation */}
       {(isDoctor || isNurse || isNonMedicalCaregiver) && (
-        <div className="relative z-10 w-full px-8">
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-950/80 backdrop-blur-sm">
-            <div className="border-b border-slate-800/60">
+        <div className="w-full px-8">
+          <div className="bg-white rounded-lg border border-gray-200">
+            <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8 px-6">
                 <button
                   onClick={() => setActiveTab('dashboard')}
-                  className={`py-4 px-1 border-b-2 font-medium text-xs transition-colors ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'dashboard'
-                      ? 'border-blue-400 text-blue-300'
-                      : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-700'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   Dashboard
                 </button>
                 <button
                   onClick={() => setActiveTab('clients')}
-                  className={`py-4 px-1 border-b-2 font-medium text-xs transition-colors ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'clients'
-                      ? 'border-blue-400 text-blue-300'
-                      : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-700'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   Clients
@@ -1086,30 +1078,30 @@ const CaregiverDashboard = () => {
                   <>
                     <button
                       onClick={() => setActiveTab('prescriptions')}
-                      className={`py-4 px-1 border-b-2 font-medium text-xs transition-colors ${
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
                         activeTab === 'prescriptions'
-                          ? 'border-blue-400 text-blue-300'
-                          : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-700'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
                       Prescriptions (View Only)
                     </button>
                     <button
                       onClick={() => setActiveTab('consultations')}
-                      className={`py-4 px-1 border-b-2 font-medium text-xs transition-colors ${
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
                         activeTab === 'consultations'
-                          ? 'border-blue-400 text-blue-300'
-                          : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-700'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
                       Consultations (View Only)
                     </button>
                     <button
                       onClick={() => setActiveTab('diagnostics')}
-                      className={`py-4 px-1 border-b-2 font-medium text-xs transition-colors ${
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
                         activeTab === 'diagnostics'
-                          ? 'border-blue-400 text-blue-300'
-                          : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-700'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
                       Diagnostics (View Only)
@@ -1123,7 +1115,7 @@ const CaregiverDashboard = () => {
       )}
 
       {/* Main Content */}
-      <div className="relative z-10 w-full p-8 dashboard-full-width">
+      <div className="w-full p-8 dashboard-full-width">
         {showSettings ? (
           <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
         ) : activeTab === 'clients' ? (
@@ -1172,8 +1164,8 @@ const CaregiverDashboard = () => {
                   <p className="text-sm font-medium text-gray-600 mb-1">Completed Tasks</p>
                   <p className="text-3xl font-bold text-gray-900">{recentTasks.filter(t => t.status === 'completed').length}</p>
                 </div>
-                <div className="p-3 bg-blue-50 rounded-xl">
-                  <CheckCircle className="h-8 w-8 text-blue-600" />
+                <div className="p-3 bg-green-50 rounded-xl">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
               </div>
             </div>
@@ -1194,8 +1186,8 @@ const CaregiverDashboard = () => {
                   <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
                   <p className="text-3xl font-bold text-gray-900">₦{(caregiver?.thisMonthEarnings || 0).toLocaleString()}</p>
                 </div>
-                <div className="p-3 bg-blue-50 rounded-xl">
-                  <TrendingUp className="h-8 w-8 text-blue-600" />
+                <div className="p-3 bg-purple-50 rounded-xl">
+                  <TrendingUp className="h-8 w-8 text-purple-600" />
                 </div>
               </div>
             </div>
@@ -1284,8 +1276,8 @@ const CaregiverDashboard = () => {
                 {recentTasks.map((task) => (
                   <div key={task.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-blue-50 rounded-lg">
-                        <CheckCircle className="h-6 w-6 text-blue-600" />
+                      <div className="p-2 bg-green-50 rounded-lg">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
                         <h4 className="text-base font-semibold text-gray-900">{task.task}</h4>
@@ -1321,7 +1313,7 @@ const CaregiverDashboard = () => {
                     <span className="text-base font-medium text-gray-700">Punctuality</span>
                     <div className="flex items-center">
                       <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${performance.punctuality}%` }}></div>
+                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.punctuality}%` }}></div>
                       </div>
                       <span className="text-lg font-bold text-gray-900">{performance.punctuality}%</span>
                     </div>
@@ -1353,7 +1345,7 @@ const CaregiverDashboard = () => {
                     <span className="text-base font-medium text-gray-700">Safety Record</span>
                     <div className="flex items-center">
                       <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${performance.safety}%` }}></div>
+                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.safety}%` }}></div>
                       </div>
                       <span className="text-lg font-bold text-gray-900">{performance.safety}%</span>
                     </div>
@@ -1373,15 +1365,15 @@ const CaregiverDashboard = () => {
                     <span className="text-sm font-semibold text-gray-900">Messages</span>
                   </button>
                   <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <Camera className="h-8 w-8 text-blue-600 mb-3" />
+                    <Camera className="h-8 w-8 text-green-600 mb-3" />
                     <span className="text-sm font-semibold text-gray-900">Photo Update</span>
                   </button>
                   <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <FileText className="h-8 w-8 text-blue-600 mb-3" />
+                    <FileText className="h-8 w-8 text-purple-600 mb-3" />
                     <span className="text-sm font-semibold text-gray-900">Add Note</span>
                   </button>
                   <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <Navigation className="h-8 w-8 text-blue-600 mb-3" />
+                    <Navigation className="h-8 w-8 text-orange-600 mb-3" />
                     <span className="text-sm font-semibold text-gray-900">Navigation</span>
                   </button>
                 </div>

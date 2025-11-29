@@ -17,20 +17,20 @@ import { getPatientActivities } from '../utils/patientActivityLogger';
 import { toast } from 'react-toastify';
 
 /**
- * Patient Activity Log Viewer
+ * Client Activity Log Viewer
  * 
- * Displays comprehensive activity log for a patient
+ * Displays comprehensive activity log for a Client
  * Shows all activities with:
  * - Time and date
  * - Staff member details
  * - Activity description
  * - Activity details
  * 
- * @param {string} patientId - Patient registration number (e.g., UC-2025-0001)
- * @param {string} patientDocId - Patient Firestore document ID
- * @param {string} patientName - Patient name (optional, for display)
+ * @param {string} clientId - Client registration number (e.g., UC-2025-0001)
+ * @param {string} patientDocId - Client Firestore document ID
+ * @param {string} clientName - Client name (optional, for display)
  */
-const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Patient' }) => {
+const PatientActivityLogViewer = ({ clientId, patientDocId, clientName = 'Client' }) => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState('all');
@@ -71,10 +71,10 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
 
   useEffect(() => {
     loadActivities();
-  }, [patientId, filterCategory, filterActivityType]);
+  }, [clientId, filterCategory, filterActivityType]);
 
   const loadActivities = async () => {
-    if (!patientId) return;
+    if (!clientId) return;
     
     setLoading(true);
     try {
@@ -84,10 +84,10 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
         activityType: filterActivityType !== 'all' ? filterActivityType : null
       };
       
-      const loadedActivities = await getPatientActivities(patientId, options);
+      const loadedActivities = await getPatientActivities(clientId, options);
       setActivities(loadedActivities);
     } catch (error) {
-      console.error('Error loading patient activities:', error);
+      console.error('Error loading Client activities:', error);
       toast.error('Failed to load activity log');
     } finally {
       setLoading(false);
@@ -141,18 +141,18 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `patient-${patientId}-activities-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `Client-${clientId}-activities-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
     
     toast.success('Activity log exported successfully');
   };
 
-  if (!patientId) {
+  if (!clientId) {
     return (
       <div className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-8 text-center">
         <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-        <p className="text-slate-300">No patient selected</p>
+        <p className="text-slate-300">No Client selected</p>
       </div>
     );
   }
@@ -167,9 +167,9 @@ const PatientActivityLogViewer = ({ patientId, patientDocId, patientName = 'Pati
               <Activity className="h-5 w-5 text-slate-950" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-slate-50">Patient Activity Log</h3>
+              <h3 className="text-lg font-semibold text-slate-50">Client Activity Log</h3>
               <p className="text-xs text-slate-400">
-                {patientName} • Registration: <span className="font-mono text-emerald-300">{patientId}</span>
+                {clientName} • Registration: <span className="font-mono text-emerald-300">{clientId}</span>
               </p>
             </div>
           </div>

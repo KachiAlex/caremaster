@@ -83,9 +83,9 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
       features = [
         { name: 'Advanced Medication Management', icon: Pill, route: '/service-provider/prescriptions', color: 'bg-blue-600' },
         { name: 'Vital Signs Monitoring', icon: Heart, route: '/service-provider/diagnostics', color: 'bg-red-600' },
-        { name: 'Medical Documentation', icon: FileText, route: '/service-provider/medical-records', color: 'bg-blue-600' },
+        { name: 'Medical Documentation', icon: FileText, route: '/service-provider/medical-records', color: 'bg-green-600' },
         { name: 'Emergency Response', icon: AlertTriangle, route: '/service-provider/emergency', color: 'bg-red-700' },
-        { name: 'Health Assessments', icon: Stethoscope, route: '/service-provider/assessments', color: 'bg-blue-600' }
+        { name: 'Health Assessments', icon: Stethoscope, route: '/service-provider/assessments', color: 'bg-purple-600' }
       ];
     }
     
@@ -93,9 +93,9 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
     else if (specializations.includes('Physical Therapist') || specializations.includes('Occupational Therapist')) {
       level = 'therapy';
       features = [
-        { name: 'Exercise Programs', icon: Activity, route: '/service-provider/therapy', color: 'bg-blue-600' },
+        { name: 'Exercise Programs', icon: Activity, route: '/service-provider/therapy', color: 'bg-orange-600' },
         { name: 'Mobility Assessment', icon: TrendingUp, route: '/service-provider/mobility', color: 'bg-blue-600' },
-        { name: 'Progress Tracking', icon: FileText, route: '/service-provider/progress', color: 'bg-blue-600' },
+        { name: 'Progress Tracking', icon: FileText, route: '/service-provider/progress', color: 'bg-green-600' },
         { name: 'Equipment Management', icon: Shield, route: '/service-provider/equipment', color: 'bg-gray-600' }
       ];
     }
@@ -104,11 +104,11 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
     else if (specializations.includes('Dementia Care') || specializations.includes('Memory Care Specialist')) {
       level = 'dementia';
       features = [
-        { name: 'Cognitive Monitoring', icon: Brain, route: '/service-provider/cognitive', color: 'bg-blue-600' },
-        { name: 'Behavioral Tracking', icon: Eye, route: '/service-provider/behavior', color: 'bg-blue-600' },
+        { name: 'Cognitive Monitoring', icon: Brain, route: '/service-provider/cognitive', color: 'bg-purple-600' },
+        { name: 'Behavioral Tracking', icon: Eye, route: '/service-provider/behavior', color: 'bg-indigo-600' },
         { name: 'Safety Protocols', icon: Shield, route: '/service-provider/safety', color: 'bg-red-600' },
         { name: 'Family Communication', icon: MessageSquare, route: '/service-provider/family', color: 'bg-blue-600' },
-        { name: 'Memory Activities', icon: Users, route: '/service-provider/activities', color: 'bg-blue-600' }
+        { name: 'Memory Activities', icon: Users, route: '/service-provider/activities', color: 'bg-green-600' }
       ];
     }
     
@@ -116,10 +116,10 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
     else if (specializations.includes('Companion Care') || specializations.includes('Social Worker')) {
       level = 'companion';
       features = [
-        { name: 'Social Activities', icon: Users, route: '/service-provider/social', color: 'bg-blue-600' },
-        { name: 'Mental Health Support', icon: Heart, route: '/service-provider/mental-health', color: 'bg-blue-600' },
+        { name: 'Social Activities', icon: Users, route: '/service-provider/social', color: 'bg-green-600' },
+        { name: 'Mental Health Support', icon: Heart, route: '/service-provider/mental-health', color: 'bg-pink-600' },
         { name: 'Daily Living Assistance', icon: Clock, route: '/service-provider/daily-care', color: 'bg-blue-600' },
-        { name: 'Recreation Planning', icon: Calendar, route: '/service-provider/recreation', color: 'bg-blue-600' }
+        { name: 'Recreation Planning', icon: Calendar, route: '/service-provider/recreation', color: 'bg-purple-600' }
       ];
     }
     
@@ -128,9 +128,9 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
       level = 'basic';
       features = [
         { name: 'Basic Care Tasks', icon: Heart, route: '/service-provider/tasks', color: 'bg-blue-600' },
-        { name: 'Client Communication', icon: MessageSquare, route: '/service-provider/messages', color: 'bg-blue-600' },
-        { name: 'Schedule Management', icon: Calendar, route: '/service-provider/schedule', color: 'bg-blue-600' },
-        { name: 'Care Documentation', icon: Camera, route: '/service-provider/care-logs', color: 'bg-blue-600' }
+        { name: 'Client Communication', icon: MessageSquare, route: '/service-provider/messages', color: 'bg-green-600' },
+        { name: 'Schedule Management', icon: Calendar, route: '/service-provider/schedule', color: 'bg-purple-600' },
+        { name: 'Care Documentation', icon: Camera, route: '/service-provider/care-logs', color: 'bg-orange-600' }
       ];
     }
 
@@ -181,9 +181,9 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
               <p className="text-sm font-medium text-gray-900">Qualification Level</p>
               <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
                 specializationInfo.level === 'medical' ? 'bg-red-100 text-red-800' :
-                specializationInfo.level === 'therapy' ? 'bg-blue-100 text-orange-800' :
-                specializationInfo.level === 'dementia' ? 'bg-blue-100 text-purple-800' :
-                specializationInfo.level === 'companion' ? 'bg-blue-100 text-blue-800' :
+                specializationInfo.level === 'therapy' ? 'bg-orange-100 text-orange-800' :
+                specializationInfo.level === 'dementia' ? 'bg-purple-100 text-purple-800' :
+                specializationInfo.level === 'companion' ? 'bg-green-100 text-green-800' :
                 'bg-gray-100 text-gray-800'
               }`}>
                 {specializationInfo.level.charAt(0).toUpperCase() + specializationInfo.level.slice(1)}
@@ -215,7 +215,7 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Certifications</h3>
           <div className="flex flex-wrap gap-2">
             {specializationInfo.certifications.map((cert, index) => (
-              <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
                 <Award className="h-3 w-3 inline mr-1" />
                 {cert}
               </span>
@@ -255,7 +255,7 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
             <MapPin className="h-4 w-4 mr-2" /> Open Route Optimization
           </button>
         </div>
-        <p className="text-sm text-gray-600 mt-2">See your assigned patients on a route and launch navigation.</p>
+        <p className="text-sm text-gray-600 mt-2">See your assigned clients on a route and launch navigation.</p>
       </div>
 
       {/* Qualification-based Alerts */}
@@ -277,12 +277,12 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
       )}
 
       {specializationInfo.level === 'dementia' && (
-        <div className="card border-l-4 border-blue-500 bg-blue-50">
+        <div className="card border-l-4 border-purple-500 bg-purple-50">
           <div className="flex items-start">
-            <Brain className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+            <Brain className="h-5 w-5 text-purple-600 mr-2 mt-0.5" />
             <div>
               <h4 className="text-sm font-medium text-purple-800">Memory Care Specialist Guidelines</h4>
-              <ul className="text-sm text-blue-700 mt-1 space-y-1">
+              <ul className="text-sm text-purple-700 mt-1 space-y-1">
                 <li>• Implement cognitive stimulation activities</li>
                 <li>• Monitor behavioral changes and triggers</li>
                 <li>• Maintain safe, structured environment</li>
@@ -294,9 +294,9 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
       )}
 
       {specializationInfo.level === 'therapy' && (
-        <div className="card border-l-4 border-blue-500 bg-blue-50">
+        <div className="card border-l-4 border-orange-500 bg-orange-50">
           <div className="flex items-start">
-            <Activity className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+            <Activity className="h-5 w-5 text-orange-600 mr-2 mt-0.5" />
             <div>
               <h4 className="text-sm font-medium text-orange-800">Physical Therapy Protocols</h4>
               <ul className="text-sm text-orange-700 mt-1 space-y-1">
@@ -331,13 +331,13 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
           
           {specializationInfo.level === 'therapy' && (
             <>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <Activity className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="text-center p-4 bg-orange-50 rounded-lg">
+                <Activity className="h-6 w-6 text-orange-600 mx-auto mb-2" />
                 <div className="text-xl font-bold text-gray-900">85%</div>
                 <div className="text-sm text-gray-600">Mobility Improvement</div>
               </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-green-600 mx-auto mb-2" />
                 <div className="text-xl font-bold text-gray-900">23</div>
                 <div className="text-sm text-gray-600">Exercise Sessions</div>
               </div>
@@ -346,13 +346,13 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
           
           {specializationInfo.level === 'dementia' && (
             <>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <Brain className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <Brain className="h-6 w-6 text-purple-600 mx-auto mb-2" />
                 <div className="text-xl font-bold text-gray-900">92%</div>
                 <div className="text-sm text-gray-600">Cognitive Stability</div>
               </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <Eye className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="text-center p-4 bg-indigo-50 rounded-lg">
+                <Eye className="h-6 w-6 text-indigo-600 mx-auto mb-2" />
                 <div className="text-xl font-bold text-gray-900">12</div>
                 <div className="text-sm text-gray-600">Behavior Incidents</div>
               </div>
@@ -361,13 +361,13 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
 
           {specializationInfo.level === 'companion' && (
             <>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <Users className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <Users className="h-6 w-6 text-green-600 mx-auto mb-2" />
                 <div className="text-xl font-bold text-gray-900">45</div>
                 <div className="text-sm text-gray-600">Social Activities</div>
               </div>
               <div className="text-center p-4 bg-pink-50 rounded-lg">
-                <Heart className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                <Heart className="h-6 w-6 text-pink-600 mx-auto mb-2" />
                 <div className="text-xl font-bold text-gray-900">4.9</div>
                 <div className="text-sm text-gray-600">Satisfaction Score</div>
               </div>

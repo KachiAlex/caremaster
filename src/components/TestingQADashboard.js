@@ -30,9 +30,9 @@ const TestingQADashboard = () => {
 
   const testSuites = [
     {
-      id: 'patient-api',
-      name: 'Patient API Tests',
-      description: 'Tests for patient registration, retrieval, and updates',
+      id: 'Client-api',
+      name: 'Client API Tests',
+      description: 'Tests for Client registration, retrieval, and updates',
       tests: 15,
       status: 'passing'
     },

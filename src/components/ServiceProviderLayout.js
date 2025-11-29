@@ -66,7 +66,7 @@ const ServiceProviderLayout = () => {
     { name: 'Tasks', href: '/service-provider/tasks', icon: ClipboardList, roles: ['caregiver', 'doctor', 'admin'] },
     { name: 'Care Logs', href: '/service-provider/care-logs', icon: Camera, roles: ['caregiver', 'admin'] },
     { name: 'Activities', href: '/service-provider/activities', icon: Activity, roles: ['caregiver', 'admin'] },
-    { name: 'Patients', href: '/service-provider/medical-records', icon: Users, roles: ['caregiver', 'doctor', 'admin'] },
+    { name: 'clients', href: '/service-provider/medical-records', icon: Users, roles: ['caregiver', 'doctor', 'admin'] },
     { name: 'Prescriptions', href: '/service-provider/prescriptions', icon: Pill, roles: ['doctor', 'admin'] },
     { name: 'Consultations', href: '/service-provider/consultations', icon: Stethoscope, roles: ['doctor', 'admin'] },
     { name: 'Diagnostics', href: '/service-provider/diagnostics', icon: FileText, roles: ['doctor', 'admin'] },
@@ -87,11 +87,11 @@ const ServiceProviderLayout = () => {
         <div className="fixed inset-y-0 left-0 flex w-full max-w-xs sm:max-w-sm flex-col bg-white shadow-xl safe-area-inset animate-slide-in-left">
           <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center min-w-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-2 shrink-0">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-2 shrink-0">
                 <Heart className="h-5 w-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="brand-title-alt text-blue-600 truncate">UltimateCare</h1>
+                <h1 className="brand-title-alt text-blue-600 truncate">Care Master</h1>
                 <p className="text-xs text-gray-500 truncate">
                   {isDoctor ? 'Medical Portal' : 'Care Portal'}
                 </p>
@@ -146,11 +146,11 @@ const ServiceProviderLayout = () => {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-sm">
           <div className="flex h-16 items-center px-4 border-b border-gray-200">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
                 <Heart className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="brand-title-alt text-blue-600">UltimateCare</h1>
+                <h1 className="brand-title-alt text-blue-600">Care Master</h1>
                 <p className="text-xs text-gray-500">
                   {isDoctor ? 'Medical Portal' : 'Care Portal'}
                 </p>

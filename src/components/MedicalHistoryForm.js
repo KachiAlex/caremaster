@@ -18,7 +18,7 @@ import { toast } from 'react-toastify';
 import { createNurseReport } from '../api/nurseReportsAPI';
 import { emergencyAPI } from '../api/emergencyAPI';
 
-const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel }) => {
+const MedicalHistoryForm = ({ clientId, nurseId, nurseName, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     // Vital Signs
     bloodPressure: { systolic: '', diastolic: '' },
@@ -163,7 +163,7 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
       }
 
       await createNurseReport({
-        patientId,
+        clientId,
         nurseId,
         nurseName,
         bloodPressure: `${formData.bloodPressure.systolic}/${formData.bloodPressure.diastolic}`,
@@ -212,13 +212,13 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
       setLoading(true);
       
       const emergencyData = {
-        patientId,
+        clientId,
         nurseId,
         nurseName,
         emergencyType: 'Medical Emergency',
         severity: 'Critical',
-        description: emergencyReason || 'Critical medical condition detected during patient assessment',
-        location: 'Patient Residence',
+        description: emergencyReason || 'Critical medical condition detected during Client assessment',
+        location: 'Client Residence',
         triggeredBy: 'Nurse Assessment',
         medicalData: formData
       };
@@ -227,7 +227,7 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
       
       // Also save the medical report
       await createNurseReport({
-        patientId,
+        clientId,
         nurseId,
         nurseName,
         bloodPressure: `${formData.bloodPressure.systolic}/${formData.bloodPressure.diastolic}`,
@@ -291,7 +291,7 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
               <h3 className="text-lg font-bold text-red-600">Emergency Alert</h3>
             </div>
             <p className="text-gray-700 mb-4">
-              Critical conditions detected in patient assessment. This will trigger an emergency alert to doctors and admin.
+              Critical conditions detected in Client assessment. This will trigger an emergency alert to doctors and admin.
             </p>
             <textarea
               value={emergencyReason}
@@ -421,7 +421,7 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
         {/* Pain Assessment */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-            <Activity className="mr-2 text-blue-500" />
+            <Activity className="mr-2 text-orange-500" />
             Pain Assessment
           </h3>
           
@@ -473,7 +473,7 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
       {/* Physical Assessment */}
       <div className="mt-6 space-y-4">
         <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-          <Eye className="mr-2 text-blue-500" />
+          <Eye className="mr-2 text-green-500" />
           Physical Assessment
         </h3>
         
@@ -618,7 +618,7 @@ const MedicalHistoryForm = ({ patientId, nurseId, nurseName, onSave, onCancel })
       {/* Photo Upload */}
       <div className="mt-6 space-y-4">
         <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-          <Camera className="mr-2 text-blue-500" />
+          <Camera className="mr-2 text-purple-500" />
           Photo Documentation
         </h3>
         

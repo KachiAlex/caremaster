@@ -1,6 +1,6 @@
 /**
- * Patient Reports Component
- * Generates and displays reports based on patient logs
+ * Client Reports Component
+ * Generates and displays reports based on Client logs
  */
 
 import React, { useState, useEffect } from 'react';
@@ -27,9 +27,9 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 
-const PatientReports = ({ patientId = null, patientName = null }) => {
+const PatientReports = ({ clientId = null, clientName = null }) => {
   const { userProfile, institutionId } = useUser();
-  const [reportType, setReportType] = useState('patient'); // patient, clinician, institution
+  const [reportType, setReportType] = useState('Client'); // Client, clinician, institution
   const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportData, setReportData] = useState(null);
@@ -44,8 +44,8 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
       end.setHours(23, 59, 59, 999); // End of day
 
       let data = null;
-      if (reportType === 'patient' && patientId) {
-        data = await generatePatientActivityReport(patientId, start, end);
+      if (reportType === 'Client' && clientId) {
+        data = await generatePatientActivityReport(clientId, start, end);
       } else if (reportType === 'clinician' && userProfile?.id) {
         data = await generateClinicianActivityReport(userProfile.id, start, end);
       } else if (reportType === 'institution' && institutionId) {
@@ -71,7 +71,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
       return;
     }
     try {
-      const filename = `patient-report-${new Date().toISOString().split('T')[0]}.csv`;
+      const filename = `Client-report-${new Date().toISOString().split('T')[0]}.csv`;
       exportReportToCSV(reportData, filename);
       toast.success('Report exported to CSV');
     } catch (error) {
@@ -86,7 +86,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
       return;
     }
     try {
-      const filename = `patient-report-${new Date().toISOString().split('T')[0]}.json`;
+      const filename = `Client-report-${new Date().toISOString().split('T')[0]}.json`;
       exportReportToJSON(reportData, filename);
       toast.success('Report exported to JSON');
     } catch (error) {
@@ -108,7 +108,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-slate-50 flex items-center">
           <FileText className="h-6 w-6 mr-3 text-blue-400" />
-          Patient Reports
+          Client Reports
         </h3>
         {reportData && (
           <div className="flex gap-2">
@@ -150,7 +150,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
               }}
               className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-50 focus:ring-blue-500 focus:border-blue-500"
             >
-              {patientId && <option value="patient">Patient Activity</option>}
+              {clientId && <option value="Client">Client Activity</option>}
               <option value="clinician">Clinician Activity</option>
               {institutionId && <option value="institution">Institution Activity</option>}
             </select>
@@ -215,7 +215,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
               <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-slate-400 mb-1">Unique Patients</p>
+                    <p className="text-xs text-slate-400 mb-1">Unique clients</p>
                     <p className="text-2xl font-bold text-slate-50">{reportData.statistics.uniquePatients}</p>
                   </div>
                   <Users className="h-8 w-8 text-blue-400" />
@@ -226,7 +226,7 @@ const PatientReports = ({ patientId = null, patientName = null }) => {
               <div className="bg-slate-900/70 border border-slate-800/60 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-slate-400 mb-1">Total Patients</p>
+                    <p className="text-xs text-slate-400 mb-1">Total clients</p>
                     <p className="text-2xl font-bold text-slate-50">{reportData.statistics.totalPatients}</p>
                   </div>
                   <Users className="h-8 w-8 text-blue-400" />

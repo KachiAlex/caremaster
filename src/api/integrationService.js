@@ -7,7 +7,7 @@ import {
 } from './patientsAPI';
 import { 
   createAppointment, 
-  getAppointmentsByPatient, 
+  getAppointmentsByClient, 
   getAppointmentsByDoctor, 
   getAppointmentsByCaregiver,
   getTodaysAppointments,
@@ -22,7 +22,7 @@ import {
 } from './messagesAPI';
 import { 
   createCareTask, 
-  getCareTasksByPatient, 
+  getCareTasksByClient, 
   getCareTasksByCaregiver, 
   getTodaysCareTasks,
   completeCareTask 
@@ -31,16 +31,16 @@ import { getUserById } from './usersAPI';
 
 // Integration service to connect all roles and manage workflows
 
-// Patient-Caregiver Integration
+// Client-Caregiver Integration
 export const PatientCaregiverIntegration = {
-  // Assign patient to caregiver
-  async assignPatient(patientId, caregiverId) {
+  // Assign Client to caregiver
+  async assignClient(clientId, caregiverId) {
     try {
-      await assignPatientToCaregiver(patientId, caregiverId);
+      await assignPatientToCaregiver(clientId, caregiverId);
       
-      // Create conversation between patient and caregiver
+      // Create conversation between Client and caregiver
       const conversation = await getOrCreateConversation(
-        patientId, 
+        clientId, 
         caregiverId, 
         'care'
       );
@@ -53,46 +53,46 @@ export const PatientCaregiverIntegration = {
       
       return { success: true, conversationId: conversation.id };
     } catch (error) {
-      console.error('Error in patient-caregiver assignment:', error);
+      console.error('Error in Client-caregiver assignment:', error);
       throw error;
     }
   },
 
-  // Get patient-caregiver relationship data
-  async getPatientCaregiverData(patientId, caregiverId) {
+  // Get Client-caregiver relationship data
+  async getPatientCaregiverData(clientId, caregiverId) {
     try {
-      const [patient, caregiver, tasks, appointments, conversations] = await Promise.all([
-        getUserById(patientId),
+      const [Client, caregiver, tasks, appointments, conversations] = await Promise.all([
+        getUserById(clientId),
         getUserById(caregiverId),
-        getCareTasksByPatient(patientId),
-        getAppointmentsByPatient(patientId),
-        getOrCreateConversation(patientId, caregiverId, 'care')
+        getCareTasksByClient(clientId),
+        getAppointmentsByClient(clientId),
+        getOrCreateConversation(clientId, caregiverId, 'care')
       ]);
 
       return {
-        patient,
+        Client,
         caregiver,
         tasks: tasks.filter(task => task.caregiverId === caregiverId),
         appointments: appointments.filter(apt => apt.caregiverId === caregiverId),
         conversation: conversations
       };
     } catch (error) {
-      console.error('Error fetching patient-caregiver data:', error);
+      console.error('Error fetching Client-caregiver data:', error);
       throw error;
     }
   }
 };
 
-// Patient-Doctor Integration
+// Client-Doctor Integration
 export const PatientDoctorIntegration = {
-  // Assign patient to doctor
-  async assignPatient(patientId, doctorId) {
+  // Assign Client to doctor
+  async assignClient(clientId, doctorId) {
     try {
-      await assignPatientToDoctor(patientId, doctorId);
+      await assignPatientToDoctor(clientId, doctorId);
       
-      // Create conversation between patient and doctor
+      // Create conversation between Client and doctor
       const conversation = await getOrCreateConversation(
-        patientId, 
+        clientId, 
         doctorId, 
         'medical'
       );
@@ -105,31 +105,31 @@ export const PatientDoctorIntegration = {
       
       return { success: true, conversationId: conversation.id };
     } catch (error) {
-      console.error('Error in patient-doctor assignment:', error);
+      console.error('Error in Client-doctor assignment:', error);
       throw error;
     }
   },
 
-  // Get patient-doctor relationship data
-  async getPatientDoctorData(patientId, doctorId) {
+  // Get Client-doctor relationship data
+  async getPatientDoctorData(clientId, doctorId) {
     try {
-      const [patient, doctor, appointments, medicalHistory, conversations] = await Promise.all([
-        getUserById(patientId),
+      const [Client, doctor, appointments, medicalHistory, conversations] = await Promise.all([
+        getUserById(clientId),
         getUserById(doctorId),
-        getAppointmentsByPatient(patientId),
-        // getPatientMedicalHistory(patientId), // This would need to be implemented
-        getOrCreateConversation(patientId, doctorId, 'medical')
+        getAppointmentsByClient(clientId),
+        // getPatientMedicalHistory(clientId), // This would need to be implemented
+        getOrCreateConversation(clientId, doctorId, 'medical')
       ]);
 
       return {
-        patient,
+        Client,
         doctor,
         appointments: appointments.filter(apt => apt.doctorId === doctorId),
         medicalHistory,
         conversation: conversations
       };
     } catch (error) {
-      console.error('Error fetching patient-doctor data:', error);
+      console.error('Error fetching Client-doctor data:', error);
       throw error;
     }
   }
@@ -138,14 +138,14 @@ export const PatientDoctorIntegration = {
 // Caregiver-Doctor Integration
 export const CaregiverDoctorIntegration = {
   // Create shared care plan
-  async createSharedCarePlan(patientId, caregiverId, doctorId, carePlanData) {
+  async createSharedCarePlan(clientId, caregiverId, doctorId, carePlanData) {
     try {
       // Create care tasks based on doctor's recommendations
       const careTasks = [];
       for (const task of carePlanData.tasks) {
         const taskId = await createCareTask({
           ...task,
-          patientId,
+          clientId,
           caregiverId,
           doctorId,
           carePlanId: carePlanData.id,
@@ -163,7 +163,7 @@ export const CaregiverDoctorIntegration = {
 
       // Send care plan message
       await sendMessage(conversation.id, doctorId, {
-        text: `New care plan created for patient. Tasks assigned: ${careTasks.length}`,
+        text: `New care plan created for client. Tasks assigned: ${careTasks.length}`,
         messageType: 'medical',
         metadata: { carePlanId: carePlanData.id, taskIds: careTasks }
       });
@@ -176,12 +176,12 @@ export const CaregiverDoctorIntegration = {
   },
 
   // Get coordination data between caregiver and doctor
-  async getCoordinationData(caregiverId, doctorId, patientId = null) {
+  async getCoordinationData(caregiverId, doctorId, clientId = null) {
     try {
       const [caregiver, doctor, sharedPatients, conversations] = await Promise.all([
         getUserById(caregiverId),
         getUserById(doctorId),
-        patientId ? [patientId] : this.getSharedPatients(caregiverId, doctorId),
+        clientId ? [clientId] : this.getSharedPatients(caregiverId, doctorId),
         getOrCreateConversation(caregiverId, doctorId, 'medical')
       ]);
 
@@ -197,7 +197,7 @@ export const CaregiverDoctorIntegration = {
     }
   },
 
-  // Get patients shared between caregiver and doctor
+  // Get clients shared between caregiver and doctor
   async getSharedPatients(caregiverId, doctorId) {
     try {
       const [caregiverPatients, doctorPatients] = await Promise.all([
@@ -205,14 +205,14 @@ export const CaregiverDoctorIntegration = {
         getPatientsByDoctor(doctorId)
       ]);
 
-      // Find intersection of patients
+      // Find intersection of clients
       const sharedPatients = caregiverPatients.filter(cp => 
         doctorPatients.some(dp => dp.id === cp.id)
       );
 
       return sharedPatients;
     } catch (error) {
-      console.error('Error getting shared patients:', error);
+      console.error('Error getting shared clients:', error);
       throw error;
     }
   }
@@ -240,11 +240,11 @@ export const AdminIntegration = {
     }
   },
 
-  // Monitor patient-caregiver relationships
+  // Monitor Client-caregiver relationships
   async monitorPatientCaregiverRelationships() {
     try {
       // Implementation would involve checking for:
-      // - Unassigned patients
+      // - Unassigned clients
       // - Overloaded caregivers
       // - Inactive relationships
       // - Communication gaps
@@ -275,11 +275,11 @@ export const AdminIntegration = {
 
 // Workflow Automation
 export const WorkflowAutomation = {
-  // Auto-assign patients based on criteria
+  // Auto-assign clients based on criteria
   async autoAssignPatients() {
     try {
       // Implementation would involve:
-      // - Finding unassigned patients
+      // - Finding unassigned clients
       // - Matching with available caregivers/doctors
       // - Creating assignments automatically
       return { assigned: 0, failed: 0 };
@@ -321,19 +321,19 @@ export const WorkflowAutomation = {
 // Emergency Integration
 export const EmergencyIntegration = {
   // Handle emergency alerts
-  async handleEmergencyAlert(patientId, emergencyData) {
+  async handleEmergencyAlert(clientId, emergencyData) {
     try {
-      // Get patient's assigned caregivers and doctors
+      // Get Client's assigned caregivers and doctors
       const [caregivers, doctors] = await Promise.all([
-        getPatientsByCaregiver(patientId),
-        getPatientsByDoctor(patientId)
+        getPatientsByCaregiver(clientId),
+        getPatientsByDoctor(clientId)
       ]);
 
       // Send emergency notifications
       const notifications = [];
       for (const caregiver of caregivers) {
         const conversation = await getOrCreateConversation(
-          patientId, 
+          clientId, 
           caregiver.id, 
           'emergency'
         );
@@ -350,7 +350,7 @@ export const EmergencyIntegration = {
 
       for (const doctor of doctors) {
         const conversation = await getOrCreateConversation(
-          patientId, 
+          clientId, 
           doctor.id, 
           'emergency'
         );

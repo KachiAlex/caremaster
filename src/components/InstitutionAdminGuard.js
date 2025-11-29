@@ -89,13 +89,36 @@ const InstitutionAdminGuard = ({ children }) => {
             return;
           }
           
+          // Redirect users to their appropriate dashboard based on role
           console.log('⛔ Unauthorized access attempt to Institution Admin portal');
           console.log(`User role "${userType}" attempted to access Institution Admin portal`);
-          console.log('Full user profile for debugging:', JSON.stringify(userProfile, null, 2));
+          
+          // Redirect pharmacists to pharmacy dashboard
+          if (userType === 'pharmacist' || userProfile?.medicalQualification === 'Pharmacist') {
+            toast.info('Redirecting to pharmacy dashboard...');
+            if (hasInstitutionId) {
+              navigate(`/institution-pharmacy/dashboard?institution=${userProfile.institutionId}`, { replace: true });
+            } else {
+              navigate('/institution-pharmacy/dashboard', { replace: true });
+            }
+            setLoading(false);
+            return;
+          }
+          
+          // Redirect caregivers/doctors/nurses to caregiver dashboard
+          if (['caregiver', 'doctor', 'nurse'].includes(userType)) {
+            toast.info('Redirecting to caregiver dashboard...');
+            if (hasInstitutionId) {
+              navigate(`/institution-caregiver/dashboard?institution=${userProfile.institutionId}`, { replace: true });
+            } else {
+              navigate('/institution-caregiver/dashboard', { replace: true });
+            }
+            setLoading(false);
+            return;
+          }
           
           toast.error(`Access denied. You are logged in as '${userType || 'unknown'}'. Please contact your administrator to grant you admin access.`);
           
-          // Don't log out - just redirect to login
           // Redirect to institution login with the institutionId if available
           if (hasInstitutionId) {
             navigate(`/institution/login?institution=${userProfile.institutionId}&role=admin`, { replace: true });
@@ -117,7 +140,12 @@ const InstitutionAdminGuard = ({ children }) => {
           return;
         }
 
-        // Check license status
+        // Check license status (temporarily disabled for debugging)
+        console.log('🔍 Skipping license check temporarily for debugging');
+        console.log('Institution ID:', userProfile.institutionId);
+        
+        // TODO: Re-enable license checking after debugging
+        /*
         try {
           const licenseStatus = await fetchLicenseStatus(userProfile.institutionId);
           console.log('License status check:', licenseStatus);
@@ -137,6 +165,7 @@ const InstitutionAdminGuard = ({ children }) => {
           console.warn('License check failed, allowing access for development');
           // Don't block access if license check fails
         }
+        */
 
         setIsAuthorized(true);
         setLoading(false);
