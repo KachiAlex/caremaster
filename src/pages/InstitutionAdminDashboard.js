@@ -297,12 +297,6 @@ const InstitutionAdminDashboard = () => {
   const [billingPlans, setBillingPlans] = useState([]);
   const [showEditBillingPlanModal, setShowEditBillingPlanModal] = useState(false);
   const [selectedBillingPlan, setSelectedBillingPlan] = useState(null);
-  
-  // Payment Gateway States
-  const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
-  const [showPaymentGatewayModal, setShowPaymentGatewayModal] = useState(false);
-  const [selectedGateway, setSelectedGateway] = useState(null);
-  const [paymentGatewayForm, setPaymentGatewayForm] = useState(PAYMENT_GATEWAY_DEFAULT_FORM);
 
   // Dashboard Card Modal States
   const [showStaffModal, setShowStaffModal] = useState(false);
