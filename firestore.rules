@@ -162,6 +162,23 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
     }
     
+    // Task time tracking collection - caregivers can create tracking records for their tasks
+    match /taskTimeTracking/{trackingId} {
+      allow read, list: if isAdmin() || (request.auth != null && (
+        isCaregiver() || isDoctor() || 
+        resource.data.caregiverId == request.auth.uid
+      ));
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        (isCaregiver() || isDoctor()) && request.resource.data.caregiverId == request.auth.uid
+      );
+      allow update, delete: if isAdmin() || (
+        request.auth != null && 
+        (isCaregiver() || isDoctor()) && 
+        resource.data.caregiverId == request.auth.uid
+      );
+    }
+    
     // Analytics events - admin only
     match /analyticsEvents/{eventId} {
       allow create, read, list: if isAdmin();
