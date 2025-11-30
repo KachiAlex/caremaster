@@ -23,7 +23,8 @@ import {
   RefreshCw,
   Users,
   Receipt,
-  Building
+  Building,
+  Settings
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
@@ -35,6 +36,7 @@ import {
   SERVICE_TYPE
 } from '../api/autoBillingAPI';
 import { useUser } from '../contexts/UserContext';
+import BillingPlanConfiguration from './BillingPlanConfiguration';
 
 const BillingManagementDashboard = ({ institutionId: propInstitutionId, clients = [] }) => {
   const { institutionId: contextInstitutionId } = useUser();
@@ -159,7 +161,8 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, clients 
         <div className="flex flex-wrap gap-2">
           {[
             { id: 'bills', name: 'Bills', icon: Receipt },
-            { id: 'outstanding', name: 'Outstanding', icon: AlertCircle }
+            { id: 'outstanding', name: 'Outstanding', icon: AlertCircle },
+            { id: 'configuration', name: 'Plan Configuration', icon: Settings }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -335,6 +338,11 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, clients 
             )}
           </div>
         </div>
+      )}
+
+      {/* Configuration Tab */}
+      {activeTab === 'configuration' && (
+        <BillingPlanConfiguration institutionId={institutionId} />
       )}
 
       {/* Payment Modal */}

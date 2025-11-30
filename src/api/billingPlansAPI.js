@@ -75,6 +75,27 @@ export const getBillingPlan = async (planId) => {
   }
 };
 
+// Supported currencies
+export const SUPPORTED_CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'NGN', symbol: '₦', name: 'Nigerian Naira' },
+  { code: 'GHS', symbol: 'GH₵', name: 'Ghanaian Cedi' },
+  { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling' },
+  { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' }
+];
+
+// Billing frequencies
+export const BILLING_FREQUENCIES = [
+  { id: 'weekly', label: 'Weekly', multiplier: 52 },
+  { id: 'monthly', label: 'Monthly', multiplier: 12 },
+  { id: 'annual', label: 'Annual', multiplier: 1 }
+];
+
 // Create default billing plans (Basic, Standard, Premium)
 const createDefaultPlans = async (institutionId) => {
   const defaultPlans = [
@@ -82,7 +103,10 @@ const createDefaultPlans = async (institutionId) => {
       name: 'Basic',
       tier: 'basic',
       description: 'Essential care services',
+      weeklyPrice: 5.99,
       monthlyPrice: 19.99,
+      annualPrice: 199.99,
+      // Keep yearlyPrice for backward compatibility
       yearlyPrice: 199.99,
       currency: 'USD',
       features: [
@@ -94,6 +118,7 @@ const createDefaultPlans = async (institutionId) => {
       ],
       institutionId,
       isActive: true,
+      sortOrder: 1,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     },
@@ -101,7 +126,9 @@ const createDefaultPlans = async (institutionId) => {
       name: 'Standard',
       tier: 'standard',
       description: 'Comprehensive care package',
+      weeklyPrice: 11.99,
       monthlyPrice: 39.99,
+      annualPrice: 399.99,
       yearlyPrice: 399.99,
       currency: 'USD',
       features: [
@@ -115,6 +142,7 @@ const createDefaultPlans = async (institutionId) => {
       ],
       institutionId,
       isActive: true,
+      sortOrder: 2,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     },
@@ -122,7 +150,9 @@ const createDefaultPlans = async (institutionId) => {
       name: 'Premium',
       tier: 'premium',
       description: 'Premium concierge service',
+      weeklyPrice: 22.99,
       monthlyPrice: 79.99,
+      annualPrice: 799.99,
       yearlyPrice: 799.99,
       currency: 'USD',
       features: [
@@ -138,6 +168,7 @@ const createDefaultPlans = async (institutionId) => {
       ],
       institutionId,
       isActive: true,
+      sortOrder: 3,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }
@@ -250,15 +281,28 @@ export const assignSubscriptionToClient = async (clientId, planId, billingCycle 
       throw new Error('Billing plan not found');
     }
     
-    // Calculate pricing
-    const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+    // Calculate pricing based on billing cycle
+    let price;
     const startDate = new Date();
     const endDate = new Date();
     
-    if (billingCycle === 'monthly') {
-      endDate.setMonth(endDate.getMonth() + 1);
-    } else {
-      endDate.setFullYear(endDate.getFullYear() + 1);
+    switch (billingCycle) {
+      case 'weekly':
+        price = plan.weeklyPrice || (plan.monthlyPrice / 4);
+        endDate.setDate(endDate.getDate() + 7);
+        break;
+      case 'monthly':
+        price = plan.monthlyPrice;
+        endDate.setMonth(endDate.getMonth() + 1);
+        break;
+      case 'annual':
+      case 'yearly':
+        price = plan.annualPrice || plan.yearlyPrice;
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        break;
+      default:
+        price = plan.monthlyPrice;
+        endDate.setMonth(endDate.getMonth() + 1);
     }
     
     // Check if client already has a subscription
@@ -374,5 +418,126 @@ export const getInstitutionSubscriptions = async (institutionId) => {
     console.error('Error fetching institution subscriptions:', error);
     throw error;
   }
+};
+
+// ==================== BILLING SETTINGS ====================
+
+const BILLING_SETTINGS_COLLECTION = 'billingSettings';
+
+// Get institution billing settings
+export const getBillingSettings = async (institutionId) => {
+  try {
+    const settingsRef = doc(db, BILLING_SETTINGS_COLLECTION, institutionId);
+    const settingsDoc = await getDoc(settingsRef);
+    
+    if (!settingsDoc.exists()) {
+      // Return default settings
+      return {
+        id: institutionId,
+        currency: 'USD',
+        enabledFrequencies: ['monthly', 'annual'],
+        defaultFrequency: 'monthly',
+        taxRate: 0,
+        taxLabel: 'Tax',
+        invoicePrefix: 'INV',
+        invoiceNotes: '',
+        paymentTermsDays: 30,
+        lateFeePercentage: 0,
+        autoGenerateInvoices: true,
+        sendInvoiceReminders: true,
+        reminderDays: [7, 3, 1],
+        createdAt: null,
+        updatedAt: null
+      };
+    }
+    
+    const data = settingsDoc.data();
+    return {
+      id: settingsDoc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+    };
+  } catch (error) {
+    console.error('Error fetching billing settings:', error);
+    throw error;
+  }
+};
+
+// Save institution billing settings
+export const saveBillingSettings = async (institutionId, settings) => {
+  try {
+    const settingsRef = doc(db, BILLING_SETTINGS_COLLECTION, institutionId);
+    
+    const settingsPayload = {
+      ...settings,
+      institutionId,
+      updatedAt: serverTimestamp(),
+    };
+    
+    // Check if settings exist
+    const existingDoc = await getDoc(settingsRef);
+    
+    if (existingDoc.exists()) {
+      await updateDoc(settingsRef, settingsPayload);
+    } else {
+      settingsPayload.createdAt = serverTimestamp();
+      await setDoc(settingsRef, settingsPayload);
+    }
+    
+    return institutionId;
+  } catch (error) {
+    console.error('Error saving billing settings:', error);
+    throw error;
+  }
+};
+
+// Update plan sort order
+export const updatePlanSortOrder = async (planId, sortOrder) => {
+  try {
+    const planRef = doc(db, BILLING_PLANS_COLLECTION, planId);
+    await updateDoc(planRef, {
+      sortOrder,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error updating plan sort order:', error);
+    throw error;
+  }
+};
+
+// Toggle plan active status
+export const togglePlanStatus = async (planId, isActive) => {
+  try {
+    const planRef = doc(db, BILLING_PLANS_COLLECTION, planId);
+    await updateDoc(planRef, {
+      isActive,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error toggling plan status:', error);
+    throw error;
+  }
+};
+
+// Get price for a plan based on frequency
+export const getPlanPrice = (plan, frequency) => {
+  switch (frequency) {
+    case 'weekly':
+      return plan.weeklyPrice || (plan.monthlyPrice / 4);
+    case 'monthly':
+      return plan.monthlyPrice;
+    case 'annual':
+    case 'yearly':
+      return plan.annualPrice || plan.yearlyPrice;
+    default:
+      return plan.monthlyPrice;
+  }
+};
+
+// Format currency with symbol
+export const formatCurrency = (amount, currencyCode = 'USD') => {
+  const currency = SUPPORTED_CURRENCIES.find(c => c.code === currencyCode) || SUPPORTED_CURRENCIES[0];
+  return `${currency.symbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
