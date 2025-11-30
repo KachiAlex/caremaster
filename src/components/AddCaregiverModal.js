@@ -126,11 +126,29 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
       console.error('Error creating caregiver:', error);
       
       let errorMessage = 'Failed to create caregiver account';
+      
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email is already registered in the system';
+        // Set error on the email field for better UX
+        setErrors(prev => ({
+          ...prev,
+          email: 'This email is already registered. Please use a different email or check if the user already exists in your staff list.'
+        }));
+        toast.error(
+          <>
+            <div className="font-bold">Email Already In Use</div>
+            <div className="text-sm mt-1">
+              The email "{formData.email}" is already registered in the system. 
+              If this person should have access, check your existing staff list.
+            </div>
+          </>,
+          { autoClose: 6000 }
+        );
+        return;
       } else if (error.code === 'auth/invalid-email') {
+        setErrors(prev => ({ ...prev, email: 'Invalid email address format' }));
         errorMessage = 'Invalid email address format';
       } else if (error.code === 'auth/weak-password') {
+        setErrors(prev => ({ ...prev, password: 'Password is too weak (minimum 6 characters required)' }));
         errorMessage = 'Password is too weak (minimum 6 characters required)';
       } else if (error.message) {
         errorMessage = error.message;

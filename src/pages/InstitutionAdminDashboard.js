@@ -78,7 +78,7 @@ import { assignmentAPI } from '../api/assignmentAPI';
 import { getClientReports, createClientReport, getClientCareLogs, createClientCareLog } from '../api/patientReportsAPI';
 import { getCareLogsByCaregiver } from '../api/careLogsAPI';
 import * as billingPlansAPI from '../api/billingPlansAPI';
-import * as paymentGatewayAPI from '../api/paymentGatewayAPI';
+// Payment gateway removed - using billing plans instead
 import * as subscriptionInvoiceAPI from '../api/subscriptionInvoiceAPI';
 import { getAllAppointments } from '../api/appointmentsAPI';
 import { getAllTaskAssignments } from '../api/taskAssignmentAPI';
@@ -160,25 +160,7 @@ const formatDateForInput = (value) => {
   return `${year}-${month}-${day}`;
 };
 
-const PAYMENT_GATEWAY_PROVIDERS = [
-  { value: 'stripe', label: 'Stripe' },
-  { value: 'paystack', label: 'Paystack' },
-  { value: 'flutterwave', label: 'Flutterwave' },
-  { value: 'custom', label: 'Custom Integration' }
-];
-
-const PAYMENT_GATEWAY_MODES = [
-  { value: 'test', label: 'Test' },
-  { value: 'live', label: 'Live' }
-];
-
-const PAYMENT_GATEWAY_DEFAULT_FORM = {
-  provider: 'stripe',
-  mode: 'test',
-  apiKey: '',
-  webhookSecret: '',
-  webhookEndpoint: ''
-};
+// Payment gateway constants removed
 
 const StatCard = ({ icon: Icon, label, value, accent }) => (
   <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
@@ -2923,7 +2905,6 @@ const InstitutionAdminDashboard = () => {
     { id: 'scheduling', label: 'Scheduling', icon: Calendar },
     { id: 'wage-management', label: 'Wage Management', icon: DollarSign },
     { id: 'billing-plans', label: 'Billing Plans', icon: Briefcase },
-    { id: 'payment-gateway', label: 'Payment Gateway', icon: CreditCard },
     { id: 'user-management', label: 'User Management', icon: Users },
     { id: 'admin-roles', label: 'Admin Roles', icon: UserCog },
     { id: 'cleanup-orphaned-users', label: 'Cleanup Orphaned Users', icon: Trash2 },
@@ -3933,145 +3914,6 @@ const InstitutionAdminDashboard = () => {
               </div>
             </div>
             <BillingManagementDashboard institutionId={effectiveInstitutionId} clients={clients} />
-          </div>
-        );
-      case 'payment-gateway':
-        const gatewayProvider = paymentGatewayConfig?.provider || 'Not configured';
-        const gatewayMode = paymentGatewayConfig?.mode || 'test';
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Payment Gateway</h3>
-                <p className="text-sm text-gray-600">Configure how your institution accepts payments.</p>
-              </div>
-              <button
-                onClick={() => setShowPaymentGatewayModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-              >
-                <CreditCard className="h-4 w-4" />
-                Configure Gateway
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-                <p className="text-xs uppercase text-gray-500">Provider</p>
-                <p className="text-lg font-semibold text-gray-900">{gatewayProvider}</p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-                <p className="text-xs uppercase text-gray-500">Mode</p>
-                <p className="text-lg font-semibold text-gray-900">{gatewayMode}</p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-                <p className="text-xs uppercase text-gray-500">API Key</p>
-                <p className="text-lg font-semibold text-gray-900 truncate">{paymentGatewayConfig?.apiKey || 'Not configured'}</p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-                <p className="text-xs uppercase text-gray-500">Webhook</p>
-                <p className="text-lg font-semibold text-gray-900 truncate">{paymentGatewayConfig?.webhookEndpoint || '—'}</p>
-              </div>
-            </div>
-            {showPaymentGatewayModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 relative">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900">Configure Payment Gateway</h4>
-                      <p className="text-sm text-gray-500">Save your merchant API details and webhook.</p>
-                    </div>
-                    <button
-                      onClick={() => setShowPaymentGatewayModal(false)}
-                      className="p-2 rounded-full hover:bg-gray-100 transition"
-                    >
-                      <X className="h-5 w-5 text-gray-600" />
-                    </button>
-                  </div>
-                  <form
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      handleSavePaymentGatewayConfig(paymentGatewayForm);
-                    }}
-                    className="space-y-4"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Provider</label>
-                        <select
-                          value={paymentGatewayForm.provider}
-                          onChange={(event) => handlePaymentGatewayFormChange('provider', event.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          {PAYMENT_GATEWAY_PROVIDERS.map((provider) => (
-                            <option key={provider.value} value={provider.value}>
-                              {provider.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Mode</label>
-                        <select
-                          value={paymentGatewayForm.mode}
-                          onChange={(event) => handlePaymentGatewayFormChange('mode', event.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          {PAYMENT_GATEWAY_MODES.map((mode) => (
-                            <option key={mode.value} value={mode.value}>
-                              {mode.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">API Key</label>
-                      <input
-                        type="text"
-                        value={paymentGatewayForm.apiKey}
-                        onChange={(event) => handlePaymentGatewayFormChange('apiKey', event.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="sk_live_..."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">Webhook Endpoint</label>
-                      <input
-                        type="url"
-                        value={paymentGatewayForm.webhookEndpoint}
-                        onChange={(event) => handlePaymentGatewayFormChange('webhookEndpoint', event.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="https://yourapp.com/webhook"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">Webhook Secret</label>
-                      <input
-                        type="text"
-                        value={paymentGatewayForm.webhookSecret}
-                        onChange={(event) => handlePaymentGatewayFormChange('webhookSecret', event.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="whsec_..."
-                      />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowPaymentGatewayModal(false)}
-                        className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
-                      >
-                        Save Configuration
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
           </div>
         );
       case 'user-management':

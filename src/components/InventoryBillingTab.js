@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { 
   Package, 
   Plus, 
@@ -12,7 +12,8 @@ import {
   XCircle,
   Download,
   Eye,
-  Search
+  Search,
+  RefreshCw
 } from 'lucide-react';
 import { inventoryAPI, invoiceAPI, calculateInvoiceTotals } from '../api/inventoryAPI';
 import { toast } from 'react-toastify';
@@ -30,6 +31,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [viewingInvoice, setViewingInvoice] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Item form data
   const [itemFormData, setItemFormData] = useState({
@@ -56,45 +58,56 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
   const categories = ['Medical', 'Personal Care', 'Nutrition', 'Mobility', 'Safety', 'Other'];
   const units = ['Piece', 'Box', 'Pack', 'Bottle', 'Tube', 'Roll', 'Bag'];
 
-  useEffect(() => {
-    if (institutionId) {
-      loadData();
-    }
-  }, [institutionId]);
-
-  const loadData = async () => {
+  // Memoized load function
+  const loadData = useCallback(async (showRefreshToast = false) => {
+    if (!institutionId) return;
+    
     try {
-      setLoading(true);
+      if (showRefreshToast) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const [inventoryData, invoicesData, statsData] = await Promise.all([
-        inventoryAPI.getItemsByInstitution(institutionId),
-        invoiceAPI.getInvoicesByInstitution(institutionId),
-        invoiceAPI.getInvoiceStats(institutionId)
+        inventoryAPI.getItemsByInstitution(institutionId).catch(() => []),
+        invoiceAPI.getInvoicesByInstitution(institutionId).catch(() => []),
+        invoiceAPI.getInvoiceStats(institutionId).catch(() => null)
       ]);
 
-      setInventory(inventoryData);
-      setInvoices(invoicesData);
+      setInventory(inventoryData || []);
+      setInvoices(invoicesData || []);
       setStats(statsData);
+      
+      if (showRefreshToast) {
+        toast.success('Data refreshed');
+      }
     } catch (error) {
       console.error('Error loading inventory data:', error);
       toast.error('Failed to load inventory data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [institutionId]);
 
-  const handleAddItem = async (e) => {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleAddItem = useCallback(async (e) => {
     e.preventDefault();
     
     try {
       await inventoryAPI.createItem({
         ...itemFormData,
         institutionId,
-        unitPrice: parseFloat(itemFormData.unitPrice),
-        quantity: parseInt(itemFormData.quantity),
-        minStock: parseInt(itemFormData.minStock)
+        unitPrice: parseFloat(itemFormData.unitPrice) || 0,
+        quantity: parseInt(itemFormData.quantity) || 0,
+        minStock: parseInt(itemFormData.minStock) || 10
       });
 
-      toast.success('✅ Item added successfully!');
+      toast.success('Item added successfully!');
       setShowAddItemModal(false);
       resetItemForm();
       loadData();
@@ -102,20 +115,21 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
       console.error('Error adding item:', error);
       toast.error('Failed to add item');
     }
-  };
+  }, [itemFormData, institutionId, loadData]);
 
-  const handleUpdateItem = async (e) => {
+  const handleUpdateItem = useCallback(async (e) => {
     e.preventDefault();
+    if (!selectedItem?.id) return;
     
     try {
       await inventoryAPI.updateItem(selectedItem.id, {
         ...itemFormData,
-        unitPrice: parseFloat(itemFormData.unitPrice),
-        quantity: parseInt(itemFormData.quantity),
-        minStock: parseInt(itemFormData.minStock)
+        unitPrice: parseFloat(itemFormData.unitPrice) || 0,
+        quantity: parseInt(itemFormData.quantity) || 0,
+        minStock: parseInt(itemFormData.minStock) || 10
       });
 
-      toast.success('✅ Item updated successfully!');
+      toast.success('Item updated successfully!');
       setShowAddItemModal(false);
       setSelectedItem(null);
       resetItemForm();
@@ -124,20 +138,20 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
       console.error('Error updating item:', error);
       toast.error('Failed to update item');
     }
-  };
+  }, [selectedItem, itemFormData, loadData]);
 
-  const handleDeleteItem = async (itemId) => {
+  const handleDeleteItem = useCallback(async (itemId) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
 
     try {
       await inventoryAPI.deleteItem(itemId);
-      toast.success('✅ Item deleted successfully!');
+      toast.success('Item deleted successfully!');
       loadData();
     } catch (error) {
       console.error('Error deleting item:', error);
       toast.error('Failed to delete item');
     }
-  };
+  }, [loadData]);
 
   const handleCreateInvoice = async (e) => {
     e.preventDefault();
@@ -421,15 +435,30 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
     setShowAddItemModal(true);
   };
 
-  const filteredInventory = inventory.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Memoized filtered data
+  const filteredInventory = useMemo(() => {
+    if (!searchTerm) return inventory;
+    const term = searchTerm.toLowerCase();
+    return inventory.filter(item =>
+      item.name?.toLowerCase().includes(term) ||
+      item.category?.toLowerCase().includes(term) ||
+      item.sku?.toLowerCase().includes(term)
+    );
+  }, [inventory, searchTerm]);
 
-  const filteredInvoices = invoices.filter(invoice =>
-    invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredInvoices = useMemo(() => {
+    if (!searchTerm) return invoices;
+    const term = searchTerm.toLowerCase();
+    return invoices.filter(invoice =>
+      invoice.invoiceNumber?.toLowerCase().includes(term) ||
+      invoice.clientName?.toLowerCase().includes(term)
+    );
+  }, [invoices, searchTerm]);
+
+  // Memoized low stock count
+  const lowStockCount = useMemo(() => 
+    inventory.filter(i => i.quantity <= (i.minStock || 10)).length,
+    [inventory]
   );
 
   if (loading) {
@@ -462,7 +491,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
             <div>
               <p className="text-sm text-gray-600">Low Stock</p>
               <p className="text-2xl font-bold text-orange-600">
-                {inventory.filter(i => i.quantity <= i.minStock).length}
+                {lowStockCount}
               </p>
             </div>
             <AlertTriangle className="h-10 w-10 text-orange-600" />
@@ -526,7 +555,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
           {activeSubTab === 'inventory' && (
             <div className="space-y-4">
               {/* Toolbar */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
@@ -537,17 +566,27 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-                <button
-                  onClick={() => {
-                    setSelectedItem(null);
-                    resetItemForm();
-                    setShowAddItemModal(true);
-                  }}
-                  className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Add Item
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => loadData(true)}
+                    disabled={refreshing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    title="Refresh data"
+                  >
+                    <RefreshCw className={`h-5 w-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedItem(null);
+                      resetItemForm();
+                      setShowAddItemModal(true);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Add Item
+                  </button>
+                </div>
               </div>
 
               {/* Inventory Table */}
