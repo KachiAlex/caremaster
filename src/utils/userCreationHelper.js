@@ -133,9 +133,10 @@ export function createStandardizedUserData(userData, options = {}) {
       cannotBeDeleted: typeMapping.cannotBeDeleted || false
     }),
     
-    // Status
+    // Status - all three fields for compatibility
     status: typeMapping.defaultStatus,
     isActive: true,
+    active: true,  // Required for filtering compatibility
     
     // Timestamps
     createdAt: serverTimestamp(),

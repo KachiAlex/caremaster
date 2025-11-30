@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import SpecializedCaregiverDashboard from '../components/SpecializedCaregiverDashboard';
+import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import { 
   Users, 
   Calendar, 
@@ -68,7 +69,7 @@ import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
 
 // Shared Components
-const DashboardHeader = ({ userProfile, userRole }) => {
+const DashboardHeader = ({ userProfile, userRole, user }) => {
   const getRoleIcon = () => {
     switch (userRole) {
       case 'doctor': return <Stethoscope className="h-6 w-6 text-blue-600" />;
@@ -139,11 +140,12 @@ const DashboardHeader = ({ userProfile, userRole }) => {
             <p className="text-sm font-medium text-gray-900">{userProfile?.name}</p>
             <p className="text-xs text-gray-500 capitalize">{userRole}</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-            <span className="text-sm font-medium text-gray-700">
-              {userProfile?.name?.split(' ').map(n => n[0]).join('') || 'U'}
-            </span>
-          </div>
+          <UserAvatarDropdown
+            userProfile={userProfile}
+            user={user}
+            profileImageUrl={userProfile?.photoURL || userProfile?.profilePictureUrl}
+            size="md"
+          />
         </div>
       </div>
     </div>
@@ -368,7 +370,7 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
 
 // Main Dashboard Component
 const ServiceProviderDashboard = () => {
-  const { userProfile, userRole, loading: userLoading } = useUser();
+  const { user, userProfile, userRole, loading: userLoading } = useUser();
   const navigate = useNavigate();
   // Derive robust role flags (prevents misclassification)
   const normalizedQualification = (userProfile?.medicalQualification || '').toString().toLowerCase();
@@ -835,7 +837,7 @@ const ServiceProviderDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader userProfile={userProfile} userRole={effectiveRole} />
+      <DashboardHeader userProfile={userProfile} userRole={effectiveRole} user={user} />
       <QuickStats 
         userRole={effectiveRole} 
         stats={stats} 

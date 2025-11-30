@@ -38,6 +38,7 @@ import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import CaregiverGuard from '../components/CaregiverGuard';
 import CaregiverSettings from '../components/CaregiverSettings';
+import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import NurseVitalsInput from '../components/NurseVitalsInput';
 import NurseCareLogs from '../components/NurseCareLogs';
 import NurseReportGenerator from '../components/NurseReportGenerator';
@@ -992,21 +993,12 @@ const CaregiverDashboard = () => {
             <div className={`p-3 bg-${dashboardConfig.color}-100 rounded-full`}>
               <dashboardConfig.icon className={`h-8 w-8 text-${dashboardConfig.color}-600`} />
             </div>
-            <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
-              {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="h-full w-full object-cover"
-                  onLoad={() => console.log('Profile image loaded successfully')}
-                  onError={() => console.log('Profile image failed to load')}
-                />
-              ) : (
-                <span className="text-white font-semibold text-lg">
-                  {caregiver?.name.split(' ').map(n => n[0]).join('')}
-                </span>
-              )}
-            </div>
+            <UserAvatarDropdown
+              userProfile={userProfile || caregiver}
+              user={user}
+              profileImageUrl={profileImage || userProfile?.photoURL || userProfile?.profilePictureUrl}
+              size="lg"
+            />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{dashboardConfig.title}</h1>
               <p className="text-gray-600">Welcome, {userProfile?.name || caregiver?.name}</p>

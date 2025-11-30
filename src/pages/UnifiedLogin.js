@@ -100,12 +100,34 @@ const UnifiedLogin = () => {
 
       // Now we have userData - detect institution and role
       const institutionId = userData?.institutionId;
-      const userRole = userData?.userType || userData?.type || userData?.role;
+      
+      // Detect role - check roles array first, then individual fields
+      let userRole;
+      if (Array.isArray(userData?.roles) && userData.roles.length > 0) {
+        userRole = userData.roles[0]; // Use first role as primary
+      } else {
+        userRole = userData?.userType || userData?.type || userData?.role;
+      }
+      
+      // SAFEGUARD: If role fields suggest pharmacist but userRole doesn't match, fix it
+      if (!userRole || userRole === 'Client' || userRole === 'elderly') {
+        if (userData?.userType === 'pharmacist' || 
+            userData?.type === 'pharmacist' || 
+            userData?.role === 'pharmacist' ||
+            (Array.isArray(userData?.roles) && userData.roles.includes('pharmacist'))) {
+          console.warn('⚠️ Detected pharmacist but role was:', userRole);
+          userRole = 'pharmacist';
+        }
+      }
       
       console.log('✅ Login successful:', {
         email,
         institutionId,
         userRole,
+        userType: userData?.userType,
+        type: userData?.type,
+        role: userData?.role,
+        roles: userData?.roles,
         userId: user?.uid || userData?.uid
       });
 
@@ -140,6 +162,30 @@ const UnifiedLogin = () => {
         // Standalone user (no institution)
         if (userRole === 'admin') {
           navigate('/admin');
+        } else if (userRole === 'pharmacist') {
+          // Pharmacists should have an institution, but handle gracefully
+          // Try to get institutionId from URL params if available
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlInstitutionId = urlParams.get('institution');
+          
+          if (urlInstitutionId) {
+            // Update Firestore with institutionId from URL
+            try {
+              const { doc, updateDoc } = await import('firebase/firestore');
+              const { db } = await import('../firebase/config');
+              const userRef = doc(db, 'users', user?.uid || userData?.uid);
+              await updateDoc(userRef, { institutionId: urlInstitutionId });
+              console.log('✅ Set institutionId from URL:', urlInstitutionId);
+              navigate(`/institution-pharmacy/dashboard?institution=${urlInstitutionId}`);
+            } catch (error) {
+              console.error('Failed to set institutionId:', error);
+              toast.warning('Pharmacist account detected but no institution found. Please contact support.');
+              navigate('/dashboard');
+            }
+          } else {
+            toast.warning('Pharmacist account detected but no institution found. Please contact support to set your institution.');
+            navigate('/dashboard');
+          }
         } else if (userRole === 'caregiver' || userRole === 'doctor') {
           navigate('/service-provider');
         } else {

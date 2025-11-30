@@ -84,6 +84,7 @@ import { getAllAppointments } from '../api/appointmentsAPI';
 import { getAllTaskAssignments } from '../api/taskAssignmentAPI';
 import { getAllCareTasks } from '../api/careTasksAPI';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
+import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notificationsAPI } from '../api/notificationsAPI';
 import { institutionAPI } from '../api/institutionAPI';
 import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
@@ -550,20 +551,78 @@ const InstitutionAdminDashboard = () => {
       const institutionClients = (instId ? clientsData.filter(p => p.institutionId === instId) : clientsData)
         .filter(p => p.status !== 'archived');
 
+      // Helper functions for user filtering (used by both filters and counts)
+      // Check both 'active' and 'isActive' fields, and allow undefined/null (defaults to active)
+      const isUserActive = (u) => {
+        if (u.status === 'deleted') return false;
+        if (u.active === false) return false;
+        if (u.isActive === false) return false;
+        return true; // Default to active if not explicitly set to false
+      };
+      
+      // Helper to check if user has a specific role (checks userType, type, and roles array)
+      const hasRole = (u, role) => {
+        if (u.userType === role || u.type === role) return true;
+        if (Array.isArray(u.roles) && u.roles.includes(role)) return true;
+        return false;
+      };
+
       // Merge caregivers from users collection (for those created via Add Caregiver button, exclude deleted)
       const caregiversFromUsers = institutionUsers.filter(u => 
-        (u.userType === 'caregiver' || u.userType === 'nurse' || u.userType === 'doctor' ||
-        u.type === 'caregiver' || u.type === 'nurse' || u.type === 'doctor') &&
-        u.status !== 'deleted' &&
-        u.active !== false
+        (hasRole(u, 'caregiver') || hasRole(u, 'nurse') || hasRole(u, 'doctor')) &&
+        isUserActive(u)
       );
       
       // Filter pharmacists from users collection (exclude deleted)
-      const pharmacistsFromUsers = institutionUsers.filter(u => 
-        (u.userType === 'pharmacist' || u.type === 'pharmacist') &&
-        u.status !== 'deleted' &&
-        u.active !== false
+      // Use the same logic as pharmacistsCount to ensure consistency
+      
+      // Debug: Log all potential pharmacists before filtering
+      const potentialPharmacists = institutionUsers.filter(u => 
+        u.userType === 'pharmacist' || u.type === 'pharmacist' || (Array.isArray(u.roles) && u.roles.includes('pharmacist'))
       );
+      console.log('🔍 Potential pharmacists found:', potentialPharmacists.length, potentialPharmacists.map(p => ({
+        id: p.id || p.uid,
+        email: p.email,
+        name: p.name || p.displayName,
+        userType: p.userType,
+        type: p.type,
+        roles: p.roles,
+        status: p.status,
+        active: p.active,
+        isActive: p.isActive,
+        institutionId: p.institutionId,
+        hasRole: hasRole(p, 'pharmacist'),
+        isActiveCheck: isUserActive(p)
+      })));
+      
+      const pharmacistsFromUsers = institutionUsers.filter(u => {
+        const hasPharmacistRole = hasRole(u, 'pharmacist');
+        const isActive = isUserActive(u);
+        const result = hasPharmacistRole && isActive;
+        
+        // Log filtering decision for potential pharmacists
+        if (u.userType === 'pharmacist' || u.type === 'pharmacist' || (Array.isArray(u.roles) && u.roles.includes('pharmacist'))) {
+          console.log(`🔍 Pharmacist filter check for ${u.email}:`, {
+            hasPharmacistRole,
+            isActive,
+            result,
+            userType: u.userType,
+            type: u.type,
+            roles: u.roles,
+            status: u.status,
+            active: u.active,
+            isActive: u.isActive
+          });
+        }
+        
+        return result;
+      });
+      
+      console.log('✅ Pharmacists after filtering:', pharmacistsFromUsers.length, pharmacistsFromUsers.map(p => ({
+        id: p.id || p.uid,
+        email: p.email,
+        name: p.name || p.displayName
+      })));
       
       // Deduplicate caregivers
       const allInstitutionCaregivers = [...institutionCaregivers];
@@ -616,6 +675,8 @@ const InstitutionAdminDashboard = () => {
         updatedAt: p.updatedAt
       }));
       
+      console.log('💊 Final pharmacists list to set:', allInstitutionPharmacists.length, allInstitutionPharmacists);
+      
       // Update state with pharmacists
       setPharmacists(allInstitutionPharmacists);
       
@@ -642,21 +703,7 @@ const InstitutionAdminDashboard = () => {
 
       // Count users by role directly from users collection (includes all users regardless of onboarding status)
       // This ensures stats update as users are onboarded
-      // Check both 'active' and 'isActive' fields, and allow undefined/null (defaults to active)
-      const isUserActive = (u) => {
-        if (u.status === 'deleted') return false;
-        if (u.active === false) return false;
-        if (u.isActive === false) return false;
-        return true; // Default to active if not explicitly set to false
-      };
-      
-      // Helper to check if user has a specific role (checks userType, type, and roles array)
-      const hasRole = (u, role) => {
-        if (u.userType === role || u.type === role) return true;
-        if (Array.isArray(u.roles) && u.roles.includes(role)) return true;
-        return false;
-      };
-      
+      // Note: isUserActive and hasRole helpers are defined earlier in this function
       const doctorsCount = institutionUsers.filter(u => 
         hasRole(u, 'doctor') && isUserActive(u)
       ).length;
@@ -696,6 +743,19 @@ const InstitutionAdminDashboard = () => {
           active: u.active,
           isActive: u.isActive,
           institutionId: u.institutionId
+        })),
+        allPharmacists: institutionUsers.filter(u => hasRole(u, 'pharmacist')).map(u => ({
+          id: u.id,
+          email: u.email,
+          userType: u.userType,
+          type: u.type,
+          roles: u.roles,
+          status: u.status,
+          active: u.active,
+          isActive: u.isActive,
+          institutionId: u.institutionId,
+          hasRoleCheck: hasRole(u, 'pharmacist'),
+          isActiveCheck: isUserActive(u)
         }))
       });
 
@@ -921,22 +981,39 @@ const InstitutionAdminDashboard = () => {
       }
 
       const additionalFields = {
+        // Identity fields
         email,
         name,
         displayName: name,
         phone: phone || '',
-        institutionId: instId,
+        
+        // REQUIRED: Role fields (all three formats for compatibility)
         userType: 'caregiver',
         type: 'caregiver',
         role: 'caregiver',
-        status: 'pending',
+        roles: ['caregiver'], // Array format required for filtering
+        
+        // REQUIRED: Active status fields
+        status: 'pending',     // Can be 'pending', 'active', but NOT 'deleted'
+        isActive: true,         // Must not be false
+        active: true,            // Must not be false
+        
+        // REQUIRED: Institution field
+        institutionId: instId,
+        
+        // Account settings
         onboardingComplete: false,
         profileComplete: false,
+        accountType: 'institution_created',
+        
+        // Payment fields
         paymentType: 'hourly',
         hourlyRate: 0,
         monthlyRate: 0,
         rateType: 'per_hour',
         currency: 'USD',
+        
+        // Timestamps
         updatedAt: new Date().toISOString(),
         createdBy: user?.uid || 'admin'
       };
@@ -1143,27 +1220,50 @@ const InstitutionAdminDashboard = () => {
       
       const pharmacistId = authUser.user.uid;
       
-      // Create user document in Firestore
+      // Create user document in Firestore with all required fields
+      // CRITICAL: Use setDoc with merge: false to ensure we overwrite any default 'elderly' role
+      // that might have been set by the Firebase Auth trigger
       await setDoc(doc(db, 'users', pharmacistId), {
+        // Identity fields
+        id: pharmacistId,
+        uid: pharmacistId,
         email: pharmacistData.email,
         name: pharmacistData.name,
         displayName: pharmacistData.name,
         phone: pharmacistData.phone || '',
+        
+        // REQUIRED: Role fields (all three formats for compatibility)
+        // CRITICAL: These MUST be set to prevent 'elderly' default from Auth trigger
         userType: 'pharmacist',
         type: 'pharmacist',
         role: 'pharmacist',
+        roles: ['pharmacist'], // Array format required for filtering - NEVER include 'elderly'
+        
+        // REQUIRED: Active status fields
+        status: 'active',        // Must not be 'deleted'
+        isActive: true,          // Must not be false
+        active: true,            // Must not be false
+        
+        // REQUIRED: Institution field
         institutionId: instId,
+        
+        // Pharmacist-specific fields
         licenseNumber: pharmacistData.licenseNumber || '',
         specialization: pharmacistData.specialization || 'General Pharmacy',
+        medicalQualification: 'Pharmacist',
         qualifications: pharmacistData.qualifications || '',
         experience: pharmacistData.experience || 0,
         address: pharmacistData.address || '',
         emergencyContact: pharmacistData.emergencyContact || '',
         notes: pharmacistData.notes || '',
-        status: 'active',
+        
+        // Account settings
         onboardingComplete: true,
         profileComplete: true,
         assignedClients: [],
+        accountType: 'institution_created',
+        
+        // Timestamps
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         createdBy: user?.uid || 'admin'

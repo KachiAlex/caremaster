@@ -88,16 +88,57 @@ export const createCaregiverWithAuth = functions.https.onCall(
         throw authError;
       }
 
-      // Create user document in Firestore
+      // Determine role fields based on userType
+      const userType = data.userType || 'caregiver';
+      let roles: string[] = [];
+      switch (userType) {
+        case 'doctor':
+          roles = ['doctor', 'caregiver'];
+          break;
+        case 'nurse':
+          roles = ['nurse', 'caregiver'];
+          break;
+        case 'pharmacist':
+          roles = ['pharmacist'];
+          break;
+        case 'caregiver':
+        default:
+          roles = ['caregiver'];
+          break;
+      }
+
+      // Create user document in Firestore with all required fields
       await getDb().collection('users').doc(authUser.uid).set({
+        // Identity fields
+        id: authUser.uid,
+        uid: authUser.uid,
         email: data.email,
         name: data.name,
+        displayName: data.name,
         phone: data.phone || '',
-        userType: data.userType || 'caregiver',
+        
+        // REQUIRED: Role fields (all formats for compatibility)
+        userType: userType,
+        type: userType,
+        role: userType,
+        roles: roles, // Array format required for filtering
+        
+        // REQUIRED: Active status fields
+        status: 'pending',     // Can be 'pending', 'active', but NOT 'deleted'
+        isActive: true,         // Must not be false
+        active: true,           // Must not be false
+        
+        // REQUIRED: Institution field
         institutionId: data.institutionId,
-        status: 'pending',
-        onboardingComplete: false,
+        
+        // Medical fields
         medicalQualification: data.specialization || '',
+        
+        // Account settings
+        onboardingComplete: false,
+        accountType: 'institution_created',
+        
+        // Timestamps
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         createdBy: context.auth.uid

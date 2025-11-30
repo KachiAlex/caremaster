@@ -1101,27 +1101,27 @@ const UserManagement = ({ institutionId }) => {
 
       {/* Add Caregiver Modal */}
       {showAddCaregiverModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <UserPlus className="h-6 w-6 text-white" />
-                <div>
-                  <h3 className="text-xl font-bold text-white">Add New Caregiver</h3>
-                  <p className="text-purple-100 text-sm">Create a new caregiver profile</p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] my-4 flex flex-col">
+            {/* Modal Header - Fixed */}
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 sm:px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-white shrink-0" />
+                <div className="min-w-0">
+                  <h3 className="text-lg sm:text-xl font-bold text-white truncate">Add New Caregiver</h3>
+                  <p className="text-purple-100 text-xs sm:text-sm truncate">Create a new caregiver profile</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAddCaregiverModal(false)}
-                className="text-white hover:bg-purple-500 rounded-lg p-2 transition-colors"
+                className="text-white hover:bg-purple-500 rounded-lg p-2 transition-colors shrink-0 ml-2"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+            {/* Modal Body - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Profile Picture Section */}
                 <div className="md:col-span-2 flex items-center space-x-6 mb-4 p-4 bg-gray-50 rounded-lg">
@@ -1304,17 +1304,17 @@ const UserManagement = ({ institutionId }) => {
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end space-x-3">
+            {/* Modal Footer - Fixed */}
+            <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 shrink-0">
               <button
                 onClick={() => setShowAddCaregiverModal(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                className="w-full sm:w-auto px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleCreateUser('caregiver')}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                className="w-full sm:w-auto px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Create Caregiver

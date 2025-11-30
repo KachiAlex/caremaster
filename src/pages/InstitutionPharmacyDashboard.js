@@ -1,17 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useUser } from '../contexts/UserContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import sessionManager from '../utils/sessionManager';
 import { Pill, LogOut, Building2, Bell } from 'lucide-react';
 import { getAuth, signOut } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import PharmacyTab from '../components/PharmacyTab';
+import UserAvatarDropdown from '../components/UserAvatarDropdown';
 
 const InstitutionPharmacyDashboard = () => {
-  const { user, userProfile, institutionId, institutionData } = useUser();
+  const { user, userProfile, institutionId: contextInstitutionId, institutionData } = useUser();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [assignedClients, setAssignedClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Get institutionId from URL params, context, or profile (in that order)
+  const institutionId = useMemo(() => {
+    return searchParams.get('institution') || 
+           contextInstitutionId || 
+           userProfile?.institutionId || 
+           null;
+  }, [searchParams, contextInstitutionId, userProfile?.institutionId]);
 
   // Check if user is a pharmacist
   const isPharmacist = userProfile?.role === 'pharmacist' ||
@@ -20,33 +30,61 @@ const InstitutionPharmacyDashboard = () => {
                        userProfile?.medicalQualification === 'pharmacist';
 
   useEffect(() => {
-    // Redirect if not a pharmacist
-    if (userProfile && !isPharmacist) {
-      toast.error('Access denied. This dashboard is for pharmacists only.');
-      navigate('/');
-      return;
-    }
-
-    // Validate tab session for role conflicts
-    if (userProfile && user) {
-      const userRole = userProfile.userType || userProfile.type || userProfile.role;
-      const validation = sessionManager.validateTabSession(user, userRole);
-      
-      if (validation.needsInit) {
-        // First load - set tab session
-        sessionManager.setTabSession(userRole, user.uid, institutionId);
-      } else if (!validation.valid) {
-        // Session conflict detected
-        sessionManager.handleSessionConflict(validation, navigate, toast);
+    const initializeDashboard = async () => {
+      // Redirect if not a pharmacist
+      if (userProfile && !isPharmacist) {
+        toast.error('Access denied. This dashboard is for pharmacists only.');
+        navigate('/');
         return;
       }
-    }
 
-    // Load assigned clients
-    if (user?.uid && institutionId) {
-      loadAssignedClients();
-    }
-  }, [user, userProfile, institutionId, isPharmacist, navigate]);
+      // Validate tab session for role conflicts
+      if (userProfile && user) {
+        const userRole = userProfile.userType || userProfile.type || userProfile.role || 'pharmacist';
+        const validation = sessionManager.validateTabSession(user, userRole);
+        
+        if (validation.needsInit) {
+          // First load - set tab session with institutionId from URL if available
+          const effectiveInstitutionId = institutionId || searchParams.get('institution');
+          sessionManager.setTabSession(userRole, user.uid, effectiveInstitutionId);
+          
+          // If institutionId was in URL but not in profile, update Firestore
+          if (effectiveInstitutionId && !userProfile.institutionId) {
+            console.log('🔄 Updating profile with institutionId from URL...');
+            try {
+              const { doc, updateDoc } = await import('firebase/firestore');
+              const { db } = await import('../firebase/config');
+              const userRef = doc(db, 'users', user.uid);
+              await updateDoc(userRef, { institutionId: effectiveInstitutionId });
+              console.log('✅ Updated profile with institutionId:', effectiveInstitutionId);
+              // Reload profile after a short delay
+              setTimeout(() => {
+                window.location.reload();
+              }, 500);
+              return;
+            } catch (error) {
+              console.error('❌ Failed to update institutionId:', error);
+            }
+          }
+        } else if (!validation.valid) {
+          // Session conflict detected
+          sessionManager.handleSessionConflict(validation, navigate, toast);
+          return;
+        }
+      }
+
+      // Load assigned clients
+      if (user?.uid && institutionId) {
+        loadAssignedClients();
+      } else if (user?.uid && !institutionId) {
+        // InstitutionId missing - show error
+        setLoading(false);
+        toast.error('Institution ID is required. Please contact support.');
+      }
+    };
+
+    initializeDashboard();
+  }, [user, userProfile, institutionId, isPharmacist, navigate, searchParams]);
 
   const loadAssignedClients = async () => {
     try {
@@ -187,27 +225,21 @@ const InstitutionPharmacyDashboard = () => {
                 <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
               </button>
 
-              {/* User Profile */}
-              <div className="flex items-center space-x-3 bg-gray-50 px-3 py-2 rounded-lg">
+              {/* User Profile with Dropdown */}
+              <div className="flex items-center space-x-3">
                 <div className="text-right hidden md:block">
                   <p className="text-sm font-semibold text-gray-900">
                     {userProfile?.name || userProfile?.displayName || 'Pharmacist'}
                   </p>
                   <p className="text-xs text-gray-600">Pharmacist</p>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold">
-                  {(userProfile?.name || userProfile?.displayName || 'P').charAt(0).toUpperCase()}
-                </div>
+                <UserAvatarDropdown
+                  userProfile={userProfile}
+                  user={user}
+                  profileImageUrl={userProfile?.photoURL || userProfile?.profilePictureUrl}
+                  size="md"
+                />
               </div>
-
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden md:inline">Logout</span>
-              </button>
             </div>
           </div>
         </div>

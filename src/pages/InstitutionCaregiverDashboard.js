@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
+import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import { caregiverAPI } from '../api/caregiverAPI';
 import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
 import { getActiveTasks } from '../api/taskTimeTrackingAPI';
@@ -4109,27 +4110,18 @@ const InstitutionCaregiverDashboard = () => {
               <div className="flex items-center gap-2 md:gap-3">
                 <Bell className="h-5 w-5 text-gray-400 cursor-pointer hover:text-gray-600" />
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden shrink-0">
-                    {profileImage ? (
-                      <img
-                        src={profileImage}
-                        alt="Profile"
-                        className="h-full w-full object-cover"
-                        onLoad={() => console.log('Profile image loaded successfully')}
-                        onError={() => console.log('Profile image failed to load')}
-                      />
-                    ) : (
-                      <span className="text-white font-semibold">
-                        {caregiver?.name ? caregiver.name.toString().split(' ').map(n => n[0]).join('') : 'U'}
-                      </span>
-                    )}
-                  </div>
                   <div className="hidden md:block text-right min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {caregiver?.name || userProfile?.name || 'User'}
                     </p>
                     <p className="text-xs text-gray-500">Caregiver</p>
                   </div>
+                  <UserAvatarDropdown
+                    userProfile={userProfile || caregiver}
+                    user={user}
+                    profileImageUrl={profileImage || userProfile?.photoURL || userProfile?.profilePictureUrl}
+                    size="md"
+                  />
                 </div>
               </div>
             </div>

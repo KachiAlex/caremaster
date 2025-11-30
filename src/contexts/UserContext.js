@@ -46,12 +46,30 @@ export const UserProvider = ({ children }) => {
             let userRoles = [];
             
             if (Array.isArray(profile.roles) && profile.roles.length > 0) {
-              // User has multiple roles
+              // User has multiple roles - prioritize specific roles over generic ones
               userRoles = profile.roles;
-              roleFromProfile = profile.roles[0]; // Primary role
+              
+              // Priority order: admin > pharmacist > doctor > nurse > caregiver > elderly/client
+              const rolePriority = ['admin', 'pharmacist', 'doctor', 'nurse', 'caregiver', 'elderly', 'client'];
+              const sortedRoles = profile.roles.sort((a, b) => {
+                const aIndex = rolePriority.indexOf(a.toLowerCase());
+                const bIndex = rolePriority.indexOf(b.toLowerCase());
+                // If not in priority list, put at end
+                const aPriority = aIndex === -1 ? 999 : aIndex;
+                const bPriority = bIndex === -1 ? 999 : bIndex;
+                return aPriority - bPriority;
+              });
+              
+              roleFromProfile = sortedRoles[0]; // Use highest priority role as primary
+              
+              console.log('🔍 Role priority sorting:', {
+                original: profile.roles,
+                sorted: sortedRoles,
+                primary: roleFromProfile
+              });
             } else {
               // Single role (backward compatibility)
-              // Check all possible role fields, prioritizing admin
+              // Check all possible role fields, prioritizing admin, then pharmacist, then other roles
               const possibleRole = profile.role || profile.userType || profile.type;
               
               // SAFEGUARD: If email contains "admin" or userType/type is admin, ensure role is admin
@@ -61,6 +79,13 @@ export const UserProvider = ({ children }) => {
                                    profile.role === 'admin' ||
                                    profile.isAdmin === true ||
                                    profile.institutionAdmin === true;
+              
+              // SAFEGUARD: Check if user is pharmacist (check all possible fields)
+              const isLikelyPharmacist = profile.userType === 'pharmacist' ||
+                                        profile.type === 'pharmacist' ||
+                                        profile.role === 'pharmacist' ||
+                                        (Array.isArray(profile.roles) && profile.roles.includes('pharmacist')) ||
+                                        profile.medicalQualification === 'Pharmacist';
               
               if (isLikelyAdmin && possibleRole !== 'admin') {
                 console.warn('⚠️ User appears to be admin but role field shows:', possibleRole);
@@ -75,11 +100,56 @@ export const UserProvider = ({ children }) => {
                   await updateDoc(userRef, { 
                     userType: 'admin',
                     type: 'admin',
-                    role: 'admin'
+                    role: 'admin',
+                    roles: ['admin']
                   });
                   console.log('✅ Fixed admin role in Firestore');
                 } catch (updateError) {
                   console.error('❌ Failed to update admin role:', updateError);
+                }
+              } else if (isLikelyPharmacist && possibleRole !== 'pharmacist') {
+                console.warn('⚠️ User appears to be pharmacist but role field shows:', possibleRole);
+                console.warn('🔧 Auto-correcting to pharmacist role');
+                roleFromProfile = 'pharmacist';
+                userRoles = ['pharmacist'];
+                
+                // Update Firestore to fix the issue - ensure ALL required fields are set
+                try {
+                  const { doc, updateDoc } = await import('firebase/firestore');
+                  const userRef = doc(db, 'users', firebaseUser.uid);
+                  
+                  // Prepare update with all required pharmacist fields
+                  const pharmacistUpdate = {
+                    userType: 'pharmacist',
+                    type: 'pharmacist',
+                    role: 'pharmacist',
+                    roles: ['pharmacist'],
+                    isActive: true,
+                    active: true
+                  };
+                  
+                  // Preserve institutionId if it exists, or try to get it from profile
+                  if (profile.institutionId) {
+                    pharmacistUpdate.institutionId = profile.institutionId;
+                  }
+                  
+                  // Ensure status is not 'deleted'
+                  if (profile.status === 'deleted') {
+                    pharmacistUpdate.status = 'active';
+                  } else if (!profile.status) {
+                    pharmacistUpdate.status = 'active';
+                  }
+                  
+                  await updateDoc(userRef, pharmacistUpdate);
+                  console.log('✅ Fixed pharmacist role and required fields in Firestore');
+                  
+                  // Update local profile immediately
+                  updatedProfile = {
+                    ...profile,
+                    ...pharmacistUpdate
+                  };
+                } catch (updateError) {
+                  console.error('❌ Failed to update pharmacist role:', updateError);
                 }
               } else {
                 roleFromProfile = possibleRole || 'Client';
@@ -159,11 +229,109 @@ export const UserProvider = ({ children }) => {
               }
             }
             
+            // ADDITIONAL SAFEGUARD: If pharmacist is in roles array but not primary, prioritize it
+            if (Array.isArray(userRoles) && userRoles.includes('pharmacist') && roleFromProfile !== 'pharmacist') {
+              console.warn('⚠️ Pharmacist role found in array but not primary. Prioritizing pharmacist.');
+              roleFromProfile = 'pharmacist';
+              // Reorder roles array to put pharmacist first
+              userRoles = ['pharmacist', ...userRoles.filter(r => r !== 'pharmacist')];
+              
+              // Update Firestore to fix the roles array
+              try {
+                const { doc, updateDoc } = await import('firebase/firestore');
+                const userRef = doc(db, 'users', firebaseUser.uid);
+                await updateDoc(userRef, {
+                  userType: 'pharmacist',
+                  type: 'pharmacist',
+                  role: 'pharmacist',
+                  roles: userRoles
+                });
+                console.log('✅ Fixed pharmacist role priority in Firestore');
+                
+                // Update local profile
+                updatedProfile = {
+                  ...updatedProfile,
+                  userType: 'pharmacist',
+                  type: 'pharmacist',
+                  role: 'pharmacist',
+                  roles: userRoles
+                };
+              } catch (updateError) {
+                console.error('❌ Failed to fix pharmacist role priority:', updateError);
+              }
+            }
+            
             setUserProfile(updatedProfile);
             setUserRole(roleFromProfile);
             setUserRoles(userRoles);
             console.log('✅ User role set to:', roleFromProfile);
             console.log('✅ User roles:', userRoles);
+
+            // AUTO-FIX: Ensure pharmacists have all required fields
+            if (roleFromProfile === 'pharmacist' || (Array.isArray(userRoles) && userRoles.includes('pharmacist'))) {
+              // Use pharmacist as primary if it's in roles
+              if (roleFromProfile !== 'pharmacist' && Array.isArray(userRoles) && userRoles.includes('pharmacist')) {
+                roleFromProfile = 'pharmacist';
+                setUserRole('pharmacist');
+              }
+              
+              // CRITICAL: Remove 'elderly' from roles array if present (should never happen for pharmacists)
+              let cleanRoles = Array.isArray(userRoles) ? [...userRoles] : ['pharmacist'];
+              if (cleanRoles.includes('elderly')) {
+                console.warn('⚠️ CRITICAL: Found "elderly" in pharmacist roles array! Removing it.');
+                cleanRoles = cleanRoles.filter(r => r !== 'elderly');
+                // Ensure pharmacist is first
+                cleanRoles = ['pharmacist', ...cleanRoles.filter(r => r !== 'pharmacist')];
+              }
+              
+              const needsFix = !updatedProfile.roles || 
+                              !updatedProfile.roles.includes('pharmacist') ||
+                              updatedProfile.roles.includes('elderly') || // CRITICAL: Never allow 'elderly' for pharmacists
+                              updatedProfile.userType === 'elderly' || // CRITICAL: Never allow 'elderly' userType
+                              updatedProfile.type === 'elderly' || // CRITICAL: Never allow 'elderly' type
+                              updatedProfile.isActive === false ||
+                              updatedProfile.active === false ||
+                              updatedProfile.status === 'deleted' ||
+                              !updatedProfile.institutionId;
+              
+              if (needsFix) {
+                console.warn('⚠️ Pharmacist missing required fields or has incorrect role, auto-fixing...');
+                try {
+                  const { doc, updateDoc } = await import('firebase/firestore');
+                  const userRef = doc(db, 'users', firebaseUser.uid);
+                  
+                  const fixData = {
+                    userType: 'pharmacist', // CRITICAL: Never 'elderly'
+                    type: 'pharmacist',     // CRITICAL: Never 'elderly'
+                    role: 'pharmacist',     // CRITICAL: Never 'elderly'
+                    roles: cleanRoles,      // CRITICAL: Never include 'elderly'
+                    isActive: true,
+                    active: true
+                  };
+                  
+                  // Preserve existing institutionId or set from profile
+                  if (updatedProfile.institutionId) {
+                    fixData.institutionId = updatedProfile.institutionId;
+                  }
+                  
+                  // Fix status if deleted
+                  if (updatedProfile.status === 'deleted') {
+                    fixData.status = 'active';
+                  } else if (!updatedProfile.status) {
+                    fixData.status = 'active';
+                  }
+                  
+                  await updateDoc(userRef, fixData);
+                  console.log('✅ Auto-fixed pharmacist fields in Firestore (removed any "elderly" role)');
+                  
+                  // Update local profile
+                  Object.assign(updatedProfile, fixData);
+                  setUserProfile({ ...updatedProfile });
+                } catch (fixError) {
+                  console.error('❌ Failed to auto-fix pharmacist fields:', fixError);
+                }
+              }
+            }
 
             // Institution and License check
             try {
@@ -206,7 +374,21 @@ export const UserProvider = ({ children }) => {
             }
           } else {
             // User profile doesn't exist in Firestore - create it automatically
+            // BUT: Never default to 'elderly' for institution users or if we can detect they're staff
             console.log('User profile not found in Firestore, creating profile...');
+            
+            // Check if this might be an institution user (has institutionId in custom claims or email pattern)
+            const token = await firebaseUser.getIdTokenResult().catch(() => null);
+            const tokenInstitutionId = token?.claims?.institutionId;
+            const isLikelyStaff = firebaseUser.email?.toLowerCase().includes('admin') ||
+                                 firebaseUser.email?.toLowerCase().includes('caregiver') ||
+                                 firebaseUser.email?.toLowerCase().includes('nurse') ||
+                                 firebaseUser.email?.toLowerCase().includes('doctor') ||
+                                 firebaseUser.email?.toLowerCase().includes('pharmacist');
+            
+            // Default to 'client' instead of 'elderly' to be safer
+            // Only use 'elderly' if we're absolutely sure it's a standalone client signup
+            const defaultUserType = (tokenInstitutionId || isLikelyStaff) ? 'client' : 'client'; // Use 'client' for both to be safe
             try {
               // Import createUser function
               const { createUser } = await import('../api/usersAPI');
