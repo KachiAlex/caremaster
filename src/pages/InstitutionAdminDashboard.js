@@ -65,7 +65,9 @@ import {
   UserCog,
   UserPlus,
   Database,
-  CreditCard
+  CreditCard,
+  Ban,
+  MoreVertical
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUserStatus } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -3626,6 +3628,7 @@ const InstitutionAdminDashboard = () => {
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">License</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Specialty</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -3638,11 +3641,95 @@ const InstitutionAdminDashboard = () => {
                             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                               pharmacist.status === 'active' ? 'bg-green-100 text-green-800' :
                               pharmacist.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              pharmacist.status === 'suspended' ? 'bg-red-100 text-red-800' :
                               pharmacist.status === 'inactive' ? 'bg-gray-100 text-gray-700' :
                               'bg-gray-100 text-gray-700'
                             }`}>
                               {pharmacist.status || 'Active'}
                             </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedPharmacist(pharmacist);
+                                  setSelectedUserForEdit(pharmacist);
+                                  setShowEditUserModal(true);
+                                }}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="View/Edit Pharmacist"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              {pharmacist.status !== 'suspended' ? (
+                                <button
+                                  onClick={async () => {
+                                    if (!window.confirm(`Are you sure you want to suspend ${pharmacist.name || 'this pharmacist'}? They will not be able to access the system.`)) {
+                                      return;
+                                    }
+                                    try {
+                                      const pharmacistId = pharmacist.id || pharmacist.uid;
+                                      await updateUserStatus(pharmacistId, 'suspended');
+                                      toast.success('Pharmacist suspended successfully');
+                                      await loadDashboardData();
+                                    } catch (error) {
+                                      console.error('Error suspending pharmacist:', error);
+                                      toast.error('Failed to suspend pharmacist');
+                                    }
+                                  }}
+                                  className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                  title="Suspend Pharmacist"
+                                >
+                                  <Ban className="h-4 w-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={async () => {
+                                    if (!window.confirm(`Are you sure you want to reactivate ${pharmacist.name || 'this pharmacist'}?`)) {
+                                      return;
+                                    }
+                                    try {
+                                      const pharmacistId = pharmacist.id || pharmacist.uid;
+                                      await updateUserStatus(pharmacistId, 'active');
+                                      toast.success('Pharmacist reactivated successfully');
+                                      await loadDashboardData();
+                                    } catch (error) {
+                                      console.error('Error reactivating pharmacist:', error);
+                                      toast.error('Failed to reactivate pharmacist');
+                                    }
+                                  }}
+                                  className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Reactivate Pharmacist"
+                                >
+                                  <UserCheck className="h-4 w-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(`Are you sure you want to delete ${pharmacist.name || 'this pharmacist'}? This action cannot be undone.`)) {
+                                    return;
+                                  }
+                                  try {
+                                    const pharmacistId = pharmacist.id || pharmacist.uid;
+                                    const userRef = doc(db, 'users', pharmacistId);
+                                    await updateDoc(userRef, {
+                                      status: 'deleted',
+                                      active: false,
+                                      deletedAt: new Date().toISOString()
+                                    });
+                                    toast.success('Pharmacist deleted successfully');
+                                    await loadDashboardData();
+                                  } catch (error) {
+                                    console.error('Error deleting pharmacist:', error);
+                                    toast.error('Failed to delete pharmacist');
+                                  }
+                                }}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete Pharmacist"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -4959,6 +5046,112 @@ const InstitutionAdminDashboard = () => {
             loadDashboardData(); // Refresh data to show updated profile picture
           }}
         />
+      )}
+
+      {/* Edit User Modal - For editing pharmacists and other users */}
+      {showEditUserModal && selectedUserForEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">Edit {selectedUserForEdit.userType === 'pharmacist' ? 'Pharmacist' : 'User'}</h3>
+              <button
+                onClick={() => {
+                  setShowEditUserModal(false);
+                  setSelectedUserForEdit(null);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+                  <input
+                    type="text"
+                    value={selectedUserForEdit.name || selectedUserForEdit.fullName || `${selectedUserForEdit.firstName || ''} ${selectedUserForEdit.lastName || ''}`.trim() || ''}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={selectedUserForEdit.email || ''}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  />
+                </div>
+                {selectedUserForEdit.userType === 'pharmacist' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">License Number</label>
+                      <input
+                        type="text"
+                        value={selectedUserForEdit.licenseNumber || ''}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Specialization</label>
+                      <input
+                        type="text"
+                        value={selectedUserForEdit.specialization || ''}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                  </>
+                )}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                  <select
+                    value={selectedUserForEdit.status || 'active'}
+                    onChange={async (e) => {
+                      try {
+                        const newStatus = e.target.value;
+                        const userId = selectedUserForEdit.id || selectedUserForEdit.uid;
+                        await updateUserStatus(userId, newStatus);
+                        toast.success('Status updated successfully');
+                        await loadDashboardData();
+                        setShowEditUserModal(false);
+                        setSelectedUserForEdit(null);
+                      } catch (error) {
+                        console.error('Error updating status:', error);
+                        toast.error('Failed to update status');
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> To edit other details like name, email, or license number, please contact support or use the Firebase Console.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowEditUserModal(false);
+                  setSelectedUserForEdit(null);
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -38,6 +38,10 @@ const SchedulingModule = ({ institutionId }) => {
   const [caregivers, setCaregivers] = useState([]);
   const [viewMode, setViewMode] = useState('day'); // day, week, month
   const [selectedScheduleDetail, setSelectedScheduleDetail] = useState(null);
+  const [showDaySchedulesModal, setShowDaySchedulesModal] = useState(false);
+  const [selectedDaySchedules, setSelectedDaySchedules] = useState([]);
+  const [selectedDayDate, setSelectedDayDate] = useState(null);
+  const [selectedDayCaregiver, setSelectedDayCaregiver] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -575,7 +579,13 @@ const SchedulingModule = ({ institutionId }) => {
                                   <button
                                     key={schedule.id}
                                     type="button"
-                                    onClick={() => setSelectedScheduleDetail(schedule)}
+                                    onClick={() => {
+                                      // Show all schedules for this day in a modal
+                                      setSelectedDaySchedules(daySchedules);
+                                      setSelectedDayDate(date);
+                                      setSelectedDayCaregiver(caregiver);
+                                      setShowDaySchedulesModal(true);
+                                    }}
                                     className="group mb-2 w-full rounded-md border-l-4 text-left transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
                                     style={{ 
                                       borderLeftColor: serviceConfig.color,
@@ -1090,6 +1100,144 @@ const SchedulingModule = ({ institutionId }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Day Schedules Modal - Shows all schedules for a selected day */}
+      {showDaySchedulesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Schedules for {selectedDayDate?.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {selectedDayCaregiver?.name || 'Caregiver'} • {selectedDaySchedules.length} schedule{selectedDaySchedules.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDaySchedulesModal(false);
+                  setSelectedDaySchedules([]);
+                  setSelectedDayDate(null);
+                  setSelectedDayCaregiver(null);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Schedules List */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {selectedDaySchedules.length === 0 ? (
+                <div className="text-center py-12">
+                  <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500">No schedules for this day</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {selectedDaySchedules.map((schedule) => {
+                    const serviceConfig = getServiceTypeConfig(schedule);
+                    return (
+                      <div
+                        key={schedule.id}
+                        className="border-l-4 rounded-lg bg-gray-50 p-4 hover:bg-gray-100 transition-colors cursor-pointer"
+                        style={{ borderLeftColor: serviceConfig.color }}
+                        onClick={() => {
+                          setSelectedScheduleDetail(schedule);
+                          setShowDaySchedulesModal(false);
+                        }}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2 flex-1">
+                            <span
+                              className="px-2 py-1 rounded text-xs font-bold text-white uppercase"
+                              style={{ backgroundColor: serviceConfig.color }}
+                            >
+                              {serviceConfig.code}
+                            </span>
+                            {schedule.priority === 'high' && (
+                              <span className="px-2 py-1 rounded text-xs font-semibold text-white bg-red-500 uppercase">
+                                HIGH
+                              </span>
+                            )}
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              schedule.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              schedule.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                              schedule.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {schedule.status || 'Scheduled'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSchedule(schedule);
+                              setShowEditModal(true);
+                              setShowDaySchedulesModal(false);
+                            }}
+                            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                            title="Edit Schedule"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                          {schedule.title || schedule.clientName || 'Care Visit'}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            <span>{schedule.startTime || '9:00 AM'}{schedule.endTime ? ` - ${schedule.endTime}` : ''}</span>
+                          </div>
+                          {schedule.clientName && (
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>{schedule.clientName}</span>
+                            </div>
+                          )}
+                          {schedule.location && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4" />
+                              <span>{schedule.location}</span>
+                            </div>
+                          )}
+                        </div>
+                        {schedule.description && (
+                          <p className="text-sm text-gray-600 mt-2">{schedule.description}</p>
+                        )}
+                        {schedule.instructions && (
+                          <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                            <p className="text-xs font-semibold text-blue-900 mb-1">Instructions:</p>
+                            <p className="text-xs text-blue-800">{schedule.instructions}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => {
+                  setShowDaySchedulesModal(false);
+                  setSelectedDaySchedules([]);
+                  setSelectedDayDate(null);
+                  setSelectedDayCaregiver(null);
+                }}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
