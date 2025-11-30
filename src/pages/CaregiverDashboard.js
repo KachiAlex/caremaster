@@ -36,6 +36,8 @@ import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
 import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
+import { startTask, completeTask } from '../api/taskTimeTrackingAPI';
+import { emergencyAPI } from '../api/emergencyAPI';
 import CaregiverGuard from '../components/CaregiverGuard';
 import CaregiverSettings from '../components/CaregiverSettings';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
@@ -318,12 +320,21 @@ const CaregiverDashboard = () => {
           setRecentTasks([]);
         }
         
-        // Load performance data (placeholder for now)
+        // Load performance data with calculated metrics
+        const completedCount = loadedRecentTasks.filter(task => task.status === 'completed').length;
+        const totalCount = loadedRecentTasks.length;
+        const taskCompletion = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+        
         setPerformance({
-          completedTasks: loadedRecentTasks.filter(task => task.status === 'completed').length,
-          totalTasks: loadedRecentTasks.length,
-          rating: 4.8,
-          hoursWorked: 40
+          completedTasks: completedCount,
+          totalTasks: totalCount,
+          rating: caregiver?.rating || 0,
+          hoursWorked: caregiver?.thisMonthEarnings ? Math.round(caregiver.thisMonthEarnings / 50) : 0, // Estimate based on earnings
+          punctuality: 95, // Placeholder - would need attendance data
+          taskCompletion: taskCompletion,
+          clientSatisfaction: caregiver?.rating || 'N/A',
+          communication: caregiver?.rating || 'N/A',
+          safety: 100 // Placeholder - would need incident data
         });
 
         // Load profile image from settings
@@ -517,9 +528,87 @@ const CaregiverDashboard = () => {
     window.location.href = `/service-provider/messages`;
   };
 
-  const handleClockIn = (scheduleId) => {
-    // Handle clock in
-    console.log('Clock in for schedule:', scheduleId);
+  const handleClockIn = async (scheduleId) => {
+    if (!user?.uid) {
+      toast.error('User not authenticated');
+      return;
+    }
+    
+    try {
+      // Find the schedule item to get task ID
+      const scheduleItem = todaySchedule.find(s => s.id === scheduleId);
+      if (!scheduleItem) {
+        toast.error('Schedule item not found');
+        return;
+      }
+      
+      // If it's a task, use task time tracking API
+      if (scheduleItem.type === 'task' && scheduleItem.id) {
+        await startTask(scheduleItem.id, user.uid);
+        toast.success('Task started successfully');
+        // Reload schedule to reflect changes
+        const loadCaregiverData = async () => {
+          // Reload today's schedule
+          const [todaysAppointments, todaysTasks, assignments] = await Promise.all([
+            getTodaysAppointments(user?.uid, 'caregiver'),
+            getTodayTasks(user?.uid),
+            assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
+          ]);
+          
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const assignmentTasks = assignments
+            .filter(a => {
+              if (!a.dueDate) return false;
+              const dueDate = new Date(a.dueDate);
+              dueDate.setHours(0, 0, 0, 0);
+              return dueDate.getTime() === today.getTime();
+            })
+            .map(assignment => ({
+              id: assignment.id,
+              type: 'task',
+              title: assignment.title || 'Assigned Task',
+              time: assignment.dueTime ? `${assignment.dueTime}:00` : '09:00:00',
+              scheduledTime: assignment.dueDate ? new Date(`${assignment.dueDate}T${assignment.dueTime || '09:00'}`) : new Date(),
+              client: assignment.clientName || 'Client',
+              status: assignment.status || 'pending',
+              priority: assignment.priority || 'normal',
+              description: assignment.description,
+              instructions: assignment.instructions,
+              assignmentType: 'clientAssignment'
+            }));
+          
+          const combinedSchedule = [
+            ...todaysAppointments.map(apt => ({
+              id: apt.id,
+              type: 'appointment',
+              title: apt.title || 'Appointment',
+              time: apt.scheduledTime,
+              client: apt.clientName || 'Client',
+              status: apt.status || 'scheduled'
+            })),
+            ...todaysTasks.map(task => ({
+              id: task.id,
+              type: 'task',
+              title: task.title,
+              time: task.scheduledTime,
+              client: task.clientName || 'Client',
+              status: task.status || 'pending'
+            })),
+            ...assignmentTasks
+          ];
+          
+          combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
+          setTodaySchedule(combinedSchedule);
+        };
+        loadCaregiverData();
+      } else {
+        toast.info('Clock in is only available for tasks');
+      }
+    } catch (error) {
+      console.error('Error clocking in:', error);
+      toast.error(error.message || 'Failed to clock in');
+    }
   };
 
   // --- Role-specific UI helpers ---
@@ -586,19 +675,129 @@ const CaregiverDashboard = () => {
     );
   };
 
-  const handleClockOut = (scheduleId) => {
-    // Handle clock out
-    console.log('Clock out for schedule:', scheduleId);
+  const handleClockOut = async (scheduleId) => {
+    if (!user?.uid) {
+      toast.error('User not authenticated');
+      return;
+    }
+    
+    try {
+      // Find the schedule item to get task ID
+      const scheduleItem = todaySchedule.find(s => s.id === scheduleId);
+      if (!scheduleItem) {
+        toast.error('Schedule item not found');
+        return;
+      }
+      
+      // If it's a task, use task time tracking API to complete it
+      if (scheduleItem.type === 'task' && scheduleItem.id) {
+        await completeTask(scheduleItem.id, user.uid, 'Completed via clock out');
+        toast.success('Task completed successfully');
+        // Reload schedule to reflect changes
+        const [todaysAppointments, todaysTasks, assignments] = await Promise.all([
+          getTodaysAppointments(user?.uid, 'caregiver'),
+          getTodayTasks(user?.uid),
+          assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
+        ]);
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const assignmentTasks = assignments
+          .filter(a => {
+            if (!a.dueDate) return false;
+            const dueDate = new Date(a.dueDate);
+            dueDate.setHours(0, 0, 0, 0);
+            return dueDate.getTime() === today.getTime();
+          })
+          .map(assignment => ({
+            id: assignment.id,
+            type: 'task',
+            title: assignment.title || 'Assigned Task',
+            time: assignment.dueTime ? `${assignment.dueTime}:00` : '09:00:00',
+            scheduledTime: assignment.dueDate ? new Date(`${assignment.dueDate}T${assignment.dueTime || '09:00'}`) : new Date(),
+            client: assignment.clientName || 'Client',
+            status: assignment.status || 'pending',
+            priority: assignment.priority || 'normal',
+            description: assignment.description,
+            instructions: assignment.instructions,
+            assignmentType: 'clientAssignment'
+          }));
+        
+        const combinedSchedule = [
+          ...todaysAppointments.map(apt => ({
+            id: apt.id,
+            type: 'appointment',
+            title: apt.title || 'Appointment',
+            time: apt.scheduledTime,
+            client: apt.clientName || 'Client',
+            status: apt.status || 'scheduled'
+          })),
+          ...todaysTasks.map(task => ({
+            id: task.id,
+            type: 'task',
+            title: task.title,
+            time: task.scheduledTime,
+            client: task.clientName || 'Client',
+            status: task.status || 'pending'
+          })),
+          ...assignmentTasks
+        ];
+        
+        combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
+        setTodaySchedule(combinedSchedule);
+      } else {
+        toast.info('Clock out is only available for tasks');
+      }
+    } catch (error) {
+      console.error('Error clocking out:', error);
+      toast.error(error.message || 'Failed to clock out');
+    }
   };
 
-  const handleTaskComplete = (taskId) => {
-    // Handle task completion
-    console.log('Complete task:', taskId);
+  const handleTaskComplete = async (taskId) => {
+    if (!user?.uid) {
+      toast.error('User not authenticated');
+      return;
+    }
+    
+    try {
+      await completeTask(taskId, user.uid, 'Task completed');
+      toast.success('Task completed successfully');
+      // Reload recent tasks
+      const loadedRecentTasks = await getCareTasksByCaregiver(user.uid);
+      setRecentTasks(loadedRecentTasks.slice(0, 5));
+    } catch (error) {
+      console.error('Error completing task:', error);
+      toast.error(error.message || 'Failed to complete task');
+    }
   };
 
-  const handleEmergency = (clientId) => {
-    // Handle emergency
-    console.log('Emergency for client:', clientId);
+  const handleEmergency = async (clientId) => {
+    if (!user?.uid || !clientId) {
+      toast.error('Missing required information');
+      return;
+    }
+    
+    try {
+      const client = assignedClients.find(c => c.id === clientId) || selectedClient;
+      const result = await emergencyAPI.triggerEmergencyAlert({
+        userId: clientId,
+        caregiverId: user.uid,
+        type: 'medical',
+        severity: 'high',
+        location: client?.address || client?.location || 'Unknown location',
+        description: `Emergency assistance requested by caregiver ${userProfile?.name || 'Caregiver'} for client ${client?.name || client?.fullName || 'Client'}`
+      });
+      
+      if (result.success) {
+        toast.success('Emergency alert sent! Help is on the way.');
+      } else {
+        toast.error('Failed to send emergency alert');
+      }
+    } catch (error) {
+      console.error('Error sending emergency alert:', error);
+      toast.error('Failed to send emergency alert. Please call emergency services directly.');
+    }
   };
 
   const loadProfileImage = () => {
@@ -628,6 +827,33 @@ const CaregiverDashboard = () => {
   };
 
   const formatTime = (timeString) => {
+    if (!timeString) return 'Time not set';
+    
+    // Handle Date objects
+    if (timeString instanceof Date) {
+      return timeString.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Handle ISO strings
+    if (typeof timeString === 'string' && timeString.includes('T')) {
+      const date = new Date(timeString);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    }
+    
+    // Handle time strings like "09:00:00" or "09:00"
+    if (typeof timeString === 'string') {
+      const timeMatch = timeString.match(/(\d{1,2}):(\d{2})/);
+      if (timeMatch) {
+        const hours = parseInt(timeMatch[1]);
+        const minutes = timeMatch[2];
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+        return `${displayHours}:${minutes} ${period}`;
+      }
+    }
+    
     return timeString;
   };
 
@@ -1013,10 +1239,7 @@ const CaregiverDashboard = () => {
               )}
             </div>
           </div>
-          <div className="flex items-center space-x-6">
-            <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
-              <Bell className="h-6 w-6" />
-            </button>
+          <div className="flex items-center space-x-4">
             <button 
               onClick={() => setShowSettings(!showSettings)}
               className={`p-3 rounded-full transition-colors ${
@@ -1024,11 +1247,9 @@ const CaregiverDashboard = () => {
                   ? 'bg-blue-100 text-blue-700' 
                   : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
               }`}
+              title="Settings"
             >
               <Settings className="h-6 w-6" />
-            </button>
-            <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
-              <LogOut className="h-6 w-6" />
             </button>
           </div>
         </div>
@@ -1191,6 +1412,13 @@ const CaregiverDashboard = () => {
               <h2 className="text-xl font-bold text-gray-900">Today's Schedule</h2>
             </div>
             <div className="p-8">
+              {todaySchedule.length === 0 ? (
+                <div className="text-center py-12">
+                  <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Schedule for Today</h3>
+                  <p className="text-gray-600">You have no appointments, tasks, or assignments scheduled for today.</p>
+                </div>
+              ) : (
               <div className="space-y-6">
                 {todaySchedule.map((schedule) => (
                   <div key={schedule.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
@@ -1205,13 +1433,19 @@ const CaregiverDashboard = () => {
                         <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
                           <div className="flex items-center">
                             <Clock className="h-5 w-5 mr-2 text-gray-500" />
-                            <span className="font-medium">{formatTime(schedule.time)} ({schedule.duration})</span>
+                            <span className="font-medium">
+                              {schedule.time ? formatTime(schedule.time) : 'Time not set'}
+                              {schedule.duration && ` (${schedule.duration})`}
+                            </span>
                           </div>
+                          {schedule.address && (
                           <div className="flex items-center">
                             <MapPin className="h-5 w-5 mr-2 text-gray-500" />
                             <span className="font-medium">{schedule.address}</span>
                           </div>
+                          )}
                         </div>
+                        {schedule.tasks && Array.isArray(schedule.tasks) && schedule.tasks.length > 0 && (
                         <div className="mb-4">
                           <h4 className="text-sm font-semibold text-gray-700 mb-3">Tasks:</h4>
                           <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1223,6 +1457,19 @@ const CaregiverDashboard = () => {
                             ))}
                           </ul>
                         </div>
+                        )}
+                        {schedule.description && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Description:</h4>
+                            <p className="text-sm text-gray-600">{schedule.description}</p>
+                          </div>
+                        )}
+                        {schedule.instructions && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Instructions:</h4>
+                            <p className="text-sm text-gray-600">{schedule.instructions}</p>
+                          </div>
+                        )}
                         {schedule.notes && (
                           <div className="mb-4">
                             <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes:</h4>
@@ -1244,8 +1491,9 @@ const CaregiverDashboard = () => {
                           Clock Out
                         </button>
                         <button
-                          onClick={() => handleEmergency(schedule.clientId)}
+                          onClick={() => handleEmergency(schedule.clientId || schedule.client?.id)}
                           className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center"
+                          disabled={!schedule.clientId && !schedule.client?.id}
                         >
                           <AlertTriangle className="h-4 w-4 mr-2" />
                           Emergency
@@ -1264,6 +1512,13 @@ const CaregiverDashboard = () => {
               <h2 className="text-xl font-bold text-gray-900">Recent Tasks</h2>
             </div>
             <div className="p-8">
+              {recentTasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <CheckCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Recent Tasks</h3>
+                  <p className="text-gray-600">You haven't completed any tasks yet.</p>
+                </div>
+              ) : (
               <div className="space-y-4">
                 {recentTasks.map((task) => (
                   <div key={task.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
@@ -1305,41 +1560,45 @@ const CaregiverDashboard = () => {
                     <span className="text-base font-medium text-gray-700">Punctuality</span>
                     <div className="flex items-center">
                       <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.punctuality}%` }}></div>
+                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.punctuality || 0}%` }}></div>
                       </div>
-                      <span className="text-lg font-bold text-gray-900">{performance.punctuality}%</span>
+                      <span className="text-lg font-bold text-gray-900">{performance.punctuality || 0}%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-base font-medium text-gray-700">Task Completion</span>
                     <div className="flex items-center">
                       <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${performance.taskCompletion}%` }}></div>
+                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${performance.taskCompletion || 0}%` }}></div>
                       </div>
-                      <span className="text-lg font-bold text-gray-900">{performance.taskCompletion}%</span>
+                      <span className="text-lg font-bold text-gray-900">{performance.taskCompletion || 0}%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-base font-medium text-gray-700">Client Satisfaction</span>
                     <div className="flex items-center">
                       <Star className="h-5 w-5 text-yellow-400 mr-2" />
-                      <span className="text-lg font-bold text-gray-900">{performance.clientSatisfaction}</span>
+                      <span className="text-lg font-bold text-gray-900">
+                        {typeof performance.clientSatisfaction === 'number' ? performance.clientSatisfaction.toFixed(1) : performance.clientSatisfaction || 'N/A'}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-base font-medium text-gray-700">Communication</span>
                     <div className="flex items-center">
                       <Star className="h-5 w-5 text-yellow-400 mr-2" />
-                      <span className="text-lg font-bold text-gray-900">{performance.communication}</span>
+                      <span className="text-lg font-bold text-gray-900">
+                        {typeof performance.communication === 'number' ? performance.communication.toFixed(1) : performance.communication || 'N/A'}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-base font-medium text-gray-700">Safety Record</span>
                     <div className="flex items-center">
                       <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.safety}%` }}></div>
+                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.safety || 0}%` }}></div>
                       </div>
-                      <span className="text-lg font-bold text-gray-900">{performance.safety}%</span>
+                      <span className="text-lg font-bold text-gray-900">{performance.safety || 0}%</span>
                     </div>
                   </div>
                 </div>

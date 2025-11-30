@@ -1606,8 +1606,8 @@ const InstitutionCaregiverDashboard = () => {
     }
   }, [user?.uid, loadConversations]);
 
-  // Load activities function
-  const loadActivities = async () => {
+  // Load activities function - memoized with useCallback to prevent infinite loops
+  const loadActivities = useCallback(async () => {
     if (!user?.uid) return;
     
     try {
@@ -1628,10 +1628,11 @@ const InstitutionCaregiverDashboard = () => {
       });
     } catch (error) {
       console.error('Error loading activities:', error);
+      toast.error('Failed to load activities');
     }
-  };
+  }, [user?.uid]);
 
-  // Load activities when component mounts or tab changes (MOVED AFTER loadActivities definition)
+  // Load activities when component mounts or tab changes
   useEffect(() => {
     if (user?.uid && activeTab === 'activities') {
       loadActivities();
@@ -3680,7 +3681,10 @@ const InstitutionCaregiverDashboard = () => {
 
       await activitiesAPI.logActivity(activityData);
       toast.success(`${activityType} logged successfully!`);
-      // Note: AdlLogger component handles its own loading, so no need to reload activities here
+      // Reload activities to show the new entry
+      if (activeTab === 'activities') {
+        loadActivities();
+      }
     } catch (error) {
       console.error('Error logging activity:', error);
       toast.error('Failed to log activity');
@@ -3707,6 +3711,10 @@ const InstitutionCaregiverDashboard = () => {
       await activitiesAPI.logActivity(activityData);
       toast.success('Activity logged successfully!');
       setShowActivityModal(false);
+      // Reload activities to show the new entry
+      if (activeTab === 'activities') {
+        loadActivities();
+      }
       setActivityFormData({
         category: '',
         activityType: '',
