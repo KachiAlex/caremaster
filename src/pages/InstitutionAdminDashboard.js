@@ -467,23 +467,6 @@ const InstitutionAdminDashboard = () => {
       loadPaymentGatewayConfig();
     }
   }, [activeTab, effectiveInstitutionId]);
-
-  useEffect(() => {
-    if (paymentGatewayConfig) {
-      setPaymentGatewayForm({
-        provider: paymentGatewayConfig.provider || PAYMENT_GATEWAY_DEFAULT_FORM.provider,
-        mode: paymentGatewayConfig.mode || PAYMENT_GATEWAY_DEFAULT_FORM.mode,
-        apiKey: paymentGatewayConfig.apiKey || '',
-        webhookSecret: paymentGatewayConfig.webhookSecret || '',
-        webhookEndpoint: paymentGatewayConfig.webhookEndpoint || ''
-      });
-      setSelectedGateway(paymentGatewayConfig.provider || null);
-    } else {
-      setSelectedGateway(null);
-      setPaymentGatewayForm(PAYMENT_GATEWAY_DEFAULT_FORM);
-    }
-  }, [paymentGatewayConfig]);
-  
   // Load institution data
   const loadInstitutionData = async () => {
     try {
