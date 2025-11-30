@@ -18,7 +18,8 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
   const roles = [
     { value: 'caregiver', label: 'Caregiver' },
     { value: 'nurse', label: 'Nurse' },
-    { value: 'doctor', label: 'Doctor' }
+    { value: 'doctor', label: 'Doctor' },
+    { value: 'pharmacist', label: 'Pharmacist' }
   ];
 
   const validate = () => {
@@ -67,7 +68,8 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
       const userTypeMap = {
         'caregiver': 'caregiver',
         'nurse': 'nurse',
-        'doctor': 'doctor'
+        'doctor': 'doctor',
+        'pharmacist': 'pharmacist'
       };
 
       const userData = {
@@ -87,16 +89,17 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
         onboardingComplete: false // Caregiver needs to complete onboarding
       });
 
+      const roleLabel = roles.find(r => r.value === formData.role)?.label || 'Staff';
       toast.success(
         <>
-          <div className="font-bold mb-2">Caregiver Account Created Successfully!</div>
+          <div className="font-bold mb-2">{roleLabel} Account Created Successfully!</div>
           <div className="text-sm">
             <div>Email: <strong>{result.email}</strong></div>
             <div className="mt-2 text-xs opacity-80">
-              The caregiver will receive login credentials via email and be prompted to complete onboarding on first login.
+              The {roleLabel.toLowerCase()} will receive login credentials via email and be prompted to complete onboarding on first login.
             </div>
             <div className="mt-1 text-xs text-amber-600 font-medium">
-              ⚠️ Please securely share the password with the caregiver through a secure channel.
+              ⚠️ Please securely share the password with the {roleLabel.toLowerCase()} through a secure channel.
             </div>
           </div>
         </>,
@@ -147,8 +150,8 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
           <div>
-            <h2 className="text-2xl font-bold text-white">Add New Caregiver</h2>
-            <p className="text-blue-100 text-sm mt-1">Create a caregiver account</p>
+            <h2 className="text-2xl font-bold text-white">Add New Staff Member</h2>
+            <p className="text-blue-100 text-sm mt-1">Create a {roles.find(r => r.value === formData.role)?.label.toLowerCase() || 'staff'} account</p>
           </div>
           <button
             onClick={onClose}
@@ -281,8 +284,8 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
               <div className="text-sm text-blue-800">
                 <p className="font-medium mb-1">What happens next?</p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Caregiver account will be created</li>
-                  <li>Caregiver will complete onboarding on first login</li>
+                  <li>{roles.find(r => r.value === formData.role)?.label || 'Staff'} account will be created</li>
+                  <li>They will complete onboarding on first login</li>
                   <li>They cannot access dashboard until onboarding is complete</li>
                 </ul>
               </div>
@@ -312,7 +315,7 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
               ) : (
                 <>
                   <User className="h-4 w-4 mr-2" />
-                  Add Caregiver
+                  Add {roles.find(r => r.value === formData.role)?.label || 'Staff'}
                 </>
               )}
             </button>

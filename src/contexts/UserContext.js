@@ -265,7 +265,7 @@ export const UserProvider = ({ children }) => {
   }, []);
 
   const isServiceProvider = () => {
-    return userRole === 'doctor' || userRole === 'caregiver';
+    return userRole === 'doctor' || userRole === 'caregiver' || userRole === 'nurse' || userRole === 'pharmacist';
   };
 
   const refreshUserProfile = async () => {
@@ -288,6 +288,14 @@ export const UserProvider = ({ children }) => {
 
   const isCaregiver = () => {
     return userRole === 'caregiver';
+  };
+
+  const isPharmacist = () => {
+    return userRole === 'pharmacist';
+  };
+
+  const isNurse = () => {
+    return userRole === 'nurse';
   };
 
   const isElderly = () => {
@@ -316,27 +324,28 @@ export const UserProvider = ({ children }) => {
       onboardingProfileComplete: userProfile.onboardingProfileComplete
     });
 
-    // For caregivers, enforce onboarding completion
-    // IMPORTANT: If caregiver is activated (status: 'active'), allow access even if onboarding is incomplete
-    // Only require onboarding completion for caregivers who are not yet activated
-    if (userProfile.userType === 'caregiver') {
-      // If caregiver is activated, allow access regardless of onboarding status
+    // For caregivers and pharmacists, enforce onboarding completion
+    // IMPORTANT: If user is activated (status: 'active'), allow access even if onboarding is incomplete
+    // Only require onboarding completion for users who are not yet activated
+    const caregiverTypes = ['caregiver', 'nurse', 'doctor', 'pharmacist'];
+    if (caregiverTypes.includes(userProfile.userType)) {
+      // If user is activated, allow access regardless of onboarding status
       if (userProfile.status === 'active') {
-        console.log('✅ Activated caregiver - allowing access even if onboarding incomplete');
+        console.log(`✅ Activated ${userProfile.userType} - allowing access even if onboarding incomplete`);
         return false;
       }
       
       // Check if onboarding is explicitly complete
       const isComplete = userProfile.onboardingComplete === true;
       if (!isComplete) {
-        console.log('🚫 CAREGIVER ONBOARDING INCOMPLETE - blocking access', {
+        console.log(`🚫 ${userProfile.userType.toUpperCase()} ONBOARDING INCOMPLETE - blocking access`, {
           onboardingComplete: userProfile.onboardingComplete,
           userType: userProfile.userType,
           status: userProfile.status
         });
         return true;
       }
-      console.log('✅ Caregiver onboarding complete');
+      console.log(`✅ ${userProfile.userType} onboarding complete`);
       return false;
     }
 
@@ -421,6 +430,8 @@ export const UserProvider = ({ children }) => {
     isServiceProvider,
     isDoctor,
     isCaregiver,
+    isPharmacist,
+    isNurse,
     isElderly,
     isAdmin,
     updateUserProfile: setUserProfile,

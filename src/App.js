@@ -767,9 +767,11 @@ function OnboardingGuardedLayout() {
   
   if (isOnboardingIncomplete()) {
     // IMPORTANT: Check userProfile exists before checking userType
-    if (userProfile && userProfile.userType === 'caregiver') {
+    // Caregivers, nurses, doctors, and pharmacists use the same onboarding flow
+    const caregiverTypes = ['caregiver', 'nurse', 'doctor', 'pharmacist'];
+    if (userProfile && caregiverTypes.includes(userProfile.userType)) {
       const caregiverRoute = getCaregiverOnboardingRoute();
-      console.log('🔄 Redirecting CAREGIVER to:', caregiverRoute);
+      console.log(`🔄 Redirecting ${userProfile.userType.toUpperCase()} to:`, caregiverRoute);
       return <Navigate to={caregiverRoute} replace />;
     }
     // Redirect clients/elderly to client onboarding
@@ -781,18 +783,19 @@ function OnboardingGuardedLayout() {
   return <Layout />;
 }
 
-// Caregiver-specific onboarding guard
+// Caregiver-specific onboarding guard (also handles nurses, doctors, and pharmacists)
 function CaregiverOnboardingGuard() {
   const { userProfile, getCaregiverOnboardingRoute } = useUser();
   
-  // Only allow access if caregiver has completed onboarding
-  if (userProfile?.userType === 'caregiver' && !userProfile?.onboardingComplete) {
+  // Only allow access if caregiver/nurse/doctor/pharmacist has completed onboarding
+  const caregiverTypes = ['caregiver', 'nurse', 'doctor', 'pharmacist'];
+  if (userProfile && caregiverTypes.includes(userProfile.userType) && !userProfile?.onboardingComplete) {
     const caregiverRoute = getCaregiverOnboardingRoute();
-    console.log('🚫 Caregiver onboarding incomplete, redirecting to:', caregiverRoute);
+    console.log(`🚫 ${userProfile.userType} onboarding incomplete, redirecting to:`, caregiverRoute);
     return <Navigate to={caregiverRoute} replace />;
   }
   
-  console.log('✅ Caregiver onboarding complete, showing caregiver layout');
+  console.log(`✅ ${userProfile?.userType || 'Staff'} onboarding complete, showing caregiver layout`);
   return <CaregiverLayout />;
 }
 
@@ -823,22 +826,17 @@ function StrictCaregiverGuard() {
     return <CaregiverLayout />;
   }
   
-  // Force onboarding for incomplete caregivers
-  if (userProfile?.userType === 'caregiver' && !userProfile?.onboardingComplete) {
-    console.log('🚫 STRICT: Caregiver onboarding required - forcing redirect');
+  // Force onboarding for incomplete caregivers, nurses, doctors, and pharmacists
+  const caregiverTypes = ['caregiver', 'nurse', 'doctor', 'pharmacist'];
+  if (caregiverTypes.includes(userProfile?.userType) && !userProfile?.onboardingComplete) {
+    console.log(`🚫 STRICT: ${userProfile.userType} onboarding required - forcing redirect`);
     window.location.replace('/caregiver/onboarding');
     return <LoadingSpinner />;
   }
   
-  // Allow access to caregiver dashboard for complete caregivers
-  if (userProfile?.userType === 'caregiver') {
-    console.log('✅ Caregiver access granted to caregiver dashboard');
-    return <CaregiverLayout />;
-  }
-  
-  // Allow doctors to access caregiver dashboard
-  if (userProfile?.userType === 'doctor') {
-    console.log('✅ Doctor access granted to caregiver dashboard');
+  // Allow access to caregiver dashboard for complete caregivers, nurses, doctors, and pharmacists
+  if (caregiverTypes.includes(userProfile?.userType)) {
+    console.log(`✅ ${userProfile.userType} access granted to caregiver dashboard`);
     return <CaregiverLayout />;
   }
   

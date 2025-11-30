@@ -93,7 +93,9 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
         const cloudResult = await createInstitutionUser({
           ...userData,
           institutionId,
-          createdBy
+          createdBy,
+          // Pharmacists need to go through onboarding (same as caregivers)
+          onboardingComplete: formData.userType === 'pharmacist' ? false : undefined
         });
         
         // Cloud Function returns { success, uid, email, temporaryPassword, userData }
@@ -108,11 +110,12 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
         console.warn('Cloud Function not available, using client-side creation:', cloudError);
         
         // Create user with standardized fields (client-side - will log out admin)
+        // Pharmacists need to go through onboarding (same as caregivers)
         result = await createCompleteUserAccount(userData, {
           institutionId,
           createdBy,
           accountType: 'institution_created',
-          onboardingComplete: false
+          onboardingComplete: formData.userType === 'pharmacist' ? false : false // Both caregivers and pharmacists go through onboarding
         });
         
         // If client-side creation requires reload, reload the page to restore admin session

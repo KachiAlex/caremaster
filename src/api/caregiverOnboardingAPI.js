@@ -100,7 +100,12 @@ export const completeOnboarding = async (uid) => {
   const caregiverName = userData.name || caregiverData.name || 'A caregiver';
   const caregiverEmail = userData.email || caregiverData.email || '';
   
+  // Determine user type (caregiver, doctor, nurse, or pharmacist)
+  const userType = userData.userType || userData.type || caregiverData.userType || caregiverData.type || 'caregiver';
+  const isPharmacist = userType === 'pharmacist';
+  
   // Update caregivers collection - set status to 'active' automatically after onboarding
+  // Note: Pharmacists also use the caregivers collection for onboarding data
   await updateDoc(caregiverRef, { 
     onboardingComplete: true,
     status: 'active', // Automatically set to active - no admin approval required
@@ -113,14 +118,14 @@ export const completeOnboarding = async (uid) => {
   try {
     await updateDoc(userRef, { 
       onboardingComplete: true, 
-      userType: 'caregiver',
-      type: 'caregiver', // Also set type field for consistency
+      userType: userType, // Preserve user type (caregiver, doctor, nurse, or pharmacist)
+      type: userType, // Also set type field for consistency
       status: 'active', // Automatically set to active - no admin approval required
       active: true,
       institutionId: institutionId, // Preserve institutionId
       updatedAt: serverTimestamp() 
     });
-    console.log('✅ Updated users collection with userType: caregiver, status: active');
+    console.log(`✅ Updated users collection with userType: ${userType}, status: active`);
   } catch (error) {
     console.error('❌ Failed to update users collection:', error);
     throw error; // Re-throw to catch in UI
@@ -141,12 +146,13 @@ export const completeOnboarding = async (uid) => {
       console.log(`📧 Notifying ${adminsSnap.size} admin(s) about new caregiver onboarding`);
       
       // Create notifications for each admin (informational - no action required)
+      const userTypeLabel = isPharmacist ? 'Pharmacist' : 'Caregiver';
       const notificationPromises = adminsSnap.docs.map(adminDoc => {
         return createNotification({
           userId: adminDoc.id,
           type: NOTIFICATION_TYPES.CAREGIVER_ONBOARDING,
           priority: NOTIFICATION_PRIORITIES.MEDIUM,
-          title: 'New Caregiver Onboarded',
+          title: `New ${userTypeLabel} Onboarded`,
           message: `${caregiverName} (${caregiverEmail}) has completed onboarding and is now active. No approval needed.`,
           data: {
             caregiverId: uid,

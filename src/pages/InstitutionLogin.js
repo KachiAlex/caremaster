@@ -99,10 +99,21 @@ const InstitutionLogin = () => {
       console.log('🏢 Admin portal - navigating to:', adminUrl);
       navigate(adminUrl);
     } else if (roleParam === 'pharmacist') {
-      // Pharmacist portal - route to pharmacist dashboard
-      const pharmacistUrl = `/institution-pharmacy/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
-      console.log('💊 Pharmacist portal - navigating to:', pharmacistUrl);
-      navigate(pharmacistUrl);
+      // Pharmacist portal - check onboarding status (same flow as caregivers)
+      if (!userData.onboardingComplete) {
+        const onboardingUrl = `/institution-caregiver/onboarding${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+        console.log('💊 Pharmacist portal (onboarding) - navigating to:', onboardingUrl);
+        navigate(onboardingUrl);
+      } else if (userData.status === 'active') {
+        // Onboarding complete and active - go to pharmacist dashboard
+        const pharmacistUrl = `/institution-pharmacy/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+        console.log('💊 Pharmacist portal (active) - navigating to:', pharmacistUrl);
+        navigate(pharmacistUrl);
+      } else {
+        // Other status
+        toast.error(`Your account status is "${userData.status}". Please contact your administrator.`);
+        navigate('/institution/login');
+      }
     } else if (roleParam === 'caregiver') {
       // Caregiver portal - check onboarding and approval status
       if (!userData.onboardingComplete) {
@@ -136,9 +147,16 @@ const InstitutionLogin = () => {
         console.log('👥 Fallback caregiver - navigating to:', fallbackCaregiverUrl);
         navigate(fallbackCaregiverUrl);
       } else if (userRole === 'pharmacist') {
-        const fallbackPharmacistUrl = `/institution-pharmacy/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
-        console.log('💊 Fallback pharmacist - navigating to:', fallbackPharmacistUrl);
-        navigate(fallbackPharmacistUrl);
+        // Check onboarding status for pharmacists
+        if (!userData.onboardingComplete) {
+          const fallbackOnboardingUrl = `/institution-caregiver/onboarding${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+          console.log('💊 Fallback pharmacist (onboarding) - navigating to:', fallbackOnboardingUrl);
+          navigate(fallbackOnboardingUrl);
+        } else {
+          const fallbackPharmacistUrl = `/institution-pharmacy/dashboard${userInstitutionId ? `?institution=${userInstitutionId}` : ''}`;
+          console.log('💊 Fallback pharmacist (active) - navigating to:', fallbackPharmacistUrl);
+          navigate(fallbackPharmacistUrl);
+        }
       } else {
         console.log('❓ Unknown role - navigating to welcome');
         navigate('/institution/welcome');

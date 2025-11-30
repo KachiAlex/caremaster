@@ -28,9 +28,9 @@ const InstitutionCaregiverGuard = ({ children }) => {
         status: userProfile.status
       });
 
-      // Check if user is actually a caregiver, doctor, nurse, or has caregiver-related roles
+      // Check if user is actually a caregiver, doctor, nurse, pharmacist, or has caregiver-related roles
       const userRoles = Array.isArray(userProfile.roles) ? userProfile.roles : [userProfile.userType];
-      const allowedRoles = ['caregiver', 'doctor', 'nurse'];
+      const allowedRoles = ['caregiver', 'doctor', 'nurse', 'pharmacist'];
       const hasAllowedRole = userRoles.some(role => allowedRoles.includes(role)) || user?.uid?.startsWith('caregiver_');
       
       if (!hasAllowedRole) {
@@ -120,9 +120,9 @@ const InstitutionCaregiverGuard = ({ children }) => {
 
   // Block rendering if profile loaded but checks fail
   if (!loading && userProfile) {
-    // Check if user is actually a caregiver, doctor, nurse, or has caregiver-related roles
+    // Check if user is actually a caregiver, doctor, nurse, pharmacist, or has caregiver-related roles
     const userRoles = Array.isArray(userProfile.roles) ? userProfile.roles : [userProfile.userType];
-    const allowedRoles = ['caregiver', 'doctor', 'nurse'];
+    const allowedRoles = ['caregiver', 'doctor', 'nurse', 'pharmacist'];
     const hasAllowedRole = userRoles.some(role => allowedRoles.includes(role)) || user?.uid?.startsWith('caregiver_');
     
     if (!hasAllowedRole) {

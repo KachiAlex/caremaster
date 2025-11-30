@@ -232,9 +232,14 @@ const InstitutionCaregiverOnboarding = () => {
       toast.success('Onboarding completed successfully! Redirecting to your dashboard...');
       
       // Use window.location to force a full page reload and refresh UserContext
-      // Redirect directly to dashboard since status is now 'active'
+      // Redirect based on user type - pharmacists go to pharmacy dashboard, others to caregiver dashboard
       setTimeout(() => {
-        window.location.href = `/institution-caregiver/dashboard${effectiveInstitutionId ? `?institution=${effectiveInstitutionId}` : ''}`;
+        const userType = userProfile?.userType || userProfile?.type || 'caregiver';
+        if (userType === 'pharmacist') {
+          window.location.href = `/institution-pharmacy/dashboard${effectiveInstitutionId ? `?institution=${effectiveInstitutionId}` : ''}`;
+        } else {
+          window.location.href = `/institution-caregiver/dashboard${effectiveInstitutionId ? `?institution=${effectiveInstitutionId}` : ''}`;
+        }
       }, 1500);
     } catch (error) {
       console.error('Error completing onboarding:', error);
@@ -264,7 +269,7 @@ const InstitutionCaregiverOnboarding = () => {
             Welcome to {institutionData?.name || 'Institution'} Portal
           </h1>
           <p className="text-lg text-gray-600">
-            Complete your profile to start providing care
+            Complete your profile to get started
           </p>
         </div>
 
