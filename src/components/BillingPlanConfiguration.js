@@ -28,7 +28,13 @@ import {
   Sparkles,
   Crown,
   Star,
-  Zap
+  Zap,
+  Users,
+  UserPlus,
+  Search,
+  XCircle,
+  Clock,
+  CheckCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
@@ -39,10 +45,14 @@ import {
   saveBillingSettings,
   togglePlanStatus,
   updatePlanSortOrder,
+  getInstitutionSubscriptions,
+  assignSubscriptionToClient,
+  cancelClientSubscription,
   SUPPORTED_CURRENCIES,
   BILLING_FREQUENCIES,
   formatCurrency
 } from '../api/billingPlansAPI';
+import { getClientsByInstitution } from '../api/patientsAPI';
 import { useUser } from '../contexts/UserContext';
 
 // Tier icons mapping
@@ -65,6 +75,12 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
   const [plans, setPlans] = useState([]);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
+  
+  // Subscriptions state
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
   
   // Settings state
   const [settings, setSettings] = useState({
@@ -91,15 +107,19 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [plansData, settingsData] = await Promise.all([
+      const [plansData, settingsData, subscriptionsData, clientsData] = await Promise.all([
         getBillingPlans(institutionId),
-        getBillingSettings(institutionId)
+        getBillingSettings(institutionId),
+        getInstitutionSubscriptions(institutionId).catch(() => []),
+        getClientsByInstitution(institutionId).catch(() => [])
       ]);
       
       // Sort plans by sortOrder
       const sortedPlans = plansData.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
       setPlans(sortedPlans);
       setSettings(settingsData);
+      setSubscriptions(subscriptionsData);
+      setClients(clientsData);
     } catch (error) {
       console.error('Error loading billing configuration:', error);
       toast.error('Failed to load billing configuration');
@@ -212,6 +232,59 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
     return currency?.symbol || '$';
   };
 
+  const handleAssignClient = async (clientId, planId, billingCycle) => {
+    try {
+      setSaving(true);
+      await assignSubscriptionToClient(clientId, planId, billingCycle);
+      toast.success('Client assigned to plan successfully!');
+      setShowAssignModal(false);
+      await loadData();
+    } catch (error) {
+      console.error('Error assigning client to plan:', error);
+      toast.error('Failed to assign client to plan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelSubscription = async (subscriptionId) => {
+    if (!window.confirm('Are you sure you want to cancel this subscription?')) {
+      return;
+    }
+    
+    try {
+      await cancelClientSubscription(subscriptionId);
+      toast.success('Subscription cancelled successfully');
+      await loadData();
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      toast.error('Failed to cancel subscription');
+    }
+  };
+
+  // Get clients without active subscriptions
+  const getUnsubscribedClients = () => {
+    const subscribedClientIds = new Set(
+      subscriptions
+        .filter(s => s.status === 'active')
+        .map(s => s.clientId)
+    );
+    return clients.filter(c => !subscribedClientIds.has(c.id));
+  };
+
+  // Filter subscriptions by search term
+  const filteredSubscriptions = subscriptions.filter(sub => {
+    if (!subscriptionSearchTerm) return true;
+    const searchLower = subscriptionSearchTerm.toLowerCase();
+    const client = clients.find(c => c.id === sub.clientId);
+    const clientName = client?.name || client?.fullName || '';
+    return (
+      clientName.toLowerCase().includes(searchLower) ||
+      sub.planName?.toLowerCase().includes(searchLower) ||
+      sub.status?.toLowerCase().includes(searchLower)
+    );
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -242,6 +315,7 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
         <div className="flex flex-wrap gap-2">
           {[
             { id: 'plans', name: 'Billing Plans', icon: DollarSign },
+            { id: 'subscriptions', name: 'Client Subscriptions', icon: Users, badge: subscriptions.filter(s => s.status === 'active').length },
             { id: 'settings', name: 'Settings', icon: Settings }
           ].map((tab) => {
             const Icon = tab.icon;
@@ -258,6 +332,11 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
               >
                 <Icon className="h-4 w-4" />
                 <span className="font-medium">{tab.name}</span>
+                {tab.badge > 0 && (
+                  <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-blue-600 text-white rounded-full">
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -430,6 +509,210 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Subscriptions Tab */}
+      {activeTab === 'subscriptions' && (
+        <div className="space-y-4">
+          {/* Header with Add Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by client name, plan, or status..."
+                value={subscriptionSearchTerm}
+                onChange={(e) => setSubscriptionSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button
+              onClick={() => setShowAssignModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+            >
+              <UserPlus className="h-4 w-4" />
+              Assign Client to Plan
+            </button>
+          </div>
+
+          {/* Subscriptions Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {filteredSubscriptions.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Client
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Plan
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Billing Cycle
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Price
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Next Billing
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredSubscriptions.map((subscription) => {
+                      const client = clients.find(c => c.id === subscription.clientId);
+                      const clientName = client?.name || client?.fullName || 'Unknown Client';
+                      const nextBillingDate = subscription.nextBillingDate 
+                        ? new Date(subscription.nextBillingDate).toLocaleDateString()
+                        : 'N/A';
+                      
+                      return (
+                        <tr key={subscription.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span className="text-blue-600 font-semibold text-sm">
+                                  {clientName.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900">{clientName}</div>
+                                <div className="text-xs text-gray-500">{client?.email || ''}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              {subscription.planTier === 'premium' && <Crown className="h-4 w-4 text-amber-500" />}
+                              {subscription.planTier === 'standard' && <Zap className="h-4 w-4 text-blue-500" />}
+                              {subscription.planTier === 'basic' && <Star className="h-4 w-4 text-gray-500" />}
+                              <span className="text-sm font-medium text-gray-900">{subscription.planName}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-600 capitalize">{subscription.billingCycle}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-semibold text-gray-900">
+                              {formatCurrency(subscription.price, subscription.currency)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              subscription.status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : subscription.status === 'cancelled'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {subscription.status === 'active' && <CheckCircle className="h-3 w-3" />}
+                              {subscription.status === 'cancelled' && <XCircle className="h-3 w-3" />}
+                              {subscription.status === 'pending' && <Clock className="h-3 w-3" />}
+                              {subscription.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {nextBillingDate}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            {subscription.status === 'active' && (
+                              <button
+                                onClick={() => handleCancelSubscription(subscription.id)}
+                                className="text-red-600 hover:text-red-800 text-sm font-medium"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-12 text-center">
+                <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Subscriptions Yet</h3>
+                <p className="text-gray-500 mb-4">
+                  {subscriptionSearchTerm 
+                    ? 'No subscriptions match your search criteria'
+                    : 'Assign clients to billing plans to start tracking subscriptions'}
+                </p>
+                {!subscriptionSearchTerm && (
+                  <button
+                    onClick={() => setShowAssignModal(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Assign First Client
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Active Subscriptions</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {subscriptions.filter(s => s.status === 'active').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Unsubscribed Clients</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {getUnsubscribedClients().length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Monthly Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(
+                      subscriptions
+                        .filter(s => s.status === 'active')
+                        .reduce((sum, s) => {
+                          const monthlyPrice = s.billingCycle === 'annual' 
+                            ? s.price / 12 
+                            : s.billingCycle === 'weekly'
+                            ? s.price * 4
+                            : s.price;
+                          return sum + monthlyPrice;
+                        }, 0),
+                      settings.currency
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -662,6 +945,19 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
             setEditingPlan(null);
           }}
           onSave={handleSavePlan}
+          saving={saving}
+        />
+      )}
+
+      {/* Assign Client Modal */}
+      {showAssignModal && (
+        <AssignClientModal
+          clients={getUnsubscribedClients()}
+          allClients={clients}
+          plans={plans.filter(p => p.isActive)}
+          settings={settings}
+          onClose={() => setShowAssignModal(false)}
+          onAssign={handleAssignClient}
           saving={saving}
         />
       )}
@@ -952,6 +1248,267 @@ const PlanModal = ({ plan, settings, onClose, onSave, saving }) => {
               <>
                 <Save className="h-4 w-4" />
                 {plan ? 'Update Plan' : 'Create Plan'}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Assign Client to Plan Modal Component
+const AssignClientModal = ({ clients, allClients, plans, settings, onClose, onAssign, saving }) => {
+  const [selectedClient, setSelectedClient] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [billingCycle, setBillingCycle] = useState(settings.defaultFrequency || 'monthly');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredClients = clients.filter(client => {
+    if (!searchTerm) return true;
+    const name = client.name || client.fullName || '';
+    const email = client.email || '';
+    return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           email.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const selectedPlanData = plans.find(p => p.id === selectedPlan);
+  
+  const getPriceForCycle = () => {
+    if (!selectedPlanData) return 0;
+    switch (billingCycle) {
+      case 'weekly':
+        return selectedPlanData.weeklyPrice || (selectedPlanData.monthlyPrice / 4);
+      case 'monthly':
+        return selectedPlanData.monthlyPrice;
+      case 'annual':
+        return selectedPlanData.annualPrice || selectedPlanData.yearlyPrice;
+      default:
+        return selectedPlanData.monthlyPrice;
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!selectedClient) {
+      toast.error('Please select a client');
+      return;
+    }
+    
+    if (!selectedPlan) {
+      toast.error('Please select a billing plan');
+      return;
+    }
+    
+    onAssign(selectedClient, selectedPlan, billingCycle);
+  };
+
+  const getClientName = (clientId) => {
+    const client = allClients.find(c => c.id === clientId);
+    return client?.name || client?.fullName || 'Unknown';
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Assign Client to Plan</h3>
+            <p className="text-sm text-gray-500 mt-1">Subscribe a client to a billing plan</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Client Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Client <span className="text-red-500">*</span>
+            </label>
+            {clients.length > 5 && (
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search clients..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            )}
+            {filteredClients.length > 0 ? (
+              <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-100">
+                {filteredClients.map((client) => (
+                  <label
+                    key={client.id}
+                    className={`flex items-center p-3 cursor-pointer hover:bg-gray-50 ${
+                      selectedClient === client.id ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="client"
+                      value={client.id}
+                      checked={selectedClient === client.id}
+                      onChange={(e) => setSelectedClient(e.target.value)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <div className="ml-3">
+                      <div className="text-sm font-medium text-gray-900">
+                        {client.name || client.fullName}
+                      </div>
+                      {client.email && (
+                        <div className="text-xs text-gray-500">{client.email}</div>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-lg text-center">
+                <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">
+                  {searchTerm 
+                    ? 'No clients match your search'
+                    : 'All clients are already subscribed to plans'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Plan Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Billing Plan <span className="text-red-500">*</span>
+            </label>
+            {plans.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3">
+                {plans.map((plan) => {
+                  const TierIcon = TIER_ICONS[plan.tier] || Star;
+                  return (
+                    <label
+                      key={plan.id}
+                      className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        selectedPlan === plan.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="plan"
+                        value={plan.id}
+                        checked={selectedPlan === plan.id}
+                        onChange={(e) => setSelectedPlan(e.target.value)}
+                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="flex items-center gap-2">
+                          <TierIcon className={`h-4 w-4 ${
+                            plan.tier === 'premium' ? 'text-amber-500' :
+                            plan.tier === 'standard' ? 'text-blue-500' :
+                            'text-gray-500'
+                          }`} />
+                          <span className="font-medium text-gray-900">{plan.name}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">{plan.description}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(plan.monthlyPrice, settings.currency)}
+                        </div>
+                        <div className="text-xs text-gray-500">/month</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-lg text-center">
+                <DollarSign className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No active billing plans available</p>
+              </div>
+            )}
+          </div>
+
+          {/* Billing Cycle */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Billing Cycle
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {BILLING_FREQUENCIES.filter(f => settings.enabledFrequencies.includes(f.id)).map((freq) => (
+                <button
+                  key={freq.id}
+                  type="button"
+                  onClick={() => setBillingCycle(freq.id)}
+                  className={`px-4 py-3 rounded-lg border-2 text-center transition-all ${
+                    billingCycle === freq.id
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                  }`}
+                >
+                  <div className="font-medium">{freq.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Price Preview */}
+          {selectedPlan && (
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Subscription Price</p>
+                  <p className="text-xs text-gray-400">
+                    {selectedClient && `for ${getClientName(selectedClient)}`}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(getPriceForCycle(), settings.currency)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    per {billingCycle === 'annual' ? 'year' : billingCycle === 'weekly' ? 'week' : 'month'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </form>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving || !selectedClient || !selectedPlan || filteredClients.length === 0}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Assigning...
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4" />
+                Assign to Plan
               </>
             )}
           </button>
