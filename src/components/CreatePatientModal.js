@@ -57,6 +57,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     medications: [],
     allergies: [],
     bloodType: '',
+    genotype: '',
     careLevel: 'basic',
     
     // Additional Information
@@ -86,10 +87,30 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
   const [nationalId, setNationalId] = useState('');
 
   const careLevels = [
-    { value: 'basic', label: 'Basic Care', description: 'Minimal assistance needed' },
-    { value: 'intermediate', label: 'Intermediate Care', description: 'Moderate assistance required' },
-    { value: 'advanced', label: 'Advanced Care', description: 'Significant medical support needed' },
-    { value: 'critical', label: 'Critical Care', description: 'Intensive medical monitoring' }
+    { 
+      value: 'basic', 
+      label: 'Basic Care', 
+      description: 'Minimal assistance needed',
+      details: 'Includes assistance with daily activities like meal preparation, light housekeeping, medication reminders, and companionship. Suitable for clients who are mostly independent but need occasional support.'
+    },
+    { 
+      value: 'intermediate', 
+      label: 'Intermediate Care', 
+      description: 'Moderate assistance required',
+      details: 'Includes personal care assistance (bathing, dressing, grooming), mobility support, medication administration, meal assistance, and regular health monitoring. Suitable for clients who need daily support with activities of daily living.'
+    },
+    { 
+      value: 'advanced', 
+      label: 'Advanced Care', 
+      description: 'Significant medical support needed',
+      details: 'Includes skilled nursing care, wound care, catheter care, vital signs monitoring, medication management, assistance with medical equipment, and coordination with healthcare providers. Suitable for clients with chronic conditions requiring regular medical attention.'
+    },
+    { 
+      value: 'critical', 
+      label: 'Critical Care', 
+      description: 'Intensive medical monitoring',
+      details: 'Includes 24/7 monitoring, complex medical procedures, ventilator care, intensive medication management, frequent vital signs checks, emergency response readiness, and constant supervision. Suitable for clients with severe medical conditions requiring intensive care.'
+    }
   ];
 
   const handleInputChange = (e) => {
@@ -199,16 +220,17 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
       const result = await checkForDuplicates(formData, institutionId || userProfile?.institutionId);
       setDuplicateCheck(result);
       
+      // Only block if there are exact matches
       if (shouldBlockRegistration(result)) {
         setShowDuplicateModal(true);
         setCheckingDuplicates(false);
         return false;
       }
       
-      if (result.hasDuplicates) {
-        // Show warning but allow proceed
+      // Show warning for similar matches but allow proceed
+      if (result.hasDuplicates && result.similarMatches && result.similarMatches.length > 0) {
         toast.warning(
-          `Found ${result.exactMatches.length} exact match(es) and ${result.similarMatches.length} similar match(es). Please review before proceeding.`,
+          `Found ${result.similarMatches.length} similar match(es). Please review before proceeding.`,
           { autoClose: 5000 }
         );
       }
@@ -275,17 +297,19 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, skipDuplicateCheck = false) => {
     e.preventDefault();
     
     if (!validateStep(currentStep)) {
       return;
     }
 
-    // Check for duplicates
-    const canProceed = await handleDuplicateCheck();
-    if (!canProceed) {
-      return;
+    // Check for duplicates (unless explicitly skipped)
+    if (!skipDuplicateCheck) {
+      const canProceed = await handleDuplicateCheck();
+      if (!canProceed) {
+        return;
+      }
     }
 
     setLoading(true);
@@ -309,6 +333,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         medications: formData.medications,
         allergies: formData.allergies,
         bloodType: formData.bloodType || null,
+        genotype: formData.genotype || null,
         careLevel: formData.careLevel,
         insuranceProvider: formData.insuranceProvider.trim() || null,
         insurancePolicyNumber: formData.insurancePolicyNumber.trim() || null,
@@ -359,6 +384,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         medications: [],
         allergies: [],
         bloodType: '',
+        genotype: '',
         careLevel: 'basic',
         insuranceProvider: '',
         insurancePolicyNumber: '',
@@ -604,6 +630,25 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                     </div>
 
                     <div>
+                      <label className={labelClass}>Genotype</label>
+                      <select
+                        name="genotype"
+                        value={formData.genotype}
+                        onChange={handleInputChange}
+                        className={inputClass}
+                      >
+                        <option value="">Select genotype</option>
+                        <option value="AA">AA</option>
+                        <option value="AS">AS</option>
+                        <option value="SS">SS</option>
+                        <option value="AC">AC</option>
+                        <option value="SC">SC</option>
+                        <option value="CC">CC</option>
+                        <option value="Unknown">Unknown</option>
+                      </select>
+                    </div>
+
+                    <div>
                       <label className={labelClass}>National ID</label>
                       <input
                         type="text"
@@ -759,6 +804,11 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                           <div className="flex-1">
                             <div className="font-medium text-gray-900">{level.label}</div>
                             <div className="text-xs text-gray-500 mt-1">{level.description}</div>
+                            {formData.careLevel === level.value && level.details && (
+                              <div className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+                                {level.details}
+                              </div>
+                            )}
                           </div>
                           {formData.careLevel === level.value && (
                             <CheckCircle className="h-5 w-5 text-blue-600" />
@@ -1032,7 +1082,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         )}
 
         {/* Duplicate Warning Modal */}
-        {showDuplicateModal && duplicateCheck && (
+        {showDuplicateModal && duplicateCheck && duplicateCheck.exactMatches && duplicateCheck.exactMatches.length > 0 && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl border border-red-200 p-6 max-w-2xl w-full shadow-xl">
               <div className="flex items-center gap-3 mb-4">
@@ -1053,11 +1103,13 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                         <p className="font-medium text-gray-900">{match.clientName}</p>
                         <p className="text-sm text-gray-600">Client ID: {match.clientId}</p>
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {match.matchReasons.map((reason, i) => (
-                            <span key={i} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">
-                              {reason}
-                            </span>
-                          ))}
+                          {match.matchReasons && match.matchReasons.length > 0 ? (
+                            match.matchReasons.map((reason, i) => (
+                              <span key={i} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">
+                                {reason}
+                              </span>
+                            ))
+                          ) : null}
                         </div>
                       </div>
                       <span className="text-xs font-medium text-red-600">
@@ -1079,10 +1131,12 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                   Cancel Registration
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setShowDuplicateModal(false);
-                    // Proceed with registration anyway
-                    handleSubmit(new Event('submit'));
+                    setDuplicateCheck(null);
+                    // Proceed with registration anyway, skipping duplicate check
+                    const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                    await handleSubmit(submitEvent, true);
                   }}
                   className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
                 >

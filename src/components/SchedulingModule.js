@@ -3,6 +3,7 @@ import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, s
 import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
 import { getAllClients } from '../api/patientsAPI';
+import { assignmentAPI } from '../api/assignmentAPI';
 import {
   Calendar,
   Plus,
@@ -70,8 +71,111 @@ const SchedulingModule = ({ institutionId }) => {
         where('institutionId', '==', institutionId)
       );
       const schedulesSnapshot = await getDocs(schedulesQuery);
-      const schedulesList = schedulesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setSchedules(schedulesList);
+      const schedulesList = schedulesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Ensure scheduleDate is in ISO format (YYYY-MM-DD)
+          scheduleDate: data.scheduleDate || (data.scheduledDate ? new Date(data.scheduledDate).toISOString().split('T')[0] : null)
+        };
+      });
+
+      // Load assignments from clientAssignments collection
+      let assignmentsList = [];
+      try {
+        // Get all assignments and filter by institution
+        const allAssignments = await assignmentAPI.getAllAssignments();
+        
+        // Filter assignments for this institution by checking caregiver's institutionId
+        assignmentsList = allAssignments
+          .filter(assignment => {
+            if (!assignment.caregiverId) return false;
+            // Check if caregiver belongs to this institution
+            const caregiver = caregiversList.find(c => c.id === assignment.caregiverId);
+            // Also check if assignment has institutionId field
+            return caregiver || assignment.institutionId === institutionId;
+          })
+          .map(assignment => {
+            // Convert assignment to schedule format
+            let dueDate = assignment.dueDate;
+            let scheduleDate = null;
+            
+            // Convert Firestore Timestamp to Date if needed
+            if (dueDate && dueDate.toDate && typeof dueDate.toDate === 'function') {
+              dueDate = dueDate.toDate();
+            }
+            
+            if (dueDate) {
+              // Handle different date formats
+              if (dueDate instanceof Date) {
+                scheduleDate = dueDate.toISOString().split('T')[0];
+              } else if (typeof dueDate === 'string') {
+                // If it's already in ISO format, use it; otherwise parse it
+                if (dueDate.includes('T')) {
+                  scheduleDate = dueDate.split('T')[0];
+                } else if (dueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                  // Already in YYYY-MM-DD format
+                  scheduleDate = dueDate;
+                } else {
+                  // Try to parse as date
+                  const parsed = new Date(dueDate);
+                  if (!isNaN(parsed.getTime())) {
+                    scheduleDate = parsed.toISOString().split('T')[0];
+                  }
+                }
+              }
+            }
+
+            // Convert dueTime to startTime format
+            let startTime = '09:00';
+            if (assignment.dueTime) {
+              // dueTime might be in format "HH:MM" or "HH:MM:SS"
+              startTime = assignment.dueTime.split(':').slice(0, 2).join(':');
+            }
+
+            // Determine end time (default to 1 hour after start)
+            let endTime = '17:00';
+            if (startTime) {
+              const [hours, minutes] = startTime.split(':').map(Number);
+              const endDate = new Date();
+              endDate.setHours(hours + 1, minutes, 0, 0);
+              endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+            }
+
+            return {
+              id: `assignment-${assignment.id}`,
+              assignmentId: assignment.id,
+              institutionId: institutionId,
+              clientId: assignment.clientId,
+              clientName: assignment.clientName || 'Unknown Client',
+              caregiverId: assignment.caregiverId,
+              caregiverName: assignment.caregiverName || 'Unknown Caregiver',
+              title: assignment.title || assignment.description || 'Assigned Task',
+              description: assignment.description || assignment.instructions || '',
+              serviceType: 'care-visit', // Default service type for assignments
+              type: 'care-visit',
+              priority: assignment.priority || 'medium',
+              scheduleDate: scheduleDate,
+              endDate: scheduleDate, // Use same date for end date
+              startTime: startTime,
+              endTime: endTime,
+              comments: assignment.instructions || assignment.description || '',
+              specialInstructions: assignment.instructions || assignment.description || '',
+              status: assignment.status || 'scheduled',
+              isAssignment: true, // Flag to identify this came from assignments
+              createdAt: assignment.createdAt,
+              updatedAt: assignment.updatedAt
+            };
+          });
+      } catch (error) {
+        console.error('Error loading assignments:', error);
+        // Don't show error toast, just log it - assignments are optional
+      }
+
+      // Merge schedules and assignments
+      const allSchedules = [...schedulesList, ...assignmentsList];
+      setSchedules(allSchedules);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load scheduling data');

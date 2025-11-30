@@ -92,9 +92,11 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
           <div className="font-bold mb-2">Caregiver Account Created Successfully!</div>
           <div className="text-sm">
             <div>Email: <strong>{result.email}</strong></div>
-            <div>Password: <strong>{formData.password}</strong></div>
             <div className="mt-2 text-xs opacity-80">
-              The caregiver will be prompted to complete onboarding on first login.
+              The caregiver will receive login credentials via email and be prompted to complete onboarding on first login.
+            </div>
+            <div className="mt-1 text-xs text-amber-600 font-medium">
+              ⚠️ Please securely share the password with the caregiver through a secure channel.
             </div>
           </div>
         </>,

@@ -191,6 +191,87 @@ export const getInstitutionByDomain = async (domain) => {
   }
 };
 
+// Get institution settings
+export const getInstitutionSettings = async (institutionId) => {
+  try {
+    const institution = await getInstitution(institutionId);
+    if (!institution) {
+      return null;
+    }
+
+    // Return settings in the format expected by InstitutionSettings component
+    return {
+      name: institution.name || '',
+      description: institution.description || '',
+      address: institution.address || '',
+      city: institution.city || '',
+      state: institution.state || '',
+      country: institution.country || 'Nigeria',
+      postalCode: institution.postalCode || '',
+      phone: institution.phone || '',
+      email: institution.email || '',
+      website: institution.website || '',
+      licenseNumber: institution.licenseNumber || '',
+      establishedDate: institution.establishedDate || '',
+      specialties: institution.specialties || [],
+      maxUsers: institution.maxUsers || 100,
+      features: institution.features || {
+        telemedicine: true,
+        aiAnalysis: true,
+        emergencyAlerts: true,
+        mobileApp: true,
+        apiAccess: false
+      },
+      branding: institution.branding || {
+        logo: null,
+        primaryColor: '#3B82F6',
+        secondaryColor: '#10B981'
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching institution settings:', error);
+    throw error;
+  }
+};
+
+// Update institution settings
+export const updateInstitutionSettings = async (institutionId, settings) => {
+  try {
+    console.log('💾 Updating institution settings:', institutionId);
+    
+    const institutionRef = doc(db, INSTITUTIONS_COLLECTION, institutionId);
+    
+    // Prepare update data
+    const updateData = {
+      name: settings.name,
+      description: settings.description,
+      address: settings.address,
+      city: settings.city,
+      state: settings.state,
+      country: settings.country,
+      postalCode: settings.postalCode,
+      phone: settings.phone,
+      email: settings.email,
+      website: settings.website,
+      licenseNumber: settings.licenseNumber,
+      establishedDate: settings.establishedDate,
+      specialties: settings.specialties || [],
+      maxUsers: settings.maxUsers || 100,
+      features: settings.features || {},
+      branding: settings.branding || {},
+      updatedAt: serverTimestamp()
+    };
+
+    await updateDoc(institutionRef, updateData);
+    
+    console.log('✅ Institution settings updated successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error updating institution settings:', error);
+    throw error;
+  }
+};
+
 // Institution API object
 export const institutionAPI = {
   getInstitution,
@@ -198,5 +279,7 @@ export const institutionAPI = {
   checkSlugAvailability,
   generateInstitutionUrls,
   getInstitutionBySlug,
-  getInstitutionByDomain
+  getInstitutionByDomain,
+  getInstitutionSettings,
+  updateInstitutionSettings
 };

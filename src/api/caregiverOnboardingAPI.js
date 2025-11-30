@@ -147,7 +147,7 @@ export const completeOnboarding = async (uid) => {
           type: NOTIFICATION_TYPES.CAREGIVER_ONBOARDING,
           priority: NOTIFICATION_PRIORITIES.MEDIUM,
           title: 'New Caregiver Onboarded',
-          message: `${caregiverName} (${caregiverEmail}) has completed onboarding and is now active.`,
+          message: `${caregiverName} (${caregiverEmail}) has completed onboarding and is now active. No approval needed.`,
           data: {
             caregiverId: uid,
             caregiverName: caregiverName,

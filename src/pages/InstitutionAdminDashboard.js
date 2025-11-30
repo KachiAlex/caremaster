@@ -679,14 +679,73 @@ const InstitutionAdminDashboard = () => {
         return aptDate >= today && (apt.status === 'scheduled' || apt.status === 'confirmed' || !apt.status);
       }).length;
 
+      // Count users by role directly from users collection (includes all users regardless of onboarding status)
+      // This ensures stats update as users are onboarded
+      // Check both 'active' and 'isActive' fields, and allow undefined/null (defaults to active)
+      const isUserActive = (u) => {
+        if (u.status === 'deleted') return false;
+        if (u.active === false) return false;
+        if (u.isActive === false) return false;
+        return true; // Default to active if not explicitly set to false
+      };
+      
+      // Helper to check if user has a specific role (checks userType, type, and roles array)
+      const hasRole = (u, role) => {
+        if (u.userType === role || u.type === role) return true;
+        if (Array.isArray(u.roles) && u.roles.includes(role)) return true;
+        return false;
+      };
+      
+      const doctorsCount = institutionUsers.filter(u => 
+        hasRole(u, 'doctor') && isUserActive(u)
+      ).length;
+      
+      const nursesCount = institutionUsers.filter(u => 
+        hasRole(u, 'nurse') && isUserActive(u)
+      ).length;
+      
+      // Caregivers: count only those who are NOT doctors, nurses, or pharmacists
+      // (to avoid double counting)
+      const caregiversCount = institutionUsers.filter(u => 
+        hasRole(u, 'caregiver') && 
+        !hasRole(u, 'doctor') && 
+        !hasRole(u, 'nurse') && 
+        !hasRole(u, 'pharmacist') && 
+        isUserActive(u)
+      ).length;
+      
+      const pharmacistsCount = institutionUsers.filter(u => 
+        hasRole(u, 'pharmacist') && isUserActive(u)
+      ).length;
+      
+      // Debug logging to help identify issues
+      console.log('📊 Role counts calculation:', {
+        totalInstitutionUsers: institutionUsers.length,
+        nurses: nursesCount,
+        doctors: doctorsCount,
+        caregivers: caregiversCount,
+        pharmacists: pharmacistsCount,
+        allNurses: institutionUsers.filter(u => hasRole(u, 'nurse')).map(u => ({
+          id: u.id,
+          email: u.email,
+          userType: u.userType,
+          type: u.type,
+          roles: u.roles,
+          status: u.status,
+          active: u.active,
+          isActive: u.isActive,
+          institutionId: u.institutionId
+        }))
+      });
+
       // Build stats object
       const realStats = {
         totalUsers: institutionUsers.length,
         clients: institutionClients.length,
-        caregivers: allInstitutionCaregivers.filter(c => c.userType === 'caregiver' || c.type === 'caregiver').length,
-        doctors: allInstitutionCaregivers.filter(c => c.userType === 'doctor' || c.type === 'doctor').length,
-        nurses: allInstitutionCaregivers.filter(c => c.userType === 'nurse' || c.type === 'nurse').length,
-        pharmacists: allInstitutionPharmacists.length,
+        caregivers: caregiversCount,
+        doctors: doctorsCount,
+        nurses: nursesCount,
+        pharmacists: pharmacistsCount,
         activeAppointments: activeAppointmentsCount,
         activeAssignments: activeAssignmentCount,
         pendingAssignments: pendingAssignmentCount,
@@ -2883,10 +2942,30 @@ const InstitutionAdminDashboard = () => {
           <div className="space-y-6">
             {/* Primary Stats */}
             <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard icon={Users} label="Total Staff" value={stats.totalUsers.toLocaleString()} accent="from-blue-500 to-blue-600" />
-              <StatCard icon={Heart} label="Total Clients" value={stats.clients.toLocaleString()} accent="from-green-500 to-green-600" />
-              <StatCard icon={Activity} label="Active Tasks" value={stats.activeAssignments.toLocaleString()} accent="from-indigo-500 to-purple-500" />
-              <StatCard icon={ClipboardList} label="Pending Tasks" value={stats.pendingAssignments.toLocaleString()} accent="from-yellow-500 to-orange-500" />
+              <div 
+                onClick={() => setActiveTab('user-management')}
+                className="cursor-pointer transform transition hover:scale-105"
+              >
+                <StatCard icon={Users} label="Total Staff" value={stats.totalUsers.toLocaleString()} accent="from-blue-500 to-blue-600" />
+              </div>
+              <div 
+                onClick={() => setActiveTab('clients')}
+                className="cursor-pointer transform transition hover:scale-105"
+              >
+                <StatCard icon={Heart} label="Total Clients" value={stats.clients.toLocaleString()} accent="from-green-500 to-green-600" />
+              </div>
+              <div 
+                onClick={() => setActiveTab('scheduling')}
+                className="cursor-pointer transform transition hover:scale-105"
+              >
+                <StatCard icon={Activity} label="Active Tasks" value={stats.activeAssignments.toLocaleString()} accent="from-indigo-500 to-purple-500" />
+              </div>
+              <div 
+                onClick={() => setActiveTab('assignments')}
+                className="cursor-pointer transform transition hover:scale-105"
+              >
+                <StatCard icon={ClipboardList} label="Pending Tasks" value={stats.pendingAssignments.toLocaleString()} accent="from-yellow-500 to-orange-500" />
+              </div>
             </section>
 
             {/* Secondary Stats */}

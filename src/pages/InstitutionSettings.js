@@ -19,6 +19,8 @@ import {
   AlertCircle,
   ArrowLeft
 } from 'lucide-react';
+import { getInstitutionSettings, updateInstitutionSettings } from '../api/institutionAPI';
+import { toast } from 'react-toastify';
 
 const InstitutionSettings = () => {
   const { userProfile, institutionId } = useUser();
@@ -58,56 +60,58 @@ const InstitutionSettings = () => {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      // TODO: Replace with actual API call to fetch institution settings
-      const mockSettings = {
-        name: 'St. Mary\'s Healthcare Center',
-        description: 'Leading healthcare provider specializing in elderly care and rehabilitation services.',
-        address: '123 Healthcare Drive',
-        city: 'Lagos',
-        state: 'Lagos State',
-        country: 'Nigeria',
-        postalCode: '100001',
-        phone: '+234 1 234 5678',
-        email: 'info@stmarys.com',
-        website: 'https://stmarys.com',
-        licenseNumber: 'HC-2024-001',
-        establishedDate: '2020-01-15',
-        specialties: ['Geriatric Care', 'Physical Therapy', 'Nursing Services', 'Mental Health'],
-        maxUsers: 150,
-        features: {
-          telemedicine: true,
-          aiAnalysis: true,
-          emergencyAlerts: true,
-          mobileApp: true,
-          apiAccess: false
-        },
-        branding: {
-          logo: null,
-          primaryColor: '#3B82F6',
-          secondaryColor: '#10B981'
+      if (!institutionId) {
+        toast.error('Institution ID not found');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const fetchedSettings = await getInstitutionSettings(institutionId);
+        
+        if (fetchedSettings) {
+          // Format establishedDate if it exists (it might be a Date object or string)
+          const formattedDate = fetchedSettings.establishedDate 
+            ? (fetchedSettings.establishedDate instanceof Date 
+                ? fetchedSettings.establishedDate.toISOString().split('T')[0]
+                : fetchedSettings.establishedDate.split('T')[0])
+            : '';
+          
+          setSettings({
+            ...fetchedSettings,
+            establishedDate: formattedDate
+          });
+        } else {
+          toast.warning('Settings not found. Using default values.');
         }
-      };
-      
-      setSettings(mockSettings);
-      setLoading(false);
+      } catch (error) {
+        console.error('Error fetching institution settings:', error);
+        toast.error('Failed to load institution settings');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchSettings();
-  }, []);
+    if (institutionId) {
+      fetchSettings();
+    } else {
+      setLoading(false);
+    }
+  }, [institutionId]);
 
   const handleSave = async () => {
+    if (!institutionId) {
+      toast.error('Institution ID not found');
+      return;
+    }
+
     setSaving(true);
     try {
-      // TODO: Implement save settings API call
-      console.log('Saving settings:', settings);
-      
-      // Mock delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      alert('Settings saved successfully!');
+      await updateInstitutionSettings(institutionId, settings);
+      toast.success('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Error saving settings. Please try again.');
+      toast.error('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }

@@ -4,21 +4,30 @@
 /**
  * Check for duplicate clients
  * @param {Object} clientData - Client data to check
- * @returns {Promise<Object>} - Result with isDuplicate and matches
+ * @param {string} institutionId - Institution ID to scope the search
+ * @returns {Promise<Object>} - Result with hasDuplicates, exactMatches, and similarMatches
  */
-export const checkForDuplicates = async (clientData) => {
+export const checkForDuplicates = async (clientData, institutionId) => {
   // TODO: Implement duplicate detection logic
-  console.warn('checkForDuplicates not yet fully implemented');
-  return { isDuplicate: false, matches: [] };
+  // For now, return no duplicates to allow registration
+  return { 
+    hasDuplicates: false, 
+    exactMatches: [],
+    similarMatches: []
+  };
 };
 
 /**
- * Should block registration based on duplicate check
- * @param {Object} clientData - Client data to check
- * @returns {Promise<boolean>} - Whether to block registration
+ * Should block registration based on duplicate check result
+ * @param {Object} duplicateCheckResult - Result from checkForDuplicates
+ * @returns {boolean} - Whether to block registration
  */
-export const shouldBlockRegistration = async (clientData) => {
-  const duplicateCheck = await checkForDuplicates(clientData);
-  return duplicateCheck.isDuplicate;
+export const shouldBlockRegistration = (duplicateCheckResult) => {
+  // Only block if there are exact matches (potential true duplicates)
+  // Similar matches are warnings but don't block
+  if (!duplicateCheckResult) return false;
+  return duplicateCheckResult.hasDuplicates && 
+         duplicateCheckResult.exactMatches && 
+         duplicateCheckResult.exactMatches.length > 0;
 };
 
