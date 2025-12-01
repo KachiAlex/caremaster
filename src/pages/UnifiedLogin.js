@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
+import { verifyPasswordSecure } from '../utils/securePasswordAuth';
+import rateLimiter from '../utils/rateLimiter';
 import { 
   Mail, 
   Lock, 
@@ -37,6 +39,27 @@ const UnifiedLogin = () => {
     setLoading(true);
 
     try {
+      // SECURITY FIX: Check rate limit before authentication
+      const rateLimitKey = email.toLowerCase().trim();
+      const rateLimitCheck = rateLimiter.checkLimit(rateLimitKey, {
+        maxAttempts: 5,
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        lockoutDuration: 30 * 60 * 1000 // 30 minutes
+      });
+      
+      if (!rateLimitCheck.allowed) {
+        if (rateLimitCheck.locked) {
+          const minutes = Math.ceil(rateLimitCheck.lockoutDuration / 60);
+          setError(`Account temporarily locked due to too many failed attempts. Please try again in ${minutes} minute(s).`);
+          setLoading(false);
+          return;
+        } else {
+          setError(`Too many login attempts. Please try again later.`);
+          setLoading(false);
+          return;
+        }
+      }
+      
       // First, try Firebase Auth login
       let userCredential;
       let user;
@@ -44,6 +67,8 @@ const UnifiedLogin = () => {
 
       try {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Reset rate limit on successful authentication
+        rateLimiter.reset(rateLimitKey);
         user = userCredential.user;
         
         // Get user profile from Firestore
@@ -63,16 +88,42 @@ const UnifiedLogin = () => {
           throw new Error('Invalid email or password');
         }
 
-        // Check password match
+        // SECURITY FIX: Use secure password verification instead of plain text comparison
         let customAuthUser = null;
-        querySnapshot.forEach((userDoc) => {
+        let passwordVerificationResult = null;
+        
+        for (const userDoc of querySnapshot.docs) {
           const data = userDoc.data();
-          if (data.password === password) {
-            customAuthUser = { uid: userDoc.id, ...data };
+          if (data.password) {
+            // Verify password securely
+            passwordVerificationResult = await verifyPasswordSecure(password, data.password);
+            
+            if (passwordVerificationResult === true || passwordVerificationResult?.verified === true) {
+              customAuthUser = { uid: userDoc.id, ...data };
+              
+              // If password needs migration, update it in Firestore
+              if (passwordVerificationResult?.needsMigration && passwordVerificationResult?.hashedPassword) {
+                try {
+                  await setDoc(doc(db, 'users', userDoc.id), {
+                    password: passwordVerificationResult.hashedPassword,
+                    passwordMigrated: true,
+                    passwordMigratedAt: new Date().toISOString()
+                  }, { merge: true });
+                  console.log('✅ Password migrated to secure hash');
+                } catch (migrationError) {
+                  console.error('Failed to migrate password:', migrationError);
+                  // Continue with login even if migration fails
+                }
+              }
+              // Reset rate limit on successful custom auth
+              rateLimiter.reset(rateLimitKey);
+              break; // Found matching user, exit loop
+            }
           }
-        });
+        }
 
         if (!customAuthUser) {
+          // Rate limit already checked, but don't increment on "user not found" to prevent enumeration
           throw new Error('Invalid email or password');
         }
 
@@ -194,8 +245,17 @@ const UnifiedLogin = () => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError(error.message || 'Login failed. Please check your credentials.');
-      toast.error(error.message || 'Login failed. Please check your credentials.');
+      
+      // SECURITY FIX: Handle rate limiting errors and prevent user enumeration
+      if (error.message && error.message.includes('locked')) {
+        setError(error.message);
+        toast.error(error.message);
+      } else {
+        // For other errors, show generic message to prevent user enumeration
+        const genericError = 'Invalid email or password. Please try again.';
+        setError(genericError);
+        toast.error(genericError);
+      }
     } finally {
       setLoading(false);
     }

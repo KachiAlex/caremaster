@@ -4,15 +4,35 @@ import logger from '../utils/logger';
 
 class EncryptionService {
   constructor() {
-    // Use environment variable for encryption key, fallback to generated key
-    this.encryptionKey = process.env.REACT_APP_ENCRYPTION_KEY || this.generateKey();
+    // SECURITY FIX: Require encryption key in production, no fallback
+    const envKey = process.env.REACT_APP_ENCRYPTION_KEY;
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    if (isProduction && !envKey) {
+      const error = new Error('REACT_APP_ENCRYPTION_KEY is required in production environment');
+      logger.error('CRITICAL: Encryption key missing in production', { error: error.message });
+      errorHandler.handleError(error, { context: 'encryption_service_init' });
+      throw error; // Fail fast in production if key is missing
+    }
+    
+    if (!envKey) {
+      // Development only: generate temporary key with warning
+      this.encryptionKey = this.generateKey();
+      logger.warn('⚠️ SECURITY WARNING: Using generated encryption key in development. Set REACT_APP_ENCRYPTION_KEY for production.');
+    } else {
+      // Validate key strength
+      if (!this.validateKeyStrength(envKey)) {
+        logger.warn('⚠️ Encryption key may be weak. Consider using a stronger key.');
+      }
+      this.encryptionKey = envKey;
+    }
+    
     this.algorithm = 'AES-256-CBC';
   }
 
-  // Generate a secure encryption key
+  // Generate a secure encryption key (development only)
   generateKey() {
     const key = CryptoJS.lib.WordArray.random(256/8).toString();
-    logger.warn('Using generated encryption key - set REACT_APP_ENCRYPTION_KEY in production');
     return key;
   }
 
@@ -151,17 +171,79 @@ class EncryptionService {
 
   // Validate encryption key strength
   validateKeyStrength(key) {
-    if (!key || key.length < 32) {
+    if (!key || typeof key !== 'string') {
       return false;
     }
     
-    // Check for sufficient entropy
+    // Minimum length requirement (256 bits = 32 bytes, but base64 encoded is longer)
+    if (key.length < 32) {
+      return false;
+    }
+    
+    // Check for sufficient entropy (at least 3 of 4 character types)
     const hasUpperCase = /[A-Z]/.test(key);
     const hasLowerCase = /[a-z]/.test(key);
     const hasNumbers = /\d/.test(key);
-    const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(key);
+    const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\\/]/.test(key);
     
-    return hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChars;
+    const entropyScore = [hasUpperCase, hasLowerCase, hasNumbers, hasSpecialChars].filter(Boolean).length;
+    
+    // Require at least 3 character types for strong key
+    return entropyScore >= 3;
+  }
+  
+  // Hash password securely (for custom auth - one-way hash)
+  hashPassword(password) {
+    try {
+      if (!password) {
+        throw new Error('Password is required');
+      }
+      
+      // Use PBKDF2 for password hashing (more secure than SHA)
+      const salt = CryptoJS.lib.WordArray.random(128/8);
+      const iterations = 10000; // Number of iterations
+      const keySize = 256/32; // Key size in words
+      
+      const hash = CryptoJS.PBKDF2(password, salt, {
+        keySize: keySize,
+        iterations: iterations
+      });
+      
+      // Return salt and hash combined (salt:hash format)
+      return salt.toString() + ':' + hash.toString();
+    } catch (error) {
+      logger.error('Password hashing failed', { error });
+      errorHandler.handleError(error, { context: 'password_hashing' });
+      throw new Error('Failed to hash password');
+    }
+  }
+  
+  // Verify password against hash
+  verifyPassword(password, hashWithSalt) {
+    try {
+      if (!password || !hashWithSalt) {
+        return false;
+      }
+      
+      const [saltString, hashString] = hashWithSalt.split(':');
+      if (!saltString || !hashString) {
+        return false;
+      }
+      
+      const salt = CryptoJS.enc.Hex.parse(saltString);
+      const iterations = 10000;
+      const keySize = 256/32;
+      
+      const hash = CryptoJS.PBKDF2(password, salt, {
+        keySize: keySize,
+        iterations: iterations
+      });
+      
+      return hash.toString() === hashString;
+    } catch (error) {
+      logger.error('Password verification failed', { error });
+      return false;
+    }
   }
 
   // Rotate encryption key (for key rotation)

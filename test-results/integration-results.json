@@ -1,0 +1,51 @@
+{
+  "numTotalTests": 18,
+  "numPassedTests": 17,
+  "numFailedTests": 1,
+  "testResults": [
+    {
+      "name": "authAPI.register",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "title": "authAPI.register",
+          "status": "passed",
+          "duration": 120
+        }
+      ]
+    },
+    {
+      "name": "authAPI.login",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "title": "authAPI.login",
+          "status": "passed",
+          "duration": 95
+        }
+      ]
+    },
+    {
+      "name": "patientsAPI.createClient",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "title": "patientsAPI.createClient",
+          "status": "passed",
+          "duration": 150
+        }
+      ]
+    },
+    {
+      "name": "patientsAPI.searchPatients",
+      "status": "failed",
+      "assertionResults": [
+        {
+          "title": "patientsAPI.searchPatients",
+          "status": "failed",
+          "duration": 200
+        }
+      ]
+    }
+  ]
+}

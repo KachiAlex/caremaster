@@ -26,6 +26,7 @@ import { toast } from 'react-toastify';
 import { checkForDuplicates, shouldBlockRegistration } from '../utils/clientDuplicateDetection';
 import { uploadClientDocument, validateFile } from '../utils/clientDocumentUpload';
 import { generateClientQRCodeData } from '../utils/clientQRCodeGenerator';
+import { validateFormInputs, sanitizeText, validateEmail, validatePhone, validateDate } from '../utils/inputValidation';
 import QRCode from 'qrcode.react';
 
 const CreateClientModal = ({ open, onClose, onSuccess }) => {
@@ -113,9 +114,33 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     }
   ];
 
+  // SECURITY FIX: Enhanced input handling with validation and sanitization
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Sanitize input based on field type
+    let sanitizedValue = value;
+    
+    if (name === 'email') {
+      const emailValidation = validateEmail(value);
+      if (value && !emailValidation.valid) {
+        // Show validation error but don't block input
+        // Error will be shown on submit
+      }
+      sanitizedValue = sanitizeText(value);
+    } else if (name === 'phone' || name === 'emergencyContactPhone' || name === 'physicianPhone') {
+      sanitizedValue = sanitizeText(value);
+      // Remove non-numeric characters except + for phone
+      sanitizedValue = sanitizedValue.replace(/[^\d+\-() ]/g, '');
+    } else if (name === 'notes' || name === 'address') {
+      // Allow more characters for text fields but sanitize HTML
+      sanitizedValue = sanitizeText(value);
+    } else {
+      // Standard sanitization for other fields
+      sanitizedValue = sanitizeText(value);
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
   };
 
   const addMedicalCondition = () => {
@@ -314,33 +339,53 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
     setLoading(true);
     try {
-      // Prepare Client data
+      // SECURITY FIX: Comprehensive validation and sanitization before submission
+      const validationSchema = {
+        name: { required: true, type: 'text', label: 'Name' },
+        email: { required: false, type: 'email', label: 'Email' },
+        phone: { required: true, type: 'phone', label: 'Phone' },
+        dateOfBirth: { required: true, type: 'date', label: 'Date of Birth' },
+        emergencyContactName: { required: true, type: 'text', label: 'Emergency Contact Name' },
+        emergencyContactPhone: { required: true, type: 'phone', label: 'Emergency Contact Phone' },
+        physicianPhone: { required: false, type: 'phone', label: 'Physician Phone' }
+      };
+      
+      const validation = validateFormInputs(formData, validationSchema);
+      
+      if (!validation.valid) {
+        const firstError = Object.values(validation.errors)[0];
+        toast.error(firstError);
+        setLoading(false);
+        return;
+      }
+      
+      // Prepare Client data with sanitized values
       const clientData = {
-        name: formData.name.trim(),
-        fullName: formData.fullName.trim() || formData.name.trim(),
-        email: formData.email.trim().toLowerCase() || null,
-        phone: formData.phone.trim(),
+        name: sanitizeText(formData.name.trim()),
+        fullName: sanitizeText(formData.fullName.trim() || formData.name.trim()),
+        email: formData.email ? sanitizeText(formData.email.trim().toLowerCase()) : null,
+        phone: sanitizeText(formData.phone.trim()),
         dateOfBirth: formData.dateOfBirth || null,
         gender: formData.gender || null,
-        address: formData.address.trim() || null,
-        city: formData.city.trim() || null,
-        state: formData.state.trim() || null,
-        zipCode: formData.zipCode.trim() || null,
-        emergencyContactName: formData.emergencyContactName.trim(),
-        emergencyContactPhone: formData.emergencyContactPhone.trim(),
-        emergencyContactRelationship: formData.emergencyContactRelationship.trim() || null,
-        medicalConditions: formData.medicalConditions,
-        medications: formData.medications,
-        allergies: formData.allergies,
+        address: formData.address ? sanitizeText(formData.address.trim()) : null,
+        city: formData.city ? sanitizeText(formData.city.trim()) : null,
+        state: formData.state ? sanitizeText(formData.state.trim()) : null,
+        zipCode: formData.zipCode ? sanitizeText(formData.zipCode.trim()) : null,
+        emergencyContactName: sanitizeText(formData.emergencyContactName.trim()),
+        emergencyContactPhone: sanitizeText(formData.emergencyContactPhone.trim()),
+        emergencyContactRelationship: formData.emergencyContactRelationship ? sanitizeText(formData.emergencyContactRelationship.trim()) : null,
+        medicalConditions: formData.medicalConditions.map(condition => sanitizeText(condition)),
+        medications: formData.medications.map(med => sanitizeText(med)),
+        allergies: formData.allergies.map(allergy => sanitizeText(allergy)),
         bloodType: formData.bloodType || null,
         genotype: formData.genotype || null,
         careLevel: formData.careLevel,
-        insuranceProvider: formData.insuranceProvider.trim() || null,
-        insurancePolicyNumber: formData.insurancePolicyNumber.trim() || null,
-        nationalId: formData.nationalId.trim() || nationalId.trim() || null,
-        primaryCarePhysician: formData.primaryCarePhysician.trim() || null,
-        physicianPhone: formData.physicianPhone.trim() || null,
-        notes: formData.notes.trim() || null,
+        insuranceProvider: formData.insuranceProvider ? sanitizeText(formData.insuranceProvider.trim()) : null,
+        insurancePolicyNumber: formData.insurancePolicyNumber ? sanitizeText(formData.insurancePolicyNumber.trim()) : null,
+        nationalId: formData.nationalId ? sanitizeText(formData.nationalId.trim()) : (nationalId ? sanitizeText(nationalId.trim()) : null),
+        primaryCarePhysician: formData.primaryCarePhysician ? sanitizeText(formData.primaryCarePhysician.trim()) : null,
+        physicianPhone: formData.physicianPhone ? sanitizeText(formData.physicianPhone.trim()) : null,
+        notes: formData.notes ? sanitizeText(formData.notes.trim()) : null,
         institutionId: institutionId || userProfile?.institutionId,
         userType: 'Client',
         type: 'Client',

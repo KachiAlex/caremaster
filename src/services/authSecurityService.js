@@ -24,6 +24,7 @@ class AuthSecurityService {
     this.loginAttempts = new Map();
     this.lockedAccounts = new Map();
     this.activeSessions = new Map();
+    this.sessionTimeouts = new Map(); // SECURITY FIX: Track session timeouts for cleanup
   }
 
   // Enhanced sign in with security measures
@@ -125,13 +126,13 @@ class AuthSecurityService {
     }
   }
 
-  // Secure sign out with session cleanup
+  // SECURITY FIX: Enhanced sign out with complete session cleanup
   async secureSignOut() {
     try {
       const user = auth.currentUser;
       if (user) {
-        // Clean up session data
-        this.activeSessions.delete(user.uid);
+        // Invalidate session completely
+        this.invalidateSession(user.uid);
         
         logger.info('Secure sign out', { userId: user.uid });
       }
@@ -242,19 +243,91 @@ class AuthSecurityService {
     }
   }
 
-  // Session management
+  // SECURITY FIX: Enhanced session management with proper timeout and invalidation
   setSessionTimeout(userId) {
-    setTimeout(() => {
+    // Clear any existing timeout for this user
+    const existingTimeout = this.sessionTimeouts?.get(userId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    
+    // Set new timeout
+    const timeoutId = setTimeout(() => {
       if (this.activeSessions.has(userId)) {
         this.activeSessions.delete(userId);
-        logger.info('Session expired', { userId });
+        logger.info('Session expired due to timeout', { userId, timeout: this.sessionTimeout });
         
         // Auto sign out if user is still active
         if (auth.currentUser?.uid === userId) {
+          logger.warn('Auto-signing out user due to session timeout', { userId });
           this.secureSignOut();
         }
       }
+      
+      // Clear timeout reference
+      if (this.sessionTimeouts) {
+        this.sessionTimeouts.delete(userId);
+      }
     }, this.sessionTimeout * 1000);
+    
+    // Store timeout reference for cleanup
+    if (!this.sessionTimeouts) {
+      this.sessionTimeouts = new Map();
+    }
+    this.sessionTimeouts.set(userId, timeoutId);
+    
+    // Set warning timeout (5 minutes before expiration)
+    const warningTime = Math.max(this.sessionTimeout - 300, 60) * 1000;
+    setTimeout(() => {
+      if (this.activeSessions.has(userId) && auth.currentUser?.uid === userId) {
+        logger.info('Session expiration warning', { userId, timeRemaining: 300 });
+        // Could dispatch event for UI to show warning
+        if (window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('sessionExpiring', { 
+            detail: { userId, timeRemaining: 300 } 
+          }));
+        }
+      }
+    }, warningTime);
+  }
+  
+  // SECURITY FIX: Invalidate session on logout
+  invalidateSession(userId) {
+    // Clear session data
+    this.activeSessions.delete(userId);
+    
+    // Clear timeout
+    if (this.sessionTimeouts?.has(userId)) {
+      clearTimeout(this.sessionTimeouts.get(userId));
+      this.sessionTimeouts.delete(userId);
+    }
+    
+    logger.info('Session invalidated', { userId });
+  }
+  
+  // SECURITY FIX: Validate session on each request
+  validateSession(userId) {
+    if (!this.activeSessions.has(userId)) {
+      logger.warn('Session validation failed - session not found', { userId });
+      return false;
+    }
+    
+    const sessionData = this.activeSessions.get(userId);
+    const now = Date.now();
+    const sessionAge = now - sessionData.loginTime;
+    
+    // Check if session has expired
+    if (sessionAge > this.sessionTimeout * 1000) {
+      logger.warn('Session validation failed - session expired', { userId, sessionAge });
+      this.invalidateSession(userId);
+      return false;
+    }
+    
+    // Update last activity time
+    sessionData.lastActivity = now;
+    this.activeSessions.set(userId, sessionData);
+    
+    return true;
   }
 
   // Check if session is valid

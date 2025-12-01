@@ -7,6 +7,8 @@ import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import authManager from '../utils/authManager';
 import sessionManager from '../utils/sessionManager';
+import { verifyPasswordSecure } from '../utils/securePasswordAuth';
+import rateLimiter from '../utils/rateLimiter';
 import { 
   Building2, 
   Mail, 
@@ -170,6 +172,27 @@ const InstitutionLogin = () => {
     setError('');
 
     try {
+      // SECURITY FIX: Check rate limit before authentication
+      const rateLimitKey = formData.email.toLowerCase().trim();
+      const rateLimitCheck = rateLimiter.checkLimit(rateLimitKey, {
+        maxAttempts: 5,
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        lockoutDuration: 30 * 60 * 1000 // 30 minutes
+      });
+      
+      if (!rateLimitCheck.allowed) {
+        if (rateLimitCheck.locked) {
+          const minutes = Math.ceil(rateLimitCheck.lockoutDuration / 60);
+          setError(`Account temporarily locked due to too many failed attempts. Please try again in ${minutes} minute(s).`);
+          setSubmitting(false);
+          return;
+        } else {
+          setError(`Too many login attempts. Please try again later.`);
+          setSubmitting(false);
+          return;
+        }
+      }
+      
       // Check if user exists and determine auth method
       console.log('🔍 Checking user for:', formData.email);
       const usersRef = collection(db, 'users');
@@ -217,23 +240,46 @@ const InstitutionLogin = () => {
       let shouldUseFirebaseAuth = isAdmin;
       
       if (!shouldUseFirebaseAuth && userDocData.password) {
-        // Try custom authentication for non-admin users with password in Firestore
-        const passwordMatches = userDocData.password === formData.password;
+        // SECURITY FIX: Use secure password verification instead of plain text comparison
         const institutionMatches = userDocData.institutionId === institutionId;
         
-        console.log('🔐 Custom auth check:', {
-          passwordMatches,
-          institutionMatches,
-          storedPassword: userDocData.password ? '***' : 'undefined',
-          inputPassword: formData.password ? '***' : 'undefined'
-        });
-        
-        if (passwordMatches && institutionMatches) {
-          customAuthUser = { uid: userDocId, ...userDocData };
-          console.log('✅ Custom auth successful!');
+        if (!institutionMatches) {
+          console.log('❌ Institution mismatch');
         } else {
-          if (!passwordMatches) console.log('❌ Password mismatch - will try Firebase Auth');
-          if (!institutionMatches) console.log('❌ Institution mismatch');
+          // Verify password securely
+          const passwordVerification = await verifyPasswordSecure(formData.password, userDocData.password);
+          
+          console.log('🔐 Custom auth check:', {
+            institutionMatches,
+            passwordVerified: passwordVerification === true || passwordVerification?.verified === true,
+            needsMigration: passwordVerification?.needsMigration === true
+          });
+          
+          if (passwordVerification === true || passwordVerification?.verified === true) {
+            customAuthUser = { uid: userDocId, ...userDocData };
+            
+            // If password needs migration, update it in Firestore
+            if (passwordVerification?.needsMigration && passwordVerification?.hashedPassword) {
+              try {
+                await setDoc(doc(db, 'users', userDocId), {
+                  password: passwordVerification.hashedPassword,
+                  passwordMigrated: true,
+                  passwordMigratedAt: new Date().toISOString()
+                }, { merge: true });
+                console.log('✅ Password migrated to secure hash');
+              } catch (migrationError) {
+                console.error('Failed to migrate password:', migrationError);
+                // Continue with login even if migration fails
+              }
+            }
+            
+            console.log('✅ Custom auth successful!');
+            // Reset rate limit on successful authentication
+            rateLimiter.reset(rateLimitKey);
+          } else {
+            console.log('❌ Password mismatch - will try Firebase Auth');
+            // Rate limit will be checked again for Firebase Auth attempt
+          }
         }
       } else if (isAdmin) {
         console.log('🔐 Admin user detected - will use Firebase Auth');

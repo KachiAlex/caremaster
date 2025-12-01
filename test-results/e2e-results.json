@@ -1,0 +1,52 @@
+{
+  "stats": {
+    "total": 12,
+    "passed": 11,
+    "failed": 1
+  },
+  "suites": [
+    {
+      "specs": [
+        {
+          "title": "User registration flow",
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 2500
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "User login flow",
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 1800
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Patient creation workflow",
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "failed",
+                  "duration": 5000
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

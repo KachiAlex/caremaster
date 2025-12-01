@@ -106,8 +106,9 @@ exports.createInstitutionUser = functions.https.onCall(async (data, context) => 
                 roles = ['caregiver'];
                 break;
         }
-        // Create standardized user document in Firestore
+        // Create standardized user document in Firestore with all required fields
         const userData = {
+            // Identity fields
             id: authUser.uid,
             uid: authUser.uid,
             firstName,
@@ -116,15 +117,21 @@ exports.createInstitutionUser = functions.https.onCall(async (data, context) => 
             displayName,
             email,
             phone: phone || '',
+            // REQUIRED: Role fields (all formats for compatibility)
             userType: effectiveUserType,
             type: effectiveUserType,
             role: effectiveUserType,
-            roles,
-            status: 'active',
-            isActive: true,
+            roles, // Array format required for filtering
+            // REQUIRED: Active status fields
+            status: 'active', // Can be 'active', 'pending', but NOT 'deleted'
+            isActive: true, // Must not be false
+            active: true, // Must not be false
+            // REQUIRED: Institution field
             institutionId,
+            // Account settings
             accountType: 'institution_created',
             onboardingComplete: false,
+            // Timestamps
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             joinDate: admin.firestore.FieldValue.serverTimestamp(),
             lastActive: admin.firestore.FieldValue.serverTimestamp(),

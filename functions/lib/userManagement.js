@@ -40,10 +40,36 @@ const getDb = () => admin.firestore();
 // Create user profile when user signs up
 const createUserProfile = async (user) => {
     try {
+        // CRITICAL: Check if user profile already exists (created by institution flow)
+        // This prevents overwriting pharmacist/caregiver/doctor/nurse roles with 'elderly'
+        const existingProfile = await getDb().collection('users').doc(user.uid).get();
+        if (existingProfile.exists) {
+            const existingData = existingProfile.data();
+            // NEVER overwrite non-elderly roles - these are institution staff
+            const staffRoles = ['pharmacist', 'caregiver', 'doctor', 'nurse', 'admin'];
+            if ((existingData === null || existingData === void 0 ? void 0 : existingData.userType) && staffRoles.includes(existingData.userType)) {
+                console.log(`User profile already exists with staff role: ${existingData.userType}, skipping default profile creation`);
+                return;
+            }
+            // Check roles array for staff roles
+            if (Array.isArray(existingData === null || existingData === void 0 ? void 0 : existingData.roles)) {
+                const hasStaffRole = existingData.roles.some((role) => staffRoles.includes(role));
+                if (hasStaffRole) {
+                    console.log(`User profile has staff role in roles array: ${existingData.roles}, skipping default profile creation`);
+                    return;
+                }
+            }
+            // If user has institutionId, they're institution staff - don't default to elderly
+            if (existingData === null || existingData === void 0 ? void 0 : existingData.institutionId) {
+                console.log(`User has institutionId, skipping elderly profile creation - institution flow will handle it`);
+                return;
+            }
+            // If it exists but is elderly and has no institutionId, it's a real client - proceed
+        }
         const userProfileData = {
             displayName: user.displayName || 'User',
             email: user.email || '',
-            userType: 'elderly', // Default type
+            userType: 'elderly', // Default type ONLY for standalone client signups
             dateOfBirth: '',
             phoneNumber: '',
             emergencyContactName: '',
@@ -52,8 +78,8 @@ const createUserProfile = async (user) => {
             allergies: [],
             medications: []
         };
-        // Create user profile in Firestore
-        await getDb().collection('users').doc(user.uid).set(Object.assign(Object.assign({}, userProfileData), { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp(), isActive: true }));
+        // Create user profile in Firestore (only if it doesn't exist or is truly a new client)
+        await getDb().collection('users').doc(user.uid).set(Object.assign(Object.assign({}, userProfileData), { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp(), isActive: true }), { merge: true }); // Use merge to not overwrite existing fields
         // Create elderly profile if user is elderly
         if (userProfileData.userType === 'elderly') {
             await getDb().collection('elderlyProfiles').doc(user.uid).set({

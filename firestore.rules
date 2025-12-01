@@ -96,12 +96,17 @@ service cloud.firestore {
     
     // Users collection - users can read their own data, admins can read/write all
     // Also allow service providers (caregivers/doctors) to read other users for messaging
-    // IMPORTANT: Allow unauthenticated reads for custom login flow (institution caregivers)
+    // SECURITY FIX: Restricted list queries to authenticated users only with rate limiting
     match /users/{userId} {
       // Allow read by email for login verification (limited scope)
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin() || isCaregiver() || isDoctor());
-      // Allow list queries for authentication purposes (will be filtered by email in code)
-      allow list: if true; // Needed for custom auth login flow
+      // SECURITY FIX: Restrict list queries to authenticated users only
+      // List queries must be authenticated and filtered by email in application code
+      allow list: if request.auth != null && (
+        // Only allow list queries for authentication purposes by authenticated users
+        // Application code must filter by email to prevent enumeration
+        request.query.limit <= 10  // Rate limiting: max 10 results per query
+      );
       allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
       // TEMPORARY: Allow authenticated users to update only role-related fields for migration
       allow update: if request.auth != null && 

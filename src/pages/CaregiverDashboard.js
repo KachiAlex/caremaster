@@ -1503,6 +1503,7 @@ const CaregiverDashboard = () => {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </div>
 
@@ -1545,6 +1546,7 @@ const CaregiverDashboard = () => {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </div>
 

@@ -8,6 +8,14 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:unit": "react-scripts test --testPathPattern=__tests__ --testPathIgnorePatterns=\"(e2e|integration|penetration)\" --watchAll=false",
+    "test:integration": "react-scripts test --testPathPattern=integration --watchAll=false",
+    "test:component": "react-scripts test --testPathPattern=component --watchAll=false",
+    "test:e2e": "playwright test",
+    "test:penetration": "node tests/penetration/runner.js",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:component && npm run test:e2e && npm run test:penetration",
+    "test:coverage": "jest --coverage",
+    "test:report": "node tests/generate-report.js",
     "eject": "react-scripts eject",
     "firebase:login": "firebase login",
     "firebase:init": "firebase init",
@@ -106,9 +114,14 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
-    "firebase-admin": "^13.5.0"
+    "@testing-library/user-event": "^14.5.1",
+    "docx": "^8.5.0",
+    "firebase-admin": "^13.5.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
   }
 }

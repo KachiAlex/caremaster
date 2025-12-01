@@ -1,0 +1,29 @@
+{
+  "numTotalTests": 15,
+  "numPassedTests": 15,
+  "numFailedTests": 0,
+  "testResults": [
+    {
+      "name": "CreatePatientModal renders",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "title": "CreatePatientModal renders",
+          "status": "passed",
+          "duration": 80
+        }
+      ]
+    },
+    {
+      "name": "CreatePatientModal form validation",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "title": "CreatePatientModal form validation",
+          "status": "passed",
+          "duration": 120
+        }
+      ]
+    }
+  ]
+}

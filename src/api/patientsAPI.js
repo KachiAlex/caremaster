@@ -527,16 +527,23 @@ export const getClientStats = async () => {
 };
 
 // Search patients/clients by ID, name, or email
+// SECURITY FIX: Added input validation and sanitization
 export const searchPatients = async (searchTerm) => {
   try {
     if (!searchTerm || searchTerm.trim() === '') {
       return [];
     }
     
+    // SECURITY: Sanitize and validate search term
+    const sanitizedTerm = searchTerm.trim().replace(/[<>]/g, '').substring(0, 100);
+    if (sanitizedTerm.length < 1) {
+      return [];
+    }
+    
     const clientsRef = collection(db, CLIENTS_COLLECTION);
     const querySnapshot = await getDocs(clientsRef);
     
-    const searchLower = searchTerm.toLowerCase().trim();
+    const searchLower = sanitizedTerm.toLowerCase();
     const results = [];
     
     querySnapshot.forEach((doc) => {
