@@ -305,7 +305,7 @@ export const assignSubscriptionToClient = async (clientId, planId, billingCycle 
         endDate.setMonth(endDate.getMonth() + 1);
     }
     
-    // Check if client already has a subscription
+    // Check if client already has a subscription (including cancelled ones)
     const existingSubscription = await getClientSubscription(clientId);
     
     const subscriptionData = {
@@ -321,21 +321,22 @@ export const assignSubscriptionToClient = async (clientId, planId, billingCycle 
       endDate: endDate,
       nextBillingDate: endDate,
       institutionId: plan.institutionId,
-      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
     
     if (existingSubscription) {
-      // Update existing subscription
+      // Update existing subscription (reactivate if cancelled)
       const subscriptionRef = doc(db, CLIENT_SUBSCRIPTIONS_COLLECTION, existingSubscription.id);
       await updateDoc(subscriptionRef, {
         ...subscriptionData,
         createdAt: existingSubscription.createdAt, // Preserve original creation date
+        cancelledAt: null, // Clear cancellation date if resubscribing
       });
       return existingSubscription.id;
     } else {
       // Create new subscription
       const subscriptionsRef = collection(db, CLIENT_SUBSCRIPTIONS_COLLECTION);
+      subscriptionData.createdAt = serverTimestamp();
       const docRef = await addDoc(subscriptionsRef, subscriptionData);
       return docRef.id;
     }
@@ -437,8 +438,9 @@ export const getBillingSettings = async (institutionId) => {
         currency: 'USD',
         enabledFrequencies: ['monthly', 'annual'],
         defaultFrequency: 'monthly',
-        taxRate: 0,
-        taxLabel: 'Tax',
+        taxRate: 0, // Legacy support
+        taxLabel: 'Tax', // Legacy support
+        taxes: [], // Array of tax objects: [{ id, label, rate, isActive }]
         invoicePrefix: 'INV',
         invoiceNotes: '',
         paymentTermsDays: 30,
@@ -452,6 +454,18 @@ export const getBillingSettings = async (institutionId) => {
     }
     
     const data = settingsDoc.data();
+    // Migrate legacy taxRate/taxLabel to taxes array if needed
+    if (!data.taxes && (data.taxRate || data.taxLabel)) {
+      data.taxes = [{
+        id: 'tax-1',
+        label: data.taxLabel || 'Tax',
+        rate: data.taxRate || 0,
+        isActive: true
+      }];
+    } else if (!data.taxes) {
+      data.taxes = [];
+    }
+    
     return {
       id: settingsDoc.id,
       ...data,

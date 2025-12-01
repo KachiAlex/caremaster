@@ -87,8 +87,9 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
     currency: 'USD',
     enabledFrequencies: ['monthly', 'annual'],
     defaultFrequency: 'monthly',
-    taxRate: 0,
-    taxLabel: 'Tax',
+    taxRate: 0, // Legacy support
+    taxLabel: 'Tax', // Legacy support
+    taxes: [], // Array of tax objects: [{ id, label, rate, isActive }]
     invoicePrefix: 'INV',
     invoiceNotes: '',
     paymentTermsDays: 30,
@@ -117,6 +118,21 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
       // Sort plans by sortOrder
       const sortedPlans = plansData.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
       setPlans(sortedPlans);
+      
+      // Ensure taxes array exists (migration from legacy taxRate/taxLabel)
+      if (!settingsData.taxes) {
+        if (settingsData.taxRate || settingsData.taxLabel) {
+          settingsData.taxes = [{
+            id: 'tax-1',
+            label: settingsData.taxLabel || 'Tax',
+            rate: settingsData.taxRate || 0,
+            isActive: true
+          }];
+        } else {
+          settingsData.taxes = [];
+        }
+      }
+      
       setSettings(settingsData);
       setSubscriptions(subscriptionsData);
       setClients(clientsData);
@@ -262,14 +278,14 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
     }
   };
 
-  // Get clients without active subscriptions
+  // Get clients without active subscriptions (includes cancelled subscriptions for resubscription)
   const getUnsubscribedClients = () => {
-    const subscribedClientIds = new Set(
+    const activeSubscribedClientIds = new Set(
       subscriptions
         .filter(s => s.status === 'active')
         .map(s => s.clientId)
     );
-    return clients.filter(c => !subscribedClientIds.has(c.id));
+    return clients.filter(c => !activeSubscribedClientIds.has(c.id));
   };
 
   // Filter subscriptions by search term
@@ -808,33 +824,109 @@ const BillingPlanConfiguration = ({ institutionId: propInstitutionId }) => {
                 <Settings className="h-5 w-5 text-blue-600" />
                 Tax & Invoice Settings
               </h3>
+              
+              {/* Multiple Taxes Management */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Taxes
+                  </label>
+                  <button
+                    onClick={() => {
+                      const newTax = {
+                        id: `tax-${Date.now()}`,
+                        label: 'Tax',
+                        rate: 0,
+                        isActive: true
+                      };
+                      setSettings({
+                        ...settings,
+                        taxes: [...(settings.taxes || []), newTax]
+                      });
+                    }}
+                    className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Tax
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  {(!settings.taxes || settings.taxes.length === 0) ? (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-500">No taxes configured. Click "Add Tax" to create one.</p>
+                    </div>
+                  ) : (
+                    settings.taxes.map((tax, index) => (
+                      <div key={tax.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Tax Label
+                            </label>
+                            <input
+                              type="text"
+                              value={tax.label}
+                              onChange={(e) => {
+                                const newTaxes = [...settings.taxes];
+                                newTaxes[index].label = e.target.value;
+                                setSettings({ ...settings, taxes: newTaxes });
+                              }}
+                              placeholder="e.g., VAT, GST, Sales Tax"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Tax Rate (%)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              value={tax.rate}
+                              onChange={(e) => {
+                                const newTaxes = [...settings.taxes];
+                                newTaxes[index].rate = parseFloat(e.target.value) || 0;
+                                setSettings({ ...settings, taxes: newTaxes });
+                              }}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={tax.isActive !== false}
+                              onChange={(e) => {
+                                const newTaxes = [...settings.taxes];
+                                newTaxes[index].isActive = e.target.checked;
+                                setSettings({ ...settings, taxes: newTaxes });
+                              }}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-xs text-gray-600">Active</span>
+                          </label>
+                          <button
+                            onClick={() => {
+                              const newTaxes = settings.taxes.filter((_, i) => i !== index);
+                              setSettings({ ...settings, taxes: newTaxes });
+                            }}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete tax"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tax Rate (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={settings.taxRate}
-                    onChange={(e) => setSettings({ ...settings, taxRate: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tax Label
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.taxLabel}
-                    onChange={(e) => setSettings({ ...settings, taxLabel: e.target.value })}
-                    placeholder="e.g., VAT, GST, Tax"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Invoice Prefix

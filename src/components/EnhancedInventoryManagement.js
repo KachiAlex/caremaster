@@ -43,9 +43,11 @@ import {
   GRN_STATUS
 } from '../api/enhancedInventoryAPI';
 import { inventoryAPI } from '../api/inventoryAPI';
+import { getInstitutionCurrencySettings } from '../utils/currencyFormatter';
+import { X } from 'lucide-react';
 
 const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
-  const { institutionId: contextInstitutionId } = useUser();
+  const { institutionId: contextInstitutionId, user, userProfile } = useUser();
   const institutionId = propInstitutionId || contextInstitutionId;
 
   const [activeTab, setActiveTab] = useState('suppliers');
@@ -98,6 +100,15 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
 
   // Inventory items for PO/GRN
   const [inventoryItems, setInventoryItems] = useState([]);
+  const [currencySettings, setCurrencySettings] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [newPOItem, setNewPOItem] = useState({
+    inventoryId: '',
+    name: '',
+    quantity: 1,
+    unitPrice: 0,
+    unit: 'piece'
+  });
 
   useEffect(() => {
     if (institutionId) {
@@ -140,10 +151,20 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
           break;
       }
 
-      // Load inventory items for PO/GRN
+      // Load inventory items and suppliers for PO/GRN
       if (activeTab === 'purchase-orders' || activeTab === 'grn') {
-        const items = await inventoryAPI.getItemsByInstitution(institutionId);
+        const [items, suppliersData] = await Promise.all([
+          inventoryAPI.getItemsByInstitution(institutionId),
+          supplierAPI.getSuppliersByInstitution(institutionId)
+        ]);
         setInventoryItems(items);
+        setSuppliers(suppliersData);
+      }
+
+      // Load currency settings
+      if (institutionId) {
+        const currency = await getInstitutionCurrencySettings(institutionId);
+        setCurrencySettings(currency);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -205,11 +226,37 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
 
   // Purchase Order handlers
   const handleSavePO = async () => {
+    // Validation
+    if (!poForm.supplierId) {
+      toast.error('Please select a supplier');
+      return;
+    }
+
+    if (!poForm.items || poForm.items.length === 0) {
+      toast.error('Please add at least one item to the purchase order');
+      return;
+    }
+
+    // Validate all items
+    const invalidItems = poForm.items.filter(item => 
+      !item.inventoryId && !item.name || 
+      !item.quantity || item.quantity <= 0 || 
+      !item.unitPrice || item.unitPrice <= 0
+    );
+
+    if (invalidItems.length > 0) {
+      toast.error('Please complete all item details (name, quantity, and unit price)');
+      return;
+    }
+
     try {
+      setSaving(true);
+      const userId = user?.uid || userProfile?.id || userProfile?.uid;
+
       if (selectedPO) {
         await purchaseOrderAPI.updatePurchaseOrderStatus(selectedPO.id, poForm.status || PURCHASE_ORDER_STATUS.PENDING, {
           items: poForm.items,
-          expectedDeliveryDate: poForm.expectedDeliveryDate,
+          expectedDeliveryDate: poForm.expectedDeliveryDate ? new Date(poForm.expectedDeliveryDate) : null,
           notes: poForm.notes
         });
         toast.success('Purchase order updated successfully');
@@ -217,7 +264,9 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
         await purchaseOrderAPI.createPurchaseOrder({
           ...poForm,
           institutionId,
-          createdBy: 'current-user-id' // Replace with actual user ID
+          createdBy: userId,
+          expectedDeliveryDate: poForm.expectedDeliveryDate ? new Date(poForm.expectedDeliveryDate) : null,
+          supplierName: suppliers.find(s => s.id === poForm.supplierId)?.name || ''
         });
         toast.success('Purchase order created successfully');
       }
@@ -227,18 +276,21 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
       loadData();
     } catch (error) {
       console.error('Error saving purchase order:', error);
-      toast.error('Failed to save purchase order');
+      toast.error(`Failed to save purchase order: ${error.message || 'Unknown error'}`);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleApprovePO = async (poId) => {
     try {
-      await purchaseOrderAPI.approvePurchaseOrder(poId, 'current-user-id');
+      const userId = user?.uid || userProfile?.id || userProfile?.uid;
+      await purchaseOrderAPI.approvePurchaseOrder(poId, userId);
       toast.success('Purchase order approved');
       loadData();
     } catch (error) {
       console.error('Error approving purchase order:', error);
-      toast.error('Failed to approve purchase order');
+      toast.error(`Failed to approve purchase order: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -252,25 +304,87 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
   };
 
   const addPOItem = () => {
+    if (!newPOItem.inventoryId && !newPOItem.name) {
+      toast.error('Please select an inventory item or enter item name');
+      return;
+    }
+
+    const selectedItem = inventoryItems.find(item => item.id === newPOItem.inventoryId);
+    const itemToAdd = {
+      inventoryId: newPOItem.inventoryId || null,
+      name: selectedItem?.name || newPOItem.name,
+      quantity: parseFloat(newPOItem.quantity) || 1,
+      unitPrice: parseFloat(newPOItem.unitPrice) || (selectedItem?.unitPrice || 0),
+      unit: selectedItem?.unit || newPOItem.unit || 'piece'
+    };
+
     setPOForm(prev => ({
       ...prev,
-      items: [...prev.items, {
-        inventoryId: '',
-        name: '',
-        quantity: 1,
-        unitPrice: 0,
-        unit: 'piece'
-      }]
+      items: [...prev.items, itemToAdd]
     }));
+
+    // Reset new item form
+    setNewPOItem({
+      inventoryId: '',
+      name: '',
+      quantity: 1,
+      unitPrice: 0,
+      unit: 'piece'
+    });
+  };
+
+  const removePOItem = (index) => {
+    setPOForm(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updatePOItem = (index, field, value) => {
+    setPOForm(prev => ({
+      ...prev,
+      items: prev.items.map((item, i) => {
+        if (i === index) {
+          const updated = { ...item, [field]: value };
+          if (field === 'quantity' || field === 'unitPrice') {
+            updated.total = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.unitPrice) || 0);
+          }
+          return updated;
+        }
+        return item;
+      })
+    }));
+  };
+
+  const formatCurrency = (amount) => {
+    if (!currencySettings) {
+      return `$${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    const { currency = 'USD', currencySymbol = '$', currencyPosition = 'before' } = currencySettings;
+    const formatted = (amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return currencyPosition === 'after' ? `${formatted} ${currencySymbol}` : `${currencySymbol}${formatted}`;
   };
 
   // GRN handlers
   const handleSaveGRN = async () => {
+    if (!grnForm.purchaseOrderId && !grnForm.supplierId) {
+      toast.error('Please select a purchase order or supplier');
+      return;
+    }
+
+    if (!grnForm.items || grnForm.items.length === 0) {
+      toast.error('Please add at least one item');
+      return;
+    }
+
     try {
+      setSaving(true);
+      const userId = user?.uid || userProfile?.id || userProfile?.uid;
       await grnAPI.createGRN({
         ...grnForm,
         institutionId,
-        receivedBy: 'current-user-id' // Replace with actual user ID
+        receivedBy: userId,
+        receivedDate: grnForm.receivedDate ? new Date(grnForm.receivedDate) : new Date()
       });
       toast.success('Goods received note created successfully');
       setShowGRNModal(false);
@@ -278,7 +392,9 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
       loadData();
     } catch (error) {
       console.error('Error saving GRN:', error);
-      toast.error('Failed to save GRN');
+      toast.error(`Failed to save GRN: ${error.message || 'Unknown error'}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -413,9 +529,19 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Purchase Orders</h3>
             <button
-              onClick={() => {
+              onClick={async () => {
                 setSelectedPO(null);
                 resetPOForm();
+                // Load suppliers if not already loaded
+                if (suppliers.length === 0 && institutionId) {
+                  try {
+                    const suppliersData = await supplierAPI.getSuppliersByInstitution(institutionId);
+                    setSuppliers(suppliersData);
+                  } catch (error) {
+                    console.error('Error loading suppliers:', error);
+                    toast.error('Failed to load suppliers');
+                  }
+                }
                 setShowPOModal(true);
               }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
@@ -441,7 +567,9 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
                 {purchaseOrders.map(po => (
                   <tr key={po.id} className="border-b">
                     <td className="px-4 py-2 font-medium">{po.poNumber}</td>
-                    <td className="px-4 py-2">{po.supplierId}</td>
+                    <td className="px-4 py-2">
+                      {suppliers.find(s => s.id === po.supplierId)?.name || po.supplierName || po.supplierId || 'N/A'}
+                    </td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-1 rounded text-xs ${
                         po.status === PURCHASE_ORDER_STATUS.APPROVED ? 'bg-green-100 text-green-800' :
@@ -452,7 +580,7 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
                         {po.status}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-right">₦{po.totalAmount?.toLocaleString() || 0}</td>
+                    <td className="px-4 py-2 text-right">{formatCurrency(po.totalAmount || 0)}</td>
                     <td className="px-4 py-2">
                       {po.expectedDeliveryDate ? new Date(po.expectedDeliveryDate).toLocaleDateString() : 'N/A'}
                     </td>
@@ -466,9 +594,29 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
                         </button>
                       )}
                       <button
-                        onClick={() => {
+                        onClick={async () => {
+                          // Load suppliers if not already loaded
+                          if (suppliers.length === 0 && institutionId) {
+                            try {
+                              const suppliersData = await supplierAPI.getSuppliersByInstitution(institutionId);
+                              setSuppliers(suppliersData);
+                            } catch (error) {
+                              console.error('Error loading suppliers:', error);
+                            }
+                          }
+                          
+                          // Format date for form input
+                          const formattedPO = {
+                            ...po,
+                            expectedDeliveryDate: po.expectedDeliveryDate 
+                              ? (po.expectedDeliveryDate instanceof Date 
+                                  ? po.expectedDeliveryDate.toISOString().split('T')[0]
+                                  : new Date(po.expectedDeliveryDate).toISOString().split('T')[0])
+                              : ''
+                          };
+                          
                           setSelectedPO(po);
-                          setPOForm(po);
+                          setPOForm(formattedPO);
                           setShowPOModal(true);
                         }}
                         className="text-blue-600 hover:text-blue-700"
@@ -663,6 +811,270 @@ const EnhancedInventoryManagement = ({ institutionId: propInstitutionId }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Purchase Order Modal */}
+      {showPOModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {selectedPO ? 'View/Edit Purchase Order' : 'Create New Purchase Order'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowPOModal(false);
+                  setSelectedPO(null);
+                  resetPOForm();
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Supplier Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Supplier *
+                </label>
+                <select
+                  value={poForm.supplierId}
+                  onChange={(e) => setPOForm(prev => ({ ...prev, supplierId: e.target.value }))}
+                  disabled={!!selectedPO}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  required
+                >
+                  <option value="">Select a supplier</option>
+                  {suppliers.map(supplier => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Expected Delivery Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Expected Delivery Date
+                </label>
+                <input
+                  type="date"
+                  value={poForm.expectedDeliveryDate || ''}
+                  onChange={(e) => setPOForm(prev => ({ ...prev, expectedDeliveryDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Items Section */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-md font-semibold text-gray-900">Items</h4>
+                  {!selectedPO && (
+                    <button
+                      onClick={addPOItem}
+                      className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Item
+                    </button>
+                  )}
+                </div>
+
+                {/* Add New Item Form */}
+                {!selectedPO && (
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="grid grid-cols-12 gap-2">
+                      <div className="col-span-4">
+                        <select
+                          value={newPOItem.inventoryId}
+                          onChange={(e) => {
+                            const selected = inventoryItems.find(item => item.id === e.target.value);
+                            setNewPOItem(prev => ({
+                              ...prev,
+                              inventoryId: e.target.value,
+                              name: selected?.name || prev.name,
+                              unitPrice: selected?.unitPrice || prev.unitPrice,
+                              unit: selected?.unit || prev.unit
+                            }));
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                          <option value="">Select from inventory</option>
+                          {inventoryItems.map(item => (
+                            <option key={item.id} value={item.id}>
+                              {item.name} - Stock: {item.quantity || 0}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="text"
+                          placeholder="Or enter item name"
+                          value={newPOItem.name}
+                          onChange={(e) => setNewPOItem(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          placeholder="Qty"
+                          value={newPOItem.quantity}
+                          onChange={(e) => setNewPOItem(prev => ({ ...prev, quantity: e.target.value }))}
+                          min="1"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          placeholder="Unit Price"
+                          value={newPOItem.unitPrice}
+                          onChange={(e) => setNewPOItem(prev => ({ ...prev, unitPrice: e.target.value }))}
+                          min="0"
+                          step="0.01"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <button
+                          onClick={addPOItem}
+                          className="w-full h-full bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Items Table */}
+                {poForm.items && poForm.items.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border border-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left">Item Name</th>
+                          <th className="px-4 py-2 text-center">Quantity</th>
+                          <th className="px-4 py-2 text-center">Unit</th>
+                          <th className="px-4 py-2 text-right">Unit Price</th>
+                          <th className="px-4 py-2 text-right">Total</th>
+                          {!selectedPO && <th className="px-4 py-2 text-center">Action</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {poForm.items.map((item, index) => (
+                          <tr key={index} className="border-b">
+                            <td className="px-4 py-2">{item.name}</td>
+                            <td className="px-4 py-2 text-center">
+                              {selectedPO ? (
+                                item.quantity
+                              ) : (
+                                <input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => updatePOItem(index, 'quantity', e.target.value)}
+                                  min="1"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                                />
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-center">{item.unit || 'piece'}</td>
+                            <td className="px-4 py-2 text-right">
+                              {selectedPO ? (
+                                formatCurrency(item.unitPrice)
+                              ) : (
+                                <input
+                                  type="number"
+                                  value={item.unitPrice}
+                                  onChange={(e) => updatePOItem(index, 'unitPrice', e.target.value)}
+                                  min="0"
+                                  step="0.01"
+                                  className="w-24 px-2 py-1 border border-gray-300 rounded text-right"
+                                />
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-right font-medium">
+                              {formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}
+                            </td>
+                            {!selectedPO && (
+                              <td className="px-4 py-2 text-center">
+                                <button
+                                  onClick={() => removePOItem(index)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50">
+                        <tr>
+                          <td colSpan={selectedPO ? 4 : 5} className="px-4 py-2 text-right font-semibold">
+                            Total Amount:
+                          </td>
+                          <td className="px-4 py-2 text-right font-bold text-lg">
+                            {formatCurrency(
+                              poForm.items.reduce((sum, item) => 
+                                sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0
+                              )
+                            )}
+                          </td>
+                          {!selectedPO && <td></td>}
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No items added yet</p>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notes
+                </label>
+                <textarea
+                  value={poForm.notes || ''}
+                  onChange={(e) => setPOForm(prev => ({ ...prev, notes: e.target.value }))}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Additional notes or instructions..."
+                />
+              </div>
+
+              {/* Action Buttons */}
+              {!selectedPO && (
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <button
+                    onClick={() => {
+                      setShowPOModal(false);
+                      setSelectedPO(null);
+                      resetPOForm();
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSavePO}
+                    disabled={saving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Saving...' : 'Save Purchase Order'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

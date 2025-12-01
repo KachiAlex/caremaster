@@ -104,3 +104,13 @@ export const formatCurrencyWithPosition = (amount, symbol, position = 'before') 
   return `${symbol}${formattedAmount}`;
 };
 
+/**
+ * Format currency amount (alias for formatCurrency for backward compatibility)
+ * @param {number} amount - Amount to format
+ * @param {Object} institutionSettings - Institution settings object with currency info
+ * @returns {string} Formatted currency string
+ */
+export const formatCurrencyAmount = (amount, institutionSettings = null) => {
+  return formatCurrency(amount, institutionSettings);
+};
+
