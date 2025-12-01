@@ -481,7 +481,29 @@ export const assignClientToDoctor = async (clientId, doctorId) => {
 // Create new Client (hospital operations)
 export const createClient = async (clientData = {}, registeredBy = null) => {
   try {
-    const clientId = await generateClientId(clientData.institutionId || null);
+    // Validate required fields before proceeding
+    if (!clientData.name || !clientData.name.trim()) {
+      throw new Error('Client name is required');
+    }
+    
+    if (!clientData.phone || !clientData.phone.trim()) {
+      throw new Error('Client phone number is required');
+    }
+
+    // Validate institutionId is present
+    if (!clientData.institutionId) {
+      throw new Error('Institution ID is required for client registration');
+    }
+
+    // Generate client ID
+    let clientId;
+    try {
+      clientId = await generateClientId(clientData.institutionId || null);
+    } catch (idError) {
+      console.error('Error generating client ID:', idError);
+      throw new Error('Failed to generate client ID. Please try again.');
+    }
+
     const clientsRef = collection(db, CLIENTS_COLLECTION);
     
     // SECURITY FIX: Encrypt sensitive patient data before storing
@@ -499,10 +521,27 @@ export const createClient = async (clientData = {}, registeredBy = null) => {
       registeredBy: registeredBy?.id || registeredBy?.uid || null,
     };
 
-    const docRef = await addDoc(clientsRef, newPatient);
-    console.log(`✅ Client created with ID: ${clientId} (doc: ${docRef.id})`);
+    // Create client document in Firestore
+    let docRef;
+    try {
+      docRef = await addDoc(clientsRef, newPatient);
+      console.log(`✅ Client created with ID: ${clientId} (doc: ${docRef.id})`);
+    } catch (firestoreError) {
+      console.error('Firestore error creating client:', firestoreError);
+      
+      // Provide more specific error messages
+      if (firestoreError.code === 'permission-denied') {
+        throw new Error('Permission denied. Please ensure you have admin access to create clients.');
+      } else if (firestoreError.code === 'unavailable') {
+        throw new Error('Service temporarily unavailable. Please check your internet connection and try again.');
+      } else if (firestoreError.code === 'deadline-exceeded') {
+        throw new Error('Request timeout. Please try again.');
+      } else {
+        throw new Error(`Failed to create client: ${firestoreError.message || 'Unknown error'}`);
+      }
+    }
 
-    // Log Client registration (non-blocking)
+    // Log Client registration (non-blocking - don't fail if logging fails)
     if (registeredBy) {
       try {
         const registrationDetails = {
@@ -511,7 +550,7 @@ export const createClient = async (clientData = {}, registeredBy = null) => {
         };
         await logPatientRegistration(clientId, registeredBy, registrationDetails);
       } catch (logError) {
-        console.error('Error logging Client registration:', logError);
+        console.warn('Error logging Client registration (non-critical):', logError);
         // Do not fail client creation if logging fails
       }
     }
@@ -519,7 +558,17 @@ export const createClient = async (clientData = {}, registeredBy = null) => {
     return { id: docRef.id, clientId };
   } catch (error) {
     console.error('Error creating Client:', error);
-    throw error;
+    
+    // Re-throw with enhanced error message if it's our custom error
+    if (error.message && error.message.includes('required') || error.message.includes('Permission denied') || error.message.includes('Service temporarily')) {
+      throw error;
+    }
+    
+    // For unknown errors, provide a user-friendly message
+    const enhancedError = new Error(error.message || 'Failed to create client. Please try again.');
+    enhancedError.code = error.code;
+    enhancedError.originalError = error;
+    throw enhancedError;
   }
 };
 

@@ -122,7 +122,16 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     // Sanitize input based on field type
     let sanitizedValue = value;
     
-    if (name === 'email') {
+    // Name fields - allow spaces and preserve formatting
+    if (name === 'name' || name === 'fullName' || name === 'emergencyContactName' || name === 'primaryCarePhysician') {
+      // Remove dangerous characters but preserve spaces
+      sanitizedValue = value.replace(/[\x00-\x1F\x7F]/g, ''); // Remove control characters
+      sanitizedValue = sanitizedValue.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ''); // Remove script tags
+      sanitizedValue = sanitizedValue.replace(/on\w+\s*=\s*["'][^"']*["']/gi, ''); // Remove event handlers
+      sanitizedValue = sanitizedValue.replace(/javascript:/gi, ''); // Remove javascript:
+      sanitizedValue = sanitizedValue.replace(/data:text\/html/gi, ''); // Remove data URIs
+      // Don't trim - allow spaces in names
+    } else if (name === 'email') {
       const emailValidation = validateEmail(value);
       if (value && !emailValidation.valid) {
         // Show validation error but don't block input
@@ -358,6 +367,14 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
     setLoading(true);
     try {
+      // Validate institutionId is present
+      const effectiveInstitutionId = institutionId || userProfile?.institutionId;
+      if (!effectiveInstitutionId) {
+        toast.error('Institution ID is required. Please ensure you are logged in with an institution account.');
+        setLoading(false);
+        return;
+      }
+
       // SECURITY FIX: Comprehensive validation and sanitization before submission
       const validationSchema = {
         name: { required: true, type: 'text', label: 'Name' },
@@ -405,18 +422,48 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         primaryCarePhysician: formData.primaryCarePhysician ? sanitizeText(formData.primaryCarePhysician.trim()) : null,
         physicianPhone: formData.physicianPhone ? sanitizeText(formData.physicianPhone.trim()) : null,
         notes: formData.notes ? sanitizeText(formData.notes.trim()) : null,
-        institutionId: institutionId || userProfile?.institutionId,
+        institutionId: effectiveInstitutionId,
         userType: 'Client',
         type: 'Client',
         status: 'active'
       };
 
-      const result = await createClient(clientData, userProfile);
-      setCreatedPatientId(result.clientId);
+      // Create client with improved error handling
+      let result;
+      try {
+        result = await createClient(clientData, userProfile);
+        setCreatedPatientId(result.clientId);
+      } catch (createError) {
+        // Provide specific error messages based on error type
+        let errorMessage = 'Failed to create client. Please try again.';
+        
+        if (createError.code === 'permission-denied' || createError.code === 'PERMISSION_DENIED') {
+          errorMessage = 'Permission denied. Please ensure you have admin access to create clients.';
+        } else if (createError.code === 'unavailable') {
+          errorMessage = 'Service temporarily unavailable. Please check your internet connection and try again.';
+        } else if (createError.code === 'deadline-exceeded') {
+          errorMessage = 'Request timeout. Please try again.';
+        } else if (createError.message) {
+          errorMessage = `Failed to create client: ${createError.message}`;
+        }
+        
+        toast.error(errorMessage, { autoClose: 6000 });
+        console.error('Client creation error:', createError);
+        setLoading(false);
+        return;
+      }
       
-      // Upload documents after Client creation
+      // Upload documents after Client creation (non-blocking - don't fail if upload fails)
       if (Object.values(uploadedDocuments).some(doc => doc !== null)) {
-        await uploadDocumentsAfterRegistration(result.clientId);
+        try {
+          await uploadDocumentsAfterRegistration(result.clientId);
+        } catch (uploadError) {
+          // Log upload error but don't fail the entire operation
+          console.warn('Document upload failed (client was created successfully):', uploadError);
+          toast.warning('Client created successfully, but some documents could not be uploaded. You can upload them later.', {
+            autoClose: 6000
+          });
+        }
       }
       
       toast.success(
@@ -477,8 +524,25 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         setCreatedPatientId(null);
       }, 2000);
     } catch (error) {
-      console.error('Error creating Client:', error);
-      toast.error(`Failed to create Client: ${error.message || 'Unknown error'}`);
+      console.error('Unexpected error creating Client:', error);
+      
+      // Provide user-friendly error messages
+      let errorMessage = 'An unexpected error occurred while creating the client.';
+      
+      if (error.code === 'permission-denied' || error.code === 'PERMISSION_DENIED') {
+        errorMessage = 'Permission denied. Please ensure you have admin access. If the problem persists, try logging out and back in.';
+      } else if (error.code === 'unavailable') {
+        errorMessage = 'Service temporarily unavailable. Please check your internet connection and try again.';
+      } else if (error.code === 'deadline-exceeded') {
+        errorMessage = 'Request timed out. Please try again.';
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      toast.error(errorMessage, { 
+        autoClose: 8000,
+        position: 'top-center'
+      });
     } finally {
       setLoading(false);
     }

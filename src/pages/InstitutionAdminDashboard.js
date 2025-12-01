@@ -907,14 +907,46 @@ const InstitutionAdminDashboard = () => {
     try {
       // Use effectiveInstitutionId which includes URL parameter
       const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
+      
+      // Validate institutionId before proceeding
+      if (!instId) {
+        toast.error('Institution ID is required. Please ensure you are logged in with an institution account.', {
+          autoClose: 6000
+        });
+        return;
+      }
+
       const newClient = {
         ...clientData,
         institutionId: instId,
         status: 'active'
       };
 
-      const clientId = await createClient(newClient);
-      console.log('✅ Client created with ID:', clientId);
+      let result;
+      try {
+        result = await createClient(newClient, userProfile);
+        console.log('✅ Client created with ID:', result);
+      } catch (createError) {
+        // Provide specific error messages based on error type
+        let errorMessage = 'Failed to create client. Please try again.';
+        
+        if (createError.code === 'permission-denied' || createError.code === 'PERMISSION_DENIED') {
+          errorMessage = 'Permission denied. Please ensure you have admin access to create clients. If the problem persists, try logging out and back in.';
+        } else if (createError.code === 'unavailable') {
+          errorMessage = 'Service temporarily unavailable. Please check your internet connection and try again.';
+        } else if (createError.code === 'deadline-exceeded') {
+          errorMessage = 'Request timeout. Please try again.';
+        } else if (createError.message) {
+          errorMessage = createError.message;
+        }
+        
+        toast.error(errorMessage, { 
+          autoClose: 8000,
+          position: 'top-center'
+        });
+        console.error('Client creation error:', createError);
+        return;
+      }
       
       setShowCreatePatientModal(false);
       toast.success('Client added successfully', { 
@@ -923,10 +955,18 @@ const InstitutionAdminDashboard = () => {
       });
       
       // Reload dashboard data to get the newly created client
-      await loadDashboardData();
+      try {
+        await loadDashboardData();
+      } catch (reloadError) {
+        console.warn('Error reloading dashboard data:', reloadError);
+        // Don't show error to user - client was created successfully
+      }
     } catch (error) {
-      console.error('Error adding client:', error);
-      toast.error(error.message || 'Failed to add Client');
+      console.error('Unexpected error adding client:', error);
+      toast.error(error.message || 'An unexpected error occurred. Please try again.', {
+        autoClose: 8000,
+        position: 'top-center'
+      });
     }
   };
 
