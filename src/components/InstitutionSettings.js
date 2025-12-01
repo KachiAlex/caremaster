@@ -51,6 +51,7 @@ const InstitutionSettings = ({ institutionId }) => {
     currency: 'USD',
     currencySymbol: '$',
     currencyPosition: 'before', // before or after
+    taxRate: 0, // Default tax rate (percentage)
     timezone: 'America/New_York',
     dateFormat: 'MM/DD/YYYY',
     timeFormat: '12h',
@@ -141,6 +142,7 @@ const InstitutionSettings = ({ institutionId }) => {
           currency: data.currency || 'USD',
           currencySymbol: data.currencySymbol || '$',
           currencyPosition: data.currencyPosition || 'before',
+          taxRate: data.taxRate !== undefined ? data.taxRate : 0,
           timezone: data.timezone || 'America/New_York',
           dateFormat: data.dateFormat || 'MM/DD/YYYY',
           timeFormat: data.timeFormat || '12h',
@@ -427,6 +429,25 @@ const InstitutionSettings = ({ institutionId }) => {
                   <option value="before">Before Amount ({settings.currencySymbol}100)</option>
                   <option value="after">After Amount (100{settings.currencySymbol})</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tax Rate (%) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={settings.taxRate}
+                  onChange={(e) => setSettings({ ...settings, taxRate: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="0.0"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Default tax rate (VAT/GST) for invoices. Can be overridden per invoice.
+                </p>
               </div>
 
               <div>

@@ -106,31 +106,27 @@ const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdB
           userData: cloudResult.data.userData
         };
       } catch (cloudError) {
-        // If Cloud Function is not available or fails, fall back to client-side creation
-        console.warn('Cloud Function not available, using client-side creation:', cloudError);
+        // If Cloud Function is not available or fails, show error instead of falling back
+        // Client-side creation would log out the admin, so we avoid it
+        console.error('Cloud Function error:', cloudError);
         
-        // Create user with standardized fields (client-side - will log out admin)
-        // Pharmacists need to go through onboarding (same as caregivers)
-        result = await createCompleteUserAccount(userData, {
-          institutionId,
-          createdBy,
-          accountType: 'institution_created',
-          onboardingComplete: formData.userType === 'pharmacist' ? false : false // Both caregivers and pharmacists go through onboarding
+        let errorMessage = 'Failed to create user account. Please try again.';
+        if (cloudError.code === 'functions/not-found') {
+          errorMessage = 'User creation service is not available. Please contact support.';
+        } else if (cloudError.code === 'already-exists') {
+          errorMessage = 'A user with this email already exists. Please use a different email.';
+        } else if (cloudError.message) {
+          errorMessage = `Error: ${cloudError.message}. Please check your input and try again.`;
+        }
+        
+        toast.error(errorMessage, { 
+          autoClose: 8000,
+          style: { fontSize: '14px', minWidth: '350px' },
+          bodyStyle: { fontSize: '14px' }
         });
         
-        // If client-side creation requires reload, reload the page to restore admin session
-        if (result.requiresReload) {
-          // Store success message in sessionStorage before reload
-          sessionStorage.setItem('userCreatedMessage', JSON.stringify({
-            email: result.email,
-            temporaryPassword: result.temporaryPassword,
-            userType: formData.userType
-          }));
-          
-          // Reload page to restore admin session
-          window.location.reload();
-          return;
-        }
+        setLoading(false);
+        return; // Don't proceed with creation
       }
 
       // Show success message WITHOUT revealing password (security best practice)

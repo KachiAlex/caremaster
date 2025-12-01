@@ -4,13 +4,11 @@
  */
 
 import React from 'react';
+import { formatCurrencyAmount } from '../../utils/currencyFormatter';
 
-const InvoicePrintTemplate = ({ invoice, institutionId }) => {
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(amount || 0);
+const InvoicePrintTemplate = ({ invoice, institutionId, currencySettings }) => {
+  const formatCurrencyAmountAmount = (amount) => {
+    return formatCurrencyAmount(amount, currencySettings);
   };
 
   const formatDate = (date) => {
@@ -108,10 +106,10 @@ const InvoicePrintTemplate = ({ invoice, institutionId }) => {
                     {item.quantity}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-right">
-                    {formatCurrency(item.unitPrice)}
+                    {formatCurrencyAmount(item.unitPrice)}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-right font-semibold">
-                    {formatCurrency(item.total || (item.quantity * item.unitPrice))}
+                    {formatCurrencyAmount(item.total || (item.quantity * item.unitPrice))}
                   </td>
                 </tr>
               ))}
@@ -127,24 +125,24 @@ const InvoicePrintTemplate = ({ invoice, institutionId }) => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span>{formatCurrency(invoice.subtotal || 0)}</span>
+                <span>{formatCurrencyAmount(invoice.subtotal || 0)}</span>
               </div>
               {invoice.discount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Discount ({invoice.discountPercent || 0}%):</span>
-                  <span>-{formatCurrency(invoice.discount)}</span>
+                  <span>-{formatCurrencyAmount(invoice.discount)}</span>
                 </div>
               )}
               {invoice.tax > 0 && (
                 <div className="flex justify-between">
                   <span>Tax ({invoice.taxRate || 0}%):</span>
-                  <span>{formatCurrency(invoice.tax)}</span>
+                  <span>{formatCurrencyAmount(invoice.tax)}</span>
                 </div>
               )}
               <hr className="my-2" />
               <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
-                <span className="text-blue-600">{formatCurrency(invoice.totalAmount)}</span>
+                <span className="text-blue-600">{formatCurrencyAmount(invoice.totalAmount)}</span>
               </div>
             </div>
           </div>

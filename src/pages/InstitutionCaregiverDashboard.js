@@ -709,16 +709,43 @@ const InstitutionCaregiverDashboard = () => {
           })),
           ...allAdminAssignments.map(assignment => {
             const dueDateStr = dateToString(assignment.dueDate);
+            // Create proper datetime string combining date and time in local timezone
+            let combinedTime = dueDateStr;
+            if (assignment.dueDate && assignment.dueTime) {
+              try {
+                // Parse the date string and create datetime in local timezone
+                const dateParts = dueDateStr.split('T')[0].split('-');
+                if (dateParts.length === 3) {
+                  const year = parseInt(dateParts[0]);
+                  const month = parseInt(dateParts[1]) - 1;
+                  const day = parseInt(dateParts[2]);
+                  const [hours, minutes] = assignment.dueTime.split(':');
+                  
+                  // Create date in local timezone
+                  const localDate = new Date(year, month, day, parseInt(hours) || 9, parseInt(minutes) || 0);
+                  combinedTime = localDate.toISOString();
+                } else {
+                  // Fallback: combine strings
+                  combinedTime = assignment.dueTime ? `${dueDateStr}T${assignment.dueTime}:00` : dueDateStr;
+                }
+              } catch (error) {
+                console.warn('Error parsing assignment date/time:', error);
+                combinedTime = assignment.dueTime ? `${dueDateStr}T${assignment.dueTime}:00` : dueDateStr;
+              }
+            }
+            
             return {
-            id: assignment.id,
-            type: 'assignment',
-            title: assignment.title || 'Assigned Task',
-              time: assignment.dueTime ? `${dueDateStr} ${assignment.dueTime}` : dueDateStr,
-            client: assignment.clientName || 'Client',
-            status: assignment.status || 'pending',
-            priority: assignment.priority,
-            description: assignment.description,
-            instructions: assignment.instructions
+              id: assignment.id,
+              type: 'assignment',
+              title: assignment.title || 'Assigned Task',
+              time: combinedTime,
+              client: assignment.clientName || 'Client',
+              clientId: assignment.clientId,
+              status: assignment.status || 'pending',
+              priority: assignment.priority,
+              description: assignment.description,
+              instructions: assignment.instructions,
+              dueDate: assignment.dueDate
             };
           })
         ];
@@ -2371,22 +2398,46 @@ const InstitutionCaregiverDashboard = () => {
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const today = new Date().getDay();
     
-    // Get tasks for the selected date
+    // Get tasks for the selected date (fixed timezone issues)
     const getTasksForDate = (date) => {
       if (!todaySchedule || !Array.isArray(todaySchedule)) {
         return [];
       }
       
-      const dayStart = new Date(date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(date);
-      dayEnd.setHours(23, 59, 59, 999);
+      // Normalize the target date to local date (ignore time, use local timezone)
+      const targetDate = new Date(date);
+      const targetYear = targetDate.getFullYear();
+      const targetMonth = targetDate.getMonth();
+      const targetDay = targetDate.getDate();
       
       return todaySchedule.filter(item => {
         if (!item || !item.time) return false;
+        
+        // Parse the item's time/date
         const itemDate = new Date(item.time);
-        return itemDate >= dayStart && itemDate <= dayEnd;
+        if (isNaN(itemDate.getTime())) return false;
+        
+        // Compare by date components (year, month, day) to avoid timezone issues
+        const itemYear = itemDate.getFullYear();
+        const itemMonth = itemDate.getMonth();
+        const itemDay = itemDate.getDate();
+        
+        // Match if the date components are the same
+        return itemYear === targetYear && 
+               itemMonth === targetMonth && 
+               itemDay === targetDay;
       });
+    };
+    
+    // Helper function to check if a task is past/overdue
+    const isTaskPast = (item) => {
+      if (!item || !item.time) return false;
+      const itemDate = new Date(item.time);
+      if (isNaN(itemDate.getTime())) return false;
+      
+      const now = new Date();
+      // Check if task is past (completed tasks are not considered past)
+      return item.status !== 'completed' && itemDate < now;
     };
     
     const selectedDayTasks = getTasksForDate(selectedScheduleDate);
@@ -2458,17 +2509,33 @@ const InstitutionCaregiverDashboard = () => {
                     <div className="mt-2 space-y-1">
                       {dayItems.slice(0, 3).map((item, idx) => {
                         const itemTime = new Date(item.time);
+                        const isPast = isTaskPast(item);
                         return (
                           <div 
                             key={idx}
-                            className={`text-xs text-white rounded px-2 py-1 truncate ${
-                              item.type === 'appointment' ? 'bg-blue-500' :
-                              item.type === 'task' ? 'bg-green-500' :
-                              'bg-purple-500'
+                            className={`text-xs text-white rounded px-2 py-1 truncate cursor-pointer hover:opacity-80 transition-opacity border-l-2 ${
+                              isPast 
+                                ? 'bg-red-600 border-red-800 opacity-90' : // Past/overdue tasks in red
+                                item.type === 'appointment' ? 'bg-blue-500 border-blue-600' :
+                                item.type === 'task' ? 'bg-green-500 border-green-600' :
+                                'bg-purple-500 border-purple-600'
                             }`}
-                            title={item.title}
+                            title={isPast ? `${item.title} (Overdue)` : item.title}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent date selection
+                              // Find the full task object from recentTasks or use item data
+                              const fullTask = recentTasks.find(t => t.id === item.id) || item;
+                              setSelectedTask({
+                                ...fullTask,
+                                clientName: fullTask.client || fullTask.clientName || 'Client',
+                                scheduledTime: fullTask.time || fullTask.scheduledTime,
+                                dueDate: fullTask.dueDate || fullTask.time
+                              });
+                              setShowTaskDetailsModal(true);
+                            }}
                           >
                             {itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} {item.title.substring(0, 10)}
+                            {isPast && ' ⚠️'}
                           </div>
                         );
                       })}
@@ -2523,22 +2590,45 @@ const InstitutionCaregiverDashboard = () => {
                       {index < todaySchedule.length - 1 && <div className="w-0.5 flex-1 min-h-[60px] bg-gray-300"></div>}
                     </div>
                     <div className="flex-1 pb-6">
-                      <div className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                      <div 
+                        className={`rounded-lg p-4 hover:shadow-md transition-all cursor-pointer border-l-4 ${
+                          isTaskPast(item)
+                            ? 'bg-red-50 border-red-500 hover:bg-red-100' : // Past/overdue tasks
+                            'bg-gray-50 border-gray-300 hover:bg-gray-100'
+                        }`}
+                        onClick={() => {
+                          // Find the full task object from recentTasks or use item data
+                          const fullTask = recentTasks.find(t => t.id === item.id) || item;
+                          setSelectedTask({
+                            ...fullTask,
+                            clientName: fullTask.client || fullTask.clientName || 'Client',
+                            scheduledTime: fullTask.time || fullTask.scheduledTime,
+                            dueDate: fullTask.dueDate || fullTask.time
+                          });
+                          setShowTaskDetailsModal(true);
+                        }}
+                      >
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <p className="font-semibold text-gray-900">{item.title}</p>
+                            <p className={`font-semibold flex items-center gap-2 ${
+                              isTaskPast(item) ? 'text-red-900' : 'text-gray-900'
+                            }`}>
+                              {isTaskPast(item) && <AlertTriangle className="h-4 w-4 text-red-600" />}
+                              {item.title}
+                            </p>
                             <p className="text-sm text-gray-600 mt-1">
                               <User className="h-3 w-3 inline mr-1" />
                               {item.client || 'Client'}
                             </p>
                           </div>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                            isTaskPast(item) ? 'bg-red-100 text-red-800' :
                             item.status === 'completed' ? 'bg-green-100 text-green-800' : 
                             item.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                             item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {item.status || 'pending'}
+                            {isTaskPast(item) ? 'Overdue' : (item.status || 'pending')}
                           </span>
                         </div>
                         

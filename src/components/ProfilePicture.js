@@ -126,18 +126,20 @@ const ProfilePicture = ({
 
   const getInitials = () => {
     if (!userName) return 'U';
-    return userName
+    const initials = userName
       .split(' ')
       .map(word => word.charAt(0))
       .join('')
       .toUpperCase()
       .substring(0, 2);
+    // Return single initial if only one word, otherwise return first two initials
+    return initials.length > 0 ? initials : 'U';
   };
 
   return (
     <div className={`relative inline-block ${className}`}>
       {/* Profile Picture Display */}
-      <div className={`${sizes[size]} rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative group`}>
+      <div className={`${sizes[size]} rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative group flex-shrink-0`}>
         {getDisplayImage().startsWith('data:') || getDisplayImage().startsWith('http') ? (
           <img
             src={getDisplayImage()}
@@ -151,8 +153,13 @@ const ProfilePicture = ({
         ) : null}
         
         {/* Fallback Avatar */}
-        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
-          {getInitials()}
+        <div 
+          className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold"
+          style={{ display: (getDisplayImage().startsWith('data:') || getDisplayImage().startsWith('http')) ? 'none' : 'flex' }}
+        >
+          <span className="leading-none select-none" style={{ lineHeight: '1', letterSpacing: '0' }}>
+            {getInitials()}
+          </span>
         </div>
         
         {/* Upload Overlay */}

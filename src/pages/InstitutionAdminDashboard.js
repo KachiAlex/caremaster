@@ -1238,100 +1238,53 @@ const InstitutionAdminDashboard = () => {
         return;
       }
       
-      console.log('✅ Email is unique, creating Firebase Auth account...');
+      console.log('✅ Email is unique, creating user via Cloud Function...');
       
-      // Create Firebase Auth account directly (no cloud function needed)
-      let authUser;
+      // Use Cloud Function to create user (preserves admin session)
       try {
-        authUser = await createUserWithEmailAndPassword(
-          auth,
-          pharmacistData.email,
-          pharmacistData.password
-        );
-        console.log('✅ Firebase Auth account created:', authUser.user.uid);
-      } catch (authError) {
-        console.error('❌ Firebase Auth error:', authError);
-        if (authError.code === 'auth/email-already-in-use') {
-          toast.error('A user with this email already exists in Firebase Auth.');
-        } else if (authError.code === 'auth/weak-password') {
-          toast.error('Password is too weak. Please use a stronger password.');
+        const createInstitutionUser = httpsCallable(functions, 'createInstitutionUserFunction');
+        
+        // Parse name into firstName and lastName
+        const nameParts = pharmacistData.name.trim().split(' ');
+        const firstName = nameParts[0] || pharmacistData.name;
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        const cloudResult = await createInstitutionUser({
+          email: pharmacistData.email,
+          firstName,
+          lastName,
+          userType: 'pharmacist',
+          institutionId: instId,
+          password: pharmacistData.password,
+          phone: pharmacistData.phone || '',
+          medicalQualification: 'Pharmacist',
+          specialization: pharmacistData.specialization || 'General Pharmacy',
+          licenseNumber: pharmacistData.licenseNumber || '',
+          createdBy: user?.uid || 'admin',
+          onboardingComplete: false // Pharmacists go through onboarding
+        });
+        
+        console.log('✅ Pharmacist created via Cloud Function:', cloudResult.data);
+        
+        setShowAddPharmacist(false);
+        toast.success(`✅ Pharmacist ${pharmacistData.name} added successfully! They can now login with their credentials.`);
+        
+        // Reload dashboard data to show new pharmacist (preserves active tab)
+        await loadDashboardData();
+        
+      } catch (cloudError) {
+        console.error('❌ Cloud Function error:', cloudError);
+        
+        // If Cloud Function fails, show error but don't fall back to client-side creation
+        // (which would log out the admin)
+        if (cloudError.code === 'functions/not-found') {
+          toast.error('User creation service is not available. Please contact support.');
+        } else if (cloudError.code === 'already-exists') {
+          toast.error('A user with this email already exists.');
         } else {
-          toast.error(`Authentication error: ${authError.message}`);
+          toast.error(cloudError.message || 'Failed to create pharmacist. Please try again.');
         }
-        return;
       }
-      
-      const pharmacistId = authUser.user.uid;
-      
-      // Create user document in Firestore with all required fields
-      // CRITICAL: Use setDoc with merge: false to ensure we overwrite any default 'elderly' role
-      // that might have been set by the Firebase Auth trigger
-      await setDoc(doc(db, 'users', pharmacistId), {
-        // Identity fields
-        id: pharmacistId,
-        uid: pharmacistId,
-        email: pharmacistData.email,
-        name: pharmacistData.name,
-        displayName: pharmacistData.name,
-        phone: pharmacistData.phone || '',
-        
-        // REQUIRED: Role fields (all three formats for compatibility)
-        // CRITICAL: These MUST be set to prevent 'elderly' default from Auth trigger
-        userType: 'pharmacist',
-        type: 'pharmacist',
-        role: 'pharmacist',
-        roles: ['pharmacist'], // Array format required for filtering - NEVER include 'elderly'
-        
-        // REQUIRED: Active status fields
-        status: 'active',        // Must not be 'deleted'
-        isActive: true,          // Must not be false
-        active: true,            // Must not be false
-        
-        // REQUIRED: Institution field
-        institutionId: instId,
-        
-        // Pharmacist-specific fields
-        licenseNumber: pharmacistData.licenseNumber || '',
-        specialization: pharmacistData.specialization || 'General Pharmacy',
-        medicalQualification: 'Pharmacist',
-        qualifications: pharmacistData.qualifications || '',
-        experience: pharmacistData.experience || 0,
-        address: pharmacistData.address || '',
-        emergencyContact: pharmacistData.emergencyContact || '',
-        notes: pharmacistData.notes || '',
-        
-        // Account settings
-        onboardingComplete: true,
-        profileComplete: true,
-        assignedClients: [],
-        accountType: 'institution_created',
-        
-        // Timestamps
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: user?.uid || 'admin'
-      });
-      
-      console.log('✅ Pharmacist document created in Firestore');
-      
-      // Sign out the newly created user (since we created them with createUserWithEmailAndPassword)
-      // This prevents the admin from being logged out
-      await signOut(auth);
-      
-      // Sign the admin back in if they have auth
-      // (This is a workaround - ideally we'd use Admin SDK but that requires cloud function)
-      console.log('✅ Cleaned up auth state');
-      
-      setShowAddPharmacist(false);
-      toast.success(`✅ Pharmacist ${pharmacistData.name} added successfully! They can now login with their credentials.`);
-      
-      // Reload dashboard data
-      await loadDashboardData();
-      
-      // Reload the page to restore admin session
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
       
     } catch (error) {
       console.error('❌ Error adding pharmacist:', error);
@@ -1415,15 +1368,34 @@ const InstitutionAdminDashboard = () => {
         const { createCareTask } = await import('../api/careTasksAPI');
         const { Timestamp } = await import('firebase/firestore');
         
-        // Parse dueDate and dueTime to create scheduledTime
+        // Parse dueDate and dueTime to create scheduledTime (fix timezone issues)
         let scheduledTime = new Date();
         if (formData.dueDate) {
-          scheduledTime = new Date(formData.dueDate);
-          if (formData.dueTime) {
-            const [hours, minutes] = formData.dueTime.split(':');
-            scheduledTime.setHours(parseInt(hours) || 9, parseInt(minutes) || 0, 0, 0);
+          // Parse date string and create in local timezone to avoid date shifts
+          const dateParts = formData.dueDate.split('-');
+          if (dateParts.length === 3) {
+            const year = parseInt(dateParts[0]);
+            const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
+            const day = parseInt(dateParts[2]);
+            
+            // Create date in local timezone
+            scheduledTime = new Date(year, month, day);
+            
+            if (formData.dueTime) {
+              const [hours, minutes] = formData.dueTime.split(':');
+              scheduledTime.setHours(parseInt(hours) || 9, parseInt(minutes) || 0, 0, 0);
+            } else {
+              scheduledTime.setHours(9, 0, 0, 0); // Default to 9 AM
+            }
           } else {
-            scheduledTime.setHours(9, 0, 0, 0); // Default to 9 AM
+            // Fallback to original method if date format is different
+            scheduledTime = new Date(formData.dueDate);
+            if (formData.dueTime) {
+              const [hours, minutes] = formData.dueTime.split(':');
+              scheduledTime.setHours(parseInt(hours) || 9, parseInt(minutes) || 0, 0, 0);
+            } else {
+              scheduledTime.setHours(9, 0, 0, 0);
+            }
           }
         }
         

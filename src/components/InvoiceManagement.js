@@ -31,6 +31,7 @@ import { useUser } from '../contexts/UserContext';
 import { invoiceAPI, calculateInvoiceTotals } from '../api/inventoryAPI';
 import { getClientsByInstitution } from '../api/patientsAPI';
 import InvoicePrintTemplate from './templates/InvoicePrintTemplate';
+import { formatCurrencyAmount, getInstitutionCurrencySettings } from '../utils/currencyFormatter';
 
 const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
   const { institutionId: contextInstitutionId } = useUser();
@@ -46,13 +47,14 @@ const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [createdInvoice, setCreatedInvoice] = useState(null);
+  const [currencySettings, setCurrencySettings] = useState(null);
 
   // Invoice form state
   const [invoiceForm, setInvoiceForm] = useState({
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     notes: '',
     paymentMethod: '',
-    taxRate: 7.5, // Default 7.5% VAT
+    taxRate: 0, // Will be loaded from institution settings
     discount: 0
   });
 
@@ -64,12 +66,34 @@ const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
     unit: 'piece'
   });
 
-  // Load clients on mount
+  // Load currency settings and clients on mount
   useEffect(() => {
     if (institutionId) {
+      loadCurrencySettings();
       loadClients();
     }
   }, [institutionId]);
+
+  const loadCurrencySettings = async () => {
+    try {
+      const settings = await getInstitutionCurrencySettings(institutionId);
+      setCurrencySettings(settings);
+      // Update default tax rate from settings
+      setInvoiceForm(prev => ({
+        ...prev,
+        taxRate: settings.taxRate || 0
+      }));
+    } catch (error) {
+      console.error('Error loading currency settings:', error);
+      // Use defaults if loading fails
+      setCurrencySettings({
+        currency: 'USD',
+        currencySymbol: '$',
+        currencyPosition: 'before',
+        taxRate: 0
+      });
+    }
+  };
 
   // Load current billing when client is selected
   useEffect(() => {
@@ -261,7 +285,7 @@ const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: '',
         paymentMethod: '',
-        taxRate: 7.5,
+        taxRate: currencySettings?.taxRate || 0,
         discount: 0
       });
       setShowCheckout(false);
@@ -307,11 +331,8 @@ const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
     window.print();
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(amount || 0);
+  const formatCurrencyAmountAmount = (amount) => {
+    return formatCurrencyAmount(amount, currencySettings);
   };
 
   return (
@@ -395,7 +416,7 @@ const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <div className="text-sm text-red-600 font-medium">Outstanding Balance</div>
                   <div className="text-2xl font-bold text-red-700">
-                    {formatCurrency(currentBilling.outstandingBalance)}
+                    {formatCurrencyAmount(currentBilling.outstandingBalance)}
                   </div>
                 </div>
 
@@ -425,7 +446,7 @@ const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
                         <div key={invoice.id} className="text-xs text-gray-600 flex justify-between">
                           <span>{invoice.invoiceNumber}</span>
                           <span className={invoice.status === 'paid' ? 'text-green-600' : 'text-red-600'}>
-                            {formatCurrency(invoice.totalAmount)}
+                            {formatCurrencyAmount(invoice.totalAmount)}
                           </span>
                         </div>
                       ))}
@@ -544,7 +565,7 @@ const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
                               />
                             </td>
                             <td className="px-4 py-3 text-right font-medium">
-                              {formatCurrency(item.total)}
+                              {formatCurrencyAmount(item.total)}
                             </td>
                             <td className="px-4 py-3 text-center">
                               <button
@@ -566,20 +587,20 @@ const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
                   <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                     <div className="flex justify-between mb-2">
                       <span>Subtotal:</span>
-                      <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+                      <span className="font-medium">{formatCurrencyAmount(totals.subtotal)}</span>
                     </div>
                     <div className="flex justify-between mb-2">
                       <span>Discount ({invoiceForm.discount}%):</span>
-                      <span className="font-medium text-green-600">-{formatCurrency(totals.discount)}</span>
+                      <span className="font-medium text-green-600">-{formatCurrencyAmount(totals.discount)}</span>
                     </div>
                     <div className="flex justify-between mb-2">
                       <span>Tax ({invoiceForm.taxRate}%):</span>
-                      <span className="font-medium">{formatCurrency(totals.tax)}</span>
+                      <span className="font-medium">{formatCurrencyAmount(totals.tax)}</span>
                     </div>
                     <hr className="my-3" />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total:</span>
-                      <span className="text-blue-600">{formatCurrency(totals.total)}</span>
+                      <span className="text-blue-600">{formatCurrencyAmount(totals.total)}</span>
                     </div>
                   </div>
                 )}
@@ -720,7 +741,7 @@ const InvoiceManagement = ({ institutionId: propInstitutionId }) => {
               </div>
             </div>
             <div className="p-6">
-              <InvoicePrintTemplate invoice={createdInvoice} institutionId={institutionId} />
+              <InvoicePrintTemplate invoice={createdInvoice} institutionId={institutionId} currencySettings={currencySettings} />
             </div>
           </div>
         </div>

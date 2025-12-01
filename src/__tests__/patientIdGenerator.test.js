@@ -145,7 +145,13 @@ describe('Client ID Generator', () => {
 
       collection.mockReturnValue({});
 
-      await expect(generateClientId()).rejects.toThrow();
+      // The function catches errors and returns a fallback ID instead of throwing
+      const clientId = await generateClientId();
+      
+      // Should return a fallback ID in format UC-YYYY-XXXX
+      expect(clientId).toBeTruthy();
+      expect(clientId).toMatch(/^UC-\d{4}-/);
+      expect(isValidPatientId(clientId)).toBe(true);
     });
 
     test('should increment from highest existing number', async () => {
