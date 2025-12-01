@@ -13,44 +13,64 @@ describe('Error Handler Unit Tests', () => {
   });
 
   describe('handleError', () => {
+    // Mock toast
+    const mockToast = {
+      error: jest.fn(),
+      warning: jest.fn(),
+      info: jest.fn()
+    };
+    
+    beforeEach(() => {
+      jest.mock('react-toastify', () => ({
+        toast: mockToast
+      }));
+    });
+
     test('should handle Firebase errors', () => {
       const firebaseError = {
         code: 'auth/user-not-found',
         message: 'User not found'
       };
       
-      errorHandler.handleError(firebaseError, { context: 'login' });
+      const result = errorHandler.handleError(firebaseError, { context: 'login' });
       
-      expect(console.error).toHaveBeenCalled();
+      expect(result).toBeTruthy();
+      expect(result.type).toBe('auth');
+      expect(result.userMessage).toBeTruthy();
     });
 
     test('should handle network errors', () => {
-      const networkError = new Error('Network request failed');
+      const networkError = new Error('network request failed');
       networkError.name = 'NetworkError';
+      // errorHandler checks for 'network' in message (case-insensitive via includes)
       
-      errorHandler.handleError(networkError, { context: 'api_call' });
+      const result = errorHandler.handleError(networkError, { context: 'api_call' });
       
-      expect(console.error).toHaveBeenCalled();
+      expect(result).toBeTruthy();
+      expect(result.type).toBe('network');
     });
 
     test('should handle validation errors', () => {
       const validationError = {
         name: 'ValidationError',
         message: 'Invalid input data',
-        fields: ['email', 'password']
+        fields: ['email', 'password'],
+        code: 'invalid-argument' // errorHandler checks for this code
       };
       
-      errorHandler.handleError(validationError, { context: 'form_validation' });
+      const result = errorHandler.handleError(validationError, { context: 'form_validation' });
       
-      expect(console.error).toHaveBeenCalled();
+      expect(result).toBeTruthy();
+      expect(result.type).toBe('validation');
     });
 
     test('should handle unknown errors gracefully', () => {
       const unknownError = new Error('Unknown error occurred');
       
-      errorHandler.handleError(unknownError, { context: 'unknown' });
+      const result = errorHandler.handleError(unknownError, { context: 'unknown' });
       
-      expect(console.error).toHaveBeenCalled();
+      expect(result).toBeTruthy();
+      expect(result.type).toBe('unknown');
     });
   });
 

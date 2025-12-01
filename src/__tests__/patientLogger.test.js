@@ -171,8 +171,9 @@ describe('Client Logger', () => {
       const callArgs = addDoc.mock.calls[0][1];
       expect(callArgs.action).toBe('vital_signs_recorded');
       expect(callArgs.category).toBe('vital_signs');
-      expect(callArgs.description).toContain('Vital signs recorded');
-      expect(callArgs.description).toContain('type'); // Description includes keys
+      // Description format: "Blood Pressure: 120/80 mmHg (normal)"
+      expect(callArgs.description).toContain('Blood Pressure');
+      expect(callArgs.description).toContain('120/80');
       expect(callArgs.details).toEqual(vitalSignData);
     });
   });

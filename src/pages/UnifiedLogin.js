@@ -6,6 +6,7 @@ import { auth, db } from '../firebase/config';
 import { toast } from 'react-toastify';
 import { verifyPasswordSecure } from '../utils/securePasswordAuth';
 import rateLimiter from '../utils/rateLimiter';
+import authSecurityService from '../services/authSecurityService';
 import { 
   Mail, 
   Lock, 
@@ -16,7 +17,8 @@ import {
   Shield,
   User,
   Pill,
-  Heart
+  Heart,
+  XCircle
 } from 'lucide-react';
 
 const UnifiedLogin = () => {
@@ -26,6 +28,9 @@ const UnifiedLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -340,6 +345,20 @@ const UnifiedLogin = () => {
             </div>
           </div>
 
+          {/* Forgot Password Link */}
+          <div className="text-right">
+            <button
+              type="button"
+              onClick={() => {
+                setResetEmail(email || '');
+                setShowResetModal(true);
+              }}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+            >
+              Forgot password?
+            </button>
+          </div>
+
           {/* Submit Button */}
           <div>
             <button
@@ -373,6 +392,100 @@ const UnifiedLogin = () => {
           </p>
         </div>
       </div>
+
+      {/* Password Reset Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Reset your password</h3>
+                <p className="text-sm text-blue-100">Enter your email to receive a password reset link.</p>
+              </div>
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Close reset password modal"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (!resetEmail) {
+                  toast.error('Please enter your email address');
+                  return;
+                }
+
+                setResettingPassword(true);
+                try {
+                  await authSecurityService.securePasswordReset(resetEmail.trim());
+                  toast.success('Password reset email sent successfully. Please check your inbox.');
+                  setShowResetModal(false);
+                  setResetEmail('');
+                } catch (resetError) {
+                  console.error('Password reset failed:', resetError);
+                  const message = resetError?.code === 'auth/user-not-found'
+                    ? 'No account found with that email address.'
+                    : resetError?.message || 'Failed to send password reset email. Please try again.';
+                  toast.error(message);
+                } finally {
+                  setResettingPassword(false);
+                }
+              }}
+              className="px-6 py-6 space-y-4"
+            >
+              <div>
+                <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    id="reset-email"
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your account email"
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetEmail('');
+                  }}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resettingPassword}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                >
+                  {resettingPassword ? (
+                    <>
+                      <Loader className="animate-spin h-4 w-4 mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send reset link'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -86,8 +86,11 @@ export function isValidPatientId(clientId) {
   if (!clientId || typeof clientId !== 'string') return false;
   
   // Pattern: UC-YYYY-NNNN or UC-XXXX-YYYY-NNNN (with institution prefix)
-  const pattern = /^UC-(\d{4}|[A-Z0-9]{4})-\d{4}-\d{4}$/;
-  return pattern.test(clientId);
+  // Simple format: UC-2025-0001
+  // Institution format: UC-HOSP-2025-0001
+  const simplePattern = /^UC-\d{4}-\d{4}$/;
+  const institutionPattern = /^UC-[A-Z0-9]{1,10}-\d{4}-\d{4}$/;
+  return simplePattern.test(clientId) || institutionPattern.test(clientId);
 }
 
 /**

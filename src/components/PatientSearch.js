@@ -158,10 +158,10 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
       {showResults && results.length > 0 && (
         <div className="absolute z-50 w-full mt-2 bg-slate-950 border border-slate-800/80 rounded-2xl shadow-xl shadow-black/50 max-h-96 overflow-y-auto">
           <div className="p-2">
-            {results.map((Client, index) => (
+            {results.map((client, index) => (
               <div
-                key={client.id}
-                onClick={() => handleSelect(Client)}
+                key={client.id || client.clientId || index}
+                onClick={() => handleSelect(client)}
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
                   index === selectedIndex
                     ? 'bg-blue-500/20 border border-blue-500/30'
