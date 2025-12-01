@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getUserById } from '../api/usersAPI';
@@ -22,6 +22,7 @@ export const UserProvider = ({ children }) => {
   const [licenseActive, setLicenseActive] = useState(true);
   const [institutionId, setInstitutionId] = useState(null);
   const [institutionData, setInstitutionData] = useState(null);
+  const logoutTimeoutRef = useRef(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -432,18 +433,36 @@ export const UserProvider = ({ children }) => {
           setUserRole(null); // Don't set a default role, let the login flow handle it
         }
       } else {
-        setUser(null);
-        setUserProfile(null);
-        setUserRole(null);
-        setUserRoles([]);
-        setLicenseActive(true);
-        setInstitutionId(null);
-        setInstitutionData(null);
+        // Clear any pending logout timeout
+        if (logoutTimeoutRef.current) {
+          clearTimeout(logoutTimeoutRef.current);
+          logoutTimeoutRef.current = null;
+        }
+        
+        // Add a small delay before clearing user state to handle token refresh
+        // This prevents immediate logout during Firebase token refresh
+        logoutTimeoutRef.current = setTimeout(() => {
+          // Only clear if user is still null (not a temporary token refresh)
+          if (!auth.currentUser) {
+            setUser(null);
+            setUserProfile(null);
+            setUserRole(null);
+            setUserRoles([]);
+            setLicenseActive(true);
+            setInstitutionId(null);
+            setInstitutionData(null);
+          }
+        }, 2000); // Wait 2 seconds before clearing state
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (logoutTimeoutRef.current) {
+        clearTimeout(logoutTimeoutRef.current);
+      }
+      unsubscribe();
+    };
   }, []);
 
   const isServiceProvider = () => {

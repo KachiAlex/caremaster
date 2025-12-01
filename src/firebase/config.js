@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getAuth, connectAuthEmulator, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
@@ -29,6 +29,16 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
 export const storage = getStorage(app);
+
+// Set auth persistence to local storage for better session persistence
+// This prevents automatic logout during token refresh
+try {
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    logger.warn('Failed to set auth persistence:', error);
+  });
+} catch (error) {
+  logger.warn('Error setting auth persistence:', error);
+}
 
 // Connect to emulators in development
 if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_USE_EMULATORS === 'true') {

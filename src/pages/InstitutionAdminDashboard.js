@@ -917,7 +917,10 @@ const InstitutionAdminDashboard = () => {
       console.log('✅ Client created with ID:', clientId);
       
       setShowCreatePatientModal(false);
-      toast.success('Client added successfully');
+      toast.success('Client added successfully', { 
+        autoClose: 5000,
+        position: 'top-center'
+      });
       
       // Reload dashboard data to get the newly created client
       await loadDashboardData();
