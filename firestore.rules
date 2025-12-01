@@ -132,11 +132,17 @@ service cloud.firestore {
       // Admin full access. Caregivers/doctors/pharmacists can read clients
       // For list queries, allow based on role (resource.data not available in list queries)
       // For document reads, also allow based on institutionId match
-      allow read: if isAdmin() || isCaregiver() || isDoctor() || isPharmacist() || 
-                  (request.auth != null && resource.data != null && resource.data.institutionId == userInstitution());
-      allow list: if isAdmin() || isCaregiver() || isDoctor() || isPharmacist();
-      // Writes restricted to admin
-      allow write: if isAdmin();
+      allow read: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() || 
+        isPharmacist() || 
+        (resource.data != null && resource.data.institutionId == userInstitution())
+      );
+      allow list: if request.auth != null && (isAdmin() || isCaregiver() || isDoctor() || isPharmacist());
+      // Writes restricted to authenticated admin
+      allow create: if request.auth != null && isAdmin();
+      allow update, delete: if request.auth != null && isAdmin();
     }
     
     // Client assignments
@@ -746,9 +752,49 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && isAdmin();
     }
 
+    // Patient logs collection - for comprehensive patient activity logging
+    match /patientLogs/{logId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        isPharmacist() ||
+        (resource.data != null && resource.data.clinicianId == request.auth.uid)
+      );
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        isPharmacist()
+      );
+      allow update, delete: if request.auth != null && isAdmin();
+    }
+
+    // Audit logs collection - for system audit logging
+    match /auditLogs/{logId} {
+      allow read, list: if request.auth != null && isAdmin();
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor() ||
+        isPharmacist()
+      );
+      allow update, delete: if request.auth != null && isAdmin();
+    }
+
+    // Caregiver assignments collection (alternative name)
+    match /caregiverAssignments/{assignmentId} {
+      allow read, list: if request.auth != null && (
+        isAdmin() || 
+        isCaregiver() || 
+        (resource.data != null && resource.data.caregiverId == request.auth.uid)
+      );
+      allow write: if request.auth != null && isAdmin();
+    }
+
     // Allow admins to read/write any other collections
     match /{document=**} {
-      allow read, write: if isAdmin();
+      allow read, write: if request.auth != null && isAdmin();
     }
   }
 }
