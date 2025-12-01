@@ -16,6 +16,7 @@ import { db } from '../firebase/config';
 import { logClientActivity } from './clientActivitiesAPI';
 import { notificationsAPI } from './notificationsAPI';
 import { logConsultation } from '../utils/patientLogger';
+import { handleAPIError, validateAPIRequest } from '../utils/apiErrorHandler';
 
 const CONSULTATIONS_COLLECTION = 'consultations';
 
@@ -31,6 +32,15 @@ export const CONSULTATION_TYPES = {
 // Create a new consultation
 export const createConsultation = async (consultationData) => {
   try {
+    // SECURITY FIX: Validate API request parameters
+    validateAPIRequest(consultationData, {
+      clientId: { required: true, type: 'string', minLength: 1 },
+      doctorId: { required: true, type: 'string', minLength: 1 },
+      consultationType: { required: false, type: 'string' },
+      consultationDate: { required: false, type: 'string' },
+      chiefComplaint: { required: false, type: 'string', maxLength: 1000 }
+    });
+
     if (!consultationData.clientId || !consultationData.doctorId) {
       throw new Error('Client ID and Doctor ID are required');
     }
@@ -182,8 +192,9 @@ export const createConsultation = async (consultationData) => {
     
     return { id: docRef.id, ...newConsultation };
   } catch (error) {
-    console.error('Error creating consultation:', error);
-    throw error;
+    return handleAPIError(error, 'create_consultation', {
+      defaultMessage: 'Failed to create consultation'
+    });
   }
 };
 

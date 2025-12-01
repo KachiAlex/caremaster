@@ -61,9 +61,15 @@ describe('Care Plans API', () => {
 
   describe('updateCarePlan', () => {
     test('should update a care plan successfully', async () => {
-      const { updateDoc, doc } = require('firebase/firestore');
+      const { updateDoc, doc, getDoc } = require('firebase/firestore');
       updateDoc.mockResolvedValue();
       doc.mockReturnValue({});
+      
+      // Mock getDoc to return a document that exists
+      getDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ clientId: 'Client-123', diagnosis: 'Hypertension' })
+      });
 
       const updateData = {
         diagnosis: 'Hypertension - Controlled',
@@ -74,12 +80,19 @@ describe('Care Plans API', () => {
 
       expect(result.id).toBe('careplan-123');
       expect(updateDoc).toHaveBeenCalled();
-      expect(doc).toHaveBeenCalled();
+      expect(getDoc).toHaveBeenCalled();
     });
 
     test('should handle errors when updating care plan', async () => {
-      const { updateDoc, doc } = require('firebase/firestore');
+      const { updateDoc, doc, getDoc } = require('firebase/firestore');
       doc.mockReturnValue({});
+      
+      // Mock getDoc to return a document that exists
+      getDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ clientId: 'Client-123', diagnosis: 'Hypertension' })
+      });
+      
       updateDoc.mockRejectedValue(new Error('Firestore error'));
 
       const updateData = {

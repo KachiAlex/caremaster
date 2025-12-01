@@ -18,6 +18,8 @@ import { toast } from 'react-toastify';
 import { getOutstandingPayments } from '../api/autoBillingAPI';
 import { useUser } from '../contexts/UserContext';
 import BillingPlanConfiguration from './BillingPlanConfiguration';
+import InvoiceManagement from './InvoiceManagement';
+import { FileText } from 'lucide-react';
 
 const BillingManagementDashboard = ({ institutionId: propInstitutionId, clients = [] }) => {
   const { institutionId: contextInstitutionId } = useUser();
@@ -82,6 +84,7 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, clients 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex flex-wrap gap-2">
           {[
+            { id: 'invoicing', name: 'Create Invoice', icon: FileText },
             { id: 'outstanding', name: 'Outstanding Payments', icon: AlertCircle },
             { id: 'configuration', name: 'Plan Configuration', icon: Settings }
           ].map((tab) => {
@@ -104,6 +107,11 @@ const BillingManagementDashboard = ({ institutionId: propInstitutionId, clients 
           })}
         </div>
       </div>
+
+      {/* Invoicing Tab */}
+      {activeTab === 'invoicing' && (
+        <InvoiceManagement institutionId={institutionId} />
+      )}
 
       {/* Outstanding Payments Tab */}
       {activeTab === 'outstanding' && (

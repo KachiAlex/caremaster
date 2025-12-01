@@ -274,10 +274,11 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">
+              <label htmlFor="name" className="block text-xs font-medium text-slate-400 mb-2">
                 Full Name <span className="text-red-400">*</span>
               </label>
               <input
+                id="name"
                 type="text"
                 name="name"
                 value={formData.name}
@@ -291,10 +292,11 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">
+              <label htmlFor="dateOfBirth" className="block text-xs font-medium text-slate-400 mb-2">
                 Date of Birth <span className="text-red-400">*</span>
               </label>
               <input
+                id="dateOfBirth"
                 type="date"
                 name="dateOfBirth"
                 value={formData.dateOfBirth}
@@ -307,10 +309,11 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">
+              <label htmlFor="gender" className="block text-xs font-medium text-slate-400 mb-2">
                 Gender <span className="text-red-400">*</span>
               </label>
               <select
+                id="gender"
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
@@ -327,10 +330,11 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">
+              <label htmlFor="phone" className="block text-xs font-medium text-slate-400 mb-2">
                 Phone <span className="text-red-400">*</span>
               </label>
               <input
+                id="phone"
                 type="tel"
                 name="phone"
                 value={formData.phone}
@@ -344,8 +348,9 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Email</label>
+              <label htmlFor="email" className="block text-xs font-medium text-slate-400 mb-2">Email</label>
               <input
+                id="email"
                 type="email"
                 name="email"
                 value={formData.email}
@@ -399,8 +404,9 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
           </div>
 
           <div className="mt-4">
-            <label className="block text-xs font-medium text-slate-400 mb-2">Address</label>
+            <label htmlFor="address" className="block text-xs font-medium text-slate-400 mb-2">Address</label>
             <input
+              id="address"
               type="text"
               name="address"
               value={formData.address}
@@ -453,10 +459,11 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">
+              <label htmlFor="emergencyContactName" className="block text-xs font-medium text-slate-400 mb-2">
                 Contact Name <span className="text-red-400">*</span>
               </label>
               <input
+                id="emergencyContactName"
                 type="text"
                 name="emergencyContactName"
                 value={formData.emergencyContactName}
@@ -470,10 +477,11 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">
+              <label htmlFor="emergencyContactPhone" className="block text-xs font-medium text-slate-400 mb-2">
                 Contact Phone <span className="text-red-400">*</span>
               </label>
               <input
+                id="emergencyContactPhone"
                 type="tel"
                 name="emergencyContactPhone"
                 value={formData.emergencyContactPhone}
@@ -487,8 +495,9 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Relationship</label>
+              <label htmlFor="emergencyContactRelationship" className="block text-xs font-medium text-slate-400 mb-2">Relationship</label>
               <input
+                id="emergencyContactRelationship"
                 type="text"
                 name="emergencyContactRelationship"
                 value={formData.emergencyContactRelationship}
@@ -509,8 +518,9 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
           
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Medical Conditions</label>
+              <label htmlFor="medicalConditions" className="block text-xs font-medium text-slate-400 mb-2">Medical Conditions</label>
               <textarea
+                id="medicalConditions"
                 name="medicalConditions"
                 value={formData.medicalConditions}
                 onChange={handleChange}
@@ -521,8 +531,9 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Current Medications</label>
+              <label htmlFor="medications" className="block text-xs font-medium text-slate-400 mb-2">Current Medications</label>
               <textarea
+                id="medications"
                 name="medications"
                 value={formData.medications}
                 onChange={handleChange}
@@ -533,8 +544,9 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Allergies</label>
+              <label htmlFor="allergies" className="block text-xs font-medium text-slate-400 mb-2">Allergies</label>
               <textarea
+                id="allergies"
                 name="allergies"
                 value={formData.allergies}
                 onChange={handleChange}
@@ -554,10 +566,11 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
           </h3>
           
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-2">
+            <label htmlFor="careLevel" className="block text-xs font-medium text-slate-400 mb-2">
               Care Level Category <span className="text-red-400">*</span>
             </label>
             <select
+              id="careLevel"
               name="careLevel"
               value={formData.careLevel}
               onChange={handleChange}
@@ -592,8 +605,9 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Insurance Provider</label>
+              <label htmlFor="insuranceProvider" className="block text-xs font-medium text-slate-400 mb-2">Insurance Provider</label>
               <input
+                id="insuranceProvider"
                 type="text"
                 name="insuranceProvider"
                 value={formData.insuranceProvider}
@@ -604,8 +618,9 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Policy Number</label>
+              <label htmlFor="insurancePolicyNumber" className="block text-xs font-medium text-slate-400 mb-2">Policy Number</label>
               <input
+                id="insurancePolicyNumber"
                 type="text"
                 name="insurancePolicyNumber"
                 value={formData.insurancePolicyNumber}

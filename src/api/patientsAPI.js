@@ -17,18 +17,26 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { generateClientId } from '../utils/clientIdGenerator';
+import { encryptPatientData, decryptPatientData } from '../utils/dataEncryptionHelper';
+import secureConfigService from '../services/secureConfigService';
+import { logPatientRegistration, logPatientProfileUpdate } from '../utils/patientLogger';
 
 const CLIENTS_COLLECTION = 'clients';
 
 const normalizeClientDoc = (docSnap) => {
   const clientData = docSnap.data();
+  
+  // SECURITY FIX: Decrypt sensitive patient data if encrypted
+  const shouldDecrypt = secureConfigService.get('security.encryptPatientData', true);
+  const decryptedData = shouldDecrypt ? decryptPatientData(clientData) : clientData;
+  
   return {
     id: docSnap.id,
-    ...clientData,
-    dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-    createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-    updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-    lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
+    ...decryptedData,
+    dateOfBirth: decryptedData.dateOfBirth?.toDate?.() || decryptedData.dateOfBirth,
+    createdAt: decryptedData.createdAt?.toDate?.() || decryptedData.createdAt,
+    updatedAt: decryptedData.updatedAt?.toDate?.() || decryptedData.updatedAt,
+    lastVisit: decryptedData.lastVisit?.toDate?.() || decryptedData.lastVisit,
   };
 };
 
@@ -49,15 +57,18 @@ export const getAllClients = async (institutionId = null) => {
         const querySnapshot = await getDocs(q);
         
         const clients = [];
+        const shouldDecrypt = secureConfigService.get('security.encryptPatientData', true);
         querySnapshot.forEach((doc) => {
           const clientData = doc.data();
+          // SECURITY FIX: Decrypt sensitive patient data if encrypted
+          const decryptedData = shouldDecrypt ? decryptPatientData(clientData) : clientData;
           clients.push({
             id: doc.id,
-            ...clientData,
-            dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-            createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-            updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-            lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
+            ...decryptedData,
+            dateOfBirth: decryptedData.dateOfBirth?.toDate?.() || decryptedData.dateOfBirth,
+            createdAt: decryptedData.createdAt?.toDate?.() || decryptedData.createdAt,
+            updatedAt: decryptedData.updatedAt?.toDate?.() || decryptedData.updatedAt,
+            lastVisit: decryptedData.lastVisit?.toDate?.() || decryptedData.lastVisit,
           });
         });
         
@@ -153,13 +164,18 @@ export const getClientById = async (clientId) => {
     
     if (clientSnap.exists()) {
       const clientData = clientSnap.data();
+      
+      // SECURITY FIX: Decrypt sensitive patient data if encrypted
+      const shouldDecrypt = secureConfigService.get('security.encryptPatientData', true);
+      const decryptedData = shouldDecrypt ? decryptPatientData(clientData) : clientData;
+      
       return {
         id: clientSnap.id,
-        ...clientData,
-        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
+        ...decryptedData,
+        dateOfBirth: decryptedData.dateOfBirth?.toDate?.() || decryptedData.dateOfBirth,
+        createdAt: decryptedData.createdAt?.toDate?.() || decryptedData.createdAt,
+        updatedAt: decryptedData.updatedAt?.toDate?.() || decryptedData.updatedAt,
+        lastVisit: decryptedData.lastVisit?.toDate?.() || decryptedData.lastVisit,
       };
     } else {
       throw new Error('Client not found');
@@ -376,15 +392,20 @@ export const getClientsByDoctor = async (doctorId, institutionId = null) => {
   }
 };
 
-// Update client
+// Update client (low-level helper)
 export const updateClient = async (clientId, updateData) => {
   try {
     const clientRef = doc(db, CLIENTS_COLLECTION, clientId);
+
+    // SECURITY FIX: Encrypt sensitive patient data before updating
+    const shouldEncrypt = secureConfigService.get('security.encryptPatientData', true);
+    const dataToUpdate = shouldEncrypt ? encryptPatientData(updateData) : updateData;
+
     const updatedData = {
-      ...updateData,
+      ...dataToUpdate,
       updatedAt: serverTimestamp(),
     };
-    
+
     await updateDoc(clientRef, updatedData);
     return true;
   } catch (error) {
@@ -393,7 +414,39 @@ export const updateClient = async (clientId, updateData) => {
   }
 };
 
-export const updatePatient = updateClient;
+// High-level update with logging and existence checks
+export const updatePatient = async (clientId, updateData, registeredBy = null) => {
+  try {
+    const clientRef = doc(db, CLIENTS_COLLECTION, clientId);
+    const clientSnap = await getDoc(clientRef);
+
+    if (!clientSnap.exists()) {
+      throw new Error('Client not found');
+    }
+
+    // Perform the actual update (with encryption)
+    await updateClient(clientId, updateData);
+
+    // Determine the simple Client ID used in logs
+    const existingData = clientSnap.data() || {};
+    const patientSimpleId = existingData.clientId || clientId;
+
+    // Log profile update if we have information about who performed it
+    if (registeredBy) {
+      try {
+        await logPatientProfileUpdate(patientSimpleId, registeredBy, updateData);
+      } catch (logError) {
+        console.error('Error logging Client profile update:', logError);
+        // Do not fail the update if logging fails
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error updating patient:', error);
+    throw error;
+  }
+};
 
 // Assign client to caregiver
 export const assignClientToCaregiver = async (clientId, caregiverId) => {
@@ -431,8 +484,12 @@ export const createClient = async (clientData = {}, registeredBy = null) => {
     const clientId = await generateClientId(clientData.institutionId || null);
     const clientsRef = collection(db, CLIENTS_COLLECTION);
     
+    // SECURITY FIX: Encrypt sensitive patient data before storing
+    const shouldEncrypt = secureConfigService.get('security.encryptPatientData', true);
+    const dataToStore = shouldEncrypt ? encryptPatientData(clientData) : clientData;
+    
     const newPatient = {
-      ...clientData,
+      ...dataToStore,
       clientId,
       status: clientData.status || 'active',
       registrationDate: serverTimestamp(),
@@ -441,10 +498,24 @@ export const createClient = async (clientData = {}, registeredBy = null) => {
       lastVisit: serverTimestamp(),
       registeredBy: registeredBy?.id || registeredBy?.uid || null,
     };
-    
+
     const docRef = await addDoc(clientsRef, newPatient);
     console.log(`✅ Client created with ID: ${clientId} (doc: ${docRef.id})`);
-    
+
+    // Log Client registration (non-blocking)
+    if (registeredBy) {
+      try {
+        const registrationDetails = {
+          ...clientData,
+          registrationMethod: clientData.registrationMethod || 'hospital_registration',
+        };
+        await logPatientRegistration(clientId, registeredBy, registrationDetails);
+      } catch (logError) {
+        console.error('Error logging Client registration:', logError);
+        // Do not fail client creation if logging fails
+      }
+    }
+
     return { id: docRef.id, clientId };
   } catch (error) {
     console.error('Error creating Client:', error);
@@ -495,6 +566,18 @@ export const addMedicalRecord = async (clientId, recordData) => {
     return docRef.id;
   } catch (error) {
     console.error('Error adding medical record:', error);
+    throw error;
+  }
+};
+
+// Delete patient/client
+export const deletePatient = async (clientId) => {
+  try {
+    const clientRef = doc(db, CLIENTS_COLLECTION, clientId);
+    await deleteDoc(clientRef);
+    return true;
+  } catch (error) {
+    console.error('Error deleting patient:', error);
     throw error;
   }
 };

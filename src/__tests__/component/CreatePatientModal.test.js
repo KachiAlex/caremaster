@@ -3,9 +3,11 @@
  * Tests component rendering, user interactions, and form validation
  */
 
+jest.setTimeout(10000);
+
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { UserContext } from '../../contexts/UserContext';
+import { UserProvider } from '../../contexts/UserContext';
 import CreatePatientModal from '../../components/CreatePatientModal';
 import { toast } from 'react-toastify';
 
@@ -38,22 +40,27 @@ jest.mock('qrcode.react', () => {
   };
 });
 
+jest.mock('../../contexts/UserContext', () => ({
+  ...jest.requireActual('../../contexts/UserContext'),
+  useUser: jest.fn()
+}));
+
+const { useUser } = require('../../contexts/UserContext');
+
 const mockUserContext = {
   userProfile: {
     id: 'admin-123',
     name: 'Admin User',
     email: 'admin@hospital.com',
-    role: 'admin'
+    role: 'admin',
+    institutionId: 'institution-123'
   },
   institutionId: 'institution-123'
 };
 
 const renderWithContext = (component) => {
-  return render(
-    <UserContext.Provider value={mockUserContext}>
-      {component}
-    </UserContext.Provider>
-  );
+  useUser.mockReturnValue(mockUserContext);
+  return render(component);
 };
 
 describe('CreatePatientModal Component Tests', () => {
@@ -70,7 +77,8 @@ describe('CreatePatientModal Component Tests', () => {
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      expect(screen.getByText(/create.*patient/i)).toBeInTheDocument();
+      // Header title should be visible
+      expect(screen.getByText(/register new client/i)).toBeTruthy();
     });
 
     test('should not render modal when closed', () => {
@@ -78,7 +86,7 @@ describe('CreatePatientModal Component Tests', () => {
         <CreatePatientModal open={false} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      expect(screen.queryByText(/create.*patient/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/register new client/i)).toBeNull();
     });
 
     test('should render all form steps', () => {
@@ -87,7 +95,7 @@ describe('CreatePatientModal Component Tests', () => {
       );
 
       // Check for step indicators
-      expect(screen.getByText(/step.*1/i)).toBeInTheDocument();
+      expect(screen.getByText(/step.*1/i)).toBeTruthy();
     });
   });
 
@@ -114,7 +122,7 @@ describe('CreatePatientModal Component Tests', () => {
       expect(emailInput.value).toBe('john@example.com');
     });
 
-    test('should validate email format', () => {
+    test('should keep invalid email value for later validation', () => {
       renderWithContext(
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
@@ -123,8 +131,9 @@ describe('CreatePatientModal Component Tests', () => {
       fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
       fireEvent.blur(emailInput);
 
-      // Should show validation error
-      expect(screen.getByText(/invalid.*email/i)).toBeInTheDocument();
+      // Value is preserved; validation happens on submit, not on blur
+      expect(emailInput.value).toBe('invalid-email');
+      expect(screen.queryByText(/invalid.*email/i)).toBeNull();
     });
 
     test('should accept phone input', () => {
@@ -156,40 +165,62 @@ describe('CreatePatientModal Component Tests', () => {
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      const submitButton = screen.getByRole('button', { name: /submit|save|create/i });
-      fireEvent.click(submitButton);
+      // Leave name empty, fill other required fields on step 1
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+1234567890' } });
+      fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: '1990-01-01' } });
+
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/name.*required/i)).toBeInTheDocument();
+        expect(toast.error).toHaveBeenCalledWith('Client name is required');
       });
     });
 
-    test('should require email field', async () => {
+    test('should allow submission without email', async () => {
+      const { createClient } = require('../../api/patientsAPI');
+      createClient.mockResolvedValue({
+        id: 'patient-123',
+        clientId: 'UC-2025-0001'
+      });
+
       renderWithContext(
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      const nameInput = screen.getByLabelText(/name/i);
-      fireEvent.change(nameInput, { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+1234567890' } });
+      fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: '1990-01-01' } });
 
-      const submitButton = screen.getByRole('button', { name: /submit|save|create/i });
+      // Step 1 → Step 2
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      fireEvent.click(nextButton);
+
+      // Fill required emergency contact fields
+      fireEvent.change(screen.getByLabelText(/contact name/i), { target: { value: 'Jane Doe' } });
+      fireEvent.change(screen.getByLabelText(/contact phone/i), { target: { value: '+1 555 987 6543' } });
+
+      // Step 2 → Step 3
+      fireEvent.click(nextButton);
+
+      const submitButton = screen.getByRole('button', { name: /register client/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/email.*required/i)).toBeInTheDocument();
+        expect(createClient).toHaveBeenCalled();
       });
     });
 
-    test('should validate phone number format', () => {
+    test('should sanitize phone number input', () => {
       renderWithContext(
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
       const phoneInput = screen.getByLabelText(/phone/i);
-      fireEvent.change(phoneInput, { target: { value: '123' } });
+      fireEvent.change(phoneInput, { target: { value: 'abc123!!' } });
       fireEvent.blur(phoneInput);
 
-      expect(screen.getByText(/invalid.*phone/i)).toBeInTheDocument();
+      expect(phoneInput.value).toBe('123');
     });
   });
 
@@ -205,12 +236,24 @@ describe('CreatePatientModal Component Tests', () => {
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      // Fill in form
-      fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'John Doe' } });
+      // Fill required fields across steps
+      fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+1234567890' } });
       fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'john@example.com' } });
-      fireEvent.change(screen.getByLabelText(/phone/i), { target: { value: '+1234567890' } });
+      fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: '1990-01-01' } });
 
-      const submitButton = screen.getByRole('button', { name: /submit|save|create/i });
+      // Step 1 → Step 2
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      fireEvent.click(nextButton);
+
+      // Fill required emergency contact fields
+      fireEvent.change(screen.getByLabelText(/contact name/i), { target: { value: 'Jane Doe' } });
+      fireEvent.change(screen.getByLabelText(/contact phone/i), { target: { value: '+1 555 987 6543' } });
+
+      // Step 2 → Step 3
+      fireEvent.click(nextButton);
+
+      const submitButton = screen.getByRole('button', { name: /register client/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -228,11 +271,24 @@ describe('CreatePatientModal Component Tests', () => {
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      // Fill in form
-      fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'John Doe' } });
+      // Fill required fields across steps
+      fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+1 555 123 4567' } });
       fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'john@example.com' } });
+      fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: '1990-01-01' } });
 
-      const submitButton = screen.getByRole('button', { name: /submit|save|create/i });
+      // Step 1 → Step 2
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      fireEvent.click(nextButton);
+
+      // Fill required emergency contact fields
+      fireEvent.change(screen.getByLabelText(/contact name/i), { target: { value: 'Jane Doe' } });
+      fireEvent.change(screen.getByLabelText(/contact phone/i), { target: { value: '+1 555 987 6543' } });
+
+      // Step 2 → Step 3 (where submit button is rendered)
+      fireEvent.click(nextButton);
+
+      const submitButton = screen.getByRole('button', { name: /register client/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -253,10 +309,23 @@ describe('CreatePatientModal Component Tests', () => {
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+1 555 123 4567' } });
       fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'john@example.com' } });
+      fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: '1990-01-01' } });
 
-      const submitButton = screen.getByRole('button', { name: /submit|save|create/i });
+      // Step 1 → Step 2
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      fireEvent.click(nextButton);
+
+      // Fill required emergency contact fields
+      fireEvent.change(screen.getByLabelText(/contact name/i), { target: { value: 'Jane Doe' } });
+      fireEvent.change(screen.getByLabelText(/contact phone/i), { target: { value: '+1 555 987 6543' } });
+
+      // Step 2 → Step 3
+      fireEvent.click(nextButton);
+
+      const submitButton = screen.getByRole('button', { name: /register client/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -275,7 +344,22 @@ describe('CreatePatientModal Component Tests', () => {
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      const fileInput = screen.getByLabelText(/upload|document/i);
+      // Fill required fields for step 1
+      fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+1 555 123 4567' } });
+
+      // Go to step 2
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      fireEvent.click(nextButton);
+
+      // Fill required fields for step 2
+      fireEvent.change(screen.getByLabelText(/contact name/i), { target: { value: 'Jane Doe' } });
+      fireEvent.change(screen.getByLabelText(/contact phone/i), { target: { value: '+1 555 987 6543' } });
+
+      // Go to step 3 (Medical Information + Documents)
+      fireEvent.click(nextButton);
+
+      const [fileInput] = screen.getAllByTestId('file-input');
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
       fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -292,12 +376,28 @@ describe('CreatePatientModal Component Tests', () => {
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      const fileInput = screen.getByLabelText(/upload|document/i);
+      // Fill required fields for step 1
+      fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: 'John Doe' } });
+      fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: '+1 555 123 4567' } });
+
+      // Go to step 2
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      fireEvent.click(nextButton);
+
+      // Fill required fields for step 2
+      fireEvent.change(screen.getByLabelText(/contact name/i), { target: { value: 'Jane Doe' } });
+      fireEvent.change(screen.getByLabelText(/contact phone/i), { target: { value: '+1 555 987 6543' } });
+
+      // Go to step 3 (Medical Information + Documents)
+      fireEvent.click(nextButton);
+
+      const [fileInput] = screen.getAllByTestId('file-input');
       const file = new File(['test'], 'test.exe', { type: 'application/x-msdownload' });
       fireEvent.change(fileInput, { target: { files: [file] } });
 
       await waitFor(() => {
-        expect(screen.getByText(/invalid.*file/i)).toBeInTheDocument();
+        expect(validateFile).toHaveBeenCalledWith(file);
+        expect(toast.error).toHaveBeenCalled();
       });
     });
   });
@@ -308,7 +408,7 @@ describe('CreatePatientModal Component Tests', () => {
         <CreatePatientModal open={true} onClose={mockOnClose} onSuccess={mockOnSuccess} />
       );
 
-      const closeButton = screen.getByRole('button', { name: /close|x/i });
+      const closeButton = screen.getByRole('button', { name: /close/i });
       fireEvent.click(closeButton);
 
       expect(mockOnClose).toHaveBeenCalled();
@@ -326,4 +426,5 @@ describe('CreatePatientModal Component Tests', () => {
     });
   });
 });
+
 

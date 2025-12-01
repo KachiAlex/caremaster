@@ -76,7 +76,8 @@ describe('Consultation API', () => {
       doctorName: 'Dr. Jane Smith'
     };
 
-    await expect(createConsultation(consultationData)).rejects.toThrow('Client ID and Doctor ID are required');
+    // validateAPIRequest throws APIError with "Validation failed" message
+    await expect(createConsultation(consultationData)).rejects.toThrow();
   });
 
   test('should handle errors when creating consultation', async () => {

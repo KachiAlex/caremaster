@@ -122,16 +122,8 @@ describe('Client ID Generator', () => {
     });
 
     test('should generate ID with institution code when provided', async () => {
-      const institutionId = 'test-institution-123';
+      const institutionId = 'HOSP-institution-123';
       const currentYear = new Date().getFullYear();
-
-      // Mock institution document
-      const mockInstitutionDoc = {
-        exists: () => true,
-        data: () => ({ code: 'HOSP' })
-      };
-
-      getDoc.mockResolvedValue(mockInstitutionDoc);
 
       // Mock empty query result
       const mockQuerySnapshot = {
@@ -140,11 +132,11 @@ describe('Client ID Generator', () => {
 
       getDocs.mockResolvedValue(mockQuerySnapshot);
       collection.mockReturnValue({});
-      doc.mockReturnValue({});
 
       const clientId = await generateClientId(institutionId);
 
       expect(isValidPatientId(clientId)).toBe(true);
+      // generateClientId uses first 4 chars of institutionId: 'HOSP'
       expect(clientId).toMatch(/^UC-HOSP-\d{4}-\d{4}$/);
     });
 

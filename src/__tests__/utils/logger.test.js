@@ -5,6 +5,12 @@
 
 import logger from '../../utils/logger';
 
+// Mock environment config
+jest.mock('../../config/environment', () => ({
+  isDevelopment: () => true,
+  isProduction: () => false
+}));
+
 describe('Logger Unit Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -12,6 +18,9 @@ describe('Logger Unit Tests', () => {
     console.info = jest.fn();
     console.warn = jest.fn();
     console.error = jest.fn();
+    console.debug = jest.fn();
+    // Set log level to DEBUG so all logs are shown
+    logger.setLogLevel(0);
   });
 
   describe('log levels', () => {
@@ -31,13 +40,8 @@ describe('Logger Unit Tests', () => {
     });
 
     test('should log debug messages in development', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
-      
       logger.debug('Test debug message', { data: 'test' });
-      expect(console.log).toHaveBeenCalled();
-      
-      process.env.NODE_ENV = originalEnv;
+      expect(console.debug).toHaveBeenCalled();
     });
   });
 

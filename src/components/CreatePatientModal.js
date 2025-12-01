@@ -85,6 +85,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     insuranceCard: null
   });
   const [uploading, setUploading] = useState({});
+  const [fileError, setFileError] = useState('');
   const [nationalId, setNationalId] = useState('');
 
   const careLevels = [
@@ -274,23 +275,41 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
   const handleFileUpload = async (file, documentType) => {
     if (!file) return;
 
-    const validation = validateFile(file);
-    if (!validation.valid) {
-      toast.error(validation.error);
-      return;
-    }
-
+    setFileError('');
     setUploading(prev => ({ ...prev, [documentType]: true }));
+
     try {
-      // We'll upload after Client is created, store file for now
+      // Support both sync and async validateFile implementations
+      const validationResult = await Promise.resolve(validateFile(file));
+
+      let isValid = true;
+      let errorMessage = '';
+
+      if (validationResult && typeof validationResult === 'object' && 'isValid' in validationResult) {
+        isValid = validationResult.isValid;
+        errorMessage = validationResult.error || '';
+      } else if (typeof validationResult === 'boolean') {
+        isValid = validationResult;
+      }
+
+      if (!isValid) {
+        const message = errorMessage || 'Invalid file type. Please upload a supported file.';
+        setFileError(message);
+        toast.error(message);
+        return;
+      }
+
+      // Store file for upload after Client creation
       setUploadedDocuments(prev => ({
         ...prev,
         [documentType]: { file, type: documentType }
       }));
       toast.success(`${documentType.replace('_', ' ')} file selected`);
     } catch (error) {
+      const message = 'Invalid file. Please try another file.';
       console.error('Error handling file:', error);
-      toast.error('Failed to process file');
+      setFileError(message);
+      toast.error(message);
     } finally {
       setUploading(prev => ({ ...prev, [documentType]: false }));
     }
@@ -470,8 +489,18 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
   if (!open) return null;
 
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4"
+      data-testid="modal-backdrop"
+      onClick={handleBackdropClick}
+    >
       <div className="w-full max-w-4xl max-h-[90vh] rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-50">
@@ -485,10 +514,13 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close"
             className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
+            <span className="sr-only">Close</span>
           </button>
         </div>
 
@@ -578,10 +610,11 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>Full Name *</label>
+                      <label htmlFor="name" className={labelClass}>Full Name *</label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
+                          id="name"
                           type="text"
                           name="name"
                           value={formData.name}
@@ -594,10 +627,11 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                     </div>
 
                     <div>
-                      <label className={labelClass}>Email Address</label>
+                      <label htmlFor="email" className={labelClass}>Email Address</label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
+                          id="email"
                           type="email"
                           name="email"
                           value={formData.email}
@@ -609,10 +643,11 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                     </div>
 
                     <div>
-                      <label className={labelClass}>Phone Number *</label>
+                      <label htmlFor="phone" className={labelClass}>Phone Number *</label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
+                          id="phone"
                           type="tel"
                           name="phone"
                           value={formData.phone}
@@ -625,10 +660,11 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                     </div>
 
                     <div>
-                      <label className={labelClass}>Date of Birth</label>
+                      <label htmlFor="dateOfBirth" className={labelClass}>Date of Birth</label>
                       <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
+                          id="dateOfBirth"
                           type="date"
                           name="dateOfBirth"
                           value={formData.dateOfBirth}
@@ -639,8 +675,9 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                     </div>
 
                     <div>
-                      <label className={labelClass}>Gender</label>
+                      <label htmlFor="gender" className={labelClass}>Gender</label>
                       <select
+                        id="gender"
                         name="gender"
                         value={formData.gender}
                         onChange={handleInputChange}
@@ -745,8 +782,9 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>ZIP Code</label>
+                      <label htmlFor="zipCode" className={labelClass}>ZIP Code</label>
                       <input
+                        id="zipCode"
                         type="text"
                         name="zipCode"
                         value={formData.zipCode}
@@ -769,8 +807,9 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>Contact Name *</label>
+                      <label htmlFor="emergencyContactName" className={labelClass}>Contact Name *</label>
                       <input
+                        id="emergencyContactName"
                         type="text"
                         name="emergencyContactName"
                         value={formData.emergencyContactName}
@@ -782,10 +821,11 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                     </div>
 
                     <div>
-                      <label className={labelClass}>Contact Phone *</label>
+                      <label htmlFor="emergencyContactPhone" className={labelClass}>Contact Phone *</label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
+                          id="emergencyContactPhone"
                           type="tel"
                           name="emergencyContactPhone"
                           value={formData.emergencyContactPhone}
@@ -798,8 +838,9 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className={labelClass}>Relationship</label>
+                      <label htmlFor="emergencyContactRelationship" className={labelClass}>Relationship</label>
                       <select
+                        id="emergencyContactRelationship"
                         name="emergencyContactRelationship"
                         value={formData.emergencyContactRelationship}
                         onChange={handleInputChange}
@@ -1003,6 +1044,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                             <input
                               type="file"
                               accept=".pdf,.jpg,.jpeg,.png,.webp"
+                              data-testid="file-input"
                               onChange={(e) => {
                                 const file = e.target.files[0];
                                 if (file) handleFileUpload(file, key);
@@ -1035,6 +1077,11 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                         </div>
                       ))}
                     </div>
+                    {fileError && (
+                      <p className="text-xs text-red-600 mt-2" role="alert">
+                        {fileError}
+                      </p>
+                    )}
                     <p className="text-xs text-gray-500 mt-2">
                       Supported formats: PDF, JPG, PNG, WebP (Max 10MB per file)
                     </p>
