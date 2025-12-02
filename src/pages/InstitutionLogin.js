@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { useUser } from '../contexts/UserContext';
@@ -21,6 +21,8 @@ import {
   XCircle
 } from 'lucide-react';
 import authSecurityService from '../services/authSecurityService';
+// LICENSE CHECK IMPORT
+import { fetchLicenseStatus } from '../services/licenseService';
 
 const InstitutionLogin = () => {
   const [searchParams] = useSearchParams();
@@ -357,6 +359,37 @@ const InstitutionLogin = () => {
           }, { merge: true });
           console.log('✅ User document synced');
           
+          // LICENSE CHECK - Verify institution has active license
+          console.log('🔐 Checking license for institution:', institutionId);
+          try {
+            const licenseStatus = await fetchLicenseStatus(institutionId);
+            console.log('📋 License status:', licenseStatus);
+            
+            if (!licenseStatus.active) {
+              console.error('❌ Institution license is not active:', licenseStatus.reason);
+              toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
+              
+              // Sign out user immediately
+              await signOut(auth);
+              
+              // Redirect to license activation page
+              navigate(`/license-required?institution=${institutionId}`, { replace: true });
+              setSubmitting(false);
+              return;
+            }
+            
+            console.log('✅ License verified - allowing access');
+          } catch (licenseError) {
+            console.error('❌ Error checking license:', licenseError);
+            toast.error('Unable to verify institution license. Access denied.');
+            
+            // Sign out user on license check failure
+            await signOut(auth);
+            navigate(`/license-required?institution=${institutionId}`, { replace: true });
+            setSubmitting(false);
+            return;
+          }
+          
           toast.success('Login successful!');
           await routeUserToDashboard(userCredential.user, customAuthUser);
           return;
@@ -391,6 +424,37 @@ const InstitutionLogin = () => {
                 password: formData.password,
                 updatedAt: new Date().toISOString()
               }, { merge: true });
+              
+              // LICENSE CHECK - Verify institution has active license (for new Firebase Auth accounts)
+              console.log('🔐 Checking license for institution:', institutionId);
+              try {
+                const licenseStatus = await fetchLicenseStatus(institutionId);
+                console.log('📋 License status:', licenseStatus);
+                
+                if (!licenseStatus.active) {
+                  console.error('❌ Institution license is not active:', licenseStatus.reason);
+                  toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
+                  
+                  // Sign out user immediately
+                  await signOut(auth);
+                  
+                  // Redirect to license activation page
+                  navigate(`/license-required?institution=${institutionId}`, { replace: true });
+                  setSubmitting(false);
+                  return;
+                }
+                
+                console.log('✅ License verified - allowing access');
+              } catch (licenseError) {
+                console.error('❌ Error checking license:', licenseError);
+                toast.error('Unable to verify institution license. Access denied.');
+                
+                // Sign out user on license check failure
+                await signOut(auth);
+                navigate(`/license-required?institution=${institutionId}`, { replace: true });
+                setSubmitting(false);
+                return;
+              }
               
               toast.success('Login successful! Setting up your account...');
               await routeUserToDashboard(authResult.user, customAuthUser);
@@ -453,6 +517,37 @@ const InstitutionLogin = () => {
         if (roleParam === 'pharmacist' && userRole !== 'pharmacist') {
           await auth.signOut();
           toast.error(`You are logged in as ${userRole}, not pharmacist. Please use the correct portal.`);
+          setSubmitting(false);
+          return;
+        }
+
+        // LICENSE CHECK - Verify institution has active license (Firebase Auth path)
+        console.log('🔐 Checking license for institution:', institutionId);
+        try {
+          const licenseStatus = await fetchLicenseStatus(institutionId);
+          console.log('📋 License status:', licenseStatus);
+          
+          if (!licenseStatus.active) {
+            console.error('❌ Institution license is not active:', licenseStatus.reason);
+            toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
+            
+            // Sign out user immediately
+            await signOut(auth);
+            
+            // Redirect to license activation page
+            navigate(`/license-required?institution=${institutionId}`, { replace: true });
+            setSubmitting(false);
+            return;
+          }
+          
+          console.log('✅ License verified - allowing access');
+        } catch (licenseError) {
+          console.error('❌ Error checking license:', licenseError);
+          toast.error('Unable to verify institution license. Access denied.');
+          
+          // Sign out user on license check failure
+          await signOut(auth);
+          navigate(`/license-required?institution=${institutionId}`, { replace: true });
           setSubmitting(false);
           return;
         }
@@ -531,6 +626,37 @@ const InstitutionLogin = () => {
       };
 
       await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
+
+      // LICENSE CHECK - Verify institution has active license (for new sign-ups)
+      console.log('🔐 Checking license for institution:', institutionId);
+      try {
+        const licenseStatus = await fetchLicenseStatus(institutionId);
+        console.log('📋 License status:', licenseStatus);
+        
+        if (!licenseStatus.active) {
+          console.error('❌ Institution license is not active:', licenseStatus.reason);
+          toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
+          
+          // Sign out user immediately
+          await signOut(auth);
+          
+          // Redirect to license activation page
+          navigate(`/license-required?institution=${institutionId}`, { replace: true });
+          setSubmitting(false);
+          return;
+        }
+        
+        console.log('✅ License verified - allowing access');
+      } catch (licenseError) {
+        console.error('❌ Error checking license:', licenseError);
+        toast.error('Unable to verify institution license. Access denied.');
+        
+        // Sign out user on license check failure
+        await signOut(auth);
+        navigate(`/license-required?institution=${institutionId}`, { replace: true });
+        setSubmitting(false);
+        return;
+      }
 
       toast.success('Account created successfully!');
       
