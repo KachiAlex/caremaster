@@ -140,18 +140,24 @@ const InstitutionAdminGuard = ({ children }) => {
           return;
         }
 
-        // Check license status (temporarily disabled for debugging)
-        console.log('🔍 Skipping license check temporarily for debugging');
-        console.log('Institution ID:', userProfile.institutionId);
+        // CRITICAL: License check - NO BYPASS ALLOWED
+        console.log('🔐 ENFORCING LICENSE CHECK for institution:', userProfile.institutionId);
         
-        // SECURITY: Enforce license checking
         try {
           const licenseStatus = await fetchLicenseStatus(userProfile.institutionId);
-          console.log('License status check:', licenseStatus);
+          console.log('📋 License status result:', {
+            active: licenseStatus.active,
+            reason: licenseStatus.reason,
+            hasLicense: !!licenseStatus.license,
+            institutionId: userProfile.institutionId
+          });
           
           if (!licenseStatus.active) {
-            console.warn('⚠️ License check failed:', licenseStatus.reason || 'inactive');
-            toast.error(`Access denied. Your institution's license is ${licenseStatus.reason || 'inactive'}. Please contact support or activate your license.`);
+            console.error('❌ ACCESS DENIED - License inactive:', licenseStatus.reason || 'no_license');
+            toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}. Contact your administrator.`);
+            
+            // FORCE sign out to ensure no cached access
+            await signOut(auth);
             
             // Block access and redirect to license activation page
             navigate(`/license-required?institution=${userProfile.institutionId}`, { replace: true });
@@ -159,11 +165,15 @@ const InstitutionAdminGuard = ({ children }) => {
             return;
           }
           
-          console.log('✅ License verified - access granted');
+          console.log('✅ LICENSE VERIFIED - Access granted to admin dashboard');
         } catch (licenseError) {
-          console.error('Error checking license status:', licenseError);
-          toast.error('Unable to verify license. Please contact support.');
-          navigate('/license-required', { replace: true });
+          console.error('❌ LICENSE CHECK ERROR:', licenseError);
+          toast.error('Unable to verify license. Access denied.');
+          
+          // FORCE sign out on error
+          await signOut(auth);
+          
+          navigate(`/license-required?institution=${userProfile.institutionId}`, { replace: true });
           setLoading(false);
           return;
         }
