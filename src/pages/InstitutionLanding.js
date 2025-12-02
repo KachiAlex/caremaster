@@ -164,7 +164,17 @@ const InstitutionLanding = () => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-between">
+            {/* Back to Home Button */}
+            <a 
+              href="/" 
+              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors group"
+            >
+              <Heart className="h-6 w-6 mr-2 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold hidden sm:inline">Care Master Home</span>
+            </a>
+
+            {/* Institution Info */}
             <div className="flex items-center space-x-3">
               <Building2 className="h-8 w-8 text-blue-600" />
               <div className="text-center">
@@ -174,6 +184,9 @@ const InstitutionLanding = () => {
                 )}
               </div>
             </div>
+
+            {/* Spacer for balance */}
+            <div className="w-24 sm:w-32"></div>
           </div>
         </div>
       </div>

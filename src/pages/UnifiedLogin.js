@@ -271,14 +271,16 @@ const UnifiedLogin = () => {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+          <a href="/" className="inline-flex justify-center mb-4 group cursor-pointer">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
               <Heart className="h-8 w-8 text-white" />
             </div>
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900">
-            Care Master
-          </h2>
+          </a>
+          <a href="/" className="inline-block group">
+            <h2 className="text-3xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+              Care Master
+            </h2>
+          </a>
           <p className="mt-2 text-sm text-gray-600">
             Sign in to your account
           </p>

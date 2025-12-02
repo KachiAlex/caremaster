@@ -125,14 +125,14 @@ const NewHomePage = () => {
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center">
-              <Heart className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-2xl font-bold text-gray-900">Care Master</span>
+            {/* Logo - Clickable Home Button */}
+            <Link to="/" className="flex items-center group cursor-pointer">
+              <Heart className="h-8 w-8 text-blue-600 group-hover:scale-110 transition-transform" />
+              <span className="ml-2 text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">Care Master</span>
               <span className="ml-3 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full hidden sm:inline">
                 Health Tech
               </span>
-            </div>
+            </Link>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
