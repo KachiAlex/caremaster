@@ -16,11 +16,18 @@ import {
   CheckCircle,
   Users,
   Calendar,
-  Zap
+  Zap,
+  FileText,
+  Key,
+  Clock as ClockIcon,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { db } from '../firebase/config';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'react-toastify';
+import { fetchLicenseStatus } from '../services/licenseService';
 
 /**
  * InstitutionSettings Component
@@ -37,6 +44,8 @@ const InstitutionSettings = ({ institutionId }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+  const [licenseData, setLicenseData] = useState(null);
+  const [loadingLicense, setLoadingLicense] = useState(false);
   
   const [settings, setSettings] = useState({
     // General Settings
@@ -121,7 +130,21 @@ const InstitutionSettings = ({ institutionId }) => {
 
   useEffect(() => {
     loadSettings();
+    loadLicenseData();
   }, [institutionId]);
+
+  const loadLicenseData = async () => {
+    try {
+      setLoadingLicense(true);
+      const status = await fetchLicenseStatus(institutionId);
+      setLicenseData(status);
+    } catch (error) {
+      console.error('Error loading license data:', error);
+      toast.error('Failed to load license information');
+    } finally {
+      setLoadingLicense(false);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -248,8 +271,9 @@ const InstitutionSettings = ({ institutionId }) => {
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
+        <nav className="flex space-x-8 overflow-x-auto">
           {[
+            { id: 'license', label: 'License', icon: FileText },
             { id: 'general', label: 'General', icon: Building },
             { id: 'currency', label: 'Currency & Regional', icon: DollarSign },
             { id: 'hours', label: 'Business Hours', icon: Clock },
@@ -277,6 +301,219 @@ const InstitutionSettings = ({ institutionId }) => {
 
       {/* Tab Content */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        {/* License Tab */}
+        {activeTab === 'license' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">License Information</h3>
+              <button
+                onClick={loadLicenseData}
+                disabled={loadingLicense}
+                className="flex items-center px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loadingLicense ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+
+            {loadingLicense ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+                <span className="ml-3 text-gray-600">Loading license information...</span>
+              </div>
+            ) : licenseData ? (
+              <div className="space-y-6">
+                {/* License Status Card */}
+                <div className={`border-2 rounded-lg p-6 ${
+                  licenseData.active 
+                    ? 'border-green-200 bg-green-50' 
+                    : 'border-red-200 bg-red-50'
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      {licenseData.active ? (
+                        <CheckCircle2 className="h-8 w-8 text-green-600" />
+                      ) : (
+                        <XCircle className="h-8 w-8 text-red-600" />
+                      )}
+                      <div>
+                        <h4 className={`text-xl font-bold ${
+                          licenseData.active ? 'text-green-900' : 'text-red-900'
+                        }`}>
+                          {licenseData.active ? 'License Active' : 'License Inactive'}
+                        </h4>
+                        <p className={`text-sm ${
+                          licenseData.active ? 'text-green-700' : 'text-red-700'
+                        }`}>
+                          {licenseData.active 
+                            ? 'Your institution has full access to all features' 
+                            : `Reason: ${licenseData.reason || 'Not licensed'}`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* License Details */}
+                {licenseData.license && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* License Key */}
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <Key className="h-5 w-5 text-gray-600 mr-2" />
+                        <h5 className="font-semibold text-gray-900">License Key</h5>
+                      </div>
+                      <p className="text-sm text-gray-600 font-mono break-all">
+                        {licenseData.license.licenseKey || 'Not available'}
+                      </p>
+                    </div>
+
+                    {/* Plan Type */}
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <FileText className="h-5 w-5 text-gray-600 mr-2" />
+                        <h5 className="font-semibold text-gray-900">Plan Type</h5>
+                      </div>
+                      <p className="text-sm text-gray-600 capitalize">
+                        {licenseData.license.planType || 'Standard'}
+                      </p>
+                    </div>
+
+                    {/* Start Date */}
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <Calendar className="h-5 w-5 text-gray-600 mr-2" />
+                        <h5 className="font-semibold text-gray-900">Start Date</h5>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {licenseData.license.startsAt ? (
+                          licenseData.license.startsAt.toDate ? 
+                            licenseData.license.startsAt.toDate().toLocaleDateString() : 
+                            new Date(licenseData.license.startsAt).toLocaleDateString()
+                        ) : 'Not specified'}
+                      </p>
+                    </div>
+
+                    {/* Expiration Date */}
+                    <div className={`rounded-lg p-4 border-2 ${
+                      licenseData.active 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : 'bg-red-50 border-red-200'
+                    }`}>
+                      <div className="flex items-center mb-2">
+                        <ClockIcon className={`h-5 w-5 mr-2 ${
+                          licenseData.active ? 'text-blue-600' : 'text-red-600'
+                        }`} />
+                        <h5 className={`font-semibold ${
+                          licenseData.active ? 'text-blue-900' : 'text-red-900'
+                        }`}>
+                          Expiration Date
+                        </h5>
+                      </div>
+                      <p className={`text-sm font-medium ${
+                        licenseData.active ? 'text-blue-700' : 'text-red-700'
+                      }`}>
+                        {licenseData.license.endsAt ? (
+                          licenseData.license.endsAt.toDate ? 
+                            licenseData.license.endsAt.toDate().toLocaleDateString() : 
+                            new Date(licenseData.license.endsAt).toLocaleDateString()
+                        ) : 'Not specified'}
+                      </p>
+                      {licenseData.license.endsAt && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          {(() => {
+                            const expiryDate = licenseData.license.endsAt.toDate ? 
+                              licenseData.license.endsAt.toDate() : 
+                              new Date(licenseData.license.endsAt);
+                            const daysUntilExpiry = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+                            
+                            if (daysUntilExpiry < 0) {
+                              return `Expired ${Math.abs(daysUntilExpiry)} days ago`;
+                            } else if (daysUntilExpiry === 0) {
+                              return 'Expires today';
+                            } else if (daysUntilExpiry <= 30) {
+                              return `⚠️ Expires in ${daysUntilExpiry} days`;
+                            } else {
+                              return `Expires in ${daysUntilExpiry} days`;
+                            }
+                          })()}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* License Status */}
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center mb-2">
+                        <Shield className="h-5 w-5 text-gray-600 mr-2" />
+                        <h5 className="font-semibold text-gray-900">License Status</h5>
+                      </div>
+                      <p className="text-sm text-gray-600 capitalize">
+                        {licenseData.license.status || 'Unknown'}
+                      </p>
+                    </div>
+
+                    {/* Max Users */}
+                    {licenseData.license.maxUsers && (
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center mb-2">
+                          <Users className="h-5 w-5 text-gray-600 mr-2" />
+                          <h5 className="font-semibold text-gray-900">Max Users</h5>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {licenseData.license.maxUsers} users
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* No License Found */}
+                {!licenseData.license && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <div className="flex items-start">
+                      <AlertTriangle className="h-6 w-6 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-yellow-900 mb-2">No License Found</h4>
+                        <p className="text-sm text-yellow-800 mb-4">
+                          This institution does not have an active license. Please contact your system administrator to activate a license.
+                        </p>
+                        <p className="text-sm text-yellow-800">
+                          <strong>What this means:</strong> Access to the platform is restricted. Users cannot log in until a valid license is activated.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Renewal/Contact Information */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <AlertCircle className="h-5 w-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-900 mb-1">Need to renew or update your license?</p>
+                      <p className="text-sm text-blue-800">
+                        Contact your Care Master account manager or reach out to support for license renewal, upgrades, or questions.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <FileText className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600 mb-2">Unable to load license information</p>
+                <button
+                  onClick={loadLicenseData}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* General Tab */}
         {activeTab === 'general' && (
           <div className="space-y-6">
