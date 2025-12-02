@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { verifyPasswordSecure } from '../utils/securePasswordAuth';
 import rateLimiter from '../utils/rateLimiter';
 import authSecurityService from '../services/authSecurityService';
+import { fetchLicenseStatus } from '../services/licenseService';
 import { 
   Mail, 
   Lock, 
@@ -156,6 +157,35 @@ const UnifiedLogin = () => {
 
       // Now we have userData - detect institution and role
       const institutionId = userData?.institutionId;
+      
+      // CRITICAL: Check license status for institution users BEFORE allowing access
+      if (institutionId) {
+        console.log('🔍 Checking license status for institution:', institutionId);
+        try {
+          const licenseStatus = await fetchLicenseStatus(institutionId);
+          console.log('📋 License status:', licenseStatus);
+          
+          if (!licenseStatus.active) {
+            console.warn('⛔ License check failed:', licenseStatus.reason);
+            toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}. Please contact your administrator to activate the license.`);
+            
+            // Sign out and redirect to license activation page
+            await signOut(auth);
+            setLoading(false);
+            navigate(`/license-required?institution=${institutionId}`, { replace: true });
+            return;
+          }
+          
+          console.log('✅ License verified - proceeding with login');
+        } catch (licenseError) {
+          console.error('❌ Error checking license:', licenseError);
+          toast.error('Unable to verify institution license. Access denied.');
+          await signOut(auth);
+          setLoading(false);
+          navigate(`/license-required?institution=${institutionId}`, { replace: true });
+          return;
+        }
+      }
       
       // Detect role - check roles array first, then individual fields
       let userRole;

@@ -7,6 +7,7 @@ import { getAuth, signOut } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import PharmacyTab from '../components/PharmacyTab';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
+import { fetchLicenseStatus } from '../services/licenseService';
 
 const InstitutionPharmacyDashboard = () => {
   const { user, userProfile, institutionId: contextInstitutionId, institutionData } = useUser();
@@ -36,6 +37,31 @@ const InstitutionPharmacyDashboard = () => {
         toast.error('Access denied. This dashboard is for pharmacists only.');
         navigate('/');
         return;
+      }
+
+      // CRITICAL: Check institution license before allowing any access
+      if (institutionId) {
+        try {
+          console.log('🔍 Checking institution license for pharmacist access...');
+          const licenseStatus = await fetchLicenseStatus(institutionId);
+          
+          if (!licenseStatus.active) {
+            console.warn('⛔ Institution license inactive:', licenseStatus.reason);
+            toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}. Please contact your administrator.`);
+            signOut(getAuth()).then(() => {
+              navigate(`/license-required?institution=${institutionId}`, { replace: true });
+            });
+            return;
+          }
+          console.log('✅ Institution license verified for pharmacist');
+        } catch (licenseError) {
+          console.error('❌ License check error:', licenseError);
+          toast.error('Unable to verify institution license. Access denied.');
+          signOut(getAuth()).then(() => {
+            navigate(`/license-required?institution=${institutionId}`, { replace: true });
+          });
+          return;
+        }
       }
 
       // Validate tab session for role conflicts

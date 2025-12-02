@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
+import { fetchLicenseStatus } from '../services/licenseService';
 
 const InstitutionCaregiverGuard = ({ children }) => {
   const [searchParams] = useSearchParams();
@@ -15,8 +16,9 @@ const InstitutionCaregiverGuard = ({ children }) => {
   const effectiveInstitutionId = urlInstitutionId || institutionId || userProfile?.institutionId;
 
   useEffect(() => {
-    // If not loading and user profile is available
-    if (!loading && userProfile) {
+    const checkAccess = async () => {
+      // If not loading and user profile is available
+      if (!loading && userProfile) {
       console.log('🔒 InstitutionCaregiverGuard: Checking access...', {
         userId: user?.uid,
         userType: userProfile.userType,
@@ -71,6 +73,29 @@ const InstitutionCaregiverGuard = ({ children }) => {
         return;
       }
 
+      // CRITICAL: Check institution license status before allowing access
+      try {
+        console.log('🔍 Checking institution license for caregiver access...');
+        const licenseStatus = await fetchLicenseStatus(effectiveInstitutionId);
+        
+        if (!licenseStatus.active) {
+          console.warn('⛔ Institution license inactive:', licenseStatus.reason);
+          toast.error(`Access denied. Your institution's license is ${licenseStatus.reason || 'inactive'}. Please contact your administrator.`);
+          signOut(auth).then(() => {
+            navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
+          });
+          return;
+        }
+        console.log('✅ Institution license verified for caregiver');
+      } catch (licenseError) {
+        console.error('❌ License check error:', licenseError);
+        toast.error('Unable to verify institution license. Access denied.');
+        signOut(auth).then(() => {
+          navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
+        });
+        return;
+      }
+
       // Check if caregiver needs approval (onboarding complete but not yet approved)
       if (userProfile.status === 'pending' || !userProfile.status) {
         console.log('⏳ Caregiver pending approval - redirecting to pending approval page');
@@ -93,7 +118,13 @@ const InstitutionCaregiverGuard = ({ children }) => {
         });
         return;
       }
-    }
+
+      // All checks passed - show children
+      console.log('✅ All caregiver guard checks passed');
+      }
+    };
+
+    checkAccess();
   }, [user, userProfile, loading, navigate, institutionId, urlInstitutionId, effectiveInstitutionId]);
 
   // Show loading state
