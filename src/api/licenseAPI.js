@@ -33,13 +33,25 @@ export const getLicenseStatus = async (institutionId) => {
     }
 
     // Query licenses for this institution
-    const q = query(
-      collection(db, LICENSES_COLLECTION),
-      where('institutionId', '==', institutionId),
-      orderBy('endsAt', 'desc')
-    );
+    // Try with orderBy first, fall back to simple query if index doesn't exist
+    let snapshot;
+    try {
+      const q = query(
+        collection(db, LICENSES_COLLECTION),
+        where('institutionId', '==', institutionId),
+        orderBy('endsAt', 'desc')
+      );
+      snapshot = await getDocs(q);
+    } catch (indexError) {
+      // If index doesn't exist, use simple query without orderBy
+      console.warn('⚠️ LICENSE CHECK - Index not found, using simple query');
+      const simpleQ = query(
+        collection(db, LICENSES_COLLECTION),
+        where('institutionId', '==', institutionId)
+      );
+      snapshot = await getDocs(simpleQ);
+    }
 
-    const snapshot = await getDocs(q);
     console.log('📋 LICENSE CHECK - Found licenses:', snapshot.size);
 
     if (snapshot.empty) {
@@ -47,8 +59,10 @@ export const getLicenseStatus = async (institutionId) => {
       return { active: false, reason: 'no_license' };
     }
 
-    // Get the most recent license
+    // Get the most recent license (sort in memory if not sorted by query)
     let mostRecentLicense = null;
+    const allLicenses = [];
+    
     snapshot.forEach((doc) => {
       const licenseData = { id: doc.id, ...doc.data() };
       console.log('📄 LICENSE CHECK - License data:', {
@@ -58,10 +72,17 @@ export const getLicenseStatus = async (institutionId) => {
         active: licenseData.active,
         endsAt: licenseData.endsAt
       });
-      if (!mostRecentLicense) {
-        mostRecentLicense = licenseData;
-      }
+      allLicenses.push(licenseData);
     });
+
+    // Sort by endsAt in memory to get most recent
+    allLicenses.sort((a, b) => {
+      const aEndsAt = a.endsAt?.toDate ? a.endsAt.toDate() : new Date(a.endsAt);
+      const bEndsAt = b.endsAt?.toDate ? b.endsAt.toDate() : new Date(b.endsAt);
+      return bEndsAt - aEndsAt; // Descending order (most recent first)
+    });
+
+    mostRecentLicense = allLicenses[0];
 
     if (!mostRecentLicense) {
       console.warn('❌ LICENSE CHECK - No valid license found');
