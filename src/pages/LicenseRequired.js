@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { validateLicenseKey } from '../services/licenseService';
+import { validateLicenseKey, activateLicense } from '../services/licenseService';
 import { toast } from 'react-toastify';
 import { 
   Shield, 
@@ -66,15 +66,20 @@ const LicenseRequired = () => {
     setLoading(true);
 
     try {
-      // In a real implementation, this would call a Cloud Function to validate and activate
-      // For now, we'll check if a license exists in Firestore with this key
+      // Activate license using license key
+      const result = await activateLicense(licenseKey.trim().toUpperCase(), institutionId);
       
-      const licensesRef = db.collection ? 
-        await db.collection('licenses').where('licenseKey', '==', licenseKey.trim().toUpperCase()).get() :
-        await getDoc(doc(db, 'licenses', licenseKey.trim().toUpperCase()));
+      if (!result.success) {
+        toast.error(result.error || 'Failed to activate license. Please check your license key.');
+        setLoading(false);
+        return;
+      }
 
-      // Simulated validation - in production this should be a Cloud Function
-      toast.success('✅ License activated successfully!');
+      if (result.alreadyActive) {
+        toast.info('License is already active for this institution.');
+      } else {
+        toast.success('✅ License activated successfully!');
+      }
       
       setTimeout(() => {
         window.location.href = institutionId ? 

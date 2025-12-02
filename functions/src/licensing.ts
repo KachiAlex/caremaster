@@ -1,5 +1,9 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import * as cors from 'cors';
+
+// Enable CORS for all licensing functions
+const corsHandler = cors({ origin: true });
 
 type CreateInstitutionRequest = {
   name: string;

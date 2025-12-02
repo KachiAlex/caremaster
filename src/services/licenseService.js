@@ -1,30 +1,29 @@
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
+import { getLicenseStatus as getDirectLicenseStatus, activateLicenseByKey as directActivateLicenseByKey, getAllLicenses as getDirectLicenses, getAllInstitutions as getDirectInstitutions } from '../api/licenseAPI';
 
+// Use direct Firestore access to bypass CORS issues
 export async function fetchLicenseStatus(institutionId) {
-  return new Promise((resolve) => {
-    if (!institutionId) {
-      resolve({ active: false, reason: 'no_institution_id' });
-      return;
-    }
+  try {
+    // Use direct Firestore access instead of Cloud Functions
+    const status = await getDirectLicenseStatus(institutionId);
+    return status;
+  } catch (error) {
+    console.error('Error fetching license status:', error);
+    // Security: Default to inactive on error
+    return { active: false, reason: 'error', error: error.message };
+  }
+}
 
-    const functions = getFunctions(getApp(), 'us-central1');
-    const callable = httpsCallable(functions, 'getLicenseStatusFunction');
-    
-    // Call license check function
-    Promise.resolve(callable({ institutionId }))
-      .then((res) => {
-        resolve(res.data);
-      })
-      .catch((error) => {
-        console.error('License check error:', error);
-        // If functions not deployed or network error, default to INACTIVE for security
-        resolve({ active: false, reason: 'check_unavailable', error: error.message });
-      });
-  }).catch(() => {
-    // Security: Default to inactive on any error
-    return { active: false, reason: 'error' };
-  });
+// Activate license using license key
+export async function activateLicense(licenseKey, institutionId) {
+  try {
+    const result = await directActivateLicenseByKey(licenseKey, institutionId);
+    return result;
+  } catch (error) {
+    console.error('Error activating license:', error);
+    throw error;
+  }
 }
 
 // Validate license key format
@@ -81,17 +80,41 @@ export async function assignInstitutionAdmin(payload) {
 }
 
 export async function getInstitutions() {
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'getInstitutionsFunction');
-  const res = await callable();
-  return res.data;
+  try {
+    // Use direct Firestore access to bypass CORS
+    const institutions = await getDirectInstitutions();
+    return institutions;
+  } catch (error) {
+    console.error('Error fetching institutions:', error);
+    // Fallback to Cloud Functions if Firestore fails
+    try {
+      const functions = getFunctions(getApp(), 'us-central1');
+      const callable = httpsCallable(functions, 'getInstitutionsFunction');
+      const res = await callable();
+      return res.data;
+    } catch (funcError) {
+      throw error;
+    }
+  }
 }
 
 export async function getLicenses() {
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'getLicensesFunction');
-  const res = await callable();
-  return res.data;
+  try {
+    // Use direct Firestore access to bypass CORS
+    const licenses = await getDirectLicenses();
+    return licenses;
+  } catch (error) {
+    console.error('Error fetching licenses:', error);
+    // Fallback to Cloud Functions if Firestore fails
+    try {
+      const functions = getFunctions(getApp(), 'us-central1');
+      const callable = httpsCallable(functions, 'getLicensesFunction');
+      const res = await callable();
+      return res.data;
+    } catch (funcError) {
+      throw error;
+    }
+  }
 }
 
 export async function updateInstitution(institutionId, updates) {
@@ -122,7 +145,7 @@ export async function suspendLicense(licenseId) {
   return res.data;
 }
 
-export async function activateLicense(licenseId) {
+export async function activateLicenseById(licenseId) {
   const functions = getFunctions(getApp(), 'us-central1');
   const callable = httpsCallable(functions, 'activateLicenseFunction');
   const res = await callable({ licenseId });
