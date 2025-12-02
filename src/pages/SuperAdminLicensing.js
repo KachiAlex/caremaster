@@ -575,7 +575,13 @@ const SuperAdminLicensing = () => {
                       {i.active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{i.createdAt ? new Date(i.createdAt).toLocaleDateString() : '—'}</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {i.createdAt ? (
+                      i.createdAt.toDate ? 
+                        i.createdAt.toDate().toLocaleDateString() : 
+                        new Date(i.createdAt).toLocaleDateString()
+                    ) : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
                       <button 
@@ -696,10 +702,18 @@ const SuperAdminLicensing = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500">
-                        {license.endsAt ? new Date(license.endsAt).toLocaleDateString() : '—'}
+                        {license.endsAt ? (
+                          license.endsAt.toDate ? 
+                            license.endsAt.toDate().toLocaleDateString() : 
+                            new Date(license.endsAt).toLocaleDateString()
+                        ) : '—'}
                       </td>
                       <td className="px-4 py-3 text-gray-500">
-                        {license.createdAt ? new Date(license.createdAt).toLocaleDateString() : '—'}
+                        {license.createdAt ? (
+                          license.createdAt.toDate ? 
+                            license.createdAt.toDate().toLocaleDateString() : 
+                            new Date(license.createdAt).toLocaleDateString()
+                        ) : '—'}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">

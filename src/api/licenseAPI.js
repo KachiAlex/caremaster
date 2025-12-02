@@ -25,7 +25,10 @@ const INSTITUTIONS_COLLECTION = 'institutions';
 // Get license status for an institution
 export const getLicenseStatus = async (institutionId) => {
   try {
+    console.log('🔍 LICENSE CHECK - Institution ID:', institutionId);
+    
     if (!institutionId) {
+      console.warn('❌ LICENSE CHECK - No institution ID provided');
       return { active: false, reason: 'no_institution_id' };
     }
 
@@ -37,8 +40,10 @@ export const getLicenseStatus = async (institutionId) => {
     );
 
     const snapshot = await getDocs(q);
+    console.log('📋 LICENSE CHECK - Found licenses:', snapshot.size);
 
     if (snapshot.empty) {
+      console.warn(`❌ LICENSE CHECK - No license found for institution: ${institutionId}`);
       return { active: false, reason: 'no_license' };
     }
 
@@ -46,12 +51,20 @@ export const getLicenseStatus = async (institutionId) => {
     let mostRecentLicense = null;
     snapshot.forEach((doc) => {
       const licenseData = { id: doc.id, ...doc.data() };
+      console.log('📄 LICENSE CHECK - License data:', {
+        id: doc.id,
+        licenseKey: licenseData.licenseKey,
+        status: licenseData.status,
+        active: licenseData.active,
+        endsAt: licenseData.endsAt
+      });
       if (!mostRecentLicense) {
         mostRecentLicense = licenseData;
       }
     });
 
     if (!mostRecentLicense) {
+      console.warn('❌ LICENSE CHECK - No valid license found');
       return { active: false, reason: 'no_valid_license' };
     }
 
@@ -64,18 +77,33 @@ export const getLicenseStatus = async (institutionId) => {
     const isWithinDateRange = startsAt <= now && endsAt >= now;
     const active = isActiveStatus && isWithinDateRange;
 
+    console.log('🔍 LICENSE CHECK - Validation:', {
+      institutionId,
+      licenseKey: mostRecentLicense.licenseKey,
+      isActiveStatus,
+      isWithinDateRange,
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      now: now.toISOString(),
+      finalActive: active,
+      reason: !active ? (!isActiveStatus ? 'suspended' : 'expired') : 'valid'
+    });
+
     if (!active) {
       if (!isActiveStatus) {
+        console.warn('❌ LICENSE CHECK - License is suspended/inactive');
         return { active: false, reason: 'license_suspended', license: mostRecentLicense };
       }
       if (!isWithinDateRange) {
+        console.warn('❌ LICENSE CHECK - License is expired');
         return { active: false, reason: 'license_expired', license: mostRecentLicense };
       }
     }
 
+    console.log('✅ LICENSE CHECK - License is ACTIVE');
     return { active, license: mostRecentLicense };
   } catch (error) {
-    console.error('Error checking license status:', error);
+    console.error('❌ LICENSE CHECK - Error:', error);
     // Security: Default to inactive on error
     return { active: false, reason: 'check_error', error: error.message };
   }
