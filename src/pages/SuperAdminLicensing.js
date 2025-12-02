@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { X } from 'lucide-react';
-import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin } from '../services/licenseService';
+import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, generateLicenseKey } from '../services/licenseService';
 
 const Card = ({ title, value, accent = 'bg-blue-100 text-blue-800' }) => (
   <div className={`rounded-xl border border-gray-200 p-5 bg-white`}> 
@@ -40,7 +40,13 @@ const SuperAdminLicensing = () => {
 
   // Forms
   const [institution, setInstitution] = useState({ name: '', domain: '', notes: '' });
-  const [license, setLicense] = useState({ institutionId: '', plan: 'basic', seats: 10, endsAt: '' });
+  const [license, setLicense] = useState({ 
+    institutionId: '', 
+    plan: 'basic', 
+    seats: 10, 
+    endsAt: '',
+    licenseKey: '' 
+  });
   const [adminUser, setAdminUser] = useState({ institutionId: '', email: '', displayName: '' });
 
   // Modals
@@ -305,13 +311,24 @@ const SuperAdminLicensing = () => {
     }
     
     try {
+      // Generate license key if not provided
+      const licenseKey = license.licenseKey || generateLicenseKey();
+      
       const res = await createLicense({
         institutionId: license.institutionId.trim(),
         plan: license.plan,
         seats: license.seats,
-        endsAt: license.endsAt
+        endsAt: license.endsAt,
+        licenseKey: licenseKey
       });
-      setMessage(`License created: ${res.id}`);
+      
+      // Copy license key to clipboard
+      try {
+        await navigator.clipboard.writeText(licenseKey);
+        setMessage(`License created successfully! License Key: ${licenseKey} (Copied to clipboard)`);
+      } catch (err) {
+        setMessage(`License created successfully! License Key: ${licenseKey}`);
+      }
       
       // Refresh licenses data
       try {
@@ -322,7 +339,7 @@ const SuperAdminLicensing = () => {
       }
       
       setShowLicenseModal(false);
-      setLicense({ institutionId: '', plan: 'basic', seats: 10, endsAt: '' });
+      setLicense({ institutionId: '', plan: 'basic', seats: 10, endsAt: '', licenseKey: '' });
     } catch (e) {
       setMessage(e.message || 'Failed to create license');
     } finally { setBusy(false); }
@@ -622,6 +639,7 @@ const SuperAdminLicensing = () => {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institution</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License Key</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seats</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -646,6 +664,27 @@ const SuperAdminLicensing = () => {
                     <tr key={license.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-900">
                         {institution?.name || 'Unknown Institution'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
+                            {license.licenseKey || 'N/A'}
+                          </code>
+                          {license.licenseKey && (
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(license.licenseKey);
+                                toast.success('License key copied!');
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Copy License Key"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-700 capitalize">{license.plan}</td>
                       <td className="px-4 py-3 text-gray-700">{license.seats}</td>
@@ -708,18 +747,75 @@ const SuperAdminLicensing = () => {
 
       {/* Create License Modal */}
       <Modal open={showLicenseModal} title="Create License" onClose={() => setShowLicenseModal(false)}>
-        <div className="grid grid-cols-1 gap-3">
-          <input className="border rounded p-2" placeholder="Institution ID" value={license.institutionId} onChange={e => setLicense({ ...license, institutionId: e.target.value })} />
-          <select className="border rounded p-2" value={license.plan} onChange={e => setLicense({ ...license, plan: e.target.value })}>
-            <option value="basic">Basic</option>
-            <option value="standard">Standard</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
-          <input className="border rounded p-2" type="number" placeholder="Seats" value={license.seats} onChange={e => setLicense({ ...license, seats: Number(e.target.value) })} />
-          <input className="border rounded p-2" type="date" placeholder="Ends At" value={license.endsAt} onChange={e => setLicense({ ...license, endsAt: e.target.value })} />
-          <div className="flex justify-end gap-2 pt-2">
-            <button onClick={() => setShowLicenseModal(false)} className="px-4 py-2 border rounded-md">Cancel</button>
-            <button disabled={busy} onClick={handleCreateLicense} className="px-4 py-2 bg-indigo-600 text-white rounded-md">Create</button>
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Institution ID *</label>
+            <input 
+              className="border rounded p-2 w-full" 
+              placeholder="Institution ID" 
+              value={license.institutionId} 
+              onChange={e => setLicense({ ...license, institutionId: e.target.value })} 
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">License Key</label>
+            <div className="flex gap-2">
+              <input 
+                className="border rounded p-2 w-full font-mono text-sm" 
+                placeholder="Auto-generated if empty" 
+                value={license.licenseKey} 
+                onChange={e => setLicense({ ...license, licenseKey: e.target.value.toUpperCase() })} 
+                maxLength={24}
+              />
+              <button
+                type="button"
+                onClick={() => setLicense({ ...license, licenseKey: generateLicenseKey() })}
+                className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 whitespace-nowrap text-sm"
+              >
+                Generate
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Format: LIC-XXXX-XXXX-XXXX-XXXX</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Plan *</label>
+            <select className="border rounded p-2 w-full" value={license.plan} onChange={e => setLicense({ ...license, plan: e.target.value })}>
+              <option value="basic">Basic</option>
+              <option value="standard">Standard</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Seats *</label>
+            <input 
+              className="border rounded p-2 w-full" 
+              type="number" 
+              placeholder="Number of seats" 
+              value={license.seats} 
+              onChange={e => setLicense({ ...license, seats: Number(e.target.value) })} 
+              min={1}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Expires On *</label>
+            <input 
+              className="border rounded p-2 w-full" 
+              type="date" 
+              value={license.endsAt} 
+              onChange={e => setLicense({ ...license, endsAt: e.target.value })} 
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <button onClick={() => setShowLicenseModal(false)} className="px-4 py-2 border rounded-md hover:bg-gray-50">Cancel</button>
+            <button disabled={busy} onClick={handleCreateLicense} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50">
+              {busy ? 'Creating...' : 'Create License'}
+            </button>
           </div>
         </div>
       </Modal>

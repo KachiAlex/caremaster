@@ -43,6 +43,7 @@ const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
 const InstitutionLanding = lazy(() => import('./pages/InstitutionLanding'));
 const InstitutionLogin = lazy(() => import('./pages/InstitutionLogin'));
 const UnifiedLogin = lazy(() => import('./pages/UnifiedLogin'));
+const LicenseRequired = lazy(() => import('./pages/LicenseRequired'));
 const InstitutionCaregiverOnboarding = lazy(() => import('./pages/InstitutionCaregiverOnboarding'));
 const InstitutionCaregiverPendingApproval = lazy(() => import('./pages/InstitutionCaregiverPendingApproval'));
 const InstitutionCaregiverDashboard = lazy(() => import('./pages/InstitutionCaregiverDashboard'));
@@ -389,6 +390,12 @@ function App() {
       <Route 
         path="/onboard" 
         element={<InstitutionLanding />} 
+      />
+
+      {/* License Activation - Public */}
+      <Route 
+        path="/license-required" 
+        element={<LicenseRequired />} 
       />
       
       {/* Legacy institution login - redirects to unified login */}

@@ -144,28 +144,29 @@ const InstitutionAdminGuard = ({ children }) => {
         console.log('🔍 Skipping license check temporarily for debugging');
         console.log('Institution ID:', userProfile.institutionId);
         
-        // TODO: Re-enable license checking after debugging
-        /*
+        // SECURITY: Enforce license checking
         try {
           const licenseStatus = await fetchLicenseStatus(userProfile.institutionId);
           console.log('License status check:', licenseStatus);
           
           if (!licenseStatus.active) {
             console.warn('⚠️ License check failed:', licenseStatus.reason || 'inactive');
-            // For now, allow access but show warning (can be made stricter later)
-            toast.warning(`License status: ${licenseStatus.reason || 'inactive'}. Access granted for now.`);
-            // Uncomment below to enforce license check:
-            // toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
-            // navigate('/onboard', { replace: true });
-            // setLoading(false);
-            // return;
+            toast.error(`Access denied. Your institution's license is ${licenseStatus.reason || 'inactive'}. Please contact support or activate your license.`);
+            
+            // Block access and redirect to license activation page
+            navigate(`/license-required?institution=${userProfile.institutionId}`, { replace: true });
+            setLoading(false);
+            return;
           }
+          
+          console.log('✅ License verified - access granted');
         } catch (licenseError) {
           console.error('Error checking license status:', licenseError);
-          console.warn('License check failed, allowing access for development');
-          // Don't block access if license check fails
+          toast.error('Unable to verify license. Please contact support.');
+          navigate('/license-required', { replace: true });
+          setLoading(false);
+          return;
         }
-        */
 
         setIsAuthorized(true);
         setLoading(false);

@@ -2,8 +2,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 
 export async function fetchLicenseStatus(institutionId) {
-  // Suppress all potential errors - functions may not be deployed
-  // Use a promise that never rejects to prevent any error propagation
   return new Promise((resolve) => {
     if (!institutionId) {
       resolve({ active: false, reason: 'no_institution_id' });
@@ -13,20 +11,52 @@ export async function fetchLicenseStatus(institutionId) {
     const functions = getFunctions(getApp(), 'us-central1');
     const callable = httpsCallable(functions, 'getLicenseStatusFunction');
     
-    // Wrap in Promise.resolve to catch any errors and never reject
+    // Call license check function
     Promise.resolve(callable({ institutionId }))
       .then((res) => {
         resolve(res.data);
       })
-      .catch(() => {
-        // Silently default to active - functions not deployed or network error
-        // This prevents any console errors from bubbling up
-        resolve({ active: true, reason: 'check_unavailable', _suppressError: true });
+      .catch((error) => {
+        console.error('License check error:', error);
+        // If functions not deployed or network error, default to INACTIVE for security
+        resolve({ active: false, reason: 'check_unavailable', error: error.message });
       });
   }).catch(() => {
-    // Final safety net - always return active
-    return { active: true, reason: 'error', _suppressError: true };
+    // Security: Default to inactive on any error
+    return { active: false, reason: 'error' };
   });
+}
+
+// Validate license key format
+export function validateLicenseKey(licenseKey) {
+  if (!licenseKey || typeof licenseKey !== 'string') {
+    return { valid: false, error: 'License key is required' };
+  }
+  
+  // License key format: LIC-XXXX-XXXX-XXXX-XXXX (20 chars + 4 dashes = 24 total)
+  const licenseKeyPattern = /^LIC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+  
+  if (!licenseKeyPattern.test(licenseKey)) {
+    return { valid: false, error: 'Invalid license key format. Expected: LIC-XXXX-XXXX-XXXX-XXXX' };
+  }
+  
+  return { valid: true };
+}
+
+// Generate a license key
+export function generateLicenseKey() {
+  const segments = [];
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excluding confusing chars: 0, O, I, 1
+  
+  for (let i = 0; i < 4; i++) {
+    let segment = '';
+    for (let j = 0; j < 4; j++) {
+      segment += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    segments.push(segment);
+  }
+  
+  return `LIC-${segments.join('-')}`;
 }
 
 export async function createInstitution(payload) {
