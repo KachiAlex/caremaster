@@ -32,6 +32,14 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
   const [viewingInvoice, setViewingInvoice] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentFormData, setPaymentFormData] = useState({
+    method: 'cash',
+    reference: '',
+    amount: 0,
+    date: new Date().toISOString().split('T')[0],
+    notes: ''
+  });
 
   // Item form data
   const [itemFormData, setItemFormData] = useState({
@@ -200,6 +208,46 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
     }
   };
 
+  const handleMarkAsPaid = (invoice) => {
+    setViewingInvoice(invoice);
+    setPaymentFormData({
+      method: 'cash',
+      reference: `PAY-${Date.now()}`,
+      amount: invoice.totalAmount || 0,
+      date: new Date().toISOString().split('T')[0],
+      notes: ''
+    });
+    setShowPaymentModal(true);
+  };
+
+  const handleConfirmPayment = async (e) => {
+    e.preventDefault();
+
+    if (!viewingInvoice) return;
+
+    try {
+      const paymentDetails = {
+        method: paymentFormData.method,
+        reference: paymentFormData.reference,
+        amount: parseFloat(paymentFormData.amount),
+        date: new Date(paymentFormData.date),
+        notes: paymentFormData.notes,
+        processedAt: new Date(),
+        processedBy: institutionId
+      };
+
+      await invoiceAPI.updateInvoiceStatus(viewingInvoice.id, 'paid', paymentDetails);
+      
+      toast.success('✅ Payment confirmed! Invoice is now a receipt.');
+      setShowPaymentModal(false);
+      setShowInvoiceViewModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error confirming payment:', error);
+      toast.error('Failed to confirm payment');
+    }
+  };
+
   const handleViewInvoice = (invoice) => {
     setViewingInvoice(invoice);
     setShowInvoiceViewModal(true);
@@ -274,9 +322,11 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
             </div>
 
             <div style="text-align: right; margin-bottom: 20px;">
-              <h2 style="font-size: 24px; color: #2563eb;">INVOICE</h2>
+              <h2 style="font-size: 24px; color: ${invoice.status === 'paid' ? '#059669' : '#2563eb'};">
+                ${invoice.status === 'paid' ? 'RECEIPT' : 'INVOICE'}
+              </h2>
               <p style="font-size: 18px; font-weight: 600;">#${invoice.invoiceNumber}</p>
-              <span class="status ${invoice.status}">${invoice.status.toUpperCase()}</span>
+              <span class="status ${invoice.status}">${invoice.status === 'paid' ? 'PAID' : invoice.status.toUpperCase()}</span>
             </div>
 
             <div class="invoice-info">
@@ -349,11 +399,39 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
             ` : ''}
 
             ${invoice.status === 'paid' && invoice.paymentDetails ? `
-            <div style="margin-top: 20px; padding: 15px; background: #d1fae5; border-left: 4px solid #059669;">
-              <h3 style="font-size: 14px; margin-bottom: 10px; color: #065f46;">Payment Information:</h3>
-              <p style="color: #065f46;"><strong>Method:</strong> ${invoice.paymentDetails.method || 'N/A'}</p>
-              <p style="color: #065f46;"><strong>Reference:</strong> ${invoice.paymentDetails.reference || 'N/A'}</p>
-              <p style="color: #065f46;"><strong>Date:</strong> ${formatDate(invoice.paymentDetails.date)}</p>
+            <div style="margin-top: 30px; padding: 20px; background: #d1fae5; border: 2px solid #059669; border-radius: 8px;">
+              <h3 style="font-size: 16px; margin-bottom: 15px; color: #065f46; font-weight: bold;">
+                ✓ PAYMENT RECEIVED - OFFICIAL RECEIPT
+              </h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                  <p style="color: #047857; font-size: 12px; margin-bottom: 4px;">Payment Method</p>
+                  <p style="color: #065f46; font-weight: bold;">${(invoice.paymentDetails.method || 'N/A').toUpperCase()}</p>
+                </div>
+                <div>
+                  <p style="color: #047857; font-size: 12px; margin-bottom: 4px;">Reference Number</p>
+                  <p style="color: #065f46; font-weight: bold;">${invoice.paymentDetails.reference || 'N/A'}</p>
+                </div>
+                <div>
+                  <p style="color: #047857; font-size: 12px; margin-bottom: 4px;">Amount Paid</p>
+                  <p style="color: #065f46; font-weight: bold; font-size: 18px;">₦${(invoice.paymentDetails.amount || invoice.totalAmount)?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p style="color: #047857; font-size: 12px; margin-bottom: 4px;">Payment Date</p>
+                  <p style="color: #065f46; font-weight: bold;">${formatDate(invoice.paymentDetails.date)}</p>
+                </div>
+              </div>
+              ${invoice.paymentDetails.notes ? `
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #059669;">
+                <p style="color: #047857; font-size: 12px; margin-bottom: 4px;">Payment Notes</p>
+                <p style="color: #065f46;">${invoice.paymentDetails.notes}</p>
+              </div>
+              ` : ''}
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #059669; text-align: center;">
+                <p style="color: #065f46; font-size: 12px;">
+                  ✓ This document serves as an official receipt of payment
+                </p>
+              </div>
             </div>
             ` : ''}
 
@@ -1224,9 +1302,16 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">
-                  Invoice #{viewingInvoice.invoiceNumber}
-                </h3>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {viewingInvoice.status === 'paid' ? 'Receipt' : 'Invoice'} #{viewingInvoice.invoiceNumber}
+                  </h3>
+                  {viewingInvoice.status === 'paid' && (
+                    <p className="text-sm text-green-600 mt-1">
+                      ✓ Payment received - Official receipt
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={() => setShowInvoiceViewModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1235,36 +1320,49 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                 </button>
               </div>
 
-              {/* Invoice Header */}
-              <div className="bg-blue-600 text-white p-6 rounded-lg mb-6">
+              {/* Invoice/Receipt Header */}
+              <div className={`${viewingInvoice.status === 'paid' ? 'bg-green-600' : 'bg-blue-600'} text-white p-6 rounded-lg mb-6`}>
                 <h1 className="text-3xl font-bold">Care Master Healthcare</h1>
-                <p className="text-blue-100 mt-2">Professional Healthcare Services & Elderly Care</p>
+                <p className={`${viewingInvoice.status === 'paid' ? 'text-green-100' : 'text-blue-100'} mt-2`}>
+                  Professional Healthcare Services & Elderly Care
+                </p>
                 <div className="mt-4 text-sm">
                   <p>📍 Lagos, Nigeria</p>
                   <p>📞 +234 800 Care Master (353379)</p>
-                  <p>✉️ billing@Care Master.com</p>
+                  <p>✉️ billing@caremaster.com</p>
                 </div>
               </div>
 
               {/* Status Badge */}
-              <div className="mb-6">
-                {viewingInvoice.status === 'paid' && (
-                  <span className="px-4 py-2 text-sm font-semibold bg-green-100 text-green-800 rounded-full flex items-center w-fit">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    PAID
-                  </span>
-                )}
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  {viewingInvoice.status === 'paid' && (
+                    <span className="px-4 py-2 text-sm font-semibold bg-green-100 text-green-800 rounded-full flex items-center w-fit">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      RECEIPT (PAID)
+                    </span>
+                  )}
+                  {viewingInvoice.status === 'pending' && (
+                    <span className="px-4 py-2 text-sm font-semibold bg-yellow-100 text-yellow-800 rounded-full flex items-center w-fit">
+                      <Clock className="h-4 w-4 mr-2" />
+                      INVOICE (PENDING)
+                    </span>
+                  )}
+                  {viewingInvoice.status === 'cancelled' && (
+                    <span className="px-4 py-2 text-sm font-semibold bg-red-100 text-red-800 rounded-full flex items-center w-fit">
+                      <XCircle className="h-4 w-4 mr-2" />
+                      CANCELLED
+                    </span>
+                  )}
+                </div>
                 {viewingInvoice.status === 'pending' && (
-                  <span className="px-4 py-2 text-sm font-semibold bg-yellow-100 text-yellow-800 rounded-full flex items-center w-fit">
-                    <Clock className="h-4 w-4 mr-2" />
-                    PENDING
-                  </span>
-                )}
-                {viewingInvoice.status === 'cancelled' && (
-                  <span className="px-4 py-2 text-sm font-semibold bg-red-100 text-red-800 rounded-full flex items-center w-fit">
-                    <XCircle className="h-4 w-4 mr-2" />
-                    CANCELLED
-                  </span>
+                  <button
+                    onClick={() => handleMarkAsPaid(viewingInvoice)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Confirm Payment
+                  </button>
                 )}
               </div>
 
@@ -1350,30 +1448,206 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
 
               {/* Payment Info */}
               {viewingInvoice.status === 'paid' && viewingInvoice.paymentDetails && (
-                <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-600 rounded">
-                  <h4 className="text-sm font-semibold text-green-800 mb-2">Payment Information:</h4>
-                  <p className="text-green-700"><strong>Method:</strong> {viewingInvoice.paymentDetails.method}</p>
-                  <p className="text-green-700"><strong>Reference:</strong> {viewingInvoice.paymentDetails.reference}</p>
-                  <p className="text-green-700"><strong>Date:</strong> {viewingInvoice.paymentDetails.date?.toLocaleDateString()}</p>
+                <div className="mb-6 p-6 bg-green-50 border-2 border-green-600 rounded-lg">
+                  <h4 className="text-lg font-bold text-green-800 mb-4 flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    Payment Received - Receipt
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-green-600 font-medium">Payment Method</p>
+                      <p className="text-green-900 font-semibold">{viewingInvoice.paymentDetails.method?.toUpperCase()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-green-600 font-medium">Reference Number</p>
+                      <p className="text-green-900 font-semibold">{viewingInvoice.paymentDetails.reference}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-green-600 font-medium">Amount Paid</p>
+                      <p className="text-green-900 font-semibold text-lg">₦{viewingInvoice.paymentDetails.amount?.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-green-600 font-medium">Payment Date</p>
+                      <p className="text-green-900 font-semibold">
+                        {viewingInvoice.paymentDetails.date ? 
+                          (viewingInvoice.paymentDetails.date.toDate ? 
+                            viewingInvoice.paymentDetails.date.toDate().toLocaleDateString() : 
+                            new Date(viewingInvoice.paymentDetails.date).toLocaleDateString()
+                          ) : 'N/A'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  {viewingInvoice.paymentDetails.notes && (
+                    <div className="mt-4 pt-4 border-t border-green-200">
+                      <p className="text-sm text-green-600 font-medium">Payment Notes</p>
+                      <p className="text-green-800">{viewingInvoice.paymentDetails.notes}</p>
+                    </div>
+                  )}
+                  <div className="mt-4 pt-4 border-t border-green-200 text-center">
+                    <p className="text-xs text-green-700">
+                      ✓ This document serves as an official receipt of payment
+                    </p>
+                  </div>
                 </div>
               )}
 
               {/* Actions */}
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <button
-                  onClick={() => setShowInvoiceViewModal(false)}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => handleDownloadInvoice(viewingInvoice)}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download/Print
-                </button>
+              <div className="flex justify-between items-center pt-4 border-t">
+                {viewingInvoice.status === 'pending' && (
+                  <button
+                    onClick={() => handleMarkAsPaid(viewingInvoice)}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center font-semibold"
+                  >
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    Confirm Payment & Generate Receipt
+                  </button>
+                )}
+                {viewingInvoice.status === 'paid' && (
+                  <p className="text-sm text-green-600 font-medium">
+                    ✓ Payment received - This is now a receipt
+                  </p>
+                )}
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setShowInvoiceViewModal(false)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => handleDownloadInvoice(viewingInvoice)}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {viewingInvoice.status === 'paid' ? 'Download Receipt' : 'Download Invoice'}
+                  </button>
+                </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Confirmation Modal */}
+      {showPaymentModal && viewingInvoice && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <CheckCircle className="h-6 w-6 mr-2 text-green-600" />
+                Confirm Payment
+              </h3>
+              
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-gray-600">Invoice Number</p>
+                <p className="text-lg font-bold text-gray-900">{viewingInvoice.invoiceNumber}</p>
+                <p className="text-sm text-gray-600 mt-2">Total Amount</p>
+                <p className="text-2xl font-bold text-green-600">₦{viewingInvoice.totalAmount?.toLocaleString()}</p>
+              </div>
+
+              <form onSubmit={handleConfirmPayment} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Method *
+                  </label>
+                  <select
+                    required
+                    value={paymentFormData.method}
+                    onChange={(e) => setPaymentFormData({...paymentFormData, method: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="card">Debit/Credit Card</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Reference *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={paymentFormData.reference}
+                    onChange={(e) => setPaymentFormData({...paymentFormData, reference: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="e.g., PAY-123456, TRX-789"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Amount Received (₦) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={paymentFormData.amount}
+                    onChange={(e) => setPaymentFormData({...paymentFormData, amount: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={paymentFormData.date}
+                    onChange={(e) => setPaymentFormData({...paymentFormData, date: e.target.value})}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Notes (Optional)
+                  </label>
+                  <textarea
+                    rows="2"
+                    value={paymentFormData.notes}
+                    onChange={(e) => setPaymentFormData({...paymentFormData, notes: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Additional payment details..."
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      setPaymentFormData({
+                        method: 'cash',
+                        reference: '',
+                        amount: 0,
+                        date: new Date().toISOString().split('T')[0],
+                        notes: ''
+                      });
+                    }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center font-semibold"
+                  >
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    Confirm Payment
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
