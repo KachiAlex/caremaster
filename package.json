@@ -16,6 +16,7 @@
     "test:all": "npm run test:unit && npm run test:integration && npm run test:component && npm run test:e2e && npm run test:penetration",
     "test:coverage": "jest --coverage",
     "test:report": "node tests/generate-report.js",
+    "convert:report": "node scripts/convert-report-to-word.js",
     "eject": "react-scripts eject",
     "firebase:login": "firebase login",
     "firebase:init": "firebase init",

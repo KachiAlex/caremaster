@@ -37,7 +37,8 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
   const [itemFormData, setItemFormData] = useState({
     name: '',
     category: 'medical',
-    unitPrice: '',
+    costPrice: '',
+    sellingPrice: '',
     quantity: '',
     unit: 'piece',
     description: '',
@@ -102,7 +103,8 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
       await inventoryAPI.createItem({
         ...itemFormData,
         institutionId,
-        unitPrice: parseFloat(itemFormData.unitPrice) || 0,
+        costPrice: parseFloat(itemFormData.costPrice) || 0,
+        sellingPrice: parseFloat(itemFormData.sellingPrice) || 0,
         quantity: parseInt(itemFormData.quantity) || 0,
         minStock: parseInt(itemFormData.minStock) || 10
       });
@@ -124,7 +126,8 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
     try {
       await inventoryAPI.updateItem(selectedItem.id, {
         ...itemFormData,
-        unitPrice: parseFloat(itemFormData.unitPrice) || 0,
+        costPrice: parseFloat(itemFormData.costPrice) || 0,
+        sellingPrice: parseFloat(itemFormData.sellingPrice) || 0,
         quantity: parseInt(itemFormData.quantity) || 0,
         minStock: parseInt(itemFormData.minStock) || 10
       });
@@ -372,7 +375,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
         inventoryId: item.id,
         name: item.name,
         description: item.description,
-        unitPrice: item.unitPrice,
+        unitPrice: item.sellingPrice || item.unitPrice || 0,
         quantity: 1,
         unit: item.unit
       }]
@@ -399,7 +402,8 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
     setItemFormData({
       name: '',
       category: 'medical',
-      unitPrice: '',
+      costPrice: '',
+      sellingPrice: '',
       quantity: '',
       unit: 'piece',
       description: '',
@@ -424,7 +428,8 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
     setItemFormData({
       name: item.name,
       category: item.category,
-      unitPrice: item.unitPrice,
+      costPrice: item.costPrice || item.unitPrice || '',
+      sellingPrice: item.sellingPrice || item.unitPrice || '',
       quantity: item.quantity,
       unit: item.unit,
       description: item.description || '',
@@ -598,16 +603,22 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                         Item
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category
+                        Supplier
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Stock
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Unit Price
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Cost Price
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Selling Price
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Total Value
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date Created
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
@@ -615,53 +626,70 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredInventory.map((item) => (
-                      <tr key={item.id} className={item.quantity <= item.minStock ? 'bg-orange-50' : ''}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                            {item.sku && <div className="text-sm text-gray-500">SKU: {item.sku}</div>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                            {item.category}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <span className={`text-sm font-medium ${
-                              item.quantity <= item.minStock ? 'text-orange-600' : 'text-gray-900'
-                            }`}>
-                              {item.quantity} {item.unit}
-                            </span>
-                            {item.quantity <= item.minStock && (
-                              <AlertTriangle className="h-4 w-4 text-orange-600 ml-2" />
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ₦{item.unitPrice?.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          ₦{((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => editItem(item)}
-                            className="text-blue-600 hover:text-blue-900 mr-3"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredInventory.map((item) => {
+                      const costPrice = item.costPrice || item.unitPrice || 0;
+                      const sellingPrice = item.sellingPrice || item.unitPrice || 0;
+                      const formatDate = (date) => {
+                        if (!date) return 'N/A';
+                        const d = date.toDate ? date.toDate() : new Date(date);
+                        return d.toLocaleDateString();
+                      };
+                      
+                      return (
+                        <tr key={item.id} className={item.quantity <= item.minStock ? 'bg-orange-50' : ''}>
+                          <td className="px-6 py-4">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                              {item.description && <div className="text-sm text-gray-500">{item.description}</div>}
+                              {item.sku && <div className="text-xs text-gray-400">SKU: {item.sku}</div>}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {item.supplier || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center">
+                              <span className={`text-sm font-medium ${
+                                item.quantity <= item.minStock ? 'text-orange-600' : 'text-gray-900'
+                              }`}>
+                                {item.quantity} {item.unit}
+                              </span>
+                              {item.quantity <= item.minStock && (
+                                <AlertTriangle className="h-4 w-4 text-orange-600 ml-2" />
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                            ₦{costPrice?.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-green-600">
+                            ₦{sellingPrice?.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900">
+                            ₦{((item.quantity || 0) * sellingPrice).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                            {formatDate(item.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button
+                              onClick={() => editItem(item)}
+                              className="text-blue-600 hover:text-blue-900 mr-3"
+                              title="Edit item"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Delete item"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
 
@@ -846,18 +874,36 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Unit Price (₦) *
+                      Cost Price (₦) *
                     </label>
                     <input
                       type="number"
                       required
                       min="0"
                       step="0.01"
-                      value={itemFormData.unitPrice}
-                      onChange={(e) => setItemFormData({...itemFormData, unitPrice: e.target.value})}
+                      value={itemFormData.costPrice}
+                      onChange={(e) => setItemFormData({...itemFormData, costPrice: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="0.00"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Purchase/cost price</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Selling Price (₦) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={itemFormData.sellingPrice}
+                      onChange={(e) => setItemFormData({...itemFormData, sellingPrice: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Price for invoicing</p>
                   </div>
 
                   <div>
@@ -1017,12 +1063,15 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
                         }}
                         className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       >
-                        <option value="">+ Add Item</option>
-                        {inventory.filter(i => i.quantity > 0).map(item => (
-                          <option key={item.id} value={item.id}>
-                            {item.name} - ₦{item.unitPrice} ({item.quantity} available)
-                          </option>
-                        ))}
+                        <option value="">+ Add Item from Inventory</option>
+                        {inventory.filter(i => i.quantity > 0).map(item => {
+                          const price = item.sellingPrice || item.unitPrice || 0;
+                          return (
+                            <option key={item.id} value={item.id}>
+                              {item.name} - ₦{price.toLocaleString()} ({item.quantity} {item.unit} available)
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   </div>
