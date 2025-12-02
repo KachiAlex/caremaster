@@ -404,10 +404,10 @@ function App() {
         element={<UnifiedLogin />} 
       />
 
-      {/* Institution Admin Routes - TEMPORARILY UNGUARDED FOR DEBUGGING */}
+      {/* Institution Admin Routes - PROTECTED WITH GUARD */}
       <Route 
         path="/institution-admin/dashboard" 
-        element={<InstitutionAdminDashboard />} 
+        element={<InstitutionAdminGuard><InstitutionAdminDashboard /></InstitutionAdminGuard>} 
       />
       
       <Route 
