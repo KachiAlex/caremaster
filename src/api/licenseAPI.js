@@ -11,13 +11,15 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc,
+  setDoc,
   query, 
   where,
   orderBy,
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db, auth } from '../firebase/config';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 const LICENSES_COLLECTION = 'licenses';
 const INSTITUTIONS_COLLECTION = 'institutions';
@@ -302,6 +304,120 @@ export const activateLicenseByKey = async (licenseKey, institutionId) => {
   }
 };
 
+// Get institution admins (SuperAdmin only)
+export const getInstitutionAdmins = async (institutionId) => {
+  try {
+    // Query users collection for admins of this institution
+    const usersRef = collection(db, 'users');
+    const q = query(
+      usersRef,
+      where('institutionId', '==', institutionId),
+      where('userType', 'in', ['admin', 'institutionAdmin'])
+    );
+    
+    const snapshot = await getDocs(q);
+    const admins = [];
+    
+    snapshot.forEach((doc) => {
+      admins.push({ id: doc.id, ...doc.data() });
+    });
+
+    console.log('✅ Institution admins fetched:', admins.length);
+    return admins;
+  } catch (error) {
+    console.error('Error fetching institution admins:', error);
+    throw error;
+  }
+};
+
+// Assign institution admin (SuperAdmin only)
+export const assignInstitutionAdmin = async ({ institutionId, email, displayName, password }) => {
+  try {
+    // Check if institution exists
+    const institutionRef = doc(db, 'institutions', institutionId);
+    const institutionSnap = await getDoc(institutionRef);
+    
+    if (!institutionSnap.exists()) {
+      throw new Error('Institution not found');
+    }
+
+    // Check if user already exists
+    const usersRef = collection(db, 'users');
+    const existingUserQuery = query(usersRef, where('email', '==', email));
+    const existingUserSnap = await getDocs(existingUserQuery);
+    
+    let userId;
+    
+    if (!existingUserSnap.empty) {
+      // User exists, update their profile
+      const existingUserDoc = existingUserSnap.docs[0];
+      userId = existingUserDoc.id;
+      
+      await updateDoc(doc(db, 'users', userId), {
+        institutionId,
+        institutionAdmin: true,
+        type: 'admin',
+        userType: 'admin',
+        role: 'admin',
+        updatedAt: serverTimestamp()
+      });
+      
+      console.log('✅ Existing user updated as admin:', email);
+    } else {
+      // Create new user in Firebase Auth (Note: This requires the current user to be signed out temporarily)
+      // For production, this should be done via Cloud Functions with admin SDK
+      console.warn('⚠️ Cannot create new Firebase Auth users from client. User must exist first.');
+      throw new Error('User does not exist. Please create the user account first or use Cloud Functions.');
+    }
+
+    // Create admin mapping
+    const adminMappingRef = doc(collection(db, 'institutionAdmins'));
+    await setDoc(adminMappingRef, {
+      institutionId,
+      userId,
+      email,
+      createdAt: serverTimestamp()
+    });
+
+    console.log('✅ Admin assigned successfully:', email);
+    return { userId, email, institutionId };
+  } catch (error) {
+    console.error('Error assigning institution admin:', error);
+    throw error;
+  }
+};
+
+// Remove institution admin
+export const removeInstitutionAdmin = async ({ institutionId, adminId }) => {
+  try {
+    // Remove institutionId from user document
+    const userRef = doc(db, 'users', adminId);
+    await updateDoc(userRef, {
+      institutionId: null,
+      institutionAdmin: false,
+      updatedAt: serverTimestamp()
+    });
+
+    // Remove from institutionAdmins collection
+    const adminMappingsRef = collection(db, 'institutionAdmins');
+    const q = query(
+      adminMappingsRef,
+      where('institutionId', '==', institutionId),
+      where('userId', '==', adminId)
+    );
+    
+    const snapshot = await getDocs(q);
+    const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+
+    console.log('✅ Admin removed successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Error removing institution admin:', error);
+    throw error;
+  }
+};
+
 export default {
   getLicenseStatus,
   getAllLicenses,
@@ -310,6 +426,9 @@ export default {
   updateLicense,
   suspendLicense,
   activateLicense,
-  activateLicenseByKey
+  activateLicenseByKey,
+  getInstitutionAdmins,
+  assignInstitutionAdmin,
+  removeInstitutionAdmin
 };
 

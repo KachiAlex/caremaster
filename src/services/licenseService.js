@@ -81,10 +81,18 @@ export async function createLicense(payload) {
 }
 
 export async function assignInstitutionAdmin(payload) {
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'assignInstitutionAdminFunction');
-  const res = await callable(payload);
-  return res.data;
+  try {
+    // Use direct Firestore access to bypass CORS issues
+    const { assignInstitutionAdmin: assignAdminDirect } = await import('../api/licenseAPI');
+    return await assignAdminDirect(payload);
+  } catch (error) {
+    console.error('Error assigning admin via Firestore:', error);
+    // Fallback to Cloud Function if Firestore fails
+    const functions = getFunctions(getApp(), 'us-central1');
+    const callable = httpsCallable(functions, 'assignInstitutionAdminFunction');
+    const res = await callable(payload);
+    return res.data;
+  }
 }
 
 export async function getInstitutions() {
@@ -168,16 +176,32 @@ export async function migrateInstitutionLinks(options = {}) {
 }
 
 export async function getInstitutionAdmins(institutionId) {
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'getInstitutionAdminsFunction');
-  const res = await callable({ institutionId });
-  return res.data;
+  try {
+    // Use direct Firestore access to bypass CORS issues
+    const { getInstitutionAdmins: getAdminsDirect } = await import('../api/licenseAPI');
+    return await getAdminsDirect(institutionId);
+  } catch (error) {
+    console.error('Error fetching admins via Firestore:', error);
+    // Fallback to Cloud Function if Firestore fails
+    const functions = getFunctions(getApp(), 'us-central1');
+    const callable = httpsCallable(functions, 'getInstitutionAdminsFunction');
+    const res = await callable({ institutionId });
+    return res.data;
+  }
 }
 
 export async function removeInstitutionAdmin(payload) {
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'removeInstitutionAdminFunction');
-  const res = await callable(payload);
-  return res.data;
+  try {
+    // Use direct Firestore access to bypass CORS issues
+    const { removeInstitutionAdmin: removeAdminDirect } = await import('../api/licenseAPI');
+    return await removeAdminDirect(payload);
+  } catch (error) {
+    console.error('Error removing admin via Firestore:', error);
+    // Fallback to Cloud Function if Firestore fails
+    const functions = getFunctions(getApp(), 'us-central1');
+    const callable = httpsCallable(functions, 'removeInstitutionAdminFunction');
+    const res = await callable(payload);
+    return res.data;
+  }
 }
 
