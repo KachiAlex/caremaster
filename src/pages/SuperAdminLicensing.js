@@ -4,7 +4,7 @@ import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { doc, updateDoc } from 'firebase/firestore';
 import { X } from 'lucide-react';
-import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, generateLicenseKey } from '../services/licenseService';
+import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicenseById, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, generateLicenseKey } from '../services/licenseService';
 import { toast } from 'react-toastify';
 
 const Card = ({ title, value, accent = 'bg-blue-100 text-blue-800' }) => (
@@ -238,15 +238,19 @@ const SuperAdminLicensing = () => {
           return;
         }
         await suspendLicense(license.id);
+        toast.success('License suspended successfully');
         setMessage('License suspended successfully');
       } else {
-        await activateLicense(license.id);
+        await activateLicenseById(license.id);
+        toast.success('License activated successfully');
         setMessage('License activated successfully');
       }
       
-      // Refresh data
+      // Refresh data to show updated button state
+      console.log('🔄 Refreshing licenses after toggle...');
       const updatedLicenses = await getLicenses();
       setLicenses(updatedLicenses || []);
+      console.log('✅ Licenses refreshed:', updatedLicenses.length);
     } catch (e) {
       setMessage(e.message || 'Failed to toggle license status');
     } finally {
