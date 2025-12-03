@@ -12,7 +12,7 @@ const LICENSE_TIERS = {
   basic: {
     name: 'Basic',
     color: 'bg-gray-100 text-gray-800 border-gray-300',
-    price: '₦15,000/mo',
+    defaultPrice: { NGN: 15000, USD: 20, EUR: 18, GBP: 16 },
     features: [
       'Up to 25 clients',
       'Up to 10 staff',
@@ -25,7 +25,7 @@ const LICENSE_TIERS = {
   standard: {
     name: 'Standard',
     color: 'bg-blue-100 text-blue-800 border-blue-300',
-    price: '₦45,000/mo',
+    defaultPrice: { NGN: 45000, USD: 60, EUR: 55, GBP: 48 },
     features: [
       'Up to 100 clients',
       'Up to 50 staff',
@@ -40,7 +40,7 @@ const LICENSE_TIERS = {
   professional: {
     name: 'Professional',
     color: 'bg-purple-100 text-purple-800 border-purple-300',
-    price: '₦120,000/mo',
+    defaultPrice: { NGN: 120000, USD: 160, EUR: 145, GBP: 125 },
     features: [
       'Unlimited clients',
       'Up to 200 staff',
@@ -56,7 +56,7 @@ const LICENSE_TIERS = {
   enterprise: {
     name: 'Enterprise',
     color: 'bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-900 border-orange-300',
-    price: '₦350,000/mo',
+    defaultPrice: { NGN: 350000, USD: 500, EUR: 450, GBP: 400 },
     features: [
       'Unlimited everything',
       'AI-powered features',
@@ -68,6 +68,17 @@ const LICENSE_TIERS = {
     ],
     limits: { clients: -1, staff: -1, admins: -1 }
   }
+};
+
+// Currency symbols
+const CURRENCY_SYMBOLS = {
+  NGN: '₦',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  GHS: '₵',
+  ZAR: 'R',
+  KES: 'KSh'
 };
 
 const Card = ({ title, value, accent = 'bg-blue-100 text-blue-800' }) => (
@@ -110,7 +121,10 @@ const SuperAdminLicensing = () => {
     plan: 'basic', 
     seats: 10, 
     endsAt: '',
-    licenseKey: '' 
+    licenseKey: '',
+    price: 15000,
+    currency: 'NGN',
+    billingCycle: 'monthly'
   });
   const [adminUser, setAdminUser] = useState({ institutionId: '', email: '', displayName: '' });
 
@@ -256,7 +270,10 @@ const SuperAdminLicensing = () => {
     
     setEditingLicense({
       ...license,
-      endsAt: endsAtDate
+      endsAt: endsAtDate,
+      price: license.price || LICENSE_TIERS[license.plan]?.defaultPrice.NGN || 0,
+      currency: license.currency || 'NGN',
+      billingCycle: license.billingCycle || 'monthly'
     });
     setShowEditLicenseModal(true);
   };
@@ -272,7 +289,10 @@ const SuperAdminLicensing = () => {
         plan: editingLicense.plan,
         seats: editingLicense.seats,
         endsAt: editingLicense.endsAt,
-        active: editingLicense.active
+        active: editingLicense.active,
+        price: editingLicense.price,
+        currency: editingLicense.currency,
+        billingCycle: editingLicense.billingCycle
       });
       
       setMessage('License updated successfully');
@@ -392,6 +412,12 @@ const SuperAdminLicensing = () => {
       return;
     }
     
+    if (!license.price || license.price <= 0) {
+      setMessage('License price must be greater than 0');
+      setBusy(false);
+      return;
+    }
+    
     try {
       // Generate license key if not provided
       const licenseKey = license.licenseKey || generateLicenseKey();
@@ -401,7 +427,10 @@ const SuperAdminLicensing = () => {
         plan: license.plan,
         seats: license.seats,
         endsAt: license.endsAt,
-        licenseKey: licenseKey
+        licenseKey: licenseKey,
+        price: license.price,
+        currency: license.currency,
+        billingCycle: license.billingCycle
       });
       
       // Copy license key to clipboard
@@ -421,7 +450,16 @@ const SuperAdminLicensing = () => {
       }
       
       setShowLicenseModal(false);
-      setLicense({ institutionId: '', plan: 'basic', seats: 10, endsAt: '', licenseKey: '' });
+      setLicense({ 
+        institutionId: '', 
+        plan: 'basic', 
+        seats: 10, 
+        endsAt: '', 
+        licenseKey: '',
+        price: 15000,
+        currency: 'NGN',
+        billingCycle: 'monthly'
+      });
     } catch (e) {
       setMessage(e.message || 'Failed to create license');
     } finally { setBusy(false); }
@@ -766,6 +804,7 @@ const SuperAdminLicensing = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institution</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License Key</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seats</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ends At</th>
@@ -776,11 +815,11 @@ const SuperAdminLicensing = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">Loading licenses...</td>
+                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">Loading licenses...</td>
                 </tr>
               ) : licenses.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">No licenses yet</td>
+                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">No licenses yet</td>
                 </tr>
               ) : (
                 licenses.map((license) => {
@@ -817,6 +856,21 @@ const SuperAdminLicensing = () => {
                         }`}>
                           {LICENSE_TIERS[license.plan]?.name || license.plan}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {license.price && license.currency ? (
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-gray-900">
+                              {CURRENCY_SYMBOLS[license.currency] || license.currency}
+                              {license.price.toLocaleString()}
+                            </span>
+                            <span className="text-xs text-gray-500 capitalize">
+                              {license.billingCycle || 'monthly'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">Not set</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-700">{license.seats}</td>
                       <td className="px-4 py-3">
@@ -932,7 +986,10 @@ const SuperAdminLicensing = () => {
               {Object.entries(LICENSE_TIERS).map(([key, tier]) => (
                 <div 
                   key={key}
-                  onClick={() => setLicense({ ...license, plan: key })}
+                  onClick={() => {
+                    const newPrice = tier.defaultPrice[license.currency] || tier.defaultPrice.NGN;
+                    setLicense({ ...license, plan: key, price: newPrice });
+                  }}
                   className={`
                     relative p-4 border-2 rounded-lg cursor-pointer transition-all
                     ${license.plan === key 
@@ -949,11 +1006,17 @@ const SuperAdminLicensing = () => {
                           name="plan"
                           value={key}
                           checked={license.plan === key}
-                          onChange={(e) => setLicense({ ...license, plan: e.target.value })}
+                          onChange={(e) => {
+                            const newPrice = tier.defaultPrice[license.currency] || tier.defaultPrice.NGN;
+                            setLicense({ ...license, plan: e.target.value, price: newPrice });
+                          }}
                           className="h-4 w-4 text-blue-600"
                         />
                         <span className="font-semibold text-gray-900">{tier.name}</span>
-                        <span className="text-sm text-gray-600">{tier.price}</span>
+                        <span className="text-sm text-gray-600">
+                          Suggested: {CURRENCY_SYMBOLS[license.currency] || license.currency}{' '}
+                          {tier.defaultPrice[license.currency]?.toLocaleString() || tier.defaultPrice.NGN.toLocaleString()}
+                        </span>
                       </div>
                       <ul className="ml-6 space-y-1">
                         {tier.features.map((feature, idx) => (
@@ -982,6 +1045,64 @@ const SuperAdminLicensing = () => {
               <p className="text-xs text-blue-800">
                 Tier limits are enforced automatically. Users will see upgrade prompts when approaching limits.
               </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Currency *</label>
+              <select 
+                className="border rounded p-2 w-full" 
+                value={license.currency} 
+                onChange={e => {
+                  const newCurrency = e.target.value;
+                  const newPrice = LICENSE_TIERS[license.plan]?.defaultPrice[newCurrency] || license.price;
+                  setLicense({ ...license, currency: newCurrency, price: newPrice });
+                }}
+              >
+                <option value="NGN">🇳🇬 Nigerian Naira (₦)</option>
+                <option value="USD">🇺🇸 US Dollar ($)</option>
+                <option value="EUR">🇪🇺 Euro (€)</option>
+                <option value="GBP">🇬🇧 British Pound (£)</option>
+                <option value="GHS">🇬🇭 Ghana Cedi (₵)</option>
+                <option value="ZAR">🇿🇦 South African Rand (R)</option>
+                <option value="KES">🇰🇪 Kenyan Shilling (KSh)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-gray-500 font-semibold">
+                  {CURRENCY_SYMBOLS[license.currency] || license.currency}
+                </span>
+                <input 
+                  className="border rounded p-2 pl-8 w-full" 
+                  type="number" 
+                  placeholder="Price" 
+                  value={license.price} 
+                  onChange={e => setLicense({ ...license, price: Number(e.target.value) })} 
+                  min={0}
+                  step={license.currency === 'NGN' ? 1000 : 1}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Suggested: {CURRENCY_SYMBOLS[license.currency]}{LICENSE_TIERS[license.plan]?.defaultPrice[license.currency]?.toLocaleString() || '—'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Billing Cycle *</label>
+              <select 
+                className="border rounded p-2 w-full" 
+                value={license.billingCycle} 
+                onChange={e => setLicense({ ...license, billingCycle: e.target.value })}
+              >
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly (3 months)</option>
+                <option value="biannual">Bi-Annual (6 months)</option>
+                <option value="annual">Annual (12 months)</option>
+              </select>
             </div>
           </div>
 
@@ -1186,13 +1307,72 @@ const SuperAdminLicensing = () => {
               <select 
                 className="border rounded p-2 w-full" 
                 value={editingLicense.plan} 
-                onChange={e => setEditingLicense({ ...editingLicense, plan: e.target.value })}
+                onChange={e => {
+                  const newPlan = e.target.value;
+                  const newPrice = LICENSE_TIERS[newPlan]?.defaultPrice[editingLicense.currency] || editingLicense.price;
+                  setEditingLicense({ ...editingLicense, plan: newPlan, price: newPrice });
+                }}
               >
                 <option value="basic">Basic</option>
                 <option value="standard">Standard</option>
+                <option value="professional">Professional</option>
                 <option value="enterprise">Enterprise</option>
               </select>
             </div>
+            
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                <select 
+                  className="border rounded p-2 w-full" 
+                  value={editingLicense.currency || 'NGN'} 
+                  onChange={e => {
+                    const newCurrency = e.target.value;
+                    const newPrice = LICENSE_TIERS[editingLicense.plan]?.defaultPrice[newCurrency] || editingLicense.price;
+                    setEditingLicense({ ...editingLicense, currency: newCurrency, price: newPrice });
+                  }}
+                >
+                  <option value="NGN">₦ NGN</option>
+                  <option value="USD">$ USD</option>
+                  <option value="EUR">€ EUR</option>
+                  <option value="GBP">£ GBP</option>
+                  <option value="GHS">₵ GHS</option>
+                  <option value="ZAR">R ZAR</option>
+                  <option value="KES">KSh KES</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-500 font-semibold text-sm">
+                    {CURRENCY_SYMBOLS[editingLicense.currency] || editingLicense.currency}
+                  </span>
+                  <input 
+                    className="border rounded p-2 pl-8 w-full" 
+                    type="number" 
+                    value={editingLicense.price || 0} 
+                    onChange={e => setEditingLicense({ ...editingLicense, price: Number(e.target.value) })} 
+                    min={0}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Billing</label>
+                <select 
+                  className="border rounded p-2 w-full" 
+                  value={editingLicense.billingCycle || 'monthly'} 
+                  onChange={e => setEditingLicense({ ...editingLicense, billingCycle: e.target.value })}
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="biannual">Bi-Annual</option>
+                  <option value="annual">Annual</option>
+                </select>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Seats</label>
               <input 
