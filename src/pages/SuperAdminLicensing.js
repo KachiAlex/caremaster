@@ -1,9 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { auth, db } from '../firebase/config';
+import { doc, updateDoc } from 'firebase/firestore';
 import { X } from 'lucide-react';
 import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, generateLicenseKey } from '../services/licenseService';
+import { toast } from 'react-toastify';
 
 const Card = ({ title, value, accent = 'bg-blue-100 text-blue-800' }) => (
   <div className={`rounded-xl border border-gray-200 p-5 bg-white`}> 
@@ -398,6 +400,43 @@ const SuperAdminLicensing = () => {
     } catch (e) {
       setMessage(e.message || 'Failed to assign admin');
     } finally { setBusy(false); }
+  };
+
+  const handleFixAdminProfile = async (adminId, adminEmail, institutionId) => {
+    if (!confirm(`Fix profile for ${adminEmail}?\n\nThis will add institutionId: ${institutionId} to their user document.`)) {
+      return;
+    }
+
+    setBusy(true);
+    toast.info(`Fixing profile for ${adminEmail}...`);
+    
+    try {
+      // Directly update the user document to add institutionId
+      const userRef = doc(db, 'users', adminId);
+      await updateDoc(userRef, {
+        institutionId: institutionId,
+        institutionAdmin: true,
+        type: 'admin',
+        userType: 'admin',
+        role: 'admin',
+        updatedAt: new Date()
+      });
+      
+      toast.success(`✅ Profile fixed for ${adminEmail}! They can now log in.`);
+      setMessage(`Profile fixed for ${adminEmail}`);
+      
+      // Refresh the admins list
+      if (selectedInstitutionForAdmin) {
+        const updatedAdmins = await getInstitutionAdmins(selectedInstitutionForAdmin.id);
+        setCurrentAdmins(updatedAdmins || []);
+      }
+    } catch (e) {
+      console.error('Error fixing admin profile:', e);
+      toast.error(`Failed to fix profile: ${e.message}`);
+      setMessage(e.message || 'Failed to fix admin profile');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleRemoveAdmin = async (adminId, adminEmail) => {
@@ -861,6 +900,9 @@ const SuperAdminLicensing = () => {
                     <div className="flex-1">
                       <div className="font-medium text-gray-900">{admin.displayName || admin.email}</div>
                       <div className="text-sm text-gray-600">{admin.email}</div>
+                      {!admin.institutionId && (
+                        <div className="text-xs text-red-600 mt-1">⚠️ Missing institutionId</div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 rounded text-xs ${
@@ -868,6 +910,15 @@ const SuperAdminLicensing = () => {
                       }`}>
                         {admin.active ? 'Active' : 'Inactive'}
                       </span>
+                      {!admin.institutionId && (
+                        <button
+                          onClick={() => handleFixAdminProfile(admin.id, admin.email, selectedInstitutionForAdmin?.id)}
+                          className="px-2 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                          title="Fix missing institutionId"
+                        >
+                          Fix
+                        </button>
+                      )}
                       <button
                         onClick={() => handleRemoveAdmin(admin.id, admin.email)}
                         className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
