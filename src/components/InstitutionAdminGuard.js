@@ -137,64 +137,69 @@ const InstitutionAdminGuard = ({ children }) => {
           return;
         }
 
-        if (!hasInstitutionId) {
-          toast.error('No institution assigned to your account. Contact super admin.');
-          console.error('User has no institutionId assigned');
-          console.error('User profile:', userProfile);
-          // Don't log out - just redirect
-          navigate('/onboard', { replace: true });
-          setLoading(false);
-          return;
-        }
-
-        // CRITICAL: License check - NO BYPASS ALLOWED
-        console.log('🔐 ENFORCING LICENSE CHECK for institution:', effectiveInstitutionId);
-        
-        try {
-          const licenseStatus = await fetchLicenseStatus(effectiveInstitutionId);
-          console.log('📋 License status result:', {
-            active: licenseStatus.active,
-            reason: licenseStatus.reason,
-            hasLicense: !!licenseStatus.license,
-            institutionId: effectiveInstitutionId
-          });
+        // CRITICAL: License check FIRST - check if we have institution ID to verify license
+        // This ensures we show the correct license error message
+        if (effectiveInstitutionId) {
+          console.log('🔐 ENFORCING LICENSE CHECK for institution:', effectiveInstitutionId);
           
-          if (!licenseStatus.active) {
-            console.error('❌ ACCESS DENIED - License inactive:', licenseStatus.reason || 'no_license');
+          try {
+            const licenseStatus = await fetchLicenseStatus(effectiveInstitutionId);
+            console.log('📋 License status result:', {
+              active: licenseStatus.active,
+              reason: licenseStatus.reason,
+              hasLicense: !!licenseStatus.license,
+              institutionId: effectiveInstitutionId
+            });
             
-            // Customize error message based on reason
-            let errorMessage = 'Access denied. ';
-            if (licenseStatus.reason === 'license_expired') {
-              errorMessage += 'License has expired.';
-            } else if (licenseStatus.reason === 'license_suspended') {
-              errorMessage += 'License has been suspended.';
-            } else if (licenseStatus.reason === 'no_license') {
-              errorMessage += 'No license found for this institution.';
-            } else {
-              errorMessage += `License is ${licenseStatus.reason || 'inactive'}.`;
+            if (!licenseStatus.active) {
+              console.error('❌ ACCESS DENIED - License inactive:', licenseStatus.reason || 'no_license');
+              
+              // Customize error message based on reason
+              let errorMessage = 'Access denied. ';
+              if (licenseStatus.reason === 'license_expired') {
+                errorMessage += 'Your institution license has expired.';
+              } else if (licenseStatus.reason === 'license_suspended') {
+                errorMessage += 'Your institution has been suspended.';
+              } else if (licenseStatus.reason === 'no_license') {
+                errorMessage += 'Your institution does not have an active license.';
+              } else {
+                errorMessage += `Your institution license is ${licenseStatus.reason || 'inactive'}.`;
+              }
+              errorMessage += ' Contact support or your account manager.';
+              
+              toast.error(errorMessage, { autoClose: 8000 });
+              
+              // FORCE sign out to ensure no cached access
+              await signOut(auth);
+              
+              // Block access and redirect to license activation page
+              navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
+              setLoading(false);
+              return;
             }
-            errorMessage += ' Contact your administrator.';
             
-            toast.error(errorMessage);
+            console.log('✅ LICENSE VERIFIED - Access granted to admin dashboard');
+          } catch (licenseError) {
+            console.error('❌ LICENSE CHECK ERROR:', licenseError);
+            toast.error('Unable to verify license. Access denied. Contact support.');
             
-            // FORCE sign out to ensure no cached access
+            // FORCE sign out on error
             await signOut(auth);
             
-            // Block access and redirect to license activation page
             navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
             setLoading(false);
             return;
           }
-          
-          console.log('✅ LICENSE VERIFIED - Access granted to admin dashboard');
-        } catch (licenseError) {
-          console.error('❌ LICENSE CHECK ERROR:', licenseError);
-          toast.error('Unable to verify license. Access denied.');
-          
-          // FORCE sign out on error
+        }
+
+        // After license check, verify institutionId exists
+        if (!hasInstitutionId) {
+          toast.error('No institution assigned to your account. Contact super admin.');
+          console.error('User has no institutionId assigned');
+          console.error('User profile:', userProfile);
+          // Sign out for security
           await signOut(auth);
-          
-          navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
+          navigate('/onboard', { replace: true });
           setLoading(false);
           return;
         }
