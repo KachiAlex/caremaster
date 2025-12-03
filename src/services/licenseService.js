@@ -66,10 +66,18 @@ export async function createInstitution(payload) {
 }
 
 export async function createLicense(payload) {
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'createLicenseFunction');
-  const res = await callable(payload);
-  return res.data;
+  try {
+    // Use direct Firestore access to bypass CORS issues
+    const { createLicense: createLicenseDirect } = await import('../api/licenseAPI');
+    return await createLicenseDirect(payload);
+  } catch (error) {
+    console.error('Error creating license via Firestore:', error);
+    // Fallback to Cloud Function if Firestore fails
+    const functions = getFunctions(getApp(), 'us-central1');
+    const callable = httpsCallable(functions, 'createLicenseFunction');
+    const res = await callable(payload);
+    return res.data;
+  }
 }
 
 export async function assignInstitutionAdmin(payload) {

@@ -1,9 +1,5 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import * as cors from 'cors';
-
-// Enable CORS for all licensing functions
-const corsHandler = cors({ origin: true });
 
 type CreateInstitutionRequest = {
   name: string;
@@ -17,6 +13,7 @@ type CreateLicenseRequest = {
   seats: number;
   startsAt?: string; // ISO date
   endsAt: string; // ISO date
+  licenseKey?: string; // License key
   features?: Record<string, boolean>;
 };
 
@@ -91,7 +88,7 @@ export const createLicense = functions.https.onCall(async (data: CreateLicenseRe
     throw new functions.https.HttpsError('permission-denied', 'Only super-admin can create licenses');
   }
 
-  const { institutionId, plan, seats, startsAt, endsAt, features } = data || {};
+  const { institutionId, plan, seats, startsAt, endsAt, licenseKey, features } = data || {};
   if (!institutionId || !plan || !seats || !endsAt) {
     throw new functions.https.HttpsError('invalid-argument', 'institutionId, plan, seats, endsAt are required');
   }
@@ -107,6 +104,7 @@ export const createLicense = functions.https.onCall(async (data: CreateLicenseRe
     institutionId,
     plan,
     seats,
+    licenseKey: licenseKey || null,
     startsAt: startsAt ? admin.firestore.Timestamp.fromDate(new Date(startsAt)) : now,
     endsAt: admin.firestore.Timestamp.fromDate(new Date(endsAt)),
     features: features || {},

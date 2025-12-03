@@ -92,7 +92,7 @@ exports.createLicense = functions.https.onCall(async (data, context) => {
     if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.superAdmin)) {
         throw new functions.https.HttpsError('permission-denied', 'Only super-admin can create licenses');
     }
-    const { institutionId, plan, seats, startsAt, endsAt, features } = data || {};
+    const { institutionId, plan, seats, startsAt, endsAt, licenseKey, features } = data || {};
     if (!institutionId || !plan || !seats || !endsAt) {
         throw new functions.https.HttpsError('invalid-argument', 'institutionId, plan, seats, endsAt are required');
     }
@@ -106,6 +106,7 @@ exports.createLicense = functions.https.onCall(async (data, context) => {
         institutionId,
         plan,
         seats,
+        licenseKey: licenseKey || null,
         startsAt: startsAt ? admin.firestore.Timestamp.fromDate(new Date(startsAt)) : now,
         endsAt: admin.firestore.Timestamp.fromDate(new Date(endsAt)),
         features: features || {},
