@@ -178,9 +178,22 @@ const SuperAdminLicensing = () => {
   };
 
   const handleEditLicense = (license) => {
+    // Handle Firestore Timestamp conversion safely
+    let endsAtDate = '';
+    if (license.endsAt) {
+      try {
+        const date = license.endsAt.toDate ? license.endsAt.toDate() : new Date(license.endsAt);
+        if (!isNaN(date.getTime())) {
+          endsAtDate = date.toISOString().split('T')[0];
+        }
+      } catch (e) {
+        console.error('Error converting endsAt date:', e);
+      }
+    }
+    
     setEditingLicense({
       ...license,
-      endsAt: license.endsAt ? new Date(license.endsAt).toISOString().split('T')[0] : ''
+      endsAt: endsAtDate
     });
     setShowEditLicenseModal(true);
   };
@@ -741,18 +754,26 @@ const SuperAdminLicensing = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500">
-                        {license.endsAt ? (
-                          license.endsAt.toDate ? 
-                            license.endsAt.toDate().toLocaleDateString() : 
-                            new Date(license.endsAt).toLocaleDateString()
-                        ) : '—'}
+                        {(() => {
+                          if (!license.endsAt) return '—';
+                          try {
+                            const date = license.endsAt.toDate ? license.endsAt.toDate() : new Date(license.endsAt);
+                            return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+                          } catch (e) {
+                            return '—';
+                          }
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-gray-500">
-                        {license.createdAt ? (
-                          license.createdAt.toDate ? 
-                            license.createdAt.toDate().toLocaleDateString() : 
-                            new Date(license.createdAt).toLocaleDateString()
-                        ) : '—'}
+                        {(() => {
+                          if (!license.createdAt) return '—';
+                          try {
+                            const date = license.createdAt.toDate ? license.createdAt.toDate() : new Date(license.createdAt);
+                            return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+                          } catch (e) {
+                            return '—';
+                          }
+                        })()}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">

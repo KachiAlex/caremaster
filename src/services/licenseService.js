@@ -155,17 +155,33 @@ export async function updateLicense(licenseId, updates) {
 }
 
 export async function suspendLicense(licenseId) {
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'suspendLicenseFunction');
-  const res = await callable({ licenseId });
-  return res.data;
+  try {
+    // Use direct Firestore access to bypass CORS issues
+    const { suspendLicense: suspendLicenseDirect } = await import('../api/licenseAPI');
+    return await suspendLicenseDirect(licenseId);
+  } catch (error) {
+    console.error('Error suspending license via Firestore:', error);
+    // Fallback to Cloud Function if Firestore fails
+    const functions = getFunctions(getApp(), 'us-central1');
+    const callable = httpsCallable(functions, 'suspendLicenseFunction');
+    const res = await callable({ licenseId });
+    return res.data;
+  }
 }
 
 export async function activateLicenseById(licenseId) {
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'activateLicenseFunction');
-  const res = await callable({ licenseId });
-  return res.data;
+  try {
+    // Use direct Firestore access to bypass CORS issues
+    const { activateLicense: activateLicenseDirect } = await import('../api/licenseAPI');
+    return await activateLicenseDirect(licenseId);
+  } catch (error) {
+    console.error('Error activating license via Firestore:', error);
+    // Fallback to Cloud Function if Firestore fails
+    const functions = getFunctions(getApp(), 'us-central1');
+    const callable = httpsCallable(functions, 'activateLicenseFunction');
+    const res = await callable({ licenseId });
+    return res.data;
+  }
 }
 
 export async function migrateInstitutionLinks(options = {}) {
