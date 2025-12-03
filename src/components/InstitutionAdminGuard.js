@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { fetchLicenseStatus } from '../services/licenseService';
 
 const InstitutionAdminGuard = ({ children }) => {
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -35,6 +36,10 @@ const InstitutionAdminGuard = ({ children }) => {
         const userProfile = userDoc.data();
         setUserData(userProfile);
 
+        // Get institution ID from URL params or user profile
+        const urlInstitutionId = searchParams.get('institution');
+        const effectiveInstitutionId = urlInstitutionId || userProfile?.institutionId;
+
         // Check if user has institution admin role (support multi-role)
         // Check multiple fields for admin role
         const userType = userProfile?.type || userProfile?.userType || userProfile?.role;
@@ -52,7 +57,7 @@ const InstitutionAdminGuard = ({ children }) => {
           userProfile?.isAdmin === true ||
           userProfile?.role === 'admin';
         
-        const hasInstitutionId = userProfile?.institutionId;
+        const hasInstitutionId = !!effectiveInstitutionId;
 
         console.log('🔒 InstitutionAdminGuard check:', {
           userId: user.uid,
@@ -67,7 +72,9 @@ const InstitutionAdminGuard = ({ children }) => {
           institutionAdmin: userProfile?.institutionAdmin,
           adminRoleAssigned: userProfile?.adminRoleAssigned,
           isAdmin: userProfile?.isAdmin,
-          institutionId: userProfile?.institutionId,
+          institutionIdFromProfile: userProfile?.institutionId,
+          institutionIdFromURL: urlInstitutionId,
+          effectiveInstitutionId: effectiveInstitutionId,
           fullProfile: userProfile
         });
 
@@ -141,26 +148,40 @@ const InstitutionAdminGuard = ({ children }) => {
         }
 
         // CRITICAL: License check - NO BYPASS ALLOWED
-        console.log('🔐 ENFORCING LICENSE CHECK for institution:', userProfile.institutionId);
+        console.log('🔐 ENFORCING LICENSE CHECK for institution:', effectiveInstitutionId);
         
         try {
-          const licenseStatus = await fetchLicenseStatus(userProfile.institutionId);
+          const licenseStatus = await fetchLicenseStatus(effectiveInstitutionId);
           console.log('📋 License status result:', {
             active: licenseStatus.active,
             reason: licenseStatus.reason,
             hasLicense: !!licenseStatus.license,
-            institutionId: userProfile.institutionId
+            institutionId: effectiveInstitutionId
           });
           
           if (!licenseStatus.active) {
             console.error('❌ ACCESS DENIED - License inactive:', licenseStatus.reason || 'no_license');
-            toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}. Contact your administrator.`);
+            
+            // Customize error message based on reason
+            let errorMessage = 'Access denied. ';
+            if (licenseStatus.reason === 'license_expired') {
+              errorMessage += 'License has expired.';
+            } else if (licenseStatus.reason === 'license_suspended') {
+              errorMessage += 'License has been suspended.';
+            } else if (licenseStatus.reason === 'no_license') {
+              errorMessage += 'No license found for this institution.';
+            } else {
+              errorMessage += `License is ${licenseStatus.reason || 'inactive'}.`;
+            }
+            errorMessage += ' Contact your administrator.';
+            
+            toast.error(errorMessage);
             
             // FORCE sign out to ensure no cached access
             await signOut(auth);
             
             // Block access and redirect to license activation page
-            navigate(`/license-required?institution=${userProfile.institutionId}`, { replace: true });
+            navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
             setLoading(false);
             return;
           }
@@ -173,7 +194,7 @@ const InstitutionAdminGuard = ({ children }) => {
           // FORCE sign out on error
           await signOut(auth);
           
-          navigate(`/license-required?institution=${userProfile.institutionId}`, { replace: true });
+          navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
           setLoading(false);
           return;
         }
