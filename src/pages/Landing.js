@@ -561,25 +561,41 @@ const NewHomePage = () => {
               </button>
             </div>
 
-            {/* Right Content - Image Placeholder */}
+            {/* Right Content - Device Mockup */}
             <div className="relative">
-              <div className="aspect-square bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-br from-blue-600/20 to-purple-600/20 flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <Heart className="h-24 w-24 text-blue-600 mx-auto mb-4" />
-                    <p className="text-2xl font-bold text-gray-900">Care Management</p>
-                    <p className="text-gray-600 mt-2">Powered by Technology</p>
-                  </div>
-                </div>
+              <div className="aspect-square bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center overflow-hidden p-8">
+                {/* Device Mockup Image */}
+                <img 
+                  src="/images/caremaster-mockup.png" 
+                  alt="CareMaster App on Mobile Device" 
+                  className="w-full h-full object-contain drop-shadow-2xl"
+                  onError={(e) => {
+                    // Fallback if image not found
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = `
+                      <div class="w-full h-full flex items-center justify-center">
+                        <div class="text-center p-8">
+                          <div class="inline-block p-6 bg-white rounded-2xl shadow-2xl mb-4">
+                            <svg class="h-24 w-24 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <p class="text-2xl font-bold text-gray-900">Care Management</p>
+                          <p class="text-gray-600 mt-2">Powered by Technology</p>
+                        </div>
+                      </div>
+                    `;
+                  }}
+                />
               </div>
 
               {/* Floating Stats */}
-              <div className="absolute -top-6 -right-6 bg-white rounded-xl shadow-xl p-4">
+              <div className="absolute -top-6 -right-6 bg-white rounded-xl shadow-xl p-4 z-10">
                 <div className="text-3xl font-bold text-blue-600">98%</div>
                 <div className="text-xs text-gray-600">Client Satisfaction</div>
               </div>
 
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-4">
+              <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-4 z-10">
                 <div className="text-3xl font-bold text-green-600">24/7</div>
                 <div className="text-xs text-gray-600">Support Available</div>
               </div>
