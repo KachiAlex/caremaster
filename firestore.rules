@@ -32,11 +32,16 @@ service cloud.firestore {
     
     // Helper function to check if user is admin
     function isAdmin() {
-      return request.auth != null && 
-             (request.auth.token.admin == true || 
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin' ||
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'admin' ||
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      return request.auth != null && (
+        request.auth.token.admin == true || 
+        request.auth.token.institutionAdmin == true ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'admin' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institutionAdmin == true
+        ))
+      );
     }
     
     // Medical reports - Doctor only can create/update
