@@ -3,9 +3,72 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { doc, updateDoc } from 'firebase/firestore';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
 import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicenseById, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, generateLicenseKey } from '../services/licenseService';
 import { toast } from 'react-toastify';
+
+// License Tier Definitions
+const LICENSE_TIERS = {
+  basic: {
+    name: 'Basic',
+    color: 'bg-gray-100 text-gray-800 border-gray-300',
+    price: '₦15,000/mo',
+    features: [
+      'Up to 25 clients',
+      'Up to 10 staff',
+      'Basic care management',
+      'Mobile app access',
+      'Email support (48h)'
+    ],
+    limits: { clients: 25, staff: 10, admins: 1 }
+  },
+  standard: {
+    name: 'Standard',
+    color: 'bg-blue-100 text-blue-800 border-blue-300',
+    price: '₦45,000/mo',
+    features: [
+      'Up to 100 clients',
+      'Up to 50 staff',
+      'EVV & GPS tracking',
+      'Smart scheduling',
+      'Care plans & reports',
+      'Family portal',
+      'Chat support (24h)'
+    ],
+    limits: { clients: 100, staff: 50, admins: 3 }
+  },
+  professional: {
+    name: 'Professional',
+    color: 'bg-purple-100 text-purple-800 border-purple-300',
+    price: '₦120,000/mo',
+    features: [
+      'Unlimited clients',
+      'Up to 200 staff',
+      'Pharmacy management',
+      'Telemedicine',
+      'Bed & incident mgmt',
+      'Advanced analytics',
+      'API access',
+      'Priority support (4h)'
+    ],
+    limits: { clients: -1, staff: 200, admins: 10 }
+  },
+  enterprise: {
+    name: 'Enterprise',
+    color: 'bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-900 border-orange-300',
+    price: '₦350,000/mo',
+    features: [
+      'Unlimited everything',
+      'AI-powered features',
+      'Multi-facility',
+      'Custom branding',
+      'Full API access',
+      'Dedicated support',
+      '24/7 phone support'
+    ],
+    limits: { clients: -1, staff: -1, admins: -1 }
+  }
+};
 
 const Card = ({ title, value, accent = 'bg-blue-100 text-blue-800' }) => (
   <div className={`rounded-xl border border-gray-200 p-5 bg-white`}> 
@@ -748,7 +811,13 @@ const SuperAdminLicensing = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700 capitalize">{license.plan}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                          LICENSE_TIERS[license.plan]?.color || 'bg-gray-100 text-gray-800 border-gray-300'
+                        }`}>
+                          {LICENSE_TIERS[license.plan]?.name || license.plan}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-gray-700">{license.seats}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs ${
@@ -858,12 +927,62 @@ const SuperAdminLicensing = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Plan *</label>
-            <select className="border rounded p-2 w-full" value={license.plan} onChange={e => setLicense({ ...license, plan: e.target.value })}>
-              <option value="basic">Basic</option>
-              <option value="standard">Standard</option>
-              <option value="enterprise">Enterprise</option>
-            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Plan *</label>
+            <div className="space-y-3">
+              {Object.entries(LICENSE_TIERS).map(([key, tier]) => (
+                <div 
+                  key={key}
+                  onClick={() => setLicense({ ...license, plan: key })}
+                  className={`
+                    relative p-4 border-2 rounded-lg cursor-pointer transition-all
+                    ${license.plan === key 
+                      ? 'border-blue-500 bg-blue-50 shadow-md' 
+                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    }
+                  `}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <input
+                          type="radio"
+                          name="plan"
+                          value={key}
+                          checked={license.plan === key}
+                          onChange={(e) => setLicense({ ...license, plan: e.target.value })}
+                          className="h-4 w-4 text-blue-600"
+                        />
+                        <span className="font-semibold text-gray-900">{tier.name}</span>
+                        <span className="text-sm text-gray-600">{tier.price}</span>
+                      </div>
+                      <ul className="ml-6 space-y-1">
+                        {tier.features.map((feature, idx) => (
+                          <li key={idx} className="text-xs text-gray-600 flex items-center gap-1">
+                            <svg className="h-3 w-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    {license.plan === key && (
+                      <div className="ml-2">
+                        <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+              <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-800">
+                Tier limits are enforced automatically. Users will see upgrade prompts when approaching limits.
+              </p>
+            </div>
           </div>
 
           <div>
