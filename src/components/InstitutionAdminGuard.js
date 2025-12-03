@@ -165,15 +165,13 @@ const InstitutionAdminGuard = ({ children }) => {
               } else {
                 errorMessage += `Your institution license is ${licenseStatus.reason || 'inactive'}.`;
               }
-              errorMessage += ' Contact support or your account manager.';
+              errorMessage += ' Please activate your license to continue.';
               
-              toast.error(errorMessage, { autoClose: 8000 });
+              toast.warning(errorMessage, { autoClose: 5000 });
               
-              // FORCE sign out to ensure no cached access
-              await signOut(auth);
-              
-              // Block access and redirect to license activation page
-              navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
+              // Redirect to license activation page WITHOUT signing out
+              // This allows the user to activate license and continue their session
+              navigate(`/license-required?institution=${effectiveInstitutionId}&reason=${licenseStatus.reason}`, { replace: true });
               setLoading(false);
               return;
             }
@@ -181,12 +179,10 @@ const InstitutionAdminGuard = ({ children }) => {
             console.log('✅ LICENSE VERIFIED - Access granted to admin dashboard');
           } catch (licenseError) {
             console.error('❌ LICENSE CHECK ERROR:', licenseError);
-            toast.error('Unable to verify license. Access denied. Contact support.');
+            toast.error('Unable to verify license. Please contact support.');
             
-            // FORCE sign out on error
-            await signOut(auth);
-            
-            navigate(`/license-required?institution=${effectiveInstitutionId}`, { replace: true });
+            // Redirect to license page WITHOUT signing out
+            navigate(`/license-required?institution=${effectiveInstitutionId}&reason=check_error`, { replace: true });
             setLoading(false);
             return;
           }
@@ -197,8 +193,7 @@ const InstitutionAdminGuard = ({ children }) => {
           toast.error('No institution assigned to your account. Contact super admin.');
           console.error('User has no institutionId assigned');
           console.error('User profile:', userProfile);
-          // Sign out for security
-          await signOut(auth);
+          // Redirect to onboarding without signing out
           navigate('/onboard', { replace: true });
           setLoading(false);
           return;

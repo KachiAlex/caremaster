@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { validateLicenseKey, activateLicense } from '../services/licenseService';
+import { validateLicenseKey, activateLicense, fetchLicenseStatus } from '../services/licenseService';
 import { toast } from 'react-toastify';
 import { 
   Shield, 
@@ -20,6 +20,7 @@ const LicenseRequired = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const institutionId = searchParams.get('institution');
+  const reason = searchParams.get('reason') || 'no_license';
   
   const [licenseKey, setLicenseKey] = useState('');
   const [loading, setLoading] = useState(false);
@@ -75,22 +76,32 @@ const LicenseRequired = () => {
         return;
       }
 
-      if (result.alreadyActive) {
-        toast.info('License is already active for this institution.');
-      } else {
-        toast.success('✅ License activated successfully!');
-      }
+      // Re-check license status to verify activation
+      console.log('🔄 Re-checking license status after activation...');
+      const licenseStatus = await fetchLicenseStatus(institutionId);
       
+      if (!licenseStatus.active) {
+        // License still not active
+        toast.error(`License activation failed: ${licenseStatus.reason}. Please contact support.`);
+        setLoading(false);
+        return;
+      }
+
+      // License is now active!
+      toast.success('✅ License activated successfully! Redirecting to dashboard...', {
+        autoClose: 2000
+      });
+      
+      // Redirect back to dashboard with a slight delay for the toast
       setTimeout(() => {
         window.location.href = institutionId ? 
           `/institution-admin/dashboard?institution=${institutionId}` : 
-          '/institution';
-      }, 1500);
+          '/institution-admin/dashboard';
+      }, 2000);
 
     } catch (error) {
       console.error('Error activating license:', error);
       toast.error('Failed to activate license. Please check your license key or contact support.');
-    } finally {
       setLoading(false);
     }
   };
@@ -135,13 +146,39 @@ const LicenseRequired = () => {
           {/* Content */}
           <div className="p-8">
             {/* Alert Box */}
-            <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6">
+            <div className={`border-l-4 p-4 mb-6 ${
+              reason === 'license_expired' ? 'bg-red-50 border-red-500' :
+              reason === 'license_suspended' ? 'bg-yellow-50 border-yellow-500' :
+              'bg-orange-50 border-orange-500'
+            }`}>
               <div className="flex items-start">
-                <AlertTriangle className="h-6 w-6 text-orange-500 mr-3 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className={`h-6 w-6 mr-3 flex-shrink-0 mt-0.5 ${
+                  reason === 'license_expired' ? 'text-red-500' :
+                  reason === 'license_suspended' ? 'text-yellow-500' :
+                  'text-orange-500'
+                }`} />
                 <div>
-                  <h3 className="font-bold text-orange-900 mb-1">Access Restricted</h3>
-                  <p className="text-orange-800 text-sm">
-                    Your institution does not have an active license. Please enter your license key below to activate access.
+                  <h3 className={`font-bold mb-1 ${
+                    reason === 'license_expired' ? 'text-red-900' :
+                    reason === 'license_suspended' ? 'text-yellow-900' :
+                    'text-orange-900'
+                  }`}>
+                    {reason === 'license_expired' ? 'License Expired' :
+                     reason === 'license_suspended' ? 'License Suspended' :
+                     'Access Restricted'}
+                  </h3>
+                  <p className={`text-sm ${
+                    reason === 'license_expired' ? 'text-red-800' :
+                    reason === 'license_suspended' ? 'text-yellow-800' :
+                    'text-orange-800'
+                  }`}>
+                    {reason === 'license_expired' ? 
+                      'Your institution license has expired. Please renew your license or enter a new license key to restore access.' :
+                     reason === 'license_suspended' ? 
+                      'Your institution license has been suspended. Please enter a valid license key to reactivate access or contact support.' :
+                     reason === 'no_license' ?
+                      'Your institution does not have an active license. Please enter your license key below to activate access.' :
+                      'Unable to verify your license status. Please enter your license key or contact support.'}
                   </p>
                 </div>
               </div>
