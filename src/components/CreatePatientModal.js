@@ -29,6 +29,25 @@ import { generateClientQRCodeData } from '../utils/clientQRCodeGenerator';
 import { validateFormInputs, sanitizeText, validateEmail, validatePhone, validateDate } from '../utils/inputValidation';
 import QRCode from 'qrcode.react';
 
+// Common country codes
+const countryCodes = [
+  { code: '+1', country: 'United States/Canada', flag: '🇺🇸' },
+  { code: '+44', country: 'United Kingdom', flag: '🇬🇧' },
+  { code: '+234', country: 'Nigeria', flag: '🇳🇬' },
+  { code: '+27', country: 'South Africa', flag: '🇿🇦' },
+  { code: '+254', country: 'Kenya', flag: '🇰🇪' },
+  { code: '+233', country: 'Ghana', flag: '🇬🇭' },
+  { code: '+256', country: 'Uganda', flag: '🇺🇬' },
+  { code: '+91', country: 'India', flag: '🇮🇳' },
+  { code: '+86', country: 'China', flag: '🇨🇳' },
+  { code: '+81', country: 'Japan', flag: '🇯🇵' },
+  { code: '+49', country: 'Germany', flag: '🇩🇪' },
+  { code: '+33', country: 'France', flag: '🇫🇷' },
+  { code: '+61', country: 'Australia', flag: '🇦🇺' },
+  { code: '+971', country: 'UAE', flag: '🇦🇪' },
+  { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
+];
+
 const CreateClientModal = ({ open, onClose, onSuccess }) => {
   const { userProfile, institutionId } = useUser();
   const [loading, setLoading] = useState(false);
@@ -40,6 +59,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     name: '',
     fullName: '',
     email: '',
+    phoneCountryCode: '+234',
     phone: '',
     dateOfBirth: '',
     gender: '',
@@ -50,6 +70,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     
     // Emergency Contact
     emergencyContactName: '',
+    emergencyContactPhoneCountryCode: '+234',
     emergencyContactPhone: '',
     emergencyContactRelationship: '',
     
@@ -400,7 +421,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         name: sanitizeText(formData.name.trim()),
         fullName: sanitizeText(formData.fullName.trim() || formData.name.trim()),
         email: formData.email ? sanitizeText(formData.email.trim().toLowerCase()) : null,
-        phone: sanitizeText(formData.phone.trim()),
+        phone: sanitizeText(`${formData.phoneCountryCode}${formData.phone.trim()}`),
         dateOfBirth: formData.dateOfBirth || null,
         gender: formData.gender || null,
         address: formData.address ? sanitizeText(formData.address.trim()) : null,
@@ -408,7 +429,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         state: formData.state ? sanitizeText(formData.state.trim()) : null,
         zipCode: formData.zipCode ? sanitizeText(formData.zipCode.trim()) : null,
         emergencyContactName: sanitizeText(formData.emergencyContactName.trim()),
-        emergencyContactPhone: sanitizeText(formData.emergencyContactPhone.trim()),
+        emergencyContactPhone: sanitizeText(`${formData.emergencyContactPhoneCountryCode}${formData.emergencyContactPhone.trim()}`),
         emergencyContactRelationship: formData.emergencyContactRelationship ? sanitizeText(formData.emergencyContactRelationship.trim()) : null,
         medicalConditions: formData.medicalConditions.map(condition => sanitizeText(condition)),
         medications: formData.medications.map(med => sanitizeText(med)),
@@ -708,18 +729,32 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
                     <div>
                       <label htmlFor="phone" className={labelClass}>Phone Number *</label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <input
-                          id="phone"
-                          type="tel"
-                          name="phone"
-                          value={formData.phone}
+                      <div className="flex gap-2">
+                        <select
+                          name="phoneCountryCode"
+                          value={formData.phoneCountryCode}
                           onChange={handleInputChange}
-                          required
-                          className={`${inputClass} pl-10`}
-                          placeholder="+1 (555) 123-4567"
-                        />
+                          className={`${inputClass} w-32`}
+                        >
+                          {countryCodes.map((country) => (
+                            <option key={country.code} value={country.code}>
+                              {country.flag} {country.code}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="relative flex-1">
+                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <input
+                            id="phone"
+                            type="tel"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleInputChange}
+                            required
+                            className={`${inputClass} pl-10`}
+                            placeholder="1234567890"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -886,18 +921,32 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
                     <div>
                       <label htmlFor="emergencyContactPhone" className={labelClass}>Contact Phone *</label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <input
-                          id="emergencyContactPhone"
-                          type="tel"
-                          name="emergencyContactPhone"
-                          value={formData.emergencyContactPhone}
+                      <div className="flex gap-2">
+                        <select
+                          name="emergencyContactPhoneCountryCode"
+                          value={formData.emergencyContactPhoneCountryCode}
                           onChange={handleInputChange}
-                          required
-                          className={`${inputClass} pl-10`}
-                          placeholder="+1 (555) 123-4567"
-                        />
+                          className={`${inputClass} w-32`}
+                        >
+                          {countryCodes.map((country) => (
+                            <option key={country.code} value={country.code}>
+                              {country.flag} {country.code}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="relative flex-1">
+                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <input
+                            id="emergencyContactPhone"
+                            type="tel"
+                            name="emergencyContactPhone"
+                            value={formData.emergencyContactPhone}
+                            onChange={handleInputChange}
+                            required
+                            className={`${inputClass} pl-10`}
+                            placeholder="1234567890"
+                          />
+                        </div>
                       </div>
                     </div>
 

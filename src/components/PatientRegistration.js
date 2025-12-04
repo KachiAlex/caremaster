@@ -23,6 +23,25 @@ import { createClient } from '../api/patientsAPI';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 
+// Common country codes
+const countryCodes = [
+  { code: '+1', country: 'United States/Canada', flag: '🇺🇸' },
+  { code: '+44', country: 'United Kingdom', flag: '🇬🇧' },
+  { code: '+234', country: 'Nigeria', flag: '🇳🇬' },
+  { code: '+27', country: 'South Africa', flag: '🇿🇦' },
+  { code: '+254', country: 'Kenya', flag: '🇰🇪' },
+  { code: '+233', country: 'Ghana', flag: '🇬🇭' },
+  { code: '+256', country: 'Uganda', flag: '🇺🇬' },
+  { code: '+91', country: 'India', flag: '🇮🇳' },
+  { code: '+86', country: 'China', flag: '🇨🇳' },
+  { code: '+81', country: 'Japan', flag: '🇯🇵' },
+  { code: '+49', country: 'Germany', flag: '🇩🇪' },
+  { code: '+33', country: 'France', flag: '🇫🇷' },
+  { code: '+61', country: 'Australia', flag: '🇦🇺' },
+  { code: '+971', country: 'UAE', flag: '🇦🇪' },
+  { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
+];
+
 const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutionId }) => {
   const { userProfile } = useUser();
   const institutionId = propInstitutionId || userProfile?.institutionId;
@@ -35,6 +54,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
     fullName: '',
     dateOfBirth: '',
     gender: '',
+    phoneCountryCode: '+234',
     phone: '',
     email: '',
     address: '',
@@ -44,6 +64,7 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
     
     // Emergency Contact
     emergencyContactName: '',
+    emergencyContactPhoneCountryCode: '+234',
     emergencyContactPhone: '',
     emergencyContactRelationship: '',
     
@@ -139,14 +160,14 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
         fullName: formData.fullName.trim() || formData.name.trim(),
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
-        phone: formData.phone.trim(),
+        phone: `${formData.phoneCountryCode}${formData.phone.trim()}`,
         email: formData.email.trim() || null,
         address: formData.address.trim() || null,
         city: formData.city.trim() || null,
         state: formData.state.trim() || null,
         zipCode: formData.zipCode.trim() || null,
         emergencyContactName: formData.emergencyContactName.trim(),
-        emergencyContactPhone: formData.emergencyContactPhone.trim(),
+        emergencyContactPhone: `${formData.emergencyContactPhoneCountryCode}${formData.emergencyContactPhone.trim()}`,
         emergencyContactRelationship: formData.emergencyContactRelationship.trim() || null,
         bloodType: formData.bloodType || null,
         genotype: formData.genotype || null,
@@ -333,17 +354,31 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
               <label htmlFor="phone" className="block text-xs font-medium text-slate-400 mb-2">
                 Phone <span className="text-red-400">*</span>
               </label>
-              <input
-                id="phone"
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
-                  errors.phone ? 'border-red-500/50' : 'border-slate-700'
-                }`}
-                placeholder="+1234567890"
-              />
+              <div className="flex gap-2">
+                <select
+                  name="phoneCountryCode"
+                  value={formData.phoneCountryCode}
+                  onChange={handleChange}
+                  className="w-32 px-2 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
+                >
+                  {countryCodes.map((country) => (
+                    <option key={country.code} value={country.code} className="bg-slate-900">
+                      {country.flag} {country.code}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  id="phone"
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className={`flex-1 px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
+                    errors.phone ? 'border-red-500/50' : 'border-slate-700'
+                  }`}
+                  placeholder="1234567890"
+                />
+              </div>
               {errors.phone && <p className="text-xs text-red-400 mt-1">{errors.phone}</p>}
             </div>
 
@@ -480,17 +515,31 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
               <label htmlFor="emergencyContactPhone" className="block text-xs font-medium text-slate-400 mb-2">
                 Contact Phone <span className="text-red-400">*</span>
               </label>
-              <input
-                id="emergencyContactPhone"
-                type="tel"
-                name="emergencyContactPhone"
-                value={formData.emergencyContactPhone}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
-                  errors.emergencyContactPhone ? 'border-red-500/50' : 'border-slate-700'
-                }`}
-                placeholder="+1234567890"
-              />
+              <div className="flex gap-2">
+                <select
+                  name="emergencyContactPhoneCountryCode"
+                  value={formData.emergencyContactPhoneCountryCode}
+                  onChange={handleChange}
+                  className="w-32 px-2 py-2 border border-slate-700 rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
+                >
+                  {countryCodes.map((country) => (
+                    <option key={country.code} value={country.code} className="bg-slate-900">
+                      {country.flag} {country.code}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  id="emergencyContactPhone"
+                  type="tel"
+                  name="emergencyContactPhone"
+                  value={formData.emergencyContactPhone}
+                  onChange={handleChange}
+                  className={`flex-1 px-3 py-2 border rounded-lg bg-slate-900/60 text-slate-50 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm ${
+                    errors.emergencyContactPhone ? 'border-red-500/50' : 'border-slate-700'
+                  }`}
+                  placeholder="1234567890"
+                />
+              </div>
               {errors.emergencyContactPhone && <p className="text-xs text-red-400 mt-1">{errors.emergencyContactPhone}</p>}
             </div>
 

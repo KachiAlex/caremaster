@@ -133,21 +133,21 @@ const NewHomePage = () => {
       quote: "Care Master has transformed how we manage our agency. The mobile app is intuitive, and our caregivers love it. We've seen a 40% increase in caregiver retention since switching.",
       author: "Sarah Johnson",
       role: "CEO, Compassion Home Care",
-      location: "Lagos, Nigeria",
+      location: "United States",
       rating: 5
     },
     {
       quote: "The automated scheduling and EVV compliance features alone are worth it. But the business intelligence dashboard has helped us identify growth opportunities we never knew existed.",
       author: "Dr. Michael Chen",
       role: "Owner, Senior Care Plus",
-      location: "Abuja, Nigeria",
+      location: "United Kingdom",
       rating: 5
     },
     {
       quote: "Finally, a platform that understands the complexities of home care. Custom forms, robust reporting, and exceptional support. Care Master is the total package.",
       author: "Amara Okafor",
       role: "Director, Golden Years Care",
-      location: "Port Harcourt, Nigeria",
+      location: "South Africa",
       rating: 5
     }
   ];
@@ -156,7 +156,7 @@ const NewHomePage = () => {
     "Compassion Home Care",
     "Senior Care Plus",
     "Golden Years Care",
-    "Comfort Keepers Nigeria",
+    "Comfort Keepers International",
     "Elite Elder Care"
   ];
 
@@ -236,7 +236,7 @@ const NewHomePage = () => {
             <div className="text-white">
               <div className="inline-flex items-center px-4 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-sm font-medium text-white mb-6">
                 <Award className="h-4 w-4 mr-2 text-yellow-300" />
-                #1-Rated Home Care Management Platform in Nigeria
+                #1-Rated Home Care Management Platform
               </div>
               
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
@@ -367,7 +367,7 @@ const NewHomePage = () => {
       <section className="bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-sm font-semibold text-gray-500 uppercase tracking-wide mb-8">
-            Trusted by Leading Care Agencies Across Nigeria
+            Trusted by Leading Care Agencies Worldwide
           </p>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 items-center justify-items-center opacity-60">
             {trustedBy.map((company, index) => (
@@ -767,7 +767,7 @@ const NewHomePage = () => {
                 <span className="ml-2 text-xl font-bold">Care Master</span>
               </div>
               <p className="text-gray-400 text-sm mb-4">
-                The leading Health Tech platform for modern care agencies in Nigeria and beyond.
+                The leading Health Tech platform for modern care agencies worldwide.
               </p>
               <div className="flex gap-3">
                 <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors">
