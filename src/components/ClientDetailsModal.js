@@ -97,8 +97,6 @@ const ClientDetailsModal = ({
       color: 'bg-purple-500',
       description: 'Order diagnostic tests',
       action: handleOrderLabTest
-    },
-    {
     }
   ];
 
