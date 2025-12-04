@@ -564,29 +564,97 @@ const NewHomePage = () => {
             {/* Right Content - Device Mockup */}
             <div className="relative">
               <div className="aspect-square bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center overflow-hidden p-8">
-                {/* Device Mockup Image */}
-                <img 
-                  src="/images/caremaster-mockup.png" 
-                  alt="CareMaster App on Mobile Device" 
-                  className="w-full h-full object-contain drop-shadow-2xl"
-                  onError={(e) => {
-                    // Fallback if image not found
-                    e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = `
-                      <div class="w-full h-full flex items-center justify-center">
-                        <div class="text-center p-8">
-                          <div class="inline-block p-6 bg-white rounded-2xl shadow-2xl mb-4">
-                            <svg class="h-24 w-24 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                          <p class="text-2xl font-bold text-gray-900">Care Management</p>
-                          <p class="text-gray-600 mt-2">Powered by Technology</p>
+                {/* Phone Mockup Component */}
+                <div className="relative w-full max-w-xs mx-auto">
+                  {/* Phone Frame */}
+                  <div className="relative bg-gray-900 rounded-[3rem] p-3 shadow-2xl">
+                    {/* Notch */}
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl z-10"></div>
+                    
+                    {/* Screen */}
+                    <div className="bg-white rounded-[2.5rem] overflow-hidden">
+                      {/* Status Bar */}
+                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 pt-12 pb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Heart className="h-5 w-5 text-white" />
+                          <span className="text-white font-bold text-lg">CareMaster</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-1 h-1 bg-white rounded-full"></div>
+                          <div className="w-1 h-1 bg-white rounded-full"></div>
+                          <div className="w-1 h-1 bg-white rounded-full"></div>
                         </div>
                       </div>
-                    `;
-                  }}
-                />
+                      
+                      {/* App Content */}
+                      <div className="relative bg-gray-50 pb-20">
+                        <div className="p-6">
+                          {/* Header */}
+                          <div className="mb-6">
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h3>
+                            <p className="text-gray-600 text-sm">Welcome back!</p>
+                          </div>
+                          
+                          {/* Stats Cards */}
+                          <div className="grid grid-cols-2 gap-3 mb-6">
+                            <div className="bg-white rounded-xl p-4 shadow-sm">
+                              <div className="text-2xl font-bold text-blue-600">124</div>
+                              <div className="text-xs text-gray-600 mt-1">Active Clients</div>
+                            </div>
+                            <div className="bg-white rounded-xl p-4 shadow-sm">
+                              <div className="text-2xl font-bold text-green-600">48</div>
+                              <div className="text-xs text-gray-600 mt-1">Caregivers</div>
+                            </div>
+                          </div>
+                          
+                          {/* Quick Actions */}
+                          <div className="space-y-2">
+                            <div className="bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm">
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Calendar className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-semibold text-gray-900">Schedule Visit</div>
+                                <div className="text-xs text-gray-500">2 visits today</div>
+                              </div>
+                              <ChevronRight className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <div className="bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm">
+                              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-semibold text-gray-900">Care Plans</div>
+                                <div className="text-xs text-gray-500">Manage care activities</div>
+                              </div>
+                              <ChevronRight className="h-5 w-5 text-gray-400" />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Bottom Navigation */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-around">
+                          <div className="flex flex-col items-center">
+                            <div className="w-6 h-6 bg-blue-600 rounded-lg mb-1"></div>
+                            <div className="text-xs text-blue-600 font-semibold">Home</div>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <div className="w-6 h-6 bg-gray-300 rounded-lg mb-1"></div>
+                            <div className="text-xs text-gray-500">Schedule</div>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <div className="w-6 h-6 bg-gray-300 rounded-lg mb-1"></div>
+                            <div className="text-xs text-gray-500">Clients</div>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <div className="w-6 h-6 bg-gray-300 rounded-lg mb-1"></div>
+                            <div className="text-xs text-gray-500">More</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Floating Stats */}
