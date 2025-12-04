@@ -30,6 +30,17 @@ const NewHomePage = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFeature, setActiveFeature] = useState('caregiver');
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
+  const [salesModalOpen, setSalesModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    organization: '',
+    message: ''
+  });
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formSuccess, setFormSuccess] = useState(false);
 
   // Auto-scroll stats
   const [statsAnimated, setStatsAnimated] = useState(false);
@@ -49,6 +60,36 @@ const NewHomePage = () => {
     handleScroll(); // Check on mount
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleFormSubmit = async (e, formType) => {
+    e.preventDefault();
+    setFormSubmitting(true);
+    
+    // Simulate form submission (replace with actual API call)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setFormSuccess(true);
+      
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setFormData({ name: '', email: '', phone: '', organization: '', message: '' });
+        setFormSuccess(false);
+        setDemoModalOpen(false);
+        setSalesModalOpen(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Form submission error:', error);
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const features = {
     caregiver: {
@@ -152,9 +193,6 @@ const NewHomePage = () => {
                   Institution Portal
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
-                <button className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg">
-                  Schedule Demo
-                </button>
               </div>
             </div>
 
@@ -176,7 +214,6 @@ const NewHomePage = () => {
                 <a href="#pricing" className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50">Pricing</a>
                 <a href="#testimonials" className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50">Reviews</a>
                 <Link to="/institution" className="text-blue-600 font-semibold px-3 py-2 rounded-md bg-blue-50">Institution Portal</Link>
-                <button className="mt-2 w-full px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Schedule Demo</button>
               </div>
             </div>
           )}
@@ -215,7 +252,10 @@ const NewHomePage = () => {
               </p>
 
               <div className="mt-10 flex flex-col sm:flex-row gap-4">
-                <button className="group px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl flex items-center justify-center">
+                <button 
+                  onClick={() => setDemoModalOpen(true)}
+                  className="group px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
+                >
                   Schedule a Demo
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -555,7 +595,10 @@ const NewHomePage = () => {
               <p className="mt-4 text-lg text-gray-600 leading-relaxed">
                 We are dedicated to innovation and offering agile and flexible features that are top-rated in the industry, while also providing exceptional customer support so you can focus on what matters most—providing even better care.
               </p>
-              <button className="mt-8 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center">
+              <button 
+                onClick={() => setSalesModalOpen(true)}
+                className="mt-8 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center"
+              >
                 Learn More About Our Platform
                 <ArrowRight className="ml-2 h-5 w-5" />
               </button>
@@ -691,7 +734,10 @@ const NewHomePage = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="px-10 py-5 bg-white text-blue-600 font-bold text-lg rounded-lg hover:bg-blue-50 transition-all shadow-2xl hover:shadow-3xl flex items-center justify-center">
+            <button 
+              onClick={() => setDemoModalOpen(true)}
+              className="px-10 py-5 bg-white text-blue-600 font-bold text-lg rounded-lg hover:bg-blue-50 transition-all shadow-2xl hover:shadow-3xl flex items-center justify-center"
+            >
               Schedule a Free Demo
               <Play className="ml-3 h-6 w-6" />
             </button>
@@ -783,7 +829,10 @@ const NewHomePage = () => {
                   </a>
                 </li>
                 <li className="pt-3">
-                  <button className="w-full px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                  <button 
+                    onClick={() => setDemoModalOpen(true)}
+                    className="w-full px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                  >
                     Schedule a Demo
                   </button>
                 </li>
@@ -809,6 +858,249 @@ const NewHomePage = () => {
       <button className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center z-40">
         <MessageCircle className="h-6 w-6" />
       </button>
+
+      {/* Demo Request Modal */}
+      {demoModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-8">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-3xl font-bold text-gray-900">Schedule a Demo</h3>
+                  <p className="text-gray-600 mt-2">See CareMaster in action - personalized for your agency</p>
+                </div>
+                <button 
+                  onClick={() => setDemoModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              {formSuccess ? (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle className="h-12 w-12 text-green-600" />
+                  </div>
+                  <h4 className="text-2xl font-bold text-gray-900 mb-2">Thank You!</h4>
+                  <p className="text-gray-600">We'll contact you shortly to schedule your personalized demo.</p>
+                </div>
+              ) : (
+                <form onSubmit={(e) => handleFormSubmit(e, 'demo')} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address *</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="john@example.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="+234 800 000 0000"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Organization Name *</label>
+                      <input
+                        type="text"
+                        name="organization"
+                        value={formData.organization}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="Your Care Agency"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Tell us about your needs (Optional)</label>
+                    <textarea
+                      name="message"
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      rows="4"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                      placeholder="Number of caregivers, clients, specific features you're interested in..."
+                    ></textarea>
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      type="submit"
+                      disabled={formSubmitting}
+                      className="flex-1 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {formSubmitting ? (
+                        <>
+                          <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          Schedule Demo
+                          <Calendar className="ml-2 h-5 w-5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sales Contact Modal */}
+      {salesModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-8">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-3xl font-bold text-gray-900">Talk to Sales</h3>
+                  <p className="text-gray-600 mt-2">Get answers to your questions and learn how we can help</p>
+                </div>
+                <button 
+                  onClick={() => setSalesModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              {formSuccess ? (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle className="h-12 w-12 text-green-600" />
+                  </div>
+                  <h4 className="text-2xl font-bold text-gray-900 mb-2">Thank You!</h4>
+                  <p className="text-gray-600">Our sales team will reach out to you within 24 hours.</p>
+                </div>
+              ) : (
+                <form onSubmit={(e) => handleFormSubmit(e, 'sales')} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address *</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="john@example.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="+234 800 000 0000"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Organization Name *</label>
+                      <input
+                        type="text"
+                        name="organization"
+                        value={formData.organization}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="Your Care Agency"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">How can we help? *</label>
+                    <textarea
+                      name="message"
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      required
+                      rows="4"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                      placeholder="Tell us about your questions, requirements, or what you'd like to learn more about..."
+                    ></textarea>
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      type="submit"
+                      disabled={formSubmitting}
+                      className="flex-1 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {formSubmitting ? (
+                        <>
+                          <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          Contact Sales
+                          <Mail className="ml-2 h-5 w-5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
