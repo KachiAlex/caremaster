@@ -1,10 +1,10 @@
 import { db } from '../firebase/config';
-import { 
-  collection, 
-  query, 
-  getDocs, 
-  doc, 
-  updateDoc, 
+import {
+  collection,
+  query,
+  getDocs,
+  doc,
+  updateDoc,
   deleteDoc,
   addDoc,
   setDoc,
@@ -15,6 +15,73 @@ import {
   serverTimestamp,
   getDoc
 } from 'firebase/firestore';
+import { createStandardizedUserData } from '../utils/userCreationHelper';
+
+const CAREGIVER_ROLE_FIELDS = {
+  userType: 'caregiver',
+  type: 'caregiver',
+  role: 'caregiver',
+  roles: ['caregiver']
+};
+
+const CAREGIVER_STATUS_FIELDS = {
+  status: 'pending',
+  isActive: true,
+  active: true
+};
+
+const ensureCaregiverUserDoc = async (caregiverId, caregiverData = {}) => {
+  if (!caregiverId) return;
+
+  const userRef = doc(db, 'users', caregiverId);
+  const userSnap = await getDoc(userRef);
+
+  const name = caregiverData.name || caregiverData.displayName || caregiverData.fullName || 'Caregiver';
+  const [firstName, ...rest] = name.trim().split(' ');
+  const lastName = rest.join(' ').trim();
+
+  if (!userSnap.exists()) {
+    const standardizedUser = createStandardizedUserData(
+      {
+        firstName: firstName || 'Caregiver',
+        lastName: lastName || '',
+        email: caregiverData.email || '',
+        phone: caregiverData.phone || caregiverData.contactPhone || '',
+        userType: 'caregiver'
+      },
+      {
+        uid: caregiverId,
+        institutionId: caregiverData.institutionId || caregiverData.organizationId || null,
+        createdBy: caregiverData.createdBy || null,
+        onboardingComplete: caregiverData.onboardingComplete ?? false,
+        accountType: caregiverData.accountType || 'legacy_import'
+      }
+    );
+
+    await setDoc(userRef, standardizedUser);
+    return;
+  }
+
+  const userData = userSnap.data() || {};
+  const roleNeedsFix =
+    userData.userType !== 'caregiver' ||
+    userData.type !== 'caregiver' ||
+    userData.role !== 'caregiver' ||
+    !Array.isArray(userData.roles) ||
+    !userData.roles.includes('caregiver');
+
+  const statusNeedsFix = userData.status === undefined || userData.status === 'deleted';
+  const institutionNeedsFix = !userData.institutionId && caregiverData.institutionId;
+
+  if (roleNeedsFix || statusNeedsFix || institutionNeedsFix) {
+    await updateDoc(userRef, {
+      ...CAREGIVER_ROLE_FIELDS,
+      ...(institutionNeedsFix ? { institutionId: caregiverData.institutionId } : {}),
+      ...(statusNeedsFix ? { status: 'active', isActive: true, active: true } : {}),
+      updatedAt: serverTimestamp()
+    });
+  }
+};
 
 export const caregiverAPI = {
   // Get all caregivers with filtering
@@ -188,6 +255,7 @@ export const caregiverAPI = {
       // Try to create the caregiver profile
       try {
         await setDoc(doc(db, 'caregivers', caregiverId), defaultCaregiverData);
+        await ensureCaregiverUserDoc(caregiverId, defaultCaregiverData);
         console.log('Default caregiver profile created successfully');
         return defaultCaregiverData;
       } catch (createError) {
@@ -200,31 +268,47 @@ export const caregiverAPI = {
     }
   },
 
-  // Create new caregiver
+  // Create new caregiver with automatic user guardrails
   createCaregiver: async (caregiverData) => {
     try {
-      const caregiverRef = await addDoc(collection(db, 'caregivers'), {
-        ...caregiverData,
-        status: 'pending',
-        rating: 0,
-        totalPatients: 0,
-        currentPatients: 0,
-        performance: {
-          punctuality: 0,
-          patientSatisfaction: 0,
-          taskCompletion: 0,
-          communication: 0,
-          safety: 0
+      const caregiverId =
+        caregiverData.id ||
+        caregiverData.userId ||
+        caregiverData.uid ||
+        `caregiver_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+      const caregiverDocRef = doc(db, 'caregivers', caregiverId);
+      await setDoc(
+        caregiverDocRef,
+        {
+          id: caregiverId,
+          ...caregiverData,
+          ...CAREGIVER_ROLE_FIELDS,
+          ...CAREGIVER_STATUS_FIELDS,
+          rating: caregiverData.rating ?? 0,
+          totalPatients: caregiverData.totalPatients ?? 0,
+          currentPatients: caregiverData.currentPatients ?? 0,
+          performance: caregiverData.performance || {
+            punctuality: 0,
+            patientSatisfaction: 0,
+            taskCompletion: 0,
+            communication: 0,
+            safety: 0
+          },
+          earnings: caregiverData.earnings || {
+            thisMonth: 0,
+            lastMonth: 0,
+            total: 0
+          },
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
         },
-        earnings: {
-          thisMonth: 0,
-          lastMonth: 0,
-          total: 0
-        },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-      return { id: caregiverRef.id, success: true };
+        { merge: true }
+      );
+
+      await ensureCaregiverUserDoc(caregiverId, caregiverData);
+
+      return { id: caregiverId, success: true };
     } catch (error) {
       console.error('Error creating caregiver:', error);
       throw error;

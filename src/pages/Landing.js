@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase/config';
 import { 
   Heart, 
   Shield, 
@@ -45,6 +47,12 @@ const NewHomePage = () => {
   // Auto-scroll stats
   const [statsAnimated, setStatsAnimated] = useState(false);
 
+  // Secret access to superadmin portal
+  const [secretClickCount, setSecretClickCount] = useState(0);
+  const [secretKeySequence, setSecretKeySequence] = useState([]);
+  const SECRET_KEY_SEQUENCE = ['s', 'u', 'p', 'e', 'r', 'a', 'd', 'm', 'i', 'n'];
+  const SECRET_CLICK_COUNT = 5;
+
   useEffect(() => {
     const handleScroll = () => {
       const statsSection = document.getElementById('stats');
@@ -60,6 +68,79 @@ const NewHomePage = () => {
     handleScroll(); // Check on mount
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Secret keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Only track if not typing in an input field
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      setSecretKeySequence(prev => {
+        const newSequence = [...prev, key].slice(-SECRET_KEY_SEQUENCE.length);
+        
+        // Check if sequence matches
+        if (newSequence.length === SECRET_KEY_SEQUENCE.length) {
+          const matches = newSequence.every((k, i) => k === SECRET_KEY_SEQUENCE[i]);
+          if (matches) {
+            handleSecretAccess();
+            return [];
+          }
+        }
+        
+        return newSequence;
+      });
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
+  const handleSecretAccess = async () => {
+    // Check if user is logged in
+    const user = auth.currentUser;
+    
+    if (!user) {
+      // Not logged in - redirect to superadmin login
+      navigate('/super-admin/login');
+      return;
+    }
+
+    try {
+      // Check if user has superadmin claim
+      const token = await user.getIdTokenResult();
+      const hasSuperAdminClaim = token?.claims?.superAdmin === true;
+
+      if (hasSuperAdminClaim) {
+        // User is superadmin - redirect to dashboard
+        navigate('/super-admin/dashboard');
+      } else {
+        // User is logged in but not superadmin - redirect to login
+        navigate('/super-admin/login');
+      }
+    } catch (error) {
+      console.error('Error checking superadmin status:', error);
+      // On error, redirect to login
+      navigate('/super-admin/login');
+    }
+  };
+
+  const handleLogoClick = () => {
+    setSecretClickCount(prev => {
+      const newCount = prev + 1;
+      if (newCount >= SECRET_CLICK_COUNT) {
+        handleSecretAccess();
+        return 0;
+      }
+      // Reset count after 3 seconds
+      setTimeout(() => {
+        setSecretClickCount(0);
+      }, 3000);
+      return newCount;
+    });
+  };
 
   const handleFormSubmit = async (e, formType) => {
     e.preventDefault();
@@ -166,14 +247,17 @@ const NewHomePage = () => {
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Logo - Clickable Home Button */}
-            <Link to="/" className="flex items-center group cursor-pointer">
+            {/* Logo - Clickable Home Button with Secret Access */}
+            <div 
+              onClick={handleLogoClick}
+              className="flex items-center group cursor-pointer"
+            >
               <Heart className="h-8 w-8 text-blue-600 group-hover:scale-110 transition-transform" />
               <span className="ml-2 text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">Care Master</span>
               <span className="ml-3 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full hidden sm:inline">
                 Health Tech
               </span>
-            </Link>
+            </div>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">

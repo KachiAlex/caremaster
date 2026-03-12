@@ -426,6 +426,34 @@ class CallService {
     }
   }
 
+  // Update call status
+  async updateCallStatus(callId, status) {
+    try {
+      const callsQuery = query(
+        collection(db, 'calls'),
+        where('callId', '==', callId)
+      );
+
+      const snapshot = await getDocs(callsQuery);
+      if (snapshot.empty) {
+        console.warn('Call not found:', callId);
+        return false;
+      }
+
+      const callDoc = snapshot.docs[0];
+      await updateDoc(callDoc.ref, {
+        status: status,
+        updatedAt: serverTimestamp()
+      });
+
+      console.log(`✅ Call ${callId} status updated to:`, status);
+      return true;
+    } catch (error) {
+      console.error('Error updating call status:', error);
+      throw error;
+    }
+  }
+
   // Get calls for a user with filter: 'all' | 'missed' | 'received' | 'outgoing'
   async getUserCalls(userId, filter = 'all', limitCount = 50) {
     try {
@@ -541,6 +569,147 @@ class CallService {
   // Clear active call
   clearActiveCall() {
     this.activeCall = null;
+  }
+
+  // Update call notification status
+  async updateCallNotificationStatus(notificationId, status) {
+    try {
+      const notificationRef = doc(db, 'callNotifications', notificationId);
+      await updateDoc(notificationRef, {
+        status: status,
+        updatedAt: serverTimestamp()
+      });
+      console.log(`✅ Call notification ${notificationId} updated to ${status}`);
+    } catch (error) {
+      console.error('Error updating call notification status:', error);
+      throw error;
+    }
+  }
+
+  // Listen for WebRTC signaling messages
+  listenForSignaling(callId, onSignalingMessage) {
+    const signalingQuery = query(
+      collection(db, 'signaling'),
+      where('callId', '==', callId),
+      orderBy('timestamp', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(signalingQuery, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const message = change.doc.data();
+          console.log('📡 Received signaling message:', message.type);
+          onSignalingMessage({
+            ...message,
+            documentId: change.doc.id
+          });
+        }
+      });
+    });
+
+    return unsubscribe;
+  }
+
+  // Send SDP offer/answer for WebRTC
+  async sendSdpMessage(callId, type, sdp, fromUserId) {
+    try {
+      console.log(`📨 Sending SDP ${type} for call:`, callId);
+      
+      const messageDoc = await addDoc(collection(db, 'signaling'), {
+        callId,
+        type,
+        sdp: typeof sdp === 'object' ? sdp.sdp : sdp,
+        from: fromUserId,
+        timestamp: serverTimestamp()
+      });
+
+      console.log(`✅ SDP ${type} sent successfully`);
+      return messageDoc.id;
+    } catch (error) {
+      console.error(`❌ Error sending SDP ${type}:`, error);
+      throw error;
+    }
+  }
+
+  // Send ICE candidate for WebRTC
+  async sendIceCandidate(callId, candidate, fromUserId) {
+    try {
+      if (!candidate || !candidate.candidate) {
+        return; // Skip null candidates
+      }
+
+      const candidateDoc = await addDoc(collection(db, 'signaling'), {
+        callId,
+        type: 'ice-candidate',
+        candidate: {
+          candidate: candidate.candidate,
+          sdpMLineIndex: candidate.sdpMLineIndex,
+          sdpMid: candidate.sdpMid,
+          usernameFragment: candidate.usernameFragment
+        },
+        from: fromUserId,
+        timestamp: serverTimestamp()
+      });
+
+      return candidateDoc.id;
+    } catch (error) {
+      console.error('❌ Error sending ICE candidate:', error);
+      throw error;
+    }
+  }
+
+  // Clean up signaling messages after call ends
+  async cleanupSignalingMessages(callId) {
+    try {
+      const signalingQuery = query(
+        collection(db, 'signaling'),
+        where('callId', '==', callId)
+      );
+
+      const snapshot = await getDocs(signalingQuery);
+      const batch = [];
+      
+      snapshot.docs.forEach(doc => {
+        batch.push(deleteDoc(doc.ref));
+      });
+
+      await Promise.all(batch);
+      console.log(`✅ Cleaned up ${batch.length} signaling messages for call: ${callId}`);
+      return { success: true, cleanedCount: batch.length };
+    } catch (error) {
+      console.error('Error cleaning up signaling messages:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Check if another participant is online
+  async isParticipantOnline(userId) {
+    try {
+      // Check for recent listener activity
+      const notificationsQuery = query(
+        collection(db, 'callNotifications'),
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc'),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(notificationsQuery);
+      
+      if (snapshot.empty) {
+        return false;
+      }
+
+      // If they have a notification listener, they're likely online
+      const lastNotificationTime = snapshot.docs[0].data().timestamp?.toDate?.() || new Date(0);
+      const now = new Date();
+      const diffMinutes = (now - lastNotificationTime) / (1000 * 60);
+
+      // Consider online if activity within 5 minutes
+      return diffMinutes < 5;
+    } catch (error) {
+      console.error('Error checking participant online status:', error);
+      return false;
+    }
   }
 }
 

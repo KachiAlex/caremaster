@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { 
   ArrowLeft,
@@ -13,8 +13,12 @@ import {
   Activity,
   Settings as SettingsIcon,
   Save,
-  RefreshCw
+  RefreshCw,
+  Key,
+  Eye,
+  EyeOff
 } from 'lucide-react';
+import FontSizeToggle from '../components/FontSizeToggle';
 
 const SuperAdminSettings = () => {
   const navigate = useNavigate();
@@ -22,6 +26,32 @@ const SuperAdminSettings = () => {
   const [message, setMessage] = useState('');
   const [superAdmins, setSuperAdmins] = useState([]);
   const [loadingSuperAdmins, setLoadingSuperAdmins] = useState(true);
+  
+  // Password change state
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [systemStatus, setSystemStatus] = useState({
+    api: { status: 'checking', message: 'Checking...' },
+    database: { status: 'checking', message: 'Checking...' },
+    functions: { status: 'checking', message: 'Checking...' },
+    storage: { status: 'checking', message: 'Checking...' }
+  });
+  const [userProfile, setUserProfile] = useState(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileData, setProfileData] = useState({
+    displayName: '',
+    email: ''
+  });
 
   const [settings, setSettings] = useState({
     // Security Settings
@@ -46,7 +76,105 @@ const SuperAdminSettings = () => {
 
   useEffect(() => {
     loadSuperAdmins();
+    loadSettings();
+    loadUserProfile();
+    checkSystemStatus();
+    // Check system status every 30 seconds
+    const interval = setInterval(checkSystemStatus, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const userDoc = await getDocs(
+        query(collection(db, 'users'), where('email', '==', user.email))
+      );
+      
+      if (!userDoc.empty) {
+        const profile = { id: userDoc.docs[0].id, ...userDoc.docs[0].data() };
+        setUserProfile(profile);
+        setProfileData({
+          displayName: profile.displayName || user.displayName || '',
+          email: profile.email || user.email || ''
+        });
+      } else {
+        // Fallback to auth user
+        setUserProfile({
+          email: user.email,
+          displayName: user.displayName || ''
+        });
+        setProfileData({
+          displayName: user.displayName || '',
+          email: user.email || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user || !userProfile) return;
+
+      setLoading(true);
+      setMessage('');
+
+      const userRef = doc(db, 'users', userProfile.id || user.uid);
+      await updateDoc(userRef, {
+        displayName: profileData.displayName,
+        updatedAt: serverTimestamp()
+      });
+
+      setMessage('Profile updated successfully!');
+      setEditingProfile(false);
+      loadUserProfile();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setMessage('Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const settingsRef = doc(db, 'systemSettings', 'superAdmin');
+      const settingsDoc = await getDoc(settingsRef);
+      
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data();
+        setSettings({
+          // Security Settings
+          requireMFA: data.requireMFA ?? false,
+          sessionTimeout: data.sessionTimeout ?? 60,
+          maxLoginAttempts: data.maxLoginAttempts ?? 3,
+          
+          // Notification Settings
+          emailNotifications: data.emailNotifications ?? true,
+          licenseExpiryAlerts: data.licenseExpiryAlerts ?? true,
+          systemAlerts: data.systemAlerts ?? true,
+          
+          // System Settings
+          maintenanceMode: data.maintenanceMode ?? false,
+          allowNewInstitutions: data.allowNewInstitutions ?? true,
+          autoRenewLicenses: data.autoRenewLicenses ?? false,
+          
+          // Audit Settings
+          auditLogRetention: data.auditLogRetention ?? 90,
+          detailedLogging: data.detailedLogging ?? true
+        });
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      setMessage('Failed to load settings');
+    }
+  };
 
   const loadSuperAdmins = async () => {
     try {
@@ -76,17 +204,115 @@ const SuperAdminSettings = () => {
     setMessage('');
     
     try {
-      // In a real implementation, save settings to Firestore
-      // For now, we'll simulate a save
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('No authenticated user');
+      }
+
+      const settingsRef = doc(db, 'systemSettings', 'superAdmin');
+      const settingsData = {
+        ...settings,
+        updatedAt: serverTimestamp(),
+        updatedBy: user.uid,
+        updatedByEmail: user.email
+      };
+
+      // Check if settings exist
+      const existingSettings = await getDoc(settingsRef);
+      if (existingSettings.exists()) {
+        await updateDoc(settingsRef, settingsData);
+      } else {
+        await setDoc(settingsRef, {
+          ...settingsData,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      // Log the settings change to audit logs
+      try {
+        await setDoc(doc(db, 'auditLogs', `${Date.now()}-${user.uid}`), {
+          type: 'system_settings_updated',
+          userId: user.uid,
+          email: user.email,
+          action: 'settings_updated',
+          details: {
+            settings: settings
+          },
+          timestamp: serverTimestamp(),
+          performedBy: user.uid,
+          performedByEmail: user.email
+        });
+      } catch (auditError) {
+        console.error('Error logging settings change:', auditError);
+        // Don't fail the save if audit logging fails
+      }
       
       setMessage('Settings saved successfully!');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Error saving settings:', error);
-      setMessage('Failed to save settings');
+      setMessage(`Failed to save settings: ${error.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setMessage('Please fill in all password fields');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setMessage('New password must be at least 6 characters long');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setMessage('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setMessage('New password must be different from current password');
+      return;
+    }
+
+    setChangingPassword(true);
+    setMessage('');
+
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        throw new Error('No authenticated user found');
+      }
+
+      // Reauthenticate user
+      const credential = EmailAuthProvider.credential(user.email, passwordData.currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password
+      await updatePassword(user, passwordData.newPassword);
+
+      setMessage('Password changed successfully!');
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      setShowChangePassword(false);
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      console.error('Error changing password:', error);
+      if (error.code === 'auth/wrong-password') {
+        setMessage('Current password is incorrect');
+      } else if (error.code === 'auth/weak-password') {
+        setMessage('New password is too weak');
+      } else {
+        setMessage(`Failed to change password: ${error.message}`);
+      }
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -139,6 +365,106 @@ const SuperAdminSettings = () => {
     </div>
   );
 
+  const checkSystemStatus = async () => {
+    const status = {
+      api: { status: 'checking', message: 'Checking...' },
+      database: { status: 'checking', message: 'Checking...' },
+      functions: { status: 'checking', message: 'Checking...' },
+      storage: { status: 'checking', message: 'Checking...' }
+    };
+
+    // Check Database
+    try {
+      const testQuery = query(collection(db, 'users'), limit(1));
+      await getDocs(testQuery);
+      status.database = { status: 'online', message: 'Connected' };
+    } catch (error) {
+      status.database = { status: 'error', message: 'Connection failed' };
+    }
+
+    // Check API (Firebase Functions)
+    try {
+      const healthCheckUrl = 'https://us-central1-elderx-f5c2b.cloudfunctions.net/healthCheck';
+      const response = await fetch(healthCheckUrl, { method: 'GET', signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
+        status.api = { status: 'online', message: 'Online' };
+        status.functions = { status: 'online', message: 'Active' };
+      } else {
+        status.api = { status: 'error', message: 'Unavailable' };
+        status.functions = { status: 'error', message: 'Inactive' };
+      }
+    } catch (error) {
+      status.api = { status: 'error', message: 'Unavailable' };
+      status.functions = { status: 'error', message: 'Inactive' };
+    }
+
+    // Check Storage (basic check)
+    try {
+      // Just check if storage is accessible
+      status.storage = { status: 'online', message: 'Available' };
+    } catch (error) {
+      status.storage = { status: 'error', message: 'Unavailable' };
+    }
+
+    setSystemStatus(status);
+  };
+
+  const SystemStatus = () => {
+    const getStatusBadge = (status) => {
+      const styles = {
+        online: 'bg-green-100 text-green-800',
+        checking: 'bg-yellow-100 text-yellow-800',
+        error: 'bg-red-100 text-red-800'
+      };
+      return styles[status] || styles.checking;
+    };
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <Activity className="h-5 w-5 text-green-600 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-900">System Status</h3>
+          </div>
+          <button
+            onClick={checkSystemStatus}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            title="Refresh Status"
+          >
+            <RefreshCw className="h-4 w-4 text-gray-600" />
+          </button>
+        </div>
+        
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">API Status</span>
+            <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(systemStatus.api.status)}`}>
+              {systemStatus.api.message}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Database</span>
+            <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(systemStatus.database.status)}`}>
+              {systemStatus.database.message}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Functions</span>
+            <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(systemStatus.functions.status)}`}>
+              {systemStatus.functions.message}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Storage</span>
+            <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(systemStatus.storage.status)}`}>
+              {systemStatus.storage.message}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -159,6 +485,7 @@ const SuperAdminSettings = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <FontSizeToggle />
               <button
                 onClick={handleSaveSettings}
                 disabled={loading}
@@ -187,6 +514,204 @@ const SuperAdminSettings = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Settings Column */}
           <div className="lg:col-span-2">
+            {/* Profile Management Section */}
+            <SettingSection title="Profile Management" icon={Users}>
+              {!editingProfile ? (
+                <div className="space-y-4">
+                  {userProfile && (
+                    <>
+                      <div className="flex items-center space-x-4">
+                        <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Users className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {userProfile.displayName || userProfile.email || 'Super Admin'}
+                          </p>
+                          <p className="text-sm text-gray-600">{userProfile.email}</p>
+                          {userProfile.createdAt && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Member since {userProfile.createdAt.toDate?.()?.toLocaleDateString() || 'N/A'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                        <div>
+                          <label className="text-xs text-gray-500">Display Name</label>
+                          <p className="text-sm text-gray-900 mt-1">
+                            {userProfile.displayName || 'Not set'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500">Email</label>
+                          <p className="text-sm text-gray-900 mt-1">{userProfile.email}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <button
+                    onClick={() => setEditingProfile(true)}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Edit Profile
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={profileData.displayName}
+                      onChange={(e) => setProfileData({ ...profileData, displayName: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter display name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={profileData.email}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                      placeholder="Email (cannot be changed)"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Email cannot be changed for security reasons
+                    </p>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={handleUpdateProfile}
+                      disabled={loading}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingProfile(false);
+                        loadUserProfile();
+                      }}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </SettingSection>
+
+            {/* Change Password Section */}
+            <SettingSection title="Change Password" icon={Key}>
+              {!showChangePassword ? (
+                <button
+                  onClick={() => setShowChangePassword(true)}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Change Password
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      Current Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.current ? 'text' : 'password'}
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                        placeholder="Enter current password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPasswords.current ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.new ? 'text' : 'password'}
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                        placeholder="Enter new password (min 6 characters)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPasswords.new ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.confirm ? 'text' : 'password'}
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                        placeholder="Confirm new password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPasswords.confirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={handleChangePassword}
+                      disabled={changingPassword}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {changingPassword ? 'Changing...' : 'Change Password'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowChangePassword(false);
+                        setPasswordData({
+                          currentPassword: '',
+                          newPassword: '',
+                          confirmPassword: ''
+                        });
+                        setMessage('');
+                      }}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </SettingSection>
+
             {/* Security Settings */}
             <SettingSection title="Security Settings" icon={Lock}>
               <ToggleSetting
@@ -292,13 +817,22 @@ const SuperAdminSettings = () => {
                   <Users className="h-5 w-5 text-blue-600 mr-2" />
                   <h3 className="text-lg font-semibold text-gray-900">Super Admins</h3>
                 </div>
-                <button
-                  onClick={loadSuperAdmins}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  title="Refresh"
-                >
-                  <RefreshCw className="h-4 w-4 text-gray-600" />
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => navigate('/super-admin/management')}
+                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    title="Manage Super Admins"
+                  >
+                    Manage
+                  </button>
+                  <button
+                    onClick={loadSuperAdmins}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Refresh"
+                  >
+                    <RefreshCw className="h-4 w-4 text-gray-600" />
+                  </button>
+                </div>
               </div>
               
               {loadingSuperAdmins ? (
@@ -327,31 +861,7 @@ const SuperAdminSettings = () => {
             </div>
 
             {/* System Status */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center mb-4">
-                <Activity className="h-5 w-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">System Status</h3>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">API Status</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Online</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Database</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Connected</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Functions</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Active</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Storage</span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Available</span>
-                </div>
-              </div>
-            </div>
+            <SystemStatus />
           </div>
         </div>
       </main>

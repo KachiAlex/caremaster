@@ -695,6 +695,231 @@ class WebRTCService {
       return { audioInput: [], audioOutput: [], videoInput: [] };
     }
   }
+
+  // Get user media with device selection
+  async getUserMediaWithDevices(constraints = null, selectedDevices = null) {
+    try {
+      let finalConstraints = constraints || { 
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } }, 
+        audio: { echoCancellation: true, noiseSuppression: true } 
+      };
+
+      // Apply device selection if provided
+      if (selectedDevices) {
+        if (selectedDevices.audioInput && finalConstraints.audio) {
+          if (typeof finalConstraints.audio === 'boolean') {
+            finalConstraints.audio = {};
+          }
+          finalConstraints.audio.deviceId = { exact: selectedDevices.audioInput };
+        }
+        if (selectedDevices.videoInput && finalConstraints.video) {
+          if (typeof finalConstraints.video === 'boolean') {
+            finalConstraints.video = {};
+          }
+          finalConstraints.video.deviceId = { exact: selectedDevices.videoInput };
+        }
+      }
+
+      console.log('📹 Getting user media with constraints:', finalConstraints);
+      this.localStream = await navigator.mediaDevices.getUserMedia(finalConstraints);
+      
+      // Add tracks to peer connection
+      this.localStream.getTracks().forEach(track => {
+        this.peerConnection.addTrack(track, this.localStream);
+      });
+
+      if (this.callbacks.onLocalStream) {
+        this.callbacks.onLocalStream(this.localStream);
+      }
+
+      return this.localStream;
+    } catch (error) {
+      console.error('❌ Error accessing media devices:', error);
+      
+      // Try fallback with basic constraints
+      try {
+        console.log('🔄 Trying fallback with basic constraints...');
+        this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        
+        this.localStream.getTracks().forEach(track => {
+          this.peerConnection.addTrack(track, this.localStream);
+        });
+
+        if (this.callbacks.onLocalStream) {
+          this.callbacks.onLocalStream(this.localStream);
+        }
+
+        return this.localStream;
+      } catch (fallbackError) {
+        console.error('❌ Fallback failed:', fallbackError);
+        throw fallbackError;
+      }
+    }
+  }
+
+  // Switch audio input device during call
+  async switchAudioInputDevice(deviceId) {
+    try {
+      if (!this.localStream) {
+        throw new Error('No active stream to switch');
+      }
+
+      const audioTrack = this.localStream.getAudioTracks()[0];
+      if (!audioTrack) {
+        throw new Error('No audio track found');
+      }
+
+      // Get new stream with selected device
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: { exact: deviceId } }
+      });
+
+      const newAudioTrack = newStream.getAudioTracks()[0];
+      const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'audio');
+
+      if (sender) {
+        await sender.replaceTrack(newAudioTrack);
+      }
+
+      // Stop old track and replace in local stream
+      audioTrack.stop();
+      this.localStream.removeTrack(audioTrack);
+      this.localStream.addTrack(newAudioTrack);
+
+      console.log('✅ Audio input device switched to:', deviceId);
+      
+      if (this.callbacks.onLocalStream) {
+        this.callbacks.onLocalStream(this.localStream);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ Error switching audio device:', error);
+      throw error;
+    }
+  }
+
+  // Switch video input device (camera) during call
+  async switchVideoInputDevice(deviceId) {
+    try {
+      if (!this.localStream) {
+        throw new Error('No active stream to switch');
+      }
+
+      const videoTrack = this.localStream.getVideoTracks()[0];
+      if (!videoTrack) {
+        throw new Error('No video track found');
+      }
+
+      // Get new stream with selected device
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          deviceId: { exact: deviceId },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+
+      if (sender) {
+        await sender.replaceTrack(newVideoTrack);
+      }
+
+      // Stop old track and replace in local stream
+      videoTrack.stop();
+      this.localStream.removeTrack(videoTrack);
+      this.localStream.addTrack(newVideoTrack);
+
+      console.log('✅ Video input device switched to:', deviceId);
+      
+      if (this.callbacks.onLocalStream) {
+        this.callbacks.onLocalStream(this.localStream);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ Error switching video device:', error);
+      throw error;
+    }
+  }
+
+  // Set audio output device (speaker/headphones)
+  async setAudioOutputDevice(audioElement, deviceId) {
+    try {
+      if (audioElement && audioElement.setSinkId) {
+        await audioElement.setSinkId(deviceId);
+        console.log('✅ Audio output device set to:', deviceId);
+        return true;
+      } else {
+        console.warn('⚠️ Audio output device selection not supported in browser');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error setting audio output device:', error);
+      throw error;
+    }
+  }
+
+  // Get connection stats with better error handling
+  async getConnectionStats() {
+    try {
+      if (!this.peerConnection) {
+        return null;
+      }
+
+      const stats = await this.peerConnection.getStats();
+      const statsResult = {
+        video: {
+          bytesReceived: 0,
+          bytesSent: 0,
+          packetsLost: 0,
+          frameRate: 0,
+          resolution: null
+        },
+        audio: {
+          bytesReceived: 0,
+          bytesSent: 0,
+          packetsLost: 0,
+          audioLevel: 0
+        },
+        connection: {
+          rtt: 0,
+          availableBitrate: 0,
+          totalBitrate: 0,
+          state: this.peerConnection.connectionState
+        }
+      };
+
+      stats.forEach(report => {
+        if (report.type === 'inbound-rtp' && report.mediaType === 'video') {
+          statsResult.video.bytesReceived = report.bytesReceived;
+          statsResult.video.packetsLost = report.packetsLost;
+          statsResult.video.frameRate = report.framesPerSecond;
+          statsResult.video.resolution = `${report.frameWidth}x${report.frameHeight}`;
+        } else if (report.type === 'outbound-rtp' && report.mediaType === 'video') {
+          statsResult.video.bytesSent = report.bytesSent;
+          statsResult.video.frameRate = report.framesPerSecond;
+        } else if (report.type === 'inbound-rtp' && report.mediaType === 'audio') {
+          statsResult.audio.bytesReceived = report.bytesReceived;
+          statsResult.audio.packetsLost = report.packetsLost;
+          statsResult.audio.audioLevel = report.audioLevel;
+        } else if (report.type === 'outbound-rtp' && report.mediaType === 'audio') {
+          statsResult.audio.bytesSent = report.bytesSent;
+        } else if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+          statsResult.connection.rtt = Math.round(report.currentRoundTripTime * 1000);
+          statsResult.connection.availableBitrate = Math.round(report.availableIncomingBitrate);
+          statsResult.connection.totalBitrate = Math.round((report.availableOutgoingBitrate || 0) + (report.availableIncomingBitrate || 0));
+        }
+      });
+
+      return statsResult;
+    } catch (error) {
+      console.error('❌ Error getting connection stats:', error);
+      return null;
+    }
+  }
 }
 
 export default WebRTCService;

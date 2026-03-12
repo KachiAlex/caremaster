@@ -37,6 +37,9 @@ const SuperAdminLicensing = lazy(() => import('./pages/SuperAdminLicensing'));
 const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const SuperAdminSettings = lazy(() => import('./pages/SuperAdminSettings'));
+const SuperAdminManagement = lazy(() => import('./pages/SuperAdminManagement'));
+const SuperAdminAuditLogs = lazy(() => import('./pages/SuperAdminAuditLogs'));
+const SuperAdminUserManagement = lazy(() => import('./pages/SuperAdminUserManagement'));
 const InstitutionAdminDashboard = lazy(() => import('./pages/InstitutionAdminDashboard'));
 const InstitutionUserManagement = lazy(() => import('./pages/InstitutionUserManagement'));
 const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
@@ -72,7 +75,6 @@ const WebRTCTest = lazy(() => import('./pages/WebRTCTest'));
 const PatientAccount = lazy(() => import('./pages/PatientAccount'));
 const InstitutionLabTechnicianDashboard = lazy(() => import('./pages/InstitutionLabTechnicianDashboard'));
 import EnhancedMessagingInterface from './components/EnhancedMessagingInterface';
-import MobileOptimization from './components/MobileOptimization';
 import LoadingSpinner from './components/LoadingSpinner';
 
 // PWA and Mobile Components
@@ -89,6 +91,7 @@ import pwaService from './services/pwaService';
 import hapticService from './services/hapticService';
 import voiceCommandService from './services/voiceCommandService';
 import gestureService from './services/gestureService';
+import { Capacitor } from '@capacitor/core';
 
 function App() {
   const [user, loading] = useAuthState(auth);
@@ -96,6 +99,7 @@ function App() {
   const [showGestureControls, setShowGestureControls] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isMobile, setIsMobile] = useState(false);
+  const isNativeApp = Capacitor?.isNativePlatform?.() || false;
 
   // PWA and Security Services Setup
   useEffect(() => {
@@ -305,7 +309,6 @@ function App() {
   return (
     <ErrorBoundary name="App">
       <UserProvider>
-        <MobileOptimization />
       
       {/* PWA Components */}
       <PWAInstallPrompt />
@@ -345,7 +348,11 @@ function App() {
       {/* Public routes */}
       <Route 
         path="/" 
-        element={<Landing />} 
+        element={
+          isNativeApp
+            ? (user ? <RoleBasedDashboardRoute /> : <UnifiedLogin />)
+            : <Landing />
+        } 
       />
       <Route 
         path="/auth" 
@@ -379,6 +386,21 @@ function App() {
       <Route 
         path="/super-admin/settings" 
         element={<SuperAdminGuard><SuperAdminSettings /></SuperAdminGuard>} 
+      />
+      
+      <Route 
+        path="/super-admin/management" 
+        element={<SuperAdminGuard><SuperAdminManagement /></SuperAdminGuard>} 
+      />
+      
+      <Route 
+        path="/super-admin/audit-logs" 
+        element={<SuperAdminGuard><SuperAdminAuditLogs /></SuperAdminGuard>} 
+      />
+      
+      <Route 
+        path="/super-admin/users" 
+        element={<SuperAdminGuard><SuperAdminUserManagement /></SuperAdminGuard>} 
       />
       
       <Route 

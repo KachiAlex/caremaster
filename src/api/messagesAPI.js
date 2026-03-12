@@ -218,23 +218,29 @@ export const sendMessage = async (conversationId, senderId, messageData) => {
   }
 };
 
-// Get messages for a conversation
-export const getMessagesByConversation = async (conversationId, limitCount = 50) => {
+// Get messages for a conversation with pagination support
+export const getMessagesByConversation = async (conversationId, limitCount = 50, startAfter = null) => {
   try {
     // Validate input parameters
     if (!conversationId) {
       throw new Error('Conversation ID is required');
     }
     
-    console.log('Fetching messages for conversation:', conversationId);
+    console.log('Fetching messages for conversation:', conversationId, 'limit:', limitCount);
     
     const messagesRef = collection(db, MESSAGES_COLLECTION);
-    const q = query(
-      messagesRef,
+    let constraints = [
       where('conversationId', '==', conversationId),
-      orderBy('createdAt', 'desc'),
+      orderBy('createdAt', 'asc'),  // Fetch in ascending order, no need to reverse
       limit(limitCount)
-    );
+    ];
+    
+    // Add pagination support if startAfter is provided
+    if (startAfter) {
+      constraints.push(startAfter);
+    }
+    
+    const q = query(messagesRef, ...constraints);
     const querySnapshot = await getDocs(q);
     
     const messages = [];
@@ -248,7 +254,7 @@ export const getMessagesByConversation = async (conversationId, limitCount = 50)
     });
     
     console.log('Found', messages.length, 'messages for conversation:', conversationId);
-    return messages.reverse(); // Return in chronological order
+    return messages; // Already in chronological order
   } catch (error) {
     console.error('Error fetching messages:', error);
     throw error;
@@ -301,32 +307,47 @@ export const markConversationAsRead = async (conversationId, userId) => {
   }
 };
 
-// Get unread message count for a user
+// Get unread message count for a user across all conversations
 export const getUnreadMessageCount = async (userId) => {
   try {
+    // Get all conversations where user is participant
+    const conversations = await getConversationsByUser(userId);
+    let totalUnreadCount = 0;
+    
+    // Batch query unread counts for all conversations in parallel
+    const unreadPromises = conversations.map(conv => 
+      getUnreadCountForConversation(conv.id, userId)
+    );
+    
+    const unreadCounts = await Promise.all(unreadPromises);
+    totalUnreadCount = unreadCounts.reduce((sum, count) => sum + count, 0);
+    
+    return totalUnreadCount;
+  } catch (error) {
+    console.error('Error getting unread message count:', error);
+    return 0; // Return 0 on error instead of throwing
+  }
+};
+
+// Get unread message count for a specific conversation
+export const getUnreadCountForConversation = async (conversationId, userId) => {
+  try {
+    if (!conversationId || !userId) return 0;
+    
     const messagesRef = collection(db, MESSAGES_COLLECTION);
-    // Query for messages where user is recipient and message is unread
+    // Query for unread messages in conversation where current user is not sender
     const q = query(
       messagesRef,
-      where('recipientId', '==', userId),
+      where('conversationId', '==', conversationId),
+      where('senderId', '!=', userId),
       where('read', '==', false)
     );
     
     const querySnapshot = await getDocs(q);
-    let unreadCount = 0;
-    
-    querySnapshot.forEach((doc) => {
-      const messageData = doc.data();
-      // Count unread messages where user is the recipient
-      if (messageData.recipientId === userId && !messageData.read) {
-        unreadCount++;
-      }
-    });
-    
-    return unreadCount;
+    return querySnapshot.size; // Return document count
   } catch (error) {
-    console.error('Error getting unread message count:', error);
-    throw error;
+    console.warn('Error getting unread count for conversation:', conversationId, error);
+    return 0; // Return 0 on error
   }
 };
 
@@ -360,24 +381,41 @@ export const sendNotificationMessage = async (conversationId, notificationData) 
   }
 };
 
-// Get messages by type (medical, care, emergency)
-export const getMessagesByType = async (userId, messageType) => {
+// Get messages by type (medical, care, emergency) with batch loading
+export const getMessagesByType = async (userId, messageType, limitPerConversation = 50) => {
   try {
     // First get conversations where user is participant
     const conversations = await getConversationsByUser(userId);
-    const filteredConversations = conversations.filter(conv => conv.conversationType === messageType);
+    const filteredConversations = conversations.filter(
+      conv => conv.conversationType === messageType && conv.id
+    );
     
-    const allMessages = [];
-    
-    for (const conversation of filteredConversations) {
-      const messages = await getMessagesByConversation(conversation.id);
-      allMessages.push(...messages);
+    if (filteredConversations.length === 0) {
+      console.log('No conversations found for type:', messageType);
+      return [];
     }
     
-    return allMessages.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Batch load messages from all conversations in parallel
+    const messagePromises = filteredConversations.map(conversation => 
+      getMessagesByConversation(conversation.id, limitPerConversation)
+        .catch(err => {
+          console.warn(`Failed to fetch messages for conversation ${conversation.id}:`, err);
+          return []; // Return empty array for failed conversations
+        })
+    );
+    
+    const allMessageArrays = await Promise.all(messagePromises);
+    const allMessages = allMessageArrays.flat();
+    
+    // Sort by createdAt in descending order (most recent first)
+    return allMessages.sort((a, b) => {
+      const timeA = new Date(b.createdAt).getTime();
+      const timeB = new Date(a.createdAt).getTime();
+      return timeA - timeB;
+    });
   } catch (error) {
     console.error('Error fetching messages by type:', error);
-    throw error;
+    return []; // Return empty array instead of throwing
   }
 };
 
@@ -394,84 +432,122 @@ export const deleteMessage = async (messageId) => {
 };
 
 // Real-time listener for messages in a conversation
-export const subscribeToConversationMessages = (conversationId, callback) => {
+export const subscribeToConversationMessages = (conversationId, callback, messageLimit = 50) => {
+  if (!conversationId) {
+    console.error('Conversation ID is required for real-time listener');
+    return () => {}; // Return empty unsubscribe function
+  }
+  
   const messagesRef = collection(db, MESSAGES_COLLECTION);
   const q = query(
     messagesRef,
     where('conversationId', '==', conversationId),
-    orderBy('createdAt', 'desc'),
-    limit(50)
+    orderBy('createdAt', 'asc'),  // Ascending so no need to reverse
+    limit(messageLimit)
   );
   
-  return onSnapshot(q, (querySnapshot) => {
-    const messages = [];
-    querySnapshot.forEach((doc) => {
-      const messageData = doc.data();
-      messages.push({
-        id: doc.id,
-        ...messageData,
-        createdAt: messageData.createdAt?.toDate?.() || messageData.createdAt,
-      });
-    });
-    callback(messages.reverse()); // Return in chronological order
-  });
-};
-
-// Real-time listener for conversations
-export const subscribeToUserConversations = (userId, callback) => {
-  const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
-  
-  // Try the optimized query first
-  try {
-    const q = query(
-      conversationsRef, 
-      where('participants', 'array-contains', userId),
-      orderBy('lastMessageTime', 'desc')
-    );
-    
-    return onSnapshot(q, (querySnapshot) => {
-      const conversations = [];
+  return onSnapshot(
+    q, 
+    (querySnapshot) => {
+      const messages = [];
       querySnapshot.forEach((doc) => {
-        const conversationData = doc.data();
-        conversations.push({
+        const messageData = doc.data();
+        messages.push({
           id: doc.id,
-          ...conversationData,
-          lastMessageTime: conversationData.lastMessageTime?.toDate?.() || conversationData.lastMessageTime,
-          createdAt: conversationData.createdAt?.toDate?.() || conversationData.createdAt,
-          updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
+          ...messageData,
+          createdAt: messageData.createdAt?.toDate?.() || messageData.createdAt,
         });
       });
-      callback(conversations);
-    });
-  } catch (indexError) {
-    console.log('Index not ready for real-time listener, using fallback');
+      callback(messages); // Already in chronological order
+    },
+    (error) => {
+      console.error('Real-time listener error for conversation:', conversationId, error);
+      // Call callback with empty array on error
+      callback([]);
+    }
+  );
+};
+
+// Real-time listener for conversations with optimized query and fallback
+export const subscribeToUserConversations = (userId, callback) => {
+  if (!userId) {
+    console.error('User ID is required for real-time conversation listener');
+    return () => {}; // Return empty unsubscribe function
+  }
+  
+  const conversationsRef = collection(db, CONVERSATIONS_COLLECTION);
+  
+  // Helper to process conversations data
+  const processConversations = (querySnapshot, isFallback = false) => {
+    const conversations = [];
     
-    // Fallback: listen to all conversations and filter client-side
-    const q = query(conversationsRef);
-    
-    return onSnapshot(q, (querySnapshot) => {
-      const conversations = [];
-      querySnapshot.forEach((doc) => {
-        const conversationData = doc.data();
-        if (conversationData.participants && conversationData.participants.includes(userId)) {
-          conversations.push({
-            id: doc.id,
-            ...conversationData,
-            lastMessageTime: conversationData.lastMessageTime?.toDate?.() || conversationData.lastMessageTime,
-            createdAt: conversationData.createdAt?.toDate?.() || conversationData.createdAt,
-            updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
-          });
-        }
-      });
+    querySnapshot.forEach((doc) => {
+      const conversationData = doc.data();
       
-      // Sort by lastMessageTime descending
+      // Filter for current user's conversations
+      if (!conversationData.participants?.includes(userId)) {
+        return; // Skip conversations user is not in
+      }
+      
+      conversations.push({
+        id: doc.id,
+        ...conversationData,
+        lastMessageTime: conversationData.lastMessageTime?.toDate?.() || conversationData.lastMessageTime,
+        createdAt: conversationData.createdAt?.toDate?.() || conversationData.createdAt,
+        updatedAt: conversationData.updatedAt?.toDate?.() || conversationData.updatedAt,
+      });
+    });
+    
+    // Sort by lastMessageTime descending (most recent first)
+    if (isFallback) {
       conversations.sort((a, b) => {
-        const timeA = a.lastMessageTime ? new Date(a.lastMessageTime) : new Date(0);
-        const timeB = b.lastMessageTime ? new Date(b.lastMessageTime) : new Date(0);
+        const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+        const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
         return timeB - timeA;
       });
-      
-      callback(conversations);
-    });
-  }
+    }
+    
+    callback(conversations);
+  };
+  
+  // Try optimized query with proper index
+  const q = query(
+    conversationsRef,
+    where('participants', 'array-contains', userId),
+    orderBy('lastMessageTime', 'desc')
+  );
+  
+  let unsubscribe = null;
+  
+  return onSnapshot(
+    q,
+    (querySnapshot) => {
+      console.log('Conversations updated via optimized query');
+      processConversations(querySnapshot, false);
+    },
+    (error) => {
+      // Check if error is due to missing index
+      if (error.message?.includes('index') || error.code === 'permission-denied') {
+        console.log('Using fallback listener (missing index or permissions):', error.message);
+        
+        // Fallback: listen to all conversations and filter client-side
+        const fallbackQ = query(conversationsRef);
+        
+        unsubscribe = onSnapshot(
+          fallbackQ,
+          (querySnapshot) => {
+            console.log('Conversations updated via fallback query');
+            processConversations(querySnapshot, true);
+          },
+          (fallbackError) => {
+            console.error('Fallback real-time listener also failed:', fallbackError);
+            callback([]); // Return empty list on error
+          }
+        );
+      } else {
+        console.error('Real-time listener error:', error);
+        callback([]); // Return empty list on error
+      }
+    }
+  );
 };

@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.migrateUserRoles = exports.removeInstitutionAdminFunction = exports.getInstitutionAdminsFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.createInstitutionUserFunction = exports.resetCaregiverPasswordFunction = exports.createCaregiverWithAuthFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserFunction = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
+exports.migrateUserRoles = exports.deleteSuperAdminFunction = exports.resetSuperAdminPasswordFunction = exports.removeInstitutionAdminFunction = exports.getInstitutionAdminsFunction = exports.migrateInstitutionLinksFunction = exports.activateLicenseFunction = exports.suspendLicenseFunction = exports.updateLicenseFunction = exports.deleteInstitutionFunction = exports.updateInstitutionFunction = exports.getLicensesFunction = exports.getInstitutionsFunction = exports.setSuperAdminClaimFunction = exports.getLicenseStatusFunction = exports.assignInstitutionAdminFunction = exports.createLicenseFunction = exports.createInstitutionFunction = exports.createInstitutionUserFunction = exports.resetCaregiverPasswordFunction = exports.createCaregiverWithAuthFunction = exports.healthCheck = exports.getAuditLogsFunction = exports.logAuditEventFunction = exports.scheduleNotificationFunction = exports.sendNotificationFunction = exports.generateHealthRecommendationsFunction = exports.processVoiceCommandFunction = exports.emergencyResponseFunction = exports.emergencyAlertFunction = exports.processMedicationLogFunction = exports.medicationReminderScheduler = exports.deleteUserFunction = exports.deleteUserProfileFunction = exports.updateUserProfileFunction = exports.createUserProfileFunction = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const userManagement_1 = require("./userManagement");
@@ -100,6 +100,8 @@ exports.activateLicenseFunction = licensing_1.activateLicense;
 exports.migrateInstitutionLinksFunction = licensing_1.migrateInstitutionLinks;
 exports.getInstitutionAdminsFunction = licensing_1.getInstitutionAdmins;
 exports.removeInstitutionAdminFunction = licensing_1.removeInstitutionAdmin;
+exports.resetSuperAdminPasswordFunction = licensing_1.resetSuperAdminPassword;
+exports.deleteSuperAdminFunction = licensing_1.deleteSuperAdmin;
 // User Role Migration Function
 exports.migrateUserRoles = functions.https.onRequest(async (req, res) => {
     // Enable CORS

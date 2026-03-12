@@ -290,30 +290,39 @@ const CaregiverSettings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="w-full bg-gray-50 rounded-2xl">
+
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center">
+      <div className="bg-white shadow-sm border border-gray-200 rounded-2xl p-4 sm:p-5">
+
+        <div className="max-w-7xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-inner">
               <Settings className="h-6 w-6 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Settings - REBUILT VERSION</h1>
-              <p className="text-sm text-gray-600">✅ Responsive design • ✅ All buttons functional • ✅ No horizontal scroll</p>
-              <p className="text-xs text-gray-400 mt-1">{BUILD_TAG}</p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+                <span className="px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide bg-green-100 text-green-700 rounded-full">
+                  Rebuilt
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 leading-snug">
+                Responsive layout · functional controls · no horizontal scroll
+              </p>
+              <p className="text-xs text-gray-400">{BUILD_TAG}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <button
               onClick={handleExportSettings}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center text-sm"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4" />
               Export
             </button>
-            <label className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center text-sm cursor-pointer">
-              <Upload className="h-4 w-4 mr-2" />
+            <label className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-green-200 bg-green-50 text-green-700 text-sm font-semibold hover:bg-green-100 transition cursor-pointer">
+              <Upload className="h-4 w-4" />
               Import
               <input
                 type="file"
@@ -325,17 +334,17 @@ const CaregiverSettings = () => {
             <button
               onClick={handleSaveSettings}
               disabled={saving}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold shadow hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               {saving ? (
                 <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="h-4 w-4 animate-spin" />
                   Saving...
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
-                  ✅ SAVE CHANGES (REBUILT)
+                  <Save className="h-4 w-4" />
+                  Save changes
                 </>
               )}
             </button>
@@ -344,17 +353,21 @@ const CaregiverSettings = () => {
       </div>
 
       {/* Success Banner */}
-      <div className="bg-green-100 border-l-4 border-green-500 p-4 mx-4 mt-4">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <CheckCircle className="h-5 w-5 text-green-400" />
+      <div className="mx-4 mt-4">
+        <div className="max-w-7xl mx-auto bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-4 sm:p-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3 text-green-700">
+            <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center shadow">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Caregiver Settings rebuilt for mobile</p>
+              <p className="text-xs text-green-600">Responsive layout · button parity · no sideways scroll</p>
+            </div>
           </div>
-          <div className="ml-3">
-            <p className="text-sm text-green-700 font-bold">
-              🎉 SETTINGS TAB REBUILT SUCCESSFULLY! 
-              <br />
-              ✅ Responsive design • ✅ All buttons functional • ✅ No horizontal scrolling • ✅ Better screen fit
-            </p>
+          <div className="flex gap-2 text-xs text-green-700 flex-wrap">
+            <span className="px-2 py-1 rounded-full bg-white/70 border border-green-100 font-semibold">Responsive</span>
+            <span className="px-2 py-1 rounded-full bg-white/70 border border-green-100 font-semibold">Touch friendly</span>
+            <span className="px-2 py-1 rounded-full bg-white/70 border border-green-100 font-semibold">Optimized UI</span>
           </div>
         </div>
       </div>

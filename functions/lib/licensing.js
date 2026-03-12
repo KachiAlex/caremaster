@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeInstitutionAdmin = exports.forceUpdateAllInstitutionLinks = exports.migrateInstitutionLinks = exports.getInstitutionAdmins = exports.activateLicense = exports.suspendLicense = exports.updateLicense = exports.deleteInstitution = exports.updateInstitution = exports.getLicenses = exports.getInstitutions = exports.setSuperAdminClaim = exports.getLicenseStatus = exports.assignInstitutionAdmin = exports.createLicense = exports.createInstitution = void 0;
+exports.deleteSuperAdmin = exports.resetSuperAdminPassword = exports.removeInstitutionAdmin = exports.forceUpdateAllInstitutionLinks = exports.migrateInstitutionLinks = exports.getInstitutionAdmins = exports.activateLicense = exports.suspendLicense = exports.updateLicense = exports.deleteInstitution = exports.updateInstitution = exports.getLicenses = exports.getInstitutions = exports.setSuperAdminClaim = exports.getLicenseStatus = exports.assignInstitutionAdmin = exports.createLicense = exports.createInstitution = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const getDb = () => admin.firestore();
@@ -807,6 +807,111 @@ exports.removeInstitutionAdmin = functions.https.onCall(async (data, context) =>
     catch (error) {
         console.error('Error removing institution admin:', error);
         throw new functions.https.HttpsError('internal', 'Failed to remove institution admin');
+    }
+});
+// Reset Super Admin Password
+exports.resetSuperAdminPassword = functions.https.onCall(async (data, context) => {
+    var _a, _b;
+    // Check if user is authenticated and is a super admin
+    if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.superAdmin)) {
+        throw new functions.https.HttpsError('permission-denied', 'Super admin privileges required');
+    }
+    const { userId, newPassword } = data || {};
+    if (!userId || !newPassword) {
+        throw new functions.https.HttpsError('invalid-argument', 'User ID and new password are required');
+    }
+    if (newPassword.length < 6) {
+        throw new functions.https.HttpsError('invalid-argument', 'Password must be at least 6 characters long');
+    }
+    try {
+        // Verify the user is a super admin
+        const userDoc = await getDb().collection('users').doc(userId).get();
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'User not found');
+        }
+        const userData = userDoc.data();
+        if (!(userData === null || userData === void 0 ? void 0 : userData.isSuperAdmin)) {
+            throw new functions.https.HttpsError('permission-denied', 'User is not a super admin');
+        }
+        // Update password using Firebase Admin SDK
+        await admin.auth().updateUser(userId, {
+            password: newPassword
+        });
+        // Log the action
+        await getDb().collection('auditLogs').add({
+            type: 'super_admin_password_reset',
+            userId: userId,
+            email: userData.email,
+            performedBy: context.auth.uid,
+            performedByEmail: context.auth.token.email,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            action: 'password_reset'
+        });
+        console.log(`Password reset for super admin ${userData.email}`);
+        return {
+            success: true,
+            message: 'Password reset successfully'
+        };
+    }
+    catch (error) {
+        console.error('Error resetting super admin password:', error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError('internal', `Failed to reset password: ${error.message}`);
+    }
+});
+// Delete Super Admin Account
+exports.deleteSuperAdmin = functions.https.onCall(async (data, context) => {
+    var _a, _b;
+    // Check if user is authenticated and is a super admin
+    if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.superAdmin)) {
+        throw new functions.https.HttpsError('permission-denied', 'Super admin privileges required');
+    }
+    const { userId } = data || {};
+    if (!userId) {
+        throw new functions.https.HttpsError('invalid-argument', 'User ID is required');
+    }
+    // Prevent self-deletion
+    if (userId === context.auth.uid) {
+        throw new functions.https.HttpsError('invalid-argument', 'You cannot delete your own account');
+    }
+    try {
+        // Verify the user is a super admin
+        const userDoc = await getDb().collection('users').doc(userId).get();
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'User not found');
+        }
+        const userData = userDoc.data();
+        if (!(userData === null || userData === void 0 ? void 0 : userData.isSuperAdmin)) {
+            throw new functions.https.HttpsError('permission-denied', 'User is not a super admin');
+        }
+        // Delete user from Firebase Auth
+        await admin.auth().deleteUser(userId);
+        // Delete user document from Firestore
+        await getDb().collection('users').doc(userId).delete();
+        // Log the action
+        await getDb().collection('auditLogs').add({
+            type: 'super_admin_deleted',
+            userId: userId,
+            email: userData.email,
+            performedBy: context.auth.uid,
+            performedByEmail: context.auth.token.email,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            action: 'account_deleted'
+        });
+        console.log(`Super admin ${userData.email} deleted`);
+        return {
+            success: true,
+            message: 'Super admin account deleted successfully'
+        };
+    }
+    catch (error) {
+        console.error('Error deleting super admin:', error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError('internal', `Failed to delete super admin: ${error.message}`);
     }
 });
 //# sourceMappingURL=licensing.js.map

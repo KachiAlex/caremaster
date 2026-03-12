@@ -15,13 +15,14 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
+    "site": "elderx-f5c2b",
     "public": "build",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
-        "rewrites": [
+    "rewrites": [
           {
             "source": "debug-users.html",
             "destination": "/debug-users.html"

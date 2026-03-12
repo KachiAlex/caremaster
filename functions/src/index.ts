@@ -6,7 +6,7 @@ import { handleEmergencyAlert, processEmergencyResponse } from './emergencyManag
 import { processAIVoiceCommand, generateHealthRecommendations } from './aiProcessing';
 import { sendNotification, scheduleNotification } from './notificationService';
 import { logAuditEvent, getAuditLogs } from './auditLogging';
-import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin } from './licensing';
+import { createInstitution, createLicense, assignInstitutionAdmin, getLicenseStatus, setSuperAdminClaim, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicense, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, resetSuperAdminPassword, deleteSuperAdmin } from './licensing';
 import { createCaregiverWithAuth, resetCaregiverPassword } from './caregiverManagement';
 import { createInstitutionUser } from './institutionUserManagement';
 
@@ -77,6 +77,8 @@ export const activateLicenseFunction = activateLicense;
 export const migrateInstitutionLinksFunction = migrateInstitutionLinks;
 export const getInstitutionAdminsFunction = getInstitutionAdmins;
 export const removeInstitutionAdminFunction = removeInstitutionAdmin;
+export const resetSuperAdminPasswordFunction = resetSuperAdminPassword;
+export const deleteSuperAdminFunction = deleteSuperAdmin;
 
 // User Role Migration Function
 export const migrateUserRoles = functions.https.onRequest(async (req, res) => {

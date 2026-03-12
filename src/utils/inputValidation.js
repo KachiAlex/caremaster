@@ -1,10 +1,23 @@
 /**
  * Input Validation Utility
  * SECURITY FIX: Comprehensive input validation and sanitization
+ * Enhanced with stricter XSS prevention and encoding
  */
 
 import DOMPurify from 'dompurify';
 import logger from '../utils/logger';
+
+// Configure DOMPurify for maximum security
+DOMPurify.setConfig({
+  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'br', 'p', 'ul', 'ol', 'li'],
+  ALLOWED_ATTR: [],
+  ALLOW_DATA_ATTR: false,
+  RETURN_DOM: false,
+  RETURN_DOM_FRAGMENT: false,
+  RETURN_DOM_IMPORT: false,
+  WHOLE_DOCUMENT: false,
+  FORCE_BODY: false
+});
 
 /**
  * Validate email format
@@ -105,49 +118,249 @@ export function validatePassword(password) {
 }
 
 /**
- * Sanitize HTML input to prevent XSS
+ * Sanitize user-generated content - removes all HTML by default
+ * Use for comments, messages, notes, etc.
  */
-export function sanitizeHTML(html) {
-  if (!html || typeof html !== 'string') {
+export function sanitizeUserContent(content, allowedTags = []) {
+  if (!content || typeof content !== 'string') {
     return '';
   }
   
   try {
-    return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: [], // No HTML tags allowed by default
+    const config = {
+      ALLOWED_TAGS: allowedTags,
       ALLOWED_ATTR: [],
       KEEP_CONTENT: true
-    });
+    };
+    return DOMPurify.sanitize(content, config);
   } catch (error) {
-    logger.error('HTML sanitization failed', { error });
-    // Fallback: escape HTML entities
-    return html
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#x27;');
+    logger.error('Content sanitization failed', { error });
+    return escapeHtml(content);
   }
 }
 
 /**
- * Sanitize text input (remove potentially dangerous characters)
+ * Escape HTML entities - prevents rendering of HTML
  */
-export function sanitizeText(text) {
+export function escapeHtml(text) {
   if (!text || typeof text !== 'string') {
     return '';
   }
   
-  // Remove null bytes and control characters
-  let sanitized = text.replace(/[\x00-\x1F\x7F]/g, '');
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Encode Unicode characters to prevent character-based attacks
+ */
+export function encodeUnicode(text) {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
   
-  // Remove script tags and event handlers
-  sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-  sanitized = sanitized.replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
-  sanitized = sanitized.replace(/javascript:/gi, '');
-  sanitized = sanitized.replace(/data:text\/html/gi, '');
+  return text.split('').map(char => {
+    const charCode = char.charCodeAt(0);
+    if (charCode > 127) {
+      return `&#${charCode};`;
+    }
+    return char;
+  }).join('');
+}
+
+/**
+ * Validate filename to prevent directory traversal and injection
+ */
+export function validateFilename(filename) {
+  if (!filename || typeof filename !== 'string') {
+    return { valid: false, error: 'Filename is required' };
+  }
   
-  return sanitized.trim();
+  // Check for directory traversal attempts
+  if (filename.includes('../') || filename.includes('..\\') || filename.startsWith('/')) {
+    logger.warn('Directory traversal attempt detected', { filename: filename.substring(0, 50) });
+    return { valid: false, error: 'Invalid filename' };
+  }
+  
+  // Check for null bytes
+  if (filename.includes('\0')) {
+    return { valid: false, error: 'Invalid filename' };
+  }
+  
+  // Limit filename length
+  if (filename.length > 255) {
+    return { valid: false, error: 'Filename is too long' };
+  }
+  
+  // Allow only safe characters
+  const filenameRegex = /^[a-zA-Z0-9\-_.()[\] ]+$/;
+  if (!filenameRegex.test(filename)) {
+    return { valid: false, error: 'Filename contains invalid characters' };
+  }
+  
+  return { valid: true, filename: filename.trim() };
+}
+
+/**
+ * Validate file upload by size and type
+ */
+export function validateFileUpload(file, maxSizeMB = 10, allowedTypes = ['application/pdf', 'image/jpeg', 'image/png']) {
+  if (!file) {
+    return { valid: false, error: 'File is required' };
+  }
+  
+  const maxSizeBytes = maxSizeMB * 1024 * 1024;
+  
+  if (file.size > maxSizeBytes) {
+    return { valid: false, error: `File size exceeds ${maxSizeMB}MB limit` };
+  }
+  
+  if (!allowedTypes.includes(file.type)) {
+    return { valid: false, error: `File type not allowed. Allowed types: ${allowedTypes.join(', ')}` };
+  }
+  
+  // Validate filename
+  const filenameValidation = validateFilename(file.name);
+  if (!filenameValidation.valid) {
+    return filenameValidation;
+  }
+  
+  return { valid: true };
+}
+
+/**
+ * Validate URL to prevent JavaScript: and data: URLs
+ */
+export function validateURL(url) {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, error: 'URL is required' };
+  }
+  
+  try {
+    const urlObj = new URL(url);
+    
+    // Prevent javascript: and data: protocols
+    const dangerousProtocols = ['javascript:', 'data:', 'vbscript:', 'file:'];
+    if (dangerousProtocols.some(proto => urlObj.protocol.toLowerCase() === proto.replace(':', ''))) {
+      logger.warn('Dangerous protocol detected', { protocol: urlObj.protocol });
+      return { valid: false, error: 'Invalid URL protocol' };
+    }
+    
+    // Only allow http and https
+    if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      return { valid: false, error: 'Only HTTP and HTTPS URLs are allowed' };
+    }
+    
+    return { valid: true, url: urlObj.toString() };
+  } catch (error) {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+}
+
+/**
+ * Sanitize JSON to prevent injection attacks
+ */
+export function sanitizeJSON(jsonString) {
+  if (!jsonString || typeof jsonString !== 'string') {
+    return null;
+  }
+  
+  try {
+    // First parse to validate JSON
+    const parsed = JSON.parse(jsonString);
+    
+    // Re-stringify to normalize and remove any potential injection vectors
+    return JSON.stringify(parsed);
+  } catch (error) {
+    logger.error('JSON sanitization failed', { error });
+    return null;
+  }
+}
+
+/**
+ * Validate and sanitize search query
+ */
+export function validateSearchQuery(query, maxLength = 100) {
+  if (!query || typeof query !== 'string') {
+    return { valid: false, error: 'Search query is required' };
+  }
+  
+  // Sanitize special characters that could break search
+  let sanitized = query.replace(/[*+\-()[\]{}^$|\\]/g, '\\$&');
+  
+  if (sanitized.length > maxLength) {
+    return { valid: false, error: `Search query exceeds ${maxLength} character limit` };
+  }
+  
+  // Remove null bytes
+  sanitized = sanitized.replace(/\0/g, '');
+  
+  return { valid: true, query: sanitized.trim() };
+}
+
+/**
+ * Sanitize SQL-like inputs to prevent injection (for application-level protection)
+ */
+export function preventSQLInjection(input) {
+  if (!input || typeof input !== 'string') {
+    return '';
+  }
+  
+  // Remove common SQL injection patterns
+  const dangerous = [
+    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT|STYLE|IFRAME|OBJECT|EMBED|EVENT|IMG|SVG)\b)/gi,
+    /(--|\#|;|\/\*|\*\/|xp_|sp_|;DROP|;DELETE|;INSERT|;UPDATE|;EXEC|;SELECT|javascript:|data:|vbscript:|onload=|onerror=)*$/gi
+  ];
+  
+  let sanitized = input;
+  for (const pattern of dangerous) {
+    sanitized = sanitized.replace(pattern, '');
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Validate medical data input (vital signs, measurements)
+ */
+export function validateMedicalData(data, type) {
+  if (!data || data === '') {
+    return { valid: false, error: 'Medical data is required' };
+  }
+  
+  const num = typeof data === 'string' ? parseFloat(data) : data;
+  
+  if (isNaN(num)) {
+    return { valid: false, error: 'Medical data must be numeric' };
+  }
+  
+  // Define valid ranges for common vital signs
+  const ranges = {
+    temperature: { min: 35, max: 42, unit: '°C' },
+    bloodPressureSystolic: { min: 50, max: 250, unit: 'mmHg' },
+    bloodPressureDiastolic: { min: 30, max: 150, unit: 'mmHg' },
+    heartRate: { min: 30, max: 200, unit: 'bpm' },
+    respirationRate: { min: 5, max: 60, unit: 'breaths/min' },
+    oxygenSaturation: { min: 50, max: 100, unit: '%' },
+    bloodGlucose: { min: 30, max: 600, unit: 'mg/dL' },
+    weight: { min: 1, max: 300, unit: 'kg' },
+    height: { min: 50, max: 250, unit: 'cm' }
+  };
+  
+  const range = ranges[type];
+  if (!range) {
+    return { valid: true, value: num }; // Unknown type, allow it
+  }
+  
+  if (num < range.min || num > range.max) {
+    return { 
+      valid: false, 
+      error: `${type} must be between ${range.min} and ${range.max} ${range.unit}` 
+    };
+  }
+  
+  return { valid: true, value: num };
 }
 
 /**
@@ -285,12 +498,27 @@ export function validateFormInputs(inputs, schema) {
   };
 }
 
+// Export aliases
+export { sanitizeUserContent as sanitizeText };
+export { sanitizeUserContent as sanitizeHTML };
+
+// Default export
 export default {
   validateEmail,
   validatePhone,
   validatePassword,
-  sanitizeHTML,
-  sanitizeText,
+  sanitizeHTML: sanitizeUserContent,
+  sanitizeText: sanitizeUserContent,
+  sanitizeUserContent,
+  escapeHtml,
+  encodeUnicode,
+  validateFilename,
+  validateFileUpload,
+  validateURL,
+  sanitizeJSON,
+  validateSearchQuery,
+  preventSQLInjection,
+  validateMedicalData,
   validateDate,
   validateNumber,
   validatePatientId,

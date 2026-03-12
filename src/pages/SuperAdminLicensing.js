@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
 import { doc, updateDoc } from 'firebase/firestore';
-import { X, Info } from 'lucide-react';
+import { X, Info, Download, CheckSquare, Square } from 'lucide-react';
 import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicenseById, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, generateLicenseKey } from '../services/licenseService';
 import { toast } from 'react-toastify';
+import { exportToCSV, exportToExcel, exportToJSON, formatDateForExport } from '../services/exportService';
+import FontSizeToggle from '../components/FontSizeToggle';
 
 // License Tier Definitions
 const LICENSE_TIERS = {
@@ -145,6 +147,10 @@ const SuperAdminLicensing = () => {
   const [currentAdmins, setCurrentAdmins] = useState([]);
   const [loadingAdmins, setLoadingAdmins] = useState(false);
   const [selectedInstitutionForAdmin, setSelectedInstitutionForAdmin] = useState(null);
+
+  // Bulk operations
+  const [selectedInstitutions, setSelectedInstitutions] = useState(new Set());
+  const [selectedLicenses, setSelectedLicenses] = useState(new Set());
 
   // Load data on component mount
   useEffect(() => {
@@ -350,6 +356,195 @@ const SuperAdminLicensing = () => {
       (i.id || '').toLowerCase().includes(q)
     );
   }, [institutions, query]);
+
+  // Bulk operation handlers
+  const handleSelectInstitution = (id) => {
+    const newSelected = new Set(selectedInstitutions);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedInstitutions(newSelected);
+  };
+
+  const handleSelectAllInstitutions = () => {
+    if (selectedInstitutions.size === filtered.length) {
+      setSelectedInstitutions(new Set());
+    } else {
+      setSelectedInstitutions(new Set(filtered.map(i => i.id)));
+    }
+  };
+
+  const handleSelectLicense = (id) => {
+    const newSelected = new Set(selectedLicenses);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedLicenses(newSelected);
+  };
+
+  const handleSelectAllLicenses = () => {
+    if (selectedLicenses.size === licenses.length) {
+      setSelectedLicenses(new Set());
+    } else {
+      setSelectedLicenses(new Set(licenses.map(l => l.id)));
+    }
+  };
+
+  const handleBulkActivateInstitutions = async () => {
+    if (selectedInstitutions.size === 0) return;
+    if (!window.confirm(`Activate ${selectedInstitutions.size} institution(s)?`)) return;
+
+    setBusy(true);
+    setMessage('');
+    let success = 0;
+    let failed = 0;
+
+    try {
+      for (const id of selectedInstitutions) {
+        try {
+          await updateInstitution(id, { active: true });
+          success++;
+        } catch (e) {
+          failed++;
+          console.error(`Failed to activate institution ${id}:`, e);
+        }
+      }
+      setMessage(`Activated ${success} institution(s)${failed > 0 ? `, ${failed} failed` : ''}`);
+      const updated = await getInstitutions();
+      setInstitutions(updated || []);
+      setSelectedInstitutions(new Set());
+    } catch (e) {
+      setMessage('Bulk operation failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleBulkDeactivateInstitutions = async () => {
+    if (selectedInstitutions.size === 0) return;
+    if (!window.confirm(`Deactivate ${selectedInstitutions.size} institution(s)?`)) return;
+
+    setBusy(true);
+    setMessage('');
+    let success = 0;
+    let failed = 0;
+
+    try {
+      for (const id of selectedInstitutions) {
+        try {
+          await updateInstitution(id, { active: false });
+          success++;
+        } catch (e) {
+          failed++;
+          console.error(`Failed to deactivate institution ${id}:`, e);
+        }
+      }
+      setMessage(`Deactivated ${success} institution(s)${failed > 0 ? `, ${failed} failed` : ''}`);
+      const updated = await getInstitutions();
+      setInstitutions(updated || []);
+      setSelectedInstitutions(new Set());
+    } catch (e) {
+      setMessage('Bulk operation failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleBulkDeleteInstitutions = async () => {
+    if (selectedInstitutions.size === 0) return;
+    if (!window.confirm(`Delete ${selectedInstitutions.size} institution(s)? This cannot be undone!`)) return;
+
+    setBusy(true);
+    setMessage('');
+    let success = 0;
+    let failed = 0;
+
+    try {
+      for (const id of selectedInstitutions) {
+        try {
+          await deleteInstitution(id);
+          success++;
+        } catch (e) {
+          failed++;
+          console.error(`Failed to delete institution ${id}:`, e);
+        }
+      }
+      setMessage(`Deleted ${success} institution(s)${failed > 0 ? `, ${failed} failed` : ''}`);
+      const updated = await getInstitutions();
+      setInstitutions(updated || []);
+      const updatedLicenses = await getLicenses();
+      setLicenses(updatedLicenses || []);
+      setSelectedInstitutions(new Set());
+    } catch (e) {
+      setMessage('Bulk delete failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleBulkActivateLicenses = async () => {
+    if (selectedLicenses.size === 0) return;
+    if (!window.confirm(`Activate ${selectedLicenses.size} license(s)?`)) return;
+
+    setBusy(true);
+    setMessage('');
+    let success = 0;
+    let failed = 0;
+
+    try {
+      for (const id of selectedLicenses) {
+        try {
+          await activateLicenseById(id);
+          success++;
+        } catch (e) {
+          failed++;
+          console.error(`Failed to activate license ${id}:`, e);
+        }
+      }
+      setMessage(`Activated ${success} license(s)${failed > 0 ? `, ${failed} failed` : ''}`);
+      const updated = await getLicenses();
+      setLicenses(updated || []);
+      setSelectedLicenses(new Set());
+    } catch (e) {
+      setMessage('Bulk operation failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleBulkSuspendLicenses = async () => {
+    if (selectedLicenses.size === 0) return;
+    if (!window.confirm(`Suspend ${selectedLicenses.size} license(s)?`)) return;
+
+    setBusy(true);
+    setMessage('');
+    let success = 0;
+    let failed = 0;
+
+    try {
+      for (const id of selectedLicenses) {
+        try {
+          await suspendLicense(id);
+          success++;
+        } catch (e) {
+          failed++;
+          console.error(`Failed to suspend license ${id}:`, e);
+        }
+      }
+      setMessage(`Suspended ${success} license(s)${failed > 0 ? `, ${failed} failed` : ''}`);
+      const updated = await getLicenses();
+      setLicenses(updated || []);
+      setSelectedLicenses(new Set());
+    } catch (e) {
+      setMessage('Bulk operation failed');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleCreateInstitution = async () => {
     setBusy(true); setMessage('');
@@ -606,7 +801,106 @@ const SuperAdminLicensing = () => {
           <p className="text-gray-600 text-sm">Manage institutions, licenses, and administrators</p>
         </div>
         <div className="flex gap-2">
+          <FontSizeToggle />
           <button onClick={handleNavigateToDashboard} className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Dashboard</button>
+          <div className="relative group">
+            <button className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center">
+              <Download className="h-4 w-4 mr-1" />
+              Export
+            </button>
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+              <button
+                onClick={() => {
+                  try {
+                    const institutionsData = filtered.map(i => ({
+                      Name: i.name,
+                      Domain: i.domain || '',
+                      Status: i.active ? 'Active' : 'Inactive',
+                      'Access Link': i.accessLink || '',
+                      'Created': formatDateForExport(i.createdAt)
+                    }));
+                    exportToCSV(institutionsData, `institutions-${new Date().toISOString().split('T')[0]}`);
+                    toast.success('Institutions exported to CSV');
+                  } catch (error) {
+                    toast.error('Failed to export institutions');
+                  }
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
+              >
+                Export Institutions (CSV)
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    const institutionsData = filtered.map(i => ({
+                      Name: i.name,
+                      Domain: i.domain || '',
+                      Status: i.active ? 'Active' : 'Inactive',
+                      'Access Link': i.accessLink || '',
+                      'Created': formatDateForExport(i.createdAt)
+                    }));
+                    exportToExcel(institutionsData, `institutions-${new Date().toISOString().split('T')[0]}`, null, 'Institutions');
+                    toast.success('Institutions exported to Excel');
+                  } catch (error) {
+                    toast.error('Failed to export institutions');
+                  }
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                Export Institutions (Excel)
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    const licensesData = licenses.map(l => {
+                      const institution = institutions.find(i => i.id === l.institutionId);
+                      return {
+                        'License Key': l.licenseKey || '',
+                        'Institution': institution?.name || 'Unknown',
+                        Plan: l.plan || '',
+                        Seats: l.seats || 0,
+                        Status: l.active !== false ? 'Active' : 'Inactive',
+                        'Ends At': formatDateForExport(l.endsAt),
+                        'Created': formatDateForExport(l.createdAt)
+                      };
+                    });
+                    exportToCSV(licensesData, `licenses-${new Date().toISOString().split('T')[0]}`);
+                    toast.success('Licenses exported to CSV');
+                  } catch (error) {
+                    toast.error('Failed to export licenses');
+                  }
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                Export Licenses (CSV)
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    const licensesData = licenses.map(l => {
+                      const institution = institutions.find(i => i.id === l.institutionId);
+                      return {
+                        'License Key': l.licenseKey || '',
+                        'Institution': institution?.name || 'Unknown',
+                        Plan: l.plan || '',
+                        Seats: l.seats || 0,
+                        Status: l.active !== false ? 'Active' : 'Inactive',
+                        'Ends At': formatDateForExport(l.endsAt),
+                        'Created': formatDateForExport(l.createdAt)
+                      };
+                    });
+                    exportToExcel(licensesData, `licenses-${new Date().toISOString().split('T')[0]}`, null, 'Licenses');
+                    toast.success('Licenses exported to Excel');
+                  } catch (error) {
+                    toast.error('Failed to export licenses');
+                  }
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-b-lg"
+              >
+                Export Licenses (Excel)
+              </button>
+            </div>
+          </div>
           <button onClick={() => setShowInstitutionModal(true)} className="px-3 py-2 bg-blue-600 text-white rounded-md">New Institution</button>
           <button onClick={() => setShowLicenseModal(true)} className="px-3 py-2 bg-indigo-600 text-white rounded-md">New License</button>
           <button onClick={() => setShowAdminModal(true)} className="px-3 py-2 bg-teal-600 text-white rounded-md">Assign Admin</button>
@@ -668,6 +962,41 @@ const SuperAdminLicensing = () => {
             </button>
           </div>
         </div>
+        {/* Bulk Actions for Institutions */}
+        {selectedInstitutions.size > 0 && (
+          <div className="mt-3 pt-3 border-t flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-gray-600">
+              {selectedInstitutions.size} selected
+            </span>
+            <button
+              onClick={handleBulkActivateInstitutions}
+              disabled={busy}
+              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50"
+            >
+              Activate
+            </button>
+            <button
+              onClick={handleBulkDeactivateInstitutions}
+              disabled={busy}
+              className="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 disabled:opacity-50"
+            >
+              Deactivate
+            </button>
+            <button
+              onClick={handleBulkDeleteInstitutions}
+              disabled={busy}
+              className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:opacity-50"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setSelectedInstitutions(new Set())}
+              className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
+            >
+              Clear Selection
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Institutions table */}
@@ -676,6 +1005,19 @@ const SuperAdminLicensing = () => {
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 text-gray-600">
               <tr>
+                <th className="text-left font-medium px-4 py-3 w-12">
+                  <button
+                    onClick={handleSelectAllInstitutions}
+                    className="p-1 hover:bg-gray-200 rounded"
+                    title="Select All"
+                  >
+                    {selectedInstitutions.size === filtered.length && filtered.length > 0 ? (
+                      <CheckSquare className="h-5 w-5 text-blue-600" />
+                    ) : (
+                      <Square className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </th>
                 <th className="text-left font-medium px-4 py-3">Name</th>
                 <th className="text-left font-medium px-4 py-3">Access Link</th>
                 <th className="text-left font-medium px-4 py-3">Status</th>
@@ -686,11 +1028,23 @@ const SuperAdminLicensing = () => {
             <tbody className="divide-y">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">No institutions yet</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-gray-500">No institutions yet</td>
                 </tr>
               )}
               {filtered.map((i) => (
                 <tr key={i.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => handleSelectInstitution(i.id)}
+                      className="p-1 hover:bg-gray-200 rounded"
+                    >
+                      {selectedInstitutions.has(i.id) ? (
+                        <CheckSquare className="h-5 w-5 text-blue-600" />
+                      ) : (
+                        <Square className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-900">{i.name}</div>
                     {i.slug && <div className="text-xs text-gray-500">{i.slug}</div>}
@@ -794,13 +1148,53 @@ const SuperAdminLicensing = () => {
 
       {/* Licenses Table */}
       <div className="bg-white border rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b bg-gray-50">
+        <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">Licenses</h3>
+          {selectedLicenses.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                {selectedLicenses.size} selected
+              </span>
+              <button
+                onClick={handleBulkActivateLicenses}
+                disabled={busy}
+                className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50"
+              >
+                Activate
+              </button>
+              <button
+                onClick={handleBulkSuspendLicenses}
+                disabled={busy}
+                className="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 disabled:opacity-50"
+              >
+                Suspend
+              </button>
+              <button
+                onClick={() => setSelectedLicenses(new Set())}
+                className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                  <button
+                    onClick={handleSelectAllLicenses}
+                    className="p-1 hover:bg-gray-200 rounded"
+                    title="Select All"
+                  >
+                    {selectedLicenses.size === licenses.length && licenses.length > 0 ? (
+                      <CheckSquare className="h-5 w-5 text-blue-600" />
+                    ) : (
+                      <Square className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institution</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License Key</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
@@ -815,17 +1209,29 @@ const SuperAdminLicensing = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">Loading licenses...</td>
+                  <td colSpan={10} className="px-4 py-10 text-center text-gray-500">Loading licenses...</td>
                 </tr>
               ) : licenses.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">No licenses yet</td>
+                  <td colSpan={10} className="px-4 py-10 text-center text-gray-500">No licenses yet</td>
                 </tr>
               ) : (
                 licenses.map((license) => {
                   const institution = institutions.find(i => i.id === license.institutionId);
                   return (
                     <tr key={license.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleSelectLicense(license.id)}
+                          className="p-1 hover:bg-gray-200 rounded"
+                        >
+                          {selectedLicenses.has(license.id) ? (
+                            <CheckSquare className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <Square className="h-5 w-5 text-gray-400" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-4 py-3 font-medium text-gray-900">
                         {institution?.name || 'Unknown Institution'}
                       </td>

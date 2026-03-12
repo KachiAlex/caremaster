@@ -45,7 +45,12 @@ import {
   Receipt,
   HelpCircle,
   Menu,
-  Play
+  Play,
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
@@ -118,6 +123,7 @@ const InstitutionCaregiverDashboard = () => {
   const [assignedClients, setAssignedClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
+  const [expandedClients, setExpandedClients] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -197,7 +203,10 @@ const InstitutionCaregiverDashboard = () => {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [platformUsers, setPlatformUsers] = useState([]); // All users on the platform
-  
+  const [showMobileChatPane, setShowMobileChatPane] = useState(false);
+  const [isNarrowMessagingLayout, setIsNarrowMessagingLayout] = useState(false);
+  const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
+
   // Call-related states
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
@@ -1346,6 +1355,24 @@ const InstitutionCaregiverDashboard = () => {
     }
   };
 
+  const toggleClientExpand = (clientId, clientData) => {
+    setExpandedClients((prev) => {
+      const nextState = { ...prev, [clientId]: !prev[clientId] };
+      return nextState;
+    });
+    if (!selectedClient || selectedClient.id !== clientId) {
+      setSelectedClientId(clientId);
+      setSelectedClient(clientData);
+    }
+  };
+
+  const getClientInitials = (client) => {
+    const name = client?.name || client?.fullName || '';
+    if (!name) return 'CL';
+    const parts = name.split(' ').filter(Boolean);
+    return parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'CL';
+  };
+
   const renderClientsTab = () => {
     if (!assignedClients || assignedClients.length === 0) {
       return (
@@ -1361,8 +1388,108 @@ const InstitutionCaregiverDashboard = () => {
 
     return (
       <div className="space-y-6">
-        {/* Clients List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        {/* Mobile-friendly client cards */}
+        <div className="space-y-4 lg:hidden">
+          {assignedClients.map((client) => {
+            const isExpanded = expandedClients[client.id];
+            return (
+              <div
+                key={client.id}
+                className="bg-white rounded-2xl border border-gray-200 shadow-sm"
+              >
+                <button
+                  className="w-full px-4 py-4 flex items-center justify-between gap-3"
+                  onClick={() => toggleClientExpand(client.id, client)}
+                >
+                  <div className="flex items-center gap-4 text-left">
+                    <div className="h-12 w-12 rounded-full bg-blue-100 text-blue-700 font-semibold flex items-center justify-center">
+                      {getClientInitials(client)}
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-gray-900">
+                        {client.name || client.fullName || 'Unknown Client'}
+                      </p>
+                      <p className="text-xs text-gray-500">ID: {client.id.substring(0, 8)}...</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(client.status?.toLowerCase())}`}>
+                      {client.status || 'Active'}
+                    </span>
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    )}
+                  </div>
+                </button>
+                <div className="px-4 pb-4">
+                  <div className="flex flex-wrap gap-4 text-xs text-gray-500 border-t border-gray-100 pt-3">
+                    <span className="flex items-center gap-1">
+                      <User className="h-3 w-3" /> {client.age || 'N/A'} yrs
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Activity className="h-3 w-3" /> {client.medicalConditions?.[0] || client.conditions || 'Healthy'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" /> {client.phone || client.phoneNumber || 'No phone'}
+                    </span>
+                  </div>
+                  {isExpanded && (
+                    <div className="mt-4 space-y-5 text-sm text-gray-700">
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="bg-gray-50 rounded-xl p-3">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</p>
+                          <p className="mt-1">{client.phone || client.phoneNumber || 'No phone'}</p>
+                          <p className="text-xs text-gray-500">{client.email || 'No email'}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-3">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Conditions</p>
+                          <p className="mt-1">
+                            {Array.isArray(client.medicalConditions)
+                              ? client.medicalConditions.join(', ')
+                              : client.medicalConditions || client.conditions || 'None recorded'}
+                          </p>
+                        </div>
+                        {client.address && (
+                          <div className="bg-gray-50 rounded-xl p-3">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Address</p>
+                            <p className="mt-1">{client.address}</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-blue-100 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition"
+                          onClick={() => {
+                            setSelectedClient(client);
+                            setActiveTab('clients');
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                          View Profile
+                        </button>
+                        <button
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-gray-100 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+                          onClick={() => {
+                            setSelectedClient(client);
+                            setShowVitalsModal(true);
+                          }}
+                        >
+                          <Activity className="h-4 w-4" />
+                          Record Vitals
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Clients List */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 hidden lg:block">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -1986,6 +2113,43 @@ const InstitutionCaregiverDashboard = () => {
   };
 
   // Messaging Tab Renderer
+  const isMobileMessagingView = isMobile || isTablet || isNarrowMessagingLayout;
+  const isDesktopMessagingView = !isMobileMessagingView;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+    const handleChange = (event) => setIsNarrowMessagingLayout(event.matches);
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'messages') return;
+    
+    if (isMobileMessagingView) {
+      setShowMobileChatPane(false);
+      setIsConversationListCollapsed(false);
+    } else {
+      setShowMobileChatPane(true);
+    }
+  }, [activeTab, isMobileMessagingView]);
+
+  useEffect(() => {
+    if (!isMobileMessagingView) {
+      setShowMobileChatPane(true);
+    } else if (!selectedConversation) {
+      setShowMobileChatPane(false);
+    }
+  }, [isMobileMessagingView, selectedConversation]);
+
+  useEffect(() => {
+    if (isMobileMessagingView) {
+      setIsConversationListCollapsed(false);
+    }
+  }, [isMobileMessagingView]);
+
   const renderMessagesTab = () => {
     const handleSendMessage = async () => {
       if (!newMessage.trim() || !selectedConversation) return;
@@ -2112,11 +2276,53 @@ const InstitutionCaregiverDashboard = () => {
       }
     ];
 
+    const handleConversationClick = (conversation) => {
+      setSelectedConversation(conversation);
+      if (isMobileMessagingView) {
+        setShowMobileChatPane(true);
+      } else {
+        setIsConversationListCollapsed(false);
+      }
+
+      const convId = conversation.conversationId || conversation.id;
+      loadMessagesForConversation(convId);
+    };
+
+    const toggleConversationList = () => {
+      if (isMobileMessagingView) {
+        setShowMobileChatPane(false);
+      } else {
+        setIsConversationListCollapsed(prev => !prev);
+      }
+    };
+
+    const conversationListClasses = [
+      'flex flex-col transition-all duration-200',
+      isMobileMessagingView
+        ? showMobileChatPane
+          ? 'hidden lg:flex lg:w-80 lg:border-r lg:border-gray-200'
+          : 'flex w-full border-r border-gray-200 lg:w-80'
+        : isConversationListCollapsed
+          ? 'hidden lg:flex lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none'
+          : 'hidden lg:flex lg:w-80 lg:border-r lg:border-gray-200'
+    ].join(' ');
+
+    const chatPaneClasses = [
+      'flex-1 flex flex-col transition-all duration-200',
+      isMobileMessagingView
+        ? showMobileChatPane
+          ? 'flex w-full'
+          : 'hidden lg:flex'
+        : isConversationListCollapsed
+          ? 'flex lg:pl-0'
+          : 'flex'
+    ].join(' ');
+
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[calc(100vh-250px)]">
         <div className="flex h-full">
           {/* Conversations List */}
-          <div className="w-80 border-r border-gray-200 flex flex-col">
+          <div className={conversationListClasses}>
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
               <p className="text-sm text-gray-500 mt-1">{displayConversations.length} conversations</p>
@@ -2126,12 +2332,7 @@ const InstitutionCaregiverDashboard = () => {
               {displayConversations.map((conversation) => (
                 <div
                   key={conversation.id}
-                  onClick={() => {
-                    setSelectedConversation(conversation);
-                    // Load real messages for this conversation
-                    const convId = conversation.conversationId || conversation.id;
-                    loadMessagesForConversation(convId);
-                  }}
+                  onClick={() => handleConversationClick(conversation)}
                   className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
                     selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''
                   }`}
@@ -2174,212 +2375,230 @@ const InstitutionCaregiverDashboard = () => {
           </div>
 
           {/* Chat Area */}
-          {selectedConversation ? (
-            <div className="flex-1 flex flex-col">
-              {/* Chat Header with Call Buttons */}
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold overflow-hidden">
-                    {selectedConversation.photoURL || selectedConversation.avatar ? (
-                      <img
-                        src={selectedConversation.photoURL || selectedConversation.avatar}
-                        alt={selectedConversation.name || 'User'}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <span className={selectedConversation.photoURL || selectedConversation.avatar ? 'hidden' : 'flex'}>
-                    {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
-                    <p className="text-xs text-gray-500">
-                      {selectedConversation.type || 'User'}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Call Buttons - Only show for non-client conversations */}
-                <div className="flex items-center gap-2">
-                  {!isInCall && selectedConversation.type !== 'client' && (
-                    <>
+          <div className={chatPaneClasses}>
+            {selectedConversation ? (
+              <>
+                {/* Chat Header with Call Buttons */}
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    {isDesktopMessagingView && (
                       <button
-                        onClick={startVoiceCall}
-                        className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                        title="Start Voice Call"
+                        onClick={toggleConversationList}
+                        className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
+                        aria-label={isConversationListCollapsed ? 'Show conversation list' : 'Hide conversation list'}
                       >
-                        <Phone className="h-5 w-5 text-gray-600" />
+                        {isConversationListCollapsed ? (
+                          <PanelLeftOpen className="h-5 w-5" />
+                        ) : (
+                          <PanelLeftClose className="h-5 w-5" />
+                        )}
                       </button>
-                      <button
-                        onClick={startVideoCall}
-                        className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                        title="Start Video Call"
-                      >
-                        <Camera className="h-5 w-5 text-gray-600" />
-                      </button>
-                    </>
-                  )}
-                  {isInCall && (
-                    <button
-                      onClick={endCall}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                    >
-                      <Phone className="h-4 w-4" />
-                      End Call
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Call Interface (when in call) */}
-              {isInCall && (
-                <div className="p-6 bg-gray-900 flex items-center justify-center" style={{ height: '400px' }}>
-                  <div className="text-center">
-                    {callType === 'video' ? (
-                      <div className="space-y-4">
-                        <Camera className="h-16 w-16 text-white mx-auto" />
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
-                            <div className="text-center">
-                              <p className="text-white font-medium">You</p>
-                              <p className="text-gray-400 text-sm">Camera Active</p>
-                            </div>
-                          </div>
-                          <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
-                            <div className="text-center">
-                              <p className="text-white font-medium">{selectedConversation.name}</p>
-                              <p className="text-gray-400 text-sm">Connecting...</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <Phone className="h-16 w-16 text-green-500 mx-auto animate-pulse" />
-                        <p className="text-white text-lg font-medium">Voice Call Active</p>
-                        <p className="text-gray-400">Connected with {selectedConversation.name}</p>
-                      </div>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {/* Messages Area */}
-              {!isInCall && (
-                <>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                    {messages.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center text-gray-400">
-                          <MessageSquare className="h-12 w-12 mx-auto mb-2" />
-                          <p>No messages yet. Start the conversation!</p>
-                        </div>
-                      </div>
-                    ) : (
-                      messages.map((message) => {
-                        const isSentByMe = (message.senderId || message.sender) === user?.uid;
-                        const messageTime = message.createdAt || message.timestamp;
-                        
-                        return (
-                        <div
-                          key={message.id}
-                            className={`flex items-start gap-2 ${isSentByMe ? 'justify-end' : 'justify-start'}`}
-                        >
-                          {!isSentByMe && (
-                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 overflow-hidden">
-                              {message.senderPhotoURL ? (
-                                <img
-                                  src={message.senderPhotoURL}
-                                  alt={message.senderName || 'User'}
-                                  className="h-full w-full object-cover"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-                                  }}
-                                />
-                              ) : null}
-                              <span className={message.senderPhotoURL ? 'hidden' : 'flex'}>
-                                {(message.senderName || 'U').charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                          <div
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                isSentByMe
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-900 border border-gray-200'
-                            }`}
-                          >
-                              {!isSentByMe && (
-                                <p className="text-xs font-semibold mb-1">{message.senderName || 'Unknown User'}</p>
-                              )}
-                              <p className="text-sm">{message.text || message.content}</p>
-                            <p className={`text-xs mt-1 ${
-                                isSentByMe ? 'text-blue-100' : 'text-gray-400'
-                            }`}>
-                                {new Date(messageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                          {isSentByMe && (
-                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 overflow-hidden">
-                              {userProfile?.photoURL || userProfile?.profilePicture || userProfile?.profilePictureUrl ? (
-                                <img
-                                  src={userProfile.photoURL || userProfile.profilePicture || userProfile.profilePictureUrl}
-                                  alt={userProfile.name || 'You'}
-                                  className="h-full w-full object-cover"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-                                  }}
-                                />
-                              ) : null}
-                              <span className={userProfile?.photoURL || userProfile?.profilePicture || userProfile?.profilePictureUrl ? 'hidden' : 'flex'}>
-                                {(userProfile?.name || userProfile?.displayName || 'Y').charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  {/* Message Input */}
-                  <div className="p-4 border-t border-gray-200 bg-white">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Type a message..."
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                    {isMobileMessagingView && (
                       <button
-                        onClick={handleSendMessage}
-                        disabled={!newMessage.trim()}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        onClick={() => setShowMobileChatPane(false)}
+                        className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 transition mr-1"
+                        aria-label="Back to conversations"
                       >
-                        Send
+                        <ArrowLeft className="h-5 w-5" />
                       </button>
+                    )}
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold overflow-hidden">
+                      {selectedConversation.photoURL || selectedConversation.avatar ? (
+                        <img
+                          src={selectedConversation.photoURL || selectedConversation.avatar}
+                          alt={selectedConversation.name || 'User'}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <span className={selectedConversation.photoURL || selectedConversation.avatar ? 'hidden' : 'flex'}>
+                        {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
+                      <p className="text-xs text-gray-500">{selectedConversation.type || 'User'}</p>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-              <div className="text-center text-gray-400">
-                <MessageSquare className="h-16 w-16 mx-auto mb-4" />
-                <p className="text-lg font-medium">Select a conversation to start messaging</p>
-                <p className="text-sm mt-2">Or start a voice/video call</p>
+
+                  {/* Call Buttons - Only show for non-client conversations */}
+                  <div className="flex items-center gap-2">
+                    {!isInCall && selectedConversation.type !== 'client' && (
+                      <>
+                        <button
+                          onClick={startVoiceCall}
+                          className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                          title="Start Voice Call"
+                        >
+                          <Phone className="h-5 w-5 text-gray-600" />
+                        </button>
+                        <button
+                          onClick={startVideoCall}
+                          className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                          title="Start Video Call"
+                        >
+                          <Camera className="h-5 w-5 text-gray-600" />
+                        </button>
+                      </>
+                    )}
+                    {isInCall && (
+                      <button
+                        onClick={endCall}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                      >
+                        <Phone className="h-4 w-4" />
+                        End Call
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Call Interface (when in call) */}
+                {isInCall && (
+                  <div className="p-6 bg-gray-900 flex items-center justify-center" style={{ height: '400px' }}>
+                    <div className="text-center">
+                      {callType === 'video' ? (
+                        <div className="space-y-4">
+                          <Camera className="h-16 w-16 text-white mx-auto" />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
+                              <div className="text-center">
+                                <p className="text-white font-medium">You</p>
+                                <p className="text-gray-400 text-sm">Camera Active</p>
+                              </div>
+                            </div>
+                            <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
+                              <div className="text-center">
+                                <p className="text-white font-medium">{selectedConversation.name}</p>
+                                <p className="text-gray-400 text-sm">Connecting...</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <Phone className="h-16 w-16 text-green-500 mx-auto animate-pulse" />
+                          <p className="text-white text-lg font-medium">Voice Call Active</p>
+                          <p className="text-gray-400">Connected with {selectedConversation.name}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Messages Area */}
+                {!isInCall && (
+                  <>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                      {messages.length === 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center text-gray-400">
+                            <MessageSquare className="h-12 w-12 mx-auto mb-2" />
+                            <p>No messages yet. Start the conversation!</p>
+                          </div>
+                        </div>
+                      ) : (
+                        messages.map((message) => {
+                          const isSentByMe = (message.senderId || message.sender) === user?.uid;
+                          const messageTime = message.createdAt || message.timestamp;
+
+                          return (
+                            <div
+                              key={message.id}
+                              className={`flex items-start gap-2 ${isSentByMe ? 'justify-end' : 'justify-start'}`}
+                            >
+                              {!isSentByMe && (
+                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 overflow-hidden">
+                                  {message.senderPhotoURL ? (
+                                    <img
+                                      src={message.senderPhotoURL}
+                                      alt={message.senderName || 'User'}
+                                      className="h-full w-full object-cover"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <span className={message.senderPhotoURL ? 'hidden' : 'flex'}>
+                                    {(message.senderName || 'U').charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              <div
+                                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                                  isSentByMe ? 'bg-blue-600 text-white' : 'bg-white text-gray-900 border border-gray-200'
+                                }`}
+                              >
+                                {!isSentByMe && (
+                                  <p className="text-xs font-semibold mb-1">{message.senderName || 'Unknown User'}</p>
+                                )}
+                                <p className="text-sm">{message.text || message.content}</p>
+                                <p className={`text-xs mt-1 ${isSentByMe ? 'text-blue-100' : 'text-gray-400'}`}>
+                                  {new Date(messageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                              {isSentByMe && (
+                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 overflow-hidden">
+                                  {userProfile?.photoURL || userProfile?.profilePicture || userProfile?.profilePictureUrl ? (
+                                    <img
+                                      src={userProfile.photoURL || userProfile.profilePicture || userProfile.profilePictureUrl}
+                                      alt={userProfile.name || 'You'}
+                                      className="h-full w-full object-cover"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <span className={userProfile?.photoURL || userProfile?.profilePicture || userProfile?.profilePictureUrl ? 'hidden' : 'flex'}>
+                                    {(userProfile?.name || userProfile?.displayName || 'Y').charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Message Input */}
+                    <div className="p-4 border-t border-gray-200 bg-white">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                          placeholder="Type a message..."
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          onClick={handleSendMessage}
+                          disabled={!newMessage.trim()}
+                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Send
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-400 px-6">
+                  <MessageSquare className="h-16 w-16 mx-auto mb-4" />
+                  <p className="text-lg font-medium">Select a conversation to start messaging</p>
+                  <p className="text-sm mt-2">Your chats and calling tools will appear here</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     );
@@ -2472,13 +2691,27 @@ const InstitutionCaregiverDashboard = () => {
         </div>
 
         {/* Weekly Schedule Calendar */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Weekly Schedule</h2>
-            <div className="text-sm text-gray-500">Week of {new Date().toLocaleDateString()}</div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Week of</p>
+              <h2 className="text-xl font-bold text-gray-900">{new Date().toLocaleDateString()}</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                onClick={() => setSelectedScheduleDate(new Date())}
+              >
+                Today
+              </button>
+              <div className="hidden sm:flex items-center text-sm text-gray-500">
+                <Calendar className="h-4 w-4 mr-1" />
+                Tap a day to focus timeline
+              </div>
+            </div>
           </div>
           
-          <div className="grid grid-cols-7 gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-7 sm:gap-2">
             {daysOfWeek.map((day, index) => {
               const dayDate = new Date(Date.now() + (index - today + 1) * 86400000);
               const dayStart = new Date(dayDate);
@@ -2497,23 +2730,23 @@ const InstitutionCaregiverDashboard = () => {
                 <button
                   key={day}
                   onClick={() => setSelectedScheduleDate(dayDate)}
-                  className={`text-center p-4 rounded-lg transition-all cursor-pointer hover:shadow-md ${
-                    isSelected ? 'bg-indigo-100 border-2 border-indigo-600 ring-2 ring-indigo-300' :
-                    isToday ? 'bg-blue-100 border-2 border-blue-600' : 
-                    'bg-gray-50 hover:bg-gray-100'
+                  className={`flex-1 min-w-[80px] sm:min-w-0 text-center p-3 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
+                    isSelected ? 'bg-indigo-50 border-indigo-500 shadow ring-2 ring-indigo-200' :
+                    isToday ? 'bg-blue-50 border-blue-400' : 
+                    'bg-gray-50 border-transparent hover:bg-gray-100'
                   }`}
                 >
-                  <p className="text-sm font-bold text-gray-900">{day}</p>
-                  <p className="text-xs text-gray-600 mt-1">{dayDate.getDate()}</p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{day}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{dayDate.getDate()}</p>
                   {dayItems.length > 0 ? (
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-3 space-y-1">
                       {dayItems.slice(0, 3).map((item, idx) => {
                         const itemTime = new Date(item.time);
                         const isPast = isTaskPast(item);
                         return (
                           <div 
                             key={idx}
-                            className={`text-xs text-white rounded px-2 py-1 truncate cursor-pointer hover:opacity-80 transition-opacity border-l-2 ${
+                            className={`text-xs text-white rounded-lg px-2 py-1 truncate cursor-pointer hover:opacity-80 transition-opacity border-l-2 ${
                               isPast 
                                 ? 'bg-red-600 border-red-800 opacity-90' : // Past/overdue tasks in red
                                 item.type === 'appointment' ? 'bg-blue-500 border-blue-600' :
@@ -2534,8 +2767,11 @@ const InstitutionCaregiverDashboard = () => {
                               setShowTaskDetailsModal(true);
                             }}
                           >
-                            {itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} {item.title.substring(0, 10)}
-                            {isPast && ' ⚠️'}
+                            <span className="font-semibold">
+                              {itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>{' '}
+                            {item.title.substring(0, 10)}
+                            {isPast && <span className="ml-1">⚠️</span>}
                           </div>
                         );
                       })}
@@ -2570,18 +2806,26 @@ const InstitutionCaregiverDashboard = () => {
                 const isValidTime = itemTime && !isNaN(itemTime.getTime());
                 
                 return (
-                  <div key={item.id} className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-24 text-right">
-                      <p className="text-lg font-bold text-gray-900">
-                        {isValidTime ? itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No time'}
-                      </p>
-                      {isValidTime && (
-                        <p className="text-xs text-gray-500">
-                          {itemTime.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                  <div key={item.id} className="flex flex-col sm:flex-row items-stretch sm:items-start gap-4">
+                    <div className="flex items-center sm:block justify-between">
+                      <div className="text-left sm:text-right">
+                        <p className="text-lg font-bold text-gray-900">
+                          {isValidTime ? itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No time'}
                         </p>
-                      )}
+                        {isValidTime && (
+                          <p className="text-xs text-gray-500">
+                            {itemTime.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                          </p>
+                        )}
+                      </div>
+                      <div className="sm:hidden flex items-center gap-2 text-xs">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full font-semibold ${getStatusColor(item.status)}`}>
+                          {isTaskPast(item) ? 'Overdue' : (item.status || 'pending')}
+                        </span>
+                        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 capitalize">{item.type || 'task'}</span>
+                      </div>
                     </div>
-                    <div className="flex-shrink-0 flex flex-col items-center">
+                    <div className="hidden sm:flex flex-col items-center">
                       <div className={`h-4 w-4 rounded-full border-2 ${
                         item.status === 'completed' ? 'bg-green-500 border-green-600' : 
                         item.status === 'in_progress' ? 'bg-blue-500 border-blue-600' :
@@ -2589,7 +2833,7 @@ const InstitutionCaregiverDashboard = () => {
                       }`}></div>
                       {index < todaySchedule.length - 1 && <div className="w-0.5 flex-1 min-h-[60px] bg-gray-300"></div>}
                     </div>
-                    <div className="flex-1 pb-6">
+                    <div className="flex-1 pb-4 sm:pb-6">
                       <div 
                         className={`rounded-lg p-4 hover:shadow-md transition-all cursor-pointer border-l-4 ${
                           isTaskPast(item)

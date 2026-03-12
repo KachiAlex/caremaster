@@ -620,12 +620,12 @@ const CaregiverDashboard = () => {
   const renderDoctorClientSelector = () => {
     if (!isDoctor) return null;
     return (
-      <div className="bg-white rounded-lg border p-4 mb-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
+      <div className="bg-white rounded-lg border p-4 mb-4 space-y-4">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+          <div className="w-full xl:max-w-md">
             <div className="text-sm text-gray-600">Assigned Clients</div>
             <select
-              className="mt-1 w-72 max-w-full px-3 py-2 border rounded-md"
+              className="mt-1 w-full sm:w-72 px-3 py-2 border rounded-md"
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
             >
@@ -636,7 +636,7 @@ const CaregiverDashboard = () => {
             </select>
           </div>
           {assignedClients.length === 0 && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center">
                 <User className="h-5 w-5 text-blue-600 mr-2" />
                 <div>
@@ -648,15 +648,15 @@ const CaregiverDashboard = () => {
               </div>
             </div>
           )}
-          <div className="flex flex-wrap gap-2">
-            <button onClick={handleNewConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>New Consultation</button>
-            <button onClick={handleWritePrescription} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Write Prescription</button>
-            <button onClick={handleCreateCarePlan} className="px-3 py-2 bg-emerald-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Create Care Plan</button>
-            <button onClick={handleVideoConsultation} className="px-3 py-2 bg-purple-600 text-white rounded disabled:opacity-50" disabled={!selectedClientId}>Video Consultation</button>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button onClick={handleNewConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50 text-sm" disabled={!selectedClientId}>New Consultation</button>
+            <button onClick={handleWritePrescription} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50 text-sm" disabled={!selectedClientId}>Write Prescription</button>
+            <button onClick={handleCreateCarePlan} className="px-3 py-2 bg-emerald-600 text-white rounded disabled:opacity-50 text-sm" disabled={!selectedClientId}>Create Care Plan</button>
+            <button onClick={handleVideoConsultation} className="px-3 py-2 bg-purple-600 text-white rounded disabled:opacity-50 text-sm" disabled={!selectedClientId}>Video Consultation</button>
           </div>
         </div>
         {selectedClient && (
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             <div>
               <div className="text-gray-500">Client</div>
               <div className="text-gray-900 font-medium">{selectedClient.name || selectedClient.fullName || '—'}</div>
@@ -1211,11 +1211,11 @@ const CaregiverDashboard = () => {
 
   return (
     <CaregiverGuard>
-    <div className="w-full h-full bg-gray-50 dashboard-full-width dashboard-container">
+    <div className="w-full min-h-screen bg-gray-50 dashboard-full-width dashboard-container pb-16">
       {/* Header */}
-      <div className="w-full bg-white shadow-sm border-b border-gray-200 px-8 py-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
+      <div className="w-full bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className={`p-3 bg-${dashboardConfig.color}-100 rounded-full`}>
               <dashboardConfig.icon className={`h-8 w-8 text-${dashboardConfig.color}-600`} />
             </div>
@@ -1225,7 +1225,7 @@ const CaregiverDashboard = () => {
               profileImageUrl={profileImage || userProfile?.photoURL || userProfile?.profilePictureUrl}
               size="lg"
             />
-            <div>
+            <div className="space-y-1">
               <h1 className="text-2xl font-bold text-gray-900">{dashboardConfig.title}</h1>
               <p className="text-gray-600">Welcome, {userProfile?.name || caregiver?.name}</p>
               <p className="text-sm text-gray-500">{userProfile?.medicalQualification || 'Healthcare Professional'}</p>
@@ -1239,7 +1239,7 @@ const CaregiverDashboard = () => {
               )}
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between lg:justify-end gap-4">
             <button 
               onClick={() => setShowSettings(!showSettings)}
               className={`p-3 rounded-full transition-colors ${
@@ -1256,16 +1256,16 @@ const CaregiverDashboard = () => {
       </div>
 
       {/* Doctor Client Selector (if doctor) */}
-      <div className="w-full p-8 pt-6">
+      <div className="w-full px-4 sm:px-8 pt-4 sm:pt-6">
         {renderDoctorClientSelector()}
       </div>
 
       {/* Tab Navigation */}
       {(isDoctor || isNurse || isNonMedicalCaregiver) && (
-        <div className="w-full px-8">
+        <div className="w-full px-4 sm:px-8">
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8 px-6">
+              <nav className="-mb-px flex flex-wrap gap-4 px-4 sm:px-6">
                 <button
                   onClick={() => setActiveTab('dashboard')}
                   className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -1328,7 +1328,7 @@ const CaregiverDashboard = () => {
       )}
 
       {/* Main Content */}
-      <div className="w-full p-8 dashboard-full-width">
+      <div className="w-full px-4 sm:px-8 py-6 dashboard-full-width">
         {showSettings ? (
           <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
         ) : activeTab === 'clients' ? (
@@ -1408,10 +1408,10 @@ const CaregiverDashboard = () => {
 
           {/* Today's Schedule */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-8 py-6 border-b border-gray-100">
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">Today's Schedule</h2>
             </div>
-            <div className="p-8">
+            <div className="p-4 sm:p-6 lg:p-8">
               {todaySchedule.length === 0 ? (
                 <div className="text-center py-12">
                   <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -1421,16 +1421,16 @@ const CaregiverDashboard = () => {
               ) : (
               <div className="space-y-6">
                 {todaySchedule.map((schedule) => (
-                  <div key={schedule.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4 mb-4">
+                  <div key={schedule.id} className="border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-4 mb-4">
                           <h3 className="text-xl font-semibold text-gray-900">{schedule.clientName}</h3>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(schedule.status)}`}>
                             {schedule.status}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
                           <div className="flex items-center">
                             <Clock className="h-5 w-5 mr-2 text-gray-500" />
                             <span className="font-medium">
@@ -1445,6 +1445,7 @@ const CaregiverDashboard = () => {
                           </div>
                           )}
                         </div>
+
                         {schedule.tasks && Array.isArray(schedule.tasks) && schedule.tasks.length > 0 && (
                         <div className="mb-4">
                           <h4 className="text-sm font-semibold text-gray-700 mb-3">Tasks:</h4>
@@ -1477,27 +1478,28 @@ const CaregiverDashboard = () => {
                           </div>
                         )}
                       </div>
-                      <div className="flex flex-col space-y-3 ml-8">
+                      <div className="flex flex-col gap-3 w-full lg:w-auto">
                         <button
                           onClick={() => handleClockIn(schedule.id)}
-                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                          className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                         >
                           Clock In
                         </button>
                         <button
                           onClick={() => handleClockOut(schedule.id)}
-                          className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                          className="w-full sm:w-auto px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
                         >
                           Clock Out
                         </button>
                         <button
                           onClick={() => handleEmergency(schedule.clientId || schedule.client?.id)}
-                          className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center"
+                          className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center"
                           disabled={!schedule.clientId && !schedule.client?.id}
                         >
                           <AlertTriangle className="h-4 w-4 mr-2" />
                           Emergency
                         </button>
+
                       </div>
                     </div>
                   </div>
@@ -1509,10 +1511,10 @@ const CaregiverDashboard = () => {
 
           {/* Recent Tasks */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-8 py-6 border-b border-gray-100">
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">Recent Tasks</h2>
             </div>
-            <div className="p-8">
+            <div className="p-4 sm:p-6 lg:p-8">
               {recentTasks.length === 0 ? (
                 <div className="text-center py-12">
                   <CheckCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -1522,24 +1524,25 @@ const CaregiverDashboard = () => {
               ) : (
               <div className="space-y-4">
                 {recentTasks.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
+                  <div key={task.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-4">
                       <div className="p-2 bg-green-50 rounded-lg">
                         <CheckCircle className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
                         <h4 className="text-base font-semibold text-gray-900">{task.task}</h4>
+
                         <p className="text-sm text-gray-600">{task.clientName}</p>
                         <p className="text-xs text-gray-500">
                           {new Date(task.completedAt).toLocaleString()}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-3 w-full sm:w-auto">
+                      <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
                         {task.status}
                       </span>
-                      <button className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors">
+                      <button className="w-full sm:w-auto p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors">
                         <Eye className="h-5 w-5" />
                       </button>
                     </div>
@@ -1553,15 +1556,16 @@ const CaregiverDashboard = () => {
           {/* Performance Overview */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-              <div className="px-8 py-6 border-b border-gray-100">
+              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-900">Performance Overview</h2>
               </div>
-              <div className="p-8">
+              <div className="p-4 sm:p-6 lg:p-8">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <span className="text-base font-medium text-gray-700">Punctuality</span>
                     <div className="flex items-center">
                       <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
+
                         <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.punctuality || 0}%` }}></div>
                       </div>
                       <span className="text-lg font-bold text-gray-900">{performance.punctuality || 0}%</span>
@@ -1608,24 +1612,24 @@ const CaregiverDashboard = () => {
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-              <div className="px-8 py-6 border-b border-gray-100">
+              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
               </div>
-              <div className="p-8">
-                <div className="grid grid-cols-2 gap-4">
-                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
+              <div className="p-4 sm:p-6 lg:p-8">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
                     <MessageSquare className="h-8 w-8 text-blue-600 mb-3" />
                     <span className="text-sm font-semibold text-gray-900">Messages</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
+                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
                     <Camera className="h-8 w-8 text-green-600 mb-3" />
                     <span className="text-sm font-semibold text-gray-900">Photo Update</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
+                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
                     <FileText className="h-8 w-8 text-purple-600 mb-3" />
                     <span className="text-sm font-semibold text-gray-900">Add Note</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
+                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
                     <Navigation className="h-8 w-8 text-orange-600 mb-3" />
                     <span className="text-sm font-semibold text-gray-900">Navigation</span>
                   </button>

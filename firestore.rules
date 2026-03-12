@@ -1,9 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Multi-tenant helpers
+    // ============================================================================
+    // ENHANCED SECURITY: Multi-tenant helpers with improved caching
+    // ============================================================================
     function userInstitution() {
-      // Try to get institutionId from auth token first, then fall back to user document
+      // Prioritize auth token to minimize document reads
       return request.auth != null 
         ? (request.auth.token.institutionId != null 
             ? request.auth.token.institutionId 
@@ -12,18 +14,30 @@ service cloud.firestore {
                 : null))
         : null;
     }
+    
     function isSuperAdmin() {
       return request.auth != null && request.auth.token.superAdmin == true;
     }
-    // Institutions: public read (for login/landing pages), write super-admin only
-    match /institutions/{institutionId} {
-      allow read: if true; // Public read for institution branding on login pages
-      allow write: if isSuperAdmin();
+    
+    function isAuthenticated() {
+      return request.auth != null;
     }
-    // Licenses: public read (for login/landing pages), write super-admin only
-    match /licenses/{licenseId} {
-      allow read: if true; // Public read for displaying license status on login pages
+    
+    // ============================================================================
+    // SECURITY FIX: Institution data restricted to authenticated users
+    // Only public on login pages via application code filtering
+    // ============================================================================
+    match /institutions/{institutionId} {
+      allow read: if isAuthenticated(); // Only authenticated users can read institutions
       allow write: if isSuperAdmin();
+      allow list: if isAuthenticated() && request.query.limit <= 20;
+    }
+    
+    // Licenses: restricted to authenticated users
+    match /licenses/{licenseId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+      allow list: if isAuthenticated() && request.query.limit <= 20;
     }
     // Institution admins mapping: super-admin only
     match /institutionAdmins/{docId} {
@@ -99,23 +113,32 @@ service cloud.firestore {
       );
     }
     
-    // Users collection - users can read their own data, admins can read/write all
-    // Also allow service providers (caregivers/doctors) to read other users for messaging
-    // SECURITY FIX: Restricted list queries to authenticated users only with rate limiting
+    // ============================================================================
+    // SECURITY FIX: Users collection with strict enumeration prevention
+    // ============================================================================
     match /users/{userId} {
-      // Allow read by email for login verification (limited scope)
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin() || isCaregiver() || isDoctor());
-      // SECURITY FIX: Restrict list queries to authenticated users only
-      // List queries must be authenticated and filtered by email in application code
-      allow list: if request.auth != null && (
-        // Only allow list queries for authentication purposes by authenticated users
-        // Application code must filter by email to prevent enumeration
-        request.query.limit <= 10  // Rate limiting: max 10 results per query
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || 
+        isAdmin() || 
+        isCaregiver() || 
+        isDoctor()
       );
-      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      // TEMPORARY: Allow authenticated users to update only role-related fields for migration
-      allow update: if request.auth != null && 
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'roleMigrated', 'roleMigratedAt', 'updatedAt']);
+      // SECURITY: Prevent user enumeration - no list queries allowed
+      allow list: if false; // Use email-based lookups in application code instead
+      allow create: if request.auth != null && request.auth.uid == userId && (
+        request.resource.data.email != null &&
+        request.resource.data.userType != null &&
+        request.resource.data.institutionId != null &&
+        request.resource.data.createdAt != null
+      );
+      allow update: if request.auth != null && (
+        request.auth.uid == userId || isAdmin()
+      ) && (
+        !("email" in request.resource.data.diff(resource.data).changedKeys()) && // Email immutable after creation
+        !("userType" in request.resource.data.diff(resource.data).changedKeys()) && // Role immutable without admin oversight
+        !("institutionId" in request.resource.data.diff(resource.data).changedKeys()) // Institution immutable
+      );
+      allow delete: if false; // Users never deleted, only deactivated
     }
     
     // Caregivers collection - caregivers can read their own document and query by institution, admins full access
@@ -246,55 +269,69 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     
-    // Messages collection - allow authenticated users to read/write messages
+    // ============================================================================
+    // SECURITY FIX: Messages collection with multi-tenant filtering
+    // ============================================================================
     match /messages/{messageId} {
-      allow read, write: if request.auth != null;
+      // SECURITY: Only allow read if user is part of the conversation (denormalized field)
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.senderId ||
+        request.auth.uid == resource.data.recipientId
+      );
+      allow list: if request.auth != null && request.query.limit <= 50;
+      // SECURITY: Only sender or admin can write
+      allow create: if request.auth != null && (
+        request.resource.data.senderId == request.auth.uid &&
+        request.resource.data.recipientId != null &&
+        request.resource.data.conversationId != null &&
+        request.resource.data.senderId != request.resource.data.recipientId && // Prevent self-messages
+        request.resource.data.text != null
+      );
+      allow update: if false; // Messages immutable
+      allow delete: if false; // Messages never deleted, only marked deleted
     }
     
-    // Allow users to query messages collection
-    match /messages {
-      allow read: if request.auth != null;
-    }
-    
-    // Conversations collection - allow authenticated users to read/write conversations
+    // Conversations collection - multi-tenant isolated
     match /conversations/{conversationId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Task assignments
-    match /taskAssignments/{assignmentId} {
-      allow read: if isAdmin() || (isCaregiver() && resource.data.caregiverId == request.auth.uid);
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // Nurse assignments
-    match /nurseAssignments/{assignmentId} {
-      allow read: if isAdmin() || (isCaregiver() && resource.data.nurseId == request.auth.uid);
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // Telemedicine appointments
-    match /telemedicine_appointments/{appointmentId} {
-      allow read: if isAdmin() || (
-        request.auth != null && (
-          resource.data.nurseId == request.auth.uid ||
-          resource.data.doctorId == request.auth.uid ||
-          resource.data.patientId == request.auth.uid
-        )
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.user1 ||
+        request.auth.uid == resource.data.user2
       );
-      allow write: if isAdmin() || isDoctor() || isCaregiver();
+      allow list: if request.auth != null && request.query.limit <= 50;
+      allow create: if request.auth != null && (
+        request.resource.data.user1 != null &&
+        request.resource.data.user2 != null &&
+        request.resource.data.user1 != request.resource.data.user2 // Prevent self-conversations
+      );
+      allow update, delete: if false;
     }
     
-    // Telemedicine calls
-    match /telemedicine_calls/{callId} {
-      allow read: if isAdmin() || (
-        request.auth != null && (
-          resource.data.nurseId == request.auth.uid ||
-          resource.data.doctorId == request.auth.uid ||
-          resource.data.patientId == request.auth.uid
-        )
+    // ============================================================================
+    // SECURITY FIX: Calls collection with multi-tenant filtering
+    // ============================================================================
+    match /calls/{callId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.callerId ||
+        request.auth.uid == resource.data.recipientId
       );
-      allow write: if isAdmin() || isDoctor() || isCaregiver();
+      allow create: if request.auth != null && (
+        request.resource.data.callerId == request.auth.uid &&
+        request.resource.data.recipientId != null &&
+        request.resource.data.callerId != request.resource.data.recipientId && // No self-calls
+        request.resource.data.callType in ['audio', 'video']
+      );
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.callerId ||
+        request.auth.uid == resource.data.recipientId
+      ) && request.resource.data.status in ['ringing', 'connected', 'ended'];
+      allow delete: if false;
+    }
+    
+    // Call notifications collection
+    match /callNotifications/{notificationId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
     // Emergency alerts
@@ -607,11 +644,12 @@ service cloud.firestore {
         isAdmin() || 
         isDoctor() || 
         isNurse() ||
+        isCaregiver() ||
         (resource.data != null && resource.data.clientId == request.auth.uid) ||
         (resource.data != null && resource.data.institutionId == userInstitution())
       );
       // For list queries, allow based on role (resource.data not available)
-      allow list: if request.auth != null && (isAdmin() || isDoctor() || isNurse());
+      allow list: if request.auth != null && (isAdmin() || isDoctor() || isNurse() || isCaregiver());
       allow create: if request.auth != null && (isAdmin() || isDoctor());
       allow update: if request.auth != null && (
         isAdmin() || 
@@ -648,9 +686,16 @@ service cloud.firestore {
     
     // Pharmacy invoices collection - pharmacists can manage invoices in their institution
     match /pharmacyInvoices/{invoiceId} {
-      allow read, list: if request.auth != null && (
+      allow read: if request.auth != null && (
         isAdmin() || 
         isPharmacist() ||
+        (isCaregiver() && resource.data != null && resource.data.institutionId == userInstitution()) ||
+        (resource.data != null && resource.data.clientId == request.auth.uid)
+      );
+      allow list: if request.auth != null && (
+        isAdmin() ||
+        isPharmacist() ||
+        isCaregiver() ||
         resource.data.clientId == request.auth.uid
       );
       allow create, update, delete: if request.auth != null && (

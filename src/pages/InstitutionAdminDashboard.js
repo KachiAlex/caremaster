@@ -31,6 +31,7 @@ import {
   Dot,
   FileText,
   MessageSquare,
+  ArrowLeft,
   Eye,
   EyeOff,
   Download,
@@ -67,7 +68,10 @@ import {
   Database,
   CreditCard,
   Ban,
-  MoreVertical
+  Menu,
+  MoreVertical,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUserStatus } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -128,6 +132,7 @@ import EnhancedInventoryManagement from '../components/EnhancedInventoryManageme
 import SecurityManagement from '../components/SecurityManagement';
 import BillingManagementDashboard from '../components/BillingManagementDashboard';
 import TestingQADashboard from '../components/TestingQADashboard';
+import useResponsive from '../hooks/useResponsive';
 
 const formatTimeForDisplay = (time) => {
   if (!time) return '';
@@ -272,6 +277,7 @@ const InstitutionAdminDashboard = () => {
     status: 'pending'
   });
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showCaregiverPasswordModal, setShowCaregiverPasswordModal] = useState(false);
   const [caregiverPasswordForm, setCaregiverPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [resettingCaregiverPassword, setResettingCaregiverPassword] = useState(false);
@@ -325,7 +331,35 @@ const InstitutionAdminDashboard = () => {
   const [callStartAt, setCallStartAt] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = React.useRef(null);
-  
+  const [showMobileChatPane, setShowMobileChatPane] = useState(false);
+  const [isNarrowMessagingLayout, setIsNarrowMessagingLayout] = useState(false);
+  const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
+
+  const { isMobile, isTablet } = useResponsive();
+  const isMobileMessagingView = isMobile || isTablet || isNarrowMessagingLayout;
+  const isDesktopMessagingView = !isMobileMessagingView;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+    const handleChange = (event) => setIsNarrowMessagingLayout(event.matches);
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (isMobileMessagingView) {
+      setIsConversationListCollapsed(false);
+    }
+  }, [isMobileMessagingView]);
+
+  useEffect(() => {
+    if (activeTab !== 'messages') {
+      setIsConversationListCollapsed(false);
+    }
+  }, [activeTab]);
+
   // Notification states
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -449,8 +483,7 @@ const InstitutionAdminDashboard = () => {
         setSelectedAssignmentForEdit(pendingAssignmentFromCaregiver);
         setShowEditAssignmentModal(true);
         setPendingAssignmentFromCaregiver(null);
-      }, 150); // Increased delay to ensure tab is rendered
-      
+      }, 200); // Increased delay to ensure tab is rendered
       return () => clearTimeout(timer);
     }
   }, [activeTab, pendingAssignmentFromCaregiver]);
@@ -468,6 +501,25 @@ const InstitutionAdminDashboard = () => {
       loadPaymentGatewayConfig();
     }
   }, [activeTab, effectiveInstitutionId]);
+
+  useEffect(() => {
+    if (activeTab !== 'messages') return;
+
+    if (isMobileMessagingView) {
+      setShowMobileChatPane(false);
+    } else {
+      setShowMobileChatPane(true);
+    }
+  }, [activeTab, isMobileMessagingView]);
+
+  useEffect(() => {
+    if (!isMobileMessagingView) {
+      setShowMobileChatPane(true);
+    } else if (!selectedConversation) {
+      setShowMobileChatPane(false);
+    }
+  }, [isMobileMessagingView, selectedConversation]);
+
   // Load institution data
   const loadInstitutionData = async () => {
     try {
@@ -2503,65 +2555,57 @@ const InstitutionAdminDashboard = () => {
     );
   }
   
-  // After authentication, check if user is a partner (admin with institutionId)
-  const userRole = userProfile?.userType || userProfile?.type || userProfile?.role;
-  const finalInstitutionId = userProfile?.institutionId || institutionId || effectiveInstitutionId || searchParams.get('institution');
-  
-  // If user is admin but no institutionId, show error
-  if (userRole === 'admin' && !finalInstitutionId && !loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md">
-          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Institution Not Found</h2>
-          <p className="text-gray-600 mb-4">
-            Your account is registered as an admin, but no institution is associated with your account.
-          </p>
-          <p className="text-sm text-gray-500">
-            Please contact support to associate your account with an institution.
-          </p>
-        </div>
+// If user is admin but no institutionId, show error
+if (userRole === 'admin' && !finalInstitutionId && !loading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center max-w-md">
+        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Institution Not Found</h2>
+        <p className="text-gray-600 mb-4">
+          Your account is registered as an admin, but no institution is associated with your account.
+        </p>
+        <p className="text-sm text-gray-500">
+          Please contact support to associate your account with an institution.
+        </p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  const renderMessagesTab = () => {
-    const handleSendMessage = async () => {
-      if (!newMessage.trim() || !selectedConversation) return;
-      
-      try {
-        let conversationId = selectedConversation.conversationId || selectedConversation.id;
-        
+const renderMessagesTab = () => {
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    try {
+      let conversationId = selectedConversation.conversationId || selectedConversation.id;
+
         if (!selectedConversation.conversationId && selectedConversation.participants) {
           const conversationResult = await getOrCreateConversation(selectedConversation.participants, 'admin');
           conversationId = conversationResult.id || conversationResult;
-          console.log(`✅ Created new conversation: ${conversationId}`);
         }
-        
-        if (typeof conversationId === 'object' && conversationId.id) {
+
+        if (typeof conversationId === 'object' && conversationId?.id) {
           conversationId = conversationId.id;
         }
-        
-        console.log('📤 Sending message to conversation:', conversationId);
-        
+
         await sendMessageAPI(conversationId, user.uid, {
           text: newMessage,
           type: 'text',
           senderName: userProfile?.name || 'Admin'
         });
-        
-        const message = {
+
+        const optimisticMessage = {
           id: Date.now(),
           text: newMessage,
           senderId: user?.uid,
           senderName: userProfile?.name || 'You',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
           read: false
         };
-        
-        setMessages([...messages, message]);
+
+        setMessages((prev) => [...prev, optimisticMessage]);
         setNewMessage('');
-        
         toast.success('Message sent successfully');
         loadConversations();
       } catch (error) {
@@ -2570,347 +2614,309 @@ const InstitutionAdminDashboard = () => {
       }
     };
 
-    const renderCallLogs = () => {
-      const uid = user?.uid || userProfile?.uid || userProfile?.id;
-      if (!uid) return null;
-      const CallLogsPanel = require('../components/CallLogsPanel').default;
-      return (
-        <div className="mt-4">
-          <CallLogsPanel userId={uid} />
-        </div>
-      );
+    const conversationBadge = (conversation) => {
+      const type = (conversation.type || 'user').toLowerCase();
+      const styles = {
+        caregiver: 'bg-green-100 text-green-800',
+        doctor: 'bg-blue-100 text-blue-800',
+        pharmacist: 'bg-indigo-100 text-indigo-800',
+        nurse: 'bg-purple-100 text-purple-800',
+        admin: 'bg-red-100 text-red-800',
+        client: 'bg-orange-100 text-orange-800'
+      };
+      return styles[type] || 'bg-gray-100 text-gray-700';
     };
 
-    // Combine caregivers and pharmacists for display (excluding clients)
-    const allPlatformUsers = [
-      ...caregivers.map(c => ({ ...c, userType: 'caregiver' })),
-      ...pharmacists.map(p => ({ ...p, userType: 'pharmacist' }))
-    ];
+    const formattedConversations = (conversations || []).map((conversation) => ({
+      ...conversation,
+      displayName: conversation.name || conversation.displayName || 'Unknown User',
+      displayType: (conversation.type || 'user').replace(/^\w/, (c) => c.toUpperCase())
+    }));
 
-    // Create conversation list combining existing conversations with all platform users
-    const displayConversations = allPlatformUsers.map(person => {
-      // Check if there's an existing conversation with this user
-      const existingConv = conversations.find(conv => 
-        conv.participants?.includes(person.id) || conv.participants?.includes(person.userId)
-      );
-
-      if (existingConv) {
-        return existingConv;
+    const handleConversationSelect = (conversation) => {
+      setSelectedConversation(conversation);
+      if (!isMobileMessagingView) {
+        setIsConversationListCollapsed(false);
+      }
+      if (isMobileMessagingView) {
+        setShowMobileChatPane(true);
       }
 
-      // Create a potential conversation entry
-      return {
-        id: person.id,
-        name: person.name || person.fullName || person.email || 'Unknown User',
-        avatar: person.avatar || null,
-        lastMessage: 'Start a conversation',
-        timestamp: new Date().toISOString(),
-        unread: 0,
-        type: person.userType,
-        participants: [user.uid, person.id],
-        isNew: true
-      };
-    });
+      const convId = conversation.conversationId || conversation.id;
+      if (convId) {
+        loadMessagesForConversation(convId);
+      } else {
+        setMessages([]);
+      }
+    };
+
+    const toggleConversationList = () => {
+      if (isMobileMessagingView) {
+        setShowMobileChatPane(false);
+      } else {
+        setIsConversationListCollapsed((prev) => !prev);
+      }
+    };
+
+    const conversationListClasses = [
+      'flex flex-col transition-all duration-200',
+      isMobileMessagingView
+        ? showMobileChatPane
+          ? 'hidden lg:flex lg:w-80 lg:border-r lg:border-gray-200'
+          : 'flex w-full border-r border-gray-200 lg:w-80'
+        : isConversationListCollapsed
+          ? 'hidden lg:flex lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none'
+          : 'hidden lg:flex lg:w-80 lg:border-r lg:border-gray-200'
+    ].join(' ');
+
+    const chatPaneClasses = [
+      'flex-1 flex flex-col transition-all duration-200',
+      isMobileMessagingView
+        ? showMobileChatPane
+          ? 'flex w-full'
+          : 'hidden lg:flex'
+        : isConversationListCollapsed
+          ? 'flex lg:pl-0'
+          : 'flex'
+    ].join(' ');
 
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[calc(100vh-250px)]">
         <div className="flex h-full">
-          {/* Conversations List */}
-          <div className="w-80 border-r border-gray-200 flex flex-col">
+          {/* Conversation List */}
+          <div className={conversationListClasses}>
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
-              <p className="text-sm text-gray-500 mt-1">{displayConversations.length} users available</p>
-              
-              {/* Summary Stats */}
-              {(() => {
-                const totalUnread = displayConversations.reduce((sum, conv) => sum + (conv.unread || 0), 0);
-                const totalMissedCalls = displayConversations.reduce((sum, conv) => sum + (conv.missedCalls || 0), 0);
-                
-                return (totalUnread > 0 || totalMissedCalls > 0) && (
-                  <div className="mt-2 flex items-center gap-2 text-xs">
-                    {totalUnread > 0 && (
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
-                        💬 {totalUnread} unread
-                      </span>
-                    )}
-                    {totalMissedCalls > 0 && (
-                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full font-semibold">
-                        📞 {totalMissedCalls} missed
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-              
-              {/* Search Input */}
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={messageSearchTerm || ''}
-                onChange={(e) => setMessageSearchTerm(e.target.value)}
-                className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <p className="text-sm text-gray-500 mt-1">{formattedConversations.length} conversations</p>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto">
-              {displayConversations
-                .filter(conv => 
-                  !messageSearchTerm || 
-                  (conv.name || '').toLowerCase().includes(messageSearchTerm.toLowerCase()) ||
-                  (conv.type || '').toLowerCase().includes(messageSearchTerm.toLowerCase())
-                )
-                .map((conversation) => {
-                  const roleBadgeConfig = {
-                    caregiver: { bg: 'bg-green-100', text: 'text-green-800', label: 'Caregiver' },
-                    doctor: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Doctor' },
-                    nurse: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Nurse' },
-                    pharmacist: { bg: 'bg-indigo-100', text: 'text-indigo-800', label: 'Pharmacist' },
-                    client: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Client' },
-                    admin: { bg: 'bg-red-100', text: 'text-red-800', label: 'Admin' }
-                  };
-                  const badge = roleBadgeConfig[conversation.type] || roleBadgeConfig.client;
+              {formattedConversations.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p>No conversations yet</p>
+                </div>
+              ) : (
+                formattedConversations.map((conversation) => {
+                  const displayName = conversation.displayName || 'Unknown User';
+                  const initial = displayName.charAt(0).toUpperCase();
 
                   return (
-                    <div
+                    <button
                       key={conversation.id}
-                      onClick={() => {
-                        setSelectedConversation(conversation);
-                        const convId = conversation.conversationId || conversation.id;
-                        if (!conversation.isNew) {
-                          loadMessagesForConversation(convId);
-                        } else {
-                          setMessages([]);
-                        }
-                      }}
-                      className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      type="button"
+                      onClick={() => handleConversationSelect(conversation)}
+                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
                         selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                          {(conversation.name || 'U').charAt(0).toUpperCase()}
+                          {initial}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h3 className="text-sm font-medium text-gray-900 truncate">{conversation.name || 'Unknown User'}</h3>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              {conversation.unread > 0 && (
-                                <span className="bg-blue-600 text-white text-xs rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center font-semibold">
-                                  {conversation.unread}
-                                </span>
-                              )}
-                              {conversation.missedCalls > 0 && (
-                                <span className="bg-red-600 text-white text-xs rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center font-semibold" title="Missed calls">
-                                  📞 {conversation.missedCalls}
-                                </span>
-                              )}
-                            </div>
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-gray-900 truncate">{displayName}</h3>
+                            {conversation.unread > 0 && (
+                              <span className="bg-blue-600 text-white text-xs rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
+                                {conversation.unread}
+                              </span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
-                              {badge.label}
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-xs font-medium ${conversationBadge(
+                              conversation
+                            )}`}
+                          >
+                            {conversation.displayType}
+                          </span>
+                          <p className="text-sm text-gray-500 truncate mt-1">{conversation.lastMessage || 'Start the conversation'}</p>
+                          {conversation.timestamp && (
+                            <span className="text-xs text-gray-400">
+                              {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
-                            {conversation.isNew && (
-                              <span className="text-xs text-gray-400 italic">New chat</span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-500 truncate mt-1">{conversation.lastMessage}</p>
-                          <div className="flex items-center justify-between mt-1">
-                            {!conversation.isNew && (
-                              <span className="text-xs text-gray-400">
-                                {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            )}
-                            {(conversation.unread > 0 || conversation.missedCalls > 0) && (
-                              <span className="text-xs font-semibold text-blue-600">
-                                {conversation.unread > 0 && `${conversation.unread} new`}
-                                {conversation.unread > 0 && conversation.missedCalls > 0 && ' • '}
-                                {conversation.missedCalls > 0 && `${conversation.missedCalls} missed call${conversation.missedCalls > 1 ? 's' : ''}`}
-                              </span>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
-                })}
-              {displayConversations.filter(conv => 
-                !messageSearchTerm || 
-                (conv.name || '').toLowerCase().includes(messageSearchTerm.toLowerCase()) ||
-                (conv.type || '').toLowerCase().includes(messageSearchTerm.toLowerCase())
-              ).length === 0 && (
-                <div className="p-8 text-center text-gray-500">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                  <p>No users found</p>
-                </div>
+                })
               )}
             </div>
           </div>
 
-          {/* Chat Area */}
-          {selectedConversation ? (
-            <div className="flex-1 flex flex-col">
-              {/* Chat Header with Call Buttons */}
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
-                    {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
-                    <p className="text-xs text-gray-500">
-                      {selectedConversation.type === 'caregiver' ? 'Caregiver' : selectedConversation.type === 'pharmacist' ? 'Pharmacist' : selectedConversation.type || 'User'}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Call Buttons */}
-                <div className="flex items-center gap-2">
-                  {!isInCall && (
-                    <>
+          {/* Chat Pane */}
+          <div className={chatPaneClasses}>
+            {selectedConversation ? (
+              <>
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    {isDesktopMessagingView && (
                       <button
-                        onClick={startVoiceCall}
-                        className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                        title="Start Voice Call"
+                        onClick={toggleConversationList}
+                        className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
+                        aria-label={isConversationListCollapsed ? 'Show conversation list' : 'Hide conversation list'}
                       >
-                        <Phone className="h-5 w-5 text-gray-600" />
+                        {isConversationListCollapsed ? (
+                          <PanelLeftOpen className="h-5 w-5" />
+                        ) : (
+                          <PanelLeftClose className="h-5 w-5" />
+                        )}
                       </button>
-                      <button
-                        onClick={startVideoCall}
-                        className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                        title="Start Video Call"
-                      >
-                        <Camera className="h-5 w-5 text-gray-600" />
-                      </button>
-                    </>
-                  )}
-                  {isInCall && (
-                    <button
-                      onClick={handleEndCall}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                    >
-                      <Phone className="h-4 w-4" />
-                      End Call
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Call Interface */}
-              {isInCall && (
-                <div className="p-6 bg-gray-900 flex items-center justify-center" style={{ height: '400px' }}>
-                  <div className="text-center">
-                    {callType === 'video' ? (
-                      <div className="space-y-4">
-                        <Camera className="h-16 w-16 text-white mx-auto" />
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
-                            <div className="text-center">
-                              <p className="text-white font-medium">You</p>
-                              <p className="text-gray-400 text-sm">Camera Active</p>
-                            </div>
-                          </div>
-                          <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
-                            <div className="text-center">
-                              <p className="text-white font-medium">{selectedConversation.name}</p>
-                              <p className="text-gray-400 text-sm">Connecting...</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <Phone className="h-16 w-16 text-blue-500 mx-auto animate-pulse" />
-                        <p className="text-white text-lg font-medium">Voice Call Active</p>
-                        <p className="text-gray-400">Connected with {selectedConversation.name}</p>
-                      </div>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {/* Messages Area */}
-              {!isInCall && (
-                <>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                    {messages.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center text-gray-400">
-                          <MessageSquare className="h-12 w-12 mx-auto mb-2" />
-                          <p>No messages yet. Start the conversation!</p>
-                        </div>
-                      </div>
-                    ) : (
-                      messages.map((message) => {
-                        const isSentByMe = (message.senderId || message.sender) === user?.uid;
-                        const messageTime = message.createdAt || message.timestamp;
-                        
-                        return (
-                          <div
-                            key={message.id}
-                            className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                isSentByMe
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white text-gray-900 border border-gray-200'
-                              }`}
-                            >
-                              {!isSentByMe && message.senderName && (
-                                <p className="text-xs font-semibold mb-1">{message.senderName}</p>
-                              )}
-                              <p className="text-sm">{message.text || message.content}</p>
-                              <p className={`text-xs mt-1 ${
-                                isSentByMe ? 'text-blue-100' : 'text-gray-400'
-                              }`}>
-                                {new Date(messageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  {/* Message Input */}
-                  <div className="p-4 border-t border-gray-200 bg-white">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Type a message..."
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                    {isMobileMessagingView && (
                       <button
-                        onClick={handleSendMessage}
-                        disabled={!newMessage.trim()}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        onClick={() => setShowMobileChatPane(false)}
+                        className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
+                        aria-label="Back to conversations"
                       >
-                        Send
+                        <ArrowLeft className="h-5 w-5" />
                       </button>
+                    )}
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
+                      {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
+                      <p className="text-xs text-gray-500">
+                        {selectedConversation.type
+                          ? selectedConversation.type.replace(/^\w/, (c) => c.toUpperCase())
+                          : 'User'}
+                      </p>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-              <div className="text-center text-gray-400">
-                <MessageSquare className="h-16 w-16 mx-auto mb-4" />
-                <p className="text-lg font-medium">Select a conversation to start messaging</p>
-                <p className="text-sm mt-2">Or start a voice/video call</p>
+                  <div className="flex items-center gap-2">
+                    {!isInCall ? (
+                      <>
+                        <button
+                          onClick={startVoiceCall}
+                          className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                          title="Start Voice Call"
+                        >
+                          <Phone className="h-5 w-5 text-gray-600" />
+                        </button>
+                        <button
+                          onClick={startVideoCall}
+                          className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                          title="Start Video Call"
+                        >
+                          <Camera className="h-5 w-5 text-gray-600" />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleEndCall}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                      >
+                        <Phone className="h-4 w-4" />
+                        End Call
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {isInCall ? (
+                  <div className="p-6 bg-gray-900 flex items-center justify-center h-80">
+                    <div className="text-center">
+                      {callType === 'video' ? (
+                        <div className="space-y-4">
+                          <Camera className="h-16 w-16 text-white mx-auto" />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
+                              <p className="text-white font-medium">You</p>
+                            </div>
+                            <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
+                              <p className="text-white font-medium">{selectedConversation.name}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <Phone className="h-16 w-16 text-blue-500 mx-auto animate-pulse" />
+                          <p className="text-white text-lg font-medium">Voice Call Active</p>
+                          <p className="text-gray-400">Connected with {selectedConversation.name}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                      {messages.length === 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center text-gray-400">
+                            <MessageSquare className="h-12 w-12 mx-auto mb-2" />
+                            <p>No messages yet. Start the conversation!</p>
+                          </div>
+                        </div>
+                      ) : (
+                        messages.map((message) => {
+                          const isMine = (message.senderId || message.sender) === user?.uid;
+                          const timeStamp = message.createdAt || message.timestamp;
+
+                          return (
+                            <div
+                              key={message.id || `${message.senderId}-${message.createdAt}`}
+                              className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div
+                                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                                  isMine ? 'bg-blue-600 text-white' : 'bg-white text-gray-900 border border-gray-200'
+                                }`}
+                              >
+                                {!isMine && message.senderName && (
+                                  <p className="text-xs font-semibold mb-1">{message.senderName}</p>
+                                )}
+                                <p className="text-sm">{message.text || message.content}</p>
+                                <p className={`text-xs mt-1 ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
+                                  {timeStamp
+                                    ? new Date(timeStamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                    : ''}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="p-4 border-t border-gray-200 bg-white">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                          placeholder="Type a message..."
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          onClick={handleSendMessage}
+                          disabled={!newMessage.trim()}
+                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Send
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-400 px-6">
+                  <MessageSquare className="h-16 w-16 mx-auto mb-4" />
+                  <p className="text-lg font-medium">Select a conversation to start messaging</p>
+                  <p className="text-sm mt-2">Or start a voice/video call</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
-  // Quick action functions
   const quickActions = [
     {
       name: 'Add Client',
@@ -3296,17 +3302,18 @@ const InstitutionAdminDashboard = () => {
                 Add Client
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard icon={Heart} label="Active Clients" value={stats.clients.toLocaleString()} accent="from-green-500 to-green-600" />
-              <StatCard icon={Users} label="Care Teams" value={stats.caregivers.toLocaleString()} accent="from-blue-500 to-blue-600" />
-              <StatCard icon={Clock} label="Avg Response (s)" value={stats.responseTime.toLocaleString()} accent="from-indigo-500 to-purple-500" />
-            </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
               {clients.length === 0 ? (
                 <div className="p-12 text-center text-gray-500">No clients registered yet.</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <div
+                  className="overflow-x-auto"
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x' }}
+                >
+                  <table
+                    className="min-w-[900px] divide-y divide-gray-200 text-sm"
+                    style={{ width: 'max-content', minWidth: '900px' }}
+                  >
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Name</th>
@@ -3434,12 +3441,18 @@ const InstitutionAdminDashboard = () => {
                 </button>
               </div>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
               {caregivers.length === 0 ? (
                 <div className="p-12 text-center text-gray-500">No caregivers available.</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <div
+                  className="overflow-x-auto"
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
+                >
+                  <table
+                    className="min-w-[900px] divide-y divide-gray-200 text-sm"
+                    style={{ width: 'max-content', minWidth: '900px' }}
+                  >
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
@@ -3679,7 +3692,7 @@ const InstitutionAdminDashboard = () => {
                 </button>
               </div>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
               {pharmacists.length === 0 ? (
                 <div className="p-12 text-center">
                   <Pill className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -3693,8 +3706,14 @@ const InstitutionAdminDashboard = () => {
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <div
+                  className="overflow-x-auto"
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
+                >
+                  <table
+                    className="min-w-[900px] divide-y divide-gray-200 text-sm"
+                    style={{ width: 'max-content', minWidth: '900px' }}
+                  >
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
@@ -3832,7 +3851,7 @@ const InstitutionAdminDashboard = () => {
                 </button>
               </div>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
               {assignments.length === 0 ? (
                 <div className="p-12 text-center">
                   <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -3840,7 +3859,7 @@ const InstitutionAdminDashboard = () => {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <table className="min-w-[800px] divide-y divide-gray-200 text-sm">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assignment</th>
@@ -4190,7 +4209,58 @@ const InstitutionAdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex">
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-screen z-20 shadow">
+      <div className={`fixed inset-0 z-50 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
+        <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+        <aside className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white border-r border-gray-200 flex flex-col h-screen shadow-xl">
+          <div className="p-4 border-b border-gray-200 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">Institution admin</p>
+              <h1 className="text-sm font-semibold text-gray-900 truncate">{institutionData?.name || 'Institution'}</h1>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition ${
+                    isActive ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {Icon && <Icon className="h-4 w-4" />}
+                    <span>{tab.label}</span>
+                  </div>
+                  {isActive && <span className="h-2 w-2 rounded-full bg-white" />}
+                </button>
+              );
+            })}
+          </nav>
+          <div className="p-3 border-t border-gray-200">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center px-3 py-2 text-sm text-red-600 rounded-lg border border-red-200 hover:bg-red-50 transition"
+            >
+              <LogOut className="h-4 w-4 mr-2" /> Logout
+            </button>
+          </div>
+        </aside>
+      </div>
+
+      <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col fixed h-screen z-20 shadow">
         <div className="p-4 border-b border-gray-200">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">Institution admin</p>
           <h1 className="text-sm font-semibold text-gray-900 truncate">{institutionData?.name || 'Institution'}</h1>
@@ -4226,13 +4296,21 @@ const InstitutionAdminDashboard = () => {
         </div>
       </aside>
 
-      <main className="flex-1 ml-64 px-6 py-6">
+      <main className="flex-1 md:ml-64 px-3 sm:px-4 md:px-6 py-4 md:py-6">
         <div className="max-w-6xl mx-auto space-y-6">
           <header className="flex items-center justify-between">
             <div className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-blue-600">{activeTabLabel}</p>
-            <h1 className="text-3xl font-semibold text-gray-900">{institutionData?.name || 'Institution Dashboard'}</h1>
-            <p className="text-sm text-gray-600">Welcome back, {displayName}. Manage your institution operations from one surface.</p>
+              <button
+                type="button"
+                className="md:hidden inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 text-gray-700 w-fit"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <p className="text-xs uppercase tracking-[0.3em] text-blue-600">{activeTabLabel}</p>
+              <h1 className="text-3xl font-semibold text-gray-900">{institutionData?.name || 'Institution Dashboard'}</h1>
+              <p className="text-sm text-gray-600">Welcome back, {displayName}. Manage your institution operations from one surface.</p>
             </div>
             
             {/* Profile Dropdown */}
@@ -5093,3 +5171,4 @@ const InstitutionAdminDashboard = () => {
 };
 
 export default InstitutionAdminDashboard;
+

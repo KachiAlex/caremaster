@@ -1,0 +1,11 @@
+/* Allow true horizontal scroll inside wrappers */
+.dashboard-container .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.dashboard-container .overflow-x-auto > table,
+.dashboard-container .overflow-x-auto > div,
+.dashboard-container .overflow-x-auto > * {
+  max-width: none !important;
+}
