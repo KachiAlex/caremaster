@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Mail, Phone, Lock, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { createCompleteUserAccount } from '../utils/userCreationHelper';
+import api from '../api/config';
 
 const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregiverCreated }) => {
   const [loading, setLoading] = useState(false);
@@ -81,25 +81,32 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
         password: formData.password
       };
 
-      // Create user account with onboardingComplete: false
-      const result = await createCompleteUserAccount(userData, {
-        institutionId,
-        createdBy,
-        accountType: 'admin_created',
-        onboardingComplete: false // Caregiver needs to complete onboarding
+      // Create user account using existing auth register endpoint
+      const response = await api.post('/api/auth/register', {
+        matric_number: `CG/${Date.now()}`, // Generate caregiver matric number
+        email: userData.email,
+        password: userData.password,
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        department: 'Healthcare', // Default department
+        level: 'Staff', // Default level
+        session: '2024-2025', // Default session
+        user_type: 'student' // Backend only supports student/admin
       });
+      
+      const result = response.data.data?.user?.id;
 
       const roleLabel = roles.find(r => r.value === formData.role)?.label || 'Staff';
       toast.success(
         <>
           <div className="font-bold mb-2">{roleLabel} Account Created Successfully!</div>
           <div className="text-sm">
-            <div>Email: <strong>{result.email}</strong></div>
+            <div>Email: <strong>{userData.email}</strong></div>
             <div className="mt-2 text-xs opacity-80">
-              The {roleLabel.toLowerCase()} will receive login credentials via email and be prompted to complete onboarding on first login.
+              The {roleLabel.toLowerCase()} account has been created in the system.
             </div>
             <div className="mt-1 text-xs text-amber-600 font-medium">
-              ⚠️ Please securely share the password with the {roleLabel.toLowerCase()} through a secure channel.
+              ⚠️ Please securely share the login credentials with the {roleLabel.toLowerCase()}.
             </div>
           </div>
         </>,
@@ -118,7 +125,7 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
 
       // Notify parent
       if (onCaregiverCreated) {
-        onCaregiverCreated(result);
+        onCaregiverCreated({ id: result, ...userData });
       }
 
       onClose();
@@ -127,8 +134,8 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
       
       let errorMessage = 'Failed to create caregiver account';
       
-      if (error.code === 'auth/email-already-in-use') {
-        // Set error on the email field for better UX
+      if (error.response?.status === 409) {
+        // Email already exists
         setErrors(prev => ({
           ...prev,
           email: 'This email is already registered. Please use a different email or check if the user already exists in your staff list.'
@@ -144,12 +151,8 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
           { autoClose: 6000 }
         );
         return;
-      } else if (error.code === 'auth/invalid-email') {
-        setErrors(prev => ({ ...prev, email: 'Invalid email address format' }));
-        errorMessage = 'Invalid email address format';
-      } else if (error.code === 'auth/weak-password') {
-        setErrors(prev => ({ ...prev, password: 'Password is too weak (minimum 6 characters required)' }));
-        errorMessage = 'Password is too weak (minimum 6 characters required)';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }

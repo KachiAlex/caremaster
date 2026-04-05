@@ -212,6 +212,20 @@ const InstitutionAdminDashboard = () => {
 
   const displayName =
     userProfile?.name || userProfile?.displayName || userProfile?.email || 'Institution admin';
+
+  const currentUserRole = useMemo(() => {
+    return userProfile?.userType || userProfile?.type || userProfile?.role || null;
+  }, [userProfile]);
+
+  const finalInstitutionId = useMemo(() => {
+    return (
+      effectiveInstitutionId ||
+      institutionId ||
+      userProfile?.institutionId ||
+      searchParams.get('institution') ||
+      null
+    );
+  }, [effectiveInstitutionId, institutionId, userProfile, searchParams]);
   
   const [recentActivity, setRecentActivity] = useState([]);
   const [topCaregivers, setTopCaregivers] = useState([]);
@@ -406,11 +420,10 @@ const InstitutionAdminDashboard = () => {
     }
     
     // Check if user is a partner (admin with institutionId)
-    const userRole = userProfile.userType || userProfile.type || userProfile.role;
-    const isPartner = userRole === 'admin' && (userProfile.institutionId || institutionId || effectiveInstitutionId);
+    const isPartner = currentUserRole === 'admin' && (userProfile.institutionId || institutionId || effectiveInstitutionId);
     
     // IMPORTANT: Redirect non-admin users to their appropriate dashboards
-    if (userRole === 'pharmacist' || userProfile?.medicalQualification === 'Pharmacist') {
+    if (currentUserRole === 'pharmacist' || userProfile?.medicalQualification === 'Pharmacist') {
       console.log('🚫 Pharmacist detected in admin dashboard, redirecting to pharmacy dashboard...');
       const instId = userProfile.institutionId || institutionId || effectiveInstitutionId;
       if (instId) {
@@ -421,8 +434,8 @@ const InstitutionAdminDashboard = () => {
       return;
     }
     
-    if (['caregiver', 'doctor', 'nurse'].includes(userRole)) {
-      console.log(`🚫 ${userRole} detected in admin dashboard, redirecting to caregiver dashboard...`);
+    if (['caregiver', 'doctor', 'nurse'].includes(currentUserRole)) {
+      console.log(`🚫 ${currentUserRole} detected in admin dashboard, redirecting to caregiver dashboard...`);
       const instId = userProfile.institutionId || institutionId || effectiveInstitutionId;
       if (instId) {
         navigate(`/institution-caregiver/dashboard?institution=${instId}`, { replace: true });
@@ -436,7 +449,7 @@ const InstitutionAdminDashboard = () => {
     const instIdForSession = userProfile.institutionId || institutionId || effectiveInstitutionId || searchParams.get('institution');
     
     // If user is a partner but no institutionId found, show error
-    if (userRole === 'admin' && !instIdForSession) {
+    if (currentUserRole === 'admin' && !instIdForSession) {
       console.error('❌ Partner admin detected but no institutionId found in profile');
       setLoading(false);
       toast.error('Unable to determine your institution. Please contact support.');
@@ -446,17 +459,95 @@ const InstitutionAdminDashboard = () => {
     // If we have user, profile, and institutionId, proceed with dashboard load
     if (userProfile && instIdForSession && user) {
       console.log('✅ Partner login flow - Loading dashboard:', {
-        userRole,
+        userRole: currentUserRole,
         institutionId: instIdForSession,
         isPartner
       });
       
       // Validate tab session for role conflicts
-      const validation = sessionManager.validateTabSession(user, userRole);
-      
+      const validation = sessionManager.validateTabSession(user, currentUserRole);
+
       if (validation.needsInit) {
         // First load - set tab session
-        sessionManager.setTabSession(userRole, user.uid, instIdForSession);
+        sessionManager.setTabSession(currentUserRole, user.uid, instIdForSession);
+      } else if (!validation.valid) {
+        // Session conflict detected
+        sessionManager.handleSessionConflict(validation, navigate, toast);
+        return;
+      }
+      
+      loadDashboardData();
+      loadInstitutionData();
+      
+      // Safety timeout: Force loading to false after 10 seconds if stuck
+      const timeout = setTimeout(() => {
+        setLoading(false);
+        console.warn('Loading timeout reached - forcing UI to show');
+      }, 10000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [userProfile, institutionId, effectiveInstitutionId, user, navigate, searchParams]);
+
+  useEffect(() => {
+    // Partner login flow: First authenticate, then determine partner status and institutionId
+    // Wait for user and userProfile to be loaded
+    if (!user || !userProfile) {
+      console.log('⏳ Waiting for user authentication and profile...');
+      return;
+    }
+    
+    // Check if user is a partner (admin with institutionId)
+    const isPartner = currentUserRole === 'admin' && (userProfile.institutionId || institutionId || effectiveInstitutionId);
+    
+    // IMPORTANT: Redirect non-admin users to their appropriate dashboards
+    if (currentUserRole === 'pharmacist' || userProfile?.medicalQualification === 'Pharmacist') {
+      console.log('🚫 Pharmacist detected in admin dashboard, redirecting to pharmacy dashboard...');
+      const instId = userProfile.institutionId || institutionId || effectiveInstitutionId;
+      if (instId) {
+        navigate(`/institution-pharmacy/dashboard?institution=${instId}`, { replace: true });
+      } else {
+        navigate('/institution-pharmacy/dashboard', { replace: true });
+      }
+      return;
+    }
+    
+    if (['caregiver', 'doctor', 'nurse'].includes(currentUserRole)) {
+      console.log(`🚫 ${currentUserRole} detected in admin dashboard, redirecting to caregiver dashboard...`);
+      const instId = userProfile.institutionId || institutionId || effectiveInstitutionId;
+      if (instId) {
+        navigate(`/institution-caregiver/dashboard?institution=${instId}`, { replace: true });
+      } else {
+        navigate('/institution-caregiver/dashboard', { replace: true });
+      }
+      return;
+    }
+    
+    // Get institutionId from profile (partner flow) or URL params
+    const instIdForSession = userProfile.institutionId || institutionId || effectiveInstitutionId || searchParams.get('institution');
+    
+    // If user is a partner but no institutionId found, show error
+    if (currentUserRole === 'admin' && !instIdForSession) {
+      console.error('❌ Partner admin detected but no institutionId found in profile');
+      setLoading(false);
+      toast.error('Unable to determine your institution. Please contact support.');
+      return;
+    }
+    
+    // If we have user, profile, and institutionId, proceed with dashboard load
+    if (userProfile && instIdForSession && user) {
+      console.log('✅ Partner login flow - Loading dashboard:', {
+        userRole: currentUserRole,
+        institutionId: instIdForSession,
+        isPartner
+      });
+      
+      // Validate tab session for role conflicts
+      const validation = sessionManager.validateTabSession(user, currentUserRole);
+
+      if (validation.needsInit) {
+        // First load - set tab session
+        sessionManager.setTabSession(currentUserRole, user.uid, instIdForSession);
       } else if (!validation.valid) {
         // Session conflict detected
         sessionManager.handleSessionConflict(validation, navigate, toast);
@@ -2556,7 +2647,7 @@ const InstitutionAdminDashboard = () => {
   }
   
 // If user is admin but no institutionId, show error
-if (userRole === 'admin' && !finalInstitutionId && !loading) {
+if (currentUserRole === 'admin' && !finalInstitutionId && !loading) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center max-w-md">

@@ -1,57 +1,21 @@
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  setDoc,
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit,
-  onSnapshot,
-  serverTimestamp,
-  Timestamp
-} from 'firebase/firestore';
-import { db, auth } from '../firebase/config';
-import dataConnectService from '../services/dataConnectService';
-import secureStorageService from '../services/secureStorageService';
+import api from './config';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
 
-const USERS_COLLECTION = 'users';
+const USERS_ENDPOINT = '/users';
 
 // Get all users
 export const getAllUsers = async () => {
   try {
-    const usersRef = collection(db, USERS_COLLECTION);
-    const q = query(usersRef, orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    const users = [];
-    querySnapshot.forEach((doc) => {
-      const userData = doc.data();
-      users.push({
-        id: doc.id,
-        ...userData,
-        // Convert Firestore timestamps to JavaScript dates
-        joinDate: userData.joinDate?.toDate?.() || userData.joinDate,
-        lastActive: userData.lastActive?.toDate?.() || userData.lastActive,
-        createdAt: userData.createdAt?.toDate?.() || userData.createdAt,
-        updatedAt: userData.updatedAt?.toDate?.() || userData.updatedAt,
-      });
-    });
-    
-    return users;
+    const response = await api.get(USERS_ENDPOINT);
+    return response.data;
   } catch (error) {
     console.error('Error fetching users:', error);
     throw error;
   }
 };
 
-// Get user by ID (using Data Connect)
+// Get user by ID
 export const getUserById = async (userId) => {
   try {
     if (!userId) {
@@ -60,26 +24,13 @@ export const getUserById = async (userId) => {
     
     logger.debug('Fetching user by ID', { userId });
     
-    // TODO: Data Connect user queries disabled until schema includes Firebase UID field
-    // The current schema uses auto-generated UUIDs, but Firebase Auth uses string UIDs
-    logger.debug('Skipping Data Connect for user queries - schema mismatch with Firebase Auth UIDs');
-    
-    // Fallback to Firestore
-    const userRef = doc(db, USERS_COLLECTION, userId);
-    const userSnap = await getDoc(userRef);
-    
-    if (userSnap.exists()) {
-      const userData = userSnap.data();
-      return {
-        id: userSnap.id,
-        ...userData,
-        joinDate: userData.joinDate?.toDate?.() || userData.joinDate,
-        lastActive: userData.lastActive?.toDate?.() || userData.lastActive,
-        createdAt: userData.createdAt?.toDate?.() || userData.createdAt,
-        updatedAt: userData.updatedAt?.toDate?.() || userData.updatedAt,
-      };
-    } else {
-      // Return null instead of throwing error for better UX
+    // First try REST API
+    try {
+      const response = await api.get(`${USERS_ENDPOINT}/${userId}`);
+      return response.data;
+    } catch (apiError) {
+      // If API fails, fallback to mock for Firebase users
+      console.log('API user not found, likely Firebase user - returning null');
       return null;
     }
   } catch (error) {
@@ -91,27 +42,15 @@ export const getUserById = async (userId) => {
 // Get user by email
 export const getUserByEmail = async (email) => {
   try {
-    const usersRef = collection(db, USERS_COLLECTION);
-    const q = query(usersRef, where('email', '==', email), limit(1));
-    const snap = await getDocs(q);
-    if (snap.empty) return null;
-    const docu = snap.docs[0];
-    const data = docu.data();
-    return {
-      id: docu.id,
-      ...data,
-      joinDate: data.joinDate?.toDate?.() || data.joinDate,
-      lastActive: data.lastActive?.toDate?.() || data.lastActive,
-      createdAt: data.createdAt?.toDate?.() || data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-    };
+    const response = await api.get(`${USERS_ENDPOINT}/by-email`, { params: { email } });
+    return response.data;
   } catch (error) {
     console.error('Error fetching user by email:', error);
     throw error;
   }
 };
 
-// Create new user (with fallback to direct Firestore)
+// Create new user
 export const createUser = async (userData) => {
   try {
     logger.info('Creating new user', { userType: userData.userType, userId: userData.id });
@@ -119,32 +58,15 @@ export const createUser = async (userData) => {
     const userDocData = {
       ...userData,
       status: 'active',
-      joinDate: new Date(),
-      lastActive: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
+      joinDate: new Date().toISOString(),
+      lastActive: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
-    // Try secure storage first, fallback to direct Firestore
-    try {
-      const userId = await secureStorageService.storeSecureData(
-        USERS_COLLECTION, 
-        userData.id || 'auto', 
-        userDocData,
-        { encrypt: true, audit: true }
-      );
-      logger.info('User created with secure storage', { userId });
-      return userId;
-    } catch (secureStorageError) {
-      logger.warn('Secure storage failed, using direct Firestore', { error: secureStorageError });
-      
-      // Fallback to direct Firestore creation
-      const userRef = doc(db, USERS_COLLECTION, userData.id);
-      await setDoc(userRef, userDocData);
-      
-      logger.info('User created with direct Firestore', { userId: userData.id });
-      return userData.id;
-    }
+    const response = await api.post(USERS_ENDPOINT, userDocData);
+    logger.info('User created successfully', { userId: response.data.id });
+    return response.data.id;
   } catch (error) {
     logger.error('Failed to create user', { error, userData });
     errorHandler.handleError(error, { context: 'create_user', userData });
@@ -152,35 +74,16 @@ export const createUser = async (userData) => {
   }
 };
 
-// Update user (with upsert capability)
+// Update user
 export const updateUser = async (userId, updateData) => {
   try {
-    const userRef = doc(db, USERS_COLLECTION, userId);
     const updatedData = {
       ...updateData,
-      updatedAt: serverTimestamp(),
+      updatedAt: new Date().toISOString(),
     };
     
-    // Check if document exists first
-    const userDoc = await getDoc(userRef);
-    
-    if (userDoc.exists()) {
-      // Document exists, update it
-      await updateDoc(userRef, updatedData);
-    } else {
-      // Document doesn't exist, create it
-      await setDoc(userRef, {
-        ...updatedData,
-        id: userId,
-        userType: 'elderly', // Default user type
-        status: 'active',
-        joinDate: serverTimestamp(),
-        lastActive: serverTimestamp(),
-        createdAt: serverTimestamp(),
-      });
-    }
-    
-    return true;
+    const response = await api.put(`${USERS_ENDPOINT}/${userId}`, updatedData);
+    return response.data;
   } catch (error) {
     console.error('Error updating user:', error);
     throw error;
@@ -190,8 +93,7 @@ export const updateUser = async (userId, updateData) => {
 // Delete user
 export const deleteUser = async (userId) => {
   try {
-    const userRef = doc(db, USERS_COLLECTION, userId);
-    await deleteDoc(userRef);
+    await api.delete(`${USERS_ENDPOINT}/${userId}`);
     return true;
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -202,11 +104,7 @@ export const deleteUser = async (userId) => {
 // Update user status (suspend/activate)
 export const updateUserStatus = async (userId, status) => {
   try {
-    const userRef = doc(db, USERS_COLLECTION, userId);
-    await updateDoc(userRef, {
-      status,
-      updatedAt: serverTimestamp(),
-    });
+    await api.patch(`${USERS_ENDPOINT}/${userId}/status`, { status });
     return true;
   } catch (error) {
     console.error('Error updating user status:', error);
@@ -217,24 +115,8 @@ export const updateUserStatus = async (userId, status) => {
 // Get users by type
 export const getUsersByType = async (userType) => {
   try {
-    const usersRef = collection(db, USERS_COLLECTION);
-    const q = query(usersRef, where('type', '==', userType), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    const users = [];
-    querySnapshot.forEach((doc) => {
-      const userData = doc.data();
-      users.push({
-        id: doc.id,
-        ...userData,
-        joinDate: userData.joinDate?.toDate?.() || userData.joinDate,
-        lastActive: userData.lastActive?.toDate?.() || userData.lastActive,
-        createdAt: userData.createdAt?.toDate?.() || userData.createdAt,
-        updatedAt: userData.updatedAt?.toDate?.() || userData.updatedAt,
-      });
-    });
-    
-    return users;
+    const response = await api.get(`${USERS_ENDPOINT}/by-type`, { params: { type: userType } });
+    return response.data;
   } catch (error) {
     console.error('Error fetching users by type:', error);
     throw error;
@@ -244,24 +126,8 @@ export const getUsersByType = async (userType) => {
 // Get users by status
 export const getUsersByStatus = async (status) => {
   try {
-    const usersRef = collection(db, USERS_COLLECTION);
-    const q = query(usersRef, where('status', '==', status), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    const users = [];
-    querySnapshot.forEach((doc) => {
-      const userData = doc.data();
-      users.push({
-        id: doc.id,
-        ...userData,
-        joinDate: userData.joinDate?.toDate?.() || userData.joinDate,
-        lastActive: userData.lastActive?.toDate?.() || userData.lastActive,
-        createdAt: userData.createdAt?.toDate?.() || userData.createdAt,
-        updatedAt: userData.updatedAt?.toDate?.() || userData.updatedAt,
-      });
-    });
-    
-    return users;
+    const response = await api.get(`${USERS_ENDPOINT}/by-status`, { params: { status } });
+    return response.data;
   } catch (error) {
     console.error('Error fetching users by status:', error);
     throw error;
@@ -271,77 +137,26 @@ export const getUsersByStatus = async (status) => {
 // Search users
 export const searchUsers = async (searchTerm) => {
   try {
-    const usersRef = collection(db, USERS_COLLECTION);
-    const querySnapshot = await getDocs(usersRef);
-    
-    const users = [];
-    querySnapshot.forEach((doc) => {
-      const userData = doc.data();
-      const user = {
-        id: doc.id,
-        ...userData,
-        joinDate: userData.joinDate?.toDate?.() || userData.joinDate,
-        lastActive: userData.lastActive?.toDate?.() || userData.lastActive,
-        createdAt: userData.createdAt?.toDate?.() || userData.createdAt,
-        updatedAt: userData.updatedAt?.toDate?.() || userData.updatedAt,
-      };
-      
-      // Search in name, email, and phone
-      const searchLower = searchTerm.toLowerCase();
-      if (
-        user.name?.toLowerCase().includes(searchLower) ||
-        user.email?.toLowerCase().includes(searchLower) ||
-        user.phone?.includes(searchTerm)
-      ) {
-        users.push(user);
-      }
-    });
-    
-    return users;
+    const response = await api.get(`${USERS_ENDPOINT}/search`, { params: { q: searchTerm } });
+    return response.data;
   } catch (error) {
     console.error('Error searching users:', error);
     throw error;
   }
 };
 
-// Real-time listener for users
+// Real-time listener for users (not supported with REST API - fallback to polling)
 export const subscribeToUsers = (callback) => {
-  const usersRef = collection(db, USERS_COLLECTION);
-  const q = query(usersRef, orderBy('createdAt', 'desc'));
-  
-  return onSnapshot(q, (querySnapshot) => {
-    const users = [];
-    querySnapshot.forEach((doc) => {
-      const userData = doc.data();
-      users.push({
-        id: doc.id,
-        ...userData,
-        joinDate: userData.joinDate?.toDate?.() || userData.joinDate,
-        lastActive: userData.lastActive?.toDate?.() || userData.lastActive,
-        createdAt: userData.createdAt?.toDate?.() || userData.createdAt,
-        updatedAt: userData.updatedAt?.toDate?.() || userData.updatedAt,
-      });
-    });
-    callback(users);
-  });
+  console.warn('Real-time subscriptions not supported with REST API. Use polling instead.');
+  // Return an unsubscribe function for compatibility
+  return () => {};
 };
 
 // Get user statistics
 export const getUserStats = async () => {
   try {
-    const users = await getAllUsers();
-    
-    const stats = {
-      total: users.length,
-      elderly: users.filter(user => user.type === 'elderly').length,
-      caregivers: users.filter(user => user.type === 'caregiver').length,
-      doctors: users.filter(user => user.type === 'doctor').length,
-      active: users.filter(user => user.status === 'active').length,
-      inactive: users.filter(user => user.status === 'inactive').length,
-      suspended: users.filter(user => user.status === 'suspended').length,
-    };
-    
-    return stats;
+    const response = await api.get(`${USERS_ENDPOINT}/stats`);
+    return response.data;
   } catch (error) {
     console.error('Error getting user stats:', error);
     throw error;

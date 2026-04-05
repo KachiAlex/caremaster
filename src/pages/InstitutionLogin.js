@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
-import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
-import authManager from '../utils/authManager';
-import sessionManager from '../utils/sessionManager';
-import { verifyPasswordSecure } from '../utils/securePasswordAuth';
+import { useUser } from '../contexts/UserContext';
 import rateLimiter from '../utils/rateLimiter';
 import { 
   Building2, 
@@ -25,30 +19,32 @@ import authSecurityService from '../services/authSecurityService';
 import { fetchLicenseStatus } from '../services/licenseService';
 
 const InstitutionLogin = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { userProfile } = useUser();
-  const institutionId = searchParams.get('institution');
-  const effectiveInstitutionId = institutionId || userProfile?.institutionId;
-  const roleParam = searchParams.get('role') || 'caregiver';
-  
+  const [searchParams] = useSearchParams();
+  const { login: userLogin } = useUser();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [institution, setInstitution] = useState(null);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [institution, setInstitution] = useState(null);
   const [error, setError] = useState('');
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [resettingPassword, setResettingPassword] = useState(false);
-  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     displayName: '',
     phone: '',
-    role: roleParam
+    role: 'caregiver', // caregiver, nurse, doctor, pharmacist
+    rememberMe: false
   });
+
+  // Get role and institution from URL params
+  const roleParam = searchParams.get('role') || 'caregiver';
+  const institutionId = searchParams.get('institution') || localStorage.getItem('institutionId') || 'demo-institution';
+  
+  // Determine effective institution ID
+  const effectiveInstitutionId = institution?.id || institutionId;
 
   useEffect(() => {
     const loadInstitution = async () => {
@@ -59,15 +55,9 @@ const InstitutionLogin = () => {
       }
 
       try {
-        const institutionDoc = await getDoc(doc(db, 'institutions', effectiveInstitutionId));
-        
-        if (!institutionDoc.exists()) {
-          setError('Institution not found');
-          setLoading(false);
-          return;
-        }
-
-        setInstitution({ id: institutionDoc.id, ...institutionDoc.data() });
+        const response = await fetch(`https://api.getcaremaster.com/institutions/${effectiveInstitutionId}`);
+        const data = await response.json();
+        setInstitution(data);
         setLoading(false);
       } catch (error) {
         console.error('Error loading institution:', error);
@@ -195,333 +185,17 @@ const InstitutionLogin = () => {
         }
       }
       
-      // Check if user exists and determine auth method
-      console.log('🔍 Checking user for:', formData.email);
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('email', '==', formData.email));
-      const querySnapshot = await getDocs(q);
-      
-      console.log('📊 Found', querySnapshot.size, 'user(s) with this email');
-      
-      let userDocData = null;
-      let userDocId = null;
-      querySnapshot.forEach((userDoc) => {
-        const data = userDoc.data();
-        // Check if belongs to this institution
-        if (data.institutionId === institutionId) {
-          userDocData = data;
-          userDocId = userDoc.id;
-        }
+      // Use UserContext login method
+      const result = await userLogin({
+        matric_number: formData.email,
+        password: formData.password
       });
       
-      if (!userDocData) {
-        toast.error('User not found for this institution');
-        setSubmitting(false);
-        return;
-      }
-      
-      const userRole = userDocData.role || userDocData.type || userDocData.userType;
-      const isAdmin = userRole === 'admin' || 
-                     userRole === 'institutionAdmin' ||
-                     userDocData.userType === 'admin' || 
-                     userDocData.type === 'admin' ||
-                     userDocData.isAdmin === true;
-      
-      console.log('👤 User check:', {
-        userId: userDocId,
-        hasPassword: !!userDocData.password,
-        institutionId: userDocData.institutionId,
-        targetInstitution: institutionId,
-        userType: userDocData.userType || userDocData.type,
-        isAdmin: isAdmin
-      });
-      
-      // For admins, use Firebase Auth (they don't have password in Firestore)
-      // For other users, try custom auth first (caregivers created by admin)
-      let customAuthUser = null;
-      let shouldUseFirebaseAuth = isAdmin;
-      
-      if (!shouldUseFirebaseAuth && userDocData.password) {
-        // SECURITY FIX: Use secure password verification instead of plain text comparison
-        const institutionMatches = userDocData.institutionId === institutionId;
+      if (result.success) {
+        // Reset rate limit on successful authentication
+        rateLimiter.reset(rateLimitKey);
         
-        if (!institutionMatches) {
-          console.log('❌ Institution mismatch');
-        } else {
-          // Verify password securely
-          const passwordVerification = await verifyPasswordSecure(formData.password, userDocData.password);
-          
-          console.log('🔐 Custom auth check:', {
-            institutionMatches,
-            passwordVerified: passwordVerification === true || passwordVerification?.verified === true,
-            needsMigration: passwordVerification?.needsMigration === true
-          });
-          
-          if (passwordVerification === true || passwordVerification?.verified === true) {
-            customAuthUser = { uid: userDocId, ...userDocData };
-            
-            // If password needs migration, update it in Firestore
-            if (passwordVerification?.needsMigration && passwordVerification?.hashedPassword) {
-              try {
-                await setDoc(doc(db, 'users', userDocId), {
-                  password: passwordVerification.hashedPassword,
-                  passwordMigrated: true,
-                  passwordMigratedAt: new Date().toISOString()
-                }, { merge: true });
-                console.log('✅ Password migrated to secure hash');
-              } catch (migrationError) {
-                console.error('Failed to migrate password:', migrationError);
-                // Continue with login even if migration fails
-              }
-            }
-            
-            console.log('✅ Custom auth successful!');
-            // Reset rate limit on successful authentication
-            rateLimiter.reset(rateLimitKey);
-          } else {
-            console.log('❌ Password mismatch - will try Firebase Auth');
-            // Rate limit will be checked again for Firebase Auth attempt
-          }
-        }
-      } else if (isAdmin) {
-        console.log('🔐 Admin user detected - will use Firebase Auth');
-        shouldUseFirebaseAuth = true;
-      }
-      
-      // If custom auth successful, validate role and redirect
-      if (customAuthUser && !shouldUseFirebaseAuth) {
-        // Check multiple role fields for flexibility
-        const userRole = customAuthUser.role || customAuthUser.type || customAuthUser.userType;
-        const isAdmin = userRole === 'admin' || 
-                       userRole === 'institutionAdmin' || 
-                       customAuthUser.userType === 'admin' || 
-                       customAuthUser.type === 'admin' ||
-                       customAuthUser.isAdmin === true;
-        
-        console.log('🔍 User role check:', { 
-          userRole, 
-          isAdmin,
-          roleField: customAuthUser.role,
-          typeField: customAuthUser.type,
-          userTypeField: customAuthUser.userType,
-          roleParam 
-        });
-        
-        // Validate user role matches the portal
-        if (roleParam === 'admin' && !isAdmin) {
-          // Check if this is a known admin email that should have admin access
-          const adminEmails = ['admin@bulah.com', 'admin@Care Master.com', 'admin2@Care Master.com', 'newadmin@Care Master.com'];
-          const isKnownAdmin = adminEmails.includes(customAuthUser.email?.toLowerCase());
-          
-          if (!isKnownAdmin) {
-            toast.error(`This is the Admin Portal. You are registered as ${userRole}. Please use the Caregiver Portal.`);
-            setSubmitting(false);
-            return;
-          } else {
-            console.log('🔓 Known admin email detected, allowing admin portal access:', customAuthUser.email);
-          }
-        }
-        
-        if (roleParam === 'caregiver' && !['caregiver', 'doctor', 'nurse'].includes(userRole) && !isAdmin) {
-          toast.error(`This is the Caregiver Portal. You are registered as ${userRole}. Please use the Admin Portal.`);
-          setSubmitting(false);
-          return;
-        }
-        
-        if (roleParam === 'pharmacist' && userRole !== 'pharmacist') {
-          toast.error(`This is the Pharmacist Portal. You are registered as ${userRole}.`);
-          setSubmitting(false);
-          return;
-        }
-        
-        console.log('✅ Role validation passed:', { roleParam, userRole, isAdmin });
-        
-        // Try to sign in first (most common case for returning users)
-        try {
-          console.log('Attempting sign in for:', formData.email);
-          
-          // Use authManager for role-specific sign-in
-          const userCredential = await authManager.signInWithRole(
-            formData.email,
-            formData.password,
-            userRole || roleParam
-          );
-          
-          console.log('✅ Signed in successfully with UID:', userCredential.user.uid);
-          
-          // Sync custom auth data to Firebase Auth user document
-          console.log('🔄 Syncing custom auth data to Firebase Auth user document...');
-          await setDoc(doc(db, 'users', userCredential.user.uid), {
-            ...customAuthUser,
-            uid: userCredential.user.uid,
-            password: formData.password,
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
-          console.log('✅ User document synced');
-          
-          // LICENSE CHECK - Verify institution has active license
-          console.log('🔐 Checking license for institution:', institutionId);
-          try {
-            const licenseStatus = await fetchLicenseStatus(institutionId);
-            console.log('📋 License status:', licenseStatus);
-            
-            if (!licenseStatus.active) {
-              console.error('❌ Institution license is not active:', licenseStatus.reason);
-              toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
-              
-              // Sign out user immediately
-              await signOut(auth);
-              
-              // Redirect to license activation page
-              navigate(`/license-required?institution=${institutionId}`, { replace: true });
-              setSubmitting(false);
-              return;
-            }
-            
-            console.log('✅ License verified - allowing access');
-          } catch (licenseError) {
-            console.error('❌ Error checking license:', licenseError);
-            toast.error('Unable to verify institution license. Access denied.');
-            
-            // Sign out user on license check failure
-            await signOut(auth);
-            navigate(`/license-required?institution=${institutionId}`, { replace: true });
-            setSubmitting(false);
-            return;
-          }
-          
-          toast.success('Login successful!');
-          await routeUserToDashboard(userCredential.user, customAuthUser);
-          return;
-        } catch (signInError) {
-          console.log('Sign in error:', signInError.code);
-          
-          // If user not found in Firebase Auth, create the account (first-time login)
-          if (signInError.code === 'auth/user-not-found') {
-            console.log('User not found in Firebase Auth, creating account...');
-            try {
-              // Create account with role-specific persistence
-              const authResult = await createUserWithEmailAndPassword(
-                auth,
-                formData.email,
-                formData.password
-              );
-              
-              // Store the role session
-              authManager.storeRoleSession(userRole || roleParam, {
-                uid: authResult.user.uid,
-                email: authResult.user.email,
-                displayName: authResult.user.displayName,
-                lastSignIn: Date.now()
-              });
-              
-              console.log('✅ Firebase Auth account created:', authResult.user.uid);
-              
-              // Update user document to new auth UID
-              await setDoc(doc(db, 'users', authResult.user.uid), {
-                ...customAuthUser,
-                uid: authResult.user.uid,
-                password: formData.password,
-                updatedAt: new Date().toISOString()
-              }, { merge: true });
-              
-              // LICENSE CHECK - Verify institution has active license (for new Firebase Auth accounts)
-              console.log('🔐 Checking license for institution:', institutionId);
-              try {
-                const licenseStatus = await fetchLicenseStatus(institutionId);
-                console.log('📋 License status:', licenseStatus);
-                
-                if (!licenseStatus.active) {
-                  console.error('❌ Institution license is not active:', licenseStatus.reason);
-                  toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
-                  
-                  // Sign out user immediately
-                  await signOut(auth);
-                  
-                  // Redirect to license activation page
-                  navigate(`/license-required?institution=${institutionId}`, { replace: true });
-                  setSubmitting(false);
-                  return;
-                }
-                
-                console.log('✅ License verified - allowing access');
-              } catch (licenseError) {
-                console.error('❌ Error checking license:', licenseError);
-                toast.error('Unable to verify institution license. Access denied.');
-                
-                // Sign out user on license check failure
-                await signOut(auth);
-                navigate(`/license-required?institution=${institutionId}`, { replace: true });
-                setSubmitting(false);
-                return;
-              }
-              
-              toast.success('Login successful! Setting up your account...');
-              await routeUserToDashboard(authResult.user, customAuthUser);
-              return;
-            } catch (createError) {
-              console.error('Failed to create Firebase Auth account:', createError);
-              toast.error('Failed to create account. Please try again.');
-              setSubmitting(false);
-              return;
-            }
-          } else if (signInError.code === 'auth/wrong-password') {
-            toast.error('Incorrect password. Please try again.');
-            setSubmitting(false);
-            return;
-          } else {
-            console.error('Sign in failed:', signInError);
-            // Continue to fallback
-          }
-        }
-      }
-
-      // For admins or if custom auth failed, use standard Firebase Auth login
-      console.log('🔐 Using Firebase Auth login (admin or custom auth not available)');
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-
-      // Verify user belongs to this institution
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const userRole = userData.type || userData.userType;
-        
-        // Check if user belongs to this institution
-        if (userData.institutionId !== institutionId) {
-          await auth.signOut();
-          toast.error('You are not authorized to access this institution');
-          setSubmitting(false);
-          return;
-        }
-
-        // Validate user role matches the portal they're trying to access
-        if (roleParam === 'admin' && userRole !== 'admin' && userRole !== 'institutionAdmin') {
-          await auth.signOut();
-          toast.error(`You are logged in as ${userRole}, not admin. Please use the correct portal.`);
-          setSubmitting(false);
-          return;
-        }
-        
-        if (roleParam === 'caregiver' && !['caregiver', 'doctor', 'nurse'].includes(userRole)) {
-          await auth.signOut();
-          toast.error(`You are logged in as ${userRole}. Please use the Admin portal or Pharmacist portal.`);
-          setSubmitting(false);
-          return;
-        }
-        
-        if (roleParam === 'pharmacist' && userRole !== 'pharmacist') {
-          await auth.signOut();
-          toast.error(`You are logged in as ${userRole}, not pharmacist. Please use the correct portal.`);
-          setSubmitting(false);
-          return;
-        }
-
-        // LICENSE CHECK - Verify institution has active license (Firebase Auth path)
+        // LICENSE CHECK - Verify institution has active license
         console.log('🔐 Checking license for institution:', institutionId);
         try {
           const licenseStatus = await fetchLicenseStatus(institutionId);
@@ -531,10 +205,9 @@ const InstitutionLogin = () => {
             console.error('❌ Institution license is not active:', licenseStatus.reason);
             toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
             
-            // Sign out user immediately
-            await signOut(auth);
-            
-            // Redirect to license activation page
+            // Clear auth and redirect
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             navigate(`/license-required?institution=${institutionId}`, { replace: true });
             setSubmitting(false);
             return;
@@ -545,31 +218,23 @@ const InstitutionLogin = () => {
           console.error('❌ Error checking license:', licenseError);
           toast.error('Unable to verify institution license. Access denied.');
           
-          // Sign out user on license check failure
-          await signOut(auth);
+          // Clear auth and redirect
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
           navigate(`/license-required?institution=${institutionId}`, { replace: true });
           setSubmitting(false);
           return;
         }
-
-        toast.success('Login successful!');
         
-        // Route to appropriate dashboard
-        await routeUserToDashboard(userCredential.user, userData);
+        toast.success('Login successful!');
+        await routeUserToDashboard(result.user);
       } else {
-        await auth.signOut();
-        toast.error('User profile not found');
+        setError(result.message || 'Login failed');
+        toast.error(result.message || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
-      
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        setError('Invalid email or password');
-      } else if (error.code === 'auth/too-many-requests') {
-        setError('Too many failed attempts. Please try again later.');
-      } else {
-        setError(error.message || 'Login failed');
-      }
+      setError(error.message || 'Login failed');
       toast.error('Login failed');
     } finally {
       setSubmitting(false);
@@ -601,76 +266,71 @@ const InstitutionLogin = () => {
     }
 
     try {
-      // Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-
-      // Create Firestore user profile
-      const userProfile = {
-        uid: userCredential.user.uid,
+      // Create user account via API
+      const response = await api.post('/api/auth/register', {
+        matric_number: `CG/${Date.now()}`, // Generate caregiver matric number
         email: formData.email,
-        displayName: formData.displayName,
-        phone: formData.phone || '',
-        institutionId: institutionId,
-        institutionName: institution.name,
-        type: formData.role,
-        userType: formData.role,
-        role: formData.role,
-        active: true,
-        onboardingComplete: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+        password: formData.password,
+        first_name: formData.displayName.split(' ')[0],
+        last_name: formData.displayName.split(' ').slice(1).join(' '),
+        department: 'Healthcare', // Default department
+        level: 'Staff', // Default level
+        session: '2024-2025', // Default session
+        user_type: formData.role === 'admin' ? 'admin' : 'student' // Backend only supports these types
+      });
 
-      await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
-
-      // LICENSE CHECK - Verify institution has active license (for new sign-ups)
-      console.log('🔐 Checking license for institution:', institutionId);
-      try {
-        const licenseStatus = await fetchLicenseStatus(institutionId);
-        console.log('📋 License status:', licenseStatus);
-        
-        if (!licenseStatus.active) {
-          console.error('❌ Institution license is not active:', licenseStatus.reason);
-          toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
+      if (response.data.success) {
+        // LICENSE CHECK - Verify institution has active license (for new sign-ups)
+        console.log('🔐 Checking license for institution:', institutionId);
+        try {
+          const licenseStatus = await fetchLicenseStatus(institutionId);
+          console.log('📋 License status:', licenseStatus);
           
-          // Sign out user immediately
-          await signOut(auth);
+          if (!licenseStatus.active) {
+            console.error('❌ Institution license is not active:', licenseStatus.reason);
+            toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}.`);
+            
+            // Clear auth and redirect
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            navigate(`/license-required?institution=${institutionId}`, { replace: true });
+            setSubmitting(false);
+            return;
+          }
           
-          // Redirect to license activation page
+          console.log('✅ License verified - allowing access');
+        } catch (licenseError) {
+          console.error('❌ Error checking license:', licenseError);
+          toast.error('Unable to verify institution license. Access denied.');
+          
+          // Clear auth and redirect
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
           navigate(`/license-required?institution=${institutionId}`, { replace: true });
           setSubmitting(false);
           return;
         }
-        
-        console.log('✅ License verified - allowing access');
-      } catch (licenseError) {
-        console.error('❌ Error checking license:', licenseError);
-        toast.error('Unable to verify institution license. Access denied.');
-        
-        // Sign out user on license check failure
-        await signOut(auth);
-        navigate(`/license-required?institution=${institutionId}`, { replace: true });
-        setSubmitting(false);
-        return;
-      }
 
-      toast.success('Account created successfully!');
-      
-      // Route to appropriate dashboard
-      await routeUserToDashboard(userCredential.user, userProfile);
+        toast.success('Account created successfully!');
+        
+        // Store token if provided
+        if (response.data.data?.token) {
+          localStorage.setItem('token', response.data.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        }
+        
+        // Route to appropriate dashboard
+        await routeUserToDashboard(null, response.data.data.user);
+      }
     } catch (error) {
       console.error('Sign up error:', error);
       
-      if (error.code === 'auth/email-already-in-use') {
+      if (error.response?.status === 409) {
         setError('An account with this email already exists');
-      } else if (error.code === 'auth/weak-password') {
+      } else if (error.response?.status === 400) {
         setError('Password is too weak');
       } else {
-        setError(error.message || 'Failed to create account');
+        setError(error.response?.data?.message || error.message || 'Failed to create account');
       }
       toast.error('Sign up failed');
     } finally {
