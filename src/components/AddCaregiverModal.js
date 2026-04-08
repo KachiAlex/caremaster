@@ -8,6 +8,8 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    countryCode: '+1',
+    phoneNumber: '',
     phone: '',
     password: '',
     role: 'caregiver' // caregiver, nurse, doctor
@@ -35,7 +37,7 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
       newErrors.email = 'Invalid email format';
     }
     
-    if (!formData.phone.trim()) {
+    if (!formData.phoneNumber.trim()) {
       newErrors.phone = 'Phone number is required';
     }
     
@@ -76,7 +78,7 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
         firstName,
         lastName,
         email: formData.email.trim(),
-        phone: formData.phone.trim(),
+        phone: `${formData.countryCode}${formData.phoneNumber.trim()}`,
         userType: userTypeMap[formData.role] || 'caregiver',
         password: formData.password
       };
@@ -89,9 +91,9 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
         first_name: userData.firstName,
         last_name: userData.lastName,
         department: 'Healthcare', // Default department
-        level: 'Staff', // Default level
-        session: '2024-2025', // Default session
-        user_type: 'student' // Backend only supports student/admin
+        level: '100', // Valid level for backend
+        session: '2024/2025', // Valid session format
+        user_type: 'student' // Backend only supports student
       });
       
       const result = response.data.data?.user?.id;
@@ -102,11 +104,9 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
           <div className="font-bold mb-2">{roleLabel} Account Created Successfully!</div>
           <div className="text-sm">
             <div>Email: <strong>{userData.email}</strong></div>
+            <div>Matric: <strong>CG/${Date.now()}</strong></div>
             <div className="mt-2 text-xs opacity-80">
-              The {roleLabel.toLowerCase()} account has been created in the system.
-            </div>
-            <div className="mt-1 text-xs text-amber-600 font-medium">
-              ⚠️ Please securely share the login credentials with the {roleLabel.toLowerCase()}.
+              Account created successfully. User can log in with email as matric number.
             </div>
           </div>
         </>,
@@ -117,6 +117,8 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
       setFormData({
         name: '',
         email: '',
+        countryCode: '+1',
+        phoneNumber: '',
         phone: '',
         password: '',
         role: 'caregiver'
@@ -239,16 +241,162 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
               <Phone className="inline h-4 w-4 mr-1" />
               Mobile Number *
             </label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.phone ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="+1 (555) 123-4567"
-              disabled={loading}
-            />
+            <div className="flex space-x-2">
+              {/* Country Code Dropdown */}
+              <select
+                value={formData.countryCode}
+                onChange={(e) => setFormData({...formData, countryCode: e.target.value})}
+                className={`px-3 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.phone ? 'border-red-500' : 'border-gray-300'
+                }`}
+                disabled={loading}
+              >
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+44">🇬🇧 +44</option>
+                <option value="+234">🇳🇬 +234</option>
+                <option value="+91">🇮🇳 +91</option>
+                <option value="+86">🇨🇳 +86</option>
+                <option value="+81">🇯🇵 +81</option>
+                <option value="+82">🇰🇷 +82</option>
+                <option value="+49">🇩🇪 +49</option>
+                <option value="+33">🇫🇷 +33</option>
+                <option value="+39">🇮🇹 +39</option>
+                <option value="+34">🇪🇸 +34</option>
+                <option value="+31">🇳🇱 +31</option>
+                <option value="+46">🇸🇪 +46</option>
+                <option value="+47">🇳🇴 +47</option>
+                <option value="+45">🇩🇰 +45</option>
+                <option value="+41">🇨🇭 +41</option>
+                <option value="+43">🇦🇹 +43</option>
+                <option value="+48">🇵🇱 +48</option>
+                <option value="+420">🇨🇿 +420</option>
+                <option value="+351">🇵🇹 +351</option>
+                <option value="+358">🇫🇮 +358</option>
+                <option value="+354">🇮🇸 +354</option>
+                <option value="+353">🇮🇪 +353</option>
+                <option value="+352">🇱🇺 +352</option>
+                <option value="+32">🇧🇪 +32</option>
+                <option value="+27">🇿🇦 +27</option>
+                <option value="+254">🇰🇪 +254</option>
+                <option value="+255">🇹🇿 +255</option>
+                <option value="+256">🇺🇬 +256</option>
+                <option value="+257">🇧🇮 +257</option>
+                <option value="+258">🇲🇿 +258</option>
+                <option value="+260">🇿🇲 +260</option>
+                <option value="+263">🇿🇼 +263</option>
+                <option value="+264">🇳🇦 +264</option>
+                <option value="+265">🇲🇼 +265</option>
+                <option value="+266">🇱🇸 +266</option>
+                <option value="+267">🇧🇼 +267</option>
+                <option value="+268">🇸🇿 +268</option>
+                <option value="+269">🇰🇲 +269</option>
+                <option value="+250">🇷🇼 +250</option>
+                <option value="+251">🇪🇹 +251</option>
+                <option value="+252">🇸🇴 +252</option>
+                <option value="+253">🇩🇯 +253</option>
+                <option value="+222">🇲🇷 +222</option>
+                <option value="+221">🇸🇳 +221</option>
+                <option value="+220">🇬🇲 +220</option>
+                <option value="+218">🇱🇾 +218</option>
+                <option value="+216">🇹🇳 +216</option>
+                <option value="+213">🇩🇿 +213</option>
+                <option value="+212">🇲🇦 +212</option>
+                <option value="+20">🇪🇬 +20</option>
+                <option value="+966">🇸🇦 +966</option>
+                <option value="+971">🇦🇪 +971</option>
+                <option value="+968">🇴🇲 +968</option>
+                <option value="+973">🇧🇭 +973</option>
+                <option value="+974">🇶🇦 +974</option>
+                <option value="+965">🇰🇼 +965</option>
+                <option value="+962">🇯🇴 +962</option>
+                <option value="+961">🇱🇧 +961</option>
+                <option value="+963">🇸🇾 +963</option>
+                <option value="+964">🇮🇶 +964</option>
+                <option value="+972">🇮🇱 +972</option>
+                <option value="+970">🇵🇸 +970</option>
+                <option value="+98">🇮🇷 +98</option>
+                <option value="+93">🇦🇫 +93</option>
+                <option value="+92">🇵🇰 +92</option>
+                <option value="+94">🇱🇰 +94</option>
+                <option value="+95">🇲🇲 +95</option>
+                <option value="+880">🇧🇩 +880</option>
+                <option value="+977">🇳🇵 +977</option>
+                <option value="+975">🇧🇹 +975</option>
+                <option value="+855">🇰🇭 +855</option>
+                <option value="+856">🇱🇦 +856</option>
+                <option value="+84">🇻🇳 +84</option>
+                <option value="+62">🇮🇩 +62</option>
+                <option value="+65">🇸🇬 +65</option>
+                <option value="+60">🇲🇾 +60</option>
+                <option value="+63">🇵🇭 +63</option>
+                <option value="+672">🇦🇺 +672</option>
+                <option value="+64">🇳🇿 +64</option>
+                <option value="+61">🇦🇺 +61</option>
+                <option value="+7">🇷🇺 +7</option>
+                <option value="+995">🇬🇪 +995</option>
+                <option value="+994">🇦🇿 +994</option>
+                <option value="+993">🇹🇯 +993</option>
+                <option value="+992">🇹🇯 +992</option>
+                <option value="+374">🇦🇲 +374</option>
+                <option value="+373">🇲🇩 +373</option>
+                <option value="+380">🇺🇦 +380</option>
+                <option value="+381">🇷🇸 +381</option>
+                <option value="+382">🇲🇪 +382</option>
+                <option value="+383">🇧🇦 +383</option>
+                <option value="+385">🇭🇷 +385</option>
+                <option value="+386">🇸🇮 +386</option>
+                <option value="+387">🇧🇦 +387</option>
+                <option value="+389">🇲🇰 +389</option>
+                <option value="+370">🇱🇹 +370</option>
+                <option value="+371">🇱🇻 +371</option>
+                <option value="+372">🇪🇪 +372</option>
+                <option value="+36">🇭🇺 +36</option>
+                <option value="+359">🇧🇬 +359</option>
+                <option value="+357">🇨🇾 +357</option>
+                <option value="+40">🇷🇴 +40</option>
+                <option value="+90">🇹🇷 +90</option>
+                <option value="+225">🇨🇮 +225</option>
+                <option value="+224">🇬🇳 +224</option>
+                <option value="+226">🇧🇫 +226</option>
+                <option value="+229">🇧🇯 +229</option>
+                <option value="+242">🇨🇬 +242</option>
+                <option value="+243">🇨🇩 +243</option>
+                <option value="+245">🇬🇼 +245</option>
+                <option value="+241">🇬🇦 +241</option>
+                <option value="+240">🇬🇶 +240</option>
+                <option value="+239">🇸🇹 +239</option>
+                <option value="+238">🇨🇻 +238</option>
+                <option value="+237">🇨🇲 +237</option>
+                <option value="+236">🇨🇫 +236</option>
+                <option value="+235">🇹🇩 +235</option>
+                <option value="+233">🇬🇭 +233</option>
+                <option value="+232">🇸🇱 +232</option>
+                <option value="+231">🇱🇷 +231</option>
+                <option value="+230">🇲🇺 +230</option>
+                <option value="+229">🇧🇯 +229</option>
+                <option value="+228">🇹🇬 +228</option>
+                <option value="+227">🇳🇪 +227</option>
+                <option value="+226">🇧🇫 +226</option>
+                <option value="+225">🇨🇮 +225</option>
+                <option value="+224">🇬🇳 +224</option>
+                <option value="+223">🇧🇫 +223</option>
+                <option value="+222">🇲🇷 +222</option>
+                <option value="+221">🇸🇳 +221</option>
+                <option value="+220">🇬🇲 +220</option>
+              </select>
+              
+              {/* Phone Number Input */}
+              <input
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.phone ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="555-123-4567"
+                disabled={loading}
+              />
+            </div>
             {errors.phone && (
               <p className="mt-1 text-sm text-red-600 flex items-center">
                 <AlertCircle className="h-3 w-3 mr-1" />

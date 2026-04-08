@@ -274,9 +274,9 @@ const InstitutionLogin = () => {
         first_name: formData.displayName.split(' ')[0],
         last_name: formData.displayName.split(' ').slice(1).join(' '),
         department: 'Healthcare', // Default department
-        level: 'Staff', // Default level
-        session: '2024-2025', // Default session
-        user_type: formData.role === 'admin' ? 'admin' : 'student' // Backend only supports these types
+        level: '100', // Valid level for backend
+        session: '2024/2025', // Valid session format
+        user_type: 'student' // Backend only supports student
       });
 
       if (response.data.success) {
