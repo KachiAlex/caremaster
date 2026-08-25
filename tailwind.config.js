@@ -36,10 +36,35 @@ module.exports = {
           700: '#1d4ed8',
           800: '#1e40af',
           900: '#1e3a8a',
-        }
+        },
+        // CareMaster design system colors
+        ink: {
+          DEFAULT: '#12302C',
+          soft: '#1D423C',
+          deep: '#0E2622',
+        },
+        sand: {
+          DEFAULT: '#F2EAD8',
+          deep: '#E7D9B8',
+        },
+        cream: '#FBF7EF',
+        gold: {
+          DEFAULT: '#D9A441',
+          deep: '#B9832E',
+        },
+        coral: {
+          DEFAULT: '#DD6E4F',
+          soft: '#F4DFD4',
+        },
+        sage: {
+          DEFAULT: '#6B9080',
+          soft: '#DDE7DF',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Space Grotesk', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'monospace'],
       },
       // Mobile-optimized spacing
       spacing: {

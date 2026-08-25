@@ -28,7 +28,11 @@ import {
   Brain,
   FlaskConical,
   Dumbbell,
-  UserCheck
+  UserCheck,
+  Home,
+  Users,
+  CheckSquare,
+  HelpCircle
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { caregiverAPI } from '../api/caregiverAPI';
@@ -41,14 +45,15 @@ import { emergencyAPI } from '../api/emergencyAPI';
 import CaregiverGuard from '../components/CaregiverGuard';
 import CaregiverSettings from '../components/CaregiverSettings';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
+import DashboardLayout from '../components/DashboardLayout';
 import NurseVitalsInput from '../components/NurseVitalsInput';
 import NurseCareLogs from '../components/NurseCareLogs';
 import NurseReportGenerator from '../components/NurseReportGenerator';
 import NurseMedicationManager from '../components/NurseMedicationManager';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
-import { toast } from 'react-toastify';
 import AssignmentCalendar from '../components/AssignmentCalendar';
+import { toast } from 'react-toastify';
 
 const CaregiverDashboard = () => {
   const { user, userProfile, institutionId, institutionData } = useUser();
@@ -1204,134 +1209,87 @@ const CaregiverDashboard = () => {
     );
   };
 
+  // CareMaster design system - tabs for DashboardLayout sidebar
+  const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'clients', label: 'Clients', icon: Users },
+    ...(isNonMedicalCaregiver ? [
+      { id: 'prescriptions', label: 'Prescriptions (View)', icon: Pill },
+      { id: 'consultations', label: 'Consultations (View)', icon: Stethoscope },
+      { id: 'diagnostics', label: 'Diagnostics (View)', icon: FileText },
+    ] : []),
+    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'help', label: 'Help & Support', icon: HelpCircle },
+  ];
+
+  const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label || 'Dashboard';
+  const displayName = userProfile?.name || caregiver?.name || userProfile?.displayName || 'Caregiver';
+
+  const handleLogout = () => {
+    import('backend/auth').then(({ signOut, getAuth }) => {
+      signOut(getAuth()).then(() => {
+        window.location.href = '/login';
+      }).catch((error) => {
+        console.error('Error signing out:', error);
+      });
+    });
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-64 cm-dashboard-body">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
       </div>
     );
   }
 
   return (
     <CaregiverGuard>
-    <div className="w-full min-h-screen bg-gray-50 dashboard-full-width dashboard-container pb-16">
-      {/* Header */}
-      <div className="w-full bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className={`p-3 bg-${dashboardConfig.color}-100 rounded-full`}>
-              <dashboardConfig.icon className={`h-8 w-8 text-${dashboardConfig.color}-600`} />
-            </div>
-            <UserAvatarDropdown
-              userProfile={userProfile || caregiver}
-              user={user}
-              profileImageUrl={profileImage || userProfile?.photoURL || userProfile?.profilePictureUrl}
-              size="lg"
-            />
-            <div className="space-y-1">
-              <h1 className="text-2xl font-bold text-gray-900">{dashboardConfig.title}</h1>
-              <p className="text-gray-600">Welcome, {userProfile?.name || caregiver?.name}</p>
-              <p className="text-sm text-gray-500">{userProfile?.medicalQualification || 'Healthcare Professional'}</p>
-              {institutionId && (
-                <div className="flex items-center mt-1">
-                  <Shield className="h-3 w-3 text-green-600 mr-1" />
-                  <span className="text-xs text-green-600 font-medium">
-                    {institutionData?.name || `Institution: ${institutionId.slice(0, 8)}...`}
-                  </span>
-                </div>
-              )}
-            </div>
+    <div className="min-h-screen cm-dashboard-body">
+      <DashboardLayout
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          setShowSettings(tab === 'settings');
+        }}
+        institutionName={dashboardConfig.title || 'Caregiver Portal'}
+        portalLabel="Caregiver"
+        displayName={displayName}
+        userEmail={userProfile?.email || user?.email || ''}
+        profilePictureUrl={profileImage || userProfile?.photoURL || userProfile?.profilePicture}
+        onLogout={handleLogout}
+        headerActions={
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="cm-btn-gold"
+            title="Profile Settings"
+          >
+            <User className="h-4 w-4 mr-2" />
+            <span className="hidden lg:inline">Profile</span>
+          </button>
+        }
+      >
+        <div className="space-y-6">
+          <div className="cm-section-head">
+            <span className="cm-eyebrow">{activeTabLabel}</span>
+            <h2 className="mt-2">{dashboardConfig.title}</h2>
+            <p>Welcome back, {displayName}. {userProfile?.medicalQualification || 'Healthcare Professional'}</p>
+            {institutionId && (
+              <p className="text-sm text-sage flex items-center gap-1 mt-1">
+                <Shield className="h-3 w-3" />
+                {institutionData?.name || `Institution: ${institutionId.slice(0, 8)}...`}
+              </p>
+            )}
           </div>
-          <div className="flex items-center justify-between lg:justify-end gap-4">
-            <button 
-              onClick={() => setShowSettings(!showSettings)}
-              className={`p-3 rounded-full transition-colors ${
-                showSettings 
-                  ? 'bg-blue-100 text-blue-700' 
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
-              title="Settings"
-            >
-              <Settings className="h-6 w-6" />
-            </button>
-          </div>
+
+        {/* Doctor Client Selector (if doctor) */}
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-3 sm:pt-4 md:pt-6">
+          {renderDoctorClientSelector()}
         </div>
-      </div>
 
-      {/* Doctor Client Selector (if doctor) */}
-      <div className="w-full px-4 sm:px-8 pt-4 sm:pt-6">
-        {renderDoctorClientSelector()}
-      </div>
-
-      {/* Tab Navigation */}
-      {(isDoctor || isNurse || isNonMedicalCaregiver) && (
-        <div className="w-full px-4 sm:px-8">
-          <div className="bg-white rounded-lg border border-gray-200">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex flex-wrap gap-4 px-4 sm:px-6">
-                <button
-                  onClick={() => setActiveTab('dashboard')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'dashboard'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => setActiveTab('clients')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'clients'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Clients
-                </button>
-                {/* View-only tabs for non-medical caregivers */}
-                {isNonMedicalCaregiver && (
-                  <>
-                    <button
-                      onClick={() => setActiveTab('prescriptions')}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'prescriptions'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Prescriptions (View Only)
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('consultations')}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'consultations'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Consultations (View Only)
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('diagnostics')}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                        activeTab === 'diagnostics'
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Diagnostics (View Only)
-                    </button>
-                  </>
-                )}
-              </nav>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="w-full px-4 sm:px-8 py-6 dashboard-full-width">
+        {/* Main Content */}
+        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 py-6">
         {showSettings ? (
           <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
         ) : activeTab === 'clients' ? (
@@ -1345,62 +1303,62 @@ const CaregiverDashboard = () => {
         ) : (
           <div className="space-y-6">
           {/* Qualification-Specific Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
+          <div className="cm-card p-6">
+            <h2 className="cm-display text-lg text-ink mb-4">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {dashboardConfig.quickActions.map((action, index) => (
                 <a
                   key={index}
                   href={action.href}
-                  className={`flex flex-col items-center p-4 rounded-lg border-2 border-gray-200 hover:border-${dashboardConfig.color}-300 hover:bg-${dashboardConfig.color}-50 transition-colors group`}
+                  className="flex flex-col items-center p-4 rounded-lg border-2 border-ink/10 hover:border-gold hover:bg-gold-soft/30 transition-colors group"
                 >
-                  <action.icon className={`h-8 w-8 text-${dashboardConfig.color}-600 mb-2 group-hover:text-${dashboardConfig.color}-700`} />
-                  <span className="text-sm font-medium text-gray-700 text-center">{action.name}</span>
+                  <action.icon className="h-8 w-8 text-gold-deep mb-2 group-hover:text-gold" />
+                  <span className="text-sm font-medium text-ink text-center">{action.name}</span>
                 </a>
               ))}
             </div>
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="cm-card p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Today's Visits</p>
-                  <p className="text-3xl font-bold text-gray-900">{todaySchedule.length}</p>
+                  <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Today's Visits</p>
+                  <p className="text-3xl font-bold text-ink">{todaySchedule.length}</p>
                 </div>
                 <div className="p-3 bg-blue-50 rounded-xl">
                   <Calendar className="h-8 w-8 text-blue-600" />
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Completed Tasks</p>
-                  <p className="text-3xl font-bold text-gray-900">{recentTasks.filter(t => t.status === 'completed').length}</p>
+                  <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Completed Tasks</p>
+                  <p className="text-3xl font-bold text-ink">{recentTasks.filter(t => t.status === 'completed').length}</p>
                 </div>
                 <div className="p-3 bg-green-50 rounded-xl">
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Rating</p>
-                  <p className="text-3xl font-bold text-gray-900">{caregiver?.rating}</p>
+                  <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Rating</p>
+                  <p className="text-3xl font-bold text-ink">{caregiver?.rating}</p>
                 </div>
                 <div className="p-3 bg-yellow-50 rounded-xl">
                   <Star className="h-8 w-8 text-yellow-600" />
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
-                  <p className="text-3xl font-bold text-gray-900">₦{(caregiver?.thisMonthEarnings || 0).toLocaleString()}</p>
+                  <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">This Month</p>
+                  <p className="text-3xl font-bold text-ink">₦{(caregiver?.thisMonthEarnings || 0).toLocaleString()}</p>
                 </div>
                 <div className="p-3 bg-purple-50 rounded-xl">
                   <TrendingUp className="h-8 w-8 text-purple-600" />
@@ -1411,46 +1369,51 @@ const CaregiverDashboard = () => {
 
           {/* Assignment Calendar */}
           <AssignmentCalendar
-            schedule={todaySchedule}
+            schedule={todaySchedule.map(s => ({
+              id: s.id,
+              type: s.type || 'task',
+              title: s.clientName || s.title || 'Task',
+              time: s.time || s.scheduledTime || '',
+              client: s.clientName || 'Client',
+              status: s.status || 'pending',
+              priority: s.priority
+            }))}
             onItemSelect={(item) => {
-              const fullTask = recentTasks.find(t => t.id === item.id) || item;
-              setSelectedTask({
-                ...fullTask,
-                clientName: fullTask.client || fullTask.clientName || 'Client',
-                scheduledTime: fullTask.time || fullTask.scheduledTime,
-                dueDate: fullTask.dueDate || fullTask.time
-              });
-              setShowTaskDetailsModal(true);
+              const scheduleItem = todaySchedule.find(s => s.id === item.id);
+              if (scheduleItem) {
+                setSelectedTask(scheduleItem);
+                setShowTaskDetailsModal(true);
+              }
             }}
           />
 
           {/* Today's Schedule */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Today's Schedule</h2>
+          <div className="cm-card">
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-ink/8">
+              <h2 className="cm-display text-xl text-ink">Today's Schedule</h2>
             </div>
             <div className="p-4 sm:p-6 lg:p-8">
               {todaySchedule.length === 0 ? (
                 <div className="text-center py-12">
-                  <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Schedule for Today</h3>
-                  <p className="text-gray-600">You have no appointments, tasks, or assignments scheduled for today.</p>
+                  <Calendar className="h-16 w-16 text-ink/20 mx-auto mb-4" />
+                  <h3 className="cm-display text-lg text-ink mb-2">No Schedule for Today</h3>
+                  <p className="text-text-soft">You have no appointments, tasks, or assignments scheduled for today.</p>
                 </div>
               ) : (
               <div className="space-y-6">
                 {todaySchedule.map((schedule) => (
-                  <div key={schedule.id} className="border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-md transition-shadow">
+                  <div key={schedule.id} className="border border-ink/10 rounded-xl p-4 sm:p-6 hover:shadow-md transition-shadow">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-4 mb-4">
-                          <h3 className="text-xl font-semibold text-gray-900">{schedule.clientName}</h3>
+                          <h3 className="cm-display text-xl text-ink">{schedule.clientName}</h3>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(schedule.status)}`}>
                             {schedule.status}
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-text-soft mb-4">
                           <div className="flex items-center">
-                            <Clock className="h-5 w-5 mr-2 text-gray-500" />
+                            <Clock className="h-5 w-5 mr-2 text-text-soft" />
                             <span className="font-medium">
                               {schedule.time ? formatTime(schedule.time) : 'Time not set'}
                               {schedule.duration && ` (${schedule.duration})`}
@@ -1458,7 +1421,7 @@ const CaregiverDashboard = () => {
                           </div>
                           {schedule.address && (
                           <div className="flex items-center">
-                            <MapPin className="h-5 w-5 mr-2 text-gray-500" />
+                            <MapPin className="h-5 w-5 mr-2 text-text-soft" />
                             <span className="font-medium">{schedule.address}</span>
                           </div>
                           )}
@@ -1466,11 +1429,11 @@ const CaregiverDashboard = () => {
 
                         {schedule.tasks && Array.isArray(schedule.tasks) && schedule.tasks.length > 0 && (
                         <div className="mb-4">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Tasks:</h4>
+                          <h4 className="text-sm font-semibold text-ink mb-3">Tasks:</h4>
                           <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {schedule.tasks.map((task, index) => (
-                              <li key={index} className="flex items-center text-sm text-gray-600">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                              <li key={index} className="flex items-center text-sm text-text-soft">
+                                <div className="w-2 h-2 bg-gold rounded-full mr-3"></div>
                                 {task}
                               </li>
                             ))}
@@ -1479,39 +1442,39 @@ const CaregiverDashboard = () => {
                         )}
                         {schedule.description && (
                           <div className="mb-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Description:</h4>
-                            <p className="text-sm text-gray-600">{schedule.description}</p>
+                            <h4 className="text-sm font-semibold text-ink mb-2">Description:</h4>
+                            <p className="text-sm text-text-soft">{schedule.description}</p>
                           </div>
                         )}
                         {schedule.instructions && (
                           <div className="mb-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Instructions:</h4>
-                            <p className="text-sm text-gray-600">{schedule.instructions}</p>
+                            <h4 className="text-sm font-semibold text-ink mb-2">Instructions:</h4>
+                            <p className="text-sm text-text-soft">{schedule.instructions}</p>
                           </div>
                         )}
                         {schedule.notes && (
                           <div className="mb-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes:</h4>
-                            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{schedule.notes}</p>
+                            <h4 className="text-sm font-semibold text-ink mb-2">Notes:</h4>
+                            <p className="text-sm text-text-soft bg-cream/50 p-3 rounded-lg">{schedule.notes}</p>
                           </div>
                         )}
                       </div>
                       <div className="flex flex-col gap-3 w-full lg:w-auto">
                         <button
                           onClick={() => handleClockIn(schedule.id)}
-                          className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                          className="cm-btn-gold w-full sm:w-auto"
                         >
                           Clock In
                         </button>
                         <button
                           onClick={() => handleClockOut(schedule.id)}
-                          className="w-full sm:w-auto px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                          className="w-full sm:w-auto px-6 py-3 bg-ink text-white rounded-lg hover:bg-ink/90 transition-colors font-medium"
                         >
                           Clock Out
                         </button>
                         <button
                           onClick={() => handleEmergency(schedule.clientId || schedule.client?.id)}
-                          className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center"
+                          className="w-full sm:w-auto px-6 py-3 bg-coral text-white rounded-lg hover:bg-coral/90 transition-colors font-medium flex items-center justify-center"
                           disabled={!schedule.clientId && !schedule.client?.id}
                         >
                           <AlertTriangle className="h-4 w-4 mr-2" />
@@ -1528,30 +1491,30 @@ const CaregiverDashboard = () => {
           </div>
 
           {/* Recent Tasks */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Recent Tasks</h2>
+          <div className="cm-card">
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-ink/8">
+              <h2 className="cm-display text-xl text-ink">Recent Tasks</h2>
             </div>
             <div className="p-4 sm:p-6 lg:p-8">
               {recentTasks.length === 0 ? (
                 <div className="text-center py-12">
-                  <CheckCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Recent Tasks</h3>
-                  <p className="text-gray-600">You haven't completed any tasks yet.</p>
+                  <CheckCircle className="h-16 w-16 text-ink/20 mx-auto mb-4" />
+                  <h3 className="cm-display text-lg text-ink mb-2">No Recent Tasks</h3>
+                  <p className="text-text-soft">You haven't completed any tasks yet.</p>
                 </div>
               ) : (
               <div className="space-y-4">
                 {recentTasks.map((task) => (
-                  <div key={task.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
+                  <div key={task.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border border-ink/10 rounded-xl hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-4">
                       <div className="p-2 bg-green-50 rounded-lg">
                         <CheckCircle className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
-                        <h4 className="text-base font-semibold text-gray-900">{task.task}</h4>
+                        <h4 className="text-base font-semibold text-ink">{task.task}</h4>
 
-                        <p className="text-sm text-gray-600">{task.clientName}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm text-text-soft">{task.clientName}</p>
+                        <p className="text-xs text-text-soft">
                           {new Date(task.completedAt).toLocaleString()}
                         </p>
                       </div>
@@ -1560,7 +1523,7 @@ const CaregiverDashboard = () => {
                       <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
                         {task.status}
                       </span>
-                      <button className="w-full sm:w-auto p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors">
+                      <button className="w-full sm:w-auto p-2 text-gold-deep hover:text-gold hover:bg-gold-soft/30 rounded-lg transition-colors">
                         <Eye className="h-5 w-5" />
                       </button>
                     </div>
@@ -1572,84 +1535,83 @@ const CaregiverDashboard = () => {
           </div>
 
           {/* Performance Overview */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-100">
-                <h2 className="text-xl font-bold text-gray-900">Performance Overview</h2>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="cm-card">
+              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-ink/8">
+                <h2 className="cm-display text-xl text-ink">Performance Overview</h2>
               </div>
               <div className="p-4 sm:p-6 lg:p-8">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Punctuality</span>
+                    <span className="text-base font-medium text-ink">Punctuality</span>
                     <div className="flex items-center">
-                      <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-
-                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.punctuality || 0}%` }}></div>
+                      <div className="w-40 bg-ink/10 rounded-full h-3 mr-4">
+                        <div className="bg-sage h-3 rounded-full" style={{ width: `${performance.punctuality || 0}%` }}></div>
                       </div>
-                      <span className="text-lg font-bold text-gray-900">{performance.punctuality || 0}%</span>
+                      <span className="text-lg font-bold text-ink">{performance.punctuality || 0}%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Task Completion</span>
+                    <span className="text-base font-medium text-ink">Task Completion</span>
                     <div className="flex items-center">
-                      <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${performance.taskCompletion || 0}%` }}></div>
+                      <div className="w-40 bg-ink/10 rounded-full h-3 mr-4">
+                        <div className="bg-gold h-3 rounded-full" style={{ width: `${performance.taskCompletion || 0}%` }}></div>
                       </div>
-                      <span className="text-lg font-bold text-gray-900">{performance.taskCompletion || 0}%</span>
+                      <span className="text-lg font-bold text-ink">{performance.taskCompletion || 0}%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Client Satisfaction</span>
+                    <span className="text-base font-medium text-ink">Client Satisfaction</span>
                     <div className="flex items-center">
-                      <Star className="h-5 w-5 text-yellow-400 mr-2" />
-                      <span className="text-lg font-bold text-gray-900">
+                      <Star className="h-5 w-5 text-gold mr-2" />
+                      <span className="text-lg font-bold text-ink">
                         {typeof performance.clientSatisfaction === 'number' ? performance.clientSatisfaction.toFixed(1) : performance.clientSatisfaction || 'N/A'}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Communication</span>
+                    <span className="text-base font-medium text-ink">Communication</span>
                     <div className="flex items-center">
-                      <Star className="h-5 w-5 text-yellow-400 mr-2" />
-                      <span className="text-lg font-bold text-gray-900">
+                      <Star className="h-5 w-5 text-gold mr-2" />
+                      <span className="text-lg font-bold text-ink">
                         {typeof performance.communication === 'number' ? performance.communication.toFixed(1) : performance.communication || 'N/A'}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Safety Record</span>
+                    <span className="text-base font-medium text-ink">Safety Record</span>
                     <div className="flex items-center">
-                      <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.safety || 0}%` }}></div>
+                      <div className="w-40 bg-ink/10 rounded-full h-3 mr-4">
+                        <div className="bg-sage h-3 rounded-full" style={{ width: `${performance.safety || 0}%` }}></div>
                       </div>
-                      <span className="text-lg font-bold text-gray-900">{performance.safety || 0}%</span>
+                      <span className="text-lg font-bold text-ink">{performance.safety || 0}%</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-100">
-                <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
+            <div className="cm-card">
+              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-ink/8">
+                <h2 className="cm-display text-xl text-ink">Quick Actions</h2>
               </div>
               <div className="p-4 sm:p-6 lg:p-8">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <MessageSquare className="h-8 w-8 text-blue-600 mb-3" />
-                    <span className="text-sm font-semibold text-gray-900">Messages</span>
+                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all">
+                    <MessageSquare className="h-8 w-8 text-gold-deep mb-3" />
+                    <span className="text-sm font-semibold text-ink">Messages</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <Camera className="h-8 w-8 text-green-600 mb-3" />
-                    <span className="text-sm font-semibold text-gray-900">Photo Update</span>
+                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all">
+                    <Camera className="h-8 w-8 text-sage mb-3" />
+                    <span className="text-sm font-semibold text-ink">Photo Update</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <FileText className="h-8 w-8 text-purple-600 mb-3" />
-                    <span className="text-sm font-semibold text-gray-900">Add Note</span>
+                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all">
+                    <FileText className="h-8 w-8 text-gold-deep mb-3" />
+                    <span className="text-sm font-semibold text-ink">Add Note</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-md transition-all">
-                    <Navigation className="h-8 w-8 text-orange-600 mb-3" />
-                    <span className="text-sm font-semibold text-gray-900">Navigation</span>
+                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all">
+                    <Navigation className="h-8 w-8 text-coral mb-3" />
+                    <span className="text-sm font-semibold text-ink">Navigation</span>
                   </button>
                 </div>
               </div>
@@ -1657,7 +1619,9 @@ const CaregiverDashboard = () => {
           </div>
         </div>
         )}
-      </div>
+        </div>
+        </div>
+      </DashboardLayout>
 
       {/* Modals */}
       {showVitalsModal && selectedClient && (
@@ -1746,46 +1710,6 @@ const CaregiverDashboard = () => {
           }}
           isIncoming={false}
         />
-      )}
-
-      {/* Task Details Modal (from calendar) */}
-      {showTaskDetailsModal && selectedTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">{selectedTask.title}</h2>
-              <button onClick={() => setShowTaskDetailsModal(false)} className="text-gray-400 hover:text-gray-600">
-                <span className="text-2xl">&times;</span>
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <User className="h-4 w-4" />
-                <span>{selectedTask.clientName || selectedTask.client || 'Client'}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Clock className="h-4 w-4" />
-                <span>{selectedTask.scheduledTime || selectedTask.time ? new Date(selectedTask.scheduledTime || selectedTask.time).toLocaleString() : 'Time not set'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 capitalize">{selectedTask.type || 'task'}</span>
-                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 capitalize">{selectedTask.status || 'pending'}</span>
-                {selectedTask.priority && (
-                  <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700 capitalize">{selectedTask.priority}</span>
-                )}
-              </div>
-              {selectedTask.description && (
-                <p className="text-sm text-gray-600 mt-2">{selectedTask.description}</p>
-              )}
-              {selectedTask.instructions && (
-                <div className="mt-2 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs font-semibold text-blue-700 mb-1">Instructions</p>
-                  <p className="text-sm text-gray-700">{selectedTask.instructions}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       )}
     </div>
     </CaregiverGuard>

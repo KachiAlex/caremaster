@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'backend/auth';
-import { auth, db } from '../backend/config';
-import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc, addDoc, orderBy } from 'backend/database';
-import { getFunctions, httpsCallable } from 'backend/functions';
 import { useUser } from '../contexts/UserContext';
 import authManager from '../utils/authManager';
 import sessionManager from '../utils/sessionManager';
@@ -98,10 +94,12 @@ import UserManagement from '../components/UserManagement';
 import DashboardSwitcher from '../components/DashboardSwitcher';
 import AdminRoleAssignment from '../components/AdminRoleAssignment';
 import ArchivedClients from '../components/ArchivedClients';
-import CleanupOrphanedUsers from '../components/CleanupOrphanedUsers';
 import InactiveCaregiversReport from '../components/InactiveCaregiversReport';
 import SchedulingModule from '../components/SchedulingModule';
 import ClientActivityTimeline from '../components/ClientActivityTimeline';
+import { collection, query, getDocs, getDoc, setDoc, updateDoc, addDoc, where, doc, serverTimestamp } from 'backend/database';
+import { httpsCallable, getFunctions } from 'backend/functions';
+import { db, functions } from '../backend/config';
 import CaregiverWageManagement from '../components/CaregiverWageManagement';
 import CaregiverWageEditModal from '../components/CaregiverWageEditModal';
 import UserProfileSettings from '../components/UserProfileSettings';
@@ -133,6 +131,7 @@ import SecurityManagement from '../components/SecurityManagement';
 import BillingManagementDashboard from '../components/BillingManagementDashboard';
 import TestingQADashboard from '../components/TestingQADashboard';
 import useResponsive from '../hooks/useResponsive';
+import DashboardLayout from '../components/DashboardLayout';
 
 const formatTimeForDisplay = (time) => {
   if (!time) return '';
@@ -169,16 +168,14 @@ const formatDateForInput = (value) => {
 // Payment gateway constants removed
 
 const StatCard = ({ icon: Icon, label, value, accent }) => (
-  <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+  <div className="cm-stat">
     <div className="flex items-center justify-between gap-3">
       <div>
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
-          {label}
-        </p>
-        <p className="mt-2 text-lg font-semibold text-gray-900">{value}</p>
+        <p className="cm-stat-label">{label}</p>
+        <p className="cm-stat-value">{value}</p>
       </div>
       <div
-        className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${accent}`}
+        className={`cm-stat-icon bg-gradient-to-br ${accent}`}
       >
         <Icon className="h-4 w-4 text-white" />
       </div>
@@ -196,7 +193,7 @@ const InstitutionAdminDashboard = () => {
     try {
       return getFunctions();
     } catch (error) {
-      console.error('Error initializing Firebase functions:', error);
+      console.error('Error initializing Backend functions:', error);
       return null;
     }
   }, []);
@@ -291,6 +288,8 @@ const InstitutionAdminDashboard = () => {
     status: 'pending'
   });
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [caregiverSubTab, setCaregiverSubTab] = useState('all'); // 'all' | 'inactive'
+  const [schedulingSubTab, setSchedulingSubTab] = useState('schedule'); // 'schedule' | 'assignments'
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showCaregiverPasswordModal, setShowCaregiverPasswordModal] = useState(false);
   const [caregiverPasswordForm, setCaregiverPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
@@ -568,8 +567,8 @@ const InstitutionAdminDashboard = () => {
   }, [userProfile, institutionId, effectiveInstitutionId, user, navigate, searchParams]);
 
   useEffect(() => {
-    if (activeTab === 'assignments' && pendingAssignmentFromCaregiver) {
-      // Small delay to ensure the assignments tab is fully rendered
+    if (activeTab === 'scheduling' && schedulingSubTab === 'assignments' && pendingAssignmentFromCaregiver) {
+      // Small delay to ensure the assignments sub-tab is fully rendered
       const timer = setTimeout(() => {
         setSelectedAssignmentForEdit(pendingAssignmentFromCaregiver);
         setShowEditAssignmentModal(true);
@@ -577,7 +576,7 @@ const InstitutionAdminDashboard = () => {
       }, 200); // Increased delay to ensure tab is rendered
       return () => clearTimeout(timer);
     }
-  }, [activeTab, pendingAssignmentFromCaregiver]);
+  }, [activeTab, schedulingSubTab, pendingAssignmentFromCaregiver]);
 
   // Load billing plans when tab is active
   useEffect(() => {
@@ -1038,7 +1037,7 @@ const InstitutionAdminDashboard = () => {
     try {
       sessionManager.clearTabSession();
       await authManager.signOutFromRole('admin');
-      navigate('/institution/login?institution=' + institutionId);
+      navigate('/login?institution=' + institutionId);
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to logout');
@@ -1319,7 +1318,7 @@ const InstitutionAdminDashboard = () => {
         return;
       }
 
-      // Update user document in Firestore
+      // Update user document in Database
       await updateDoc(doc(db, 'users', selectedUserForEdit.id), {
         userType: userData.userType,
         type: userData.userType,
@@ -1444,7 +1443,7 @@ const InstitutionAdminDashboard = () => {
     try {
       console.log('🗑️ Deleting pharmacist:', pharmacist.id);
       
-      // Delete from Firestore
+      // Delete from Database
       const userRef = doc(db, 'users', pharmacist.id);
       await updateDoc(userRef, {
         status: 'deleted',
@@ -1470,7 +1469,7 @@ const InstitutionAdminDashboard = () => {
       const client = clients.find(p => p.id === selectedClientForAssignment);
       const caregiver = caregivers.find(c => c.id === selectedCaregiverForAssignment);
       
-      // Use Firebase Auth UID (userId/uid) if available, otherwise fall back to id
+      // Use Backend Auth UID (userId/uid) if available, otherwise fall back to id
       // This ensures tasks are queryable by the caregiver using their user.uid
       const caregiverUserId = caregiver?.uid || caregiver?.userId || caregiver?.id || selectedCaregiverForAssignment;
       
@@ -1484,7 +1483,7 @@ const InstitutionAdminDashboard = () => {
       
       const assignmentData = {
         clientId: selectedClientForAssignment,
-        caregiverId: caregiverUserId, // Use Firebase Auth UID for querying
+        caregiverId: caregiverUserId, // Use Backend Auth UID for querying
         clientName: client?.name || client?.displayName || 'Unknown Client',
         caregiverName: caregiver?.name || caregiver?.displayName || 'Unknown Caregiver',
         clientEmail: client?.email || '',
@@ -1509,7 +1508,7 @@ const InstitutionAdminDashboard = () => {
       // This ensures tasks show up in both assignment queries and task queries
       try {
         const { createCareTask } = await import('../api/careTasksAPI');
-        const { Timestamp } = await import('firebase/firestore');
+        const { Timestamp } = await import('backend/database');
         
         // Parse dueDate and dueTime to create scheduledTime (fix timezone issues)
         let scheduledTime = new Date();
@@ -1543,7 +1542,7 @@ const InstitutionAdminDashboard = () => {
         }
         
         await createCareTask({
-          caregiverId: caregiverUserId, // Use Firebase Auth UID
+          caregiverId: caregiverUserId, // Use Backend Auth UID
           clientId: selectedClientForAssignment,
           clientId: selectedClientForAssignment,
           title: formData.title,
@@ -1566,7 +1565,7 @@ const InstitutionAdminDashboard = () => {
       if (caregiver) {
         try {
           await createNotification({
-            userId: caregiverUserId, // Use Firebase Auth UID for notifications
+            userId: caregiverUserId, // Use Backend Auth UID for notifications
             type: NOTIFICATION_TYPES.TASK,
             priority: formData.priority === 'urgent' ? NOTIFICATION_PRIORITIES.URGENT : 
                      formData.priority === 'high' ? NOTIFICATION_PRIORITIES.HIGH : 
@@ -1665,8 +1664,9 @@ const InstitutionAdminDashboard = () => {
       setPendingAssignmentFromCaregiver(assignment);
     }
     
-    // Switch to assignments tab
-    setActiveTab('assignments');
+    // Switch to scheduling tab > assignments sub-tab
+    setSchedulingSubTab('assignments');
+    setActiveTab('scheduling');
   };
 
   const handleUpdateAssignment = async (formData) => {
@@ -1815,7 +1815,7 @@ const InstitutionAdminDashboard = () => {
       return;
     }
     try {
-      const { doc, updateDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+      const { doc, updateDoc, getDoc, serverTimestamp } = await import('backend/database');
       const { db } = await import('../backend/config');
       
       const caregiverId = caregiver.id || caregiver.uid || caregiver.userId;
@@ -3012,37 +3012,37 @@ const renderMessagesTab = () => {
     {
       name: 'Add Client',
       icon: Heart,
-      color: 'bg-green-600 hover:bg-green-700',
+      color: 'bg-sage hover:brightness-95',
       action: () => setShowCreatePatientModal(true)
     },
     {
       name: 'Add Caregiver',
       icon: UserCheck,
-      color: 'bg-blue-600 hover:bg-blue-700',
+      color: 'bg-coral hover:brightness-95',
       action: () => setShowAddCaregiver(true)
     },
     {
       name: 'Assign Care',
       icon: Users,
-      color: 'bg-purple-600 hover:bg-purple-700',
+      color: 'bg-gold hover:brightness-95 text-ink',
       action: () => setShowAssignmentModal(true)
     },
     {
       name: 'Schedule',
       icon: Calendar,
-      color: 'bg-teal-600 hover:bg-teal-700',
+      color: 'bg-ink hover:brightness-110',
       action: () => setShowAppointmentsModal(true)
     },
     {
       name: 'Inventory & Billing',
       icon: Package,
-      color: 'bg-blue-600 hover:bg-blue-700',
+      color: 'bg-gold-deep hover:brightness-110',
       action: () => setActiveTab('enhanced-inventory')
     },
     {
       name: 'View Analytics',
       icon: BarChart3,
-      color: 'bg-orange-600 hover:bg-orange-700',
+      color: 'bg-sage hover:brightness-95',
       action: () => setActiveTab('analytics')
     }
   ];
@@ -3077,8 +3077,8 @@ const renderMessagesTab = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-64 cm-dashboard-body">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
       </div>
     );
   }
@@ -3088,15 +3088,12 @@ const renderMessagesTab = () => {
     { id: 'clients', label: 'Clients', icon: User },
     { id: 'archived-clients', label: 'Archived Clients', icon: Package },
     { id: 'caregivers', label: 'Caregivers', icon: UserCheck },
-    { id: 'inactive-caregivers', label: 'Inactive Caregivers', icon: AlertCircle },
     { id: 'pharmacists', label: 'Pharmacists', icon: Pill },
-    { id: 'assignments', label: 'Assignments', icon: ClipboardList },
     { id: 'scheduling', label: 'Scheduling', icon: Calendar },
     { id: 'wage-management', label: 'Wage Management', icon: DollarSign },
     { id: 'billing-plans', label: 'Billing Plans', icon: Briefcase },
     { id: 'user-management', label: 'User Management', icon: Users },
     { id: 'admin-roles', label: 'Admin Roles', icon: UserCog },
-    { id: 'cleanup-orphaned-users', label: 'Cleanup Orphaned Users', icon: Trash2 },
     { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'enhanced-inventory', label: 'Enhanced Inventory', icon: Building },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -3132,8 +3129,8 @@ const renderMessagesTab = () => {
               >
                 <StatCard icon={Activity} label="Active Tasks" value={stats.activeAssignments.toLocaleString()} accent="from-indigo-500 to-purple-500" />
               </div>
-              <div 
-                onClick={() => setActiveTab('assignments')}
+              <div
+                onClick={() => { setSchedulingSubTab('assignments'); setActiveTab('scheduling'); }}
                 className="cursor-pointer transform transition hover:scale-105"
               >
                 <StatCard icon={ClipboardList} label="Pending Tasks" value={stats.pendingAssignments.toLocaleString()} accent="from-yellow-500 to-orange-500" />
@@ -3155,7 +3152,7 @@ const renderMessagesTab = () => {
               {/* Left Column - 2/3 width */}
               <div className="lg:col-span-2 space-y-6">
                 {/* Quick Actions */}
-                <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <section className="cm-card p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
                     <span className="text-xs text-gray-500">{quickActions.length} tools</span>
@@ -3179,7 +3176,7 @@ const renderMessagesTab = () => {
 
                 {/* Pending Diagnostics */}
                 {pendingDiagnostics.length > 0 && (
-                  <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                  <section className="cm-card p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <TestTube className="h-5 w-5 text-amber-500" />
@@ -3218,14 +3215,14 @@ const renderMessagesTab = () => {
 
                 {/* Recent Assignments */}
                 {assignments.length > 0 && (
-                  <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                  <section className="cm-card p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <ClipboardList className="h-5 w-5 text-indigo-500" />
                         <h3 className="text-lg font-semibold text-gray-900">Recent Assignments</h3>
                       </div>
                       <button
-                        onClick={() => setActiveTab('assignments')}
+                        onClick={() => { setSchedulingSubTab('assignments'); setActiveTab('scheduling'); }}
                         className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                       >
                         View All
@@ -3265,7 +3262,7 @@ const renderMessagesTab = () => {
                 {/* System Alerts */}
                 {systemAlerts.length > 0 && (
                   <section 
-                    className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer"
+                    className="cm-card p-6 hover:shadow-md transition cursor-pointer"
                     onClick={() => setActiveTab('security')}
                   >
                     <div className="flex items-center gap-2 mb-4">
@@ -3285,7 +3282,7 @@ const renderMessagesTab = () => {
 
                 {/* Top Caregivers */}
                 {topCaregivers.length > 0 && (
-                  <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                  <section className="cm-card p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <Award className="h-5 w-5 text-yellow-500" />
                       <h3 className="text-lg font-semibold text-gray-900">Top Caregivers</h3>
@@ -3319,7 +3316,7 @@ const renderMessagesTab = () => {
 
                 {/* Performance Metrics */}
                 <section 
-                  className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer"
+                  className="cm-card p-6 hover:shadow-md transition cursor-pointer"
                   onClick={() => setActiveTab('analytics')}
                 >
                   <div className="flex items-center gap-2 mb-4">
@@ -3532,6 +3529,32 @@ const renderMessagesTab = () => {
                 </button>
               </div>
             </div>
+            {/* Sub-tabs: All Caregivers | Inactive Caregivers */}
+            <div className="flex gap-2 border-b border-gray-200">
+              <button
+                onClick={() => setCaregiverSubTab('all')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  caregiverSubTab === 'all'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                All Caregivers
+              </button>
+              <button
+                onClick={() => setCaregiverSubTab('inactive')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  caregiverSubTab === 'inactive'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Inactive Caregivers
+              </button>
+            </div>
+            {caregiverSubTab === 'inactive' ? (
+              <InactiveCaregiversReport institutionId={effectiveInstitutionId} />
+            ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
               {caregivers.length === 0 ? (
                 <div className="p-12 text-center text-gray-500">No caregivers available.</div>
@@ -3616,19 +3639,19 @@ const renderMessagesTab = () => {
                                   <button
                                     onClick={async () => {
                                       try {
-                                        const { doc, updateDoc, serverTimestamp, getDoc } = await import('firebase/firestore');
+                                        const { doc, updateDoc, serverTimestamp, getDoc } = await import('backend/database');
                                         const { db } = await import('../backend/config');
-                                        
+
                                         const caregiverId = caregiver.uid || caregiver.id || caregiver.userId;
-                                        
+
                                         // Update BOTH collections to keep them in sync
                                         // 1. Update users collection (for User Management tab)
                                         try {
                                           const userRef = doc(db, 'users', caregiverId);
                                           const userDoc = await getDoc(userRef);
                                           if (userDoc.exists()) {
-                                            await updateDoc(userRef, { 
-                                              status: 'active', 
+                                            await updateDoc(userRef, {
+                                              status: 'active',
                                               active: true,
                                               updatedAt: serverTimestamp()
                                             });
@@ -3637,13 +3660,13 @@ const renderMessagesTab = () => {
                                         } catch (userError) {
                                           console.warn('⚠️ Could not update users collection:', userError);
                                         }
-                                        
+
                                         // 2. Update caregivers collection (for Caregivers tab)
                                         try {
                                           const caregiverRef = doc(db, 'caregivers', caregiverId);
                                           const caregiverDoc = await getDoc(caregiverRef);
                                           if (caregiverDoc.exists()) {
-                                            await updateDoc(caregiverRef, { 
+                                            await updateDoc(caregiverRef, {
                                               status: 'active',
                                               active: true,
                                               updatedAt: serverTimestamp()
@@ -3664,7 +3687,7 @@ const renderMessagesTab = () => {
                                             console.error('❌ Failed to update via caregiverAPI:', apiError);
                                           }
                                         }
-                                        
+
                                         toast.success('Caregiver activated successfully', { autoClose: 3000 });
                                         await loadDashboardData();
                                       } catch (error) {
@@ -3687,10 +3710,10 @@ const renderMessagesTab = () => {
                                       try {
                                         const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
                                         if (isUser) {
-                                          const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+                                          const { doc, updateDoc, serverTimestamp } = await import('backend/database');
                                           const { db } = await import('../backend/config');
-                                          await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
-                                            status: 'suspended', 
+                                          await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), {
+                                            status: 'suspended',
                                             active: false,
                                             updatedAt: serverTimestamp()
                                           });
@@ -3737,29 +3760,7 @@ const renderMessagesTab = () => {
                 </div>
               )}
             </div>
-          </div>
-        );
-      case 'inactive-caregivers':
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Inactive Caregivers</h3>
-                <p className="text-sm text-gray-600">Review caregivers with no recent activity.</p>
-              </div>
-              <button
-                onClick={() => {
-                  setRefreshing(true);
-                  loadDashboardData().finally(() => setRefreshing(false));
-                }}
-                disabled={refreshing}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-            </div>
-            <InactiveCaregiversReport institutionId={effectiveInstitutionId} />
+            )}
           </div>
         );
       case 'pharmacists':
@@ -3923,181 +3924,198 @@ const renderMessagesTab = () => {
             </div>
           </div>
         );
-      case 'assignments':
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Assignments</h3>
-                <p className="text-sm text-gray-600">All client-to-caregiver/intake assignments.</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500">{assignments.length} assignments</span>
-                <button
-                  onClick={() => setShowAssignmentModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create Assignment
-                </button>
-              </div>
-            </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
-              {assignments.length === 0 ? (
-                <div className="p-12 text-center">
-                  <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-500 mb-4">No assignments scheduled.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-[800px] divide-y divide-gray-200 text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assignment</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Client</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Caregiver</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Due</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {assignments.map((assignment) => (
-                        <tr key={assignment.id || assignment.assignmentId} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-gray-900">{assignment.title || 'Assignment'}</td>
-                          <td className="px-6 py-4 text-gray-600">{assignment.clientName || 'Client'}</td>
-                          <td className="px-6 py-4">
-                            {(() => {
-                              const caregiver = caregivers.find(c => 
-                                (c.id === assignment.caregiverId) || 
-                                (c.uid === assignment.caregiverId) || 
-                                (c.userId === assignment.caregiverId)
-                              );
-                              return (
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-xs overflow-hidden flex-shrink-0">
-                                    {caregiver?.photoURL || caregiver?.profilePicture ? (
-                                      <img
-                                        src={caregiver.photoURL || caregiver.profilePicture}
-                                        alt={assignment.caregiverName || 'Caregiver'}
-                                        className="h-full w-full object-cover"
-                                        onError={(e) => {
-                                          e.target.style.display = 'none';
-                                        }}
-                                      />
-                                    ) : null}
-                                    <span className={`text-white font-semibold ${caregiver?.photoURL || caregiver?.profilePicture ? 'hidden' : 'flex'}`}>
-                                      {(assignment.caregiverName || 'C').charAt(0).toUpperCase()}
-                                    </span>
-                                  </div>
-                                  <span className="text-gray-600">{assignment.caregiverName || 'Caregiver'}</span>
-                                </div>
-                              );
-                            })()}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                              assignment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              assignment.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                              assignment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {assignment.status || 'Pending'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-gray-600">{formatDateValue(assignment.dueDate || assignment.dueAt)}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedAssignment(assignment);
-                                  setShowAssignmentDetails(true);
-                                }}
-                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="View Details"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleEditAssignment(assignment)}
-                                className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                                title="Edit Assignment"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                              {(assignment.status === 'pending' || assignment.status === 'active') && (
-                                <button
-                                  onClick={async () => {
-                                    if (!window.confirm(`Are you sure you want to ${assignment.status === 'pending' ? 'start' : 'complete'} this assignment?`)) {
-                                      return;
-                                    }
-                                    try {
-                                      const newStatus = assignment.status === 'pending' ? 'active' : 'completed';
-                                      await assignmentAPI.updateAssignment(assignment.id || assignment.assignmentId, {
-                                        status: newStatus,
-                                        ...(newStatus === 'completed' ? { completedAt: new Date().toISOString() } : { startedAt: new Date().toISOString() })
-                                      });
-                                      toast.success(`Assignment ${newStatus === 'active' ? 'started' : 'completed'} successfully`);
-                                      await loadDashboardData();
-                                    } catch (error) {
-                                      console.error('Error updating assignment status:', error);
-                                      toast.error(`Failed to ${assignment.status === 'pending' ? 'start' : 'complete'} assignment`);
-                                    }
-                                  }}
-                                  className={`p-1.5 rounded-lg transition-colors ${
-                                    assignment.status === 'pending' 
-                                      ? 'text-green-600 hover:bg-green-50' 
-                                      : 'text-blue-600 hover:bg-blue-50'
-                                  }`}
-                                  title={assignment.status === 'pending' ? 'Start Assignment' : 'Complete Assignment'}
-                                >
-                                  {assignment.status === 'pending' ? (
-                                    <CheckCircle2 className="h-4 w-4" />
-                                  ) : (
-                                    <CheckCircle className="h-4 w-4" />
-                                  )}
-                                </button>
-                              )}
-                              <button
-                                onClick={async () => {
-                                  if (!window.confirm(`Are you sure you want to delete assignment "${assignment.title || 'this assignment'}"? This action cannot be undone.`)) {
-                                    return;
-                                  }
-                                  try {
-                                    await assignmentAPI.deleteAssignment(assignment.id || assignment.assignmentId);
-                                    toast.success('Assignment deleted successfully');
-                                    await loadDashboardData();
-                                  } catch (error) {
-                                    console.error('Error deleting assignment:', error);
-                                    toast.error('Failed to delete assignment');
-                                  }
-                                }}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete Assignment"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        );
       case 'scheduling':
         return (
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-2xl font-semibold text-gray-900">Scheduling</h3>
-                <p className="text-sm text-gray-600">Manage caregiver schedules and appointments.</p>
+                <p className="text-sm text-gray-600">Manage caregiver schedules, appointments, and assignments.</p>
               </div>
+              {schedulingSubTab === 'assignments' && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-500">{assignments.length} assignments</span>
+                  <button
+                    onClick={() => setShowAssignmentModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Assignment
+                  </button>
+                </div>
+              )}
             </div>
-            <SchedulingModule institutionId={effectiveInstitutionId} />
+            {/* Sub-tabs: Schedule | Assignments */}
+            <div className="flex gap-2 border-b border-gray-200">
+              <button
+                onClick={() => setSchedulingSubTab('schedule')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  schedulingSubTab === 'schedule'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Schedule
+              </button>
+              <button
+                onClick={() => setSchedulingSubTab('assignments')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  schedulingSubTab === 'assignments'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Assignments
+              </button>
+            </div>
+            {schedulingSubTab === 'assignments' ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+                {assignments.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-gray-500 mb-4">No assignments scheduled.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-[800px] divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assignment</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Client</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Caregiver</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Due</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {assignments.map((assignment) => (
+                          <tr key={assignment.id || assignment.assignmentId} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4 font-medium text-gray-900">{assignment.title || 'Assignment'}</td>
+                            <td className="px-6 py-4 text-gray-600">{assignment.clientName || 'Client'}</td>
+                            <td className="px-6 py-4">
+                              {(() => {
+                                const caregiver = caregivers.find(c =>
+                                  (c.id === assignment.caregiverId) ||
+                                  (c.uid === assignment.caregiverId) ||
+                                  (c.userId === assignment.caregiverId)
+                                );
+                                return (
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-xs overflow-hidden flex-shrink-0">
+                                      {caregiver?.photoURL || caregiver?.profilePicture ? (
+                                        <img
+                                          src={caregiver.photoURL || caregiver.profilePicture}
+                                          alt={assignment.caregiverName || 'Caregiver'}
+                                          className="h-full w-full object-cover"
+                                          onError={(e) => {
+                                            e.target.style.display = 'none';
+                                          }}
+                                        />
+                                      ) : null}
+                                      <span className={`text-white font-semibold ${caregiver?.photoURL || caregiver?.profilePicture ? 'hidden' : 'flex'}`}>
+                                        {(assignment.caregiverName || 'C').charAt(0).toUpperCase()}
+                                      </span>
+                                    </div>
+                                    <span className="text-gray-600">{assignment.caregiverName || 'Caregiver'}</span>
+                                  </div>
+                                );
+                              })()}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                assignment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                assignment.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                                assignment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {assignment.status || 'Pending'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-gray-600">{formatDateValue(assignment.dueDate || assignment.dueAt)}</td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setSelectedAssignment(assignment);
+                                    setShowAssignmentDetails(true);
+                                  }}
+                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="View Details"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleEditAssignment(assignment)}
+                                  className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                                  title="Edit Assignment"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                {(assignment.status === 'pending' || assignment.status === 'active') && (
+                                  <button
+                                    onClick={async () => {
+                                      if (!window.confirm(`Are you sure you want to ${assignment.status === 'pending' ? 'start' : 'complete'} this assignment?`)) {
+                                        return;
+                                      }
+                                      try {
+                                        const newStatus = assignment.status === 'pending' ? 'active' : 'completed';
+                                        await assignmentAPI.updateAssignment(assignment.id || assignment.assignmentId, {
+                                          status: newStatus,
+                                          ...(newStatus === 'completed' ? { completedAt: new Date().toISOString() } : { startedAt: new Date().toISOString() })
+                                        });
+                                        toast.success(`Assignment ${newStatus === 'active' ? 'started' : 'completed'} successfully`);
+                                        await loadDashboardData();
+                                      } catch (error) {
+                                        console.error('Error updating assignment status:', error);
+                                        toast.error(`Failed to ${assignment.status === 'pending' ? 'start' : 'complete'} assignment`);
+                                      }
+                                    }}
+                                    className={`p-1.5 rounded-lg transition-colors ${
+                                      assignment.status === 'pending'
+                                        ? 'text-green-600 hover:bg-green-50'
+                                        : 'text-blue-600 hover:bg-blue-50'
+                                    }`}
+                                    title={assignment.status === 'pending' ? 'Start Assignment' : 'Complete Assignment'}
+                                  >
+                                    {assignment.status === 'pending' ? (
+                                      <CheckCircle2 className="h-4 w-4" />
+                                    ) : (
+                                      <CheckCircle className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={async () => {
+                                    if (!window.confirm(`Are you sure you want to delete assignment "${assignment.title || 'this assignment'}"? This action cannot be undone.`)) {
+                                      return;
+                                    }
+                                    try {
+                                      await assignmentAPI.deleteAssignment(assignment.id || assignment.assignmentId);
+                                      toast.success('Assignment deleted successfully');
+                                      await loadDashboardData();
+                                    } catch (error) {
+                                      console.error('Error deleting assignment:', error);
+                                      toast.error('Failed to delete assignment');
+                                    }
+                                  }}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete Assignment"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <SchedulingModule institutionId={effectiveInstitutionId} />
+            )}
           </div>
         );
       case 'wage-management':
@@ -4140,18 +4158,6 @@ const renderMessagesTab = () => {
               </div>
             </div>
             <AdminRoleAssignment institutionId={effectiveInstitutionId} />
-          </div>
-        );
-      case 'cleanup-orphaned-users':
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Cleanup Orphaned Users</h3>
-                <p className="text-sm text-gray-600">Identify and remove users without proper institution associations.</p>
-              </div>
-            </div>
-            <CleanupOrphanedUsers institutionId={effectiveInstitutionId} />
           </div>
         );
       case 'messages':
@@ -4290,7 +4296,7 @@ const renderMessagesTab = () => {
         );
       default:
         return (
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <section className="cm-card p-6">
             <h3 className="text-lg font-semibold text-gray-900">Coming Soon</h3>
             <p className="text-sm text-gray-600 mt-2">We are preparing this workspace for you. Check back soon.</p>
           </section>
@@ -4299,177 +4305,36 @@ const renderMessagesTab = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex">
-      <div className={`fixed inset-0 z-50 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
-        <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-        <aside className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white border-r border-gray-200 flex flex-col h-screen shadow-xl">
-          <div className="p-4 border-b border-gray-200 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">Institution admin</p>
-              <h1 className="text-sm font-semibold text-gray-900 truncate">{institutionData?.name || 'Institution'}</h1>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-              aria-label="Close menu"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    setSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {Icon && <Icon className="h-4 w-4" />}
-                    <span>{tab.label}</span>
-                  </div>
-                  {isActive && <span className="h-2 w-2 rounded-full bg-white" />}
-                </button>
-              );
-            })}
-          </nav>
-          <div className="p-3 border-t border-gray-200">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center px-3 py-2 text-sm text-red-600 rounded-lg border border-red-200 hover:bg-red-50 transition"
-            >
-              <LogOut className="h-4 w-4 mr-2" /> Logout
-            </button>
-          </div>
-        </aside>
-      </div>
-
-      <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col fixed h-screen z-20 shadow">
-        <div className="p-4 border-b border-gray-200">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">Institution admin</p>
-          <h1 className="text-sm font-semibold text-gray-900 truncate">{institutionData?.name || 'Institution'}</h1>
-        </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition ${
-                  isActive ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {Icon && <Icon className="h-4 w-4" />}
-                  <span>{tab.label}</span>
-                </div>
-                {isActive && <span className="h-2 w-2 rounded-full bg-white" />}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="p-3 border-t border-gray-200">
+    <div className="min-h-screen cm-dashboard-body">
+      <DashboardLayout
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        institutionName={institutionData?.name || 'Institution'}
+        portalLabel="Institution Admin"
+        displayName={displayName}
+        userEmail={userProfile?.email || user?.email}
+        profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
+        onLogout={handleLogout}
+        headerActions={
           <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center px-3 py-2 text-sm text-red-600 rounded-lg border border-red-200 hover:bg-red-50 transition"
+            onClick={() => setShowProfileSettings(true)}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-ink hover:bg-ink/5 transition"
           >
-            <LogOut className="h-4 w-4 mr-2" /> Logout
+            <Settings className="h-4 w-4" />
+            Settings
           </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 md:ml-64 px-3 sm:px-4 md:px-6 py-4 md:py-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <header className="flex items-center justify-between">
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                className="md:hidden inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 text-gray-700 w-fit"
-                onClick={() => setSidebarOpen(true)}
-                aria-label="Open menu"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-              <p className="text-xs uppercase tracking-[0.3em] text-blue-600">{activeTabLabel}</p>
-              <h1 className="text-3xl font-semibold text-gray-900">{institutionData?.name || 'Institution Dashboard'}</h1>
-              <p className="text-sm text-gray-600">Welcome back, {displayName}. Manage your institution operations from one surface.</p>
-            </div>
-            
-            {/* Profile Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold overflow-hidden">
-                  {userProfile?.photoURL || userProfile?.profilePicture ? (
-                    <img
-                      src={userProfile.photoURL || userProfile.profilePicture}
-                      alt={displayName}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <span className={`text-white font-semibold ${userProfile?.photoURL || userProfile?.profilePicture ? 'hidden' : 'flex'}`}>
-                    {(displayName || 'A').charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-gray-900">{displayName}</p>
-                  <p className="text-xs text-gray-500">Admin</p>
-                </div>
-                <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {/* Dropdown Menu */}
-              {showProfileDropdown && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setShowProfileDropdown(false)}
-                  />
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                    <div className="px-4 py-3 border-b border-gray-200">
-                      <p className="text-sm font-semibold text-gray-900">{displayName}</p>
-                      <p className="text-xs text-gray-500">{userProfile?.email || user?.email}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowProfileSettings(true);
-                        setShowProfileDropdown(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <User className="h-4 w-4" />
-                      Profile Settings
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Logout
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </header>
+        }
+      >
+        <div className="space-y-6">
+          <div className="cm-section-head">
+            <span className="cm-eyebrow">{activeTabLabel}</span>
+            <h2 className="mt-2">{institutionData?.name || 'Institution Dashboard'}</h2>
+            <p>Welcome back, {displayName}. Manage your institution operations from one surface.</p>
+          </div>
           {renderTabContent()}
         </div>
-      </main>
+      </DashboardLayout>
 
       {showCreatePatientModal && (
         <CreatePatientModal
@@ -4504,7 +4369,7 @@ const renderMessagesTab = () => {
             try {
               const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
               if (isUser) {
-                const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+                const { doc, updateDoc, serverTimestamp } = await import('backend/database');
                 const { db } = await import('../backend/config');
                 await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
                   status: 'suspended', 
@@ -4525,7 +4390,7 @@ const renderMessagesTab = () => {
             try {
               const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
               if (isUser) {
-                const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+                const { doc, updateDoc, serverTimestamp } = await import('backend/database');
                 const { db } = await import('../backend/config');
                 await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
                   status: 'active', 
@@ -5237,7 +5102,7 @@ const renderMessagesTab = () => {
                 </div>
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-800">
-                    <strong>Note:</strong> To edit other details like name, email, or license number, please contact support or use the Firebase Console.
+                    <strong>Note:</strong> To edit other details like name, email, or license number, please contact support or use the Backend Console.
                   </p>
                 </div>
               </div>

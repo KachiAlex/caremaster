@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'backend/auth';
-import { collection, getDocs, query, where, orderBy, limit, onSnapshot } from 'backend/database';
-import { auth, db } from '../backend/config';
 import authManager from '../utils/authManager';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area,
@@ -25,6 +22,9 @@ import {
   Eye
 } from 'lucide-react';
 import FontSizeToggle from '../components/FontSizeToggle';
+import { collection, query, getDocs, orderBy, limit, onSnapshot } from 'backend/database';
+import { db } from '../backend/config';
+import DashboardLayout from '../components/DashboardLayout';
 
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
@@ -49,6 +49,12 @@ const SuperAdminDashboard = () => {
   });
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Session info for the top bar / sidebar
+  const session = authManager.getRoleSession('super-admin');
+  const displayName = session?.displayName || session?.email || 'Super Admin';
+  const userEmail = session?.email || '';
 
   useEffect(() => {
     let institutionsData = [];
@@ -342,12 +348,31 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  const StatCard = ({ icon: Icon, label, value, trend, color = 'blue' }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
+  const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: Activity },
+    { id: 'licensing', label: 'Licensing', icon: FileText, route: '/super-admin/licensing' },
+    { id: 'users', label: 'Users', icon: Users, route: '/super-admin/users' },
+    { id: 'audit-logs', label: 'Audit Logs', icon: Eye, route: '/super-admin/audit-logs' },
+    { id: 'settings', label: 'Settings', icon: Settings, route: '/super-admin/settings' },
+    { id: 'management', label: 'Manage Admins', icon: Shield, route: '/super-admin/management' },
+  ];
+
+  const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label || 'Dashboard';
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    const tab = tabs.find((t) => t.id === tabId);
+    if (tab?.route) {
+      navigate(tab.route);
+    }
+  };
+
+  const StatCard = ({ icon: Icon, label, value, trend, accent = 'from-sage to-ink' }) => (
+    <div className="cm-stat">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600">{label}</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
+          <p className="cm-stat-label">{label}</p>
+          <p className="cm-stat-value">{value}</p>
           {trend && (
             <div className={`mt-2 flex items-center text-sm ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
               <TrendingUp className="h-4 w-4 mr-1" />
@@ -355,8 +380,8 @@ const SuperAdminDashboard = () => {
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-lg bg-${color}-100`}>
-          <Icon className={`h-6 w-6 text-${color}-600`} />
+        <div className={`cm-stat-icon bg-gradient-to-br ${accent}`}>
+          <Icon className="h-4 w-4 text-white" />
         </div>
       </div>
     </div>
@@ -397,423 +422,388 @@ const SuperAdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center cm-dashboard-body">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold mx-auto mb-4"></div>
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
+  const renderTabContent = () => (
+    <>
+      {/* Alerts */}
+      {alerts.length > 0 && (
+        <div className="space-y-3">
+          {alerts.map((alert, index) => (
+            <AlertBanner key={index} {...alert} />
+          ))}
+        </div>
+      )}
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          icon={Building2}
+          label="Active Institutions"
+          value={stats.activeInstitutions}
+          trend={5}
+          accent="from-blue-500 to-blue-600"
+        />
+        <StatCard
+          icon={FileText}
+          label="Active Licenses"
+          value={stats.activeLicenses}
+          trend={3}
+          accent="from-green-500 to-green-600"
+        />
+        <StatCard
+          icon={Users}
+          label="Total Users"
+          value={stats.totalUsers}
+          trend={8}
+          accent="from-indigo-500 to-purple-500"
+        />
+        <StatCard
+          icon={DollarSign}
+          label="Monthly Revenue"
+          value={`$${stats.totalRevenue.toLocaleString()}`}
+          trend={12}
+          accent="from-sage to-ink"
+        />
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="cm-card p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Institutions</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{stats.totalInstitutions}</p>
+            </div>
+            <Building2 className="h-8 w-8 text-gray-400" />
+          </div>
+        </div>
+
+        <div className="cm-card p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Expiring Soon</p>
+              <p className="mt-1 text-2xl font-bold text-yellow-600">{stats.expiringLicenses}</p>
+            </div>
+            <Clock className="h-8 w-8 text-yellow-400" />
+          </div>
+        </div>
+
+        <div className="cm-card p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Active Users</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{stats.activeUsers}</p>
+            </div>
+            <Users className="h-8 w-8 text-gray-400" />
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="cm-card p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <button
+            onClick={() => navigate('/super-admin/licensing')}
+            className="flex flex-col items-center p-4 rounded-lg border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+          >
+            <Building2 className="h-8 w-8 text-blue-600 mb-2" />
+            <span className="text-sm font-medium text-gray-900">Manage Institutions</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/super-admin/licensing')}
+            className="flex flex-col items-center p-4 rounded-lg border-2 border-green-200 hover:border-green-400 hover:bg-green-50 transition-colors"
+          >
+            <FileText className="h-8 w-8 text-green-600 mb-2" />
+            <span className="text-sm font-medium text-gray-900">Issue License</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/super-admin/licensing')}
+            className="flex flex-col items-center p-4 rounded-lg border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-colors"
+          >
+            <Users className="h-8 w-8 text-purple-600 mb-2" />
+            <span className="text-sm font-medium text-gray-900">Assign Admin</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/super-admin/settings')}
+            className="flex flex-col items-center p-4 rounded-lg border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+          >
+            <Settings className="h-8 w-8 text-gray-600 mb-2" />
+            <span className="text-sm font-medium text-gray-900">System Settings</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/super-admin/management')}
+            className="flex flex-col items-center p-4 rounded-lg border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-colors"
+          >
+            <Shield className="h-8 w-8 text-red-600 mb-2" />
+            <span className="text-sm font-medium text-gray-900">Manage Admins</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/super-admin/users')}
+            className="flex flex-col items-center p-4 rounded-lg border-2 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+          >
+            <Users className="h-8 w-8 text-indigo-600 mb-2" />
+            <span className="text-sm font-medium text-gray-900">All Users</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/super-admin/audit-logs')}
+            className="flex flex-col items-center p-4 rounded-lg border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 transition-colors"
+          >
+            <Activity className="h-8 w-8 text-orange-600 mb-2" />
+            <span className="text-sm font-medium text-gray-900">Audit Logs</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Analytics Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Trend Chart */}
+        <div className="cm-card p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <TrendingUp className="h-5 w-5 text-green-600 mr-2" />
+            Revenue Trend (Last 6 Months)
+          </h3>
+          {chartData.revenueTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={chartData.revenueTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Area type="monotone" dataKey="revenue" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              No revenue data available
+            </div>
+          )}
+        </div>
+
+        {/* Institution Growth Chart */}
+        <div className="cm-card p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Building2 className="h-5 w-5 text-gold-deep mr-2" />
+            Institution Growth
+          </h3>
+          {chartData.institutionGrowth.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={chartData.institutionGrowth}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              No growth data available
+            </div>
+          )}
+        </div>
+
+        {/* License Distribution Chart */}
+        <div className="cm-card p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <FileText className="h-5 w-5 text-purple-600 mr-2" />
+            License Plan Distribution
+          </h3>
+          {chartData.licenseDistribution.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={chartData.licenseDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {chartData.licenseDistribution.map((entry, index) => {
+                    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  })}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              No license data available
+            </div>
+          )}
+        </div>
+
+        {/* User Growth Chart */}
+        <div className="cm-card p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Users className="h-5 w-5 text-indigo-600 mr-2" />
+            User Growth
+          </h3>
+          {chartData.userGrowth.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={chartData.userGrowth}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="users" stroke="#6366f1" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              No user data available
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="cm-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+          <button
+            onClick={() => navigate('/super-admin/audit-logs')}
+            className="text-sm text-gold-deep hover:opacity-80 font-medium"
+          >
+            View All →
+          </button>
+        </div>
+        <div className="space-y-4">
+          {recentActivity.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No recent activity</p>
+          ) : (
+            recentActivity.map((activity) => (
+              <div 
+                key={activity.id} 
+                className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => {
+                  setSelectedActivity(activity);
+                  setShowActivityModal(true);
+                }}
+              >
+                <div className="flex-shrink-0 mt-1">
+                  <Activity className="h-5 w-5 text-gold-deep" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">
+                    {activity.type?.replace(/_/g, ' ').toUpperCase()}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {activity.email || activity.userId || 'System'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {activity.timestamp?.toLocaleString()}
+                  </p>
+                </div>
+                <Eye className="h-4 w-4 text-gray-400" />
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <Shield className="h-8 w-8 text-red-600 mr-3" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Super Admin Portal</h1>
-                <p className="text-sm text-gray-600">System-wide management and monitoring</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <FontSizeToggle />
+    <div className="min-h-screen cm-dashboard-body">
+      <DashboardLayout
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        institutionName="Care Master"
+        portalLabel="Super Admin"
+        displayName={displayName || 'Super Admin'}
+        userEmail={userEmail}
+        onLogout={handleLogout}
+        headerActions={<FontSizeToggle />}
+      >
+        <div className="space-y-6">
+          <div className="cm-section-head">
+            <span className="cm-eyebrow">{activeTabLabel || 'Dashboard'}</span>
+            <h2 className="mt-2">Super Admin Console</h2>
+            <p>System-wide administration and oversight.</p>
+          </div>
+          {renderTabContent()}
+        </div>
+      </DashboardLayout>
+
+      {/* Activity Details Modal */}
+      {showActivityModal && selectedActivity && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Activity Details</h3>
               <button
-                onClick={() => navigate('/super-admin/licensing')}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+                onClick={() => {
+                  setShowActivityModal(false);
+                  setSelectedActivity(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
               >
-                Licensing Console
-              </button>
-              <button
-                onClick={() => navigate('/super-admin/users')}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
-              >
-                Users
-              </button>
-              <button
-                onClick={() => navigate('/super-admin/audit-logs')}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
-              >
-                Audit Logs
-              </button>
-            <button
-              onClick={() => navigate('/super-admin/settings')}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Settings"
-            >
-              <Settings className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => navigate('/super-admin/management')}
-              className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
-              title="Manage Super Admins"
-            >
-              Manage Admins
-            </button>
-              <button
-                onClick={handleLogout}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
+                <XCircle className="h-5 w-5" />
               </button>
             </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Alerts */}
-        {alerts.length > 0 && (
-          <div className="mb-8 space-y-3">
-            {alerts.map((alert, index) => (
-              <AlertBanner key={index} {...alert} />
-            ))}
-          </div>
-        )}
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            icon={Building2}
-            label="Active Institutions"
-            value={stats.activeInstitutions}
-            trend={5}
-            color="blue"
-          />
-          <StatCard
-            icon={FileText}
-            label="Active Licenses"
-            value={stats.activeLicenses}
-            trend={3}
-            color="green"
-          />
-          <StatCard
-            icon={Users}
-            label="Total Users"
-            value={stats.totalUsers}
-            trend={8}
-            color="purple"
-          />
-          <StatCard
-            icon={DollarSign}
-            label="Monthly Revenue"
-            value={`$${stats.totalRevenue.toLocaleString()}`}
-            trend={12}
-            color="emerald"
-          />
-        </div>
-
-        {/* Secondary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+            <div className="p-6 space-y-4">
               <div>
-                <p className="text-sm text-gray-600">Total Institutions</p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{stats.totalInstitutions}</p>
+                <label className="text-sm font-medium text-gray-500">Type</label>
+                <p className="text-sm text-gray-900 mt-1">
+                  {selectedActivity.type?.replace(/_/g, ' ').toUpperCase() || 'N/A'}
+                </p>
               </div>
-              <Building2 className="h-8 w-8 text-gray-400" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Expiring Soon</p>
-                <p className="mt-1 text-2xl font-bold text-yellow-600">{stats.expiringLicenses}</p>
+                <label className="text-sm font-medium text-gray-500">Action</label>
+                <p className="text-sm text-gray-900 mt-1">
+                  {selectedActivity.action?.replace(/_/g, ' ') || 'N/A'}
+                </p>
               </div>
-              <Clock className="h-8 w-8 text-yellow-400" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Active Users</p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{stats.activeUsers}</p>
+                <label className="text-sm font-medium text-gray-500">User</label>
+                <p className="text-sm text-gray-900 mt-1">
+                  {selectedActivity.email || selectedActivity.userId || 'System'}
+                </p>
               </div>
-              <Users className="h-8 w-8 text-gray-400" />
+              <div>
+                <label className="text-sm font-medium text-gray-500">Performed By</label>
+                <p className="text-sm text-gray-900 mt-1">
+                  {selectedActivity.performedByEmail || selectedActivity.performedBy || 'System'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Timestamp</label>
+                <p className="text-sm text-gray-900 mt-1">
+                  {selectedActivity.timestamp?.toLocaleString() || 'N/A'}
+                </p>
+              </div>
+              {selectedActivity.details && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Details</label>
+                  <pre className="text-xs text-gray-900 mt-1 bg-gray-50 p-3 rounded-lg overflow-x-auto">
+                    {JSON.stringify(selectedActivity.details, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <button
-              onClick={() => navigate('/super-admin/licensing')}
-              className="flex flex-col items-center p-4 rounded-lg border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-colors"
-            >
-              <Building2 className="h-8 w-8 text-blue-600 mb-2" />
-              <span className="text-sm font-medium text-gray-900">Manage Institutions</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/super-admin/licensing')}
-              className="flex flex-col items-center p-4 rounded-lg border-2 border-green-200 hover:border-green-400 hover:bg-green-50 transition-colors"
-            >
-              <FileText className="h-8 w-8 text-green-600 mb-2" />
-              <span className="text-sm font-medium text-gray-900">Issue License</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/super-admin/licensing')}
-              className="flex flex-col items-center p-4 rounded-lg border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-colors"
-            >
-              <Users className="h-8 w-8 text-purple-600 mb-2" />
-              <span className="text-sm font-medium text-gray-900">Assign Admin</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/super-admin/settings')}
-              className="flex flex-col items-center p-4 rounded-lg border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-colors"
-            >
-              <Settings className="h-8 w-8 text-gray-600 mb-2" />
-              <span className="text-sm font-medium text-gray-900">System Settings</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/super-admin/management')}
-              className="flex flex-col items-center p-4 rounded-lg border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-colors"
-            >
-              <Shield className="h-8 w-8 text-red-600 mb-2" />
-              <span className="text-sm font-medium text-gray-900">Manage Admins</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/super-admin/users')}
-              className="flex flex-col items-center p-4 rounded-lg border-2 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
-            >
-              <Users className="h-8 w-8 text-indigo-600 mb-2" />
-              <span className="text-sm font-medium text-gray-900">All Users</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/super-admin/audit-logs')}
-              className="flex flex-col items-center p-4 rounded-lg border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 transition-colors"
-            >
-              <Activity className="h-8 w-8 text-orange-600 mb-2" />
-              <span className="text-sm font-medium text-gray-900">Audit Logs</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Analytics Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Revenue Trend Chart */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <TrendingUp className="h-5 w-5 text-green-600 mr-2" />
-              Revenue Trend (Last 6 Months)
-            </h3>
-            {chartData.revenueTrend.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={chartData.revenueTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="revenue" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-500">
-                No revenue data available
-              </div>
-            )}
-          </div>
-
-          {/* Institution Growth Chart */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Building2 className="h-5 w-5 text-blue-600 mr-2" />
-              Institution Growth
-            </h3>
-            {chartData.institutionGrowth.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={chartData.institutionGrowth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-500">
-                No growth data available
-              </div>
-            )}
-          </div>
-
-          {/* License Distribution Chart */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <FileText className="h-5 w-5 text-purple-600 mr-2" />
-              License Plan Distribution
-            </h3>
-            {chartData.licenseDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={chartData.licenseDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {chartData.licenseDistribution.map((entry, index) => {
-                      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                    })}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-500">
-                No license data available
-              </div>
-            )}
-          </div>
-
-          {/* User Growth Chart */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Users className="h-5 w-5 text-indigo-600 mr-2" />
-              User Growth
-            </h3>
-            {chartData.userGrowth.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={chartData.userGrowth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="users" stroke="#6366f1" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-500">
-                No user data available
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-            <button
-              onClick={() => navigate('/super-admin/audit-logs')}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-            >
-              View All →
-            </button>
-          </div>
-          <div className="space-y-4">
-            {recentActivity.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No recent activity</p>
-            ) : (
-              recentActivity.map((activity) => (
-                <div 
-                  key={activity.id} 
-                  className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => {
-                    setSelectedActivity(activity);
-                    setShowActivityModal(true);
-                  }}
-                >
-                  <div className="flex-shrink-0 mt-1">
-                    <Activity className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
-                      {activity.type?.replace(/_/g, ' ').toUpperCase()}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {activity.email || activity.userId || 'System'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {activity.timestamp?.toLocaleString()}
-                    </p>
-                  </div>
-                  <Eye className="h-4 w-4 text-gray-400" />
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Activity Details Modal */}
-        {showActivityModal && selectedActivity && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Activity Details</h3>
-                <button
-                  onClick={() => {
-                    setShowActivityModal(false);
-                    setSelectedActivity(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XCircle className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Type</label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedActivity.type?.replace(/_/g, ' ').toUpperCase() || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Action</label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedActivity.action?.replace(/_/g, ' ') || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">User</label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedActivity.email || selectedActivity.userId || 'System'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Performed By</label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedActivity.performedByEmail || selectedActivity.performedBy || 'System'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Timestamp</label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedActivity.timestamp?.toLocaleString() || 'N/A'}
-                  </p>
-                </div>
-                {selectedActivity.details && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Details</label>
-                    <pre className="text-xs text-gray-900 mt-1 bg-gray-50 p-3 rounded-lg overflow-x-auto">
-                      {JSON.stringify(selectedActivity.details, null, 2)}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
+      )}
     </div>
   );
 };

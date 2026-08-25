@@ -76,9 +76,7 @@ import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { careLogsAPI } from '../api/careLogsAPI';
 import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, markConversationAsRead } from '../api/messagesAPI';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from 'backend/database';
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
-import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import activitiesAPI, { ACTIVITY_CATEGORIES, COMMON_ACTIVITIES } from '../api/activitiesAPI';
 import prescriptionsAPI from '../api/prescriptionsAPI';
@@ -97,8 +95,12 @@ import WebRTCService from '../services/webrtcService';
 import AdlLogger from '../components/AdlLogger';
 import UserProfileSettings from '../components/UserProfileSettings';
 import HelpSupport from '../components/HelpSupport';
-import AssignmentCalendar from '../components/AssignmentCalendar';
 import TaskCompletionModal from '../components/TaskCompletionModal';
+import { collection, query, getDocs, setDoc, updateDoc, where, doc } from 'backend/database';
+import { signOut } from 'backend/auth';
+import { db } from '../backend/config';
+import DashboardLayout from '../components/DashboardLayout';
+import AssignmentCalendar from '../components/AssignmentCalendar';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -1251,7 +1253,7 @@ const InstitutionCaregiverDashboard = () => {
                 <User className="h-5 w-5 text-blue-600 mr-2" />
                 <div>
                   <h4 className="text-sm font-medium text-blue-800">No clients assigned yet</h4>
-                  <p className="text-sm text-blue-600 mt-1">
+                  <p className="text-sm text-gold-deep mt-1">
                     Contact your administrator to get clients assigned to your care. Once assigned, you'll be able to create care plans, write prescriptions, and conduct consultations.
                   </p>
                 </div>
@@ -1322,7 +1324,7 @@ const InstitutionCaregiverDashboard = () => {
     if (timeString instanceof Date) {
       return timeString.toLocaleString();
     }
-    // If it's a Firestore Timestamp, convert to string
+    // If it's a Database Timestamp, convert to string
     if (timeString?.toDate) {
       return timeString.toDate().toLocaleString();
     }
@@ -1377,7 +1379,7 @@ const InstitutionCaregiverDashboard = () => {
   const renderClientsTab = () => {
     if (!assignedClients || assignedClients.length === 0) {
       return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+        <div className="cm-card p-8 text-center">
           <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No Assigned Clients</h3>
           <p className="text-gray-600 mb-4">
@@ -1490,7 +1492,7 @@ const InstitutionCaregiverDashboard = () => {
         </div>
 
         {/* Desktop Clients List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 hidden lg:block">
+        <div className="cm-card hidden lg:block">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -1578,7 +1580,7 @@ const InstitutionCaregiverDashboard = () => {
           <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">Total Clients</p>
+                <p className="text-sm font-medium text-gold-deep">Total Clients</p>
                 <p className="text-2xl font-bold text-blue-900">{assignedClients.length}</p>
               </div>
               <Users className="h-10 w-10 text-blue-600" />
@@ -2159,7 +2161,7 @@ const InstitutionCaregiverDashboard = () => {
         // Get or create conversation
         let conversationId = selectedConversation.conversationId || selectedConversation.id;
         
-        // If conversation doesn't exist in Firestore yet, create it
+        // If conversation doesn't exist in Database yet, create it
         if (!selectedConversation.conversationId && selectedConversation.participants) {
           const conversationResult = await getOrCreateConversation(selectedConversation.participants, 'care');
           // getOrCreateConversation returns an object with id property
@@ -2174,7 +2176,7 @@ const InstitutionCaregiverDashboard = () => {
         
         console.log('📤 Sending message to conversation:', conversationId);
         
-        // Send message to Firestore
+        // Send message to Database
         await sendMessageAPI(conversationId, user.uid, {
           text: newMessage,
           type: 'text',
@@ -2320,7 +2322,7 @@ const InstitutionCaregiverDashboard = () => {
     ].join(' ');
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[calc(100vh-250px)]">
+      <div className="cm-card h-[calc(100vh-250px)]">
         <div className="flex h-full">
           {/* Conversations List */}
           <div className={conversationListClasses}>
@@ -2692,7 +2694,7 @@ const InstitutionCaregiverDashboard = () => {
         </div>
 
         {/* Weekly Schedule Calendar */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-500">Week of</p>
@@ -2790,7 +2792,7 @@ const InstitutionCaregiverDashboard = () => {
         </div>
 
         {/* Selected Day's Timeline */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="cm-card p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">
               {selectedScheduleDate.toDateString() === new Date().toDateString() ? "Today's Timeline" : "Schedule Timeline"}
@@ -2940,7 +2942,7 @@ const InstitutionCaregiverDashboard = () => {
     return (
       <div className="space-y-6">
         {/* Report Type Selector */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="cm-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Nursing Reports</h2>
             <div className="flex gap-2">
@@ -2974,7 +2976,7 @@ const InstitutionCaregiverDashboard = () => {
 
         {/* Shift Report Generator */}
         {reportType === 'shift' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="cm-card p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Shift Report</h3>
             
             <div className="grid grid-cols-2 gap-4 mb-6">
@@ -3066,7 +3068,7 @@ const InstitutionCaregiverDashboard = () => {
 
         {/* Handoff Notes */}
         {reportType === 'handoff' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="cm-card p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Handoff Notes</h3>
             
             <div className="space-y-4 mb-6">
@@ -3098,7 +3100,7 @@ const InstitutionCaregiverDashboard = () => {
 
         {/* Incident Reports */}
         {reportType === 'incident' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="cm-card p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Incident Reports</h3>
             
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
@@ -3285,7 +3287,7 @@ const InstitutionCaregiverDashboard = () => {
 
           {/* Prescriptions Display */}
           {!selectedClient ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+            <div className="cm-card p-12 text-center">
               <Pill className="h-20 w-20 text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No Client Selected</h3>
               <p className="text-gray-600">
@@ -3293,7 +3295,7 @@ const InstitutionCaregiverDashboard = () => {
               </p>
               </div>
             ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="cm-card">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center">
                   <User className="h-5 w-5 text-indigo-600 mr-2" />
@@ -3468,7 +3470,7 @@ const InstitutionCaregiverDashboard = () => {
         </div>
 
         {/* Current Medications */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="cm-card">
           <div className="p-6">
             {!selectedClient ? (
               <div className="text-center py-12">
@@ -3652,7 +3654,7 @@ const InstitutionCaregiverDashboard = () => {
           <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">Today's Tasks</p>
+                <p className="text-sm font-medium text-gold-deep">Today's Tasks</p>
                 <p className="text-2xl font-bold text-blue-900">{todayTasks.length}</p>
               </div>
               <Clock className="h-10 w-10 text-blue-600" />
@@ -3681,7 +3683,7 @@ const InstitutionCaregiverDashboard = () => {
         </div>
 
         {/* Tasks List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="cm-card">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-bold text-gray-900">All Tasks</h2>
             <p className="text-sm text-gray-600 mt-1">Manage your care tasks and assignments</p>
@@ -3829,7 +3831,7 @@ const InstitutionCaregiverDashboard = () => {
         </div>
 
         {/* Client Selection and Action */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="cm-card p-6">
           <div className="flex flex-col md:flex-row md:items-end gap-4">
             {/* Client Selector */}
             <div className="flex-1">
@@ -3892,7 +3894,7 @@ const InstitutionCaregiverDashboard = () => {
         </div>
 
         {/* Care Logs List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="cm-card">
           <div className="p-6">
             {!selectedClient ? (
               <div className="text-center py-12">
@@ -4113,363 +4115,85 @@ const InstitutionCaregiverDashboard = () => {
     );
   };
 
+  // CareMaster design system - tabs for DashboardLayout sidebar
+  const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+    { id: 'carelogs', label: 'Care Logs', icon: Camera },
+    { id: 'activities', label: 'Activities', icon: Activity },
+    { id: 'clients', label: 'Clients', icon: Users },
+    ...(isDoctor || isNurse || isPharmacist ? [
+      { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
+      { id: 'consultations', label: 'Consultations', icon: Stethoscope },
+      { id: 'diagnostics', label: 'Diagnostics', icon: FileText },
+    ] : []),
+    { id: 'help', label: 'Help & Support', icon: HelpCircle },
+  ];
+
+  const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label || 'Dashboard';
+  const displayName = caregiver?.name || userProfile?.name || userProfile?.displayName || 'Caregiver';
+
+  const handleLogout = () => {
+    sessionManager.clearTabSession();
+    import('backend/auth').then(({ signOut, getAuth }) => {
+      signOut(getAuth()).then(() => {
+        window.location.href = '/institution';
+      }).catch((error) => {
+        console.error('Error signing out:', error);
+      });
+    });
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-64 cm-dashboard-body">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
       </div>
     );
   }
 
   return (
     <InstitutionCaregiverGuard>
-    <div className="w-full h-full bg-gray-50 flex flex-col lg:flex-row">
-      {/* Mobile Header/Top Bar */}
-      {isMobile && (
-        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm safe-area-top">
-          <div className="flex items-center justify-between px-3 py-3">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 rounded-lg hover:bg-gray-100 touch-manipulation"
-                aria-label="Toggle menu"
-              >
-                <Menu className="h-6 w-6 text-gray-600" />
-              </button>
-              <div className="flex items-center space-x-2">
-                <div className="p-1.5 bg-blue-50 rounded-lg">
-                  <Heart className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <h1 className="brand-title-alt text-gray-900">Care Master</h1>
-                  <p className="text-xs text-gray-500">{dashboardConfig.title}</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-gray-600" />
-              <button onClick={() => navigate('/settings')} className="p-2 rounded-lg hover:bg-gray-100 touch-manipulation">
-                <Settings className="h-5 w-5 text-gray-600" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sidebar Overlay for Mobile */}
-      {isMobile && !sidebarCollapsed && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 animate-fade-in lg:hidden"
-          onClick={() => setSidebarCollapsed(true)}
-        />
-      )}
-
-      {/* Sidebar */}
-      {(isDoctor || isNurse || isNonMedicalCaregiver) && (
-        <div className={`
-          ${isMobile 
-            ? `fixed inset-y-0 left-0 z-50 w-full max-w-xs transform transition-transform duration-300 ${sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'}`
-            : `${sidebarCollapsed ? 'w-16' : 'w-64'} transition-all duration-300`
-          }
-          bg-white shadow-lg border-r border-gray-200 flex flex-col safe-area-inset
-        `}>
-          {/* Sidebar Header */}
-          <div className="p-4 md:p-6 border-b border-gray-100 shrink-0">
-            {!sidebarCollapsed || isMobile ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="p-2 bg-blue-50 rounded-lg shrink-0">
-                    <Heart className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <h1 className="brand-title-alt text-gray-900 truncate">Care Master</h1>
-                    <p className="text-xs text-gray-500 truncate">Care Portal</p>
-                  </div>
-                </div>
-                {isMobile && (
-                  <button
-                    onClick={() => setSidebarCollapsed(true)}
-                    className="p-2 rounded-lg hover:bg-gray-100 touch-manipulation shrink-0"
-                    aria-label="Close menu"
-                  >
-                    <X className="h-6 w-6 text-gray-600" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Heart className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
+    <div className="min-h-screen cm-dashboard-body">
+      <DashboardLayout
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        institutionName={institutionData?.name || 'Institution'}
+        portalLabel="Caregiver"
+        displayName={displayName}
+        userEmail={userProfile?.email || user?.email || ''}
+        profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
+        onLogout={handleLogout}
+        headerActions={
+          <>
+            {userRoles && userRoles.length > 1 && (
+              <DashboardSwitcher
+                userRoles={userRoles}
+                currentDashboard={userProfile?.medicalQualification?.toLowerCase() || userProfile?.userType || 'caregiver'}
+                institutionId={effectiveInstitutionId}
+              />
             )}
+            <button
+              onClick={() => setShowProfileSettings(true)}
+              className="cm-btn-gold"
+              title="Profile Settings"
+            >
+              <User className="h-4 w-4 mr-2" />
+              <span className="hidden lg:inline">Profile</span>
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-6">
+          <div className="cm-section-head">
+            <span className="cm-eyebrow">{activeTabLabel}</span>
+            <h2 className="mt-2">{institutionData?.name || 'Caregiver Dashboard'}</h2>
+            <p>Welcome back, {displayName}.</p>
           </div>
 
-          {/* Sidebar Navigation */}
-          <nav className="flex-1 p-3 md:p-4 space-y-1 overflow-y-auto smooth-scroll">
-            <button
-              onClick={() => {
-                setActiveTab('dashboard');
-                if (isMobile) setSidebarCollapsed(true);
-              }}
-              className={`w-full flex items-center px-3 md:px-4 py-3 rounded-lg text-sm font-medium transition-colors touch-feedback ${
-                activeTab === 'dashboard'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Home className={`h-5 w-5 shrink-0 ${sidebarCollapsed && !isMobile ? 'mx-auto' : 'mr-3'}`} />
-              {(!sidebarCollapsed || isMobile) && <span className="truncate">Dashboard</span>}
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('schedule')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'schedule'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Calendar className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Schedule'}
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('messages')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'messages'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <MessageSquare className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Messages'}
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('tasks')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'tasks'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <CheckSquare className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Tasks'}
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('carelogs')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'carelogs'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Camera className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Care Logs'}
-            </button>
-            
-            <button
-              onClick={() => {
-                console.log('🎯 Activities tab button clicked!');
-                setActiveTab('activities');
-                if (isMobile) setSidebarCollapsed(true);
-              }}
-              className={`w-full flex items-center px-3 md:px-4 py-3 rounded-lg text-sm font-medium transition-colors touch-feedback ${
-                activeTab === 'activities'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Activity className={`h-5 w-5 shrink-0 ${sidebarCollapsed && !isMobile ? 'mx-auto' : 'mr-3'}`} />
-              {(!sidebarCollapsed || isMobile) && <span className="truncate">Activities</span>}
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('clients')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'clients'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Users className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Clients'}
-            </button>
-            
-            {/* Medical tabs - only show for doctors, nurses, and pharmacists */}
-            {(isDoctor || isNurse || isPharmacist) && (
-              <>
-            <button
-              onClick={() => setActiveTab('prescriptions')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'prescriptions'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Pill className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Prescriptions'}
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('consultations')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'consultations'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Stethoscope className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Consultations'}
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('diagnostics')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'diagnostics'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <FileText className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Diagnostics'}
-            </button>
-              </>
-            )}
-
-            <button
-              onClick={() => setActiveTab('help')}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'help'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <HelpCircle className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Help & Support'}
-            </button>
-          </nav>
-
-          {/* Sidebar Footer */}
-          <div className="p-4 border-t border-gray-100">
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-2 ${
-                showSettings 
-                  ? 'bg-blue-50 text-blue-700' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Settings className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Settings'}
-            </button>
-            
-            <button
-              onClick={() => {
-                // Clear tab session
-                sessionManager.clearTabSession();
-                // Import signOut from firebase/auth
-                import('firebase/auth').then(({ signOut, getAuth }) => {
-                  signOut(getAuth()).then(() => {
-                    // Clear user context and redirect to institution landing
-                    window.location.href = '/institution';
-                  }).catch((error) => {
-                    console.error('Error signing out:', error);
-                  });
-                });
-              }}
-              className="w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <LogOut className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!sidebarCollapsed && 'Logout'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header - Hidden on mobile (we have mobile header at top) */}
-        <div className="hidden md:block bg-white shadow-sm border-b border-gray-100 px-4 sm:px-6 md:px-8 py-4 md:py-6">
-          <div className="flex justify-between items-center">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
-                {activeTab === 'dashboard' && 'General Care Dashboard'}
-                {activeTab === 'clients' && 'Client Management'}
-                {activeTab === 'messages' && 'Messages'}
-                {activeTab === 'schedule' && 'Schedule'}
-                {activeTab === 'tasks' && 'Tasks'}
-                {activeTab === 'carelogs' && 'Care Logs'}
-                {activeTab === 'activities' && 'Activities'}
-                {activeTab === 'prescriptions' && 'Prescriptions'}
-                {activeTab === 'consultations' && 'Consultations'}
-                {activeTab === 'diagnostics' && 'Diagnostics'}
-                {activeTab === 'help' && 'Help & Support'}
-              </h1>
-              <p className="text-sm md:text-base text-gray-600 mt-1 truncate">
-                {activeTab === 'dashboard' && `Welcome back, ${caregiver?.name || userProfile?.name || 'User'}`}
-                {activeTab === 'clients' && 'Manage your assigned clients'}
-                {activeTab === 'messages' && 'Communicate with team members'}
-                {activeTab === 'schedule' && 'View your upcoming schedule'}
-                {activeTab === 'tasks' && 'Manage your care tasks'}
-                {activeTab === 'carelogs' && 'View and manage care logs'}
-                {activeTab === 'activities' && 'Track your activities'}
-                {activeTab === 'prescriptions' && 'View prescribed medications'}
-                {activeTab === 'consultations' && 'View consultation notes'}
-                {activeTab === 'diagnostics' && 'View diagnostic results'}
-              </p>
-              {activeTab === 'dashboard' && (
-                <div className="flex items-center mt-2">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {userProfile?.medicalQualification || 'General Medicine'}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2 md:gap-4 shrink-0">
-              {userRoles && userRoles.length > 1 && (
-                <div className="hidden lg:block">
-                  <DashboardSwitcher 
-                    userRoles={userRoles} 
-                    currentDashboard={userProfile?.medicalQualification?.toLowerCase() || userProfile?.userType || 'caregiver'} 
-                    institutionId={effectiveInstitutionId}
-                  />
-                </div>
-              )}
-              <button 
-                onClick={() => setShowProfileSettings(true)}
-                className="flex items-center px-3 md:px-4 py-2 text-xs md:text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors touch-manipulation"
-                title="Profile Settings"
-              >
-                <User className="h-4 w-4 mr-2" />
-                <span className="hidden lg:inline">Profile</span>
-              </button>
-              <button className="hidden md:flex items-center px-3 md:px-4 py-2 text-xs md:text-sm text-gray-600 hover:text-gray-900 transition-colors touch-manipulation">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                <span className="hidden lg:inline">Refresh</span>
-              </button>
-              <div className="flex items-center gap-2 md:gap-3">
-                <Bell className="h-5 w-5 text-gray-400 cursor-pointer hover:text-gray-600" />
-                <div className="flex items-center gap-2">
-                  <div className="hidden md:block text-right min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {caregiver?.name || userProfile?.name || 'User'}
-                    </p>
-                    <p className="text-xs text-gray-500">Caregiver</p>
-                  </div>
-                  <UserAvatarDropdown
-                    userProfile={userProfile || caregiver}
-                    user={user}
-                    profileImageUrl={profileImage || userProfile?.photoURL || userProfile?.profilePictureUrl}
-                    size="md"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Doctor Client Selector (if doctor) */}
         <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-3 sm:pt-4 md:pt-6">
@@ -4485,13 +4209,13 @@ const InstitutionCaregiverDashboard = () => {
                   setActiveTab('clients');
                   if (isMobile) setSidebarCollapsed(true);
                 }}
-                className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all active:scale-95 touch-manipulation"
+                className="cm-card p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all active:scale-95 touch-manipulation"
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Assigned Clients</p>
                     <p className="text-xl md:text-2xl font-bold text-gray-900">{assignedClients.length}</p>
-                    <p className="text-xs text-blue-600 mt-1 flex items-center">
+                    <p className="text-xs text-gold-deep mt-1 flex items-center">
                       <Eye className="h-3 w-3 mr-1" />
                       <span className="truncate">Click to view</span>
                     </p>
@@ -4507,7 +4231,7 @@ const InstitutionCaregiverDashboard = () => {
                   setActiveTab('tasks');
                   if (isMobile) setSidebarCollapsed(true);
                 }}
-                className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-green-200 transition-all active:scale-95 touch-manipulation"
+                className="cm-card p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-green-200 transition-all active:scale-95 touch-manipulation"
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
@@ -4529,7 +4253,7 @@ const InstitutionCaregiverDashboard = () => {
                   setActiveTab('tasks');
                   if (isMobile) setSidebarCollapsed(true);
                 }}
-                className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all active:scale-95 touch-manipulation"
+                className="cm-card p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all active:scale-95 touch-manipulation"
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
@@ -4551,7 +4275,7 @@ const InstitutionCaregiverDashboard = () => {
                   setActiveTab('messages');
                   if (isMobile) setSidebarCollapsed(true);
                 }}
-                className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-purple-200 transition-all active:scale-95 touch-manipulation"
+                className="cm-card p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-purple-200 transition-all active:scale-95 touch-manipulation"
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
@@ -4568,25 +4292,14 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Assignment Calendar — shown in dashboard overview */}
-        {activeTab === 'dashboard' && (
-          <div className="px-3 sm:px-4 md:px-6 lg:px-8 pb-4 md:pb-6">
-            <AssignmentCalendar
-              schedule={todaySchedule}
-              onItemSelect={(item) => {
-                const fullTask = recentTasks.find(t => t.id === item.id) || item;
-                setSelectedTask({
-                  ...fullTask,
-                  clientName: fullTask.client || fullTask.clientName || 'Client',
-                  scheduledTime: fullTask.time || fullTask.scheduledTime,
-                  dueDate: fullTask.dueDate || fullTask.time
-                });
-                setShowTaskDetailsModal(true);
-              }}
-            />
+            
+            <div className="flex justify-end mt-4 md:mt-6">
+              <button className="flex items-center px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base touch-manipulation">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Weekly Overview</span>
+                <span className="sm:hidden">Overview</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -4688,7 +4401,7 @@ const InstitutionCaregiverDashboard = () => {
             )}
             
             {/* General Care Provider Dashboard Section */}
-            <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
+            <div className="cm-card p-4 sm:p-6 md:p-8">
               <div className="flex flex-col sm:flex-row items-start justify-between mb-4 md:mb-6 gap-4">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2">General Care Provider Dashboard</h2>
@@ -4799,7 +4512,7 @@ const InstitutionCaregiverDashboard = () => {
           )}
           
           {/* Qualification-Specific Quick Actions */}
-          <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+          <div className="cm-card p-4 md:p-6">
             <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4 truncate">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {dashboardConfig.quickActions.map((action, index) => (
@@ -4817,7 +4530,7 @@ const InstitutionCaregiverDashboard = () => {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
-            <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-4 md:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Today's Visits</p>
@@ -4828,7 +4541,7 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Completed Tasks</p>
@@ -4839,7 +4552,7 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Rating</p>
@@ -4850,7 +4563,7 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
@@ -4863,12 +4576,26 @@ const InstitutionCaregiverDashboard = () => {
             </div>
           </div>
 
+          {/* Assignment Calendar */}
+          <AssignmentCalendar
+            schedule={(todaySchedule || []).map(s => ({
+              id: s.id,
+              type: s.type || 'task',
+              title: s.clientName || s.title || 'Task',
+              time: s.time || s.scheduledTime || '',
+              client: s.clientName || 'Client',
+              status: s.status || 'pending',
+              priority: s.priority
+            }))}
+            onItemSelect={() => {}}
+          />
+
           {/* Priority Alerts Section for Nurses */}
           {(userProfile?.medicalQualification?.includes('Nurse') || userProfile?.medicalQualification?.includes('RN')) && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Priority Alerts */}
               <div 
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition cursor-pointer"
+                className="cm-card p-6 hover:shadow-md transition cursor-pointer"
                 onClick={() => setActiveTab('clients')}
               >
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -4901,7 +4628,7 @@ const InstitutionCaregiverDashboard = () => {
 
               {/* Recent Activities */}
               <div 
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition cursor-pointer"
+                className="cm-card p-6 hover:shadow-md transition cursor-pointer"
                 onClick={() => setActiveTab('activities')}
               >
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -4937,7 +4664,7 @@ const InstitutionCaregiverDashboard = () => {
           )}
 
           {/* Today's Schedule */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="cm-card">
             <div className="px-8 py-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">Today's Schedule</h2>
             </div>
@@ -5012,7 +4739,7 @@ const InstitutionCaregiverDashboard = () => {
           </div>
 
           {/* Recent Tasks */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="cm-card">
             <div className="px-8 py-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">Recent Tasks</h2>
             </div>
@@ -5048,7 +4775,7 @@ const InstitutionCaregiverDashboard = () => {
 
           {/* Performance Overview */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer">
+            <div className="cm-card hover:shadow-md transition cursor-pointer">
               <div 
                 className="px-8 py-6 border-b border-gray-100"
                 onClick={() => setActiveTab('analytics')}
@@ -5102,7 +4829,7 @@ const InstitutionCaregiverDashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="cm-card">
               <div className="px-8 py-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
                 <p className="text-sm text-gray-500 mt-1">Common actions for your role</p>
@@ -5196,7 +4923,9 @@ const InstitutionCaregiverDashboard = () => {
           </div>
         </div>
         )}
-      </div>
+        </div>
+        </div>
+      </DashboardLayout>
 
       {/* Modals */}
       {showVitalsModal && selectedClient && (
@@ -6834,7 +6563,7 @@ const InstitutionCaregiverDashboard = () => {
                               <div className="flex-1">
                                 <h5 className="font-medium text-gray-900">{log.activityType || 'Care Activity'}</h5>
                                 <div className="flex items-center space-x-2 mt-1">
-                                  <span className="text-xs font-medium text-blue-600">
+                                  <span className="text-xs font-medium text-gold-deep">
                                     By: {log.caregiverName || log.createdBy || 'Staff Member'}
                                   </span>
                                   <span className="text-xs text-gray-400">•</span>
@@ -7024,8 +6753,7 @@ const InstitutionCaregiverDashboard = () => {
         />
       )}
 
-        </div>
-      </div>
+    </div>
     </InstitutionCaregiverGuard>
   );
 };

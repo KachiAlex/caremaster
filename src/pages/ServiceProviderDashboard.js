@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import SpecializedCaregiverDashboard from '../components/SpecializedCaregiverDashboard';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
-import { 
-  Users, 
-  Calendar, 
-  MessageSquare, 
-  Activity, 
-  AlertTriangle, 
+import DashboardLayout from '../components/DashboardLayout';
+import {
+  Users,
+  Calendar,
+  MessageSquare,
+  Activity,
+  AlertTriangle,
   TrendingUp,
   UserCheck,
   Clock,
@@ -31,7 +32,9 @@ import {
   Weight,
   Eye,
   Zap,
-  RefreshCw
+  RefreshCw,
+  Home,
+  HelpCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { 
@@ -197,7 +200,7 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
         return (
           <div 
             key={index} 
-            className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow cursor-pointer" 
+            className="cm-card p-6 hover:shadow-md transition-shadow cursor-pointer" 
             onClick={handleClick}
           >
             <div className="flex items-center justify-between">
@@ -224,7 +227,7 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
       {/* Recent clients */}
       <div 
-        className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+        className="cm-card hover:shadow-lg transition-shadow cursor-pointer"
         onClick={() => navigate('/service-provider/medical-records')}
       >
         <div className="p-6 border-b border-gray-200">
@@ -261,7 +264,7 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
 
       {/* Upcoming Consultations */}
       <div 
-        className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+        className="cm-card hover:shadow-lg transition-shadow cursor-pointer"
         onClick={() => navigate('/service-provider/consultations')}
       >
         <div className="p-6 border-b border-gray-200">
@@ -310,7 +313,7 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
       {/* Today's Tasks */}
-      <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/service-provider/tasks'}>
+      <div className="cm-card hover:shadow-lg transition-shadow cursor-pointer" onClick={() => window.location.href = '/service-provider/tasks'}>
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Today's Tasks</h3>
@@ -342,7 +345,7 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
       </div>
 
       {/* Recent Updates */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="cm-card">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Recent Updates</h3>
@@ -446,7 +449,7 @@ const ServiceProviderDashboard = () => {
     try {
       setLoading(true);
       
-      console.log('📊 ServiceProviderDashboard loading data for:', {
+      console.log('ðŸ“Š ServiceProviderDashboard loading data for:', {
         userId: userProfile.id,
         uid: userProfile.uid,
         userRole,
@@ -454,7 +457,7 @@ const ServiceProviderDashboard = () => {
         email: userProfile.email
       });
       
-      console.log('🔍 Role flags:', {
+      console.log('ðŸ” Role flags:', {
         isDoctor,
         isCaregiver,
         effectiveRole
@@ -462,7 +465,7 @@ const ServiceProviderDashboard = () => {
       
       const promises = [];
       
-      // Use uid if id is not available (Firebase Auth users)
+      // Use uid if id is not available (Backend Auth users)
       const userId = userProfile.id || userProfile.uid;
       
       // Load clients with error handling
@@ -472,9 +475,9 @@ const ServiceProviderDashboard = () => {
           return [];
         }));
       } else if (isCaregiver) {
-        console.log('🔍 About to call getClientsByCaregiver with userId:', userId);
+        console.log('ðŸ” About to call getClientsByCaregiver with userId:', userId);
         promises.push(getClientsByCaregiver(userId).catch(error => {
-          console.log('❌ Could not load caregiver clients:', error);
+          console.log('âŒ Could not load caregiver clients:', error);
           return [];
         }));
       } else {
@@ -528,7 +531,7 @@ const ServiceProviderDashboard = () => {
         unreadMessages
       ] = await Promise.all(promises);
       
-      console.log('🔍 Raw clients data from API:');
+      console.log('ðŸ” Raw clients data from API:');
       console.log('  - patientsCount:', clients?.length || 0);
       console.log('  - isArray:', Array.isArray(clients));
       console.log('  - clients data:', clients);
@@ -546,7 +549,7 @@ const ServiceProviderDashboard = () => {
       const actualTodaysAppointments = todaysAppointments || [];
       const actualUpcomingAppointments = upcomingAppointments || [];
       
-      console.log('📊 Dashboard stats update:');
+      console.log('ðŸ“Š Dashboard stats update:');
       console.log('  - clients:', actualPatients.length);
       console.log('  - todaysAppointments:', actualTodaysAppointments.length);
       console.log('  - upcomingAppointments:', actualUpcomingAppointments.length);
@@ -554,7 +557,7 @@ const ServiceProviderDashboard = () => {
       console.log('  - pendingTasks:', mergedPending.length);
       console.log('  - unreadMessages:', unreadMessages);
       
-      console.log('🔍 Detailed Client data:');
+      console.log('ðŸ” Detailed Client data:');
       console.log('  - patientsArray length:', actualPatients.length);
       console.log('  - patientNames:', actualPatients.map(p => p.name));
       console.log('  - patientIds:', actualPatients.map(p => p.id));
@@ -569,7 +572,7 @@ const ServiceProviderDashboard = () => {
         unreadMessages,
       });
       
-      console.log('✅ Stats set with clients count:', actualPatients.length);
+      console.log('âœ… Stats set with clients count:', actualPatients.length);
       
       // Store actual task data for caregiver sections (merged)
       setTodaysTasksData(mergedToday);
@@ -603,10 +606,10 @@ const ServiceProviderDashboard = () => {
     }
     
     const userId = userProfile.id || userProfile.uid;
-    console.log('🎧 Setting up call listener for doctor:', userId);
+    console.log('ðŸŽ§ Setting up call listener for doctor:', userId);
     
     const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {
-      console.log('📞 Incoming call notification:', callNotification);
+      console.log('ðŸ“ž Incoming call notification:', callNotification);
       
       if (callNotification.status === 'incoming') {
         setIncomingCall({
@@ -620,7 +623,7 @@ const ServiceProviderDashboard = () => {
     });
     
     return () => {
-      console.log('🔌 Cleaning up call listener');
+      console.log('ðŸ”Œ Cleaning up call listener');
       if (unsubscribe) unsubscribe();
     };
   }, [userProfile, callService]);
@@ -640,7 +643,7 @@ const ServiceProviderDashboard = () => {
         callType: incomingCall.callType
       });
       setIncomingCall(null);
-      console.log('✅ Call accepted');
+      console.log('âœ… Call accepted');
     } catch (error) {
       console.error('Error accepting call:', error);
       toast.error('Failed to accept call');
@@ -655,7 +658,7 @@ const ServiceProviderDashboard = () => {
       const userId = userProfile.id || userProfile.uid;
       await callService.rejectCall(incomingCall.callId, userId);
       setIncomingCall(null);
-      console.log('❌ Call rejected');
+      console.log('âŒ Call rejected');
     } catch (error) {
       console.error('Error rejecting call:', error);
       toast.error('Failed to reject call');
@@ -669,7 +672,7 @@ const ServiceProviderDashboard = () => {
     try {
       await callService.endCall(activeCall.callId);
       setActiveCall(null);
-      console.log('✅ Call ended');
+      console.log('âœ… Call ended');
     } catch (error) {
       console.error('Error ending call:', error);
     }
@@ -679,7 +682,7 @@ const ServiceProviderDashboard = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -699,7 +702,7 @@ const ServiceProviderDashboard = () => {
     setSelectedPatient(Client);
     setShowPatientModal(true);
     
-    // Load nurse reports from Firestore (for doctors view)
+    // Load nurse reports from Database (for doctors view)
     if (isDoctor && Client?.id) {
       getNurseReportsByPatient(client.id)
         .then((reports) => setNurseReports(reports))
@@ -836,19 +839,104 @@ const ServiceProviderDashboard = () => {
     loadDashboardData();
   };
 
+  // CareMaster design system - tabs for DashboardLayout sidebar
+  const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'tasks', label: 'Tasks', icon: ClipboardList },
+    { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
+    ...(isDoctor ? [
+      { id: 'consultations', label: 'Consultations', icon: Stethoscope },
+      { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
+      { id: 'records', label: 'Medical Records', icon: FileText },
+    ] : []),
+    { id: 'help', label: 'Help & Support', icon: HelpCircle },
+  ];
+
+  const handleTabChange = (tabId) => {
+    if (tabId === 'dashboard') return; // stay on dashboard
+    const routeMap = {
+      clients: '/service-provider/clients',
+      tasks: '/service-provider/tasks',
+      schedule: '/service-provider/schedule',
+      messages: '/service-provider/messages',
+      consultations: '/service-provider/consultations',
+      prescriptions: '/service-provider/prescriptions',
+      records: '/service-provider/medical-records',
+      help: '/service-provider/help',
+    };
+    const route = routeMap[tabId];
+    if (route) navigate(route);
+  };
+
+  const displayName = userProfile?.name || userProfile?.displayName || 'Service Provider';
+  const portalLabel = isDoctor ? 'Doctor' : 'Caregiver';
+  const institutionName = isDoctor ? 'Medical Dashboard' : 'Care Dashboard';
+
+  const handleLogout = () => {
+    import('backend/auth').then(({ signOut, getAuth }) => {
+      signOut(getAuth()).then(() => {
+        window.location.href = '/login';
+      }).catch((error) => {
+        console.error('Error signing out:', error);
+      });
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader userProfile={userProfile} userRole={effectiveRole} user={user} />
-      <QuickStats 
-        userRole={effectiveRole} 
-        stats={stats} 
-        loading={loading} 
-        onPatientClick={handlePatientClick}
-        onShowTasks={handleShowTasks}
-        onShowAppointments={handleShowAppointments}
-        onShowMessages={handleShowMessages}
-      />
-      <div className="px-6 -mt-4 mb-6">
+    <div className="min-h-screen cm-dashboard-body">
+      <DashboardLayout
+        tabs={tabs}
+        activeTab="dashboard"
+        onTabChange={handleTabChange}
+        institutionName={institutionName}
+        portalLabel={portalLabel}
+        displayName={displayName}
+        userEmail={userProfile?.email || user?.email || ''}
+        profilePictureUrl={userProfile?.photoURL || userProfile?.profilePictureUrl}
+        onLogout={handleLogout}
+        headerActions={
+          <button
+            onClick={() => window.location.reload()}
+            className="cm-btn-gold"
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            <span className="hidden lg:inline">Refresh</span>
+          </button>
+        }
+      >
+        <div className="space-y-6">
+          <div className="cm-section-head">
+            <span className="cm-eyebrow">{portalLabel} Portal</span>
+            <h2 className="mt-2">{institutionName}</h2>
+            <p>Welcome back, {displayName}. {userProfile?.medicalQualification || ''}</p>
+            {userProfile?.specializations && userProfile.specializations.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {userProfile.specializations.slice(0, 3).map((spec, index) => (
+                  <span key={index} className="px-2 py-1 bg-gold-soft/30 text-gold-deep text-xs rounded-full">
+                    {spec}
+                  </span>
+                ))}
+                {userProfile.specializations.length > 3 && (
+                  <span className="px-2 py-1 bg-ink/5 text-text-soft text-xs rounded-full">
+                    +{userProfile.specializations.length - 3} more
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+        <QuickStats
+          userRole={effectiveRole}
+          stats={stats}
+          loading={loading}
+          onPatientClick={handlePatientClick}
+          onShowTasks={handleShowTasks}
+          onShowAppointments={handleShowAppointments}
+          onShowMessages={handleShowMessages}
+        />
         <AssignmentCalendar
           schedule={[
             ...(todaysAppointmentsData || []).map(a => ({
@@ -873,31 +961,32 @@ const ServiceProviderDashboard = () => {
             setShowTaskCompletion(true);
           }}
         />
-      </div>
-      
-      {isDoctor && (
-        <DoctorSpecificSections 
-          userProfile={userProfile}
-          assignedPatients={assignedPatientsData}
-          upcomingAppointments={upcomingAppointmentsData}
-        />
-      )}
-      
-      {isCaregiver && (
-        <div className="p-6">
-          <SpecializedCaregiverDashboard 
-            onPatientClick={handlePatientClick}
+
+        {isDoctor && (
+          <DoctorSpecificSections
+            userProfile={userProfile}
             assignedPatients={assignedPatientsData}
+            upcomingAppointments={upcomingAppointmentsData}
           />
-          <div className="mt-6">
-            <CaregiverSpecificSections 
-              userProfile={userProfile} 
-              todaysTasks={todaysTasksData}
-              pendingTasks={pendingTasksData}
+        )}
+
+        {isCaregiver && (
+          <div className="p-6">
+            <SpecializedCaregiverDashboard
+              onPatientClick={handlePatientClick}
+              assignedPatients={assignedPatientsData}
             />
+            <div className="mt-6">
+              <CaregiverSpecificSections
+                userProfile={userProfile}
+                todaysTasks={todaysTasksData}
+                pendingTasks={pendingTasksData}
+              />
+            </div>
           </div>
+        )}
         </div>
-      )}
+      </DashboardLayout>
 
       {/* Client Details Modal */}
       {showPatientModal && selectedPatient && (
@@ -984,7 +1073,7 @@ const ServiceProviderDashboard = () => {
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center">
                               <span className="font-medium text-gray-900">{report.nurseName}</span>
-                              <span className="ml-2 text-sm text-gray-500">• {report.date}</span>
+                              <span className="ml-2 text-sm text-gray-500">â€¢ {report.date}</span>
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               report.status === 'stable' ? 'bg-green-100 text-green-800' : 
@@ -1006,7 +1095,7 @@ const ServiceProviderDashboard = () => {
                             </div>
                             <div className="text-center">
                               <div className="text-sm text-gray-500">Temperature</div>
-                              <div className="font-medium">{report.temperature}°F</div>
+                              <div className="font-medium">{report.temperature}Â°F</div>
                             </div>
                             <div className="text-center">
                               <div className="text-sm text-gray-500">Pain Level</div>
@@ -1180,7 +1269,7 @@ const ServiceProviderDashboard = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         <Thermometer className="h-4 w-4 inline mr-1" />
-                        Temperature (°F)
+                        Temperature (Â°F)
                       </label>
                       <input
                         type="number"
@@ -1280,7 +1369,7 @@ const ServiceProviderDashboard = () => {
                     </button>
                     <button
                       onClick={handleSubmitNurseReport}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+                      className="px-6 py-2 cm-btn-gold transition-colors flex items-center"
                     >
                       <FileText className="h-4 w-4 mr-2" />
                       Submit Nurse Report

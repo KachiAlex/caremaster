@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Heart, 
-  Calendar, 
-  Phone, 
-  MessageCircle, 
-  AlertTriangle, 
+import {
+  Heart,
+  Calendar,
+  Phone,
+  MessageCircle,
+  AlertTriangle,
   User,
   Plus,
   Activity,
@@ -17,7 +17,10 @@ import {
   Stethoscope,
   Clock,
   TrendingUp,
-  FileText
+  FileText,
+  Home,
+  Users,
+  LogOut
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { getUpcomingAppointments } from '../api/appointmentsAPI';
@@ -30,6 +33,7 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
+import DashboardLayout from '../components/DashboardLayout';
 
 const Dashboard = () => {
   const { user, userProfile } = useUser();
@@ -276,46 +280,92 @@ const Dashboard = () => {
     }
   };
 
+  // CareMaster design system - tabs for DashboardLayout sidebar
+  const tabs = [
+    { id: 'dashboard', label: 'My Dashboard', icon: Home },
+    { id: 'caregivers', label: 'My Care Team', icon: Users },
+    { id: 'appointments', label: 'Care Appointments', icon: Calendar },
+    { id: 'vital-signs', label: 'Health Monitoring', icon: Heart },
+    { id: 'telemedicine', label: 'Video Consultations', icon: Video },
+    { id: 'medications', label: 'Medications', icon: Pill },
+    { id: 'medical-documents', label: 'Medical Documents', icon: FileText },
+    { id: 'messages', label: 'Messages', icon: MessageCircle },
+    { id: 'help', label: 'Help & Support', icon: HelpCircle },
+  ];
+
+  const handleTabChange = (tabId) => {
+    if (tabId === 'dashboard') return;
+    navigate(`/${tabId}`);
+  };
+
+  const handleLogout = () => {
+    import('backend/auth').then(({ signOut, getAuth }) => {
+      signOut(getAuth()).then(() => {
+        window.location.href = '/login';
+      }).catch((error) => {
+        console.error('Error signing out:', error);
+      });
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen cm-dashboard-body">
+      <DashboardLayout
+        tabs={tabs}
+        activeTab="dashboard"
+        onTabChange={handleTabChange}
+        institutionName="Client Portal"
+        portalLabel="Client"
+        displayName={displayName}
+        userEmail={userProfile?.email || user?.email || ''}
+        profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
+        onLogout={handleLogout}
+      >
+        <div className="space-y-6">
+          <div className="cm-section-head">
+            <span className="cm-eyebrow">Client Portal</span>
+            <h2 className="mt-2">Welcome back, {displayName}</h2>
+            <p>Your personalized care dashboard.</p>
+          </div>
+
       {/* Welcome Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left - User Info */}
-        <div className="card">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Welcome back, {displayName}</h2>
+        <div className="cm-card p-6">
+          <h2 className="cm-display text-xl text-ink mb-4">Welcome back, {displayName}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">Age</p>
-              <p className="text-lg font-semibold text-gray-900">
+              <p className="cm-mono text-xs uppercase tracking-wider text-text-soft">Age</p>
+              <p className="text-lg font-semibold text-ink">
                 {userProfile?.dateOfBirth ? `${calculateAge(userProfile.dateOfBirth)} years` : 'Not provided'}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Emergency Contact</p>
-              <p className="text-lg font-semibold text-gray-900">
+              <p className="cm-mono text-xs uppercase tracking-wider text-text-soft">Emergency Contact</p>
+              <p className="text-lg font-semibold text-ink">
                 {userProfile?.emergencyContactName || 'Not provided'}
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-text-soft">
                 {userProfile?.emergencyContactPhone || 'No phone number'}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Subscription</p>
-              <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+              <p className="cm-mono text-xs uppercase tracking-wider text-text-soft">Subscription</p>
+              <span className="inline-block bg-gold-soft/40 text-gold-deep px-3 py-1 rounded-full text-sm font-medium">
                 {getSubscriptionStatus()}
               </span>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Medical Conditions</p>
+              <p className="cm-mono text-xs uppercase tracking-wider text-text-soft">Medical Conditions</p>
               <div className="flex flex-wrap gap-2 mt-1">
                 {formatMedicalConditions(userProfile?.medicalConditions).length > 0 ? (
                   formatMedicalConditions(userProfile.medicalConditions).map((condition, index) => (
-                    <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
+                    <span key={index} className="bg-ink/5 text-ink px-2 py-1 rounded-full text-xs">
                       {condition}
                     </span>
                   ))
                 ) : (
-                  <span className="text-gray-500 text-xs">No conditions listed</span>
+                  <span className="text-text-soft text-xs">No conditions listed</span>
                 )}
               </div>
             </div>
@@ -324,23 +374,23 @@ const Dashboard = () => {
 
         {/* Right - Emergency & Contact */}
         <div className="space-y-4">
-          <button 
+          <button
             onClick={handleEmergencyAlert}
-            className="w-full bg-red-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-red-700 transition-colors"
+            className="w-full bg-coral text-white py-4 px-6 rounded-xl font-bold text-lg hover:brightness-95 transition"
           >
             <AlertTriangle className="h-6 w-6 inline mr-2" />
             EMERGENCY - NEED HELP NOW
           </button>
           <div className="grid grid-cols-2 gap-4">
-            <button 
-              className="bg-orange-100 text-orange-700 py-3 px-4 rounded-lg hover:bg-orange-200 transition-colors"
+            <button
+              className="bg-coral-soft text-coral py-3 px-4 rounded-xl hover:brightness-95 transition"
               onClick={() => userProfile?.emergencyContactPhone && window.open(`tel:${userProfile.emergencyContactPhone}`)}
             >
               <Phone className="h-5 w-5 inline mr-2" />
               {userProfile?.emergencyContactName || 'Family'}
             </button>
-            <button 
-              className="bg-blue-100 text-blue-700 py-3 px-4 rounded-lg hover:bg-blue-200 transition-colors"
+            <button
+              className="bg-sage-soft text-sage py-3 px-4 rounded-xl hover:brightness-95 transition"
               onClick={() => userProfile?.doctorPhone && window.open(`tel:${userProfile.doctorPhone}`)}
             >
               <Heart className="h-5 w-5 inline mr-2" />
@@ -351,8 +401,8 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+      <div className="cm-card p-6">
+        <h3 className="cm-display text-lg text-ink mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
@@ -372,82 +422,82 @@ const Dashboard = () => {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <button 
+        <button
           onClick={() => navigate('/appointments')}
-          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
+          className="cm-card p-6 text-center hover:shadow-md transition-shadow cursor-pointer"
         >
           <Calendar className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-2xl font-bold text-ink">
             {dashboardData.loading ? '...' : dashboardData.upcomingAppointments.length}
           </div>
-          <div className="text-sm text-gray-500">Upcoming Visits</div>
+          <div className="text-sm text-text-soft">Upcoming Visits</div>
         </button>
-        <button 
+        <button
           onClick={() => navigate('/vital-signs')}
-          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
+          className="cm-card p-6 text-center hover:shadow-md transition-shadow cursor-pointer"
         >
-          <Heart className="h-8 w-8 text-red-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">
+          <Heart className="h-8 w-8 text-coral mx-auto mb-2" />
+          <div className="text-2xl font-bold text-ink">
             {dashboardData.loading ? '...' : (
-              dashboardData.latestVitalSigns?.type === 'Blood Pressure' 
-                ? dashboardData.latestVitalSigns.value 
+              dashboardData.latestVitalSigns?.type === 'Blood Pressure'
+                ? dashboardData.latestVitalSigns.value
                 : dashboardData.latestVitalSigns?.value || '--'
             )}
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-text-soft">
             {dashboardData.latestVitalSigns?.type || 'Last Reading'}
           </div>
         </button>
-        <button 
+        <button
           onClick={() => navigate('/messages')}
-          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
+          className="cm-card p-6 text-center hover:shadow-md transition-shadow cursor-pointer"
         >
-          <MessageCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">
+          <MessageCircle className="h-8 w-8 text-sage mx-auto mb-2" />
+          <div className="text-2xl font-bold text-ink">
             {dashboardData.loading ? '...' : dashboardData.unreadMessages}
           </div>
-          <div className="text-sm text-gray-500">New Messages</div>
+          <div className="text-sm text-text-soft">New Messages</div>
         </button>
-        <button 
+        <button
           onClick={() => navigate('/medications')}
-          className="card text-center hover:shadow-md transition-shadow cursor-pointer"
+          className="cm-card p-6 text-center hover:shadow-md transition-shadow cursor-pointer"
         >
-          <Pill className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">
+          <Pill className="h-8 w-8 text-gold-deep mx-auto mb-2" />
+          <div className="text-2xl font-bold text-ink">
             {dashboardData.loading ? '...' : dashboardData.activeMedications.length}
           </div>
-          <div className="text-sm text-gray-500">Active Medications</div>
+          <div className="text-sm text-text-soft">Active Medications</div>
         </button>
       </div>
 
       {/* Upcoming Care Visits */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Care Visits</h2>
+      <div className="cm-card p-6">
+        <h2 className="cm-display text-lg text-ink mb-4">Upcoming Care Visits</h2>
         {dashboardData.loading ? (
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="bg-white border border-ink/8 rounded-lg p-4">
             <div className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-4 bg-ink/10 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-ink/10 rounded w-1/2 mb-1"></div>
+              <div className="h-3 bg-ink/10 rounded w-1/3"></div>
             </div>
           </div>
         ) : dashboardData.upcomingAppointments.length > 0 ? (
           <div className="space-y-3">
             {dashboardData.upcomingAppointments.slice(0, 3).map((appointment) => (
-              <div key={appointment.id} className="bg-white border border-gray-200 rounded-lg p-4">
+              <div key={appointment.id} className="bg-white border border-ink/8 rounded-lg p-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-semibold text-ink">
                       {appointment.type || 'Healthcare Visit'}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-text-soft">
                       {appointment.doctorName || appointment.caregiverName || 'Healthcare Provider'}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      {appointment.scheduledTime ? 
+                    <p className="text-sm text-text-soft">
+                      {appointment.scheduledTime ?
                         new Date(appointment.scheduledTime).toLocaleString('en-US', {
                           weekday: 'short',
-                          month: 'short', 
+                          month: 'short',
                           day: 'numeric',
                           hour: 'numeric',
                           minute: '2-digit'
@@ -455,7 +505,7 @@ const Dashboard = () => {
                       }
                     </p>
                     {appointment.location && (
-                      <p className="text-sm text-gray-600">{appointment.location}</p>
+                      <p className="text-sm text-text-soft">{appointment.location}</p>
                     )}
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -471,8 +521,8 @@ const Dashboard = () => {
             ))}
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-lg p-4 text-center text-gray-500">
-            <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+          <div className="bg-white border border-ink/8 rounded-lg p-4 text-center text-text-soft">
+            <Calendar className="h-12 w-12 mx-auto mb-2 text-ink/20" />
             <p>No upcoming appointments</p>
             <p className="text-sm">Schedule your next visit with a caregiver</p>
           </div>
@@ -480,38 +530,38 @@ const Dashboard = () => {
       </div>
 
       {/* Caregiver Tasks & Care Activities */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Care Tasks & Activities</h2>
+      <div className="cm-card p-6">
+        <h2 className="cm-display text-lg text-ink mb-4">Care Tasks & Activities</h2>
         {dashboardData.loading ? (
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="bg-white border border-ink/8 rounded-lg p-4">
             <div className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-4 bg-ink/10 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-ink/10 rounded w-1/2 mb-1"></div>
+              <div className="h-3 bg-ink/10 rounded w-1/3"></div>
             </div>
           </div>
         ) : dashboardData.caregiverTasks.length > 0 ? (
           <div className="space-y-3">
             {dashboardData.caregiverTasks.filter(task => task.status !== 'completed' && task.status !== 'cancelled').slice(0, 5).map((task) => (
-              <div key={task.id} className="bg-white border border-l-4 border-l-blue-500 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div key={task.id} className="bg-white border border-l-4 border-l-gold rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <FileText className="h-4 w-4 text-blue-600" />
-                      <h3 className="font-semibold text-gray-900">{task.title || 'Care Task'}</h3>
+                      <FileText className="h-4 w-4 text-gold-deep" />
+                      <h3 className="font-semibold text-ink">{task.title || 'Care Task'}</h3>
                     </div>
                     {task.description && (
-                      <p className="text-sm text-gray-600 mb-2">{task.description}</p>
+                      <p className="text-sm text-text-soft mb-2">{task.description}</p>
                     )}
                     <div className="flex flex-wrap gap-2 text-sm">
                       {task.caregiverName && (
-                        <span className="text-gray-500">
+                        <span className="text-text-soft">
                           <User className="h-3 w-3 inline mr-1" />
                           Assigned to: {task.caregiverName}
                         </span>
                       )}
                       {task.dueDate && (
-                        <span className="text-gray-500">
+                        <span className="text-text-soft">
                           <Clock className="h-3 w-3 inline mr-1" />
                           Due: {task.dueDate} {task.dueTime && `at ${task.dueTime}`}
                         </span>
@@ -540,20 +590,22 @@ const Dashboard = () => {
               </div>
             ))}
             {dashboardData.caregiverTasks.filter(t => t.status !== 'completed').length > 5 && (
-              <p className="text-sm text-gray-500 text-center mt-2">
+              <p className="text-sm text-text-soft text-center mt-2">
                 + {dashboardData.caregiverTasks.filter(t => t.status !== 'completed').length - 5} more tasks
               </p>
             )}
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-lg p-4 text-center text-gray-500">
-            <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+          <div className="bg-white border border-ink/8 rounded-lg p-4 text-center text-text-soft">
+            <FileText className="h-12 w-12 mx-auto mb-2 text-ink/20" />
             <p>No active care tasks</p>
             <p className="text-sm">Your caregiver will assign tasks as needed</p>
           </div>
         )}
       </div>
-      
+        </div>
+      </DashboardLayout>
+
       {/* Incoming Call Interface */}
       {incomingCall && (
         <CallInterface
@@ -570,7 +622,7 @@ const Dashboard = () => {
           onCallRejected={handleRejectCall}
         />
       )}
-      
+
       {/* Active Call Interface */}
       {activeCall && (
         <CallInterface

@@ -1,5 +1,5 @@
 /**
- * Institution Lab Technician Dashboard
+ * Partner Lab Technician Dashboard
  * 
  * Mobile lab technician interface for home laboratory services:
  * - View assigned home visits
@@ -42,8 +42,8 @@ import { getPatientById } from '../api/patientsAPI';
 import { signOut } from 'backend/auth';
 import { auth } from '../backend/config';
 
-const InstitutionLabTechnicianDashboard = () => {
-  const { user, userProfile, institutionId, institutionData } = useUser();
+const PartnerLabTechnicianDashboard = () => {
+  const { user, userProfile, institutionId, institutionData, userRoles } = useUser();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('visits'); // visits, collections, history
@@ -58,12 +58,13 @@ const InstitutionLabTechnicianDashboard = () => {
     samplePhotos: []
   });
 
-  // Check if user is a lab technician
+  // Check if user is a lab technician (support multi-role users via roles array)
   const isLabTechnician = userProfile?.role === 'lab_technician' ||
-                          userProfile?.userType === 'lab_technician' || 
+                          userProfile?.userType === 'lab_technician' ||
                           userProfile?.type === 'lab_technician' ||
                           (userProfile?.medicalQualification || '').toLowerCase().includes('lab') ||
-                          (userProfile?.medicalQualification || '').toLowerCase().includes('technician');
+                          (userProfile?.medicalQualification || '').toLowerCase().includes('technician') ||
+                          (Array.isArray(userRoles) && userRoles.includes('labTechnician'));
 
   useEffect(() => {
     // Redirect if not a lab technician
@@ -73,13 +74,15 @@ const InstitutionLabTechnicianDashboard = () => {
       return;
     }
 
-    // Validate tab session
+    // Validate tab session.
+    // Use the fixed page role ('labTechnician') instead of userProfile.userType
+    // because multi-role users may have a different primary role in Database.
     if (userProfile && user) {
-      const userRole = userProfile.userType || userProfile.type || userProfile.role;
-      const validation = sessionManager.validateTabSession(user, userRole);
-      
+      const pageRole = 'labTechnician';
+      const validation = sessionManager.validateTabSession(user, pageRole);
+
       if (validation.needsInit) {
-        sessionManager.setTabSession(userRole, user.uid, institutionId);
+        sessionManager.setTabSession(pageRole, user.uid, institutionId);
       } else if (!validation.valid) {
         sessionManager.handleSessionConflict(validation, navigate, toast);
         return;
@@ -542,5 +545,5 @@ const InstitutionLabTechnicianDashboard = () => {
   );
 };
 
-export default InstitutionLabTechnicianDashboard;
+export default PartnerLabTechnicianDashboard;
 
