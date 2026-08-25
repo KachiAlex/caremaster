@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Menu, X, LogOut, ChevronDown } from 'lucide-react';
+import MobileBottomNav from './MobileBottomNav';
 
 /**
  * CareMaster Dashboard Layout
@@ -212,10 +213,17 @@ const DashboardLayout = ({
         </div>
 
         {/* Page content */}
-        <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto cm-animate-in">
+        <div className="px-4 sm:px-6 py-6 pb-24 md:pb-6 max-w-6xl mx-auto cm-animate-in">
           {children}
         </div>
       </main>
+
+      {/* Mobile bottom navigation */}
+      <MobileBottomNav
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+      />
     </div>
   );
 };

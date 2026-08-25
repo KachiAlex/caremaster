@@ -15,6 +15,16 @@ import SuperAdminGuard from './components/SuperAdminGuard';
 import InstitutionAdminGuard from './components/InstitutionAdminGuard';
 // Old admin components removed - using new admin system
 import ServiceProviderLayout from './components/ServiceProviderLayout';
+
+// Lazy-load heavy/non-critical components to reduce initial bundle
+const MobileOptimization = lazy(() => import('./components/MobileOptimization'));
+const PWAInstallPrompt = lazy(() => import('./components/PWAInstallPrompt'));
+const OfflineIndicator = lazy(() => import('./components/OfflineIndicator'));
+const VoiceCommandInterface = lazy(() => import('./components/VoiceCommandInterface'));
+const GestureControls = lazy(() => import('./components/GestureControls'));
+const MobileActionBar = lazy(() => import('./components/MobileActionBar'));
+const SecuritySettings = lazy(() => import('./components/SecuritySettings'));
+const SecurityDashboard = lazy(() => import('./components/SecurityDashboard'));
 const Landing = lazy(() => import('./pages/Landing'));
 const ChooseInstitution = lazy(() => import('./pages/ChooseInstitution'));
 const TenantPartners = lazy(() => import('./pages/TenantPartners'));
@@ -76,21 +86,21 @@ const InstitutionLabTechnicianDashboard = lazy(() => import('./pages/Institution
 import EnhancedMessagingInterface from './components/EnhancedMessagingInterface';
 import LoadingSpinner from './components/LoadingSpinner';
 
-// PWA and Mobile Components
-import PWAInstallPrompt from './components/PWAInstallPrompt';
-import OfflineIndicator from './components/OfflineIndicator';
-import VoiceCommandInterface from './components/VoiceCommandInterface';
-import GestureControls from './components/GestureControls';
-import MobileActionBar from './components/MobileActionBar';
-
 // PWA Services
-import SecuritySettings from './components/SecuritySettings';
-import SecurityDashboard from './components/SecurityDashboard';
 import pwaService from './services/pwaService';
 import hapticService from './services/hapticService';
 import voiceCommandService from './services/voiceCommandService';
 import gestureService from './services/gestureService';
-import { Capacitor } from '@capacitor/core';
+
+// Capacitor is heavy — lazy-detect native platform
+let isNativeApp = false;
+try {
+  // Dynamic check without importing the full Capacitor bundle
+  const { Capacitor } = require('@capacitor/core');
+  isNativeApp = Capacitor?.isNativePlatform?.() || false;
+} catch {
+  isNativeApp = false;
+}
 
 function App() {
   const [user, loading] = useAuthState(auth);
@@ -98,7 +108,6 @@ function App() {
   const [showGestureControls, setShowGestureControls] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isMobile, setIsMobile] = useState(false);
-  const isNativeApp = Capacitor?.isNativePlatform?.() || false;
 
   // PWA and Security Services Setup
   useEffect(() => {
@@ -308,39 +317,42 @@ function App() {
   return (
     <ErrorBoundary name="App">
       <UserProvider>
-      
-      {/* PWA Components */}
-      <PWAInstallPrompt />
-      <OfflineIndicator />
-      
-      {/* Mobile Action Bar */}
-      {isMobile && user && (
-        <MobileActionBar
-          onVoiceCommand={(enabled) => setShowVoiceInterface(enabled)}
-          onGestureControl={(enabled) => setShowGestureControls(enabled)}
-          onSettings={() => {
-            // Open mobile settings
-          }}
-          isOnline={isOnline}
-          isVoiceEnabled={voiceCommandService.isSupported}
-          isGestureEnabled={gestureService.isSupported}
-          isHapticEnabled={hapticService.isSupported}
+
+      {/* Lazy-loaded mobile/PWA components */}
+      <Suspense fallback={null}>
+        <MobileOptimization />
+        <PWAInstallPrompt />
+        <OfflineIndicator />
+
+        {/* Mobile Action Bar */}
+        {isMobile && user && (
+          <MobileActionBar
+            onVoiceCommand={(enabled) => setShowVoiceInterface(enabled)}
+            onGestureControl={(enabled) => setShowGestureControls(enabled)}
+            onSettings={() => {
+              // Open mobile settings
+            }}
+            isOnline={isOnline}
+            isVoiceEnabled={voiceCommandService.isSupported}
+            isGestureEnabled={gestureService.isSupported}
+            isHapticEnabled={hapticService.isSupported}
+          />
+        )}
+
+        {/* Voice Command Interface */}
+        <VoiceCommandInterface
+          isOpen={showVoiceInterface}
+          onClose={() => setShowVoiceInterface(false)}
+          onCommand={handleVoiceCommand}
         />
-      )}
-      
-      {/* Voice Command Interface */}
-      <VoiceCommandInterface
-        isOpen={showVoiceInterface}
-        onClose={() => setShowVoiceInterface(false)}
-        onCommand={handleVoiceCommand}
-      />
-      
-      {/* Gesture Controls */}
-      <GestureControls
-        isOpen={showGestureControls}
-        onClose={() => setShowGestureControls(false)}
-        onGesture={handleGesture}
-      />
+
+        {/* Gesture Controls */}
+        <GestureControls
+          isOpen={showGestureControls}
+          onClose={() => setShowGestureControls(false)}
+          onGesture={handleGesture}
+        />
+      </Suspense>
       
       <Suspense fallback={<LoadingSpinner />}>
       <Routes>

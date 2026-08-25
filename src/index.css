@@ -896,24 +896,21 @@ code {
   border-color: #0ea5e9;
 }
 
-/* Responsive design */
+/* Responsive design — mobile global fixes */
 @media (max-width: 768px) {
-  .grid-cols-2 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-  
-  .grid-cols-3 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-  
-  .grid-cols-4 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  
-  .container {
-    padding: 0 0.5rem;
+  /* Prevent horizontal scroll globally */
+  body {
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
   }
 
+  /* Ensure containers don't overflow */
+  .container {
+    padding: 0 0.5rem;
+    max-width: 100%;
+  }
+
+  /* Break long words to prevent overflow */
   p,
   a,
   span,
@@ -928,9 +925,45 @@ code {
     word-break: break-word;
   }
 
+  /* Table cells: allow wrapping by default, use whitespace-nowrap explicitly where needed */
   th,
   td {
     white-space: nowrap;
+  }
+
+  /* Touch-friendly tap targets */
+  button,
+  [role="button"],
+  .btn,
+  a.btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Smooth scrolling on iOS */
+  .overflow-y-auto,
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent pull-to-refresh */
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  /* Safe area padding for notched devices */
+  .safe-area-pt {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
