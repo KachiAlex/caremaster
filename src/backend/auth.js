@@ -53,6 +53,12 @@ export const getAuth = (_app) => ({
   currentUser: null,
   app: _app,
   __listeners: [],
+  onAuthStateChanged(callback) {
+    return onAuthStateChanged(this, callback);
+  },
+  signOut() {
+    return signOut(this);
+  },
 });
 
 export const setPersistence = (_auth, _persistence) => Promise.resolve();
