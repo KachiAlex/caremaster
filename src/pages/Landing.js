@@ -248,15 +248,11 @@ const NewHomePage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo - Clickable Home Button with Secret Access */}
-            <div 
+            <div
               onClick={handleLogoClick}
               className="flex items-center group cursor-pointer"
             >
-              <Heart className="h-8 w-8 text-blue-600 group-hover:scale-110 transition-transform" />
-              <span className="ml-2 text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">Care Master</span>
-              <span className="ml-3 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full hidden sm:inline">
-                Health Tech
-              </span>
+              <img src="/images/caremaster-logo.jpg" alt="Care Master Logo" className="h-24 w-auto" />
             </div>
 
             {/* Desktop Navigation */}
@@ -847,8 +843,7 @@ const NewHomePage = () => {
             {/* Company Info */}
             <div className="col-span-1">
               <div className="flex items-center mb-4">
-                <Heart className="h-8 w-8 text-blue-400" />
-                <span className="ml-2 text-xl font-bold">Care Master</span>
+                <img src="/images/caremaster-logo.jpg" alt="Care Master Logo" className="h-20 w-auto" />
               </div>
               <p className="text-gray-400 text-sm mb-4">
                 The leading Health Tech platform for modern care agencies worldwide.
