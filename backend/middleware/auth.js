@@ -60,57 +60,9 @@ const requireRole = (roles) => {
 };
 
 const require2FA = async (req, res, next) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication required' 
-      });
-    }
-
-    // Only bursar and admin need 2FA
-    if (['bursar', 'admin'].includes(req.user.user_type)) {
-      if (!req.user.two_factor_enabled) {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Two-factor authentication required' 
-        });
-      }
-
-      // Check if 2FA token is provided in header
-      const twoFactorToken = req.headers['x-2fa-token'];
-      if (!twoFactorToken) {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Two-factor authentication token required' 
-        });
-      }
-
-      // Verify 2FA token using TOTP
-      const speakeasy = require('speakeasy');
-      const verified = speakeasy.totp.verify({
-        secret: req.user.two_factor_secret,
-        encoding: 'base32',
-        token: twoFactorToken,
-        window: 2
-      });
-
-      if (!verified) {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Invalid two-factor authentication token' 
-        });
-      }
-    }
-
-    next();
-  } catch (error) {
-    logger.error('2FA verification error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Two-factor authentication verification failed' 
-    });
-  }
+  // 2FA is disabled for CareMaster — pass through
+  // TODO: Re-enable when 2FA is rolled out to users
+  next();
 };
 
 module.exports = {

@@ -125,7 +125,7 @@ router.post('/register', validateRequest(schemas.register), async (req, res) => 
 router.post('/create-staff', authenticateToken, async (req, res) => {
   try {
     // Only admins can create staff accounts
-    if (!['admin', 'institutionAdmin', 'super_admin'].includes(req.user.user_type)) {
+    if (!['admin', 'institutionAdmin', 'super-admin', 'superadmin', 'super_admin'].includes(req.user.user_type)) {
       return res.status(403).json({ success: false, message: 'Only admins can create staff accounts' });
     }
 

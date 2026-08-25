@@ -43,7 +43,7 @@ app.use(limiter);
 // Stricter rate limiting for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 login attempts per window
+  max: 100, // limit each IP to 100 login attempts per window
   message: 'Too many login attempts from this IP, please try again after 15 minutes.',
   skip: (req) => req.ip === '127.0.0.1',
   standardHeaders: true,

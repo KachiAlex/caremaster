@@ -10,7 +10,7 @@ const router = express.Router();
 
 // All superadmin routes require authentication and super_admin role
 router.use(authenticateToken);
-router.use(requireRole(['super_admin', 'superadmin', 'admin']));
+router.use(requireRole(['super_admin', 'superadmin', 'super-admin', 'admin']));
 
 // Parse a role field that may be a Postgres array string, JSON array, or comma-separated string
 const parseRoleField = (value) => {

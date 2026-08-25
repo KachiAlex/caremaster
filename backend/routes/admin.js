@@ -12,7 +12,7 @@ const { sendWelcomeEmail } = require('../services/emailService');
 const router = express.Router();
 
 // Create a new user within the institution admin's scope
-router.post('/users', authenticateToken, requireRole(['admin', 'institution_admin']), async (req, res) => {
+router.post('/users', authenticateToken, requireRole(['admin', 'institutionAdmin', 'institution_admin']), async (req, res) => {
   try {
     const { email, password, firstName, lastName, userType, phone, specialization, medicalQualification, licenseNumber, sendEmail } = req.body;
 
@@ -123,7 +123,7 @@ router.post('/users', authenticateToken, requireRole(['admin', 'institution_admi
 });
 
 // Get dashboard statistics
-router.get('/dashboard', authenticateToken, requireRole(['bursar', 'admin']), require2FA, async (req, res) => {
+router.get('/dashboard', authenticateToken, requireRole(['bursar', 'admin', 'institutionAdmin', 'institution_admin']), require2FA, async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     
@@ -208,7 +208,7 @@ router.get('/dashboard', authenticateToken, requireRole(['bursar', 'admin']), re
 });
 
 // Get detailed reports with filtering
-router.get('/reports', authenticateToken, requireRole(['bursar', 'admin']), require2FA, validateRequest(schemas.adminReports), async (req, res) => {
+router.get('/reports', authenticateToken, requireRole(['bursar', 'admin', 'institutionAdmin', 'institution_admin']), require2FA, validateRequest(schemas.adminReports), async (req, res) => {
   try {
     const { 
       start_date, 
@@ -292,7 +292,7 @@ router.get('/reports', authenticateToken, requireRole(['bursar', 'admin']), requ
 });
 
 // Export reports to Excel
-router.get('/reports/export/excel', authenticateToken, requireRole(['bursar', 'admin']), require2FA, async (req, res) => {
+router.get('/reports/export/excel', authenticateToken, requireRole(['bursar', 'admin', 'institutionAdmin', 'institution_admin']), require2FA, async (req, res) => {
   try {
     const { start_date, end_date, department, session, status } = req.query;
 
@@ -408,7 +408,7 @@ router.get('/reports/export/excel', authenticateToken, requireRole(['bursar', 'a
 });
 
 // Export reports to CSV
-router.get('/reports/export/csv', authenticateToken, requireRole(['bursar', 'admin']), require2FA, async (req, res) => {
+router.get('/reports/export/csv', authenticateToken, requireRole(['bursar', 'admin', 'institutionAdmin', 'institution_admin']), require2FA, async (req, res) => {
   try {
     const { start_date, end_date, department, session, status } = req.query;
 
@@ -521,7 +521,7 @@ router.get('/reports/export/csv', authenticateToken, requireRole(['bursar', 'adm
 });
 
 // Generate and download receipt
-router.get('/receipt/:transactionId', authenticateToken, requireRole(['bursar', 'admin']), require2FA, async (req, res) => {
+router.get('/receipt/:transactionId', authenticateToken, requireRole(['bursar', 'admin', 'institutionAdmin', 'institution_admin']), require2FA, async (req, res) => {
   try {
     const { transactionId } = req.params;
 

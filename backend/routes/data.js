@@ -25,6 +25,7 @@ const ALLOWED_TABLES = [
   'caregiverAssignments', 'caregiverSchedule',
   'callNotifications', 'emergencyProtocols',
   'clientActivities', 'loginLogs',
+  'signaling',
   // Collections with no backing DB table — return empty results (see NO_TABLE_COLLECTIONS)
   'medicalHistory', 'institutionAdmins', 'caregiverClockRecords',
   'caregiverEarnings', 'caregiverPerformance', 'caregiverActivityLog',
@@ -74,7 +75,7 @@ const WRITABLE_FIELDS = {
   caregiver_profiles: ['caregiver_id', 'bio', 'certifications', 'experience_years', 'skills'],
   care_tasks: ['assignment_id', 'title', 'description', 'status', 'completed_at'],
   assignments: ['client_id', 'caregiver_id', 'institution_id', 'patient_id', 'start_date', 'end_date', 'status', 'type', 'notes', 'metadata'],
-  messages: ['sender_id', 'recipient_id', 'content', 'read'],
+  messages: ['conversation_id', 'sender_id', 'receiver_id', 'recipient_id', 'content', 'text', 'message_type', 'attachments', 'read', 'sent_at', 'read_at', 'created_at', 'sender_id'],
   care_logs: ['assignment_id', 'caregiver_id', 'client_id', 'notes', 'mood', 'timestamp'],
   care_plans: ['client_id', 'title', 'description', 'start_date', 'end_date', 'status'],
   vital_signs: ['client_id', 'temperature', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'heart_rate', 'respiratory_rate', 'oxygen_saturation', 'recorded_at'],
@@ -90,9 +91,11 @@ const WRITABLE_FIELDS = {
   patient_reports: ['client_id', 'report_type', 'content', 'created_by'],
   subscriptions: ['institution_id', 'plan', 'status', 'start_date', 'end_date'],
   patients: ['name', 'email', 'phone', 'institution_id', 'status', 'medical_history', 'emergency_contacts', 'notes', 'date_of_birth', 'gender', 'address', 'city', 'state', 'country', 'blood_type', 'allergies', 'medications'],
-  calls: ['caller_id', 'recipient_id', 'status', 'duration', 'started_at', 'ended_at'],
-  conversations: ['participant1_id', 'participant2_id', 'last_message_at'],
-  elderly_profiles: ['client_id', 'medical_conditions', 'allergies', 'dietary_requirements', 'mobility_status', 'notes']
+  calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'participants', 'institution_id', 'created_at', 'answered_at'],
+  conversations: ['participants', 'conversation_type', 'type', 'title', 'last_message_at', 'last_message_preview', 'institution_id', 'last_message', 'last_message_time'],
+  elderly_profiles: ['client_id', 'medical_conditions', 'allergies', 'dietary_requirements', 'mobility_status', 'notes'],
+  call_notifications: ['call_id', 'recipient_id', 'sender_id', 'type', 'status', 'created_at'],
+  signaling: ['call_id', 'from', 'to', 'type', 'sdp', 'candidate', 'created_at']
 };
 
 // Allowed sort columns per table (to prevent SQL injection via orderBy)
