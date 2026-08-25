@@ -55,7 +55,7 @@ const InstitutionLogin = () => {
       }
 
       try {
-        const response = await fetch(`https://api.getcaremaster.com/institutions/${effectiveInstitutionId}`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://getcaremaster.com/api'}/institutions/${effectiveInstitutionId}`);
         const data = await response.json();
         setInstitution(data);
         setLoading(false);
