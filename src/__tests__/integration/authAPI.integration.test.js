@@ -3,13 +3,13 @@
  * Tests authentication flows, security, and error handling
  */
 
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth } from '../../firebase/config';
-import { collection, doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'backend/auth';
+import { auth } from '../../backend/config';
+import { collection, doc, getDoc, setDoc } from 'backend/database';
+import { db } from '../../backend/config';
 
 // Mock Firebase
-jest.mock('../../firebase/config', () => ({
+jest.mock('../../backend/config', () => ({
   auth: {
     currentUser: null
   },

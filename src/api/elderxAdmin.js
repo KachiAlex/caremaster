@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import { 
   collection, 
   query, 
@@ -12,7 +12,7 @@ import {
   limit,
   startAfter,
   getCountFromServer
-} from 'firebase/firestore';
+} from 'backend/database';
 
 export const Care MasterAdminAPI = {
   // Dashboard Statistics

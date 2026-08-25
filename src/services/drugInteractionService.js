@@ -1,5 +1,5 @@
-import { db } from '../firebase/config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../backend/config';
+import { collection, query, where, getDocs } from 'backend/database';
 
 /**
  * Drug Interaction Checker Service

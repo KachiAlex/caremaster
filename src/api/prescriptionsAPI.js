@@ -12,8 +12,8 @@ import {
   limit,
   serverTimestamp,
   onSnapshot
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import { logClientActivity } from './clientActivitiesAPI';
 
 const PRESCRIPTIONS_COLLECTION = 'prescriptions';

@@ -18,9 +18,9 @@ import {
   Loader2
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { createUserWithEmailAndPassword, updateProfile } from 'backend/auth';
+import { doc, setDoc } from 'backend/database';
+import { auth, db } from '../backend/config';
 import { createCompleteUserAccount } from '../utils/userCreationHelper';
 
 const UserCreationForm = ({ onClose, userRole = 'elderly' }) => {

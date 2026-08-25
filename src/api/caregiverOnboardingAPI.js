@@ -1,6 +1,6 @@
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase/config';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, query, where, getDocs } from 'backend/database';
+import { ref, uploadBytes, getDownloadURL } from 'backend/storage';
+import { db, storage } from '../backend/config';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from './notificationsAPI';
 
 export const saveCaregiverProfile = async (uid, profile, isDraft = false) => {

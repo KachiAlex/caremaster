@@ -4,8 +4,8 @@
  * Advanced duplicate detection for Client registration
  */
 
-import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, getDocs, getDoc, doc } from 'backend/database';
+import { db } from '../backend/config';
 
 const CLIENTS_COLLECTION = 'clients';
 

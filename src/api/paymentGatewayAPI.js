@@ -10,8 +10,8 @@ import {
   where,
   orderBy,
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const PAYMENT_GATEWAY_CONFIG_COLLECTION = 'paymentGatewayConfigs';
 const SUBSCRIPTION_INVOICES_COLLECTION = 'subscriptionInvoices';

@@ -1,8 +1,8 @@
 // Utility to force load data from Firestore
 // This bypasses any potential permission or loading issues
 
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, getDocs, query, where, orderBy } from 'backend/database';
+import { db } from '../backend/config';
 
 export const forceLoadCaregivers = async () => {
   console.log('🔍 Force loading caregivers...');

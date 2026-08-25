@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'backend/auth';
+import { doc, setDoc, getDoc } from 'backend/database';
+import { auth, db } from '../backend/config';
 import { toast } from 'react-toastify';
 import { 
   Heart, 

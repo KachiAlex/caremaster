@@ -19,8 +19,8 @@ import {
   serverTimestamp,
   Timestamp,
   onSnapshot,
-} from 'firebase/firestore';
-import { db } from '../../../firebase/config';
+} from 'backend/database';
+import { db } from '../../../backend/config';
 
 const USERS_COLLECTION = 'users';
 const HOSPITAL_SHIFTS_COLLECTION = 'hospitalShifts';

@@ -1,5 +1,5 @@
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 
 const INSTITUTIONS_COLLECTION = 'institutions';
 

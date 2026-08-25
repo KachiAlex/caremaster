@@ -17,11 +17,11 @@ import {
   CheckCircle,
   Edit2
 } from 'lucide-react';
-import { db, storage } from '../firebase/config';
-import { doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { updatePassword, updateEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { db, storage } from '../backend/config';
+import { doc, updateDoc } from 'backend/database';
+import { ref, uploadBytes, getDownloadURL } from 'backend/storage';
+import { updatePassword, updateEmail, EmailAuthProvider, reauthenticateWithCredential } from 'backend/auth';
+import { auth } from '../backend/config';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
 import ProfilePicture from './ProfilePicture';
@@ -182,7 +182,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
       if (userProfile?.userType === 'caregiver' || userProfile?.type === 'caregiver' || userProfile?.role === 'caregiver') {
         try {
           const { doc: caregiverDoc, updateDoc: updateCaregiverDoc, getDoc: getCaregiverDoc } = await import('firebase/firestore');
-          const { db } = await import('../firebase/config');
+          const { db } = await import('../backend/config');
           const caregiverRef = caregiverDoc(db, 'caregivers', userId);
           const caregiverDocSnap = await getCaregiverDoc(caregiverRef);
           

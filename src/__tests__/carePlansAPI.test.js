@@ -6,7 +6,7 @@
 import { createCarePlan, updateCarePlan } from '../api/carePlansAPI';
 
 // Mock dependencies
-jest.mock('../firebase/config', () => ({
+jest.mock('../backend/config', () => ({
   db: {}
 }));
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { signOut } from 'backend/auth';
+import { auth } from '../backend/config';
 import { 
   Home, 
   Calendar, 

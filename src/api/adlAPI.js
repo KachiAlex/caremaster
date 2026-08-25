@@ -12,8 +12,8 @@ import {
   getDocs,
   getDoc,
   limit as firestoreLimit
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 class AdlAPI {
   // Get ADL logs for a client

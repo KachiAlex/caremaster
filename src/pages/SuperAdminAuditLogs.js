@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, query, where, orderBy, limit, Timestamp, startAfter } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { collection, getDocs, query, where, orderBy, limit, Timestamp, startAfter } from 'backend/database';
+import { auth, db } from '../backend/config';
 import { 
   ArrowLeft,
   Shield,

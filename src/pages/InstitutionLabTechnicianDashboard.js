@@ -31,7 +31,7 @@ import {
   Mail
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth, signOut } from 'backend/auth';
 import sessionManager from '../utils/sessionManager';
 import {
   getHomeLabVisitsByTechnician,

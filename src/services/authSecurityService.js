@@ -9,8 +9,8 @@ import {
   multiFactor,
   PhoneAuthProvider,
   RecaptchaVerifier
-} from 'firebase/auth';
-import { auth } from '../firebase/config';
+} from 'backend/auth';
+import { auth } from '../backend/config';
 import encryptionService from './encryptionService';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';

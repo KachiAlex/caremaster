@@ -19,8 +19,8 @@ import {
   where, 
   orderBy, 
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import { updateConsultation } from './consultationsAPI';
 
 const SOAP_NOTES_COLLECTION = 'soapNotes';

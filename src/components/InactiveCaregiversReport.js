@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, getDocs, orderBy } from 'backend/database';
+import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';

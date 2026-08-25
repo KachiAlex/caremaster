@@ -20,7 +20,7 @@ jest.mock('../api/autoBillingAPI', () => ({
   generateBillFromConsultation: jest.fn().mockResolvedValue('bill-id')
 }));
 
-jest.mock('../firebase/config', () => ({
+jest.mock('../backend/config', () => ({
   db: {}
 }));
 

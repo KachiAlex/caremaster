@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { doc, getDoc, updateDoc } from 'backend/database';
+import { db } from '../backend/config';
 import { validateLicenseKey, activateLicense, fetchLicenseStatus } from '../services/licenseService';
 import { toast } from 'react-toastify';
 import { 

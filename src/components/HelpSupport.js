@@ -18,8 +18,8 @@ import {
   AlertCircle,
   Zap
 } from 'lucide-react';
-import { db } from '../firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../backend/config';
+import { collection, addDoc, serverTimestamp } from 'backend/database';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
 

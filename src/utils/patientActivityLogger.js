@@ -11,9 +11,9 @@
  * This connects the entire Client database through the registration number.
  */
 
-import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { collection, addDoc, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc } from 'backend/database';
+import { db } from '../backend/config';
+import { collection, addDoc, query, where, orderBy, getDocs, limit } from 'backend/database';
 
 const PATIENT_ACTIVITIES_COLLECTION = 'patientActivities';
 

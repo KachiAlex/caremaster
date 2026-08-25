@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'backend/auth';
+import { doc, getDoc, collection, query, where, getDocs, setDoc } from 'backend/database';
+import { auth, db } from '../backend/config';
 import { toast } from 'react-toastify';
 import { verifyPasswordSecure } from '../utils/securePasswordAuth';
 import rateLimiter from '../utils/rateLimiter';
@@ -260,7 +260,7 @@ const UnifiedLogin = () => {
             // Update Firestore with institutionId from URL
             try {
               const { doc, updateDoc } = await import('firebase/firestore');
-              const { db } = await import('../firebase/config');
+              const { db } = await import('../backend/config');
               const userRef = doc(db, 'users', user?.uid || userData?.uid);
               await updateDoc(userRef, { institutionId: urlInstitutionId });
               console.log('✅ Set institutionId from URL:', urlInstitutionId);

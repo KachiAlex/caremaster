@@ -20,8 +20,8 @@ import {
   where,
   orderBy,
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
 import { addToQueue, QUEUE_PRIORITY, DEPARTMENT_TYPES, QUEUE_STATUS, updateQueueStatus, getQueueByDepartment } from './queueAPI';
 import { getLatestVitalSigns } from './vitalSignsAPI';

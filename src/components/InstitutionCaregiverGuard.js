@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { signOut } from 'backend/auth';
+import { auth } from '../backend/config';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import { fetchLicenseStatus } from '../services/licenseService';

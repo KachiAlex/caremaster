@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import { 
   collection, 
   query, 
@@ -10,7 +10,7 @@ import {
   endAt,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
+} from 'backend/database';
 
 export const analyticsAPI = {
   // Get overview analytics

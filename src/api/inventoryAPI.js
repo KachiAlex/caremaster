@@ -17,8 +17,8 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const INVENTORY_COLLECTION = 'inventory';
 const INVOICES_COLLECTION = 'invoices';

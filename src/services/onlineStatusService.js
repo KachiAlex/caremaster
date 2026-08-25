@@ -8,8 +8,8 @@ import {
   where,
   serverTimestamp,
   getDoc
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 class OnlineStatusService {
   constructor() {

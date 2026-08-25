@@ -25,8 +25,8 @@ import {
   serverTimestamp,
   Timestamp,
   writeBatch
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
 
 const SUPPLIERS_COLLECTION = 'suppliers';

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { doc, getDoc } from 'backend/database';
+import { auth, db } from '../backend/config';
 import { useUser } from '../contexts/UserContext';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'backend/auth';
 import { toast } from 'react-toastify';
 import { 
   Building2, 

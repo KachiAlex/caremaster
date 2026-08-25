@@ -38,7 +38,7 @@ import telemedicineAPI from '../api/telemedicineAPI';
 import { toast } from 'react-toastify';
 import { testTelemedicineService, quickTest } from '../utils/telemedicineTest';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../firebase/config';
+import { auth } from '../backend/config';
 import DocumentManager from '../components/DocumentManager';
 
 const Telemedicine = () => {

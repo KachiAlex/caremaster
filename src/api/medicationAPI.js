@@ -1,4 +1,4 @@
-import { db, functions } from '../firebase/config';
+import { db, functions } from '../backend/config';
 import { 
   collection, 
   query, 
@@ -13,8 +13,8 @@ import {
   onSnapshot,
   serverTimestamp,
   getDoc
-} from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
+} from 'backend/database';
+import { httpsCallable } from 'backend/functions';
 import dataConnectService from '../services/dataConnectService';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';

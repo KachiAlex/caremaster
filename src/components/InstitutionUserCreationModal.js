@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { X, User, Mail, Phone, Briefcase, Lock, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createCompleteUserAccount } from '../utils/userCreationHelper';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../firebase/config';
+import { httpsCallable } from 'backend/functions';
+import { functions } from '../backend/config';
 
 const InstitutionUserCreationModal = ({ isOpen, onClose, institutionId, createdBy, onUserCreated }) => {
   const [loading, setLoading] = useState(false);

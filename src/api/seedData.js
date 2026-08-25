@@ -1,5 +1,5 @@
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, addDoc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 
 const USERS_COLLECTION = 'users';
 

@@ -6,8 +6,8 @@ import {
   where,
   orderBy,
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const NURSE_REPORTS_COLLECTION = 'nurseReports';
 

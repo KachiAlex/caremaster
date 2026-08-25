@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import { 
   collection, 
   addDoc, 
@@ -13,7 +13,7 @@ import {
   serverTimestamp,
   Timestamp,
   onSnapshot
-} from 'firebase/firestore';
+} from 'backend/database';
 
 const MEDICAL_REPORTS_COLLECTION = 'medicalReports';
 

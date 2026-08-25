@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Clock, CheckCircle, FileText, Shield, Mail, RefreshCw, LogOut } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { signOut } from 'firebase/auth';
-import { auth, db } from '../firebase/config';
-import { doc, getDoc } from 'firebase/firestore';
+import { signOut } from 'backend/auth';
+import { auth, db } from '../backend/config';
+import { doc, getDoc } from 'backend/database';
 import { toast } from 'react-toastify';
 
 const InstitutionCaregiverPendingApproval = () => {

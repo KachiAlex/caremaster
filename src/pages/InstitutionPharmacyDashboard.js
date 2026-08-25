@@ -3,7 +3,7 @@ import { useUser } from '../contexts/UserContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import sessionManager from '../utils/sessionManager';
 import { Pill, LogOut, Building2, Bell } from 'lucide-react';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth, signOut } from 'backend/auth';
 import { toast } from 'react-toastify';
 import PharmacyTab from '../components/PharmacyTab';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
@@ -79,7 +79,7 @@ const InstitutionPharmacyDashboard = () => {
             console.log('🔄 Updating profile with institutionId from URL...');
             try {
               const { doc, updateDoc } = await import('firebase/firestore');
-              const { db } = await import('../firebase/config');
+              const { db } = await import('../backend/config');
               const userRef = doc(db, 'users', user.uid);
               await updateDoc(userRef, { institutionId: effectiveInstitutionId });
               console.log('✅ Updated profile with institutionId:', effectiveInstitutionId);
@@ -144,7 +144,7 @@ const InstitutionPharmacyDashboard = () => {
           console.error('❌ Error with getAllClients fallback:', fallbackError);
           // Try direct query as last resort
           const { collection: firestoreCollection, query, where, getDocs } = await import('firebase/firestore');
-          const { db } = await import('../firebase/config');
+          const { db } = await import('../backend/config');
           
           const clientsQuery = query(
             firestoreCollection(db, 'clients'),

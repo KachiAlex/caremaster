@@ -23,8 +23,8 @@ import {
   serverTimestamp,
   Timestamp,
   writeBatch
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const AUDIT_LOGS_COLLECTION = 'auditLogs';
 const COMPLIANCE_POLICIES_COLLECTION = 'compliancePolicies';

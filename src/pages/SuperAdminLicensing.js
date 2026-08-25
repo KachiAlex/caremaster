@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth, db } from '../firebase/config';
-import { doc, updateDoc } from 'firebase/firestore';
+import { signOut } from 'backend/auth';
+import { auth, db } from '../backend/config';
+import { doc, updateDoc } from 'backend/database';
 import { X, Info, Download, CheckSquare, Square } from 'lucide-react';
 import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicenseById, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, generateLicenseKey } from '../services/licenseService';
 import { toast } from 'react-toastify';

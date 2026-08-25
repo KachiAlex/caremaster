@@ -14,8 +14,8 @@ import {
   onSnapshot,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import { generateClientId } from '../utils/clientIdGenerator';
 import { encryptPatientData, decryptPatientData } from '../utils/dataEncryptionHelper';
 import secureConfigService from '../services/secureConfigService';

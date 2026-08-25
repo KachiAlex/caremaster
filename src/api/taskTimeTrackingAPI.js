@@ -18,8 +18,8 @@ import {
   serverTimestamp,
   Timestamp,
   writeBatch
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const TASK_TIME_TRACKING_COLLECTION = 'taskTimeTracking';
 const CARE_TASKS_COLLECTION = 'careTasks';

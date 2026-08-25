@@ -15,8 +15,8 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { db } from '../firebase/config';
-import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../backend/config';
+import { collection, getDocs, query, where, updateDoc, doc } from 'backend/database';
 import { toast } from 'react-toastify';
 import WageCalculator from '../utils/wageCalculator';
 import UserNameWithAvatar from './UserNameWithAvatar';

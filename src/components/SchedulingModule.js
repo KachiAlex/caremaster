@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import { getAllClients } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';

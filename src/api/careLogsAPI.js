@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import { 
   collection, 
   addDoc, 
@@ -14,7 +14,7 @@ import {
   Timestamp,
   limit,
   onSnapshot
-} from 'firebase/firestore';
+} from 'backend/database';
 
 const CARE_LOGS_COLLECTION = 'careLogs';
 

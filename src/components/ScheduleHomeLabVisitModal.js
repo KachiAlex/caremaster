@@ -10,8 +10,8 @@ import { toast } from 'react-toastify';
 import { createHomeLabVisit } from '../api/homeLabServicesAPI';
 import { useUser } from '../contexts/UserContext';
 import { getPatientsByInstitution } from '../api/patientsAPI';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, getDocs } from 'backend/database';
+import { db } from '../backend/config';
 
 const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, clientId: initialPatientId = null }) => {
   const { userProfile, institutionId } = useUser();

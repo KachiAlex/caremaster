@@ -24,8 +24,8 @@ import {
   XCircle,
   AlertTriangle
 } from 'lucide-react';
-import { db } from '../firebase/config';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../backend/config';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'backend/database';
 import { toast } from 'react-toastify';
 import { fetchLicenseStatus } from '../services/licenseService';
 

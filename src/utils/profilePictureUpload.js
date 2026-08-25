@@ -1,5 +1,5 @@
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '../firebase/config';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'backend/storage';
+import { storage } from '../backend/config';
 import { toast } from 'react-toastify';
 
 /**

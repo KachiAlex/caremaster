@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, X, Save, AlertCircle } from 'lucide-react';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { doc, updateDoc, getDoc } from 'backend/database';
+import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import UserNameWithAvatar from './UserNameWithAvatar';
 

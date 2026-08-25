@@ -18,8 +18,8 @@ import {
   serverTimestamp,
   Timestamp,
   onSnapshot,
-} from 'firebase/firestore';
-import { db } from '../../../firebase/config';
+} from 'backend/database';
+import { db } from '../../../backend/config';
 
 const HOSPITAL_BEDS_COLLECTION = 'hospitalBeds';
 const HOSPITAL_INCIDENTS_COLLECTION = 'hospitalIncidents';

@@ -1,5 +1,5 @@
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { addDoc, collection, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 import logger from '../utils/logger';
 
 const ANALYTICS_COLLECTION = 'analyticsEvents';

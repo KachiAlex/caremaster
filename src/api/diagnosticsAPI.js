@@ -13,8 +13,8 @@ import {
   serverTimestamp,
   writeBatch,
   FieldValue
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import logger from '../utils/logger';
 import { logClientActivity as logActivity } from './clientActivitiesAPI';
 import { notificationsAPI } from './notificationsAPI';

@@ -1,23 +1,11 @@
-import { getDataConnect } from 'firebase/data-connect';
-import { 
-  connectorConfig, 
-  getUserProfile, 
-  getCurrentUser,
-  getMyMedications,
-  addNewVitalSign,
-  updateMedicationNotes,
-  listCaregiversForClientProfile,
-  getClientProfile,
-  getClientMedications,
-  getClientVitalSigns,
-  getClientAppointments,
-  getCaregiverClients
-} from '@dataconnect/generated';
+// Firebase Data Connect has been replaced by the VPS PostgreSQL backend.
+// This service is now a no-op stub — all data flows through backend/database.
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
 
-// Initialize Data Connect
-const dataConnect = getDataConnect(connectorConfig);
+// Stub: Data Connect is no longer available
+const dataConnect = null;
+const connectorConfig = null;
 
 class DataConnectService {
   constructor() {

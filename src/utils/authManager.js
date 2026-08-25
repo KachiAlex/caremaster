@@ -6,7 +6,7 @@
  * to be logged in simultaneously in different tabs/windows.
  */
 
-import { auth } from '../firebase/config';
+import { auth } from '../backend/config';
 import { 
   signInWithEmailAndPassword, 
   signOut,
@@ -14,7 +14,7 @@ import {
   browserSessionPersistence,
   browserLocalPersistence,
   onAuthStateChanged
-} from 'firebase/auth';
+} from 'backend/auth';
 
 // Storage keys for different roles
 const STORAGE_KEYS = {

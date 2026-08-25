@@ -24,8 +24,8 @@ import {
   limit,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
 import { generateBillFromImaging } from './autoBillingAPI';
 

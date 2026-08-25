@@ -4,11 +4,11 @@
  */
 
 import { generateClientId, isValidPatientId, extractYearFromPatientId } from '../utils/patientIdGenerator';
-import { collection, getDocs, query, where, orderBy, limit, addDoc, doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, getDocs, query, where, orderBy, limit, addDoc, doc, getDoc } from 'backend/database';
+import { db } from '../backend/config';
 
 // Mock Firebase Firestore
-jest.mock('../firebase/config', () => ({
+jest.mock('../backend/config', () => ({
   db: {}
 }));
 

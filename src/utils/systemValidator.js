@@ -1,5 +1,5 @@
-import { auth } from '../firebase/config';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth } from '../backend/config';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'backend/auth';
 import { getAllUsers, updateUser } from '../api/usersAPI';
 import assignmentAPI from '../api/assignmentAPI';
 import { emergencyAPI } from '../api/emergencyAPI';

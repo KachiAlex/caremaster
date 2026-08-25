@@ -9,8 +9,8 @@ import {
   where, 
   orderBy,
   serverTimestamp 
-} from 'firebase/firestore';
-import { db, auth } from '../firebase/config';
+} from 'backend/database';
+import { db, auth } from '../backend/config';
 
 class WebRTCService {
   constructor() {

@@ -1,5 +1,5 @@
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getApp } from 'firebase/app';
+import { getFunctions, httpsCallable } from 'backend/functions';
+import { getApp } from 'backend/app';
 import { getLicenseStatus as getDirectLicenseStatus, activateLicenseByKey as directActivateLicenseByKey, getAllLicenses as getDirectLicenses, getAllInstitutions as getDirectInstitutions } from '../api/licenseAPI';
 
 // Use direct Firestore access to bypass CORS issues

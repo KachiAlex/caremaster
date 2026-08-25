@@ -10,8 +10,8 @@
  * - Or use the standalone HTML file for one-time migration
  */
 
-import { collection, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, getDocs, doc, updateDoc, writeBatch } from 'backend/database';
+import { db } from '../backend/config';
 import { ROLES } from '../constants/roles';
 
 /**

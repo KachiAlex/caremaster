@@ -8,7 +8,7 @@
  * - Activity-based time tracking
  */
 
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import { 
   collection, 
   doc, 
@@ -20,7 +20,7 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
+} from 'backend/database';
 
 /**
  * SUGGESTED HOURLY RATE WAGE STRUCTURE:

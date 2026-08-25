@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { httpsCallable, getFunctions } from 'firebase/functions';
-import { auth } from '../firebase/config';
+import { signInWithEmailAndPassword } from 'backend/auth';
+import { httpsCallable, getFunctions } from 'backend/functions';
+import { auth } from '../backend/config';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import authManager from '../utils/authManager';

@@ -1,7 +1,7 @@
 import * as billingPlansAPI from './billingPlansAPI';
 import * as paymentGatewayAPI from './paymentGatewayAPI';
-import { collection, doc, setDoc, getDocs, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, doc, setDoc, getDocs, query, where, orderBy, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 
 const SUBSCRIPTION_INVOICES_COLLECTION = 'subscriptionInvoices';
 const PAYMENT_LINKS_COLLECTION = 'paymentLinks';

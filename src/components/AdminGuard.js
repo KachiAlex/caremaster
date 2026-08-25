@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { onAuthStateChanged } from 'backend/auth';
+import { doc, getDoc } from 'backend/database';
+import { auth, db } from '../backend/config';
 import { toast } from 'react-toastify';
 
 const AdminGuard = ({ children }) => {

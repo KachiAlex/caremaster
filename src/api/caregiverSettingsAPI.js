@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import { 
   doc, 
   getDoc, 
@@ -12,9 +12,9 @@ import {
   getDocs,
   orderBy,
   limit
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '../firebase/config';
+} from 'backend/database';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'backend/storage';
+import { storage } from '../backend/config';
 import { toast } from 'react-toastify';
 
 export const caregiverSettingsAPI = {

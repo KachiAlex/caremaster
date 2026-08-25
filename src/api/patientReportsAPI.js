@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import {
   collection,
   doc,
@@ -11,7 +11,7 @@ import {
   where,
   orderBy,
   serverTimestamp
-} from 'firebase/firestore';
+} from 'backend/database';
 
 const REPORTS_COLLECTION = 'clientReports';
 const CARE_LOGS_COLLECTION = 'clientCareLogs';

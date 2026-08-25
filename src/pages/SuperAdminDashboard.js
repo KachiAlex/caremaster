@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { collection, getDocs, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { signOut } from 'backend/auth';
+import { collection, getDocs, query, where, orderBy, limit, onSnapshot } from 'backend/database';
+import { auth, db } from '../backend/config';
 import authManager from '../utils/authManager';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area,

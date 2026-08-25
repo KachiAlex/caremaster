@@ -2,8 +2,8 @@
  * Client-side utility to fix caregiver profile with missing institutionId and status
  */
 
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { doc, updateDoc, getDoc } from 'backend/database';
+import { db } from '../backend/config';
 
 export const fixCaregiverProfile = async (userId, institutionId) => {
   try {

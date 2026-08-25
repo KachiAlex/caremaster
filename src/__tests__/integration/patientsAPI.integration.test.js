@@ -4,10 +4,10 @@
  */
 
 import { createClient, updatePatient, getPatientByPatientId, searchPatients, deletePatient } from '../../api/patientsAPI';
-import { collection, addDoc, getDocs, getDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { collection, addDoc, getDocs, getDoc, updateDoc, deleteDoc, doc, query, where } from 'backend/database';
+import { db } from '../../backend/config';
 
-jest.mock('../../firebase/config', () => ({
+jest.mock('../../backend/config', () => ({
   db: {}
 }));
 

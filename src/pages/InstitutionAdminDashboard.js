@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../firebase/config';
-import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc, addDoc, orderBy } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'backend/auth';
+import { auth, db } from '../backend/config';
+import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc, addDoc, orderBy } from 'backend/database';
+import { getFunctions, httpsCallable } from 'backend/functions';
 import { useUser } from '../contexts/UserContext';
 import authManager from '../utils/authManager';
 import sessionManager from '../utils/sessionManager';
@@ -1816,7 +1816,7 @@ const InstitutionAdminDashboard = () => {
     }
     try {
       const { doc, updateDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
-      const { db } = await import('../firebase/config');
+      const { db } = await import('../backend/config');
       
       const caregiverId = caregiver.id || caregiver.uid || caregiver.userId;
       
@@ -3617,7 +3617,7 @@ const renderMessagesTab = () => {
                                     onClick={async () => {
                                       try {
                                         const { doc, updateDoc, serverTimestamp, getDoc } = await import('firebase/firestore');
-                                        const { db } = await import('../firebase/config');
+                                        const { db } = await import('../backend/config');
                                         
                                         const caregiverId = caregiver.uid || caregiver.id || caregiver.userId;
                                         
@@ -3688,7 +3688,7 @@ const renderMessagesTab = () => {
                                         const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
                                         if (isUser) {
                                           const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-                                          const { db } = await import('../firebase/config');
+                                          const { db } = await import('../backend/config');
                                           await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
                                             status: 'suspended', 
                                             active: false,
@@ -4505,7 +4505,7 @@ const renderMessagesTab = () => {
               const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
               if (isUser) {
                 const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-                const { db } = await import('../firebase/config');
+                const { db } = await import('../backend/config');
                 await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
                   status: 'suspended', 
                   active: false,
@@ -4526,7 +4526,7 @@ const renderMessagesTab = () => {
               const isUser = caregiver.uid && !caregiver.id?.startsWith('caregiver_');
               if (isUser) {
                 const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-                const { db } = await import('../firebase/config');
+                const { db } = await import('../backend/config');
                 await updateDoc(doc(db, 'users', caregiver.uid || caregiver.id), { 
                   status: 'active', 
                   active: true,

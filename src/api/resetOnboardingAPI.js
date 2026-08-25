@@ -1,5 +1,5 @@
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { doc, updateDoc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 
 // Reset onboarding status for a specific user
 export const resetUserOnboarding = async (userId) => {

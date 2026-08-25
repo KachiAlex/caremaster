@@ -4,8 +4,8 @@
  * Handles file uploads for Client documents (ID cards, referral letters, medical records)
  */
 
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '../firebase/config';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'backend/storage';
+import { storage } from '../backend/config';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = {

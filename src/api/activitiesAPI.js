@@ -11,8 +11,8 @@ import {
   orderBy, 
   limit,
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const ACTIVITIES_COLLECTION = 'caregiverActivities';
 

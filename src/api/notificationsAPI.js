@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import { 
   collection, 
   doc, 
@@ -12,7 +12,7 @@ import {
   limit,
   onSnapshot,
   serverTimestamp
-} from 'firebase/firestore';
+} from 'backend/database';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
 

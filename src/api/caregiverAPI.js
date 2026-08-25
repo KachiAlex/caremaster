@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import {
   collection,
   query,
@@ -14,7 +14,7 @@ import {
   onSnapshot,
   serverTimestamp,
   getDoc
-} from 'firebase/firestore';
+} from 'backend/database';
 import { createStandardizedUserData } from '../utils/userCreationHelper';
 
 const CAREGIVER_ROLE_FIELDS = {

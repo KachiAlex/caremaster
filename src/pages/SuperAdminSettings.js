@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'backend/auth';
+import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'backend/database';
+import { auth, db } from '../backend/config';
 import { 
   ArrowLeft,
   Shield,

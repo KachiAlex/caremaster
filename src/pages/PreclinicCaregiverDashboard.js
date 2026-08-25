@@ -31,8 +31,8 @@ import {
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { getClientsByCaregiver } from '../api/patientsAPI';
-import { collection, query, where, orderBy, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, orderBy, getDocs, updateDoc, doc } from 'backend/database';
+import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import PreclinicLayout from '../components/PreclinicLayout';
 import { StatCard, PreclinicTable, StatusBadge, PageHeader, PreclinicCard } from '../components/PreclinicComponents';

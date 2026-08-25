@@ -3,8 +3,8 @@
  * Monitors and sends notifications for critical events
  */
 
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, onSnapshot, Timestamp } from 'backend/database';
+import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';

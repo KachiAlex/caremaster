@@ -6,8 +6,8 @@ import {
   deleteObject,
   uploadBytesResumable,
   getMetadata
-} from 'firebase/storage';
-import { storage } from '../firebase/config';
+} from 'backend/storage';
+import { storage } from '../backend/config';
 import logger from '../utils/logger';
 
 class FileStorageService {

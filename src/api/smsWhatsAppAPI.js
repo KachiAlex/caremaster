@@ -24,8 +24,8 @@ import {
   orderBy, 
   limit,
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const SMS_WHATSAPP_LOGS_COLLECTION = 'smsWhatsAppLogs';
 const SMS_WHATSAPP_SETTINGS_COLLECTION = 'smsWhatsAppSettings';

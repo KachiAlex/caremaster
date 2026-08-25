@@ -10,7 +10,7 @@ import { generateClientId } from '../utils/clientIdGenerator';
 // Mock dependencies
 jest.mock('../utils/clientIdGenerator');
 jest.mock('../utils/patientLogger');
-jest.mock('../firebase/config', () => ({
+jest.mock('../backend/config', () => ({
   db: {}
 }));
 

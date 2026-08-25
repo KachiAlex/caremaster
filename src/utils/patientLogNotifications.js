@@ -80,7 +80,7 @@ export const checkAbnormalVitalSigns = async (vitalSignData, patientSimpleId, cl
     if (alerts.length > 0) {
       // Get all doctors and admins for the institution
       const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../firebase/config');
+      const { db } = await import('../backend/config');
       
       const usersRef = collection(db, 'users');
       const q = query(
@@ -149,7 +149,7 @@ export const notifyCriticalEvent = async (logData, institutionId) => {
     
     // Get admins for the institution
     const { collection, query, where, getDocs } = await import('firebase/firestore');
-    const { db } = await import('../firebase/config');
+    const { db } = await import('../backend/config');
     
     const usersRef = collection(db, 'users');
     const q = query(

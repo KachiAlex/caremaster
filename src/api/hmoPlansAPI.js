@@ -20,8 +20,8 @@ import {
   where, 
   orderBy, 
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const HMO_PLANS_COLLECTION = 'hmoPlans';
 const PATIENT_HMO_ASSIGNMENTS_COLLECTION = 'patientHMOAssignments';

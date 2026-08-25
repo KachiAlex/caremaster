@@ -11,8 +11,8 @@ import {
   orderBy, 
   limit,
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import { logClientActivity } from './clientActivitiesAPI';
 import { notificationsAPI } from './notificationsAPI';
 import { logConsultation } from '../utils/patientLogger';

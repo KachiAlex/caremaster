@@ -22,10 +22,10 @@ import {
   limit,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { auth } from '../firebase/config';
-import { sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
+} from 'backend/database';
+import { db } from '../backend/config';
+import { auth } from '../backend/config';
+import { sendEmailVerification, sendPasswordResetEmail } from 'backend/auth';
 
 const AUDIT_LOGS_COLLECTION = 'securityAuditLogs';
 const SESSIONS_COLLECTION = 'userSessions';

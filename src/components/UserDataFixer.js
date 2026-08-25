@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshCw, CheckCircle, AlertCircle, Wrench } from 'lucide-react';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, getDocs, doc, updateDoc } from 'backend/database';
+import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 
 const UserDataFixer = ({ institutionId }) => {

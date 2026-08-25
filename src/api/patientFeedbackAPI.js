@@ -1,7 +1,7 @@
 import { 
   collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where, orderBy, serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const PATIENT_FEEDBACK_COLLECTION = 'clientFeedback';
 

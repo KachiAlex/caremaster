@@ -12,8 +12,8 @@ import {
   orderBy,
   limit,
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const BILLING_PLANS_COLLECTION = 'billingPlans';
 const CLIENT_SUBSCRIPTIONS_COLLECTION = 'clientSubscriptions';

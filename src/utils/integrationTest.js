@@ -3,8 +3,8 @@
  * Validates all major system components are working together
  */
 
-import { auth } from '../firebase/config';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../backend/config';
+import { onAuthStateChanged } from 'backend/auth';
 import { getAllUsers } from '../api/usersAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { medicationAPI } from '../api/medicationAPI';

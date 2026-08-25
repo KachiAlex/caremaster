@@ -6,8 +6,8 @@
 
 import CallService from './callService';
 import WebRTCService from './webrtcService';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { doc, updateDoc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 
 class CallFlowManager {
   constructor() {

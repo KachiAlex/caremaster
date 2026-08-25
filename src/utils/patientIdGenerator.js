@@ -8,8 +8,8 @@
  * - NNNN: Sequential number (4 digits, zero-padded)
  */
 
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, getDocs, orderBy, limit } from 'backend/database';
+import { db } from '../backend/config';
 
 /**
  * Generate a simple, memorable Client ID

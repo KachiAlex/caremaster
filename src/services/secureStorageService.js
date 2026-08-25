@@ -9,8 +9,8 @@ import {
   where,
   getDocs,
   serverTimestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import encryptionService from './encryptionService';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';

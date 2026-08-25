@@ -10,8 +10,8 @@ import {
   onSnapshot,
   serverTimestamp,
   getDocs
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 class CallService {
   constructor() {

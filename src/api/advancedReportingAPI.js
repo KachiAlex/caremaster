@@ -22,8 +22,8 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 import { analyticsAPI } from './analyticsAPI';
 
 const REPORTS_COLLECTION = 'customReports';

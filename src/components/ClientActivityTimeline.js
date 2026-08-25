@@ -23,8 +23,8 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { db } from '../firebase/config';
-import { collection, query, where, orderBy, getDocs, limit as firestoreLimit } from 'firebase/firestore';
+import { db } from '../backend/config';
+import { collection, query, where, orderBy, getDocs, limit as firestoreLimit } from 'backend/database';
 import { toast } from 'react-toastify';
 import UserNameWithAvatar from './UserNameWithAvatar';
 

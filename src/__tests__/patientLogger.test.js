@@ -14,11 +14,11 @@ import {
   getPatientLogs,
   getLogsByCategory
 } from '../utils/patientLogger';
-import { collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 
 // Mock Firebase Firestore
-jest.mock('../firebase/config', () => ({
+jest.mock('../backend/config', () => ({
   db: {}
 }));
 

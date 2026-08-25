@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { onAuthStateChanged } from 'backend/auth';
+import { auth } from '../backend/config';
 import { 
   Heart, 
   Shield, 

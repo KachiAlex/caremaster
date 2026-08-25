@@ -13,8 +13,8 @@ import {
   onSnapshot,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} from 'backend/database';
+import { db } from '../backend/config';
 
 const VITAL_SIGNS_COLLECTION = 'vitalSigns';
 

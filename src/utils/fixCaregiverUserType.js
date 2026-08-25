@@ -3,8 +3,8 @@
  * Can be called directly from the browser console or a component
  */
 
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { doc, updateDoc, getDoc } from 'backend/database';
+import { db } from '../backend/config';
 
 export const fixCaregiverUserType = async (userId) => {
   try {

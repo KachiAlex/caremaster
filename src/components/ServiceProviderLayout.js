@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/config';
+import { signOut } from 'backend/auth';
+import { auth } from '../backend/config';
 import { useUser } from '../contexts/UserContext';
 import NotificationPanel from './NotificationPanel';
 import { 
@@ -23,8 +23,8 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { db } from '../firebase/config';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../backend/config';
+import { doc, onSnapshot } from 'backend/database';
 
 const ServiceProviderLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

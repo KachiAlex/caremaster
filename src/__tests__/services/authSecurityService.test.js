@@ -4,8 +4,8 @@
  */
 
 import authSecurityService from '../../services/authSecurityService';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../../firebase/config';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'backend/auth';
+import { auth } from '../../backend/config';
 
 // Mock Firebase Auth
 jest.mock('firebase/auth', () => ({
@@ -20,7 +20,7 @@ jest.mock('firebase/auth', () => ({
   }
 }));
 
-jest.mock('../../firebase/config', () => ({
+jest.mock('../../backend/config', () => ({
   auth: {
     currentUser: null
   }

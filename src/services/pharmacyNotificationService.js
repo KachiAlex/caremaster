@@ -1,6 +1,6 @@
-import { db, functions } from '../firebase/config';
-import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../backend/config';
+import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'backend/database';
+import { httpsCallable } from 'backend/functions';
 
 /**
  * Pharmacy Notification Service

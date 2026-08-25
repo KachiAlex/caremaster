@@ -17,9 +17,9 @@ import {
   browserSessionPersistence,
   browserLocalPersistence,
   Timestamp
-} from 'firebase/auth';
+} from 'backend/auth';
 import { auth, db } from '../config/firebaseConfig';
-import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from 'backend/database';
 import { validateEmail, validatePassword, escapeHtml } from '../utils/inputValidation';
 import { escapeHtml as escapeHtmlXss } from '../utils/xssProtection';
 import {

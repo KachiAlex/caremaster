@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, query, where, getDocs, deleteDoc, doc, writeBatch } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, getDocs, deleteDoc, doc, writeBatch } from 'backend/database';
+import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import { Trash2, AlertTriangle, CheckCircle, RefreshCw, Users, Search, Filter } from 'lucide-react';
 

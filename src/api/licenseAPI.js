@@ -17,9 +17,9 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
-import { db, auth } from '../firebase/config';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+} from 'backend/database';
+import { db, auth } from '../backend/config';
+import { createUserWithEmailAndPassword } from 'backend/auth';
 
 const LICENSES_COLLECTION = 'licenses';
 const INSTITUTIONS_COLLECTION = 'institutions';

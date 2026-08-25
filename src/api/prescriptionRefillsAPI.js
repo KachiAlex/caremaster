@@ -1,4 +1,4 @@
-import { db } from '../firebase/config';
+import { db } from '../backend/config';
 import { 
   collection, 
   query, 
@@ -14,7 +14,7 @@ import {
   onSnapshot,
   serverTimestamp,
   Timestamp
-} from 'firebase/firestore';
+} from 'backend/database';
 
 /**
  * Prescription Refills API
