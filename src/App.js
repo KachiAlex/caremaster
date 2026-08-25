@@ -364,13 +364,13 @@ function App() {
       />
       <Route 
         path="/signup" 
-        element={<Navigate to="/admin/login" replace />} 
+        element={<Navigate to="/login" replace />} 
       />
       
       {/* Super Admin Routes - Must be before other protected routes */}
       <Route 
         path="/super-admin/login" 
-        element={<SuperAdminLogin />} 
+        element={<UnifiedLogin />} 
       />
       
       <Route 
@@ -490,17 +490,17 @@ function App() {
       {/* Institution Caregiver Routes */}
       <Route 
         path="/institution-caregiver/onboarding" 
-        element={user ? <InstitutionCaregiverOnboarding /> : <Navigate to="/institution/login" replace />} 
+        element={user ? <InstitutionCaregiverOnboarding /> : <Navigate to="/login" replace />} 
       />
       
       <Route 
         path="/institution-caregiver/pending-approval" 
-        element={user ? <InstitutionCaregiverPendingApproval /> : <Navigate to="/institution/login" replace />} 
+        element={user ? <InstitutionCaregiverPendingApproval /> : <Navigate to="/login" replace />} 
       />
       
       <Route 
         path="/institution-caregiver/dashboard" 
-        element={user ? <InstitutionCaregiverDashboard /> : <Navigate to="/institution/login" replace />} 
+        element={user ? <InstitutionCaregiverDashboard /> : <Navigate to="/login" replace />} 
       />
 
       <Route 
@@ -511,13 +511,13 @@ function App() {
       {/* Pharmacy Dashboard */}
       <Route 
         path="/institution-pharmacy/dashboard" 
-        element={user ? <InstitutionPharmacyDashboard /> : <Navigate to="/institution/login" replace />} 
+        element={user ? <InstitutionPharmacyDashboard /> : <Navigate to="/login" replace />} 
       />
 
       {/* Institution Pharmacist Routes */}
       <Route 
         path="/institution-pharmacist/dashboard" 
-        element={user ? <InstitutionCaregiverDashboard /> : <Navigate to="/institution/login" replace />} 
+        element={user ? <InstitutionCaregiverDashboard /> : <Navigate to="/login" replace />} 
       />
 
       <Route 
@@ -643,15 +643,15 @@ function App() {
         element={<Pricing />} 
       />
       
-      {/* Caregiver Login Route */}
+      {/* Caregiver Login Route - consolidated to UnifiedLogin */}
       <Route 
         path="/caregiver/login" 
-        element={<Auth />} 
+        element={user ? <Navigate to="/caregiver/onboarding" replace /> : <UnifiedLogin />} 
       />
       {/* Caregiver Onboarding Route */}
       <Route 
         path="/caregiver/onboarding" 
-        element={user ? <CaregiverOnboarding /> : <Navigate to="/caregiver/login" replace />} 
+        element={user ? <CaregiverOnboarding /> : <Navigate to="/login" replace />} 
       />
       
       {/* Admin routes deprecated: redirect to institution admin */}

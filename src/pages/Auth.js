@@ -3,9 +3,8 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfi
 import { doc, setDoc, getDoc } from 'backend/database';
 import { auth, db } from '../backend/config';
 import { toast } from 'react-toastify';
-import { 
-  Heart, 
-  Mail, 
+import {
+  Mail,
   Lock, 
   User, 
   Stethoscope,
@@ -342,11 +341,8 @@ const Auth = () => {
         {/* Header */}
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <div className="p-4 bg-blue-100 rounded-2xl">
-              <Heart className="h-12 w-12 text-blue-600" />
-            </div>
+            <img src="/images/caremaster-logo.jpg" alt="Care Master Logo" className="h-20 w-auto" />
           </div>
-                <h2 className="brand-title text-gray-900">Care Master</h2>
           <p className="text-gray-600 mt-2">{getStepTitle()}</p>
         </div>
 

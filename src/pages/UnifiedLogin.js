@@ -18,7 +18,6 @@ import {
   Shield,
   User,
   Pill,
-  Heart,
   XCircle
 } from 'lucide-react';
 
@@ -304,14 +303,7 @@ const UnifiedLogin = () => {
         {/* Header */}
         <div className="text-center">
           <a href="/" className="inline-flex justify-center mb-4 group cursor-pointer">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
-              <Heart className="h-8 w-8 text-white" />
-            </div>
-          </a>
-          <a href="/" className="inline-block group">
-            <h2 className="text-3xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-              Care Master
-            </h2>
+            <img src="/images/caremaster-logo.jpg" alt="Care Master Logo" className="h-20 w-auto group-hover:scale-105 transition-transform" />
           </a>
           <p className="mt-2 text-sm text-gray-600">
             Sign in to your account
