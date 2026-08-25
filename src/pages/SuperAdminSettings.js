@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'backend/auth';
-import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'backend/database';
-import { auth, db } from '../backend/config';
 import { 
   ArrowLeft,
   Shield,
@@ -19,6 +16,9 @@ import {
   EyeOff
 } from 'lucide-react';
 import FontSizeToggle from '../components/FontSizeToggle';
+import { collection, query, getDocs, getDoc, setDoc, updateDoc, where, limit, doc, serverTimestamp } from 'backend/database';
+import { updatePassword, reauthenticateWithCredential } from 'backend/auth';
+import { db, auth, functions, storage } from '../backend/config';;
 
 const SuperAdminSettings = () => {
   const navigate = useNavigate();
@@ -382,7 +382,7 @@ const SuperAdminSettings = () => {
       status.database = { status: 'error', message: 'Connection failed' };
     }
 
-    // Check API (Firebase Functions)
+    // Check API (Backend Functions)
     try {
       const healthCheckUrl = 'https://us-central1-elderx-f5c2b.cloudfunctions.net/healthCheck';
       const response = await fetch(healthCheckUrl, { method: 'GET', signal: AbortSignal.timeout(5000) });

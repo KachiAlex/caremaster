@@ -17,14 +17,13 @@ import {
   CheckCircle,
   Edit2
 } from 'lucide-react';
-import { db, storage } from '../backend/config';
-import { doc, updateDoc } from 'backend/database';
-import { ref, uploadBytes, getDownloadURL } from 'backend/storage';
-import { updatePassword, updateEmail, EmailAuthProvider, reauthenticateWithCredential } from 'backend/auth';
-import { auth } from '../backend/config';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
 import ProfilePicture from './ProfilePicture';
+import { updateDoc, doc } from 'backend/database';
+import { updatePassword, reauthenticateWithCredential, updateEmail } from 'backend/auth';
+import { uploadBytes, getDownloadURL } from 'backend/storage';
+import { db, auth, storage } from '../backend/config';
 
 /**
  * UserProfileSettings Component
@@ -143,7 +142,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
 
       let profilePictureUrl = profilePicturePreview;
 
-      // Upload new profile picture to Firebase Storage if a new file was selected
+      // Upload new profile picture to Backend Storage if a new file was selected
       if (profilePicture) {
         profilePictureUrl = await uploadProfilePicture();
         if (!profilePictureUrl) {
@@ -152,7 +151,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
         }
       }
 
-      // Update user profile in Firestore
+      // Update user profile in Database
       const userRef = doc(db, 'users', userId);
       const updateData = {
         name: profileData.name,
@@ -181,7 +180,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
       // If user is a caregiver, also update the caregivers collection to keep them in sync
       if (userProfile?.userType === 'caregiver' || userProfile?.type === 'caregiver' || userProfile?.role === 'caregiver') {
         try {
-          const { doc: caregiverDoc, updateDoc: updateCaregiverDoc, getDoc: getCaregiverDoc } = await import('firebase/firestore');
+          const { doc: caregiverDoc, updateDoc: updateCaregiverDoc, getDoc: getCaregiverDoc } = await import('backend/database');
           const { db } = await import('../backend/config');
           const caregiverRef = caregiverDoc(db, 'caregivers', userId);
           const caregiverDocSnap = await getCaregiverDoc(caregiverRef);
@@ -284,7 +283,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
       // Update email
       await updateEmail(auth.currentUser, securityData.newEmail);
 
-      // Update email in Firestore
+      // Update email in Database
       await updateDoc(doc(db, 'users', userId), {
         email: securityData.newEmail,
         updatedAt: new Date().toISOString()

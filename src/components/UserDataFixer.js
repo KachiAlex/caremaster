@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { RefreshCw, CheckCircle, AlertCircle, Wrench } from 'lucide-react';
-import { collection, getDocs, doc, updateDoc } from 'backend/database';
-import { db } from '../backend/config';
 import { toast } from 'react-toastify';
+import { collection, getDocs, updateDoc, doc } from 'backend/database';
+import { db } from '../backend/config';
 
 const UserDataFixer = ({ institutionId }) => {
   const [fixing, setFixing] = useState(false);

@@ -33,7 +33,7 @@ import {
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
 import { getPatientById, getPatientByPatientId, updatePatient } from '../api/patientsAPI';
-import { doc, updateDoc } from 'backend/database';
+import { updateDoc, doc } from 'backend/database';
 import { db } from '../backend/config';
 
 const PatientAccount = () => {

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import * as diagnosticsAPI from '../api/diagnosticsAPI';
+import { doc } from 'backend/database';
 
 const DiagnosticsTab = ({ 
   clientId, 

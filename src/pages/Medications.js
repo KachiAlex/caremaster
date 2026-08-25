@@ -22,6 +22,7 @@ import { medicationAPI } from '../api/medicationAPI';
 import { getClientsByCaregiver } from '../api/patientsAPI';
 import { createCareLog } from '../api/careLogsAPI';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { query } from 'backend/database';
 
 const Medications = () => {
   const { user, userProfile } = useUser();

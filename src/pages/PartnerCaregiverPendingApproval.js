@@ -2,37 +2,38 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Clock, CheckCircle, FileText, Shield, Mail, RefreshCw, LogOut } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { doc, getDoc } from '../services/databaseCompat';
 import { toast } from 'react-toastify';
 import { getDoc, doc } from 'backend/database';
 import { signOut } from 'backend/auth';
 import { db, auth } from '../backend/config';
 
-const InstitutionCaregiverPendingApproval = () => {
+const PartnerCaregiverPendingApproval = () => {
   const [searchParams] = useSearchParams();
   const { user, userProfile } = useUser();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(false);
-  const [institutionName, setInstitutionName] = useState('');
+  const [institutionName, setPartnerName] = useState('');
 
-  const urlInstitutionId = searchParams.get('institution');
-  const effectiveInstitutionId = urlInstitutionId || userProfile?.institutionId;
+  const urlPartnerId = searchParams.get('institution');
+  const effectivePartnerId = urlPartnerId || userProfile?.institutionId;
 
   useEffect(() => {
     // Fetch institution name
-    const fetchInstitutionName = async () => {
-      if (effectiveInstitutionId) {
+    const fetchPartnerName = async () => {
+      if (effectivePartnerId) {
         try {
-          const instDoc = await getDoc(doc(db, 'institutions', effectiveInstitutionId));
+          const instDoc = await getDoc(doc(db, 'institutions', effectivePartnerId));
           if (instDoc.exists()) {
-            setInstitutionName(instDoc.data().name || 'Your Institution');
+            setPartnerName(instDoc.data().name || 'Your Partner');
           }
         } catch (error) {
           console.error('Error fetching institution:', error);
         }
       }
     };
-    fetchInstitutionName();
-  }, [effectiveInstitutionId]);
+    fetchPartnerName();
+  }, [effectivePartnerId]);
 
   const handleCheckStatus = async () => {
     setChecking(true);
@@ -45,7 +46,7 @@ const InstitutionCaregiverPendingApproval = () => {
         if (userData.status === 'active') {
           toast.success('Your account has been approved! Redirecting to dashboard...');
           setTimeout(() => {
-            navigate(`/institution-caregiver/dashboard?institution=${effectiveInstitutionId}`);
+            navigate(`/institution-caregiver/dashboard?institution=${effectivePartnerId}`);
           }, 1500);
         } else {
           toast.info('Your account is still pending approval. Please wait for admin verification.');
@@ -193,5 +194,5 @@ const InstitutionCaregiverPendingApproval = () => {
   );
 };
 
-export default InstitutionCaregiverPendingApproval;
+export default PartnerCaregiverPendingApproval;
 

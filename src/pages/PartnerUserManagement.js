@@ -17,14 +17,17 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  Ban,
+  UserCheck
 } from 'lucide-react';
+import { collection, query, where, getDocs, orderBy, doc, updateDoc, deleteDoc, serverTimestamp } from '../services/databaseCompat';
 import { toast } from 'react-toastify';
-import InstitutionUserCreationModal from '../components/InstitutionUserCreationModal';
-import { collection, query, getDocs, where } from 'backend/database';
+import PartnerUserCreationModal from '../components/PartnerUserCreationModal';
+import { collection, query, getDocs, updateDoc, where, doc, serverTimestamp } from 'backend/database';
 import { db } from '../backend/config';
 
-const InstitutionUserManagement = () => {
+const PartnerUserManagement = () => {
   const { userProfile, institutionId } = useUser();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
@@ -110,23 +113,77 @@ const InstitutionUserManagement = () => {
     fetchUsers();
   };
 
-  const handleUserAction = (action, userId) => {
+  const handleUserAction = async (action, userId) => {
     const user = users.find(u => u.id === userId);
-    
+    if (!user) return;
+
     if (action === 'remove' || action === 'delete') {
-      // Prevent deleting primary admin
       if (user?.isPrimaryAdmin || user?.adminTier === 'primary' || user?.roles?.includes('primary-admin') || user?.cannotBeDeleted) {
         toast.error('❌ Primary administrators cannot be deleted for security reasons');
         return;
       }
-      
-      if (window.confirm(`Are you sure you want to delete ${user?.firstName} ${user?.lastName}? This action cannot be undone.`)) {
-        toast.info('Delete user functionality - Coming soon!');
+      if (!window.confirm(`Are you sure you want to delete ${user?.firstName || ''} ${user?.lastName || ''}? This action cannot be undone.`)) return;
+
+      setLoading(true);
+      try {
+        await updateDoc(doc(db, 'users', userId), {
+          status: 'deleted',
+          active: false,
+          isActive: false,
+          deletedAt: new Date().toISOString(),
+          deletedBy: userProfile?.uid || userProfile?.id,
+          updatedAt: serverTimestamp()
+        });
+        toast.success(`${user?.firstName || 'User'} deleted successfully`);
+        setUsers(prev => prev.filter(u => u.id !== userId));
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        toast.error('Failed to delete user');
+      } finally {
+        setLoading(false);
+      }
+    } else if (action === 'suspend') {
+      if (!window.confirm(`Suspend ${user?.firstName || ''} ${user?.lastName || ''}? They will lose access immediately.`)) return;
+
+      setLoading(true);
+      try {
+        await updateDoc(doc(db, 'users', userId), {
+          status: 'suspended',
+          active: false,
+          isActive: false,
+          suspendedAt: new Date().toISOString(),
+          suspendedBy: userProfile?.uid || userProfile?.id,
+          updatedAt: serverTimestamp()
+        });
+        toast.success(`${user?.firstName || 'User'} suspended successfully`);
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'suspended', active: false } : u));
+      } catch (error) {
+        console.error('Error suspending user:', error);
+        toast.error('Failed to suspend user');
+      } finally {
+        setLoading(false);
+      }
+    } else if (action === 'activate') {
+      setLoading(true);
+      try {
+        await updateDoc(doc(db, 'users', userId), {
+          status: 'active',
+          active: true,
+          isActive: true,
+          activatedAt: new Date().toISOString(),
+          activatedBy: userProfile?.uid || userProfile?.id,
+          updatedAt: serverTimestamp()
+        });
+        toast.success(`${user?.firstName || 'User'} activated successfully`);
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'active', active: true } : u));
+      } catch (error) {
+        console.error('Error activating user:', error);
+        toast.error('Failed to activate user');
+      } finally {
+        setLoading(false);
       }
     } else if (action === 'edit') {
       toast.info('Edit user functionality - Coming soon!');
-    } else {
-      toast.info(`${action} user action - Coming soon!`);
     }
   };
 
@@ -194,7 +251,7 @@ const InstitutionUserManagement = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <button
-            onClick={() => navigate(`/onboard?institution=${institutionId}`)}
+            onClick={() => navigate(`/institution-admin/dashboard?institution=${institutionId}`)}
             className="flex items-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -354,6 +411,29 @@ const InstitutionUserManagement = () => {
                       >
                         <Edit className="h-4 w-4" />
                       </button>
+                      {user.status === 'active' && (
+                        <button
+                          onClick={() => handleUserAction('suspend', user.id)}
+                          disabled={user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')}
+                          className={`p-2 rounded-lg transition-colors ${
+                            user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-orange-600 hover:bg-orange-50'
+                          }`}
+                          title="Suspend user"
+                        >
+                          <Ban className="h-4 w-4" />
+                        </button>
+                      )}
+                      {(user.status === 'suspended' || user.status === 'inactive') && (
+                        <button
+                          onClick={() => handleUserAction('activate', user.id)}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Activate user"
+                        >
+                          <UserCheck className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleUserAction('remove', user.id)}
                         disabled={user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin') || user.cannotBeDeleted}
@@ -379,8 +459,8 @@ const InstitutionUserManagement = () => {
         </div>
       </div>
 
-      {/* Institution User Creation Modal */}
-      <InstitutionUserCreationModal
+      {/* Partner User Creation Modal */}
+      <PartnerUserCreationModal
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         institutionId={institutionId}
@@ -391,4 +471,4 @@ const InstitutionUserManagement = () => {
   );
 };
 
-export default InstitutionUserManagement;
+export default PartnerUserManagement;

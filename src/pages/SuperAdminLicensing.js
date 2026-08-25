@@ -1,13 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'backend/auth';
-import { auth, db } from '../backend/config';
-import { doc, updateDoc } from 'backend/database';
 import { X, Info, Download, CheckSquare, Square } from 'lucide-react';
 import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicenseById, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, generateLicenseKey } from '../services/licenseService';
 import { toast } from 'react-toastify';
 import { exportToCSV, exportToExcel, exportToJSON, formatDateForExport } from '../services/exportService';
 import FontSizeToggle from '../components/FontSizeToggle';
+import { db, auth } from '../backend/config';
+import { updateDoc, doc } from 'backend/database';
+import { signOut } from 'backend/auth';
 
 // License Tier Definitions
 const LICENSE_TIERS = {
@@ -261,7 +261,7 @@ const SuperAdminLicensing = () => {
   };
 
   const handleEditLicense = (license) => {
-    // Handle Firestore Timestamp conversion safely
+    // Handle Database Timestamp conversion safely
     let endsAtDate = '';
     if (license.endsAt) {
       try {

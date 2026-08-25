@@ -150,7 +150,7 @@ const TenantPartners = () => {
             </div>
             <div className="mt-8 flex flex-wrap gap-4">
               <button
-                onClick={() => navigate('/institution/login?role=admin')}
+                onClick={() => navigate('/login?role=admin')}
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700"
               >
                 Partner login
@@ -201,7 +201,7 @@ const TenantPartners = () => {
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">Step 2</p>
               <h3 className="mt-2 text-xl font-semibold text-slate-900">Automatic routing</h3>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                After authentication we redirect users to their private institution workspace powered by Firestore rules and custom claims.
+                After authentication we redirect users to their private institution workspace powered by Database rules and custom claims.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm">

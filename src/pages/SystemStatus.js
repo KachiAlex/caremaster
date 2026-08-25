@@ -49,7 +49,7 @@ const SystemStatus = () => {
         checkUserSystem(),
         checkAssignmentSystem(),
         checkDataConnectStatus(),
-        checkFirebaseServices()
+        checkBackendServices()
       ]);
 
       const services = {};
@@ -57,7 +57,7 @@ const SystemStatus = () => {
       
       // Process health check results
       healthChecks.forEach((result, index) => {
-        const serviceNames = ['database', 'users', 'assignments', 'dataconnect', 'firebase'];
+        const serviceNames = ['database', 'users', 'assignments', 'dataconnect', 'backend'];
         const serviceName = serviceNames[index];
         
         if (result.status === 'fulfilled') {
@@ -157,28 +157,28 @@ const SystemStatus = () => {
       await dataConnectService._checkConnection();
       return {
         connected: true,
-        service: 'Firebase Data Connect'
+        service: 'Backend Data Connect'
       };
     } catch (error) {
       return {
         connected: false,
-        fallback: 'Firestore',
+        fallback: 'Database',
         error: error.message
       };
     }
   };
 
-  const checkFirebaseServices = async () => {
+  const checkBackendServices = async () => {
     try {
-      // Check various Firebase services
+      // Check various Backend services
       return {
         auth: 'operational',
-        firestore: 'operational',
+        database: 'operational',
         hosting: 'operational',
         dataConnect: 'operational'
       };
     } catch (error) {
-      throw new Error(`Firebase services check failed: ${error.message}`);
+      throw new Error(`Backend services check failed: ${error.message}`);
     }
   };
 
@@ -330,7 +330,7 @@ const SystemStatus = () => {
                   {service === 'users' && <Users className="h-5 w-5 text-gray-600 mr-2" />}
                   {service === 'assignments' && <Shield className="h-5 w-5 text-gray-600 mr-2" />}
                   {service === 'dataconnect' && <Zap className="h-5 w-5 text-gray-600 mr-2" />}
-                  {service === 'firebase' && <Server className="h-5 w-5 text-gray-600 mr-2" />}
+                  {service === 'backend' && <Server className="h-5 w-5 text-gray-600 mr-2" />}
                   <span className="font-medium text-gray-900 capitalize">{service}</span>
                 </div>
                 {getStatusIcon(data.status)}

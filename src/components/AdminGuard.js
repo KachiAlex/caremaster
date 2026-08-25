@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'backend/auth';
-import { doc, getDoc } from 'backend/database';
-import { auth, db } from '../backend/config';
 import { toast } from 'react-toastify';
+import { getDoc, doc } from 'backend/database';
+import { onAuthStateChanged } from 'backend/auth';
+import { db, auth } from '../backend/config';
 
 const AdminGuard = ({ children }) => {
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ const AdminGuard = ({ children }) => {
       }
 
       try {
-        // Check user's role in Firestore
+        // Check user's role in Database
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         
         if (!userDoc.exists()) {

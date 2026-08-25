@@ -413,7 +413,7 @@ const WebRTCTest = () => {
                 </li>
                 <li className="flex items-center space-x-2">
                   <CheckCircle size={16} className="text-green-500" />
-                  <span>Firebase authentication integration</span>
+                  <span>Backend authentication integration</span>
                 </li>
               </ul>
             </div>

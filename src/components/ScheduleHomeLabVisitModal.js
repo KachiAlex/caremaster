@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 import { createHomeLabVisit } from '../api/homeLabServicesAPI';
 import { useUser } from '../contexts/UserContext';
 import { getPatientsByInstitution } from '../api/patientsAPI';
-import { collection, query, where, getDocs } from 'backend/database';
+import { collection, query, getDocs, where } from 'backend/database';
 import { db } from '../backend/config';
 
 const ScheduleHomeLabVisitModal = ({ open, onClose, onSuccess, clientId: initialPatientId = null }) => {

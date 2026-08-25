@@ -37,9 +37,9 @@ import telemedicineService from '../services/telemedicineService';
 import telemedicineAPI from '../api/telemedicineAPI';
 import { toast } from 'react-toastify';
 import { testTelemedicineService, quickTest } from '../utils/telemedicineTest';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../backend/config';
+import { useAuthState } from 'react-backend-hooks/auth';
 import DocumentManager from '../components/DocumentManager';
+import { auth } from '../backend/config';
 
 const Telemedicine = () => {
   const [user, userLoading] = useAuthState(auth);
@@ -80,7 +80,7 @@ const Telemedicine = () => {
   // Determine user type based on user data
   useEffect(() => {
     if (user) {
-      // In a real app, you'd check user roles from Firestore
+      // In a real app, you'd check user roles from Database
       // For now, we'll use a simple check or default to Client
       const userRole = user.displayName?.includes('Dr.') ? 'doctor' : 'Client';
       setUserType(userRole);
@@ -190,7 +190,7 @@ const Telemedicine = () => {
         return;
       }
 
-      // Load appointments from Firebase
+      // Load appointments from Backend
       const appointmentsData = await telemedicineAPI.getAppointments(user.uid, userType);
       
       // Format appointments for display
@@ -205,7 +205,7 @@ const Telemedicine = () => {
       setError('Failed to load appointments. Please try again.');
       setLoading(false);
       
-      // No fallback - use empty data if Firebase fails
+      // No fallback - use empty data if Backend fails
       setAppointments([]);
       setUpcomingAppointments([]);
       setCompletedAppointments([]);
@@ -229,7 +229,7 @@ const Telemedicine = () => {
       const uid = await telemedicineService.joinChannel(null, channelName);
       console.log('Joined call with UID:', uid);
       
-      // Save call data to Firebase
+      // Save call data to Backend
       let callId = null;
       try {
         const callData = {
@@ -245,11 +245,11 @@ const Telemedicine = () => {
         const callResult = await telemedicineAPI.startCall(appointment.id, callData);
         callId = callResult.id;
         
-        // Update active call with Firebase call ID
+        // Update active call with Backend call ID
         setActiveCall(prev => ({ ...prev, callId }));
-      } catch (firebaseError) {
-        console.warn('Failed to save call to Firebase:', firebaseError);
-        // Continue with call even if Firebase save fails
+      } catch (backendError) {
+        console.warn('Failed to save call to Backend:', backendError);
+        // Continue with call even if Backend save fails
       }
       
       toast.success('Call started successfully!');
@@ -283,7 +283,7 @@ const Telemedicine = () => {
       // Leave Agora channel
       await telemedicineService.leaveChannel();
       
-      // Save call end data to Firebase
+      // Save call end data to Backend
       if (activeCall?.callId) {
         try {
           const callEndData = {
@@ -293,8 +293,8 @@ const Telemedicine = () => {
           };
           
           await telemedicineAPI.endCall(activeCall.callId, callEndData);
-        } catch (firebaseError) {
-          console.warn('Failed to save call end to Firebase:', firebaseError);
+        } catch (backendError) {
+          console.warn('Failed to save call end to Backend:', backendError);
         }
       }
       
@@ -341,7 +341,7 @@ const Telemedicine = () => {
         await telemedicineService.stopRecording();
         setIsRecording(false);
         
-        // Save recording data to Firebase
+        // Save recording data to Backend
         if (activeCall?.callId) {
           try {
             const recordingData = {
@@ -352,8 +352,8 @@ const Telemedicine = () => {
             };
             
             await telemedicineAPI.saveRecording(activeCall.callId, recordingData);
-          } catch (firebaseError) {
-            console.warn('Failed to save recording data to Firebase:', firebaseError);
+          } catch (backendError) {
+            console.warn('Failed to save recording data to Backend:', backendError);
           }
         }
         
@@ -362,7 +362,7 @@ const Telemedicine = () => {
         await telemedicineService.startRecording();
         setIsRecording(true);
         
-        // Save recording start data to Firebase
+        // Save recording start data to Backend
         if (activeCall?.callId) {
           try {
             const recordingData = {
@@ -371,8 +371,8 @@ const Telemedicine = () => {
             };
             
             await telemedicineAPI.saveRecording(activeCall.callId, recordingData);
-          } catch (firebaseError) {
-            console.warn('Failed to save recording start to Firebase:', firebaseError);
+          } catch (backendError) {
+            console.warn('Failed to save recording start to Backend:', backendError);
           }
         }
         
@@ -535,7 +535,7 @@ const Telemedicine = () => {
           <button 
             onClick={seedData}
             className="btn btn-secondary"
-            title="Add sample data to Firebase"
+            title="Add sample data to Backend"
           >
             <Upload className="h-4 w-4 mr-2" />
             Seed Data

@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, updateDoc, doc } from 'backend/database';
-import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import { 
   Package, 
@@ -14,6 +12,8 @@ import {
   RotateCcw,
   AlertCircle
 } from 'lucide-react';
+import { collection, query, getDocs, updateDoc, where, orderBy, doc } from 'backend/database';
+import { db } from '../backend/config';
 
 const ArchivedClients = ({ institutionId }) => {
   const [archivedClients, setArchivedClients] = useState([]);

@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, updateDoc, doc, getDoc } from 'backend/database';
-import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import { 
   Users, 
@@ -16,6 +14,9 @@ import {
   Edit
 } from 'lucide-react';
 import UserNameWithAvatar from './UserNameWithAvatar';
+import { createAdminUser } from '../utils/createAdminUser';
+import { collection, query, getDocs, getDoc, updateDoc, where, doc } from 'backend/database';
+import { db } from '../backend/config';
 
 const AdminRoleAssignment = ({ institutionId }) => {
   const [users, setUsers] = useState([]);
@@ -26,6 +27,9 @@ const AdminRoleAssignment = ({ institutionId }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [assigningRole, setAssigningRole] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createAdminData, setCreateAdminData] = useState({ email: '', password: '', name: '' });
+  const [creatingAdmin, setCreatingAdmin] = useState(false);
 
   // Load all users in the institution
   useEffect(() => {
@@ -141,6 +145,31 @@ const AdminRoleAssignment = ({ institutionId }) => {
     }
   };
 
+  const handleCreateAdmin = async () => {
+    const { email, password, name } = createAdminData;
+    if (!email || !password || !name) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    try {
+      setCreatingAdmin(true);
+      const result = await createAdminUser(email, password, name);
+      if (result.success) {
+        toast.success('Admin user created successfully');
+        setCreateAdminData({ email: '', password: '', name: '' });
+        setShowCreateModal(false);
+        await loadUsers();
+      } else {
+        toast.error(result.error || 'Failed to create admin');
+      }
+    } catch (error) {
+      console.error('Error creating admin:', error);
+      toast.error('Failed to create admin');
+    } finally {
+      setCreatingAdmin(false);
+    }
+  };
+
   const getRoleDisplayName = (user) => {
     const roles = Array.isArray(user.roles) ? user.roles : [user.userType || user.type];
     return roles.join(', ');
@@ -178,6 +207,13 @@ const AdminRoleAssignment = ({ institutionId }) => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Admin Role Assignment</h2>
             <p className="text-gray-600">Assign or remove admin roles for users in your institution</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Create New Admin
+            </button>
           </div>
           <div className="flex items-center space-x-2">
             <Shield className="h-8 w-8 text-red-600" />
@@ -403,6 +439,73 @@ const AdminRoleAssignment = ({ institutionId }) => {
                 ) : (
                   isAdmin(selectedUser) ? 'Remove Admin' : 'Make Admin'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create New Admin Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Create New Admin</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={createAdminData.name}
+                  onChange={(e) => setCreateAdminData({ ...createAdminData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter full name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={createAdminData.email}
+                  onChange={(e) => setCreateAdminData({ ...createAdminData, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter email address"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  value={createAdminData.password}
+                  onChange={(e) => setCreateAdminData({ ...createAdminData, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter password"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={creatingAdmin}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateAdmin}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                disabled={creatingAdmin}
+              >
+                {creatingAdmin ? 'Creating...' : 'Create Admin'}
               </button>
             </div>
           </div>

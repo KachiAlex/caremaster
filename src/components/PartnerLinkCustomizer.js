@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
-const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
+const PartnerLinkCustomizer = ({ institution, onUpdate, onClose }) => {
   const [customSlug, setCustomSlug] = useState(institution?.customSlug || '');
   const [customDomain, setCustomDomain] = useState(institution?.customDomain || '');
   const [showPreview, setShowPreview] = useState(false);
@@ -174,7 +174,7 @@ const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
       };
 
       await onUpdate(updates);
-      toast.success('Institution links updated successfully!');
+      toast.success('Partner links updated successfully!');
       onClose();
     } catch (error) {
       console.error('Error updating institution links:', error);
@@ -193,7 +193,7 @@ const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
         <div className="bg-blue-600 text-white p-6 rounded-t-lg">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold">Customize Institution Links</h2>
+              <h2 className="text-2xl font-bold">Customize Partner Links</h2>
               <p className="text-blue-100 mt-1">
                 {institution?.name} • Make your links more professional and memorable
               </p>
@@ -490,4 +490,4 @@ const InstitutionLinkCustomizer = ({ institution, onUpdate, onClose }) => {
   );
 };
 
-export default InstitutionLinkCustomizer;
+export default PartnerLinkCustomizer;

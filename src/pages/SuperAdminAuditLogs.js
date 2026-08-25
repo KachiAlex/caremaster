@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, query, where, orderBy, limit, Timestamp, startAfter } from 'backend/database';
-import { auth, db } from '../backend/config';
 import { 
   ArrowLeft,
   Shield,
@@ -19,6 +17,8 @@ import {
   FileText
 } from 'lucide-react';
 import FontSizeToggle from '../components/FontSizeToggle';
+import { collection, query, getDocs, orderBy, limit, startAfter } from 'backend/database';
+import { db } from '../backend/config';
 
 const SuperAdminAuditLogs = () => {
   const navigate = useNavigate();

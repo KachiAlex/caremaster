@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LogOut, User, Settings, ChevronDown, X } from 'lucide-react';
-import { signOut } from 'backend/auth';
-import { auth } from '../backend/config';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import UserProfileSettings from './UserProfileSettings';
+import { signOut } from 'backend/auth';
+import { auth } from '../backend/config';
 
 /**
  * UserAvatarDropdown Component

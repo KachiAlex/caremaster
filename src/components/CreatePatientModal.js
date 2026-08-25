@@ -113,26 +113,26 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     { 
       value: 'basic', 
       label: 'Basic Care', 
-      description: 'Minimal assistance needed',
-      details: 'Includes assistance with daily activities like meal preparation, light housekeeping, medication reminders, and companionship. Suitable for clients who are mostly independent but need occasional support.'
+      description: 'Minimal ADL assistance needed',
+      details: 'Includes assistance with activities of daily living (ADLs) like meal preparation, light housekeeping, medication reminders, and companionship. Suitable for individuals who are largely autonomous but require periodic support.'
     },
     { 
       value: 'intermediate', 
       label: 'Intermediate Care', 
-      description: 'Moderate assistance required',
-      details: 'Includes personal care assistance (bathing, dressing, grooming), mobility support, medication administration, meal assistance, and regular health monitoring. Suitable for clients who need daily support with activities of daily living.'
+      description: 'Moderate assistance & health monitoring',
+      details: 'Includes personal care support (bathing, dressing, grooming), mobility assistance, routine medication administration, and regular vital signs observation. Suitable for patients needing structured daily living assistance.'
     },
     { 
       value: 'advanced', 
       label: 'Advanced Care', 
-      description: 'Significant medical support needed',
-      details: 'Includes skilled nursing care, wound care, catheter care, vital signs monitoring, medication management, assistance with medical equipment, and coordination with healthcare providers. Suitable for clients with chronic conditions requiring regular medical attention.'
+      description: 'Skilled nursing & complex chronic care',
+      details: 'Includes skilled nursing interventions, wound management, catheter care, routine vitals monitoring, complex medication regimens, assistive medical devices, and interdisciplinary clinical coordination. Suitable for patients with chronic or multimorbid conditions.'
     },
     { 
-      value: 'critical', 
-      label: 'Critical Care', 
-      description: 'Intensive medical monitoring',
-      details: 'Includes 24/7 monitoring, complex medical procedures, ventilator care, intensive medication management, frequent vital signs checks, emergency response readiness, and constant supervision. Suitable for clients with severe medical conditions requiring intensive care.'
+      value: 'acute', 
+      label: 'Acute Care', 
+      description: 'High-acuity clinical & continuous monitoring',
+      details: 'Includes continuous physiological monitoring, complex clinical interventions, respiratory/ventilator care, high-frequency medication titration, rapid emergency response readiness, and intensive nurse-to-patient oversight. Suitable for patients with severe, unstable, or post-acute medical conditions.'
     }
   ];
 
@@ -629,7 +629,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                   <span className={`ml-2 text-xs font-medium ${
                     currentStep >= step ? 'text-blue-600' : 'text-gray-500'
                   }`}>
-                    {step === 1 ? 'Personal Info' : step === 2 ? 'Emergency Contact' : 'Medical Info'}
+                    {step === 1 ? 'Patient Demographics' : step === 2 ? 'Emergency Contact & Next of Kin' : 'Clinical & Medical Profile'}
                   </span>
                 </div>
                 {step < 3 && (
@@ -685,12 +685,12 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Step 1: Personal Information */}
+              {/* Step 1: Patient Demographics */}
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-4">
                     <User className="h-5 w-5 text-blue-600" />
-                    <h4 className="text-base font-semibold text-gray-900">Personal Information</h4>
+                    <h4 className="text-base font-semibold text-gray-900">Patient Demographics</h4>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -734,7 +734,8 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                           name="phoneCountryCode"
                           value={formData.phoneCountryCode}
                           onChange={handleInputChange}
-                          className={`${inputClass} w-32`}
+                          className="rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shrink-0"
+                          style={{ width: '130px', minWidth: '130px' }}
                         >
                           {countryCodes.map((country) => (
                             <option key={country.code} value={country.code}>
@@ -742,7 +743,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                             </option>
                           ))}
                         </select>
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 min-w-0">
                           <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                           <input
                             id="phone"
@@ -896,12 +897,12 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                 </div>
               )}
 
-              {/* Step 2: Emergency Contact */}
+              {/* Step 2: Emergency Contact & Next of Kin */}
               {currentStep === 2 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-4">
                     <AlertCircle className="h-5 w-5 text-blue-600" />
-                    <h4 className="text-base font-semibold text-gray-900">Emergency Contact Information</h4>
+                    <h4 className="text-base font-semibold text-gray-900">Emergency Contact & Next of Kin</h4>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -926,7 +927,8 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                           name="emergencyContactPhoneCountryCode"
                           value={formData.emergencyContactPhoneCountryCode}
                           onChange={handleInputChange}
-                          className={`${inputClass} w-32`}
+                          className="rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shrink-0"
+                          style={{ width: '130px', minWidth: '130px' }}
                         >
                           {countryCodes.map((country) => (
                             <option key={country.code} value={country.code}>
@@ -934,7 +936,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                             </option>
                           ))}
                         </select>
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 min-w-0">
                           <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                           <input
                             id="emergencyContactPhone"
@@ -951,7 +953,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label htmlFor="emergencyContactRelationship" className={labelClass}>Relationship</label>
+                      <label htmlFor="emergencyContactRelationship" className={labelClass}>Relationship / Legal Designation</label>
                       <select
                         id="emergencyContactRelationship"
                         name="emergencyContactRelationship"
@@ -959,25 +961,29 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                         onChange={handleInputChange}
                         className={inputClass}
                       >
-                        <option value="">Select relationship</option>
-                        <option value="spouse">Spouse</option>
-                        <option value="child">Child</option>
+                        <option value="">Select relationship / designation</option>
+                        <option value="next-of-kin">Next of Kin</option>
+                        <option value="healthcare-proxy">Healthcare Proxy / Power of Attorney</option>
+                        <option value="legal-guardian">Legal Guardian</option>
+                        <option value="spouse">Spouse / Partner</option>
+                        <option value="child">Adult Child</option>
                         <option value="parent">Parent</option>
                         <option value="sibling">Sibling</option>
-                        <option value="friend">Friend</option>
-                        <option value="other">Other</option>
+                        <option value="primary-caregiver">Family Caregiver</option>
+                        <option value="friend">Friend / Advocate</option>
+                        <option value="other">Other Designated Contact</option>
                       </select>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Step 3: Medical Information */}
+              {/* Step 3: Clinical & Medical Profile */}
               {currentStep === 3 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Activity className="h-5 w-5 text-blue-600" />
-                    <h4 className="text-base font-semibold text-gray-900">Medical Information</h4>
+                    <h4 className="text-base font-semibold text-gray-900">Clinical & Medical Profile</h4>
                   </div>
 
                   <div>
@@ -1018,7 +1024,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                   </div>
 
                   <div>
-                    <label className={labelClass}>Medical Conditions</label>
+                    <label className={labelClass}>Diagnoses & Chronic Conditions</label>
                     <div className="flex gap-2 mb-2">
                       <input
                         type="text"
@@ -1026,7 +1032,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                         onChange={(e) => setTempMedicalCondition(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addMedicalCondition())}
                         className={inputClass}
-                        placeholder="Add medical condition"
+                        placeholder="e.g., Type 2 Diabetes, Hypertension, COPD"
                       />
                       <button
                         type="button"
@@ -1058,7 +1064,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                   </div>
 
                   <div>
-                    <label className={labelClass}>Current Medications</label>
+                    <label className={labelClass}>Active Prescriptions & Pharmacotherapy</label>
                     <div className="flex gap-2 mb-2">
                       <input
                         type="text"
@@ -1066,7 +1072,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                         onChange={(e) => setTempMedication(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addMedication())}
                         className={inputClass}
-                        placeholder="Add medication"
+                        placeholder="e.g., Metformin 500mg BID, Lisinopril 10mg QD"
                       />
                       <button
                         type="button"
@@ -1099,7 +1105,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                   </div>
 
                   <div>
-                    <label className={labelClass}>Allergies</label>
+                    <label className={labelClass}>Allergies & Adverse Drug Reactions (ADRs)</label>
                     <div className="flex gap-2 mb-2">
                       <input
                         type="text"
@@ -1107,7 +1113,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                         onChange={(e) => setTempAllergy(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAllergy())}
                         className={inputClass}
-                        placeholder="Add allergy"
+                        placeholder="e.g., Penicillin (Anaphylaxis), Latex, Sulfa drugs"
                       />
                       <button
                         type="button"
@@ -1202,18 +1208,18 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelClass}>Primary Care Physician</label>
+                      <label className={labelClass}>Attending / Primary Care Physician (PCP)</label>
                       <input
                         type="text"
                         name="primaryCarePhysician"
                         value={formData.primaryCarePhysician}
                         onChange={handleInputChange}
                         className={inputClass}
-                        placeholder="Doctor's name"
+                        placeholder="Dr. Full Name, MD/DO"
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Physician Phone</label>
+                      <label className={labelClass}>Physician Contact / Clinic Phone</label>
                       <input
                         type="tel"
                         name="physicianPhone"
@@ -1226,14 +1232,14 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                   </div>
 
                   <div>
-                    <label className={labelClass}>Additional Notes</label>
+                    <label className={labelClass}>Clinical Notes & Care Plan Instructions</label>
                     <textarea
                       name="notes"
                       value={formData.notes}
                       onChange={handleInputChange}
                       rows={4}
                       className={inputClass}
-                      placeholder="Any additional information about the client..."
+                      placeholder="Special clinical instructions, baseline vitals, dietary restrictions, mobility status, or behavioral notes..."
                     />
                   </div>
                 </div>

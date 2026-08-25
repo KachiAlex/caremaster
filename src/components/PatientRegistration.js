@@ -628,19 +628,19 @@ const PatientRegistration = ({ onClose, onSuccess, institutionId: propInstitutio
               }`}
             >
               <option value="" className="bg-slate-900">Select care level</option>
-              <option value="basic" className="bg-slate-900">Basic Care - Minimal assistance needed</option>
-              <option value="intermediate" className="bg-slate-900">Intermediate Care - Moderate assistance required</option>
-              <option value="advanced" className="bg-slate-900">Advanced Care - Extensive assistance needed</option>
-              <option value="specialized" className="bg-slate-900">Specialized Care - Medical/specialized support required</option>
-              <option value="critical" className="bg-slate-900">Critical Care - Intensive medical monitoring</option>
+              <option value="basic" className="bg-slate-900">Basic Care - Minimal ADL assistance needed</option>
+              <option value="intermediate" className="bg-slate-900">Intermediate Care - Moderate assistance & monitoring</option>
+              <option value="advanced" className="bg-slate-900">Advanced Care - Skilled nursing & complex chronic care</option>
+              <option value="specialized" className="bg-slate-900">Specialized Care - Disease-specific clinical support</option>
+              <option value="acute" className="bg-slate-900">Acute Care - High-acuity clinical & continuous monitoring</option>
             </select>
             {errors.careLevel && <p className="text-xs text-red-400 mt-1">{errors.careLevel}</p>}
             <p className="text-xs text-slate-500 mt-2">
-              <strong>Basic:</strong> Assistance with daily activities, medication reminders<br/>
-              <strong>Intermediate:</strong> Help with mobility, personal care, meal preparation<br/>
-              <strong>Advanced:</strong> Extensive personal care, medical monitoring, complex medication management<br/>
-              <strong>Specialized:</strong> Disease-specific care, therapy, specialized equipment<br/>
-              <strong>Critical:</strong> 24/7 monitoring, life support, intensive medical intervention
+              <strong>Basic:</strong> Assistance with activities of daily living (ADLs), medication reminders<br/>
+              <strong>Intermediate:</strong> Help with mobility, personal care, routine vitals observation<br/>
+              <strong>Advanced:</strong> Skilled nursing care, wound management, complex pharmacotherapy<br/>
+              <strong>Specialized:</strong> Disease-specific clinical protocols, specialized equipment<br/>
+              <strong>Acute:</strong> Continuous physiological monitoring, intensive nursing oversight, emergency readiness
             </p>
           </div>
         </div>

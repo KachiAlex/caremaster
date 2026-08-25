@@ -11,8 +11,8 @@ import { query, getDocs, updateDoc, where, doc } from 'backend/database';
 import { signOut } from 'backend/auth';
 import { db, auth } from '../backend/config';
 
-const InstitutionPharmacyDashboard = () => {
-  const { user, userProfile, institutionId: contextInstitutionId, institutionData } = useUser();
+const PartnerPharmacyDashboard = () => {
+  const { user, userProfile, institutionId: contextPartnerId, institutionData, userRoles } = useUser();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [assignedClients, setAssignedClients] = useState([]);
@@ -21,16 +21,17 @@ const InstitutionPharmacyDashboard = () => {
   // Get institutionId from URL params, context, or profile (in that order)
   const institutionId = useMemo(() => {
     return searchParams.get('institution') || 
-           contextInstitutionId || 
+           contextPartnerId || 
            userProfile?.institutionId || 
            null;
-  }, [searchParams, contextInstitutionId, userProfile?.institutionId]);
+  }, [searchParams, contextPartnerId, userProfile?.institutionId]);
 
-  // Check if user is a pharmacist
+  // Check if user is a pharmacist (support multi-role users via roles array)
   const isPharmacist = userProfile?.role === 'pharmacist' ||
-                       userProfile?.userType === 'pharmacist' || 
+                       userProfile?.userType === 'pharmacist' ||
                        userProfile?.type === 'pharmacist' ||
-                       userProfile?.medicalQualification === 'pharmacist';
+                       userProfile?.medicalQualification === 'pharmacist' ||
+                       (Array.isArray(userRoles) && userRoles.includes('pharmacist'));
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -48,14 +49,14 @@ const InstitutionPharmacyDashboard = () => {
           const licenseStatus = await fetchLicenseStatus(institutionId);
           
           if (!licenseStatus.active) {
-            console.warn('⛔ Institution license inactive:', licenseStatus.reason);
-            toast.error(`Access denied. Institution license is ${licenseStatus.reason || 'inactive'}. Please contact your administrator.`);
+            console.warn('⛔ Partner license inactive:', licenseStatus.reason);
+            toast.error(`Access denied. Partner license is ${licenseStatus.reason || 'inactive'}. Please contact your administrator.`);
             signOut(getAuth()).then(() => {
               navigate(`/license-required?institution=${institutionId}`, { replace: true });
             });
             return;
           }
-          console.log('✅ Institution license verified for pharmacist');
+          console.log('✅ Partner license verified for pharmacist');
         } catch (licenseError) {
           console.error('❌ License check error:', licenseError);
           toast.error('Unable to verify institution license. Access denied.');
@@ -66,25 +67,27 @@ const InstitutionPharmacyDashboard = () => {
         }
       }
 
-      // Validate tab session for role conflicts
+      // Validate tab session for role conflicts.
+      // Use the fixed page role ('pharmacist') instead of userProfile.userType
+      // because multi-role users may have a different primary role in Database.
       if (userProfile && user) {
-        const userRole = userProfile.userType || userProfile.type || userProfile.role || 'pharmacist';
-        const validation = sessionManager.validateTabSession(user, userRole);
-        
+        const pageRole = 'pharmacist';
+        const validation = sessionManager.validateTabSession(user, pageRole);
+
         if (validation.needsInit) {
           // First load - set tab session with institutionId from URL if available
-          const effectiveInstitutionId = institutionId || searchParams.get('institution');
-          sessionManager.setTabSession(userRole, user.uid, effectiveInstitutionId);
+          const effectivePartnerId = institutionId || searchParams.get('institution');
+          sessionManager.setTabSession(pageRole, user.uid, effectivePartnerId);
           
           // If institutionId was in URL but not in profile, update Database
-          if (effectiveInstitutionId && !userProfile.institutionId) {
+          if (effectivePartnerId && !userProfile.institutionId) {
             console.log('🔄 Updating profile with institutionId from URL...');
             try {
-              const { doc, updateDoc } = await import('backend/database');
+              const { doc, updateDoc } = await import('../services/databaseCompat');
               const { db } = await import('../backend/config');
               const userRef = doc(db, 'users', user.uid);
-              await updateDoc(userRef, { institutionId: effectiveInstitutionId });
-              console.log('✅ Updated profile with institutionId:', effectiveInstitutionId);
+              await updateDoc(userRef, { institutionId: effectivePartnerId });
+              console.log('✅ Updated profile with institutionId:', effectivePartnerId);
               // Reload profile after a short delay
               setTimeout(() => {
                 window.location.reload();
@@ -105,9 +108,9 @@ const InstitutionPharmacyDashboard = () => {
       if (user?.uid && institutionId) {
         loadAssignedClients();
       } else if (user?.uid && !institutionId) {
-        // InstitutionId missing - show error
+        // PartnerId missing - show error
         setLoading(false);
-        toast.error('Institution ID is required. Please contact support.');
+        toast.error('Partner ID is required. Please contact support.');
       }
     };
 
@@ -118,7 +121,7 @@ const InstitutionPharmacyDashboard = () => {
     try {
       setLoading(true);
       console.log('🔍 Pharmacy Dashboard - Loading clients for pharmacist UID:', user.uid);
-      console.log('🔍 Pharmacy Dashboard - Institution ID:', institutionId);
+      console.log('🔍 Pharmacy Dashboard - Partner ID:', institutionId);
       console.log('🔍 Pharmacy Dashboard - User profile:', userProfile);
       
       // Pharmacists should see ALL clients in their institution (not just assigned ones)
@@ -130,14 +133,14 @@ const InstitutionPharmacyDashboard = () => {
       }
       
       // Load all clients from the institution
-      // Try getClientsByInstitution first, fall back to getAllClients if needed
+      // Try getClientsByPartner first, fall back to getAllClients if needed
       let clients = [];
       try {
-        const { getClientsByInstitution } = await import('../api/patientsAPI');
-        clients = await getClientsByInstitution(institutionId);
-        console.log('📋 Institution clients loaded:', clients.length);
+        const { getClientsByPartner } = await import('../api/patientsAPI');
+        clients = await getClientsByPartner(institutionId);
+        console.log('📋 Partner clients loaded:', clients.length);
       } catch (error) {
-        console.warn('⚠️ Error loading clients with getClientsByInstitution, trying getAllClients:', error);
+        console.warn('⚠️ Error loading clients with getClientsByPartner, trying getAllClients:', error);
         try {
           const { getAllClients } = await import('../api/patientsAPI');
           clients = await getAllClients(institutionId);
@@ -145,7 +148,7 @@ const InstitutionPharmacyDashboard = () => {
         } catch (fallbackError) {
           console.error('❌ Error with getAllClients fallback:', fallbackError);
           // Try direct query as last resort
-          const { collection: databaseCollection, query, where, getDocs } = await import('backend/database');
+          const { collection: databaseCollection, query, where, getDocs } = await import('../services/databaseCompat');
           const { db } = await import('../backend/config');
           
           const clientsQuery = query(
@@ -232,18 +235,18 @@ const InstitutionPharmacyDashboard = () => {
                   Pharmacy Dashboard
                 </h1>
                 <p className="text-xs text-gray-600">
-                  {institutionData?.name || 'Institution'}
+                  {institutionData?.name || 'Partner'}
                 </p>
               </div>
             </div>
 
             {/* User Info and Actions */}
             <div className="flex items-center space-x-4">
-              {/* Institution Info */}
+              {/* Partner Info */}
               <div className="hidden md:flex items-center space-x-2 bg-blue-50 px-3 py-2 rounded-lg">
                 <Building2 className="h-4 w-4 text-blue-600" />
                 <span className="text-sm text-gray-700">
-                  {institutionData?.name || 'Institution'}
+                  {institutionData?.name || 'Partner'}
                 </span>
               </div>
 
@@ -296,5 +299,5 @@ const InstitutionPharmacyDashboard = () => {
   );
 };
 
-export default InstitutionPharmacyDashboard;
+export default PartnerPharmacyDashboard;
 

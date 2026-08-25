@@ -5,6 +5,7 @@ import EnhancedEPrescription from './EnhancedEPrescription';
 import { uploadClientDocument } from '../utils/clientDocumentUpload';
 import { createImagingRequest } from '../api/radiologyAPI';
 import VoiceToTextInput from './VoiceToTextInput';
+import { doc } from 'backend/database';
 
 const ConsultationModal = ({
   isOpen,

@@ -23,10 +23,10 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { db } from '../backend/config';
-import { collection, query, where, orderBy, getDocs, limit as firestoreLimit } from 'backend/database';
 import { toast } from 'react-toastify';
 import UserNameWithAvatar from './UserNameWithAvatar';
+import { collection, query, getDocs, where, orderBy } from 'backend/database';
+import { db } from '../backend/config';
 
 /**
  * ClientActivityTimeline Component
@@ -87,7 +87,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
           collection(db, 'adlLogs'),
           where('clientId', '==', clientId),
           orderBy('timestamp', 'desc'),
-          firestoreLimit(limit)
+          databaseLimit(limit)
         );
         const adlSnapshot = await getDocs(adlLogsQuery);
         adlSnapshot.forEach(doc => {
@@ -121,7 +121,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
           collection(db, 'careLogs'),
           where('clientId', '==', clientId),
           orderBy('createdAt', 'desc'),
-          firestoreLimit(limit)
+          databaseLimit(limit)
         );
         const careSnapshot = await getDocs(careLogsQuery);
         careSnapshot.forEach(doc => {
@@ -153,7 +153,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
           collection(db, 'clientActivities'),
           where('clientId', '==', clientId),
           orderBy('createdAt', 'desc'),
-          firestoreLimit(limit)
+          databaseLimit(limit)
         );
         const activitiesSnapshot = await getDocs(activitiesQuery);
         activitiesSnapshot.forEach(doc => {
@@ -183,7 +183,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
           collection(db, 'medicalReports'),
           where('clientId', '==', clientId),
           orderBy('createdAt', 'desc'),
-          firestoreLimit(limit)
+          databaseLimit(limit)
         );
         const reportsSnapshot = await getDocs(reportsQuery);
         reportsSnapshot.forEach(doc => {
@@ -217,7 +217,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
           collection(db, 'assignments'),
           where('clientId', '==', clientId),
           orderBy('createdAt', 'desc'),
-          firestoreLimit(limit)
+          databaseLimit(limit)
         );
         const assignmentsSnapshot = await getDocs(assignmentsQuery);
         assignmentsSnapshot.forEach(doc => {

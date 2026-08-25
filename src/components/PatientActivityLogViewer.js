@@ -27,7 +27,7 @@ import { toast } from 'react-toastify';
  * - Activity details
  * 
  * @param {string} clientId - Client registration number (e.g., UC-2025-0001)
- * @param {string} patientDocId - Client Firestore document ID
+ * @param {string} patientDocId - Client Database document ID
  * @param {string} clientName - Client name (optional, for display)
  */
 const PatientActivityLogViewer = ({ clientId, patientDocId, clientName = 'Client' }) => {

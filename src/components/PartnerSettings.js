@@ -24,13 +24,14 @@ import {
   XCircle,
   AlertTriangle
 } from 'lucide-react';
+import { doc, getDoc, updateDoc, serverTimestamp } from '../services/databaseCompat';
 import { toast } from 'react-toastify';
 import { fetchLicenseStatus } from '../services/licenseService';
-import { db } from '../backend/config';
 import { getDoc, updateDoc, doc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 
 /**
- * InstitutionSettings Component
+ * PartnerSettings Component
  * 
  * Manage institution-wide settings including:
  * - Currency and regional settings
@@ -40,7 +41,7 @@ import { getDoc, updateDoc, doc, serverTimestamp } from 'backend/database';
  * - System preferences
  */
 
-const InstitutionSettings = ({ institutionId }) => {
+const PartnerSettings = ({ institutionId }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
@@ -245,7 +246,7 @@ const InstitutionSettings = ({ institutionId }) => {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Institution Settings</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Partner Settings</h2>
           <p className="text-sm text-gray-500 mt-1">
             Configure institution-wide preferences and settings
           </p>
@@ -522,7 +523,7 @@ const InstitutionSettings = ({ institutionId }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Institution Name *
+                  Partner Name *
                 </label>
                 <div className="relative">
                   <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -538,7 +539,7 @@ const InstitutionSettings = ({ institutionId }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Institution Type
+                  Partner Type
                 </label>
                 <select
                   value={settings.institutionType}
@@ -988,5 +989,5 @@ const InstitutionSettings = ({ institutionId }) => {
   );
 };
 
-export default InstitutionSettings;
+export default PartnerSettings;
 

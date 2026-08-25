@@ -18,12 +18,17 @@ import {
   Trash2,
   UserCheck,
   Clock,
-  ArrowRight
+  ArrowRight,
+  ClipboardList
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ClientActivityTimeline from './ClientActivityTimeline';
 import { useUser } from '../contexts/UserContext';
+import VitalsLogModal from './VitalsLogModal';
+import ConsultationsLogModal from './ConsultationsLogModal';
+import PrescriptionsLogModal from './PrescriptionsLogModal';
+import LabTestsLogModal from './LabTestsLogModal';
+import CarePlanManager from './CarePlanManager';
 
 const ClientDetailsModal = ({ 
   client, 
@@ -35,34 +40,31 @@ const ClientDetailsModal = ({
   institutionId,
   onAssignPharmacist
 }) => {
-  const navigate = useNavigate();
-  const { userProfile } = useUser();
+  const { userProfile, user } = useUser();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Quick Action Modal States
+  const [showVitalsModal, setShowVitalsModal] = useState(false);
+  const [showConsultationsModal, setShowConsultationsModal] = useState(false);
+  const [showPrescriptionsModal, setShowPrescriptionsModal] = useState(false);
+  const [showLabTestsModal, setShowLabTestsModal] = useState(false);
   
   if (!client) return null;
 
   const handleRecordVitals = () => {
-    // Navigate to vitals recording page with Client ID
-    navigate(`/service-provider/diagnostics?clientId=${client.id}&clientName=${encodeURIComponent(client.name || '')}`);
-    onClose();
+    setShowVitalsModal(true);
   };
 
   const handleScheduleConsultation = () => {
-    // Navigate to consultation booking with Client ID
-    navigate(`/service-provider/consultations?clientId=${client.id}&clientName=${encodeURIComponent(client.name || '')}`);
-    onClose();
+    setShowConsultationsModal(true);
   };
 
   const handleViewPrescriptions = () => {
-    // Navigate to prescriptions page
-    navigate(`/service-provider/prescriptions?clientId=${client.id}&clientName=${encodeURIComponent(client.name || '')}`);
-    onClose();
+    setShowPrescriptionsModal(true);
   };
 
   const handleOrderLabTest = () => {
-    // Navigate to diagnostics/lab ordering
-    navigate(`/service-provider/diagnostics?clientId=${client.id}&clientName=${encodeURIComponent(client.name || '')}&action=order`);
-    onClose();
+    setShowLabTestsModal(true);
   };
 
   const operationalFlows = [
@@ -71,31 +73,31 @@ const ClientDetailsModal = ({
       name: 'Record Vitals',
       icon: Activity,
       color: 'bg-red-500',
-      description: 'Record client vital signs',
+      description: 'Record and track vital signs',
       action: handleRecordVitals
     },
     {
       id: 'consultation',
-      name: 'Schedule Consultation',
+      name: 'Doctor Consultation',
       icon: Stethoscope,
       color: 'bg-blue-500',
-      description: 'Book doctor consultation',
+      description: 'Document clinical encounter & SOAP notes',
       action: handleScheduleConsultation
     },
     {
       id: 'prescriptions',
-      name: 'View Prescriptions',
+      name: 'Prescriptions & Rx',
       icon: Pill,
       color: 'bg-green-500',
-      description: 'View and manage medications',
+      description: 'View, prescribe, and manage medications',
       action: handleViewPrescriptions
     },
     {
       id: 'lab',
-      name: 'Order Lab Test',
+      name: 'Diagnostic & Lab Tests',
       icon: TestTube,
       color: 'bg-purple-500',
-      description: 'Order diagnostic tests',
+      description: 'Order lab tests and review results',
       action: handleOrderLabTest
     }
   ];
@@ -202,28 +204,53 @@ const ClientDetailsModal = ({
           )}
 
           {activeTab === 'operations' && (
-            <div className="space-y-6">
+            <div className="space-y-8">
+              {/* Clinical Care Plan Section */}
+              <div className="bg-gradient-to-br from-blue-50/70 via-indigo-50/50 to-white border border-blue-200 rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md">
+                      <ClipboardList className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Clinical Care Plan & Orders</h3>
+                      <p className="text-xs text-gray-600">
+                        Create, review, and manage individualized physician care plans, treatment goals, and interventions with standardized clinical templates.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <CarePlanManager
+                  clientId={client.id || client.uid || client.clientId}
+                  doctorId={user?.uid}
+                  doctorName={userProfile?.name || userProfile?.displayName || 'Attending Physician'}
+                  clientName={client.name || client.fullName || 'Client'}
+                />
+              </div>
+
+              {/* Quick Operational Flows */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Operational Flows</h3>
-                <div className="grid gap-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Clinical Quick Actions</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
                   {operationalFlows.map(flow => {
                     const Icon = flow.icon;
                     return (
                       <button
                         key={flow.id}
                         onClick={flow.action}
-                        className="flex items-center justify-between p-4 rounded-lg border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                        className="flex items-center justify-between p-4 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all group text-left"
                       >
                         <div className="flex items-center gap-4">
-                          <div className={`${flow.color} p-3 rounded-lg`}>
-                            <Icon className="h-6 w-6 text-white" />
+                          <div className={`${flow.color} p-3 rounded-xl shadow-sm`}>
+                            <Icon className="h-5 w-5 text-white" />
                           </div>
-                          <div className="text-left">
+                          <div>
                             <p className="font-semibold text-gray-900">{flow.name}</p>
-                            <p className="text-sm text-gray-500">{flow.description}</p>
+                            <p className="text-xs text-gray-500">{flow.description}</p>
                           </div>
                         </div>
-                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                        <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
                       </button>
                     );
                   })}
@@ -327,6 +354,43 @@ const ClientDetailsModal = ({
           </div>
         </div>
       </div>
+
+      {/* Quick Action Clinical Modals */}
+      {showVitalsModal && (
+        <VitalsLogModal
+          client={client}
+          isOpen={showVitalsModal}
+          onClose={() => setShowVitalsModal(false)}
+          institutionId={institutionId}
+        />
+      )}
+
+      {showConsultationsModal && (
+        <ConsultationsLogModal
+          client={client}
+          isOpen={showConsultationsModal}
+          onClose={() => setShowConsultationsModal(false)}
+          institutionId={institutionId}
+        />
+      )}
+
+      {showPrescriptionsModal && (
+        <PrescriptionsLogModal
+          client={client}
+          isOpen={showPrescriptionsModal}
+          onClose={() => setShowPrescriptionsModal(false)}
+          institutionId={institutionId}
+        />
+      )}
+
+      {showLabTestsModal && (
+        <LabTestsLogModal
+          client={client}
+          isOpen={showLabTestsModal}
+          onClose={() => setShowLabTestsModal(false)}
+          institutionId={institutionId}
+        />
+      )}
     </div>
   );
 };

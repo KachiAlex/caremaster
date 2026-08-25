@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, query, where, doc, updateDoc, deleteDoc } from 'backend/database';
-import { httpsCallable } from 'backend/functions';
-import { auth, db } from '../backend/config';
-import { functions } from '../backend/config';
 import { 
   ArrowLeft,
   Shield,
@@ -20,6 +16,9 @@ import {
   EyeOff
 } from 'lucide-react';
 import FontSizeToggle from '../components/FontSizeToggle';
+import { collection, query, getDocs, where } from 'backend/database';
+import { httpsCallable } from 'backend/functions';
+import { db, auth, functions } from '../backend/config';
 
 const SuperAdminManagement = () => {
   const navigate = useNavigate();
@@ -74,7 +73,7 @@ const SuperAdminManagement = () => {
     setMessage('');
 
     try {
-      // Call Firebase Cloud Function to reset password
+      // Call Backend Cloud Function to reset password
       const resetPasswordFunction = httpsCallable(functions, 'resetSuperAdminPassword');
       const result = await resetPasswordFunction({
         userId: selectedAdmin.id,
@@ -113,7 +112,7 @@ const SuperAdminManagement = () => {
     setMessage('');
 
     try {
-      // Call Firebase Cloud Function to delete super admin
+      // Call Backend Cloud Function to delete super admin
       const deleteAdminFunction = httpsCallable(functions, 'deleteSuperAdmin');
       const result = await deleteAdminFunction({
         userId: selectedAdmin.id

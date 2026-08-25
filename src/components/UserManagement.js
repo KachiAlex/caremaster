@@ -425,7 +425,7 @@ const UserManagement = ({ institutionId }) => {
         };
       }
 
-      // Create the user in Firestore
+      // Create the user in Database
       await createUser(userData);
       
       toast.success(`${userType === 'client' ? 'Client' : 'Caregiver'} created successfully!`);
@@ -674,7 +674,7 @@ const UserManagement = ({ institutionId }) => {
                           const date = user.joinDate || user.createdAt;
                           if (!date) return 'N/A';
                           
-                          // Handle Firestore Timestamp
+                          // Handle Database Timestamp
                           if (date.toDate && typeof date.toDate === 'function') {
                             return date.toDate().toLocaleDateString();
                           }
@@ -1119,6 +1119,7 @@ const UserManagement = ({ institutionId }) => {
                     <option value="basic">Basic Care</option>
                     <option value="intermediate">Intermediate Care</option>
                     <option value="advanced">Advanced Care</option>
+                    <option value="acute">Acute Care</option>
                     <option value="specialized">Specialized Care</option>
                   </select>
                 </div>

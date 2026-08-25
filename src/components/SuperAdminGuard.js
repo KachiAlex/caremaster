@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged, signOut } from 'backend/auth';
-import { doc, getDoc } from 'backend/database';
-import { auth, db } from '../backend/config';
 import { toast } from 'react-toastify';
+import { getDoc, doc } from 'backend/database';
+import { signOut, onAuthStateChanged } from 'backend/auth';
+import { db, auth } from '../backend/config';
 
 const SuperAdminGuard = ({ children }) => {
   const [loading, setLoading] = useState(true);

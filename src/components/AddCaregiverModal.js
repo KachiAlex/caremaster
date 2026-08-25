@@ -83,19 +83,18 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
         password: formData.password
       };
 
-      // Create user account using existing auth register endpoint
-      const response = await api.post('/api/auth/register', {
-        matric_number: `CG/${Date.now()}`, // Generate caregiver matric number
+      // Create user account using the admin create-staff endpoint
+      const response = await api.post('/auth/create-staff', {
         email: userData.email,
         password: userData.password,
         first_name: userData.firstName,
         last_name: userData.lastName,
-        department: 'Healthcare', // Default department
-        level: '100', // Valid level for backend
-        session: '2024/2025', // Valid session format
-        user_type: 'student' // Backend only supports student
+        phone: userData.phone,
+        user_type: userData.userType,
+        institution_id: institutionId,
+        department: 'Healthcare'
       });
-      
+
       const result = response.data.data?.user?.id;
 
       const roleLabel = roles.find(r => r.value === formData.role)?.label || 'Staff';

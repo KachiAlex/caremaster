@@ -101,7 +101,7 @@ const CaregiverSchedule = () => {
       setCareTasks(allTasks);
       setAppointments(allAppointments);
       
-      // No mock data - use only real data from Firebase
+      // No mock data - use only real data from Backend
       console.log('Loaded real data:', { 
         tasks: allTasks.length, 
         appointments: allAppointments.length 

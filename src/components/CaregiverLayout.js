@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { signOut } from 'backend/auth';
-import { auth } from '../backend/config';
 import { 
   Calendar, 
   Clock, 
@@ -26,6 +24,8 @@ import {
   Shield
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { signOut } from 'backend/auth';
+import { auth } from '../backend/config';
 
 const CaregiverLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

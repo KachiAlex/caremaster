@@ -2,11 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { fetchLicenseStatus } from '../services/licenseService';
-import { getDoc, doc } from 'backend/database';
 import { signOut, onAuthStateChanged } from 'backend/auth';
-import { db, auth } from '../backend/config';
+import { auth } from '../backend/config';
 
-const InstitutionAdminGuard = ({ children }) => {
+const PartnerAdminGuard = ({ children }) => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -22,23 +21,80 @@ const InstitutionAdminGuard = ({ children }) => {
         return;
       }
 
-      try {
-        // Get user document
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (!userDoc.exists()) {
-          toast.error('User profile not found');
-          await signOut(auth);
-          navigate('/login', { replace: true });
-          setLoading(false);
-          return;
-        }
+      let userProfile = null;
+      let profileSource = 'backend';
 
-        const userProfile = userDoc.data();
+      // STEP 1: Try localStorage cache first (fastest, has PostgreSQL data)
+      try {
+        const cached = localStorage.getItem('user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.uid === user.uid) {
+            userProfile = parsed;
+            profileSource = 'cache';
+            console.log('📦 PartnerAdminGuard using cached profile for:', user.email);
+          }
+        }
+      } catch (cacheError) {
+        console.warn('Failed to read cached profile in guard:', cacheError.message);
+      }
+
+      // STEP 2: Query PostgreSQL backend API for fresh authoritative data
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/api/superadmin/users/by-email?email=${encodeURIComponent(user.email)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            const pgUser = result.data;
+            // Merge backend data with cache, preserving critical fields
+            userProfile = {
+              ...(userProfile || {}),
+              uid: user.uid,
+              email: user.email,
+              id: pgUser.id,
+              firstName: pgUser.firstName,
+              lastName: pgUser.lastName,
+              userType: pgUser.userType,
+              type: pgUser.userType,
+              role: pgUser.userType,
+              roles: pgUser.roles || [pgUser.userType],
+              institutionId: pgUser.institutionId || (userProfile && userProfile.institutionId),
+              institutionName: pgUser.institutionName,
+              isActive: pgUser.isActive,
+              profileSource: 'backend',
+            };
+            profileSource = 'backend';
+            console.log('✅ PartnerAdminGuard loaded PostgreSQL profile for:', user.email, 'institutionId:', userProfile.institutionId);
+            // Update cache with fresh data
+            localStorage.setItem('user', JSON.stringify(userProfile));
+          }
+        }
+      } catch (backendError) {
+        console.warn('⚠️ Backend profile fetch failed in guard:', backendError.message);
+      }
+
+      if (!userProfile) {
+        toast.error('User profile not found');
+        await signOut(auth);
+        navigate('/login', { replace: true });
+        setLoading(false);
+        return;
+      }
+
+      if (profileSource === 'cache') {
+        toast.warning('Using cached profile. Some features may be limited until connection is restored.');
+      }
+
+      try {
         setUserData(userProfile);
 
         // Get institution ID from URL params or user profile
-        const urlInstitutionId = searchParams.get('institution');
-        const effectiveInstitutionId = urlInstitutionId || userProfile?.institutionId;
+        const urlPartnerId = searchParams.get('institution');
+        const effectivePartnerId = urlPartnerId || userProfile?.institutionId;
 
         // Check if user has institution admin role (support multi-role)
         // Check multiple fields for admin role
@@ -47,7 +103,7 @@ const InstitutionAdminGuard = ({ children }) => {
           ? userProfile.roles 
           : (userProfile?.roles ? [userProfile.roles] : [userType].filter(Boolean));
         
-        const isInstitutionAdmin = 
+        const isPartnerAdmin = 
           userRoles.includes('admin') || 
           userRoles.includes('institutionAdmin') ||
           userType === 'admin' ||
@@ -57,13 +113,13 @@ const InstitutionAdminGuard = ({ children }) => {
           userProfile?.isAdmin === true ||
           userProfile?.role === 'admin';
         
-        const hasInstitutionId = !!effectiveInstitutionId;
+        const hasPartnerId = !!effectivePartnerId;
 
-        console.log('🔒 InstitutionAdminGuard check:', {
+        console.log('🔒 PartnerAdminGuard check:', {
           userId: user.uid,
           email: user.email,
-          isInstitutionAdmin,
-          hasInstitutionId,
+          isPartnerAdmin,
+          hasPartnerId,
           userType: userType,
           userTypeField: userProfile?.type,
           userTypeField2: userProfile?.userType,
@@ -73,12 +129,12 @@ const InstitutionAdminGuard = ({ children }) => {
           adminRoleAssigned: userProfile?.adminRoleAssigned,
           isAdmin: userProfile?.isAdmin,
           institutionIdFromProfile: userProfile?.institutionId,
-          institutionIdFromURL: urlInstitutionId,
-          effectiveInstitutionId: effectiveInstitutionId,
+          institutionIdFromURL: urlPartnerId,
+          effectivePartnerId: effectivePartnerId,
           fullProfile: userProfile
         });
 
-        if (!isInstitutionAdmin) {
+        if (!isPartnerAdmin) {
           // SAFEGUARD: If user email contains "admin" or they were just created, give them a chance
           const isLikelyAdmin = user.email?.toLowerCase().includes('admin') || 
                                userProfile?.email?.toLowerCase().includes('admin') ||
@@ -97,13 +153,13 @@ const InstitutionAdminGuard = ({ children }) => {
           }
           
           // Redirect users to their appropriate dashboard based on role
-          console.log('⛔ Unauthorized access attempt to Institution Admin portal');
-          console.log(`User role "${userType}" attempted to access Institution Admin portal`);
+          console.log('⛔ Unauthorized access attempt to Partner Admin portal');
+          console.log(`User role "${userType}" attempted to access Partner Admin portal`);
           
           // Redirect pharmacists to pharmacy dashboard
           if (userType === 'pharmacist' || userProfile?.medicalQualification === 'Pharmacist') {
             toast.info('Redirecting to pharmacy dashboard...');
-            if (hasInstitutionId) {
+            if (hasPartnerId) {
               navigate(`/institution-pharmacy/dashboard?institution=${userProfile.institutionId}`, { replace: true });
             } else {
               navigate('/institution-pharmacy/dashboard', { replace: true });
@@ -115,7 +171,7 @@ const InstitutionAdminGuard = ({ children }) => {
           // Redirect caregivers/doctors/nurses to caregiver dashboard
           if (['caregiver', 'doctor', 'nurse'].includes(userType)) {
             toast.info('Redirecting to caregiver dashboard...');
-            if (hasInstitutionId) {
+            if (hasPartnerId) {
               navigate(`/institution-caregiver/dashboard?institution=${userProfile.institutionId}`, { replace: true });
             } else {
               navigate('/institution-caregiver/dashboard', { replace: true });
@@ -127,10 +183,10 @@ const InstitutionAdminGuard = ({ children }) => {
           toast.error(`Access denied. You are logged in as '${userType || 'unknown'}'. Please contact your administrator to grant you admin access.`);
           
           // Redirect to institution login with the institutionId if available
-          if (hasInstitutionId) {
+          if (hasPartnerId) {
             navigate(`/login?institution=${userProfile.institutionId}&role=admin`, { replace: true });
           } else {
-            navigate('/onboard', { replace: true });
+            navigate('/', { replace: true });
           }
           
           setLoading(false);
@@ -139,16 +195,22 @@ const InstitutionAdminGuard = ({ children }) => {
 
         // CRITICAL: License check FIRST - check if we have institution ID to verify license
         // This ensures we show the correct license error message
-        if (effectiveInstitutionId) {
-          console.log('🔐 ENFORCING LICENSE CHECK for institution:', effectiveInstitutionId);
+        // EXEMPTION: Super-admins bypass license checks
+        const isSuperAdmin = userRoles.includes('super-admin') || 
+                           userProfile?.isSuperAdmin === true || 
+                           userProfile?.superAdmin === true ||
+                           userType === 'super-admin';
+        
+        if (effectivePartnerId && !isSuperAdmin) {
+          console.log('🔐 ENFORCING LICENSE CHECK for institution:', effectivePartnerId);
           
           try {
-            const licenseStatus = await fetchLicenseStatus(effectiveInstitutionId);
+            const licenseStatus = await fetchLicenseStatus(effectivePartnerId);
             console.log('📋 License status result:', {
               active: licenseStatus.active,
               reason: licenseStatus.reason,
               hasLicense: !!licenseStatus.license,
-              institutionId: effectiveInstitutionId
+              institutionId: effectivePartnerId
             });
             
             if (!licenseStatus.active) {
@@ -171,7 +233,7 @@ const InstitutionAdminGuard = ({ children }) => {
               
               // Redirect to license activation page WITHOUT signing out
               // This allows the user to activate license and continue their session
-              navigate(`/license-required?institution=${effectiveInstitutionId}&reason=${licenseStatus.reason}`, { replace: true });
+              navigate(`/license-required?institution=${effectivePartnerId}&reason=${licenseStatus.reason}`, { replace: true });
               setLoading(false);
               return;
             }
@@ -182,19 +244,21 @@ const InstitutionAdminGuard = ({ children }) => {
             toast.error('Unable to verify license. Please contact support.');
             
             // Redirect to license page WITHOUT signing out
-            navigate(`/license-required?institution=${effectiveInstitutionId}&reason=check_error`, { replace: true });
+            navigate(`/license-required?institution=${effectivePartnerId}&reason=check_error`, { replace: true });
             setLoading(false);
             return;
           }
+        } else if (isSuperAdmin) {
+          console.log('⚠️ SUPER-ADMIN detected - Skipping license check');
         }
 
-        // After license check, verify institutionId exists
-        if (!hasInstitutionId) {
+        // After license check, verify institutionId exists (admins can skip this)
+        if (!hasPartnerId && !isPartnerAdmin) {
           toast.error('No institution assigned to your account. Contact super admin.');
           console.error('User has no institutionId assigned');
           console.error('User profile:', userProfile);
-          // Redirect to onboarding without signing out
-          navigate('/onboard', { replace: true });
+          // Redirect to home page without signing out
+          navigate('/', { replace: true });
           setLoading(false);
           return;
         }
@@ -255,4 +319,4 @@ const InstitutionAdminGuard = ({ children }) => {
   );
 };
 
-export default InstitutionAdminGuard;
+export default PartnerAdminGuard;

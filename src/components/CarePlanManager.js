@@ -54,10 +54,134 @@ const CarePlanManager = ({ clientId, doctorId, doctorName, clientName }) => {
   const [newIntervention, setNewIntervention] = useState('');
 
   const priorityOptions = [
-    { value: 'low', label: 'Low Priority', color: 'text-green-600' },
-    { value: 'medium', label: 'Medium Priority', color: 'text-yellow-600' },
-    { value: 'high', label: 'High Priority', color: 'text-orange-600' },
-    { value: 'critical', label: 'Critical Priority', color: 'text-red-600' }
+    { value: 'low', label: 'Low Priority / Maintenance', color: 'text-green-600' },
+    { value: 'medium', label: 'Medium Priority / Active', color: 'text-yellow-600' },
+    { value: 'high', label: 'High Priority / Urgent', color: 'text-orange-600' },
+    { value: 'acute', label: 'Acute Priority / Immediate', color: 'text-red-600' }
+  ];
+
+  const carePlanTemplates = [
+    {
+      name: 'Hypertension & Cardiovascular Management',
+      category: 'Cardiology',
+      data: {
+        diagnosis: 'Essential Hypertension (I10) / Chronic Cardiovascular Risk Management',
+        treatmentPlan: 'Pharmacological BP control, sodium-restricted diet (<2g/day), daily blood pressure logging, and lifestyle modifications including 30 minutes of moderate aerobic activity 5x/week.',
+        medications: [
+          { name: 'Amlodipine', dosage: '5mg', frequency: 'Once daily (morning)', duration: 'Ongoing', instructions: 'Take with or without food' },
+          { name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily (morning)', duration: 'Ongoing', instructions: 'Monitor for dry cough' }
+        ],
+        goals: [
+          'Maintain systolic BP < 130 mmHg and diastolic BP < 80 mmHg',
+          'Reduce dietary sodium intake to < 2000mg per day',
+          'Achieve 150 minutes of structured moderate exercise weekly'
+        ],
+        interventions: [
+          'Daily morning and evening blood pressure checks by caregiver',
+          'Bi-weekly weight and fluid retention assessment',
+          'Medication adherence verification via pill organizer'
+        ],
+        priority: 'medium',
+        expectedOutcomes: 'Normotensive readings consistently, zero hypertensive crisis events, improved cardiovascular endurance over 90 days.',
+        monitoringRequirements: 'Daily BP/HR charting, monthly serum creatinine and potassium labs, quarterly physician clinical review.'
+      }
+    },
+    {
+      name: 'Type 2 Diabetes Mellitus Management',
+      category: 'Endocrinology',
+      data: {
+        diagnosis: 'Type 2 Diabetes Mellitus without acute complications (E11.9)',
+        treatmentPlan: 'Glycemic control via oral hypoglycemics, structured diabetic carbohydrate-controlled meal plan, daily fasting and postprandial blood glucose checks, daily foot inspections.',
+        medications: [
+          { name: 'Metformin HCl', dosage: '500mg', frequency: 'Twice daily with meals', duration: 'Ongoing', instructions: 'Take with morning and evening meal to reduce GI discomfort' }
+        ],
+        goals: [
+          'Maintain HbA1c < 7.0%',
+          'Keep fasting blood glucose between 80-130 mg/dL',
+          'Zero hypoglycemic episodes (<70 mg/dL)'
+        ],
+        interventions: [
+          'Fasting blood glucose test every morning before breakfast',
+          'Caregiver skin and foot integrity inspection daily',
+          'Meal carbohydrate tracking and hydration support (min 2L/day)'
+        ],
+        priority: 'medium',
+        expectedOutcomes: 'Stabilized glycemic levels, no diabetic skin ulcers or peripheral neuropathy progression, HbA1c normalization in 3 months.',
+        monitoringRequirements: 'Daily glucometer log, quarterly HbA1c, annual comprehensive diabetic foot and retinal examinations.'
+      }
+    },
+    {
+      name: 'Post-Operative & Wound Care Recovery',
+      category: 'Surgical / Acute',
+      data: {
+        diagnosis: 'Post-Surgical Convalescence & Surgical Site Wound Management',
+        treatmentPlan: 'Aseptic wound dressing changes every 48 hours or PRN, pain management protocol, gradual progressive ambulation with physical therapy, infection surveillance.',
+        medications: [
+          { name: 'Acetaminophen', dosage: '500mg', frequency: 'Every 6 hours PRN pain', duration: '14 days', instructions: 'Do not exceed 3000mg in 24 hours' },
+          { name: 'Cephalexin', dosage: '500mg', frequency: 'Every 6 hours', duration: '7 days', instructions: 'Complete full course with meals' }
+        ],
+        goals: [
+          'Complete surgical incision healing with primary intention by Day 21',
+          'Maintain pain score <= 3/10 on numeric rating scale',
+          'Independent ambulation with walker within 2 weeks'
+        ],
+        interventions: [
+          'Sterile dressing change every 48 hours; photograph wound for EHR progress tracking',
+          'Incision site inspection for erythema, induration, warmth, or purulent exudate',
+          'Assisted ambulation 3x daily for 15 minutes each session'
+        ],
+        priority: 'high',
+        expectedOutcomes: 'Clean, granulated wound closure without dehiscence or surgical site infection; return to baseline mobility.',
+        monitoringRequirements: 'Vital signs QID (temp, HR, BP), daily wound exudate charting, surgeon follow-up at post-op Day 10 and Day 21.'
+      }
+    },
+    {
+      name: 'Geriatric Fall Risk & Mobility Rehabilitation',
+      category: 'Geriatrics / Rehab',
+      data: {
+        diagnosis: 'Age-Related Gait & Balance Impairment (R26.81) / High Fall Risk',
+        treatmentPlan: 'Home safety assessment and hazard mitigation, structured physical therapy for lower extremity strengthening and balance, caregiver transfer assistance, assistive device compliance.',
+        medications: [
+          { name: 'Vitamin D3 (Cholecalciferol)', dosage: '2000 IU', frequency: 'Once daily with meal', duration: 'Ongoing', instructions: 'Take with morning meal' },
+          { name: 'Calcium Carbonate', dosage: '600mg', frequency: 'Twice daily', duration: 'Ongoing', instructions: 'Take with meals' }
+        ],
+        goals: [
+          'Zero fall incidents over the next 180 days',
+          'Improve Timed Up and Go (TUG) score to < 14 seconds',
+          'Demonstrate proper use of rolling walker across all transfers'
+        ],
+        interventions: [
+          'Caregiver standby assistance for all bed-to-chair and bathroom transfers',
+          'Daily 20-minute physical therapy home exercise routine (chair rises, ankle pumps)',
+          'Clear all floor pathways, ensure adequate nightlighting and non-slip footwear'
+        ],
+        priority: 'medium',
+        expectedOutcomes: 'Improved gait stability, enhanced functional independence for ADLs, zero traumatic falls or injuries.',
+        monitoringRequirements: 'Weekly physical therapist functional assessment, monthly caregiver mobility log, quarterly doctor clinical review.'
+      }
+    },
+    {
+      name: 'Acute / Intensive Post-Hospitalization Care Plan',
+      category: 'Acute Care',
+      data: {
+        diagnosis: 'Post-Acute Hospital Discharge Rehabilitation / Complex Multimorbidity',
+        treatmentPlan: 'Intensive clinical monitoring, comprehensive medication reconciliation, vital signs every 4 hours, respiratory support observation, rapid emergency escalation protocol.',
+        medications: [],
+        goals: [
+          'Prevent 30-day hospital readmission',
+          'Stabilize vital signs within normal target parameters within 7 days',
+          'Restore independent oral intake and baseline nutritional status'
+        ],
+        interventions: [
+          'Q4H vital signs checks (BP, HR, RR, SpO2, Temperature)',
+          'Daily clinical progress summary uploaded to attending physician portal',
+          'Immediate physician notification if SBP > 180, DBP > 110, SpO2 < 92%, or Temp > 38.3C'
+        ],
+        priority: 'acute',
+        expectedOutcomes: 'Complete clinical stabilization, zero emergency room visits or readmissions within 30 days of hospital discharge.',
+        monitoringRequirements: 'Continuous nurse observation, daily vitals trends review by PCP, weekly telehealth check-in.'
+      }
+    }
   ];
 
   useEffect(() => {
@@ -264,11 +388,11 @@ const CarePlanManager = ({ clientId, doctorId, doctorName, clientName }) => {
                 </div>
                 <div className="mt-2">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    report.status === 'critical' ? 'bg-red-100 text-red-800' :
+                    report.status === 'acute' || report.status === 'critical' ? 'bg-red-100 text-red-800' :
                     report.status === 'concerning' ? 'bg-yellow-100 text-yellow-800' :
                     'bg-green-100 text-green-800'
                   }`}>
-                    {report.status}
+                    {report.status === 'critical' ? 'acute' : report.status}
                   </span>
                 </div>
               </div>
@@ -381,6 +505,45 @@ const CarePlanManager = ({ clientId, doctorId, doctorName, clientName }) => {
               </div>
 
               <div className="space-y-6">
+                {/* Clinical Template Selector */}
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-blue-900 flex items-center gap-1.5">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      Apply Clinical Care Plan Template
+                    </span>
+                    <span className="text-xs text-blue-600">Select a template to pre-populate clinical fields</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {carePlanTemplates.map((template, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setCarePlanForm({
+                            diagnosis: template.data.diagnosis,
+                            treatmentPlan: template.data.treatmentPlan,
+                            medications: [...template.data.medications],
+                            followUpDate: '',
+                            specialInstructions: template.data.specialInstructions,
+                            priority: template.data.priority,
+                            goals: [...template.data.goals],
+                            interventions: [...template.data.interventions],
+                            expectedOutcomes: template.data.expectedOutcomes,
+                            duration: '90 days',
+                            monitoringRequirements: template.data.monitoringRequirements
+                          });
+                          toast.info(`Applied template: ${template.name}`, { autoClose: 3000 });
+                        }}
+                        className="text-left p-2.5 bg-white border border-blue-200 hover:border-blue-500 hover:bg-blue-100/50 rounded-lg transition-all text-xs group"
+                      >
+                        <div className="font-semibold text-gray-900 group-hover:text-blue-700">{template.name}</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">{template.category}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Diagnosis */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

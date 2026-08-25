@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { doc, getDoc, updateDoc } from 'backend/database';
-import { db } from '../backend/config';
 import { validateLicenseKey, activateLicense, fetchLicenseStatus } from '../services/licenseService';
 import { toast } from 'react-toastify';
 import { 
@@ -15,6 +13,8 @@ import {
   Phone,
   ArrowLeft
 } from 'lucide-react';
+import { getDoc, doc } from 'backend/database';
+import { db } from '../backend/config';
 
 const LicenseRequired = () => {
   const navigate = useNavigate();

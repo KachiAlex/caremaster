@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, query, where, orderBy, limit, doc, updateDoc, deleteDoc } from 'backend/database';
-import { auth, db } from '../backend/config';
 import { 
   ArrowLeft,
   Shield,
@@ -24,6 +22,8 @@ import {
 } from 'lucide-react';
 import { exportToCSV, exportToExcel, formatDateForExport } from '../services/exportService';
 import FontSizeToggle from '../components/FontSizeToggle';
+import { collection, query, getDocs, updateDoc, deleteDoc, orderBy, limit, doc } from 'backend/database';
+import { db } from '../backend/config';
 
 const SuperAdminUserManagement = () => {
   const navigate = useNavigate();

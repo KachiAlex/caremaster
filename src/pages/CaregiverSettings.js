@@ -23,9 +23,9 @@ import {
   Upload
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { db, storage } from '../backend/config';
-import { doc, getDoc, setDoc, serverTimestamp } from 'backend/database';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'backend/storage';
+import { db, storage } from '../backend/config';;
+import { getDoc, setDoc, doc, serverTimestamp } from 'backend/database';
+import { uploadBytes, getDownloadURL } from 'backend/storage';
 
 const CaregiverSettings = ({ onProfileImageUpdate }) => {
   const { user } = useUser();

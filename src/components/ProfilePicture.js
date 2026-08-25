@@ -51,7 +51,7 @@ const ProfilePicture = ({
       // Resize image for optimization
       const resizedFile = await resizeImage(file);
       
-      // Upload to Firebase Storage
+      // Upload to Backend Storage
       const imageUrl = await uploadProfilePicture(resizedFile, userId, userType);
       
       // Call the callback with the new image URL
@@ -74,7 +74,7 @@ const ProfilePicture = ({
     if (!currentImageUrl) return;
 
     try {
-      // Delete from Firebase Storage
+      // Delete from Backend Storage
       await deleteProfilePicture(currentImageUrl);
       
       // Call the callback to remove the image

@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'backend/database';
-import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
@@ -19,6 +17,8 @@ import {
   FileText,
   FileSpreadsheet
 } from 'lucide-react';
+import { collection, query, getDocs, where, orderBy } from 'backend/database';
+import { db } from '../backend/config';
 
 const InactiveCaregiversReport = ({ institutionId }) => {
   const [inactiveCaregivers, setInactiveCaregivers] = useState([]);

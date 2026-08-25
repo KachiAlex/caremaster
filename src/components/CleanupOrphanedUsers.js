@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, query, where, getDocs, deleteDoc, doc, writeBatch } from 'backend/database';
-import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import { Trash2, AlertTriangle, CheckCircle, RefreshCw, Users, Search, Filter } from 'lucide-react';
+import { collection, query, getDocs, deleteDoc, where, doc, writeBatch } from 'backend/database';
+import { db } from '../backend/config';
 
 const CleanupOrphanedUsers = ({ institutionId }) => {
   const [orphanedUsers, setOrphanedUsers] = useState([]);
@@ -164,7 +164,7 @@ const CleanupOrphanedUsers = ({ institutionId }) => {
 
     try {
       const selectedArray = Array.from(selectedUsers);
-      const batchSize = 10; // Firestore batch limit is 500, using 10 for safety
+      const batchSize = 10; // Database batch limit is 500, using 10 for safety
       let successCount = 0;
       let errorCount = 0;
 
@@ -397,8 +397,8 @@ const CleanupOrphanedUsers = ({ institutionId }) => {
                   <div className="text-sm text-amber-800">
                     <p className="font-medium mb-1">Important Note</p>
                     <p>
-                      Deleting users removes their Firestore documents. Firebase Auth accounts may need 
-                      separate cleanup via the Firebase Console if they exist.
+                      Deleting users removes their Database documents. Backend Auth accounts may need 
+                      separate cleanup via the Backend Console if they exist.
                     </p>
                   </div>
                 </div>

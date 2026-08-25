@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, X, Save, AlertCircle } from 'lucide-react';
-import { doc, updateDoc, getDoc } from 'backend/database';
-import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import UserNameWithAvatar from './UserNameWithAvatar';
+import { db } from '../backend/config';
+import { updateDoc, doc } from 'backend/database';
 
 /**
  * CaregiverWageEditModal Component
@@ -68,7 +68,7 @@ const CaregiverWageEditModal = ({ isOpen, onClose, caregiver, onSave }) => {
         updateData.hourlyRate = 0; // Clear hourly rate when using monthly
       }
 
-      // Update in Firestore
+      // Update in Database
       const userRef = doc(db, 'users', caregiver.id);
       await updateDoc(userRef, updateData);
 

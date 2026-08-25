@@ -140,7 +140,7 @@ const CaregiverPhotos = () => {
   const formatDate = (timestamp) => {
     if (!timestamp) return 'No date';
     try {
-      // Handle Firestore timestamp objects
+      // Handle Database timestamp objects
       let date;
       if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
         date = timestamp.toDate();
@@ -159,7 +159,7 @@ const CaregiverPhotos = () => {
   const formatTime = (timestamp) => {
     if (!timestamp) return 'No time';
     try {
-      // Handle Firestore timestamp objects
+      // Handle Database timestamp objects
       let date;
       if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
         date = timestamp.toDate();

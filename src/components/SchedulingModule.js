@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'backend/database';
-import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import { getAllClients } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
@@ -24,6 +22,8 @@ import {
   ExternalLink,
   MoreVertical
 } from 'lucide-react';
+import { collection, query, getDocs, updateDoc, addDoc, where, doc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 
 const SchedulingModule = ({ institutionId }) => {
   const [schedules, setSchedules] = useState([]);
@@ -105,7 +105,7 @@ const SchedulingModule = ({ institutionId }) => {
             let dueDate = assignment.dueDate;
             let scheduleDate = null;
             
-            // Convert Firestore Timestamp to Date if needed
+            // Convert Database Timestamp to Date if needed
             if (dueDate && dueDate.toDate && typeof dueDate.toDate === 'function') {
               dueDate = dueDate.toDate();
             }
