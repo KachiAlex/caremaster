@@ -128,8 +128,9 @@ export const UserProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Clear local storage
+      // Clear local storage (must clear all token keys)
       localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       
       // Clear state

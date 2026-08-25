@@ -48,18 +48,27 @@ async function apiFetch(path, options = {}) {
 }
 
 // --- Auth instance (compatibility object) ---
+// Singleton: all callers must share the same auth instance so that
+// signOut() on one reference notifies onAuthStateChanged listeners
+// registered on another reference.
 
-export const getAuth = (_app) => ({
-  currentUser: null,
-  app: _app,
-  __listeners: [],
-  onAuthStateChanged(callback) {
-    return onAuthStateChanged(this, callback);
-  },
-  signOut() {
-    return signOut(this);
-  },
-});
+let _authInstance = null;
+
+export const getAuth = (_app) => {
+  if (_authInstance) return _authInstance;
+  _authInstance = {
+    currentUser: null,
+    app: _app,
+    __listeners: [],
+    onAuthStateChanged(callback) {
+      return onAuthStateChanged(this, callback);
+    },
+    signOut() {
+      return signOut(this);
+    },
+  };
+  return _authInstance;
+};
 
 export const setPersistence = (_auth, _persistence) => Promise.resolve();
 export const browserLocalPersistence = 'LOCAL';
