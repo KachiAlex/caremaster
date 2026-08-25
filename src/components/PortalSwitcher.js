@@ -31,8 +31,8 @@ const PortalSwitcher = () => {
   }
 
   // Client
-  if ((role||'').toLowerCase() === 'Client' || (userProfile?.isElderly)) {
-    portals.push({ label: 'Client', to: '/dashboard', icon: Users });
+  if (['client', 'elderly', 'patient'].includes((role||'').toLowerCase()) || (userProfile?.isElderly)) {
+    portals.push({ label: 'Client Portal', to: '/dashboard', icon: Users });
   }
 
   // Super admin

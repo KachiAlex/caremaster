@@ -36,7 +36,7 @@ const Layout = () => {
 
   const navigation = [
     { name: 'My Dashboard', href: '/dashboard', icon: Home },
-    { name: 'My Care Team', href: '/Client-caregivers', icon: User },
+    { name: 'My Care Team', href: '/client-caregivers', icon: User },
     { name: 'Care Appointments', href: '/appointments', icon: Calendar },
     { name: 'Health Monitoring', href: '/vital-signs', icon: Heart },
     { name: 'Video Consultations', href: '/telemedicine', icon: Video },

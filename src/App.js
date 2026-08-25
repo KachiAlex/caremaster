@@ -449,20 +449,42 @@ function App() {
       
       {/* Client Account - Manage Client account information */}
       <Route 
+        path="/client/:clientId/account" 
+        element={<PatientAccount />} 
+      />
+      <Route 
         path="/Client/:clientId/account" 
         element={<PatientAccount />} 
       />
       
       {/* Client Account without ID - uses logged-in user */}
       <Route 
+        path="/client/account" 
+        element={<PatientAccount />} 
+      />
+      <Route 
         path="/Client/account" 
         element={<PatientAccount />} 
       />
       
-      {/* Legacy dashboard route - redirect to institution-admin */}
+      {/* Client Dashboard / Portal */}
       <Route 
         path="/dashboard" 
-        element={<Navigate to="/institution-admin/dashboard" replace />} 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<Dashboard />} />
+      </Route>
+
+      <Route 
+        path="/client/dashboard" 
+        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+      >
+        <Route index element={<Dashboard />} />
+      </Route>
+
+      <Route 
+        path="/client" 
+        element={<Navigate to="/dashboard" replace />} 
       />
 
       {/* Institution Caregiver Routes */}

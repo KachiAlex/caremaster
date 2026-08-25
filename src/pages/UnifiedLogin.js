@@ -240,6 +240,8 @@ const UnifiedLogin = () => {
           } else {
             navigate(`/institution-caregiver/dashboard?institution=${institutionId}`);
           }
+        } else if (userRole === 'client' || userRole === 'elderly' || userRole === 'patient') {
+          navigate('/dashboard');
         } else {
           // Default institution user
           navigate(`/institution-caregiver/dashboard?institution=${institutionId}`);
@@ -247,7 +249,7 @@ const UnifiedLogin = () => {
       } else {
         // Standalone user (no institution)
         if (userRole === 'admin') {
-          navigate('/admin');
+          navigate('/institution-admin/dashboard');
         } else if (userRole === 'pharmacist') {
           // Pharmacists should have an institution, but handle gracefully
           // Try to get institutionId from URL params if available
