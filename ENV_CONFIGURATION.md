@@ -13,7 +13,7 @@ Create a file named `.env.local` in your project root (`c:\Care Master\.env.loca
 # Generated: October 9, 2025
 
 # Firebase Configuration (Production)
-REACT_APP_FIREBASE_API_KEY=***REMOVED***
+REACT_APP_FIREBASE_API_KEY=your_firebase_api_key_here
 REACT_APP_FIREBASE_AUTH_DOMAIN=elderx-f5c2b.firebaseapp.com
 REACT_APP_FIREBASE_PROJECT_ID=elderx-f5c2b
 REACT_APP_FIREBASE_STORAGE_BUCKET=elderx-f5c2b.firebasestorage.app

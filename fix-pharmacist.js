@@ -2,7 +2,7 @@ const { initializeApp } = require('firebase/app');
 const { getFirestore, doc, updateDoc } = require('firebase/firestore');
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBxH5xQJxQJxQJxQJxQJxQJxQJxQJxQJxQ",
+  apiKey: "REDACTED_API_KEY",
   authDomain: "elderx-f5c2b.firebaseapp.com",
   projectId: "elderx-f5c2b",
   storageBucket: "elderx-f5c2b.appspot.com",

@@ -1216,7 +1216,7 @@ const PartnerAdminDashboard = () => {
 
       // Create Backend Auth user via REST API (does NOT sign out current admin)
       const AUTH_BASE_URL = 'https://identitytoolkit.googleapis.com/v1/accounts';
-      const backendApiKey = process.env.REACT_APP_BACKEND_API_KEY || '***REMOVED***';
+      const backendApiKey = process.env.REACT_APP_BACKEND_API_KEY || '';
       const authResponse = await fetch(`${AUTH_BASE_URL}:signUp?key=${backendApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1458,7 +1458,7 @@ const PartnerAdminDashboard = () => {
 
       // Create Backend Auth user via REST API (does NOT sign out current admin)
       const AUTH_BASE_URL = 'https://identitytoolkit.googleapis.com/v1/accounts';
-      const backendApiKey = process.env.REACT_APP_BACKEND_API_KEY || '***REMOVED***';
+      const backendApiKey = process.env.REACT_APP_BACKEND_API_KEY || '';
       const authResponse = await fetch(`${AUTH_BASE_URL}:signUp?key=${backendApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

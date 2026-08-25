@@ -6,7 +6,7 @@ import { getFirestore, collection, getDocs, updateDoc, doc, query, where } from 
 
 // Firebase config (same as in your app)
 const firebaseConfig = {
-  apiKey: "AIzaSyA1V8W8Q9X2Y3Z4A5B6C7D8E9F0G1H2I3J4K",
+  apiKey: "REDACTED_API_KEY4K",
   authDomain: "elderx-f5c2b.firebaseapp.com",
   projectId: "elderx-f5c2b",
   storageBucket: "elderx-f5c2b.appspot.com",

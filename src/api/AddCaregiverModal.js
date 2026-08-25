@@ -99,7 +99,7 @@ const AddCaregiverModal = ({ isOpen, onClose, institutionId, createdBy, onCaregi
       }
 
       // 2. Create Backend Auth user via REST API (does NOT sign out current admin)
-      const backendApiKey = process.env.REACT_APP_BACKEND_API_KEY || '***REMOVED***';
+      const backendApiKey = process.env.REACT_APP_BACKEND_API_KEY || '';
       const authResponse = await fetch(`${AUTH_BASE_URL}:signUp?key=${backendApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

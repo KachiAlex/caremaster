@@ -11,8 +11,8 @@ const { validateRequest, schemas } = require('../middleware/validation');
 const { logger } = require('../utils/logger');
 const { sendPasswordResetEmail } = require('../services/emailService');
 
-// Firebase config for password migration fallback
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || '***REMOVED***';
+// Firebase config for password migration fallback (read from env only)
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || process.env.REACT_APP_FIREBASE_API_KEY || '';
 
 async function verifyFirebasePassword(email, password) {
   try {
