@@ -1,129 +1,116 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'backend/auth';
-import { auth } from '../backend/config';
-import { 
-  Heart, 
-  Shield, 
-  Users, 
-  Smartphone,
-  BarChart3,
-  Clock,
-  CheckCircle,
-  Star,
-  ArrowRight,
-  Phone,
-  Mail,
-  Calendar,
-  Activity,
-  Zap,
-  Globe,
-  Lock,
-  TrendingUp,
-  Award,
-  MessageCircle,
-  ChevronRight,
-  Menu,
-  X,
-  Play
+import {
+  Calendar, CheckCircle, X, Mail, Phone,
+  MessageCircle, Menu, MapPin, Navigation, Mic, WifiOff, Eye,
+  CreditCard, Bell, Image as ImageIcon, Send, FileText, Clock, AlertCircle
 } from 'lucide-react';
+import './Landing.css';
+import { getDoc, doc } from 'backend/database';
+import { db, auth } from '../backend/config';
 
 const NewHomePage = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeFeature, setActiveFeature] = useState('caregiver');
+  const [activePortal, setActivePortal] = useState('caregiver');
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const [salesModalOpen, setSalesModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    organization: '',
-    message: ''
-  });
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formSuccess, setFormSuccess] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '', email: '', phone: '', organization: '', message: ''
+  });
+  const [gdprConsent, setGdprConsent] = useState(false);
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
 
-  // Auto-scroll stats
-  const [statsAnimated, setStatsAnimated] = useState(false);
+  // GDPR Cookie consent — check localStorage on mount
+  useEffect(() => {
+    const consent = localStorage.getItem('cm-cookie-consent');
+    if (!consent) setShowCookieBanner(true);
+  }, []);
+
+  const handleCookieAccept = () => {
+    localStorage.setItem('cm-cookie-consent', 'accepted');
+    setShowCookieBanner(false);
+  };
+
+  const handleCookieDecline = () => {
+    localStorage.setItem('cm-cookie-consent', 'declined');
+    setShowCookieBanner(false);
+  };
+
+  // Body scroll lock when any modal is open
+  useEffect(() => {
+    const modalOpen = demoModalOpen || salesModalOpen;
+    if (modalOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [demoModalOpen, salesModalOpen]);
+
+  // Scroll reveal animation
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1 });
+    const els = document.querySelectorAll('.landing-page .reveal');
+    els.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   // Secret access to superadmin portal
   const [secretClickCount, setSecretClickCount] = useState(0);
   const [secretKeySequence, setSecretKeySequence] = useState([]);
-  const SECRET_KEY_SEQUENCE = ['s', 'u', 'p', 'e', 'r', 'a', 'd', 'm', 'i', 'n'];
+  const SECRET_KEY_SEQUENCE = ['s','u','p','e','r','a','d','m','i','n'];
   const SECRET_CLICK_COUNT = 5;
 
   useEffect(() => {
-    const handleScroll = () => {
-      const statsSection = document.getElementById('stats');
-      if (statsSection) {
-        const rect = statsSection.getBoundingClientRect();
-        if (rect.top < window.innerHeight && rect.bottom >= 0) {
-          setStatsAnimated(true);
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Check on mount
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Secret keyboard shortcut handler
-  useEffect(() => {
     const handleKeyPress = (e) => {
-      // Only track if not typing in an input field
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        return;
-      }
-
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       const key = e.key.toLowerCase();
       setSecretKeySequence(prev => {
-        const newSequence = [...prev, key].slice(-SECRET_KEY_SEQUENCE.length);
-        
-        // Check if sequence matches
-        if (newSequence.length === SECRET_KEY_SEQUENCE.length) {
-          const matches = newSequence.every((k, i) => k === SECRET_KEY_SEQUENCE[i]);
-          if (matches) {
+        const newSeq = [...prev, key].slice(-SECRET_KEY_SEQUENCE.length);
+        if (newSeq.length === SECRET_KEY_SEQUENCE.length) {
+          if (newSeq.every((k, i) => k === SECRET_KEY_SEQUENCE[i])) {
             handleSecretAccess();
             return [];
           }
         }
-        
-        return newSequence;
+        return newSeq;
       });
     };
-
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
   const handleSecretAccess = async () => {
-    // Check if user is logged in
     const user = auth.currentUser;
-    
-    if (!user) {
-      // Not logged in - redirect to superadmin login
-      navigate('/super-admin/login');
-      return;
-    }
-
+    if (!user) { navigate('/login'); return; }
     try {
-      // Check if user has superadmin claim
       const token = await user.getIdTokenResult();
       const hasSuperAdminClaim = token?.claims?.superAdmin === true;
-
-      if (hasSuperAdminClaim) {
-        // User is superadmin - redirect to dashboard
+      let hasSuperAdminFlag = false;
+      try {
+        const { doc, getDoc } = await import('../services/databaseCompat');
+        const { db } = await import('../backend/config');
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          hasSuperAdminFlag = userData?.isSuperAdmin === true || userData?.superAdmin === true;
+        }
+      } catch (err) {
+        console.warn('Database check failed in secret access:', err.message);
+      }
+      if (hasSuperAdminClaim || hasSuperAdminFlag) {
         navigate('/super-admin/dashboard');
       } else {
-        // User is logged in but not superadmin - redirect to login
-        navigate('/super-admin/login');
+        navigate('/login');
       }
     } catch (error) {
       console.error('Error checking superadmin status:', error);
-      // On error, redirect to login
-      navigate('/super-admin/login');
+      navigate('/login');
     }
   };
 
@@ -134,26 +121,49 @@ const NewHomePage = () => {
         handleSecretAccess();
         return 0;
       }
-      // Reset count after 3 seconds
-      setTimeout(() => {
-        setSecretClickCount(0);
-      }, 3000);
+      setTimeout(() => setSecretClickCount(0), 3000);
       return newCount;
     });
   };
 
+  const sanitizeInput = (str) => {
+    if (typeof str !== 'string') return '';
+    return str
+      .replace(/[<>]/g, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+=/gi, '')
+      .trim()
+      .slice(0, 1000);
+  };
+
+  const handleInputChange = (e) => {
+    const sanitized = sanitizeInput(e.target.value);
+    setFormData({ ...formData, [e.target.name]: sanitized });
+  };
+
   const handleFormSubmit = async (e, formType) => {
     e.preventDefault();
+    if (!gdprConsent) {
+      alert('Please accept the Privacy Policy and data processing terms to continue.');
+      return;
+    }
     setFormSubmitting(true);
-    
-    // Simulate form submission (replace with actual API call)
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const safeName = sanitizeInput(formData.name);
+      const safeEmail = sanitizeInput(formData.email);
+      const safePhone = sanitizeInput(formData.phone);
+      const safeOrg = sanitizeInput(formData.organization);
+      const safeMsg = sanitizeInput(formData.message);
+      const subject = formType === 'demo'
+        ? `Demo Request from ${safeName}`
+        : `Sales Inquiry from ${safeName}`;
+      const body = `Name: ${safeName}\nEmail: ${safeEmail}\nPhone: ${safePhone || 'N/A'}\nOrganization: ${safeOrg || 'N/A'}\n\nMessage:\n${safeMsg || 'No additional message.'}`.trim();
+      const mailtoUrl = `mailto:support@getcaremaster.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoUrl;
       setFormSuccess(true);
-      
-      // Reset form after 3 seconds
       setTimeout(() => {
         setFormData({ name: '', email: '', phone: '', organization: '', message: '' });
+        setGdprConsent(false);
         setFormSuccess(false);
         setDemoModalOpen(false);
         setSalesModalOpen(false);
@@ -165,492 +175,275 @@ const NewHomePage = () => {
     }
   };
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const features = {
-    caregiver: {
-      title: "Caregiver Management",
-      items: [
-        { icon: Smartphone, text: "Mobile App for Caregivers", desc: "Clock in/out, GPS tracking, visit documentation" },
-        { icon: Calendar, text: "Smart Scheduling", desc: "Automated scheduling with conflict detection" },
-        { icon: CheckCircle, text: "Electronic Visit Verification (EVV)", desc: "Automated compliance with government regulations" },
-        { icon: Activity, text: "Real-time Care Documentation", desc: "Document care activities instantly from mobile" }
-      ]
-    },
-    client: {
-      title: "Client Management",
-      items: [
-        { icon: Users, text: "Comprehensive Client Profiles", desc: "Complete health history and care plans" },
-        { icon: Heart, text: "Care Plan Builder", desc: "Customizable care plans with progress tracking" },
-        { icon: MessageCircle, text: "Family Portal", desc: "Keep families informed with real-time updates" },
-        { icon: Shield, text: "Medication Management", desc: "Track medications, allergies, and interactions" }
-      ]
-    },
-    operations: {
-      title: "Operations & Administration",
-      items: [
-        { icon: BarChart3, text: "Business Intelligence Dashboard", desc: "Real-time insights into your agency performance" },
-        { icon: TrendingUp, text: "Financial Management", desc: "Billing, invoicing, and payroll in one place" },
-        { icon: Lock, text: "Compliance & Security", desc: "HIPAA-compliant with enterprise-grade security" },
-        { icon: Zap, text: "Workflow Automation", desc: "Automate repetitive tasks and save time" }
-      ]
-    }
-  };
-
-  const stats = [
-    { number: "500+", label: "Care Agencies Served", prefix: "" },
-    { number: "10,000+", label: "Active Caregivers", prefix: "" },
-    { number: "50,000+", label: "Clients Cared For", prefix: "" },
-    { number: "99.8%", label: "Uptime Reliability", prefix: "" }
+  const timelineEvents = [
+    { time: '8:58 AM', tag: 'Caregiver', tagClass: 'tag-caregiver', dotColor: 'var(--coral)', desc: 'Maria clocks in at the Wilson residence. Location verified by GPS.' },
+    { time: '8:59 AM', tag: 'Admin', tagClass: 'tag-admin', dotColor: 'var(--gold)', desc: 'Visit appears live on the agency schedule. No action needed.' },
+    { time: '9:04 AM', tag: 'Caregiver', tagClass: 'tag-caregiver', dotColor: 'var(--coral)', desc: 'Care notes logged by voice: medication given, vitals stable.' },
+    { time: '9:05 AM', tag: 'Family', tagClass: 'tag-family', dotColor: 'var(--sage)', desc: "James gets a visit update on his phone. He doesn't have to call to check." },
+    { time: '9:47 AM', tag: 'Admin', tagClass: 'tag-admin', dotColor: 'var(--gold)', desc: 'Maria clocks out. Visit is auto-logged for payroll and billing.' },
   ];
+
+  const ledgerStats = [
+    { num: '500+', label: 'Care agencies onboarded' },
+    { num: '10,000+', label: 'Active caregivers' },
+    { num: '50,000+', label: 'Clients cared for' },
+    { num: '99.8%', label: 'Platform uptime' },
+  ];
+
+  const trustLogos = ['Compassion Home Care', 'Golden Years Care', 'Comfort Keepers Group', 'Elite Elder Care'];
+
+  const portals = {
+    caregiver: {
+      title: 'Built for a phone in one hand and a client in the other',
+      desc: 'The caregiver app runs the visit — clocking in, routing, and documenting care — without ever getting in the way of the care itself.',
+      features: [
+        { icon: MapPin, color: '#DD6E4F', bg: 'var(--coral-soft)', title: 'GPS clock in/out', sub: 'Verifies the caregiver is actually on site — the basis for EVV compliance.' },
+        { icon: Navigation, color: '#DD6E4F', bg: 'var(--coral-soft)', title: 'Route-optimized schedule', sub: 'Each day is ordered by travel time, not just appointment order.' },
+        { icon: Mic, color: '#DD6E4F', bg: 'var(--coral-soft)', title: 'Voice-to-text care notes', sub: 'Log vitals and observations hands-free, between tasks.' },
+        { icon: WifiOff, color: '#DD6E4F', bg: 'var(--coral-soft)', title: 'Works offline', sub: 'Notes sync automatically once signal returns — nothing is lost in a basement or rural route.' },
+      ],
+      visual: 'caregiver',
+      cards: [
+        { icon: MapPin, bg: 'var(--coral)', title: 'Wilson Residence', sub: 'Visit 3 of 6 today', status: 'On site', statusBg: 'var(--sage-soft)', statusColor: '#3E5D50' },
+        { icon: Navigation, bg: '#F0A98F', title: 'Next: Boyd Residence', sub: '9 min drive · 10:15 AM' },
+        { icon: CheckCircle, bg: '#E7C4B4', title: 'Care note saved', sub: 'Vitals stable · med given' },
+      ]
+    },
+    admin: {
+      title: 'Run the whole agency from one screen',
+      desc: 'See every caregiver, every visit, and every dollar moving through the agency — and get out ahead of the ones that need attention.',
+      features: [
+        { icon: Eye, color: '#B9832E', bg: '#FBF1DC', title: 'Live visit map', sub: 'Every active caregiver, plotted in real time across your territory.' },
+        { icon: CreditCard, color: '#B9832E', bg: '#FBF1DC', title: 'Automated payroll & billing', sub: 'Clocked hours flow straight into pay runs and client invoices.' },
+        { icon: FileText, color: '#B9832E', bg: '#FBF1DC', title: 'EVV & compliance reporting', sub: 'Export state-ready reports in a couple of clicks, not a couple of days.' },
+        { icon: AlertCircle, color: '#B9832E', bg: '#FBF1DC', title: 'Missed-visit alerts', sub: "Get notified the moment a check-in doesn't happen — before the family does." },
+      ],
+      visual: 'admin',
+      cards: [
+        { icon: Eye, bg: 'var(--gold)', title: '14 caregivers active', sub: '3 territories · live now' },
+        { icon: CreditCard, bg: '#E6BE72', title: 'Payroll ready', sub: 'Pay run closes in 2 days', status: 'On track', statusBg: '#fff', statusColor: '#B9832E' },
+        { icon: Clock, bg: '#EFCB93', title: '0 missed visits', sub: 'This week, agency-wide' },
+      ]
+    },
+    family: {
+      title: 'Peace of mind, without the phone calls',
+      desc: "Families see the same visit their caregiver just logged — arrival time, notes, and photos — without needing to call the office.",
+      features: [
+        { icon: Bell, color: '#3E5D50', bg: 'var(--sage-soft)', title: 'Real-time visit notifications', sub: 'A message the moment a caregiver arrives and leaves.' },
+        { icon: ImageIcon, color: '#3E5D50', bg: 'var(--sage-soft)', title: 'Care plan & photo updates', sub: "See how a loved one's day actually went." },
+        { icon: Send, color: '#3E5D50', bg: 'var(--sage-soft)', title: 'Secure messaging', sub: 'A direct line to the care team, kept in one thread.' },
+        { icon: FileText, color: '#3E5D50', bg: 'var(--sage-soft)', title: 'Invoices & billing history', sub: 'Every visit, itemized, in one place — no more paper statements.' },
+      ],
+      visual: 'family',
+      cards: [
+        { icon: Bell, bg: 'var(--sage)', title: 'Maria arrived', sub: 'Wilson residence · 8:58 AM', status: 'Just now', statusBg: '#fff', statusColor: '#3E5D50' },
+        { icon: ImageIcon, bg: '#8FAE9E', title: "Today's care note", sub: 'Vitals stable, in good spirits' },
+        { icon: FileText, bg: '#AFC6BA', title: 'March invoice ready', sub: '$1,240.00 · view breakdown' },
+      ]
+    },
+  };
 
   const testimonials = [
-    {
-      quote: "Care Master has transformed how we manage our agency. The mobile app is intuitive, and our caregivers love it. We've seen a 40% increase in caregiver retention since switching.",
-      author: "Sarah Johnson",
-      role: "CEO, Compassion Home Care",
-      location: "United States",
-      rating: 5
-    },
-    {
-      quote: "The automated scheduling and EVV compliance features alone are worth it. But the business intelligence dashboard has helped us identify growth opportunities we never knew existed.",
-      author: "Dr. Michael Chen",
-      role: "Owner, Senior Care Plus",
-      location: "United Kingdom",
-      rating: 5
-    },
-    {
-      quote: "Finally, a platform that understands the complexities of home care. Custom forms, robust reporting, and exceptional support. Care Master is the total package.",
-      author: "Amara Okafor",
-      role: "Director, Golden Years Care",
-      location: "South Africa",
-      rating: 5
-    }
-  ];
-
-  const trustedBy = [
-    "Compassion Home Care",
-    "Senior Care Plus",
-    "Golden Years Care",
-    "Comfort Keepers International",
-    "Elite Elder Care"
+    { quote: 'We cut no-show visits by 40% in the first quarter. The GPS verification alone paid for the platform.', author: 'Amara O.', role: 'Compassion Home Care', avatarBg: 'var(--coral)', initials: 'AO' },
+    { quote: 'Families stopped calling to ask "did the caregiver show up." They just check the app now.', author: 'David K.', role: 'Golden Years Care', avatarBg: 'var(--sage)', initials: 'DK' },
+    { quote: "Payroll used to take me a full day every two weeks. Now it's twelve minutes, and it's actually right.", author: 'Ruth N.', role: 'Elite Elder Care', avatarBg: 'var(--gold)', initials: 'RN' },
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="landing-page">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo - Clickable Home Button with Secret Access */}
-            <div
-              onClick={handleLogoClick}
-              className="flex items-center group cursor-pointer"
-            >
-              <img src="/images/caremaster-logo.jpg" alt="Care Master Logo" className="h-24 w-auto" />
-            </div>
+      <header>
+        <nav>
+          <div className="logo" onClick={handleLogoClick}>
+            <img src="/images/caremaster-logo.jpg" alt="Care Master" className="logo-mark" />
+            <span className="logo-text">Care Master</span>
+          </div>
+          <div className="nav-links">
+            <a href="#portals">Platforms</a>
+            <a href="#features">Features</a>
+            <a href="#reviews">Reviews</a>
+            <a href="#pricing">Pricing</a>
+          </div>
+          <div className="nav-cta">
+            <Link to="/login" className="btn btn-ghost-light" style={{ padding: '10px 18px', fontSize: '13.5px' }}>Partner Login</Link>
+            <button onClick={() => setDemoModalOpen(true)} className="btn btn-gold" style={{ padding: '10px 20px', fontSize: '13.5px' }}>Schedule a Demo</button>
+          </div>
+          <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </nav>
+        {mobileMenuOpen && (
+          <div className="mobile-nav open">
+            <a href="#portals" onClick={() => setMobileMenuOpen(false)}>Platforms</a>
+            <a href="#features" onClick={() => setMobileMenuOpen(false)}>Features</a>
+            <a href="#reviews" onClick={() => setMobileMenuOpen(false)}>Reviews</a>
+            <a href="#pricing" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Partner Login</Link>
+            <button onClick={() => { setDemoModalOpen(true); setMobileMenuOpen(false); }} className="btn btn-gold" style={{ padding: '10px 20px', fontSize: '13.5px' }}>Schedule a Demo</button>
+          </div>
+        )}
+      </header>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">Features</a>
-              <a href="#solutions" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">Solutions</a>
-              <a href="#pricing" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">Pricing</a>
-              <a href="#testimonials" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">Reviews</a>
-              <div className="flex items-center space-x-4 ml-4">
-                <a href="tel:+2348000000000" className="text-gray-600 hover:text-blue-600 text-sm font-medium">
-                  <Phone className="inline h-4 w-4 mr-1" />
-                  +234 800 000 0000
-                </a>
-                <Link
-                  to="/institution"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
-                >
-                  Institution Portal
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100"
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+      {/* Hero */}
+      <section className="hero" style={{
+        backgroundImage: 'linear-gradient(rgba(18,48,44,0.82), rgba(14,38,34,0.88)), url(/images/story-care-checkup-1.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}>
+        <div className="hero-inner">
+          <span className="eyebrow">Multi-tenant care platform</span>
+          <h1>Care doesn't happen on a dashboard.<br />It happens at <em>8:58&nbsp;AM</em>, at someone's front door.</h1>
+          <p className="lead">CareMaster connects your caregivers, your office, and the families you serve in one live system — so every visit is scheduled, verified, and logged the moment it happens.</p>
+          <div className="hero-ctas">
+            <button onClick={() => setDemoModalOpen(true)} className="btn btn-gold">
+              Schedule a Demo
+              <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
+            <a href="#timeline" className="btn btn-ghost-dark">
+              See a live visit
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </a>
+          </div>
+          <div className="hero-proof">
+            <span><span className="stars">★★★★★</span> 4.9/5 from 500+ agencies</span>
+            <span>No credit card required</span>
           </div>
 
-          {/* Mobile Navigation */}
-          {mobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-gray-200">
-              <div className="flex flex-col space-y-3">
-                <a href="#features" className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50">Features</a>
-                <a href="#solutions" className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50">Solutions</a>
-                <a href="#pricing" className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50">Pricing</a>
-                <a href="#testimonials" className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50">Reviews</a>
-                <Link to="/institution" className="text-blue-600 font-semibold px-3 py-2 rounded-md bg-blue-50">Institution Portal</Link>
-              </div>
+          {/* Timeline */}
+          <div className="timeline-shell" id="timeline">
+            <div className="timeline-head">
+              <h3>One visit, three portals — in real time</h3>
+              <span className="mono">WILSON RESIDENCE · TUE 09:00</span>
             </div>
-          )}
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-            backgroundSize: '40px 40px'
-          }}></div>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Content */}
-            <div className="text-white">
-              <div className="inline-flex items-center px-4 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-sm font-medium text-white mb-6">
-                <Award className="h-4 w-4 mr-2 text-yellow-300" />
-                #1-Rated Home Care Management Platform
-              </div>
-              
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
-                The Health Tech Platform Built For 
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500 mt-2">
-                  Modern Care Agencies
-                </span>
-              </h1>
-              
-              <p className="mt-6 text-xl text-blue-100 leading-relaxed">
-                Empower your care agency with the most flexible, powerful, and user-friendly platform. 
-                Manage caregivers, clients, billing, and operations—all in one place.
-              </p>
-
-              <div className="mt-10 flex flex-col sm:flex-row gap-4">
-                <button 
-                  onClick={() => setDemoModalOpen(true)}
-                  className="group px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
-                >
-                  Schedule a Demo
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-                <Link
-                  to="/institution"
-                  className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-bold rounded-lg hover:bg-white/20 transition-all border-2 border-white/30 flex items-center justify-center"
-                >
-                  Access Institution Portal
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </Link>
-              </div>
-
-              {/* Trust Indicators */}
-              <div className="mt-12 flex items-center gap-8 flex-wrap">
-                <div className="flex items-center text-yellow-300">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 fill-current" />
-                  ))}
-                  <span className="ml-2 text-white font-semibold">4.9/5 Rating</span>
+            <div className="timeline">
+              {timelineEvents.map((evt, i) => (
+                <div className="t-event" key={i}>
+                  <span className="t-dot" style={{ background: evt.dotColor }} />
+                  <span className="t-time">{evt.time}</span>
+                  <span className={`t-tag ${evt.tagClass}`}>{evt.tag}</span>
+                  <p className="t-desc">{evt.desc}</p>
                 </div>
-                <div className="text-white/80">
-                  <span className="font-semibold text-white">500+</span> Agencies Trust Us
-                </div>
-              </div>
-            </div>
-
-            {/* Right Content - Dashboard Preview */}
-            <div className="relative">
-              <div className="relative bg-white rounded-2xl shadow-2xl p-6 transform lg:rotate-2 hover:rotate-0 transition-transform duration-300">
-                {/* Mock Dashboard */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <Heart className="h-6 w-6 text-white" />
-                      </div>
-                      <span className="ml-3 font-bold text-gray-900">Dashboard</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-green-100 rounded-full"></div>
-                      <div className="w-8 h-8 bg-blue-100 rounded-full"></div>
-                    </div>
-                  </div>
-
-                  {/* Stats Cards */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">124</div>
-                      <div className="text-xs text-gray-600 mt-1">Active Clients</div>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">48</div>
-                      <div className="text-xs text-gray-600 mt-1">Caregivers</div>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600">₦2.4M</div>
-                      <div className="text-xs text-gray-600 mt-1">Revenue</div>
-                    </div>
-                  </div>
-
-                  {/* Chart */}
-                  <div className="bg-gray-50 rounded-lg p-4 h-32 flex items-end justify-between gap-2">
-                    {[40, 60, 45, 75, 55, 85, 70, 90].map((height, i) => (
-                      <div key={i} className="flex-1 bg-gradient-to-t from-blue-600 to-blue-400 rounded-t" style={{ height: `${height}%` }}></div>
-                    ))}
-                  </div>
-
-                  {/* Activity List */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700 flex-1">Visit completed - John Doe</span>
-                      <span className="text-xs text-gray-500">2m ago</span>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700 flex-1">New client onboarded</span>
-                      <span className="text-xs text-gray-500">15m ago</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Mobile App Preview */}
-              <div className="absolute -bottom-6 -left-6 w-32 sm:w-40 bg-white rounded-2xl shadow-xl p-3 transform -rotate-6 hover:rotate-0 transition-transform duration-300">
-                <div className="bg-blue-600 rounded-lg p-3 text-white text-center">
-                  <Clock className="h-6 w-6 mx-auto mb-2" />
-                  <div className="text-xs font-semibold">CLOCKED IN</div>
-                  <div className="text-lg font-bold">2:30 PM</div>
-                </div>
-                <div className="mt-2 space-y-1">
-                  <div className="bg-gray-100 h-2 rounded"></div>
-                  <div className="bg-gray-100 h-2 rounded w-3/4"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Wave Divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-16">
-            <path d="M0 0L60 10C120 20 240 40 360 46.7C480 53 600 47 720 43.3C840 40 960 40 1080 46.7C1200 53 1320 67 1380 73.3L1440 80V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V0Z" fill="white"/>
-          </svg>
-        </div>
-      </section>
-
-      {/* Trusted By Section */}
-      <section className="bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm font-semibold text-gray-500 uppercase tracking-wide mb-8">
-            Trusted by Leading Care Agencies Worldwide
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 items-center justify-items-center opacity-60">
-            {trustedBy.map((company, index) => (
-              <div key={index} className="text-gray-700 font-semibold text-sm text-center">
-                {company}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Value Proposition Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {/* Card 1 */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl transform group-hover:scale-105 transition-transform duration-300"></div>
-              <div className="relative bg-white m-0.5 rounded-2xl p-8 h-full">
-                <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
-                  <Users className="h-8 w-8 text-blue-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  Increase Caregiver Retention
-                </h3>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">Intuitive mobile app caregivers love</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">User-friendly scheduling and routing</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">Reliable GPS tracking and EVV</span>
-                  </li>
-                </ul>
-                <a href="#features" className="inline-flex items-center text-blue-600 font-semibold hover:text-blue-700">
-                  Learn More <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 rounded-2xl transform group-hover:scale-105 transition-transform duration-300"></div>
-              <div className="relative bg-white m-0.5 rounded-2xl p-8 h-full">
-                <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center mb-6">
-                  <BarChart3 className="h-8 w-8 text-green-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  Full Control of Operations
-                </h3>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">Robust security & compliance protocols</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">Custom reports & electronic forms</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">Streamlined workflows & automation</span>
-                  </li>
-                </ul>
-                <a href="#features" className="inline-flex items-center text-green-600 font-semibold hover:text-green-700">
-                  Learn More <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </div>
-            </div>
-
-            {/* Card 3 */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-purple-700 rounded-2xl transform group-hover:scale-105 transition-transform duration-300"></div>
-              <div className="relative bg-white m-0.5 rounded-2xl p-8 h-full">
-                <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-6">
-                  <TrendingUp className="h-8 w-8 text-purple-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  Scale Your Business
-                </h3>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">Increase revenue with better insights</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">Customizable reporting and analytics</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">Exceptional customer support 24/7</span>
-                  </li>
-                </ul>
-                <a href="#pricing" className="inline-flex items-center text-purple-600 font-semibold hover:text-purple-700">
-                  Learn More <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section id="stats" className="bg-gradient-to-br from-gray-900 to-gray-800 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className={`text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600 mb-2 transition-all duration-1000 ${statsAnimated ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-                  {stat.number}
-                </div>
-                <div className="text-gray-400 font-medium">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <span className="text-blue-600 font-semibold text-sm uppercase tracking-wide">Platform Features</span>
-            <h2 className="mt-2 text-4xl lg:text-5xl font-extrabold text-gray-900">
-              Everything You Need to Run Your Agency
-            </h2>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Comprehensive tools designed specifically for home care agencies, from caregiver management to financial reporting.
-            </p>
-          </div>
-
-          {/* Feature Tabs */}
-          <div className="flex flex-wrap justify-center gap-4 mb-12">
-            {Object.keys(features).map((key) => (
-              <button
-                key={key}
-                onClick={() => setActiveFeature(key)}
-                className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                  activeFeature === key
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {features[key].title}
-              </button>
-            ))}
-          </div>
-
-          {/* Feature Content */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {features[activeFeature].items.map((feature, index) => (
-              <div key={index} className="flex items-start gap-4 p-6 bg-gray-50 rounded-xl hover:bg-blue-50 hover:shadow-md transition-all duration-300">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <feature.icon className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">{feature.text}</h4>
-                  <p className="text-gray-600">{feature.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section id="testimonials" className="py-20 bg-gradient-to-br from-blue-50 to-purple-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center gap-1 mb-4">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="h-6 w-6 text-yellow-400 fill-current" />
               ))}
             </div>
-            <h2 className="text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4">
-              Hundreds of 5-Star Reviews
-            </h2>
-            <p className="text-xl text-gray-600">
-              Home Care Agencies Love Care Master
-            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust bar */}
+      <div className="trust reveal">
+        <div className="trust-inner">
+          <span className="trust-label">Trusted by care agencies across three continents</span>
+          <div className="trust-logos">
+            {trustLogos.map((logo, i) => <span key={i}>{logo}</span>)}
+          </div>
+        </div>
+      </div>
+
+      {/* Ledger stats */}
+      <section className="ledger reveal">
+        <div className="wrap">
+          <div className="ledger-grid">
+            {ledgerStats.map((stat, i) => (
+              <div className="ledger-item" key={i}>
+                <div className="ledger-num">{stat.num}</div>
+                <div className="ledger-label">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Three portals */}
+      <section className="portals reveal" id="portals">
+        <div className="wrap">
+          <div className="section-head">
+            <span className="eyebrow">Platform features</span>
+            <h2 id="features">Three ways in. One source of truth.</h2>
+            <p>Every caregiver, coordinator, and family member sees the same visit — just from where they sit.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <div className="flex items-center gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                  ))}
+          <div className="portal-tabs">
+            {Object.keys(portals).map(key => (
+              <button
+                key={key}
+                className={`portal-tab ${activePortal === key ? 'active' : ''}`}
+                data-portal={key}
+                onClick={() => setActivePortal(key)}
+              >
+                <span className="dot" />
+                {key === 'caregiver' ? 'Caregiver App' : key === 'admin' ? 'Admin Console' : 'Family Portal'}
+              </button>
+            ))}
+          </div>
+
+          {Object.keys(portals).map(key => {
+            const p = portals[key];
+            return (
+              <div key={key} className={`portal-panel ${activePortal === key ? 'active' : ''}`} data-panel={key}>
+                <div className="portal-copy">
+                  <h3>{p.title}</h3>
+                  <p className="desc">{p.desc}</p>
+                  <div className="portal-feature-list">
+                    {p.features.map((f, i) => {
+                      const FeatureIcon = f.icon;
+                      return (
+                        <div className="portal-feature" key={i}>
+                          <span className="icon" style={{ background: f.bg }}>
+                            <FeatureIcon size={17} color={f.color} />
+                          </span>
+                          <div>
+                            <strong>{f.title}</strong>
+                            <span className="sub">{f.sub}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <p className="text-gray-700 mb-6 leading-relaxed">{testimonial.quote}</p>
-                <div className="pt-4 border-t border-gray-200">
-                  <p className="font-bold text-gray-900">{testimonial.author}</p>
-                  <p className="text-sm text-blue-600">{testimonial.role}</p>
-                  <p className="text-sm text-gray-500">{testimonial.location}</p>
+                <div className="portal-visual" data-visual={p.visual}>
+                  {p.cards.map((c, i) => {
+                    const CardIcon = c.icon;
+                    return (
+                      <div className="pv-card" key={i}>
+                        <span className="pv-icon" style={{ background: c.bg }}>
+                          <CardIcon size={18} color="#fff" />
+                        </span>
+                        <div>
+                          <strong>{c.title}</strong>
+                          <span>{c.sub}</span>
+                        </div>
+                        {c.status && (
+                          <span className="status" style={{ background: c.statusBg, color: c.statusColor }}>{c.status}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="quotes reveal" id="reviews">
+        <div className="wrap">
+          <div className="section-head center">
+            <span className="eyebrow">Reviews</span>
+            <h2>What agencies say once they stop firefighting</h2>
+          </div>
+          <div className="quote-grid">
+            {testimonials.map((t, i) => (
+              <div className="quote-card" key={i}>
+                <span className="quote-mark">"</span>
+                <p className="body">{t.quote}</p>
+                <div className="quote-person">
+                  <span className="quote-avatar" style={{ background: t.avatarBg }}>{t.initials}</span>
+                  <div>
+                    <strong>{t.author}</strong>
+                    <span>{t.role}</span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -658,305 +451,95 @@ const NewHomePage = () => {
         </div>
       </section>
 
-      {/* Solutions Section */}
-      <section id="solutions" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            {/* Left Content */}
-            <div>
-              <span className="text-blue-600 font-semibold text-sm uppercase tracking-wide">Our Approach</span>
-              <h2 className="mt-2 text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight">
-                Customer-First Approach + Innovative Technology = 
-                <span className="block text-blue-600 mt-2">Success at Scale</span>
-              </h2>
-              <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-                Because of our unique people-first approach, Care Master is ahead of the curve when meeting the needs of our customers.
-              </p>
-              <p className="mt-4 text-lg text-gray-600 leading-relaxed">
-                We are dedicated to innovation and offering agile and flexible features that are top-rated in the industry, while also providing exceptional customer support so you can focus on what matters most—providing even better care.
-              </p>
-              <button 
-                onClick={() => setSalesModalOpen(true)}
-                className="mt-8 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center"
-              >
-                Learn More About Our Platform
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Right Content - Device Mockup */}
-            <div className="relative">
-              <div className="aspect-square bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center overflow-hidden p-8">
-                {/* Phone Mockup Component */}
-                <div className="relative w-full max-w-xs mx-auto">
-                  {/* Phone Frame */}
-                  <div className="relative bg-gray-900 rounded-[3rem] p-3 shadow-2xl">
-                    {/* Notch */}
-                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl z-10"></div>
-                    
-                    {/* Screen */}
-                    <div className="bg-white rounded-[2.5rem] overflow-hidden">
-                      {/* Status Bar */}
-                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 pt-12 pb-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Heart className="h-5 w-5 text-white" />
-                          <span className="text-white font-bold text-lg">CareMaster</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-1 h-1 bg-white rounded-full"></div>
-                          <div className="w-1 h-1 bg-white rounded-full"></div>
-                          <div className="w-1 h-1 bg-white rounded-full"></div>
-                        </div>
-                      </div>
-                      
-                      {/* App Content */}
-                      <div className="relative bg-gray-50 pb-20">
-                        <div className="p-6">
-                          {/* Header */}
-                          <div className="mb-6">
-                            <h3 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h3>
-                            <p className="text-gray-600 text-sm">Welcome back!</p>
-                          </div>
-                          
-                          {/* Stats Cards */}
-                          <div className="grid grid-cols-2 gap-3 mb-6">
-                            <div className="bg-white rounded-xl p-4 shadow-sm">
-                              <div className="text-2xl font-bold text-blue-600">124</div>
-                              <div className="text-xs text-gray-600 mt-1">Active Clients</div>
-                            </div>
-                            <div className="bg-white rounded-xl p-4 shadow-sm">
-                              <div className="text-2xl font-bold text-green-600">48</div>
-                              <div className="text-xs text-gray-600 mt-1">Caregivers</div>
-                            </div>
-                          </div>
-                          
-                          {/* Quick Actions */}
-                          <div className="space-y-2">
-                            <div className="bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm">
-                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <Calendar className="h-5 w-5 text-blue-600" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="text-sm font-semibold text-gray-900">Schedule Visit</div>
-                                <div className="text-xs text-gray-500">2 visits today</div>
-                              </div>
-                              <ChevronRight className="h-5 w-5 text-gray-400" />
-                            </div>
-                            <div className="bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm">
-                              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="text-sm font-semibold text-gray-900">Care Plans</div>
-                                <div className="text-xs text-gray-500">Manage care activities</div>
-                              </div>
-                              <ChevronRight className="h-5 w-5 text-gray-400" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Bottom Navigation */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-around">
-                          <div className="flex flex-col items-center">
-                            <div className="w-6 h-6 bg-blue-600 rounded-lg mb-1"></div>
-                            <div className="text-xs text-blue-600 font-semibold">Home</div>
-                          </div>
-                          <div className="flex flex-col items-center">
-                            <div className="w-6 h-6 bg-gray-300 rounded-lg mb-1"></div>
-                            <div className="text-xs text-gray-500">Schedule</div>
-                          </div>
-                          <div className="flex flex-col items-center">
-                            <div className="w-6 h-6 bg-gray-300 rounded-lg mb-1"></div>
-                            <div className="text-xs text-gray-500">Clients</div>
-                          </div>
-                          <div className="flex flex-col items-center">
-                            <div className="w-6 h-6 bg-gray-300 rounded-lg mb-1"></div>
-                            <div className="text-xs text-gray-500">More</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Stats */}
-              <div className="absolute -top-6 -right-6 bg-white rounded-xl shadow-xl p-4 z-10">
-                <div className="text-3xl font-bold text-blue-600">98%</div>
-                <div className="text-xs text-gray-600">Client Satisfaction</div>
-              </div>
-
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl p-4 z-10">
-                <div className="text-3xl font-bold text-green-600">24/7</div>
-                <div className="text-xs text-gray-600">Support Available</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section id="pricing" className="py-20 bg-gradient-to-br from-blue-600 to-purple-600 relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '60px 60px'
-          }}></div>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-6">
-            Ready to Transform Your Care Agency?
-          </h2>
-          <p className="text-xl text-blue-100 mb-10 max-w-3xl mx-auto">
-            Join hundreds of care agencies already using Care Master to improve operations, increase revenue, and provide better care.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={() => setDemoModalOpen(true)}
-              className="px-10 py-5 bg-white text-blue-600 font-bold text-lg rounded-lg hover:bg-blue-50 transition-all shadow-2xl hover:shadow-3xl flex items-center justify-center"
-            >
+      {/* CTA banner */}
+      <section className="cta-banner reveal" id="demo">
+        <div className="wrap">
+          <h2>Ready to run a calmer care agency?</h2>
+          <p>Join 500+ agencies using CareMaster to keep every caregiver, client, and family on the same page.</p>
+          <div className="cta-row">
+            <button onClick={() => setDemoModalOpen(true)} className="btn btn-gold">
               Schedule a Free Demo
-              <Play className="ml-3 h-6 w-6" />
+              <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
-            <Link
-              to="/institution"
-              className="px-10 py-5 bg-white/10 backdrop-blur-sm text-white font-bold text-lg rounded-lg hover:bg-white/20 transition-all border-2 border-white/30 flex items-center justify-center"
-            >
+            <Link to="/login" className="btn btn-ghost-dark">
               Access Your Portal
-              <ChevronRight className="ml-3 h-6 w-6" />
+              <svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
             </Link>
           </div>
-
-          <p className="mt-8 text-blue-200 text-sm">
-            ✓ No credit card required • ✓ Free 30-day trial • ✓ Cancel anytime
-          </p>
+          <div className="cta-checks">NO CREDIT CARD REQUIRED · FREE 30-DAY TRIAL · CANCEL ANYTIME</div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
-            {/* Company Info */}
-            <div className="col-span-1">
-              <div className="flex items-center mb-4">
-                <img src="/images/caremaster-logo.jpg" alt="Care Master Logo" className="h-20 w-auto" />
+      <footer id="pricing" className="reveal">
+        <div className="wrap">
+          <div className="footer-grid">
+            <div className="footer-brand">
+              <div className="logo" style={{ color: 'var(--sand)' }}>
+                <img src="/images/caremaster-logo.jpg" alt="Care Master" className="logo-mark" />
+                <span className="logo-text-light">Care Master</span>
               </div>
-              <p className="text-gray-400 text-sm mb-4">
-                The leading Health Tech platform for modern care agencies worldwide.
-              </p>
-              <div className="flex gap-3">
-                <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <MessageCircle className="h-5 w-5" />
-                </a>
-                <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <Mail className="h-5 w-5" />
-                </a>
-                <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <Phone className="h-5 w-5" />
-                </a>
+              <p>The health tech platform connecting caregivers, agencies, and families — in real time.</p>
+              <div className="footer-social">
+                <a href="#" aria-label="Chat" rel="noopener noreferrer"><MessageCircle size={15} /></a>
+                <a href="mailto:support@getcaremaster.com" aria-label="Email"><Mail size={15} /></a>
+                <a href="tel:+2348000000000" aria-label="Phone"><Phone size={15} /></a>
               </div>
             </div>
-
-            {/* Features */}
             <div>
-              <h4 className="font-bold text-lg mb-4">Platform Features</h4>
-              <ul className="space-y-2">
-                <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Caregiver Management</a></li>
-                <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Client Management</a></li>
-                <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Scheduling & Routing</a></li>
-                <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">EVV Compliance</a></li>
-                <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Billing & Payroll</a></li>
+              <h4>Platform</h4>
+              <ul>
+                <li><a href="#portals">Caregiver App</a></li>
+                <li><a href="#portals">Admin Console</a></li>
+                <li><a href="#portals">Family Portal</a></li>
+                <li><a href="#features">EVV Compliance</a></li>
+                <li><a href="#features">Billing & Payroll</a></li>
               </ul>
             </div>
-
-            {/* Solutions */}
             <div>
-              <h4 className="font-bold text-lg mb-4">Solutions</h4>
-              <ul className="space-y-2">
-                <li><a href="#solutions" className="text-gray-400 hover:text-white transition-colors">For Small Agencies</a></li>
-                <li><a href="#solutions" className="text-gray-400 hover:text-white transition-colors">For Enterprise</a></li>
-                <li><a href="#solutions" className="text-gray-400 hover:text-white transition-colors">For Franchises</a></li>
-                <li><a href="#solutions" className="text-gray-400 hover:text-white transition-colors">Mobile Solutions</a></li>
-                <li><a href="#solutions" className="text-gray-400 hover:text-white transition-colors">Custom Integrations</a></li>
+              <h4>Solutions</h4>
+              <ul>
+                <li><a href="#pricing">For Small Agencies</a></li>
+                <li><a href="#pricing">For Enterprise</a></li>
+                <li><a href="#pricing">For Franchises</a></li>
+                <li><a href="#pricing">Custom Integrations</a></li>
               </ul>
             </div>
-
-            {/* Contact & Portal Access */}
             <div>
-              <h4 className="font-bold text-lg mb-4">Get Started</h4>
-              <ul className="space-y-3">
-                <li>
-                  <Link to="/institution" className="flex items-center text-blue-400 hover:text-blue-300 font-semibold transition-colors">
-                    <ChevronRight className="h-4 w-4 mr-1" />
-                    Institution Portal
-                  </Link>
-                </li>
-                <li>
-                  <a href="tel:+2348000000000" className="text-gray-400 hover:text-white transition-colors flex items-center">
-                    <Phone className="h-4 w-4 mr-2" />
-                    +234 800 000 0000
-                  </a>
-                </li>
-                <li>
-                  <a href="mailto:support@caremaster.com" className="text-gray-400 hover:text-white transition-colors flex items-center">
-                    <Mail className="h-4 w-4 mr-2" />
-                    support@caremaster.com
-                  </a>
-                </li>
-                <li className="pt-3">
-                  <button 
-                    onClick={() => setDemoModalOpen(true)}
-                    className="w-full px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Schedule a Demo
-                  </button>
-                </li>
+              <h4>Get Started</h4>
+              <ul>
+                <li><Link to="/login">Partner Login</Link></li>
+                <li><a href="tel:+2348000000000">+234 800 000 0000</a></li>
+                <li><a href="mailto:support@getcaremaster.com">support@getcaremaster.com</a></li>
               </ul>
             </div>
           </div>
-
-          {/* Bottom Bar */}
-          <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm">
-              © 2025 Care Master. All rights reserved.
-            </p>
-            <div className="flex gap-6 mt-4 md:mt-0">
-              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>
-              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Terms of Service</a>
-              <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">NDPR Compliance</a>
-            </div>
+          <div className="footer-bottom">
+            <span>© 2026 Care Master. All rights reserved.</span>
+            <span>
+              <a href="/privacy-policy" rel="noopener">Privacy Policy</a> · 
+              <a href="/terms" rel="noopener">Terms of Service</a> · 
+              <a href="/security" rel="noopener">Security</a> · 
+              <a href="/gdpr" rel="noopener">GDPR</a>
+            </span>
           </div>
         </div>
       </footer>
 
-      {/* Floating Chat Button */}
-      <button className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center z-40">
-        <MessageCircle className="h-6 w-6" />
-      </button>
-
       {/* Demo Request Modal */}
       {demoModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-8">
-              {/* Modal Header */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={() => setDemoModalOpen(false)}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-5 sm:p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-3xl font-bold text-gray-900">Schedule a Demo</h3>
-                  <p className="text-gray-600 mt-2">See CareMaster in action - personalized for your agency</p>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">Schedule a Demo</h3>
+                  <p className="text-gray-600 mt-2">See CareMaster in action — personalized for your agency</p>
                 </div>
-                <button 
-                  onClick={() => setDemoModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
+                <button onClick={() => setDemoModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
                   <X className="h-6 w-6" />
                 </button>
               </div>
-
               {formSuccess ? (
                 <div className="text-center py-12">
                   <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -970,85 +553,39 @@ const NewHomePage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="John Doe"
-                      />
+                      <input type="text" name="name" value={formData.name} onChange={handleInputChange} required autoComplete="name" maxLength="100" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="John Doe" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address *</label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="john@example.com"
-                      />
+                      <input type="email" name="email" value={formData.email} onChange={handleInputChange} required autoComplete="email" maxLength="200" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="john@example.com" />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="+234 800 000 0000"
-                      />
+                      <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} required autoComplete="tel" maxLength="30" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="+234 800 000 0000" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Organization Name *</label>
-                      <input
-                        type="text"
-                        name="organization"
-                        value={formData.organization}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="Your Care Agency"
-                      />
+                      <input type="text" name="organization" value={formData.organization} onChange={handleInputChange} required autoComplete="organization" maxLength="200" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Your Care Agency" />
                     </div>
                   </div>
-
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Tell us about your needs (Optional)</label>
-                    <textarea
-                      name="message"
-                      value={formData.message}
-                      onChange={handleInputChange}
-                      rows="4"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                      placeholder="Number of caregivers, clients, specific features you're interested in..."
-                    ></textarea>
+                    <textarea name="message" value={formData.message} onChange={handleInputChange} rows="4" maxLength="1000" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none" placeholder="Number of caregivers, clients, specific features you're interested in..." />
                   </div>
-
+                  <div className="flex items-start gap-3 pt-2">
+                    <input type="checkbox" id="gdpr-demo" checked={gdprConsent} onChange={(e) => setGdprConsent(e.target.checked)} required className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    <label htmlFor="gdpr-demo" className="text-xs text-gray-600 leading-relaxed">
+                      I agree to the <a href="/privacy-policy" className="text-blue-600 underline" rel="noopener">Privacy Policy</a> and consent to having CareMaster process my data to respond to this request, in accordance with GDPR.
+                    </label>
+                  </div>
                   <div className="flex gap-4 pt-4">
-                    <button
-                      type="submit"
-                      disabled={formSubmitting}
-                      className="flex-1 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    >
+                    <button type="submit" disabled={formSubmitting} className="flex-1 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
                       {formSubmitting ? (
-                        <>
-                          <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                          Submitting...
-                        </>
+                        <><span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Submitting...</>
                       ) : (
-                        <>
-                          Schedule Demo
-                          <Calendar className="ml-2 h-5 w-5" />
-                        </>
+                        <>Schedule Demo<Calendar className="ml-2 h-5 w-5" /></>
                       )}
                     </button>
                   </div>
@@ -1061,23 +598,18 @@ const NewHomePage = () => {
 
       {/* Sales Contact Modal */}
       {salesModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-8">
-              {/* Modal Header */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={() => setSalesModalOpen(false)}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-5 sm:p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-3xl font-bold text-gray-900">Talk to Sales</h3>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">Talk to Sales</h3>
                   <p className="text-gray-600 mt-2">Get answers to your questions and learn how we can help</p>
                 </div>
-                <button 
-                  onClick={() => setSalesModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
+                <button onClick={() => setSalesModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
                   <X className="h-6 w-6" />
                 </button>
               </div>
-
               {formSuccess ? (
                 <div className="text-center py-12">
                   <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -1091,86 +623,39 @@ const NewHomePage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="John Doe"
-                      />
+                      <input type="text" name="name" value={formData.name} onChange={handleInputChange} required autoComplete="name" maxLength="100" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="John Doe" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address *</label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="john@example.com"
-                      />
+                      <input type="email" name="email" value={formData.email} onChange={handleInputChange} required autoComplete="email" maxLength="200" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="john@example.com" />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="+234 800 000 0000"
-                      />
+                      <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} required autoComplete="tel" maxLength="30" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="+234 800 000 0000" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Organization Name *</label>
-                      <input
-                        type="text"
-                        name="organization"
-                        value={formData.organization}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="Your Care Agency"
-                      />
+                      <input type="text" name="organization" value={formData.organization} onChange={handleInputChange} required autoComplete="organization" maxLength="200" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Your Care Agency" />
                     </div>
                   </div>
-
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">How can we help? *</label>
-                    <textarea
-                      name="message"
-                      value={formData.message}
-                      onChange={handleInputChange}
-                      required
-                      rows="4"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                      placeholder="Tell us about your questions, requirements, or what you'd like to learn more about..."
-                    ></textarea>
+                    <textarea name="message" value={formData.message} onChange={handleInputChange} required rows="4" maxLength="1000" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none" placeholder="Tell us about your questions, requirements, or what you'd like to learn more about..." />
                   </div>
-
+                  <div className="flex items-start gap-3 pt-2">
+                    <input type="checkbox" id="gdpr-sales" checked={gdprConsent} onChange={(e) => setGdprConsent(e.target.checked)} required className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    <label htmlFor="gdpr-sales" className="text-xs text-gray-600 leading-relaxed">
+                      I agree to the <a href="/privacy-policy" className="text-blue-600 underline" rel="noopener">Privacy Policy</a> and consent to having CareMaster process my data to respond to this inquiry, in accordance with GDPR.
+                    </label>
+                  </div>
                   <div className="flex gap-4 pt-4">
-                    <button
-                      type="submit"
-                      disabled={formSubmitting}
-                      className="flex-1 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    >
+                    <button type="submit" disabled={formSubmitting} className="flex-1 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
                       {formSubmitting ? (
-                        <>
-                          <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                          Submitting...
-                        </>
+                        <><span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />Submitting...</>
                       ) : (
-                        <>
-                          Contact Sales
-                          <Mail className="ml-2 h-5 w-5" />
-                        </>
+                        <>Contact Sales<Mail className="ml-2 h-5 w-5" /></>
                       )}
                     </button>
                   </div>
@@ -1180,9 +665,23 @@ const NewHomePage = () => {
           </div>
         </div>
       )}
+
+      {/* GDPR Cookie Consent Banner */}
+      {showCookieBanner && (
+        <div className="cookie-banner">
+          <div className="cookie-content">
+            <p>
+              We use cookies to enhance your browsing experience and analyze site traffic. By clicking "Accept", you consent to our use of cookies. See our <a href="/privacy-policy" rel="noopener">Privacy Policy</a> for details.
+            </p>
+            <div className="cookie-actions">
+              <button onClick={handleCookieDecline} className="cookie-btn cookie-btn-decline">Decline</button>
+              <button onClick={handleCookieAccept} className="cookie-btn cookie-btn-accept">Accept</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default NewHomePage;
-
