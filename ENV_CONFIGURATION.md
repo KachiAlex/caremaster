@@ -12,14 +12,6 @@ Create a file named `.env.local` in your project root (`c:\Care Master\.env.loca
 # Care Master Environment Configuration
 # Generated: October 9, 2025
 
-# Firebase Configuration (Production)
-REACT_APP_FIREBASE_API_KEY=your_firebase_api_key_here
-REACT_APP_FIREBASE_AUTH_DOMAIN=elderx-f5c2b.firebaseapp.com
-REACT_APP_FIREBASE_PROJECT_ID=elderx-f5c2b
-REACT_APP_FIREBASE_STORAGE_BUCKET=elderx-f5c2b.firebasestorage.app
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID=987610993096
-REACT_APP_FIREBASE_APP_ID=1:987610993096:web:97c82732772d1223d3f0fd
-
 # Security Configuration
 # Strong encryption key (32+ characters with uppercase, lowercase, numbers, special chars)
 REACT_APP_ENCRYPTION_KEY=Care Master2024!SecureKey#Healthcare$HIPAA%Compliant&2025

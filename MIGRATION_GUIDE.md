@@ -47,16 +47,12 @@ This keeps Firebase backend services while hosting the frontend on your server.
 ## Part 1: Prepare the Application
 
 ### 1.1 Update Firebase Configuration
-The app already uses Firebase, but ensure configuration is environment-based:
+The app uses environment-based configuration:
 
 **Create `.env.production` file:**
 ```env
-REACT_APP_FIREBASE_API_KEY=your-api-key
-REACT_APP_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-REACT_APP_FIREBASE_PROJECT_ID=your-project-id
-REACT_APP_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-REACT_APP_FIREBASE_APP_ID=your-app-id
+REACT_APP_API_URL=https://your-domain.com/api
+REACT_APP_ENVIRONMENT=production
 ```
 
 ### 1.2 Build for Production

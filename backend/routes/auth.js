@@ -4,33 +4,11 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
-const axios = require('axios');
 const db = require('../utils/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { validateRequest, schemas } = require('../middleware/validation');
 const { logger } = require('../utils/logger');
 const { sendPasswordResetEmail } = require('../services/emailService');
-
-// Firebase config for password migration fallback (read from env only)
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || process.env.REACT_APP_FIREBASE_API_KEY || '';
-
-async function verifyFirebasePassword(email, password) {
-  try {
-    const response = await axios.post(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
-      {
-        email: email,
-        password: password,
-        returnSecureToken: true
-      },
-      { timeout: 8000 }
-    );
-    return response.data;
-  } catch (error) {
-    logger.warn(`Firebase password verification failed for ${email}: ${error.response?.data?.error?.message || error.message}`);
-    return null;
-  }
-}
 
 const router = express.Router();
 
@@ -292,7 +270,7 @@ router.post('/login', validateRequest(schemas.login), async (req, res) => {
   }
 });
 
-// Login with email and password (for all users - replaces Firebase Auth)
+// Login with email and password
 router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -330,27 +308,6 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
     let passwordMigrated = false;
     if (user.password_hash) {
       isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    }
-
-    // If bcrypt check fails, try Firebase Auth as fallback (for migrated users)
-    if (!isPasswordValid) {
-      const firebaseResult = await verifyFirebasePassword(email, password);
-      if (firebaseResult && firebaseResult.localId) {
-        isPasswordValid = true;
-        // Migrate password to bcrypt in PostgreSQL
-        try {
-          const salt = await bcrypt.genSalt(12);
-          const newHash = await bcrypt.hash(password, salt);
-          await db('users').where({ id: user.id }).update({
-            password_hash: newHash,
-            firebase_uid: firebaseResult.localId
-          });
-          passwordMigrated = true;
-          logger.info(`Password migrated from Firebase to bcrypt for user: ${user.email}`);
-        } catch (migrationError) {
-          logger.error(`Failed to migrate password for ${user.email}: ${migrationError.message}`);
-        }
-      }
     }
 
     if (!isPasswordValid) {

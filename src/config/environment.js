@@ -2,16 +2,6 @@
 class EnvironmentConfig {
   constructor() {
     this.config = {
-      // Firebase Configuration
-      firebase: {
-        apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-        authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.REACT_APP_FIREBASE_APP_ID
-      },
-
       // AI Service Configuration
       ai: {
         openai: {
@@ -97,19 +87,6 @@ class EnvironmentConfig {
 
   // Validate required configuration
   validate() {
-    const required = [
-      'firebase.apiKey',
-      'firebase.projectId',
-      'firebase.authDomain'
-    ];
-
-    const missing = required.filter(path => !this.get(path));
-    
-    if (missing.length > 0) {
-      console.warn('Missing required environment variables:', missing);
-      return false;
-    }
-
     return true;
   }
 

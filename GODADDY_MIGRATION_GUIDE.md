@@ -321,12 +321,8 @@ nano .env.production
 
 Add:
 ```env
-REACT_APP_FIREBASE_API_KEY=your-api-key
-REACT_APP_FIREBASE_AUTH_DOMAIN=elderx-f5c2b.firebaseapp.com
-REACT_APP_FIREBASE_PROJECT_ID=elderx-f5c2b
-REACT_APP_FIREBASE_STORAGE_BUCKET=elderx-f5c2b.firebasestorage.app
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID=987610993096
-REACT_APP_FIREBASE_APP_ID=1:987610993096:web:97c82732772d1223d3f0fd
+REACT_APP_API_URL=https://your-domain.com/api
+REACT_APP_ENVIRONMENT=production
 ```
 
 Then rebuild:
