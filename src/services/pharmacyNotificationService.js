@@ -1,13 +1,13 @@
-import { db, functions } from '../backend/config';
-import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'backend/database';
+import { collection, addDoc, serverTimestamp } from 'backend/database';
 import { httpsCallable } from 'backend/functions';
+import { db, functions } from '../backend/config';;
 
 /**
  * Pharmacy Notification Service
  * Handles email and SMS notifications for pharmacy operations
  */
 
-// Firebase Cloud Functions for sending emails/SMS
+// Backend Cloud Functions for sending emails/SMS
 const sendEmailFunction = httpsCallable(functions, 'sendEmail');
 const sendSMSFunction = httpsCallable(functions, 'sendSMS');
 

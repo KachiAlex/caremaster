@@ -1,6 +1,6 @@
 /**
  * Query Security Audit Utility
- * SECURITY FIX: Audits Firestore queries for injection vulnerabilities
+ * SECURITY FIX: Audits Database queries for injection vulnerabilities
  */
 
 import logger from './logger';
@@ -56,14 +56,14 @@ export function validateQueryParameter(value, type = 'string') {
 }
 
 /**
- * Sanitize query value for Firestore
+ * Sanitize query value for Database
  */
 export function sanitizeQueryValue(value) {
   if (value === null || value === undefined) {
     return null;
   }
   
-  // Firestore queries are generally safe, but we should still sanitize
+  // Database queries are generally safe, but we should still sanitize
   if (typeof value === 'string') {
     // Remove null bytes and control characters
     let sanitized = value.replace(/[\x00-\x1F\x7F]/g, '');
@@ -83,7 +83,7 @@ export function sanitizeQueryValue(value) {
 }
 
 /**
- * Validate Firestore where clause parameters
+ * Validate Database where clause parameters
  */
 export function validateWhereClause(field, operator, value) {
   // Validate field name
@@ -112,7 +112,7 @@ export function validateWhereClause(field, operator, value) {
 }
 
 /**
- * Create secure Firestore query
+ * Create secure Database query
  */
 export function createSecureQuery(collectionRef, constraints = []) {
   try {
@@ -187,7 +187,7 @@ export function auditQuery(queryConstraints) {
           severity: 'medium',
           type: 'invalid_operator',
           operator: constraint.operator,
-          recommendation: 'Use only valid Firestore operators'
+          recommendation: 'Use only valid Database operators'
         });
       }
     }

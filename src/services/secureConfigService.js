@@ -11,14 +11,14 @@ class SecureConfigService {
   // Load and validate secure configuration
   loadSecureConfig() {
     const config = {
-      // Firebase Configuration (encrypted in production)
-      firebase: {
-        apiKey: this.getSecureValue('REACT_APP_FIREBASE_API_KEY'),
-        authDomain: this.getSecureValue('REACT_APP_FIREBASE_AUTH_DOMAIN'),
-        projectId: this.getSecureValue('REACT_APP_FIREBASE_PROJECT_ID'),
-        storageBucket: this.getSecureValue('REACT_APP_FIREBASE_STORAGE_BUCKET'),
-        messagingSenderId: this.getSecureValue('REACT_APP_FIREBASE_MESSAGING_SENDER_ID'),
-        appId: this.getSecureValue('REACT_APP_FIREBASE_APP_ID')
+      // Backend Configuration (encrypted in production)
+      backend: {
+        apiKey: this.getSecureValue('REACT_APP_BACKEND_API_KEY'),
+        authDomain: this.getSecureValue('REACT_APP_BACKEND_AUTH_DOMAIN'),
+        projectId: this.getSecureValue('REACT_APP_BACKEND_PROJECT_ID'),
+        storageBucket: this.getSecureValue('REACT_APP_BACKEND_STORAGE_BUCKET'),
+        messagingSenderId: this.getSecureValue('REACT_APP_BACKEND_MESSAGING_SENDER_ID'),
+        appId: this.getSecureValue('REACT_APP_BACKEND_APP_ID')
       },
 
       // AI API Keys (encrypted)
@@ -80,8 +80,8 @@ class SecureConfigService {
   // Validate configuration
   validateConfig() {
     const requiredKeys = [
-      'REACT_APP_FIREBASE_API_KEY',
-      'REACT_APP_FIREBASE_PROJECT_ID'
+      'REACT_APP_BACKEND_API_KEY',
+      'REACT_APP_BACKEND_PROJECT_ID'
     ];
 
     const missingKeys = requiredKeys.filter(key => !process.env[key]);
@@ -91,9 +91,9 @@ class SecureConfigService {
       logger.error('Missing required configuration keys', { missingKeys });
     }
 
-    // Validate Firebase config
-    if (!this.config.firebase.apiKey || !this.config.firebase.projectId) {
-      logger.warn('Firebase configuration incomplete; downstream will use safe fallbacks.');
+    // Validate Backend config
+    if (!this.config.backend.apiKey || !this.config.backend.projectId) {
+      logger.warn('Backend configuration incomplete; downstream will use safe fallbacks.');
     }
 
     // Validate security config; never hard-crash the client app
@@ -121,9 +121,9 @@ class SecureConfigService {
     return value;
   }
 
-  // Get Firebase config
-  getFirebaseConfig() {
-    return this.config.firebase;
+  // Get Backend config
+  getBackendConfig() {
+    return this.config.backend;
   }
 
   // Get AI API keys
@@ -198,7 +198,7 @@ class SecureConfigService {
   // Generate secure configuration for deployment
   generateSecureConfig() {
     const config = {
-      firebase: this.config.firebase,
+      backend: this.config.backend,
       security: {
         sessionTimeout: this.config.security.sessionTimeout,
         maxLoginAttempts: this.config.security.maxLoginAttempts,

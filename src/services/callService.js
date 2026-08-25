@@ -1,16 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy,
-  onSnapshot,
-  serverTimestamp,
-  getDocs
-} from 'backend/database';
+import { collection, doc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, getDocs, limit } from 'backend/database';;
 import { db } from '../backend/config';
 
 class CallService {
@@ -79,7 +67,7 @@ class CallService {
       };
 
       // Create call document
-      console.log('📄 Creating call document in Firestore...');
+      console.log('📄 Creating call document in Database...');
       const callDoc = await addDoc(collection(db, 'calls'), callData);
       console.log('✅ Call document created:', callDoc.id);
 

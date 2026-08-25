@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import { 
   collection, 
   addDoc, 
@@ -14,6 +13,7 @@ import {
   Timestamp,
   onSnapshot
 } from 'backend/database';
+import { db } from '../backend/config';
 
 const MEDICAL_REPORTS_COLLECTION = 'medicalReports';
 

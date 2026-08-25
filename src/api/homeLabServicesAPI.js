@@ -23,9 +23,9 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import logger from '../utils/logger';
 import ComprehensivePatientLogger from '../utils/comprehensivePatientLogger';
+import { db } from '../backend/config';
 
 const HOME_LAB_VISITS_COLLECTION = 'homeLabVisits';
 const SAMPLE_COLLECTIONS_COLLECTION = 'sampleCollections';

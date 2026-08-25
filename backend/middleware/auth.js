@@ -86,8 +86,21 @@ const require2FA = async (req, res, next) => {
         });
       }
 
-      // Verify 2FA token (implementation would go here)
-      // For now, we'll skip the actual verification
+      // Verify 2FA token using TOTP
+      const speakeasy = require('speakeasy');
+      const verified = speakeasy.totp.verify({
+        secret: req.user.two_factor_secret,
+        encoding: 'base32',
+        token: twoFactorToken,
+        window: 2
+      });
+
+      if (!verified) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Invalid two-factor authentication token' 
+        });
+      }
     }
 
     next();

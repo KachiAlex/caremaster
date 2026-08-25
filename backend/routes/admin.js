@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
@@ -6,8 +7,120 @@ const db = require('../utils/database');
 const { authenticateToken, requireRole, require2FA } = require('../middleware/auth');
 const { validateRequest, schemas } = require('../middleware/validation');
 const { logger } = require('../utils/logger');
+const { sendWelcomeEmail } = require('../services/emailService');
 
 const router = express.Router();
+
+// Create a new user within the institution admin's scope
+router.post('/users', authenticateToken, requireRole(['admin', 'institution_admin']), async (req, res) => {
+  try {
+    const { email, password, firstName, lastName, userType, phone, specialization, medicalQualification, licenseNumber, sendEmail } = req.body;
+
+    if (!email || !password || !firstName || !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, password, first name, and last name are required'
+      });
+    }
+
+    const validUserTypes = [
+      'admin', 'institution_admin', 'caregiver', 'doctor', 'nurse',
+      'pharmacist', 'client', 'elderly', 'patient'
+    ];
+    const resolvedType = (userType || 'caregiver').toLowerCase();
+    if (!validUserTypes.includes(resolvedType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid user type. Must be one of: ${validUserTypes.join(', ')}`
+      });
+    }
+
+    const existingUser = await db('users')
+      .where({ email: email.toLowerCase() })
+      .first();
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email already exists'
+      });
+    }
+
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    const matric_number = `CM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const creator = req.user;
+    const institutionId = creator.institution_id;
+
+    const [user] = await db('users')
+      .insert({
+        email: email.toLowerCase(),
+        password_hash,
+        first_name: firstName,
+        last_name: lastName,
+        display_name: `${firstName} ${lastName}`,
+        matric_number,
+        user_type: resolvedType,
+        institution_id: institutionId || null,
+        phone: phone || null,
+        specialization: specialization || null,
+        is_active: true,
+        is_verified: true
+      })
+      .returning(['id', 'email', 'first_name', 'last_name', 'user_type', 'matric_number']);
+
+    await db('audit_logs').insert({
+      user_id: creator.id,
+      action: 'create_user',
+      resource_type: 'user',
+      resource_id: user.id,
+      details: { email, userType: resolvedType, firstName, lastName, institutionId },
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent')
+    });
+
+    logger.info(`New user created by institution admin ${creator.email}: ${email} (${resolvedType})`);
+
+    if (sendEmail !== false) {
+      try {
+        const institution = institutionId
+          ? await db('institutions').where({ id: institutionId }).first()
+          : null;
+        await sendWelcomeEmail({
+          to: user.email,
+          userName: `${firstName} ${lastName}`,
+          institutionName: institution ? institution.name : null
+        });
+      } catch (emailErr) {
+        logger.error('Failed to send welcome email:', emailErr);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      data: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        displayName: `${user.first_name} ${user.last_name}`,
+        userType: user.user_type,
+        matricNumber: user.matric_number,
+        active: true,
+        verified: true
+      }
+    });
+  } catch (error) {
+    logger.error('Failed to create user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create user'
+    });
+  }
+});
 
 // Get dashboard statistics
 router.get('/dashboard', authenticateToken, requireRole(['bursar', 'admin']), require2FA, async (req, res) => {

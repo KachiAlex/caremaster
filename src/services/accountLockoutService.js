@@ -3,9 +3,10 @@
  * Implements rate limiting, account lockout, and brute-force attack prevention
  */
 
-import { db } from '../config/firebaseConfig';
-import { collection, query, where, getDocs, updateDoc, doc, Timestamp, addDoc } from 'backend/database';
+import { db } from '../config/backendConfig';
 import logger from '../utils/logger';
+import { collection, query, getDocs, updateDoc, addDoc, where } from 'backend/database';
+import { db } from '../backend/config';
 
 /**
  * Account Lockout Configuration
@@ -398,7 +399,7 @@ export const sendAccountLockedNotification = async (email, lockedUntil) => {
       }
     };
 
-    // Send via Firebase Cloud Function or email service
+    // Send via Backend Cloud Function or email service
     // await sendEmail(emailPayload);
 
     logger.info('Account locked notification queued', { email: email.substring(0, 50) });

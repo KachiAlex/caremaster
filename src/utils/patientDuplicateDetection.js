@@ -1,11 +1,11 @@
+import { collection, query, getDocs, where } from 'backend/database';
+import { db } from '../backend/config';
 /**
  * Client Duplicate Detection Utility
  * 
  * Advanced duplicate detection for Client registration
  */
 
-import { collection, query, where, getDocs, getDoc, doc } from 'backend/database';
-import { db } from '../backend/config';
 
 const CLIENTS_COLLECTION = 'clients';
 

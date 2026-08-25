@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import { 
   collection, 
   addDoc, 
@@ -15,6 +14,7 @@ import {
   onSnapshot
 } from 'backend/database';
 import { logCarePlanUpdate } from '../utils/patientLogger';
+import { db } from '../backend/config';
 
 const CARE_PLANS_COLLECTION = 'carePlans';
 const CLIENTS_COLLECTION = 'clients';

@@ -30,8 +30,8 @@ import {
   Timestamp,
   writeBatch
 } from 'backend/database';
-import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
+import { db } from '../backend/config';
 
 const BILLS_COLLECTION = 'bills';
 const HMO_PLANS_COLLECTION = 'hmoPlans';

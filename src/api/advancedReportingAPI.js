@@ -23,8 +23,8 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import { analyticsAPI } from './analyticsAPI';
+import { db } from '../backend/config';
 
 const REPORTS_COLLECTION = 'customReports';
 const REPORT_SCHEDULES_COLLECTION = 'reportSchedules';

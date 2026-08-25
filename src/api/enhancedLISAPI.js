@@ -23,9 +23,9 @@ import {
   limit,
   serverTimestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
 import { updateDiagnosticTest } from './diagnosticsAPI';
+import { db } from '../backend/config';
 
 const LAB_SAMPLES_COLLECTION = 'labSamples';
 const LAB_RESULTS_COLLECTION = 'labResults';

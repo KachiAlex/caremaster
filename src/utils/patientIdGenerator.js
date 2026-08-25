@@ -1,3 +1,5 @@
+import { collection, getDocs } from 'backend/database';
+import { db } from '../backend/config';
 /**
  * Client ID Generator
  * 
@@ -8,8 +10,6 @@
  * - NNNN: Sequential number (4 digits, zero-padded)
  */
 
-import { collection, query, where, getDocs, orderBy, limit } from 'backend/database';
-import { db } from '../backend/config';
 
 /**
  * Generate a simple, memorable Client ID

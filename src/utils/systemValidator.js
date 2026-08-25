@@ -1,11 +1,11 @@
-import { auth } from '../backend/config';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'backend/auth';
 import { getAllUsers, updateUser } from '../api/usersAPI';
 import assignmentAPI from '../api/assignmentAPI';
 import { emergencyAPI } from '../api/emergencyAPI';
 import { medicationAPI } from '../api/medicationAPI';
 import { getVitalSignsByClient } from '../api/vitalSignsAPI';
 import logger from './logger';
+import { auth } from '../backend/config';
+import { createUserWithEmailAndPassword, signOut } from 'backend/auth';
 
 /**
  * Comprehensive System Validator
@@ -172,25 +172,25 @@ export class SystemValidator {
       const { dataConnectService } = await import('../services/dataConnectService');
       
       let dataConnectWorking = false;
-      let firestoreFallback = false;
+      let databaseFallback = false;
       
       try {
         const profile = await dataConnectService.getUserProfile(this.testUser.uid);
         dataConnectWorking = !!profile;
       } catch (error) {
         if (error.message.includes('fallback') || error.message.includes('not implemented')) {
-          firestoreFallback = true;
+          databaseFallback = true;
         }
       }
       
-      const success = dataConnectWorking || firestoreFallback;
+      const success = dataConnectWorking || databaseFallback;
       
       return this.logResult(
         'Data Connect Integration',
         success,
         {
           dataConnectWorking,
-          firestoreFallback,
+          databaseFallback,
           testUserId: this.testUser.uid
         }
       );

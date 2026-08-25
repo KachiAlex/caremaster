@@ -1,14 +1,20 @@
 import api from './config';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
+import { collection, getDocs } from 'backend/database';
+import { db } from '../backend/config';
 
-const USERS_ENDPOINT = '/users';
+const USERS_ENDPOINT = '/superadmin/users';
 
 // Get all users
 export const getAllUsers = async () => {
   try {
-    const response = await api.get(USERS_ENDPOINT);
-    return response.data;
+    const snapshot = await getDocs(collection(db, 'users'));
+    const users = [];
+    snapshot.forEach((doc) => {
+      users.push({ id: doc.id, ...doc.data() });
+    });
+    return users;
   } catch (error) {
     console.error('Error fetching users:', error);
     throw error;
@@ -29,8 +35,8 @@ export const getUserById = async (userId) => {
       const response = await api.get(`${USERS_ENDPOINT}/${userId}`);
       return response.data;
     } catch (apiError) {
-      // If API fails, fallback to mock for Firebase users
-      console.log('API user not found, likely Firebase user - returning null');
+      // If API fails, fallback to mock for Backend users
+      console.log('API user not found, likely Backend user - returning null');
       return null;
     }
   } catch (error) {

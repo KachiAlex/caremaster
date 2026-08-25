@@ -14,10 +14,10 @@ import {
   writeBatch,
   FieldValue
 } from 'backend/database';
-import { db } from '../backend/config';
 import logger from '../utils/logger';
 import { logClientActivity as logActivity } from './clientActivitiesAPI';
 import { notificationsAPI } from './notificationsAPI';
+import { db } from '../backend/config';
 
 const DIAGNOSTICS_COLLECTION = 'diagnostics';
 const CLIENT_ACTIVITIES_COLLECTION = 'clientActivities';

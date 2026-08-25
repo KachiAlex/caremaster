@@ -8,7 +8,7 @@
  * @returns {Promise<string>} - URL of uploaded document
  */
 export const uploadClientDocument = async (file, clientId) => {
-  // TODO: Implement document upload to Firebase Storage
+  // TODO: Implement document upload to Backend Storage
   console.warn('uploadClientDocument not yet implemented');
   return Promise.resolve(null);
 };

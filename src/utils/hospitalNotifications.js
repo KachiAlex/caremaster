@@ -3,9 +3,9 @@
  * Monitors and sends notifications for critical events
  */
 
-import { collection, query, where, onSnapshot, Timestamp } from 'backend/database';
-import { db } from '../backend/config';
 import { toast } from 'react-toastify';
+import { collection, query, where, onSnapshot } from 'backend/database';
+import { db } from '../backend/config';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
 const HOSPITAL_BEDS_COLLECTION = 'hospitalBeds';
@@ -60,7 +60,7 @@ export function monitorBedShortage(hospitalId, threshold = 5, callback) {
             });
           }
 
-          // Create notification in Firestore
+          // Create notification in Database
           createNotification(hospitalId, {
             type: 'bed_shortage',
             severity: 'high',
@@ -126,7 +126,7 @@ export function monitorCriticalIncidents(hospitalId, callback) {
             });
           }
 
-          // Create notification in Firestore
+          // Create notification in Database
           createNotification(hospitalId, {
             type: 'critical_incident',
             severity: incident.severity,
@@ -195,7 +195,7 @@ export function monitorShiftConflicts(hospitalId, callback) {
             });
           }
 
-          // Create notification in Firestore
+          // Create notification in Database
           createNotification(hospitalId, {
             type: 'shift_conflict',
             severity: 'medium',
@@ -273,7 +273,7 @@ function shiftsOverlap(shift1, shift2) {
 }
 
 /**
- * Create a notification in Firestore
+ * Create a notification in Database
  * @param {string} hospitalId - Hospital/Institution ID
  * @param {Object} notificationData - Notification data
  */

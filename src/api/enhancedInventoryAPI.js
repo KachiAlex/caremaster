@@ -26,8 +26,8 @@ import {
   Timestamp,
   writeBatch
 } from 'backend/database';
-import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
+import { db } from '../backend/config';
 
 const SUPPLIERS_COLLECTION = 'suppliers';
 const PURCHASE_ORDERS_COLLECTION = 'purchaseOrders';

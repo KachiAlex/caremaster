@@ -149,7 +149,7 @@ class ErrorHandler {
   generateUserMessage(error, context = {}) {
     const errorType = this.determineErrorType(error);
     
-    // Handle specific Firebase error codes with more detailed messages
+    // Handle specific Backend error codes with more detailed messages
     if (error.code) {
       const specificMessage = this.getSpecificErrorMessage(error.code, error.message);
       if (specificMessage) {
@@ -221,7 +221,7 @@ class ErrorHandler {
     }
   }
 
-  // Get specific error message for Firebase error codes
+  // Get specific error message for Backend error codes
   getSpecificErrorMessage(errorCode, defaultMessage) {
     const errorMessages = {
       'auth/email-already-in-use': 'This email address is already registered.',

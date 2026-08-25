@@ -43,6 +43,11 @@ const schemas = {
     password: Joi.string().required()
   }),
 
+  emailLogin: Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().required()
+  }),
+
   fundWallet: Joi.object({
     amount: Joi.number().positive().precision(2).required()
       .messages({

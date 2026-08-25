@@ -7,8 +7,8 @@ import {
   uploadBytesResumable,
   getMetadata
 } from 'backend/storage';
-import { storage } from '../backend/config';
 import logger from '../utils/logger';
+import { storage } from '../backend/config';
 
 class FileStorageService {
   constructor() {

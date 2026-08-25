@@ -8,19 +8,7 @@
  * - Co-pay configuration
  */
 
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  serverTimestamp
-} from 'backend/database';
+import { collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, limit } from 'backend/database';;
 import { db } from '../backend/config';
 
 const HMO_PLANS_COLLECTION = 'hmoPlans';

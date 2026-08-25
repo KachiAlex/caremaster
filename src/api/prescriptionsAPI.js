@@ -13,8 +13,8 @@ import {
   serverTimestamp,
   onSnapshot
 } from 'backend/database';
-import { db } from '../backend/config';
 import { logClientActivity } from './clientActivitiesAPI';
+import { db } from '../backend/config';
 
 const PRESCRIPTIONS_COLLECTION = 'prescriptions';
 const PRESCRIPTION_ITEMS_COLLECTION = 'prescriptionItems';

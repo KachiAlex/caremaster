@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '../api/config';
+import { doc, getDoc } from 'backend/database';
+import { db } from '../backend/config';
 
 const UserContext = createContext();
 
@@ -26,7 +28,16 @@ export const UserProvider = ({ children }) => {
     // Check for existing token on mount
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    
+
+    // Clear any stale dev-token from previous deployments
+    if (token === 'dev-token' || (storedUser && storedUser.includes('dev-admin'))) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      setLoading(false);
+      return;
+    }
+
     if (token && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
@@ -42,11 +53,38 @@ export const UserProvider = ({ children }) => {
         if (userData.institutionId) {
           setInstitutionId(userData.institutionId);
         }
+
+        // Fetch fresh profile from database using firebase_uid or id
+        const userId = userData.uid || userData.id;
+        if (userId) {
+          getDoc(doc(db, 'users', userId))
+            .then((userDoc) => {
+              if (userDoc.exists()) {
+                const dbProfile = userDoc.data();
+                const mergedProfile = { ...userData, ...dbProfile };
+                setUserProfile(mergedProfile);
+                setUser(mergedProfile);
+                localStorage.setItem('user', JSON.stringify(mergedProfile));
+                const dbRole = dbProfile.userType || dbProfile.type || dbProfile.role || role;
+                setUserRole(dbRole);
+                setUserRoles(dbProfile.roles || [dbRole]);
+                if (dbProfile.institutionId) {
+                  setInstitutionId(dbProfile.institutionId);
+                }
+              }
+            })
+            .catch((err) => {
+              console.error('Failed to fetch user profile from database:', err);
+            });
+        }
       } catch (error) {
         console.error('Failed to parse stored user data:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
+    } else {
+      // No existing session — user will be redirected to login
+      setLoading(false);
     }
     
     setLoading(false);

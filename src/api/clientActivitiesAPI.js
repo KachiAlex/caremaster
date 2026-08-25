@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import { 
   collection, 
   doc, 
@@ -13,6 +12,7 @@ import {
   onSnapshot,
   serverTimestamp
 } from 'backend/database';
+import { db } from '../backend/config';
 
 const CLIENT_ACTIVITIES_COLLECTION = 'clientActivities';
 

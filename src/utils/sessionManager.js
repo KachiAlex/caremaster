@@ -1,7 +1,7 @@
 /**
  * Session Manager - Handles multi-tab authentication conflicts
  * 
- * Firebase Auth is shared across all tabs, but we need role-specific sessions.
+ * Backend Auth is shared across all tabs, but we need role-specific sessions.
  * This utility uses sessionStorage (tab-specific) to track the expected role
  * and detects when auth state conflicts with the current tab's role.
  */
@@ -44,7 +44,7 @@ export const clearTabSession = () => {
 };
 
 /**
- * Check if the current Firebase user matches this tab's expected session
+ * Check if the current Backend user matches this tab's expected session
  */
 export const validateTabSession = (currentUser, currentUserRole) => {
   const tabSession = getTabSession();
@@ -145,14 +145,14 @@ export const handleSessionConflict = (validation, navigate, toast) => {
       console.log('🔄 User logged out - clearing session');
       clearTabSession();
       toast.warning('Session expired. Please log in again.');
-      navigate('/institution/login');
+      navigate('/login');
       break;
       
     case 'user_mismatch':
       console.log('🔄 Different user in another tab - clearing session');
       clearTabSession();
       toast.error('⚠️ Different user logged in another tab. This tab has been reset.');
-      setTimeout(() => navigate('/institution/login'), 1500);
+      setTimeout(() => navigate('/login'), 1500);
       break;
       
     case 'role_mismatch':
@@ -169,7 +169,7 @@ export const handleSessionConflict = (validation, navigate, toast) => {
       console.log('🔄 Unknown session conflict - clearing session');
       clearTabSession();
       toast.error('Session conflict detected. Please log in again.');
-      navigate('/institution/login');
+      navigate('/login');
   }
   
   return false;

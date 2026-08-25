@@ -1,3 +1,5 @@
+import { collection, query, getDocs, getDoc, updateDoc, addDoc, where, orderBy, limit, doc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 /**
  * Enhanced Client Activity Logger
  * 
@@ -11,9 +13,6 @@
  * This connects the entire Client database through the registration number.
  */
 
-import { doc, updateDoc, serverTimestamp, getDoc } from 'backend/database';
-import { db } from '../backend/config';
-import { collection, addDoc, query, where, orderBy, getDocs, limit } from 'backend/database';
 
 const PATIENT_ACTIVITIES_COLLECTION = 'patientActivities';
 
@@ -25,7 +24,7 @@ const PATIENT_ACTIVITIES_COLLECTION = 'patientActivities';
  * 
  * @param {Object} activityData
  * @param {string} activityData.clientId - Client registration number (e.g., UC-2025-0001)
- * @param {string} activityData.patientDocId - Client Firestore document ID
+ * @param {string} activityData.patientDocId - Client Database document ID
  * @param {string} activityData.activityType - Type of activity (e.g., 'profile_updated', 'medication_administered')
  * @param {string} activityData.activityDescription - Human-readable description
  * @param {Object} activityData.activityDetails - Additional details about the activity
@@ -60,7 +59,7 @@ export async function logPatientActivity(activityData) {
     const activityLog = {
       // Client identification
       clientId, // Registration number (e.g., UC-2025-0001)
-      patientDocId, // Firestore document ID
+      patientDocId, // Database document ID
       
       // Activity information
       activityType,

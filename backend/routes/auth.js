@@ -4,10 +4,33 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
+const axios = require('axios');
 const db = require('../utils/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { validateRequest, schemas } = require('../middleware/validation');
 const { logger } = require('../utils/logger');
+const { sendPasswordResetEmail } = require('../services/emailService');
+
+// Firebase config for password migration fallback
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || '***REMOVED***';
+
+async function verifyFirebasePassword(email, password) {
+  try {
+    const response = await axios.post(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
+      {
+        email: email,
+        password: password,
+        returnSecureToken: true
+      },
+      { timeout: 8000 }
+    );
+    return response.data;
+  } catch (error) {
+    logger.warn(`Firebase password verification failed for ${email}: ${error.response?.data?.error?.message || error.message}`);
+    return null;
+  }
+}
 
 const router = express.Router();
 
@@ -98,6 +121,86 @@ router.post('/register', validateRequest(schemas.register), async (req, res) => 
   }
 });
 
+// Create staff account (admin only — used by AddCaregiverModal)
+router.post('/create-staff', authenticateToken, async (req, res) => {
+  try {
+    // Only admins can create staff accounts
+    if (!['admin', 'institutionAdmin', 'super_admin'].includes(req.user.user_type)) {
+      return res.status(403).json({ success: false, message: 'Only admins can create staff accounts' });
+    }
+
+    const { email, password, first_name, last_name, phone, user_type, institution_id, department } = req.body;
+
+    if (!email || !password || !first_name) {
+      return res.status(400).json({ success: false, message: 'Email, password, and first name are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    // Check if user already exists
+    const existingUser = await db('users')
+      .whereRaw('LOWER(email) = LOWER(?)', [email.trim().toLowerCase()])
+      .first();
+
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: 'A user with this email already exists' });
+    }
+
+    // Hash password
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    // Generate a unique matric_number (not used for staff login, but column is required)
+    const matric_number = `STAFF/${Date.now().toString().slice(-6)}`;
+
+    // Create user with staff fields
+    const [user] = await db('users')
+      .insert({
+        matric_number,
+        email: email.trim().toLowerCase(),
+        password_hash,
+        first_name,
+        last_name: last_name || '',
+        phone: phone || null,
+        department: department || 'Healthcare',
+        level: '100',
+        session: '2024/2025',
+        user_type: user_type || 'caregiver',
+        institution_id: institution_id || null,
+        is_active: true,
+        is_verified: true,
+        status: 'active'
+      })
+      .returning(['id', 'email', 'first_name', 'last_name', 'user_type', 'institution_id', 'phone']);
+
+    logger.info(`Staff account created by admin ${req.user.email}: ${email} (${user_type})`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Staff account created successfully',
+      data: {
+        user: {
+          id: user.id,
+          uid: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          userType: user.user_type,
+          institutionId: user.institution_id,
+          status: 'active'
+        }
+      }
+    });
+
+  } catch (error) {
+    logger.error('Create staff error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create staff account' });
+  }
+});
+
 // Login
 router.post('/login', validateRequest(schemas.login), async (req, res) => {
   try {
@@ -182,6 +285,142 @@ router.post('/login', validateRequest(schemas.login), async (req, res) => {
 
   } catch (error) {
     logger.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Login failed. Please try again.'
+    });
+  }
+});
+
+// Login with email and password (for all users - replaces Firebase Auth)
+router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user by email
+    const user = await db('users')
+      .whereRaw('LOWER(email) = LOWER(?)', [email.trim().toLowerCase()])
+      .first();
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Check if account is active
+    if (!user.is_active) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been deactivated. Please contact support.'
+      });
+    }
+
+    // Check if account is suspended
+    if (user.status === 'suspended') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended. Please contact support.'
+      });
+    }
+
+    // Verify password
+    let isPasswordValid = false;
+    let passwordMigrated = false;
+    if (user.password_hash) {
+      isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    }
+
+    // If bcrypt check fails, try Firebase Auth as fallback (for migrated users)
+    if (!isPasswordValid) {
+      const firebaseResult = await verifyFirebasePassword(email, password);
+      if (firebaseResult && firebaseResult.localId) {
+        isPasswordValid = true;
+        // Migrate password to bcrypt in PostgreSQL
+        try {
+          const salt = await bcrypt.genSalt(12);
+          const newHash = await bcrypt.hash(password, salt);
+          await db('users').where({ id: user.id }).update({
+            password_hash: newHash,
+            firebase_uid: firebaseResult.localId
+          });
+          passwordMigrated = true;
+          logger.info(`Password migrated from Firebase to bcrypt for user: ${user.email}`);
+        } catch (migrationError) {
+          logger.error(`Failed to migrate password for ${user.email}: ${migrationError.message}`);
+        }
+      }
+    }
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Update last login
+    await db('users')
+      .where({ id: user.id })
+      .update({ last_login: new Date() });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        user_type: user.user_type
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    // Log login
+    await db('audit_logs').insert({
+      user_id: user.id,
+      action: 'login',
+      resource_type: 'user',
+      resource_id: user.id,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent')
+    });
+
+    logger.info(`User logged in via email: ${user.email}`);
+
+    // Build user profile response
+    const userProfile = {
+      id: user.id,
+      uid: user.firebase_uid || user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      displayName: user.display_name || `${user.first_name} ${user.last_name}`.trim(),
+      phone: user.phone,
+      photo_url: user.photo_url,
+      userType: user.user_type,
+      roles: user.roles || [user.user_type],
+      institutionId: user.institution_id,
+      department: user.department,
+      specialization: user.specialization,
+      onboardingComplete: user.onboarding_complete,
+      status: user.status,
+      is_active: user.is_active,
+      is_verified: user.is_verified,
+      two_factor_enabled: user.two_factor_enabled
+    };
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        token,
+        user: userProfile
+      }
+    });
+
+  } catch (error) {
+    logger.error('Email login error:', error);
     res.status(500).json({
       success: false,
       message: 'Login failed. Please try again.'
@@ -323,6 +562,188 @@ router.get('/profile', authenticateToken, async (req, res) => {
       success: false,
       message: 'Failed to fetch profile'
     });
+  }
+});
+
+// Get current user profile (full - for frontend auth)
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const user = req.user;
+
+    const userProfile = {
+      id: user.id,
+      uid: user.firebase_uid || user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      displayName: user.display_name || `${user.first_name} ${user.last_name}`.trim(),
+      phone: user.phone,
+      photo_url: user.photo_url,
+      userType: user.user_type,
+      roles: user.roles || [user.user_type],
+      institutionId: user.institution_id,
+      department: user.department,
+      specialization: user.specialization,
+      onboardingComplete: user.onboarding_complete,
+      status: user.status,
+      is_active: user.is_active,
+      is_verified: user.is_verified,
+      two_factor_enabled: user.two_factor_enabled
+    };
+
+    res.json({
+      success: true,
+      data: { user: userProfile }
+    });
+  } catch (error) {
+    logger.error('Get me error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user profile'
+    });
+  }
+});
+
+// Forgot Password - Send reset email
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await db('users').where({ email: email.toLowerCase() }).first();
+    
+    // Always return success to prevent user enumeration
+    if (!user) {
+      return res.json({ 
+        success: true, 
+        message: 'If an account exists with this email, a reset link has been sent.' 
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + 3600000); // 1 hour
+
+    await db('users')
+      .where({ id: user.id })
+      .update({
+        password_reset_token: resetToken,
+        password_reset_expires: resetExpires
+      });
+
+    // Send email
+    const resetLink = `${process.env.FRONTEND_URL || 'https://getcaremaster.com'}/reset-password?token=${resetToken}`;
+    await sendPasswordResetEmail({
+      to: user.email,
+      resetLink,
+      userName: user.first_name
+    });
+
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, a reset link has been sent.'
+    });
+  } catch (error) {
+    logger.error('Forgot password error:', error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again later.' });
+  }
+});
+
+// Reset Password - Verify token and update password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ success: false, message: 'Token and new password are required' });
+    }
+
+    const user = await db('users')
+      .where({ password_reset_token: token })
+      .andWhere('password_reset_expires', '>', new Date())
+      .first();
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+    }
+
+    // Hash new password
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    // Update password and clear reset token
+    await db('users')
+      .where({ id: user.id })
+      .update({
+        password_hash,
+        password_reset_token: null,
+        password_reset_expires: null
+      });
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+  } catch (error) {
+    logger.error('Reset password error:', error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again later.' });
+  }
+});
+
+// Public license status check (no auth required - used during login)
+router.get('/license-status/:institutionId', async (req, res) => {
+  try {
+    const { institutionId } = req.params;
+    
+    if (!institutionId) {
+      return res.json({ success: true, active: false, reason: 'no_institution_id' });
+    }
+
+    const licenses = await db('licenses')
+      .where({ institution_id: institutionId })
+      .orderBy('ends_at', 'desc')
+      .limit(1);
+
+    if (!licenses || licenses.length === 0) {
+      return res.json({ success: true, active: false, reason: 'no_license' });
+    }
+
+    const license = licenses[0];
+    const now = new Date();
+    const startDate = new Date(license.starts_at);
+    const endDate = new Date(license.ends_at);
+
+    const isActive = license.active === true && startDate <= now && endDate >= now;
+
+    let reason = 'inactive';
+    if (license.active !== true) {
+      reason = license.suspended_at ? 'license_suspended' : 'license_inactive';
+    } else if (endDate < now) {
+      reason = 'license_expired';
+    } else if (startDate > now) {
+      reason = 'license_not_started';
+    }
+
+    res.json({
+      success: true,
+      active: isActive,
+      reason: isActive ? 'active' : reason,
+      license: {
+        id: license.id,
+        institutionId: license.institution_id,
+        licenseKey: license.license_key,
+        plan: license.plan,
+        seats: license.seats,
+        startsAt: license.starts_at,
+        endsAt: license.ends_at,
+        status: license.status,
+        active: license.active
+      }
+    });
+  } catch (error) {
+    logger.error('License status check error:', error);
+    res.json({ success: true, active: false, reason: 'error', error: error.message });
   }
 });
 

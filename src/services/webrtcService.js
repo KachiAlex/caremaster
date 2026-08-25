@@ -1,16 +1,5 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  onSnapshot, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy,
-  serverTimestamp 
-} from 'backend/database';
-import { db, auth } from '../backend/config';
+import { collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, limit } from 'backend/database';;
+import { auth, db } from '../backend/config';;
 
 class WebRTCService {
   constructor() {
@@ -156,7 +145,7 @@ class WebRTCService {
       this.callId = callId;
       this.isInitiator = true;
 
-      // Create call document in Firebase
+      // Create call document in Backend
       const callDoc = await addDoc(collection(db, 'calls'), {
         callId,
         callerId: this.getCurrentUserId(),
@@ -253,7 +242,7 @@ class WebRTCService {
       }
       
       // If candidate is already an RTCIceCandidate object, use it directly
-      // If it's a plain object from Firestore, create RTCIceCandidate from it
+      // If it's a plain object from Database, create RTCIceCandidate from it
       let iceCandidate = candidate;
       
       if (candidate && !(candidate instanceof RTCIceCandidate)) {
@@ -412,7 +401,7 @@ class WebRTCService {
         this.peerConnection = null;
       }
 
-      // Update call status in Firebase
+      // Update call status in Backend
       if (this.callId) {
         const callsQuery = query(
           collection(db, 'calls'),
@@ -667,7 +656,7 @@ class WebRTCService {
     return this.isScreenSharing;
   }
 
-  // Get current user ID from Firebase Auth
+  // Get current user ID from Backend Auth
   getCurrentUserId() {
     return auth.currentUser?.uid || null;
   }

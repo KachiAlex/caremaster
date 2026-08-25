@@ -25,9 +25,9 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
 import { generateBillFromImaging } from './autoBillingAPI';
+import { db } from '../backend/config';
 
 const IMAGING_REQUESTS_COLLECTION = 'imagingRequests';
 const IMAGING_RESULTS_COLLECTION = 'imagingResults';

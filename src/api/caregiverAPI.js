@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import {
   collection,
   query,
@@ -16,6 +15,7 @@ import {
   getDoc
 } from 'backend/database';
 import { createStandardizedUserData } from '../utils/userCreationHelper';
+import { db } from '../backend/config';
 
 const CAREGIVER_ROLE_FIELDS = {
   userType: 'caregiver',
@@ -111,7 +111,7 @@ export const caregiverAPI = {
             caregivers.push({
               id: doc.id,
               ...data,
-              // Handle both Firestore Timestamps and ISO strings
+              // Handle both Database Timestamps and ISO strings
               joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
               lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
               createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
@@ -121,7 +121,7 @@ export const caregiverAPI = {
 
           return caregivers;
         } catch (indexError) {
-          console.warn('Firestore index not found for caregivers, using simpler query:', indexError);
+          console.warn('Database index not found for caregivers, using simpler query:', indexError);
           // Fallback: query without orderBy
           caregiversQuery = query(
             collection(db, 'caregivers'),
@@ -140,7 +140,7 @@ export const caregiverAPI = {
             caregivers.push({
               id: doc.id,
               ...data,
-              // Handle both Firestore Timestamps and ISO strings
+              // Handle both Database Timestamps and ISO strings
               joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
               lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
               createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
@@ -195,7 +195,7 @@ export const caregiverAPI = {
         caregivers.push({
           id: doc.id,
           ...data,
-          // Handle both Firestore Timestamps and ISO strings
+          // Handle both Database Timestamps and ISO strings
           joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
           lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
@@ -221,7 +221,7 @@ export const caregiverAPI = {
         return {
           id: caregiverDoc.id,
           ...data,
-          // Handle both Firestore Timestamps and ISO strings
+          // Handle both Database Timestamps and ISO strings
           joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
           lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
@@ -348,9 +348,9 @@ export const caregiverAPI = {
         console.log('✅ Deleted from users collection');
       }
       
-      // Note: Firebase Auth user deletion requires admin SDK (backend function)
+      // Note: Backend Auth user deletion requires admin SDK (backend function)
       // For now, we mark the account as deleted in the database
-      // TODO: Implement backend function to delete from Firebase Auth
+      // TODO: Implement backend function to delete from Backend Auth
       
       return { success: true };
     } catch (error) {
@@ -446,7 +446,7 @@ export const caregiverAPI = {
         assignments.push({
           id: doc.id,
           ...data,
-          // Handle both Firestore Timestamps and ISO strings
+          // Handle both Database Timestamps and ISO strings
           assignedAt: data.assignedAt?.toDate ? data.assignedAt.toDate() : (data.assignedAt ? new Date(data.assignedAt) : null),
           endDate: data.endDate?.toDate ? data.endDate.toDate() : (data.endDate ? new Date(data.endDate) : null),
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
@@ -556,7 +556,7 @@ export const caregiverAPI = {
         schedule.push({
           id: doc.id,
           ...data,
-          // Handle both Firestore Timestamps and ISO strings
+          // Handle both Database Timestamps and ISO strings
           scheduledDate: data.scheduledDate?.toDate ? data.scheduledDate.toDate() : (data.scheduledDate ? new Date(data.scheduledDate) : null),
           startTime: data.startTime?.toDate ? data.startTime.toDate() : (data.startTime ? new Date(data.startTime) : null),
           endTime: data.endTime?.toDate ? data.endTime.toDate() : (data.endTime ? new Date(data.endTime) : null),
@@ -631,7 +631,7 @@ export const caregiverAPI = {
         earnings.push({
           id: doc.id,
           ...data,
-          // Handle both Firestore Timestamps and ISO strings
+          // Handle both Database Timestamps and ISO strings
           earnedDate: data.earnedDate?.toDate ? data.earnedDate.toDate() : (data.earnedDate ? new Date(data.earnedDate) : null),
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null)
         });
@@ -660,7 +660,7 @@ export const caregiverAPI = {
       const schedule = await caregiverAPI.getCaregiverSchedule(caregiverId, dateRange);
       analytics.totalHours = schedule.reduce((total, shift) => {
         if (shift.actualStartTime && shift.actualEndTime) {
-          // Handle both Date objects and Firestore Timestamps
+          // Handle both Date objects and Database Timestamps
           const start = shift.actualStartTime instanceof Date ? shift.actualStartTime : (shift.actualStartTime.toDate ? shift.actualStartTime.toDate() : new Date(shift.actualStartTime));
           const end = shift.actualEndTime instanceof Date ? shift.actualEndTime : (shift.actualEndTime.toDate ? shift.actualEndTime.toDate() : new Date(shift.actualEndTime));
           return total + (end - start) / (1000 * 60 * 60); // Convert to hours
@@ -717,7 +717,7 @@ export const caregiverAPI = {
         caregivers.push({
           id: doc.id,
           ...data,
-          // Handle both Firestore Timestamps and ISO strings
+          // Handle both Database Timestamps and ISO strings
           joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
           lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),

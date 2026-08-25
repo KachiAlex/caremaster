@@ -1,6 +1,6 @@
 /**
  * License API
- * Direct Firestore access for license management (bypasses Cloud Functions CORS issues)
+ * Direct Database access for license management (bypasses Cloud Functions CORS issues)
  */
 
 import { 
@@ -18,8 +18,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
-import { db, auth } from '../backend/config';
-import { createUserWithEmailAndPassword } from 'backend/auth';
+import { db } from '../backend/config';
 
 const LICENSES_COLLECTION = 'licenses';
 const INSTITUTIONS_COLLECTION = 'institutions';
@@ -28,103 +27,33 @@ const INSTITUTIONS_COLLECTION = 'institutions';
 export const getLicenseStatus = async (institutionId) => {
   try {
     console.log('🔍 LICENSE CHECK - Institution ID:', institutionId);
-    
+
     if (!institutionId) {
       console.warn('❌ LICENSE CHECK - No institution ID provided');
       return { active: false, reason: 'no_institution_id' };
     }
 
-    // Query licenses for this institution
-    // Try with orderBy first, fall back to simple query if index doesn't exist
-    let snapshot;
-    try {
-      const q = query(
-        collection(db, LICENSES_COLLECTION),
-        where('institutionId', '==', institutionId),
-        orderBy('endsAt', 'desc')
-      );
-      snapshot = await getDocs(q);
-    } catch (indexError) {
-      // If index doesn't exist, use simple query without orderBy
-      console.warn('⚠️ LICENSE CHECK - Index not found, using simple query');
-      const simpleQ = query(
-        collection(db, LICENSES_COLLECTION),
-        where('institutionId', '==', institutionId)
-      );
-      snapshot = await getDocs(simpleQ);
+    // Use the public license-status endpoint (no auth required)
+    const API_BASE = process.env.REACT_APP_API_URL || 'https://getcaremaster.com/api';
+    const res = await fetch(`${API_BASE}/auth/license-status/${institutionId}`);
+    const body = await res.json();
+
+    if (!res.ok || !body.success) {
+      console.warn('❌ LICENSE CHECK - API returned error:', body);
+      return { active: false, reason: body.reason || 'check_error' };
     }
 
-    console.log('📋 LICENSE CHECK - Found licenses:', snapshot.size);
-
-    if (snapshot.empty) {
-      console.warn(`❌ LICENSE CHECK - No license found for institution: ${institutionId}`);
-      return { active: false, reason: 'no_license' };
-    }
-
-    // Get the most recent license (sort in memory if not sorted by query)
-    let mostRecentLicense = null;
-    const allLicenses = [];
-    
-    snapshot.forEach((doc) => {
-      const licenseData = { id: doc.id, ...doc.data() };
-      console.log('📄 LICENSE CHECK - License data:', {
-        id: doc.id,
-        licenseKey: licenseData.licenseKey,
-        status: licenseData.status,
-        active: licenseData.active,
-        endsAt: licenseData.endsAt
-      });
-      allLicenses.push(licenseData);
+    console.log('✅ LICENSE CHECK - License status:', {
+      active: body.active,
+      reason: body.reason,
+      hasLicense: !!body.license
     });
 
-    // Sort by endsAt in memory to get most recent
-    allLicenses.sort((a, b) => {
-      const aEndsAt = a.endsAt?.toDate ? a.endsAt.toDate() : new Date(a.endsAt);
-      const bEndsAt = b.endsAt?.toDate ? b.endsAt.toDate() : new Date(b.endsAt);
-      return bEndsAt - aEndsAt; // Descending order (most recent first)
-    });
-
-    mostRecentLicense = allLicenses[0];
-
-    if (!mostRecentLicense) {
-      console.warn('❌ LICENSE CHECK - No valid license found');
-      return { active: false, reason: 'no_valid_license' };
-    }
-
-    // Check if license is active
-    const now = new Date();
-    const endsAt = mostRecentLicense.endsAt?.toDate ? mostRecentLicense.endsAt.toDate() : new Date(mostRecentLicense.endsAt);
-    const startsAt = mostRecentLicense.startsAt?.toDate ? mostRecentLicense.startsAt.toDate() : new Date(mostRecentLicense.startsAt || mostRecentLicense.createdAt);
-
-    const isActiveStatus = mostRecentLicense.status === 'active' || mostRecentLicense.active === true;
-    const isWithinDateRange = startsAt <= now && endsAt >= now;
-    const active = isActiveStatus && isWithinDateRange;
-
-    console.log('🔍 LICENSE CHECK - Validation:', {
-      institutionId,
-      licenseKey: mostRecentLicense.licenseKey,
-      isActiveStatus,
-      isWithinDateRange,
-      startsAt: startsAt.toISOString(),
-      endsAt: endsAt.toISOString(),
-      now: now.toISOString(),
-      finalActive: active,
-      reason: !active ? (!isActiveStatus ? 'suspended' : 'expired') : 'valid'
-    });
-
-    if (!active) {
-      if (!isActiveStatus) {
-        console.warn('❌ LICENSE CHECK - License is suspended/inactive');
-        return { active: false, reason: 'license_suspended', license: mostRecentLicense };
-      }
-      if (!isWithinDateRange) {
-        console.warn('❌ LICENSE CHECK - License is expired');
-        return { active: false, reason: 'license_expired', license: mostRecentLicense };
-      }
-    }
-
-    console.log('✅ LICENSE CHECK - License is ACTIVE');
-    return { active, license: mostRecentLicense };
+    return {
+      active: body.active,
+      reason: body.reason || (body.active ? 'active' : 'inactive'),
+      license: body.license
+    };
   } catch (error) {
     console.error('❌ LICENSE CHECK - Error:', error);
     // Security: Default to inactive on error
@@ -364,9 +293,9 @@ export const assignInstitutionAdmin = async ({ institutionId, email, displayName
       
       console.log('✅ Existing user updated as admin:', email);
     } else {
-      // Create new user in Firebase Auth (Note: This requires the current user to be signed out temporarily)
+      // Create new user in Backend Auth (Note: This requires the current user to be signed out temporarily)
       // For production, this should be done via Cloud Functions with admin SDK
-      console.warn('⚠️ Cannot create new Firebase Auth users from client. User must exist first.');
+      console.warn('⚠️ Cannot create new Backend Auth users from client. User must exist first.');
       throw new Error('User does not exist. Please create the user account first or use Cloud Functions.');
     }
 

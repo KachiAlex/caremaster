@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import { 
   doc, 
   getDoc, 
@@ -13,9 +12,9 @@ import {
   orderBy,
   limit
 } from 'backend/database';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'backend/storage';
-import { storage } from '../backend/config';
 import { toast } from 'react-toastify';
+import { uploadBytes, getDownloadURL, deleteObject } from 'backend/storage';
+import { db, storage } from '../backend/config';;
 
 export const caregiverSettingsAPI = {
   // Get caregiver settings
@@ -212,7 +211,7 @@ export const caregiverSettingsAPI = {
   // Change password
   changePassword: async (caregiverId, currentPassword, newPassword) => {
     try {
-      // This would typically involve Firebase Auth
+      // This would typically involve Backend Auth
       // For now, we'll simulate the process
       const settingsRef = doc(db, 'caregiverSettings', caregiverId);
       await updateDoc(settingsRef, {

@@ -47,9 +47,9 @@ export function handleAPIError(error, context = 'api_call', options = {}) {
 
   let apiError;
 
-  // Handle Firebase errors
+  // Handle Backend errors
   if (error.code) {
-    apiError = handleFirebaseError(error, context, defaultMessage);
+    apiError = handleBackendError(error, context, defaultMessage);
   } 
   // Handle network errors
   else if (error.message?.includes('network') || error.message?.includes('fetch')) {
@@ -102,9 +102,9 @@ export function handleAPIError(error, context = 'api_call', options = {}) {
 }
 
 /**
- * Handle Firebase-specific errors
+ * Handle Backend-specific errors
  */
-function handleFirebaseError(error, context, defaultMessage) {
+function handleBackendError(error, context, defaultMessage) {
   const errorMap = {
     'permission-denied': {
       message: 'You don\'t have permission to perform this action.',
@@ -170,7 +170,7 @@ function handleFirebaseError(error, context, defaultMessage) {
 
   const errorInfo = errorMap[error.code] || {
     message: error.message || defaultMessage,
-    code: 'UNKNOWN_FIREBASE_ERROR',
+    code: 'UNKNOWN_BACKEND_ERROR',
     statusCode: 500
   };
 
@@ -179,7 +179,7 @@ function handleFirebaseError(error, context, defaultMessage) {
     errorInfo.code,
     errorInfo.statusCode,
     { 
-      firebaseCode: error.code,
+      backendCode: error.code,
       originalError: error.message 
     }
   );

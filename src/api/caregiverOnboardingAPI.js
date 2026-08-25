@@ -1,7 +1,7 @@
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, query, where, getDocs } from 'backend/database';
-import { ref, uploadBytes, getDownloadURL } from 'backend/storage';
-import { db, storage } from '../backend/config';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from './notificationsAPI';
+import { collection, query, getDocs, getDoc, setDoc, updateDoc, where, doc, serverTimestamp } from 'backend/database';
+import { uploadBytes, getDownloadURL } from 'backend/storage';
+import { db, storage } from '../backend/config';;
 
 export const saveCaregiverProfile = async (uid, profile, isDraft = false) => {
   const caregiverRef = doc(db, 'caregivers', uid);

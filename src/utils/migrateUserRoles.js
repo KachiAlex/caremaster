@@ -10,9 +10,9 @@
  * - Or use the standalone HTML file for one-time migration
  */
 
-import { collection, getDocs, doc, updateDoc, writeBatch } from 'backend/database';
-import { db } from '../backend/config';
 import { ROLES } from '../constants/roles';
+import { collection, getDocs, updateDoc, doc, writeBatch } from 'backend/database';
+import { db } from '../backend/config';
 
 /**
  * Infer role from user profile data

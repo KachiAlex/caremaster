@@ -4,6 +4,8 @@
  */
 
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
+import { collection, query, getDocs, where } from 'backend/database';
+import { db } from '../backend/config';
 
 /**
  * Check if vital signs are abnormal and send notification
@@ -79,7 +81,7 @@ export const checkAbnormalVitalSigns = async (vitalSignData, patientSimpleId, cl
     // Send notifications for each alert
     if (alerts.length > 0) {
       // Get all doctors and admins for the institution
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const { collection, query, where, getDocs } = await import('backend/database');
       const { db } = await import('../backend/config');
       
       const usersRef = collection(db, 'users');
@@ -148,7 +150,7 @@ export const notifyCriticalEvent = async (logData, institutionId) => {
     }
     
     // Get admins for the institution
-    const { collection, query, where, getDocs } = await import('firebase/firestore');
+    const { collection, query, where, getDocs } = await import('backend/database');
     const { db } = await import('../backend/config');
     
     const usersRef = collection(db, 'users');

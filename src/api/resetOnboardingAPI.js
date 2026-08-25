@@ -1,4 +1,4 @@
-import { doc, updateDoc, serverTimestamp } from 'backend/database';
+import { collection, updateDoc, doc, serverTimestamp } from 'backend/database';
 import { db } from '../backend/config';
 
 // Reset onboarding status for a specific user
@@ -39,7 +39,7 @@ export const resetAllCaregiverOnboarding = async () => {
     
     // This would require admin privileges to query all users
     // For now, we'll provide a manual way to reset specific users
-    console.log('⚠️  Use resetUserOnboarding() for specific users, or manually reset in Firebase Console');
+    console.log('⚠️  Use resetUserOnboarding() for specific users, or manually reset in Backend Console');
     
     return { success: true, message: 'Manual reset required' };
   } catch (error) {

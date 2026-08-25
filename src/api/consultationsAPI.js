@@ -12,11 +12,11 @@ import {
   limit,
   serverTimestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import { logClientActivity } from './clientActivitiesAPI';
 import { notificationsAPI } from './notificationsAPI';
 import { logConsultation } from '../utils/patientLogger';
 import { handleAPIError, validateAPIRequest } from '../utils/apiErrorHandler';
+import { db } from '../backend/config';
 
 const CONSULTATIONS_COLLECTION = 'consultations';
 

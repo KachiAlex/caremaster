@@ -11,7 +11,7 @@ import {
   serverTimestamp,
   getDocs,
   getDoc,
-  limit as firestoreLimit
+  limit as databaseLimit
 } from 'backend/database';
 import { db } from '../backend/config';
 
@@ -23,7 +23,7 @@ class AdlAPI {
         collection(db, 'adlLogs'),
         where('clientId', '==', clientId),
         orderBy('timestamp', 'desc'),
-        firestoreLimit(limitCount)
+        databaseLimit(limitCount)
       );
 
       const snapshot = await getDocs(logsQuery);
@@ -133,7 +133,7 @@ class AdlAPI {
         collection(db, 'adlLogs'),
         where('caregiverId', '==', caregiverId),
         orderBy('timestamp', 'desc'),
-        firestoreLimit(limitCount)
+        databaseLimit(limitCount)
       );
 
       const snapshot = await getDocs(logsQuery);

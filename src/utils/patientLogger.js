@@ -1,3 +1,5 @@
+import { collection, query, getDocs, addDoc, where, orderBy, limit, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 /**
  * Client Logger Utility
  * 
@@ -12,8 +14,6 @@
  * All logs are stored in the Client's database
  */
 
-import { collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from 'backend/database';
-import { db } from '../backend/config';
 
 const PATIENT_LOGS_COLLECTION = 'patientLogs';
 

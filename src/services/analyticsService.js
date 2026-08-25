@@ -1,6 +1,6 @@
-import { addDoc, collection, serverTimestamp } from 'backend/database';
-import { db } from '../backend/config';
 import logger from '../utils/logger';
+import { collection, addDoc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
 
 const ANALYTICS_COLLECTION = 'analyticsEvents';
 

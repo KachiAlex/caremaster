@@ -15,9 +15,9 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import logger from '../utils/logger';
 import errorHandler from '../utils/errorHandler';
+import { db } from '../backend/config';
 
 const ASSIGNMENTS_COLLECTION = 'clientAssignments';
 const ASSIGNMENT_REQUESTS_COLLECTION = 'assignmentRequests';

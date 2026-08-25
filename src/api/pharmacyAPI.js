@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import { 
   collection, 
   query, 
@@ -15,6 +14,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
+import { db } from '../backend/config';
 
 export const pharmacyAPI = {
   // Get prescriptions assigned to pharmacy for a specific client

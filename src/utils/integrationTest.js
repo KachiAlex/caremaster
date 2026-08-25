@@ -3,14 +3,14 @@
  * Validates all major system components are working together
  */
 
-import { auth } from '../backend/config';
-import { onAuthStateChanged } from 'backend/auth';
 import { getAllUsers } from '../api/usersAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { medicationAPI } from '../api/medicationAPI';
 import { getVitalSignsByClient } from '../api/vitalSignsAPI';
 import { emergencyAPI } from '../api/emergencyAPI';
 import logger from './logger';
+import { auth } from '../backend/config';
+import { onAuthStateChanged } from 'backend/auth';
 
 export const runIntegrationTests = async () => {
   console.log('🚀 Starting Care Master Integration Tests...\n');
@@ -23,7 +23,7 @@ export const runIntegrationTests = async () => {
     vitalSigns: false,
     emergencySystem: false,
     dataConnect: false,
-    firestore: false
+    database: false
   };
 
   try {
@@ -97,18 +97,18 @@ export const runIntegrationTests = async () => {
       results.dataConnect = true;
       console.log('✅ Data Connect: Connected');
     } catch (error) {
-      console.log('⚠️ Data Connect: Using Firestore fallback -', error.message);
+      console.log('⚠️ Data Connect: Using Database fallback -', error.message);
       results.dataConnect = false; // Not a failure, just using fallback
     }
 
-    // Test 8: Firestore Connection
-    console.log('🗄️ Testing Firestore Connection...');
+    // Test 8: Database Connection
+    console.log('🗄️ Testing Database Connection...');
     try {
-      // Firestore test is implicit in other tests
-      results.firestore = results.userManagement || results.assignments || results.medications;
-      console.log(results.firestore ? '✅ Firestore: Connected' : '❌ Firestore: Failed');
+      // Database test is implicit in other tests
+      results.database = results.userManagement || results.assignments || results.medications;
+      console.log(results.database ? '✅ Database: Connected' : '❌ Database: Failed');
     } catch (error) {
-      console.log('❌ Firestore: Failed -', error.message);
+      console.log('❌ Database: Failed -', error.message);
     }
 
   } catch (error) {

@@ -13,7 +13,7 @@ export function generateCSPHeader() {
     'script-src': [
       "'self'",
       "'unsafe-inline'", // Required for React
-      "'unsafe-eval'", // Required for some Firebase features
+      "'unsafe-eval'", // Required for some Backend features
       'https://www.gstatic.com',
       'https://www.google.com',
       'https://apis.google.com',
@@ -37,11 +37,11 @@ export function generateCSPHeader() {
     ],
     'connect-src': [
       "'self'",
-      'https://*.firebaseio.com',
+      'https://*.backendio.com',
       'https://*.googleapis.com',
       'https://identitytoolkit.googleapis.com',
       'https://securetoken.googleapis.com',
-      'wss://*.firebaseio.com'
+      'wss://*.backendio.com'
     ],
     'frame-src': [
       "'self'",

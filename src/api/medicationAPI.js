@@ -1,4 +1,3 @@
-import { db, functions } from '../backend/config';
 import { 
   collection, 
   query, 
@@ -14,23 +13,24 @@ import {
   serverTimestamp,
   getDoc
 } from 'backend/database';
-import { httpsCallable } from 'backend/functions';
 import dataConnectService from '../services/dataConnectService';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
+import { httpsCallable } from 'backend/functions';
+import { db, functions } from '../backend/config';;
 
-// Firebase Functions
+// Backend Functions
 const createMedicationReminder = httpsCallable(functions, 'createMedicationReminder');
 const logMedicationDose = httpsCallable(functions, 'logMedicationDose');
 const getMedicationAnalytics = httpsCallable(functions, 'getMedicationAnalytics');
 
 export const medicationAPI = {
-  // Get all medications with filtering (prefer Firestore when a clientId is provided)
+  // Get all medications with filtering (prefer Database when a clientId is provided)
   getMedications: async (filters = {}) => {
     try {
       logger.debug('Fetching medications', { filters });
       
-      // When a specific clientId is provided (doctor/caregiver views), use Firestore directly.
+      // When a specific clientId is provided (doctor/caregiver views), use Database directly.
       // Data Connect often expects a Client profile context and can fail for provider lookups.
       if (!filters.clientId) {
         // Try Data Connect only for current-user context (likely Client portal)
@@ -38,11 +38,11 @@ export const medicationAPI = {
           const result = await dataConnectService.getCurrentUserMedications();
           return result.data || [];
         } catch (dataConnectError) {
-          logger.warn('Data Connect failed, falling back to Firestore', { error: dataConnectError });
+          logger.warn('Data Connect failed, falling back to Database', { error: dataConnectError });
         }
       }
       
-      // Fallback to Firestore with simplified query to avoid index requirements
+      // Fallback to Database with simplified query to avoid index requirements
       let medicationsQuery;
       
       if (filters.clientId) {
@@ -501,7 +501,7 @@ export const medicationAPI = {
     });
   },
 
-  // Create medication reminder (using Firebase Functions)
+  // Create medication reminder (using Backend Functions)
   createReminder: async (medicationId, reminderData) => {
     try {
       logger.debug('Creating medication reminder', { medicationId, reminderData });
@@ -523,7 +523,7 @@ export const medicationAPI = {
     }
   },
 
-  // Log medication dose (using Firebase Functions)
+  // Log medication dose (using Backend Functions)
   logDose: async (medicationId, doseData) => {
     try {
       logger.debug('Logging medication dose', { medicationId, doseData });
@@ -545,7 +545,7 @@ export const medicationAPI = {
     }
   },
 
-  // Get medication analytics (using Firebase Functions)
+  // Get medication analytics (using Backend Functions)
   getAnalytics: async (clientId, dateRange = {}) => {
     try {
       logger.debug('Getting medication analytics', { clientId, dateRange });

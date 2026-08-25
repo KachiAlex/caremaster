@@ -103,7 +103,7 @@ export const exportToJSON = (data, filename = 'export') => {
 const getNestedValue = (obj, path) => {
   return path.split('.').reduce((current, key) => {
     if (current && typeof current === 'object') {
-      // Handle Firestore Timestamps
+      // Handle Database Timestamps
       if (current[key]?.toDate) {
         return current[key].toDate().toLocaleString();
       }

@@ -22,8 +22,8 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
+import { db } from '../backend/config';
 
 const ATTENDANCE_COLLECTION = 'attendance';
 const LEAVE_REQUESTS_COLLECTION = 'leaveRequests';

@@ -349,7 +349,7 @@ class TelemedicineAPI {
 
   // ===== UTILITY METHODS =====
   
-  // Convert Firestore timestamp to JavaScript Date
+  // Convert Database timestamp to JavaScript Date
   convertTimestamp(timestamp) {
     if (timestamp && timestamp.toDate) {
       return timestamp.toDate();

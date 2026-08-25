@@ -18,8 +18,7 @@ import {
   browserLocalPersistence,
   Timestamp
 } from 'backend/auth';
-import { auth, db } from '../config/firebaseConfig';
-import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from 'backend/database';
+import { auth, db } from '../backend/config';
 import { validateEmail, validatePassword, escapeHtml } from '../utils/inputValidation';
 import { escapeHtml as escapeHtmlXss } from '../utils/xssProtection';
 import {
@@ -30,6 +29,7 @@ import {
   detectSuspiciousActivity
 } from './accountLockoutService';
 import logger from '../utils/logger';
+import { collection, query, getDocs, getDoc, setDoc, updateDoc, where, doc } from 'backend/database';
 
 /**
  * Get user's IP address
@@ -187,7 +187,7 @@ export const secureRegister = async (email, password, fullName, role = 'patient'
       displayName: sanitizedName
     });
 
-    // Create user document in Firestore
+    // Create user document in Database
     const userDoc = {
       uid: userCredential.user.uid,
       email: sanitizedEmail,
@@ -393,7 +393,7 @@ export const updateEmailSecure = async (newEmail) => {
     // Update email
     await updateEmail(user, newEmail.toLowerCase());
 
-    // Update Firestore user document
+    // Update Database user document
     await updateDoc(doc(db, 'users', user.uid), {
       email: newEmail.toLowerCase(),
       updatedAt: new Date()
@@ -422,7 +422,7 @@ export const updateEmailSecure = async (newEmail) => {
  */
 export const sendEmailVerificationSecure = async (user) => {
   try {
-    // This should be implemented via Firebase Cloud Functions
+    // This should be implemented via Backend Cloud Functions
     // or your backend API for better security
     logger.info('Email verification queued', {
       userId: user.uid.substring(0, 10),
@@ -448,7 +448,7 @@ export const getCurrentUserSecure = async () => {
       }
 
       try {
-        // Fetch additional user data from Firestore
+        // Fetch additional user data from Database
         const userDoc = await getDoc(doc(db, 'users', user.uid));
 
         if (!userDoc.exists()) {

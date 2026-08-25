@@ -8,7 +8,6 @@
  * - Activity-based time tracking
  */
 
-import { db } from '../backend/config';
 import { 
   collection, 
   doc, 
@@ -21,6 +20,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
+import { db } from '../backend/config';
 
 /**
  * SUGGESTED HOURLY RATE WAGE STRUCTURE:

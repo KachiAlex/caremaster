@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import {
   collection,
   doc,
@@ -12,6 +11,7 @@ import {
   orderBy,
   serverTimestamp
 } from 'backend/database';
+import { db } from '../backend/config';
 
 const REPORTS_COLLECTION = 'clientReports';
 const CARE_LOGS_COLLECTION = 'clientCareLogs';

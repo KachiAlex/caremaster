@@ -139,7 +139,7 @@ export const clearAllUsers = async () => {
   try {
     console.log('This function would clear all users. Implement with caution!');
     // Note: This is a placeholder. In a real app, you'd want to implement
-    // batch deletion or use Firebase Admin SDK for bulk operations
+    // batch deletion or use Backend Admin SDK for bulk operations
     return false;
   } catch (error) {
     console.error('Error clearing users:', error);

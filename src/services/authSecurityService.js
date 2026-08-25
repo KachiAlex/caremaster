@@ -10,11 +10,11 @@ import {
   PhoneAuthProvider,
   RecaptchaVerifier
 } from 'backend/auth';
-import { auth } from '../backend/config';
 import encryptionService from './encryptionService';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
 import secureConfigService from './secureConfigService';
+import { auth } from '../backend/config';
 
 class AuthSecurityService {
   constructor() {

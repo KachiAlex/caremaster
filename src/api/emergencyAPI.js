@@ -1,23 +1,10 @@
-import { db, functions } from '../backend/config';
-import { 
-  collection, 
-  query, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  deleteDoc,
-  addDoc,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp
-} from 'backend/database';
-import { httpsCallable } from 'backend/functions';
+import { collection, query, getDocs, doc, updateDoc, deleteDoc, addDoc, where, orderBy, limit, onSnapshot, serverTimestamp, getDoc } from 'backend/database';;
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
+import { httpsCallable } from 'backend/functions';
+import { db, functions } from '../backend/config';;
 
-// Firebase Functions
+// Backend Functions
 const processEmergencyAlert = httpsCallable(functions, 'processEmergencyAlert');
 const coordinateEmergencyResponse = httpsCallable(functions, 'coordinateEmergencyResponse');
 const updateEmergencyStatus = httpsCallable(functions, 'updateEmergencyStatus');
@@ -333,7 +320,7 @@ export const emergencyAPI = {
     }
   },
 
-  // Process emergency alert (using Firebase Functions)
+  // Process emergency alert (using Backend Functions)
   processAlert: async (emergencyData) => {
     try {
       logger.warn('Processing emergency alert', { emergencyData });
@@ -354,7 +341,7 @@ export const emergencyAPI = {
     }
   },
 
-  // Coordinate emergency response (using Firebase Functions)
+  // Coordinate emergency response (using Backend Functions)
   coordinateResponse: async (emergencyId, responseData) => {
     try {
       logger.info('Coordinating emergency response', { emergencyId, responseData });
@@ -379,7 +366,7 @@ export const emergencyAPI = {
     }
   },
 
-  // Update emergency status (using Firebase Functions)
+  // Update emergency status (using Backend Functions)
   updateStatus: async (emergencyId, status, notes) => {
     try {
       logger.info('Updating emergency status', { emergencyId, status, notes });

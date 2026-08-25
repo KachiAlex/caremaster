@@ -1,10 +1,10 @@
+import { getDoc, updateDoc, doc } from 'backend/database';
+import { db } from '../backend/config';
 /**
  * Client-side utility to fix caregiver userType issues
  * Can be called directly from the browser console or a component
  */
 
-import { doc, updateDoc, getDoc } from 'backend/database';
-import { db } from '../backend/config';
 
 export const fixCaregiverUserType = async (userId) => {
   try {

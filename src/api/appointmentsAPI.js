@@ -61,7 +61,7 @@ export const getAllAppointments = async (institutionId = null) => {
       });
     } catch (indexError) {
       // Fallback: query without orderBy if index doesn't exist
-      console.warn('Firestore index not found for appointments, using simpler query:', indexError);
+      console.warn('Database index not found for appointments, using simpler query:', indexError);
       let q = query(appointmentsRef);
       
       if (institutionId) {

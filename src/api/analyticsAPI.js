@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import { 
   collection, 
   query, 
@@ -11,6 +10,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
+import { db } from '../backend/config';
 
 export const analyticsAPI = {
   // Get overview analytics

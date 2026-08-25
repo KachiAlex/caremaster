@@ -1,9 +1,9 @@
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'backend/storage';
-import { storage } from '../backend/config';
 import { toast } from 'react-toastify';
+import { storage } from '../backend/config';
+import { uploadBytes, getDownloadURL, deleteObject } from 'backend/storage';
 
 /**
- * Upload a profile picture to Firebase Storage
+ * Upload a profile picture to Backend Storage
  * @param {File} file - The image file to upload
  * @param {string} userId - The user ID for the file path
  * @param {string} userType - The type of user (client, caregiver, admin, etc.)
@@ -43,7 +43,7 @@ export const uploadProfilePicture = async (file, userId, userType = 'user') => {
 };
 
 /**
- * Delete a profile picture from Firebase Storage
+ * Delete a profile picture from Backend Storage
  * @param {string} imageUrl - The URL of the image to delete
  * @returns {Promise<void>}
  */

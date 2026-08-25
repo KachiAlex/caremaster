@@ -8,20 +8,9 @@
  * - P: Plan with medications, procedures, follow-ups
  */
 
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  query, 
-  where, 
-  orderBy, 
-  serverTimestamp
-} from 'backend/database';
-import { db } from '../backend/config';
+import { collection, doc, getDocs, getDoc, addDoc, updateDoc, query, where, orderBy, serverTimestamp, limit } from 'backend/database';;
 import { updateConsultation } from './consultationsAPI';
+import { db } from '../backend/config';
 
 const SOAP_NOTES_COLLECTION = 'soapNotes';
 const ICD10_CODES_COLLECTION = 'icd10Codes';

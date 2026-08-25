@@ -1,5 +1,3 @@
-import { db } from '../backend/config';
-import { collection, query, where, getDocs } from 'backend/database';
 
 /**
  * Drug Interaction Checker Service

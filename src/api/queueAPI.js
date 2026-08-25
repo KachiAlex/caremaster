@@ -28,8 +28,8 @@ import {
   Timestamp,
   writeBatch
 } from 'backend/database';
-import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
+import { db } from '../backend/config';
 
 const QUEUE_COLLECTION = 'queues';
 const QUEUE_COUNTERS_COLLECTION = 'queueCounters';

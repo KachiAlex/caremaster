@@ -10,11 +10,11 @@ import {
   getDocs,
   serverTimestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import encryptionService from './encryptionService';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
 import secureConfigService from './secureConfigService';
+import { auth, db } from '../backend/config';;
 
 class SecureStorageService {
   constructor() {
@@ -44,7 +44,7 @@ class SecureStorageService {
         encrypted: encrypt && this.encryptionEnabled
       };
 
-      // Store in Firestore
+      // Store in Database
       const docRef = doc(db, collectionName, docId);
       await setDoc(docRef, dataToStore);
 
@@ -150,7 +150,7 @@ class SecureStorageService {
         version: serverTimestamp() // Increment version
       };
 
-      // Update in Firestore
+      // Update in Database
       const docRef = doc(db, collectionName, docId);
       await updateDoc(docRef, dataToUpdate);
 
@@ -196,7 +196,7 @@ class SecureStorageService {
         });
       }
 
-      // Delete from Firestore
+      // Delete from Database
       const docRef = doc(db, collectionName, docId);
       await deleteDoc(docRef);
 

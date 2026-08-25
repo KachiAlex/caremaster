@@ -1,6 +1,6 @@
+import { auth, db } from '../backend/config';;
+import { setDoc, doc, serverTimestamp } from 'backend/database';
 import { createUserWithEmailAndPassword, updateProfile } from 'backend/auth';
-import { doc, setDoc, serverTimestamp } from 'backend/database';
-import { auth, db } from '../backend/config';
 
 /**
  * Standardized user type mapping
@@ -167,7 +167,7 @@ export function createStandardizedUserData(userData, options = {}) {
 }
 
 /**
- * Create a complete user account (Auth + Firestore)
+ * Create a complete user account (Auth + Database)
  * @param {Object} userData - User data including email, password, userType, etc.
  * @param {Object} options - Additional options
  * @returns {Promise<Object>} - Created user object
@@ -190,7 +190,7 @@ export async function createCompleteUserAccount(userData, options = {}) {
       displayName: `${firstName} ${lastName}`
     });
     
-    // Create standardized Firestore document
+    // Create standardized Database document
     const standardizedData = createStandardizedUserData(
       { ...userData, firstName, lastName, email },
       { ...options, uid: user.uid }
@@ -202,7 +202,7 @@ export async function createCompleteUserAccount(userData, options = {}) {
       standardizedData.mustChangePassword = true;
     }
     
-    // Save to Firestore
+    // Save to Database
     await setDoc(doc(db, 'users', user.uid), standardizedData);
     
     console.log('✅ User created successfully:', {

@@ -1,12 +1,13 @@
 /**
  * Notification Service
  * Handles SMS, WhatsApp, Email, and Push notifications
- * Integrates with Twilio, Firebase Cloud Messaging
+ * Integrates with Twilio, Backend Cloud Messaging
  */
 
-import { db } from '../config/firebaseConfig';
-import { collection, addDoc, query, where, getDocs, updateDoc, Timestamp, doc } from 'backend/database';
+import { db } from '../config/backendConfig';
 import logger from '../utils/logger';
+import { collection, query, getDocs, updateDoc, addDoc, where, doc } from 'backend/database';
+import { db } from '../backend/config';
 
 /**
  * Notification Types
@@ -186,7 +187,7 @@ export const sendEmailNotification = async (email, subject, templateName, templa
     // Add to database
     const docRef = await addDoc(collection(db, 'notifications'), notificationRecord);
 
-    // Send via email service (SendGrid, Firebase, etc.)
+    // Send via email service (SendGrid, Backend, etc.)
     await sendEmailViaService(email, subject, templateName, templateData, docRef.id, category);
 
     logger.info('Email notification queued', {
@@ -234,7 +235,7 @@ export const sendPushNotification = async (userId, title, message, category = 'g
     // Add to database
     const docRef = await addDoc(collection(db, 'notifications'), notificationRecord);
 
-    // Send via Firebase Cloud Messaging
+    // Send via Backend Cloud Messaging
     await sendViaFCM(userId, title, message, docRef.id, category);
 
     logger.info('Push notification queued', {
@@ -621,7 +622,7 @@ const sendWhatsAppViaTwilio = async (phoneNumber, message, mediaUrl, notificatio
 const sendEmailViaService = async (email, subject, templateName, templateData, notificationId, category) => {
   try {
     // This should call your backend API endpoint that handles emails
-    // Could be SendGrid, Firebase, or custom email service
+    // Could be SendGrid, Backend, or custom email service
     // const response = await fetch('/api/notifications/send-email', {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
@@ -637,11 +638,11 @@ const sendEmailViaService = async (email, subject, templateName, templateData, n
 };
 
 /**
- * Internal: Send via Firebase Cloud Messaging
+ * Internal: Send via Backend Cloud Messaging
  */
 const sendViaFCM = async (userId, title, message, notificationId, category) => {
   try {
-    // This should call your Firebase Cloud Function or backend
+    // This should call your Backend Cloud Function or backend
     // to send via Cloud Messaging Service
     // const response = await fetch('/api/notifications/send-fcm', {
     //   method: 'POST',

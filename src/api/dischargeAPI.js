@@ -23,9 +23,9 @@ import {
   limit,
   serverTimestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import { notificationsAPI } from './notificationsAPI';
 import { createAppointment } from './appointmentsAPI';
+import { db } from '../backend/config';
 
 const DISCHARGES_COLLECTION = 'discharges';
 const DISCHARGE_SUMMARIES_COLLECTION = 'dischargeSummaries';

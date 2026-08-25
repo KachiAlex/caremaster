@@ -15,11 +15,11 @@ import {
   serverTimestamp,
   Timestamp
 } from 'backend/database';
-import { db } from '../backend/config';
 import { generateClientId } from '../utils/clientIdGenerator';
 import { encryptPatientData, decryptPatientData } from '../utils/dataEncryptionHelper';
 import secureConfigService from '../services/secureConfigService';
 import { logPatientRegistration, logPatientProfileUpdate } from '../utils/patientLogger';
+import { db } from '../backend/config';
 
 const CLIENTS_COLLECTION = 'clients';
 
@@ -74,7 +74,7 @@ export const getAllClients = async (institutionId = null) => {
         
         return clients;
       } catch (indexError) {
-        console.warn('Firestore index not found, using simpler query:', indexError);
+        console.warn('Database index not found, using simpler query:', indexError);
         // Fallback: query without orderBy, then sort in memory
         q = query(clientsRef, where('institutionId', '==', institutionId));
         const querySnapshot = await getDocs(q);
@@ -212,7 +212,7 @@ export const getPatientByPatientId = async (clientId) => {
 export const getClientsByCaregiver = async (caregiverId, institutionId = null) => {
   try {
     console.log('🔍 getClientsByCaregiver called with caregiverId:', caregiverId, 'institutionId:', institutionId);
-    console.log('🔍 Function started - about to query Firestore');
+    console.log('🔍 Function started - about to query Database');
     
     // First try to get clients directly assigned to caregiver
     const clientsRef = collection(db, CLIENTS_COLLECTION);
@@ -521,23 +521,23 @@ export const createClient = async (clientData = {}, registeredBy = null) => {
       registeredBy: registeredBy?.id || registeredBy?.uid || null,
     };
 
-    // Create client document in Firestore
+    // Create client document in Database
     let docRef;
     try {
       docRef = await addDoc(clientsRef, newPatient);
       console.log(`✅ Client created with ID: ${clientId} (doc: ${docRef.id})`);
-    } catch (firestoreError) {
-      console.error('Firestore error creating client:', firestoreError);
+    } catch (databaseError) {
+      console.error('Database error creating client:', databaseError);
       
       // Provide more specific error messages
-      if (firestoreError.code === 'permission-denied') {
+      if (databaseError.code === 'permission-denied') {
         throw new Error('Permission denied. Please ensure you have admin access to create clients.');
-      } else if (firestoreError.code === 'unavailable') {
+      } else if (databaseError.code === 'unavailable') {
         throw new Error('Service temporarily unavailable. Please check your internet connection and try again.');
-      } else if (firestoreError.code === 'deadline-exceeded') {
+      } else if (databaseError.code === 'deadline-exceeded') {
         throw new Error('Request timeout. Please try again.');
       } else {
-        throw new Error(`Failed to create client: ${firestoreError.message || 'Unknown error'}`);
+        throw new Error(`Failed to create client: ${databaseError.message || 'Unknown error'}`);
       }
     }
 

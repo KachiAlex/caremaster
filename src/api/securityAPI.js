@@ -24,8 +24,6 @@ import {
   Timestamp
 } from 'backend/database';
 import { db } from '../backend/config';
-import { auth } from '../backend/config';
-import { sendEmailVerification, sendPasswordResetEmail } from 'backend/auth';
 
 const AUDIT_LOGS_COLLECTION = 'securityAuditLogs';
 const SESSIONS_COLLECTION = 'userSessions';

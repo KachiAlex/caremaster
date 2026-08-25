@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import { 
   collection, 
   query, 
@@ -15,6 +14,7 @@ import {
   getDoc,
   Timestamp
 } from 'backend/database';
+import { db } from '../backend/config';
 
 export const auditAPI = {
   // Create audit log entry

@@ -1,7 +1,8 @@
 import * as billingPlansAPI from './billingPlansAPI';
 import * as paymentGatewayAPI from './paymentGatewayAPI';
-import { collection, doc, setDoc, getDocs, query, where, orderBy, serverTimestamp } from 'backend/database';
-import { db } from '../backend/config';
+import { collection, query, getDocs, setDoc, where, orderBy, doc, serverTimestamp } from 'backend/database';
+import { httpsCallable } from 'backend/functions';
+import { db, functions } from '../backend/config';;
 
 const SUBSCRIPTION_INVOICES_COLLECTION = 'subscriptionInvoices';
 const PAYMENT_LINKS_COLLECTION = 'paymentLinks';
@@ -184,8 +185,8 @@ export const sendPaymentLinkNotification = async (invoiceId, invoiceData, paymen
       return { success: false, message: 'No client email provided' };
     }
 
-    // Call Firebase Cloud Function to send email
-    const { getFunctions, httpsCallable } = await import('firebase/functions');
+    // Call Backend Cloud Function to send email
+    const { getFunctions, httpsCallable } = await import('backend/functions');
     const functions = getFunctions();
     const sendPaymentLinkEmail = httpsCallable(functions, 'sendPaymentLinkEmailFunction');
 

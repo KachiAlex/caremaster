@@ -6,7 +6,6 @@
  * to be logged in simultaneously in different tabs/windows.
  */
 
-import { auth } from '../backend/config';
 import { 
   signInWithEmailAndPassword, 
   signOut,
@@ -15,6 +14,7 @@ import {
   browserLocalPersistence,
   onAuthStateChanged
 } from 'backend/auth';
+import { auth } from '../backend/config';
 
 // Storage keys for different roles
 const STORAGE_KEYS = {
@@ -109,7 +109,7 @@ export const signInWithRole = async (email, password, role) => {
     // This ensures the auth state is maintained per tab/window
     await setPersistence(auth, browserSessionPersistence);
     
-    // Sign in with Firebase Auth
+    // Sign in with Backend Auth
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     
     // Store the session data for this role
@@ -138,7 +138,7 @@ export const signOutFromRole = async (role) => {
     // Clear the role session
     clearRoleSession(role);
     
-    // Only sign out from Firebase if this is the current active session
+    // Only sign out from Backend if this is the current active session
     const currentRole = getCurrentRole();
     if (currentRole === role) {
       await signOut(auth);

@@ -1,4 +1,3 @@
-import { db } from '../backend/config';
 import { 
   collection, 
   addDoc, 
@@ -15,6 +14,7 @@ import {
   limit,
   onSnapshot
 } from 'backend/database';
+import { db } from '../backend/config';
 
 const CARE_LOGS_COLLECTION = 'careLogs';
 

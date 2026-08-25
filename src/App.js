@@ -1,8 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from './backend/config';
-import { db } from './backend/config';
+import { useAuthState } from 'react-backend-hooks/auth';
+import { auth, db } from './backend/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'backend/database';
 import { UserProvider, useUser } from './contexts/UserContext';
 import ErrorBoundary from './components/ErrorBoundary';

@@ -1,5 +1,6 @@
 // PWA Service for Care Master
 import { toast } from 'react-toastify';
+import { db } from '../backend/config';
 
 class PWAService {
   constructor() {
@@ -34,11 +35,17 @@ class PWAService {
       try {
         this.swRegistration = await navigator.serviceWorker.register('/sw.js');
         console.log('Service Worker registered successfully:', this.swRegistration);
-        // Force update check and auto-reload when controller changes
+        // Force update check
         try { this.swRegistration.update && this.swRegistration.update(); } catch {}
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          window.location.reload();
-        });
+        // Only reload on controllerchange if there's already a controller
+        // (i.e. a new SW took over). Without this check, the first install
+        // triggers skipWaiting() + clients.claim() which fires controllerchange
+        // and causes an infinite reload loop.
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+          });
+        }
         
         // Handle service worker updates
         this.attachUpdateFoundListener();

@@ -1,32 +1,42 @@
-// Utility script to create admin user
-// This would typically be run once during setup
+// Utility to create admin user via the Express backend API
 
-import { createUserWithEmailAndPassword, updateProfile } from 'backend/auth';
-import { doc, setDoc } from 'backend/database';
-import { auth, db } from '../backend/config';
+const API_BASE = () =>
+  process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+function getToken() {
+  return localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+}
 
 export const createAdminUser = async (email, password, name) => {
   try {
-    // Create user with Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    // Split name into first/last (simple split on first space)
+    const parts = (name || '').trim().split(/\s+/);
+    const firstName = parts[0] || 'Admin';
+    const lastName = parts.slice(1).join(' ') || 'User';
 
-    // Update display name
-    await updateProfile(user, {
-      displayName: name
+    const res = await fetch(`${API_BASE()}/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        firstName,
+        lastName,
+        userType: 'admin',
+        sendEmail: true,
+      }),
     });
 
-    // Create user profile in Firestore
-    await setDoc(doc(db, 'users', user.uid), {
-      name: name,
-      email: email,
-      userType: 'admin',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
+    const data = await res.json();
 
-    console.log('Admin user created successfully:', user.uid);
-    return { success: true, userId: user.uid };
+    if (!res.ok || !data.success) {
+      return { success: false, error: data.message || 'Failed to create admin' };
+    }
+
+    return { success: true, userId: data.data?.id };
   } catch (error) {
     console.error('Error creating admin user:', error);
     return { success: false, error: error.message };

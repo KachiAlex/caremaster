@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc, serverTimestamp } from 'backend/database';
+import { collection, query, getDocs, getDoc, updateDoc, where, limit, doc, serverTimestamp } from 'backend/database';
 import { db } from '../backend/config';
 
 const INSTITUTIONS_COLLECTION = 'institutions';
@@ -61,7 +61,7 @@ export const checkSlugAvailability = async (slug, excludeInstitutionId = null) =
     console.log('🔍 Checking slug availability:', slug);
     
     // Import query functions dynamically to avoid circular imports
-    const { collection, query, where, getDocs } = await import('firebase/firestore');
+    const { collection, query, where, getDocs } = await import('backend/database');
     
     const institutionsRef = collection(db, INSTITUTIONS_COLLECTION);
     const slugQuery = query(
@@ -121,10 +121,10 @@ export const generateInstitutionUrls = (institution) => {
   } else {
     // Default institution ID
     return {
-      landing: `${baseUrl}/institution/login?institution=${id}`,
-      admin: `${baseUrl}/institution/login?institution=${id}&role=admin`,
-      caregiver: `${baseUrl}/institution/login?institution=${id}&role=caregiver`,
-      pharmacist: `${baseUrl}/institution/login?institution=${id}&role=pharmacist`
+      landing: `${baseUrl}/login?institution=${id}`,
+      admin: `${baseUrl}/login?institution=${id}&role=admin`,
+      caregiver: `${baseUrl}/login?institution=${id}&role=caregiver`,
+      pharmacist: `${baseUrl}/login?institution=${id}&role=pharmacist`
     };
   }
 };
@@ -134,7 +134,7 @@ export const getInstitutionBySlug = async (slug) => {
   try {
     console.log('🔍 Finding institution by slug:', slug);
     
-    const { collection, query, where, getDocs, limit } = await import('firebase/firestore');
+    const { collection, query, where, getDocs, limit } = await import('backend/database');
     
     const institutionsRef = collection(db, INSTITUTIONS_COLLECTION);
     const slugQuery = query(
@@ -165,7 +165,7 @@ export const getInstitutionByDomain = async (domain) => {
   try {
     console.log('🔍 Finding institution by domain:', domain);
     
-    const { collection, query, where, getDocs, limit } = await import('firebase/firestore');
+    const { collection, query, where, getDocs, limit } = await import('backend/database');
     
     const institutionsRef = collection(db, INSTITUTIONS_COLLECTION);
     const domainQuery = query(

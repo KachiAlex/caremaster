@@ -1,11 +1,11 @@
-import { getFunctions, httpsCallable } from 'backend/functions';
-import { getApp } from 'backend/app';
 import { getLicenseStatus as getDirectLicenseStatus, activateLicenseByKey as directActivateLicenseByKey, getAllLicenses as getDirectLicenses, getAllInstitutions as getDirectInstitutions } from '../api/licenseAPI';
+import { httpsCallable } from 'backend/functions';
+import { functions } from '../backend/config';
 
-// Use direct Firestore access to bypass CORS issues
+// Use direct Database access to bypass CORS issues
 export async function fetchLicenseStatus(institutionId) {
   try {
-    // Use direct Firestore access instead of Cloud Functions
+    // Use direct Database access instead of Cloud Functions
     const status = await getDirectLicenseStatus(institutionId);
     return status;
   } catch (error) {
@@ -67,12 +67,12 @@ export async function createInstitution(payload) {
 
 export async function createLicense(payload) {
   try {
-    // Use direct Firestore access to bypass CORS issues
+    // Use direct Database access to bypass CORS issues
     const { createLicense: createLicenseDirect } = await import('../api/licenseAPI');
     return await createLicenseDirect(payload);
   } catch (error) {
-    console.error('Error creating license via Firestore:', error);
-    // Fallback to Cloud Function if Firestore fails
+    console.error('Error creating license via Database:', error);
+    // Fallback to Cloud Function if Database fails
     const functions = getFunctions(getApp(), 'us-central1');
     const callable = httpsCallable(functions, 'createLicenseFunction');
     const res = await callable(payload);
@@ -82,12 +82,12 @@ export async function createLicense(payload) {
 
 export async function assignInstitutionAdmin(payload) {
   try {
-    // Use direct Firestore access to bypass CORS issues
+    // Use direct Database access to bypass CORS issues
     const { assignInstitutionAdmin: assignAdminDirect } = await import('../api/licenseAPI');
     return await assignAdminDirect(payload);
   } catch (error) {
-    console.error('Error assigning admin via Firestore:', error);
-    // Fallback to Cloud Function if Firestore fails
+    console.error('Error assigning admin via Database:', error);
+    // Fallback to Cloud Function if Database fails
     const functions = getFunctions(getApp(), 'us-central1');
     const callable = httpsCallable(functions, 'assignInstitutionAdminFunction');
     const res = await callable(payload);
@@ -97,12 +97,12 @@ export async function assignInstitutionAdmin(payload) {
 
 export async function getInstitutions() {
   try {
-    // Use direct Firestore access to bypass CORS
+    // Use direct Database access to bypass CORS
     const institutions = await getDirectInstitutions();
     return institutions;
   } catch (error) {
     console.error('Error fetching institutions:', error);
-    // Fallback to Cloud Functions if Firestore fails
+    // Fallback to Cloud Functions if Database fails
     try {
       const functions = getFunctions(getApp(), 'us-central1');
       const callable = httpsCallable(functions, 'getInstitutionsFunction');
@@ -116,12 +116,12 @@ export async function getInstitutions() {
 
 export async function getLicenses() {
   try {
-    // Use direct Firestore access to bypass CORS
+    // Use direct Database access to bypass CORS
     const licenses = await getDirectLicenses();
     return licenses;
   } catch (error) {
     console.error('Error fetching licenses:', error);
-    // Fallback to Cloud Functions if Firestore fails
+    // Fallback to Cloud Functions if Database fails
     try {
       const functions = getFunctions(getApp(), 'us-central1');
       const callable = httpsCallable(functions, 'getLicensesFunction');
@@ -156,12 +156,12 @@ export async function updateLicense(licenseId, updates) {
 
 export async function suspendLicense(licenseId) {
   try {
-    // Use direct Firestore access to bypass CORS issues
+    // Use direct Database access to bypass CORS issues
     const { suspendLicense: suspendLicenseDirect } = await import('../api/licenseAPI');
     return await suspendLicenseDirect(licenseId);
   } catch (error) {
-    console.error('Error suspending license via Firestore:', error);
-    // Fallback to Cloud Function if Firestore fails
+    console.error('Error suspending license via Database:', error);
+    // Fallback to Cloud Function if Database fails
     const functions = getFunctions(getApp(), 'us-central1');
     const callable = httpsCallable(functions, 'suspendLicenseFunction');
     const res = await callable({ licenseId });
@@ -171,12 +171,12 @@ export async function suspendLicense(licenseId) {
 
 export async function activateLicenseById(licenseId) {
   try {
-    // Use direct Firestore access to bypass CORS issues
+    // Use direct Database access to bypass CORS issues
     const { activateLicense: activateLicenseDirect } = await import('../api/licenseAPI');
     return await activateLicenseDirect(licenseId);
   } catch (error) {
-    console.error('Error activating license via Firestore:', error);
-    // Fallback to Cloud Function if Firestore fails
+    console.error('Error activating license via Database:', error);
+    // Fallback to Cloud Function if Database fails
     const functions = getFunctions(getApp(), 'us-central1');
     const callable = httpsCallable(functions, 'activateLicenseFunction');
     const res = await callable({ licenseId });
@@ -193,12 +193,12 @@ export async function migrateInstitutionLinks(options = {}) {
 
 export async function getInstitutionAdmins(institutionId) {
   try {
-    // Use direct Firestore access to bypass CORS issues
+    // Use direct Database access to bypass CORS issues
     const { getInstitutionAdmins: getAdminsDirect } = await import('../api/licenseAPI');
     return await getAdminsDirect(institutionId);
   } catch (error) {
-    console.error('Error fetching admins via Firestore:', error);
-    // Fallback to Cloud Function if Firestore fails
+    console.error('Error fetching admins via Database:', error);
+    // Fallback to Cloud Function if Database fails
     const functions = getFunctions(getApp(), 'us-central1');
     const callable = httpsCallable(functions, 'getInstitutionAdminsFunction');
     const res = await callable({ institutionId });
@@ -208,12 +208,12 @@ export async function getInstitutionAdmins(institutionId) {
 
 export async function removeInstitutionAdmin(payload) {
   try {
-    // Use direct Firestore access to bypass CORS issues
+    // Use direct Database access to bypass CORS issues
     const { removeInstitutionAdmin: removeAdminDirect } = await import('../api/licenseAPI');
     return await removeAdminDirect(payload);
   } catch (error) {
-    console.error('Error removing admin via Firestore:', error);
-    // Fallback to Cloud Function if Firestore fails
+    console.error('Error removing admin via Database:', error);
+    // Fallback to Cloud Function if Database fails
     const functions = getFunctions(getApp(), 'us-central1');
     const callable = httpsCallable(functions, 'removeInstitutionAdminFunction');
     const res = await callable(payload);
