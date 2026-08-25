@@ -36,6 +36,7 @@ import { db } from '../backend/config';
 import { toast } from 'react-toastify';
 import PreclinicLayout from '../components/PreclinicLayout';
 import { StatCard, PreclinicTable, StatusBadge, PageHeader, PreclinicCard } from '../components/PreclinicComponents';
+import AssignmentCalendar from '../components/AssignmentCalendar';
 
 const PreclinicCaregiverDashboard = () => {
   const { user, userProfile } = useUser();
@@ -46,6 +47,8 @@ const PreclinicCaregiverDashboard = () => {
   const [recentTasks, setRecentTasks] = useState([]);
   const [performance, setPerformance] = useState({});
   const [loading, setLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
 
   // Get qualification-specific dashboard configuration
   const getDashboardConfig = () => {
@@ -283,6 +286,25 @@ const PreclinicCaregiverDashboard = () => {
           ))}
         </div>
       </PreclinicCard>
+
+      {/* Assignment Calendar */}
+      <AssignmentCalendar
+        schedule={todayTasks.map(t => ({
+          id: t.id,
+          type: t.type || 'task',
+          title: t.title || 'Task',
+          time: t.dueDate || t.scheduledTime || '',
+          client: t.clientName || 'Client',
+          status: t.status || 'pending',
+          priority: t.priority,
+          description: t.description,
+          dueDate: t.dueDate
+        }))}
+        onItemSelect={(item) => {
+          setSelectedTask(item);
+          setShowTaskDetailsModal(true);
+        }}
+      />
 
       {/* Today's Tasks */}
       <PreclinicCard 
@@ -528,13 +550,47 @@ const PreclinicCaregiverDashboard = () => {
   }
 
   return (
-    <PreclinicLayout 
-      userRole="caregiver" 
-      activeTab={activeTab} 
+    <PreclinicLayout
+      userRole="caregiver"
+      activeTab={activeTab}
       setActiveTab={setActiveTab}
       userEmail={userProfile?.email || user?.email}
     >
       {renderTabContent()}
+
+      {/* Task Details Modal (from calendar) */}
+      {showTaskDetailsModal && selectedTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">{selectedTask.title}</h2>
+              <button onClick={() => setShowTaskDetailsModal(false)} className="text-gray-400 hover:text-gray-600">
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <User className="h-4 w-4" />
+                <span>{selectedTask.client || selectedTask.clientName || 'Client'}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Clock className="h-4 w-4" />
+                <span>{selectedTask.time ? new Date(selectedTask.time).toLocaleString() : 'Time not set'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 capitalize">{selectedTask.type || 'task'}</span>
+                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 capitalize">{selectedTask.status || 'pending'}</span>
+                {selectedTask.priority && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700 capitalize">{selectedTask.priority}</span>
+                )}
+              </div>
+              {selectedTask.description && (
+                <p className="text-sm text-gray-600 mt-2">{selectedTask.description}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </PreclinicLayout>
   );
 };

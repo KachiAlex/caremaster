@@ -97,6 +97,7 @@ import WebRTCService from '../services/webrtcService';
 import AdlLogger from '../components/AdlLogger';
 import UserProfileSettings from '../components/UserProfileSettings';
 import HelpSupport from '../components/HelpSupport';
+import AssignmentCalendar from '../components/AssignmentCalendar';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 
 const InstitutionCaregiverDashboard = () => {
@@ -4567,14 +4568,25 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            
-            <div className="flex justify-end mt-4 md:mt-6">
-              <button className="flex items-center px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base touch-manipulation">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Weekly Overview</span>
-                <span className="sm:hidden">Overview</span>
-              </button>
-            </div>
+          </div>
+        )}
+
+        {/* Assignment Calendar — shown in dashboard overview */}
+        {activeTab === 'dashboard' && (
+          <div className="px-3 sm:px-4 md:px-6 lg:px-8 pb-4 md:pb-6">
+            <AssignmentCalendar
+              schedule={todaySchedule}
+              onItemSelect={(item) => {
+                const fullTask = recentTasks.find(t => t.id === item.id) || item;
+                setSelectedTask({
+                  ...fullTask,
+                  clientName: fullTask.client || fullTask.clientName || 'Client',
+                  scheduledTime: fullTask.time || fullTask.scheduledTime,
+                  dueDate: fullTask.dueDate || fullTask.time
+                });
+                setShowTaskDetailsModal(true);
+              }}
+            />
           </div>
         )}
 

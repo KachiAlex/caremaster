@@ -64,6 +64,7 @@ import MorningBriefing from '../components/MorningBriefing';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import VitalsQuickEntry from '../components/VitalsQuickEntry';
 import WeeklyCalendar from '../components/WeeklyCalendar';
+import AssignmentCalendar from '../components/AssignmentCalendar';
 import { createVitalSign } from '../api/vitalSignsAPI';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
@@ -847,13 +848,31 @@ const ServiceProviderDashboard = () => {
         onShowAppointments={handleShowAppointments}
         onShowMessages={handleShowMessages}
       />
-      <div className="px-6 -mt-4 mb-2 flex items-center justify-end">
-        <button
-          onClick={() => setShowWeeklyCalendar(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          Weekly Overview
-        </button>
+      <div className="px-6 -mt-4 mb-6">
+        <AssignmentCalendar
+          schedule={[
+            ...(todaysAppointmentsData || []).map(a => ({
+              id: a.id, type: 'appointment', title: a.title || a.clientName || 'Appointment',
+              time: a.scheduledTime || '', client: a.clientName || 'Client', status: a.status || 'scheduled'
+            })),
+            ...(upcomingAppointmentsData || []).map(a => ({
+              id: a.id, type: 'appointment', title: a.title || a.clientName || 'Appointment',
+              time: a.scheduledTime || '', client: a.clientName || 'Client', status: a.status || 'scheduled'
+            })),
+            ...(todaysTasksData || []).map(t => ({
+              id: t.id, type: 'task', title: t.title || 'Task',
+              time: t.scheduledTime || '', client: t.clientName || 'Client', status: t.status || 'pending'
+            })),
+            ...(pendingTasksData || []).map(t => ({
+              id: t.id, type: 'task', title: t.title || 'Task',
+              time: t.scheduledTime || '', client: t.clientName || 'Client', status: t.status || 'pending'
+            })),
+          ]}
+          onItemSelect={(item) => {
+            setSelectedTask(item);
+            setShowTaskCompletion(true);
+          }}
+        />
       </div>
       
       {isDoctor && (

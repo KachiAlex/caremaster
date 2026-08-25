@@ -48,6 +48,7 @@ import NurseMedicationManager from '../components/NurseMedicationManager';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
 import { toast } from 'react-toastify';
+import AssignmentCalendar from '../components/AssignmentCalendar';
 
 const CaregiverDashboard = () => {
   const { user, userProfile, institutionId, institutionData } = useUser();
@@ -70,6 +71,8 @@ const CaregiverDashboard = () => {
   // Call-related states
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
   const [callService] = useState(() => new CallService());
 
   // Get qualification-specific dashboard configuration
@@ -1406,6 +1409,21 @@ const CaregiverDashboard = () => {
             </div>
           </div>
 
+          {/* Assignment Calendar */}
+          <AssignmentCalendar
+            schedule={todaySchedule}
+            onItemSelect={(item) => {
+              const fullTask = recentTasks.find(t => t.id === item.id) || item;
+              setSelectedTask({
+                ...fullTask,
+                clientName: fullTask.client || fullTask.clientName || 'Client',
+                scheduledTime: fullTask.time || fullTask.scheduledTime,
+                dueDate: fullTask.dueDate || fullTask.time
+              });
+              setShowTaskDetailsModal(true);
+            }}
+          />
+
           {/* Today's Schedule */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-gray-100">
@@ -1728,6 +1746,46 @@ const CaregiverDashboard = () => {
           }}
           isIncoming={false}
         />
+      )}
+
+      {/* Task Details Modal (from calendar) */}
+      {showTaskDetailsModal && selectedTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">{selectedTask.title}</h2>
+              <button onClick={() => setShowTaskDetailsModal(false)} className="text-gray-400 hover:text-gray-600">
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <User className="h-4 w-4" />
+                <span>{selectedTask.clientName || selectedTask.client || 'Client'}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Clock className="h-4 w-4" />
+                <span>{selectedTask.scheduledTime || selectedTask.time ? new Date(selectedTask.scheduledTime || selectedTask.time).toLocaleString() : 'Time not set'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 capitalize">{selectedTask.type || 'task'}</span>
+                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 capitalize">{selectedTask.status || 'pending'}</span>
+                {selectedTask.priority && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700 capitalize">{selectedTask.priority}</span>
+                )}
+              </div>
+              {selectedTask.description && (
+                <p className="text-sm text-gray-600 mt-2">{selectedTask.description}</p>
+              )}
+              {selectedTask.instructions && (
+                <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-xs font-semibold text-blue-700 mb-1">Instructions</p>
+                  <p className="text-sm text-gray-700">{selectedTask.instructions}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
     </CaregiverGuard>
