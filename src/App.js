@@ -370,9 +370,9 @@ function App() {
         path="/auth" 
         element={user ? <RoleBasedDashboardRoute /> : <UnifiedLogin />} 
       />
-      <Route 
-        path="/login" 
-        element={user ? <SignInRouteHandler /> : <UnifiedLogin />} 
+      <Route
+        path="/login"
+        element={user ? <SignInRouteHandler /> : <UnifiedLogin />}
       />
       <Route 
         path="/signup" 
@@ -760,12 +760,16 @@ function SignInRouteHandler() {
     localStorage.removeItem('token');
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
+    // Also clear auth compat state so onAuthStateChanged listeners fire
+    auth.currentUser = null;
+    (auth.__listeners || []).forEach((cb) => cb(null));
     return <Navigate to="/login" replace />;
   }
 
   console.log('🔄 SignInRouteHandler - Checking user role:', {
     userRole,
     userType: userProfile?.userType,
+    institutionId: userProfile?.institutionId,
     currentPath: window.location.pathname
   });
 
@@ -773,6 +777,20 @@ function SignInRouteHandler() {
   if (userRole === 'super-admin' || userProfile?.userType === 'super-admin') {
     console.log('🚀 Redirecting super-admin to /super-admin/dashboard');
     return <Navigate to="/super-admin/dashboard" replace />;
+  }
+
+  // If the user is on /login (not coming from another route), show the login
+  // form so they can log in with a different account. This prevents stale
+  // sessions from trapping users in a redirect loop.
+  if (window.location.pathname === '/login') {
+    console.log('📝 User on /login page — showing login form (stale session will be replaced on new login)');
+    // Clear the stale session so UnifiedLogin can render
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    auth.currentUser = null;
+    (auth.__listeners || []).forEach((cb) => cb(null));
+    return <UnifiedLogin />;
   }
 
   // Check if user came from institution login - if so, let them continue to their intended destination

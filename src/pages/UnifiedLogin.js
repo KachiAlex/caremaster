@@ -12,10 +12,6 @@ import {
   Eye, 
   EyeOff,
   Loader,
-  Building2,
-  Shield,
-  User,
-  Pill,
   XCircle
 } from 'lucide-react';
 
@@ -201,139 +197,143 @@ const UnifiedLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <a href="/" className="inline-flex justify-center mb-4 group cursor-pointer">
-            <img src="/images/caremaster-logo.jpg" alt="Care Master Logo" className="h-20 w-auto group-hover:scale-105 transition-transform" />
-          </a>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to your account
-          </p>
+    <div className="min-h-screen w-full bg-cream flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md cm-animate-in">
+        {/* Brand header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-sage to-ink shadow-lg shadow-ink/20 mb-4">
+            <img
+              src="/images/caremaster-logo.jpg"
+              alt="Care Master Logo"
+              className="w-10 h-10 object-contain rounded-lg"
+            />
+          </div>
+          <h1 className="font-display text-3xl text-ink tracking-tight">Care Master</h1>
+          <p className="mt-1 text-sm text-[var(--cm-text-soft)]">One Stop Health Care Solution</p>
         </div>
 
-        {/* Login Form */}
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
+        <div className="cm-card p-6 sm:p-8">
+          <div className="mb-6">
+            <span className="cm-eyebrow">Account Access</span>
+            <h2 className="cm-display text-2xl text-ink mt-3">Welcome back</h2>
+            <p className="text-sm text-[var(--cm-text-soft)] mt-1">Sign in to manage care with confidence.</p>
+          </div>
 
-          <div className="space-y-4">
-            {/* Email Field */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-[10px] bg-coral-soft/40 border border-coral/20 text-coral px-4 py-3 text-sm">
+                {error}
+              </div>
+            )}
+
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                <Mail className="inline h-4 w-4 mr-1" />
-                Email Address
+              <label htmlFor="email" className="block text-sm font-medium text-ink mb-1.5">
+                Email address
               </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-sage" />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="cm-input pl-10"
+                  placeholder="you@example.com"
+                />
+              </div>
             </div>
 
-            {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                <Lock className="inline h-4 w-4 mr-1" />
+              <label htmlFor="password" className="block text-sm font-medium text-ink mb-1.5">
                 Password
               </label>
               <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-sage" />
                 <input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
-                  className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="cm-input pl-10 pr-10"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sage hover:text-ink transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* Forgot Password Link */}
-          <div className="text-right">
-            <button
-              type="button"
-              onClick={() => {
-                setResetEmail(email || '');
-                setShowResetModal(true);
-              }}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-            >
-              Forgot password?
-            </button>
-          </div>
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => {
+                  setResetEmail(email || '');
+                  setShowResetModal(true);
+                }}
+                className="text-sm font-medium text-ink hover:text-gold transition-colors"
+              >
+                Forgot password?
+              </button>
+            </div>
 
-          {/* Submit Button */}
-          <div>
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+              className="cm-btn cm-btn-gold w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
-                  <Loader className="h-5 w-5 mr-2 animate-spin" />
+                  <Loader className="h-5 w-5 animate-spin" />
                   Signing in...
                 </>
               ) : (
                 'Sign In'
               )}
             </button>
-          </div>
 
-          {/* Info Text */}
-          <div className="text-center">
-            <p className="text-xs text-gray-500">
-              We'll automatically detect your institution and role
+            <p className="text-center text-xs text-[var(--cm-text-soft)]">
+              We'll automatically detect your institution and role.
+            </p>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-ink/5 text-center">
+            <p className="text-xs text-[var(--cm-text-soft)]">
+              Need help?{' '}
+              <a href="/support" className="text-ink hover:text-gold font-medium transition-colors">
+                Contact Support
+              </a>
             </p>
           </div>
-        </form>
-
-        {/* Footer */}
-        <div className="text-center">
-          <p className="text-xs text-gray-500">
-            Need help? <a href="/support" className="text-blue-600 hover:text-blue-500">Contact Support</a>
-          </p>
         </div>
+
+        <p className="mt-6 text-center text-xs text-[var(--cm-text-soft)]/70">
+          Care Master — Compassionate care, connected.
+        </p>
       </div>
 
       {/* Password Reset Modal */}
       {showResetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+        <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="cm-card w-full max-w-md overflow-hidden">
+            <div className="bg-ink text-sand px-6 py-4 rounded-t-[var(--cm-radius)] flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Reset your password</h3>
-                <p className="text-sm text-blue-100">Enter your email to receive a password reset link.</p>
+                <h3 className="font-display text-lg">Reset your password</h3>
+                <p className="text-sm text-sand/70 mt-0.5">Enter your email to receive a reset link.</p>
               </div>
               <button
                 onClick={() => setShowResetModal(false)}
-                className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 text-sand/80 hover:text-sand hover:bg-white/10 rounded-lg transition-colors"
                 aria-label="Close reset password modal"
               >
                 <XCircle className="h-5 w-5" />
@@ -364,46 +364,46 @@ const UnifiedLogin = () => {
                   setResettingPassword(false);
                 }
               }}
-              className="px-6 py-6 space-y-4"
+              className="px-6 py-6 space-y-5"
             >
               <div>
-                <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="reset-email" className="block text-sm font-medium text-ink mb-1.5">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-sage" />
                   <input
                     id="reset-email"
                     type="email"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="cm-input pl-10"
                     placeholder="Enter your account email"
                     autoComplete="email"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-2">
+              <div className="flex justify-end space-x-3 pt-1">
                 <button
                   type="button"
                   onClick={() => {
                     setShowResetModal(false);
                     setResetEmail('');
                   }}
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="cm-btn cm-btn-ghost-light"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={resettingPassword}
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                  className="cm-btn cm-btn-gold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {resettingPassword ? (
                     <>
-                      <Loader className="animate-spin h-4 w-4 mr-2" />
+                      <Loader className="animate-spin h-4 w-4" />
                       Sending...
                     </>
                   ) : (
@@ -420,4 +420,3 @@ const UnifiedLogin = () => {
 };
 
 export default UnifiedLogin;
-
