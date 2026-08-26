@@ -265,7 +265,7 @@ export const assignInstitutionAdmin = async ({ institutionId, email, displayName
     // Check if institution exists
     const institutionRef = doc(db, 'institutions', institutionId);
     const institutionSnap = await getDoc(institutionRef);
-    
+
     if (!institutionSnap.exists()) {
       throw new Error('Institution not found');
     }
@@ -274,39 +274,54 @@ export const assignInstitutionAdmin = async ({ institutionId, email, displayName
     const usersRef = collection(db, 'users');
     const existingUserQuery = query(usersRef, where('email', '==', email));
     const existingUserSnap = await getDocs(existingUserQuery);
-    
+
     let userId;
-    
+
     if (!existingUserSnap.empty) {
       // User exists, update their profile
       const existingUserDoc = existingUserSnap.docs[0];
       userId = existingUserDoc.id;
-      
+
       await updateDoc(doc(db, 'users', userId), {
         institutionId,
-        institutionAdmin: true,
         type: 'admin',
         userType: 'admin',
         role: 'admin',
         updatedAt: serverTimestamp()
       });
-      
+
       console.log('✅ Existing user updated as admin:', email);
     } else {
-      // Create new user in Backend Auth (Note: This requires the current user to be signed out temporarily)
-      // For production, this should be done via Cloud Functions with admin SDK
-      console.warn('⚠️ Cannot create new Backend Auth users from client. User must exist first.');
-      throw new Error('User does not exist. Please create the user account first or use Cloud Functions.');
-    }
+      // Create new user via backend /create-staff endpoint
+      if (!password) {
+        throw new Error('Password is required to create a new admin account');
+      }
+      const names = (displayName || email).trim().split(' ');
+      const firstName = names[0] || 'Admin';
+      const lastName = names.slice(1).join(' ') || '';
 
-    // Create admin mapping
-    const adminMappingRef = doc(collection(db, 'institutionAdmins'));
-    await setDoc(adminMappingRef, {
-      institutionId,
-      userId,
-      email,
-      createdAt: serverTimestamp()
-    });
+      const response = await fetch('/api/auth/create-staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email,
+          password,
+          first_name: firstName,
+          last_name: lastName,
+          user_type: 'admin',
+          institution_id: institutionId,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to create admin account');
+      }
+
+      userId = result.data.user.id;
+      console.log('✅ New admin account created:', email);
+    }
 
     console.log('✅ Admin assigned successfully:', email);
     return { userId, email, institutionId };
@@ -319,25 +334,15 @@ export const assignInstitutionAdmin = async ({ institutionId, email, displayName
 // Remove institution admin
 export const removeInstitutionAdmin = async ({ institutionId, adminId }) => {
   try {
-    // Remove institutionId from user document
+    // Remove institutionId and reset role from user document
     const userRef = doc(db, 'users', adminId);
     await updateDoc(userRef, {
       institutionId: null,
-      institutionAdmin: false,
+      userType: 'caregiver',
+      type: 'caregiver',
+      role: 'caregiver',
       updatedAt: serverTimestamp()
     });
-
-    // Remove from institutionAdmins collection
-    const adminMappingsRef = collection(db, 'institutionAdmins');
-    const q = query(
-      adminMappingsRef,
-      where('institutionId', '==', institutionId),
-      where('userId', '==', adminId)
-    );
-    
-    const snapshot = await getDocs(q);
-    const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-    await Promise.all(deletePromises);
 
     console.log('✅ Admin removed successfully');
     return { success: true };

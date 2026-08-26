@@ -64,6 +64,9 @@ const COLLECTION_TO_TABLE = {
   userSessions: 'user_sessions',
   loginAttempts: 'login_attempts',
   twoFactorAuth: 'two_factor_auth',
+  purchaseOrders: 'purchase_orders',
+  goodsReceived: 'goods_received',
+  stockAudit: 'stock_audit',
 };
 
 // Collections that have no backing DB table — return empty results
@@ -87,7 +90,7 @@ function resolveTable(collectionName) {
 
 // Whitelisted fields per table for create/update operations
 const WRITABLE_FIELDS = {
-  users: ['first_name', 'last_name', 'phone', 'photo_url', 'department', 'level', 'session'],
+  users: ['first_name', 'last_name', 'phone', 'photo_url', 'department', 'level', 'session', 'institution_id', 'user_type', 'type', 'role', 'is_active', 'is_verified', 'onboarding_complete', 'display_name', 'specialization', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'profile_complete', 'account_type', 'status', 'updated_at'],
   institutions: ['name', 'email', 'phone', 'address', 'city', 'state', 'country', 'zip_code', 'website', 'license_key', 'plan', 'seats', 'active', 'status', 'license_starts_at', 'license_ends_at', 'features', 'settings', 'updated_at'],
   appointments: ['client_id', 'caregiver_id', 'scheduled_date', 'duration', 'status', 'notes'],
   clients: ['name', 'full_name', 'email', 'phone', 'institution_id', 'status', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship', 'medical_conditions', 'medications', 'allergies', 'blood_type', 'genotype', 'care_level', 'insurance_provider', 'insurance_policy_number', 'national_id', 'primary_care_physician', 'physician_phone', 'notes', 'user_type', 'type', 'city', 'state', 'zip_code', 'client_id', 'assigned_caregiver', 'assigned_doctor', 'user_id'],
@@ -103,10 +106,14 @@ const WRITABLE_FIELDS = {
   diagnostics: ['client_id', 'diagnosis', 'diagnosis_date', 'notes', 'diagnosed_by'],
   notifications: ['user_id', 'title', 'message', 'type', 'read', 'created_at'],
   attendance: ['caregiver_id', 'client_id', 'clock_in', 'clock_out', 'location_lat', 'location_lng'],
-  invoices: ['client_id', 'amount', 'status', 'due_date', 'paid_date'],
+  invoices: ['patient_id', 'patientId', 'client_id', 'clientId', 'institution_id', 'institutionId', 'invoice_number', 'invoiceNumber', 'status', 'amount', 'tax_amount', 'taxAmount', 'discount', 'total_amount', 'totalAmount', 'currency', 'issue_date', 'issueDate', 'due_date', 'dueDate', 'paid_date', 'paidAt', 'paid_at', 'payment_method', 'paymentMethod', 'payment_reference', 'paymentReference', 'description', 'line_items', 'lineItems', 'items', 'metadata', 'created_at', 'updated_at'],
   billing_plans: ['name', 'description', 'amount', 'billing_cycle', 'features'],
   emergency_alerts: ['client_id', 'caregiver_id', 'alert_type', 'severity', 'status', 'message', 'created_at'],
-  inventory: ['name', 'quantity', 'unit', 'reorder_level', 'cost'],
+  inventory: ['name', 'institution_id', 'institutionId', 'sku', 'category', 'description', 'quantity', 'min_stock', 'minStock', 'reorder_level', 'reorderLevel', 'unit', 'unit_price', 'unitPrice', 'cost', 'supplier', 'supplier_id', 'supplierId', 'expiry_date', 'expiryDate', 'last_restocked', 'lastRestocked', 'last_restocked_date', 'lastRestockedDate', 'batch_number', 'batchNumber', 'status', 'metadata', 'created_at', 'updated_at'],
+  suppliers: ['name', 'institution_id', 'institutionId', 'contact_person', 'contactPerson', 'email', 'phone', 'address', 'city', 'state', 'country', 'notes', 'status', 'created_at', 'updated_at'],
+  purchase_orders: ['institution_id', 'institutionId', 'supplier_id', 'supplierId', 'po_number', 'poNumber', 'status', 'items', 'expected_delivery_date', 'expectedDeliveryDate', 'total_amount', 'totalAmount', 'received_quantity', 'receivedQuantity', 'created_by', 'createdBy', 'approved_by', 'approvedBy', 'approved_at', 'approvedAt', 'notes', 'created_at', 'updated_at'],
+  goods_received: ['institution_id', 'institutionId', 'purchase_order_id', 'purchaseOrderId', 'supplier_id', 'supplierId', 'grn_number', 'grnNumber', 'received_date', 'receivedDate', 'status', 'items', 'notes', 'created_at', 'updated_at'],
+  stock_audit: ['institution_id', 'institutionId', 'inventory_id', 'inventoryId', 'type', 'quantity', 'previous_stock', 'previousStock', 'new_stock', 'newStock', 'reference', 'reference_type', 'referenceType', 'notes', 'timestamp', 'created_at', 'updated_at'],
   medications: ['name', 'generic_name', 'dosage_form', 'strength', 'instructions'],
   patient_reports: ['client_id', 'report_type', 'content', 'created_by'],
   subscriptions: ['institution_id', 'plan', 'status', 'start_date', 'end_date'],
@@ -151,6 +158,12 @@ const SORTABLE_COLUMNS = {
   receipts: ['id', 'created_at'],
   transactions: ['id', 'created_at'],
   wallets: ['id', 'created_at'],
+  suppliers: ['id', 'name', 'created_at', 'updated_at'],
+  purchase_orders: ['id', 'po_number', 'status', 'created_at', 'updated_at'],
+  goods_received: ['id', 'grn_number', 'received_date', 'created_at', 'updated_at'],
+  stock_audit: ['id', 'timestamp', 'created_at', 'updated_at'],
+  inventory: ['id', 'name', 'quantity', 'expiry_date', 'status', 'created_at', 'updated_at'],
+  invoices: ['id', 'invoice_number', 'due_date', 'created_at', 'updated_at']
 };
 
 function validateTable(tableName) {

@@ -299,12 +299,11 @@ export const grnAPI = {
               status: 'active'
             };
 
-            const newItemRef = doc(collection(db, INVENTORY_COLLECTION));
-            batch.set(newItemRef, newItem);
+            const { id: newItemId } = await addDoc(collection(db, INVENTORY_COLLECTION), newItem);
 
             // Log stock audit
             await logStockAudit({
-              inventoryId: newItemRef.id,
+              inventoryId: newItemId,
               institutionId: grnData.institutionId,
               type: 'created',
               quantity: item.quantityReceived,
