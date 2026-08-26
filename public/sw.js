@@ -1,8 +1,8 @@
 // Care Master Service Worker for PWA functionality
-const CACHE_NAME = 'Care Master-v1.1.0';
-const STATIC_CACHE = 'Care Master-static-v9';
-const DYNAMIC_CACHE = 'Care Master-dynamic-v9';
-const API_CACHE = 'Care Master-api-v9';
+const CACHE_NAME = 'Care Master-v1.2.0';
+const STATIC_CACHE = 'Care Master-static-v10';
+const DYNAMIC_CACHE = 'Care Master-dynamic-v10';
+const API_CACHE = 'Care Master-api-v10';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
@@ -112,7 +112,7 @@ self.addEventListener('fetch', (event) => {
 
   // Handle different types of requests
   if (request.method === 'GET') {
-    // Static assets - cache first strategy
+    // Static assets (JS/CSS/images) - cache first strategy
     if (isStaticAsset(request)) {
       event.respondWith(cacheFirst(request, STATIC_CACHE));
     }
@@ -120,9 +120,10 @@ self.addEventListener('fetch', (event) => {
     else if (isAPIRequest(request)) {
       event.respondWith(networkFirstWithFallback(request, API_CACHE));
     }
-    // HTML pages - network first with fallback
+    // HTML navigation requests - ALWAYS network first, never serve stale HTML
+    // (stale HTML references old hashed JS chunks that no longer exist)
     else if (isHTMLRequest(request)) {
-      event.respondWith(networkFirstWithFallback(request, DYNAMIC_CACHE));
+      event.respondWith(htmlNetworkFirst(request));
     }
     // Other requests - network first
     else {
@@ -305,6 +306,10 @@ async function storeQueuedRequest(requestData) {
 // Helper functions
 function isStaticAsset(request) {
   const url = new URL(request.url);
+  // Never cache the service worker itself or manifest — always fetch fresh
+  if (url.pathname === '/sw.js' || url.pathname === '/manifest.json') {
+    return false;
+  }
   return url.pathname.startsWith('/static/') ||
          url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2)$/);
 }
@@ -316,7 +321,39 @@ function isAPIRequest(request) {
 }
 
 function isHTMLRequest(request) {
-  return request.headers.get('accept').includes('text/html');
+  const accept = request.headers.get('accept');
+  return accept && accept.includes('text/html');
+}
+
+// HTML network-first — always fetch fresh HTML from network.
+// If offline, serve cached HTML as fallback. Never cache 503/error responses.
+// This prevents stale HTML from referencing non-existent JS chunks after deploy.
+async function htmlNetworkFirst(request) {
+  try {
+    const networkResponse = await fetch(request);
+    // Only cache successful HTML responses (200)
+    if (networkResponse.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, networkResponse.clone()).catch(() => {});
+    }
+    return networkResponse;
+  } catch (error) {
+    // Network failed — try cache as fallback for offline support
+    const cache = await caches.open(DYNAMIC_CACHE);
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    // No cache available — try offline page
+    const offlinePage = await caches.match('/offline.html');
+    if (offlinePage) {
+      return offlinePage;
+    }
+    return new Response('Offline', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' }
+    });
+  }
 }
 
 // Background sync for offline requests

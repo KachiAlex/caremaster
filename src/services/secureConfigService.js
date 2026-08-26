@@ -79,30 +79,11 @@ class SecureConfigService {
 
   // Validate configuration
   validateConfig() {
-    const requiredKeys = [
-      'REACT_APP_BACKEND_API_KEY',
-      'REACT_APP_BACKEND_PROJECT_ID'
-    ];
-
-    const missingKeys = requiredKeys.filter(key => !process.env[key]);
-    
-    if (missingKeys.length > 0) {
-      // Never hard-crash the app for missing env at runtime; rely on downstream fallbacks
-      logger.error('Missing required configuration keys', { missingKeys });
-    }
-
-    // Validate Backend config
-    if (!this.config.backend.apiKey || !this.config.backend.projectId) {
-      logger.warn('Backend configuration incomplete; downstream will use safe fallbacks.');
-    }
-
-    // Validate security config; never hard-crash the client app
-    if (this.config.isProduction) {
-      if (!this.config.security.encryptionKey) {
-        logger.warn('Encryption key missing in production; continuing with generated key.');
-      } else if (!encryptionService.validateKeyStrength(this.config.security.encryptionKey)) {
-        logger.warn('Encryption key may be weak; consider rotating to a stronger key.');
-      }
+    // No required env keys — the app uses the Express backend API URL
+    // which defaults to http://localhost:5000/api in development.
+    // Just log a warning if the API URL is not set in production.
+    if (this.config.isProduction && !process.env.REACT_APP_API_URL) {
+      logger.warn('REACT_APP_API_URL not set; using default fallback.');
     }
 
     logger.info('Configuration validated successfully');
