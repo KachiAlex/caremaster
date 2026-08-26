@@ -11,6 +11,7 @@ import securityMonitoringService from './services/securityMonitoringService';
 import biometricAuthService from './services/biometricAuthService';
 import secureConfigService from './services/secureConfigService';
 import Layout from './components/Layout';
+import ClientPortalLayout from './components/ClientPortalLayout';
 import SuperAdminGuard from './components/SuperAdminGuard';
 import InstitutionAdminGuard from './components/InstitutionAdminGuard';
 // Old admin components removed - using new admin system
@@ -481,14 +482,14 @@ function App() {
       {/* Client Dashboard / Portal */}
       <Route 
         path="/dashboard" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Dashboard />} />
       </Route>
 
       <Route 
         path="/client/dashboard" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Dashboard />} />
       </Route>
@@ -539,37 +540,37 @@ function App() {
       {/* Protected routes - Dashboard removed (clients don't have accounts) */}
       <Route 
         path="/medications" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Medications />} />
       </Route>
       <Route 
         path="/vital-signs" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<VitalSigns />} />
       </Route>
       <Route 
         path="/appointments" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Appointments />} />
       </Route>
       <Route 
         path="/telemedicine" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Telemedicine />} />
       </Route>
       <Route 
         path="/medical-documents" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<MedicalDocuments />} />
       </Route>
       <Route 
         path="/webrtc-test" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<WebRTCTest />} />
       </Route>
@@ -577,37 +578,37 @@ function App() {
       {/* Direct test route for caregiver onboarding - removed as onboarding is now integrated into Auth.js */}
       <Route 
         path="/profile" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Profile />} />
       </Route>
       <Route 
         path="/messages" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Messages />} />
       </Route>
       <Route 
         path="/subscription" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<Subscription />} />
       </Route>
       <Route 
         path="/client-caregivers" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<ClientCaregivers />} />
       </Route>
       <Route 
         path="/security" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<SecuritySettings />} />
       </Route>
       <Route 
         path="/security-dashboard" 
-        element={user ? <Layout /> : <Navigate to="/login" replace />} 
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
       >
         <Route index element={<SecurityDashboard />} />
       </Route>

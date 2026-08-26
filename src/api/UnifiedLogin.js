@@ -231,7 +231,9 @@ const UnifiedLogin = () => {
           ...userData,
         };
         localStorage.setItem('user', JSON.stringify(profileToCache));
-        localStorage.setItem('token', user?.uid || userData?.uid || email);
+        // NOTE: Do NOT overwrite the JWT token here — signInWithEmailAndPassword
+        // in the auth compat layer already stored the real JWT via setToken().
+        // Overwriting it with the UID breaks all subsequent authenticated API calls.
       }
 
       // Check if account is suspended
@@ -245,10 +247,12 @@ const UnifiedLogin = () => {
 
       // Route based on role and institution
       // Super-admin always goes to the super-admin dashboard, regardless of institution
+      // Use window.location.href for a hard navigation so React Router state
+      // (e.g. SignInRouteHandler re-rendering) can't override the redirect.
       if (userRole === 'super-admin' || userData?.userType === 'super-admin') {
-        navigate('/super-admin/dashboard');
         setLoading(false);
         clearTimeout(loginTimeout);
+        window.location.href = '/super-admin/dashboard';
         return;
       }
 

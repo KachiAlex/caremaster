@@ -309,19 +309,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen cm-dashboard-body">
-      <DashboardLayout
-        tabs={tabs}
-        activeTab="dashboard"
-        onTabChange={handleTabChange}
-        institutionName="Client Portal"
-        portalLabel="Client"
-        displayName={displayName}
-        userEmail={userProfile?.email || user?.email || ''}
-        profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
-        onLogout={handleLogout}
-      >
-        <div className="space-y-6">
+    <>
+      <div className="space-y-6">
           <div className="cm-section-head">
             <span className="cm-eyebrow">Client Portal</span>
             <h2 className="mt-2">Welcome back, {displayName}</h2>
@@ -604,7 +593,6 @@ const Dashboard = () => {
         )}
       </div>
         </div>
-      </DashboardLayout>
 
       {/* Incoming Call Interface */}
       {incomingCall && (

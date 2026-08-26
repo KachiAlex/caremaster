@@ -32,18 +32,18 @@ const SuperAdminLogin = () => {
 
       if (hasSuperAdminClaim || isSuperAdminByUserType) {
         toast.success('Welcome, Super Admin!');
-        navigate('/super-admin/dashboard');
+        window.location.href = '/super-admin/dashboard';
       } else {
         // Try to set super-admin claim if user is an admin
         try {
           const functions = getFunctions();
           const setSuperAdminClaim = httpsCallable(functions, 'setSuperAdminClaim');
           await setSuperAdminClaim({ userId: user.uid });
-          
+
           // Refresh token to get updated claims
           await user.getIdToken(true);
           toast.success('Super-admin privileges granted!');
-          navigate('/super-admin/dashboard');
+          window.location.href = '/super-admin/dashboard';
         } catch (claimError) {
           console.error('Error setting super-admin claim:', claimError);
           toast.error('Access denied. Super-admin privileges required.');
