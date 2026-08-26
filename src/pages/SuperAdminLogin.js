@@ -25,11 +25,12 @@ const SuperAdminLogin = () => {
       const userCredential = await authManager.signInWithRole(email, password, 'super-admin');
       const user = userCredential.user;
 
-      // Check if user has super-admin claim
+      // Check if user has super-admin claim or super-admin userType
       const token = await user.getIdTokenResult();
       const hasSuperAdminClaim = token?.claims?.superAdmin === true;
+      const isSuperAdminByUserType = user.userType === 'super-admin' || user.user_type === 'super-admin';
 
-      if (hasSuperAdminClaim) {
+      if (hasSuperAdminClaim || isSuperAdminByUserType) {
         toast.success('Welcome, Super Admin!');
         navigate('/super-admin/dashboard');
       } else {

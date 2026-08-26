@@ -88,13 +88,34 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
   if (token) setToken(token);
   if (user) localStorage.setItem('user', JSON.stringify(user));
 
+  // Build a user object with Firebase-compatible token methods
+  const buildUserObj = (u) => {
+    if (!u) return null;
+    const claims = {
+      superAdmin: u.userType === 'super-admin' || u.user_type === 'super-admin',
+      admin: u.userType === 'admin' || u.user_type === 'admin' || u.userType === 'institutionAdmin',
+      userType: u.userType || u.user_type,
+    };
+    return {
+      ...u,
+      getIdToken: () => Promise.resolve(token),
+      getIdTokenResult: () => Promise.resolve({
+        token,
+        claims,
+        signInProvider: 'password',
+        expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        issuedAtTime: new Date().toISOString(),
+      }),
+    };
+  };
+
   // Notify onAuthStateChanged listeners
   const authObj = _auth || getAuth({});
-  authObj.currentUser = user ? { ...user, getIdToken: () => Promise.resolve(token) } : null;
+  authObj.currentUser = buildUserObj(user);
   (authObj.__listeners || []).forEach((cb) => cb(authObj.currentUser));
 
   return {
-    user: authObj.currentUser || { uid: user?.id || 'unknown', email, getIdToken: () => Promise.resolve(token) },
+    user: authObj.currentUser || buildUserObj({ id: 'unknown', email }) || { uid: user?.id || 'unknown', email, getIdToken: () => Promise.resolve(token) },
   };
 }
 
@@ -174,7 +195,22 @@ export function onAuthStateChanged(auth, callback) {
   if (token && userStr) {
     try {
       const user = JSON.parse(userStr);
-      auth.currentUser = { ...user, getIdToken: () => Promise.resolve(token) };
+      const claims = {
+        superAdmin: user.userType === 'super-admin' || user.user_type === 'super-admin',
+        admin: user.userType === 'admin' || user.user_type === 'admin' || user.userType === 'institutionAdmin',
+        userType: user.userType || user.user_type,
+      };
+      auth.currentUser = {
+        ...user,
+        getIdToken: () => Promise.resolve(token),
+        getIdTokenResult: () => Promise.resolve({
+          token,
+          claims,
+          signInProvider: 'password',
+          expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          issuedAtTime: new Date().toISOString(),
+        }),
+      };
       callback(auth.currentUser);
     } catch {
       callback(null);

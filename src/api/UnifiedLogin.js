@@ -318,6 +318,14 @@ const UnifiedLogin = () => {
       toast.success('Login successful! Redirecting...');
 
       // Route based on role and institution
+      // Super-admin always goes to the super-admin dashboard, regardless of institution
+      if (userRole === 'super-admin' || userData?.userType === 'super-admin') {
+        navigate('/super-admin/dashboard');
+        setLoading(false);
+        clearTimeout(loginTimeout);
+        return;
+      }
+
       if (institutionId) {
         // User belongs to an institution
         // TOP-LEVEL ADMIN CHECK: Any user with admin role is exempt from onboarding

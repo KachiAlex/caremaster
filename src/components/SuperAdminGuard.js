@@ -24,8 +24,9 @@ const SuperAdminGuard = ({ children }) => {
         // Check for super-admin custom claim
         const token = await user.getIdTokenResult();
         const hasSuperAdminClaim = token?.claims?.superAdmin === true;
-        
-        if (hasSuperAdminClaim) {
+        const isSuperAdminByUserType = user.userType === 'super-admin' || user.user_type === 'super-admin';
+
+        if (hasSuperAdminClaim || isSuperAdminByUserType) {
           setIsSuperAdmin(true);
           setLoading(false);
         } else {
