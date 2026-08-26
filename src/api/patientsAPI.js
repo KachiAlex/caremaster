@@ -478,6 +478,48 @@ export const assignClientToDoctor = async (clientId, doctorId) => {
   }
 };
 
+// Create a login account for an existing client and link it to the client record.
+// Calls the backend POST /api/auth/create-client endpoint (admin only).
+// Returns the new user account info on success; throws on failure.
+export const createClientLoginAccount = async ({ clientId, email, password, firstName, lastName, institutionId, phone }) => {
+  if (!clientId) throw new Error('Client ID is required to create a login account');
+  if (!email) throw new Error('Email is required to create a login account');
+  if (!password || password.length < 6) throw new Error('Password must be at least 6 characters');
+
+  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+
+  const res = await fetch(`${API_BASE}/auth/create-client`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      clientId,
+      email,
+      password,
+      first_name: firstName,
+      last_name: lastName,
+      institution_id: institutionId,
+      phone,
+    }),
+  });
+
+  const text = await res.text();
+  let body;
+  try { body = text ? JSON.parse(text) : {}; } catch { body = { raw: text }; }
+
+  if (!res.ok) {
+    const err = new Error(body.message || `Failed to create client login account (${res.status})`);
+    err.code = body.code || res.status;
+    err.response = body;
+    throw err;
+  }
+
+  return body.data && body.data.user ? body.data.user : null;
+};
+
 // Create new Client (hospital operations)
 export const createClient = async (clientData = {}, registeredBy = null) => {
   try {

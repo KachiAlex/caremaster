@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { verifyPasswordSecure } from '../utils/securePasswordAuth';
 import rateLimiter from '../utils/rateLimiter';
 import authSecurityService from '../services/authSecurityService';
 import { fetchLicenseStatus } from '../services/licenseService';
-import { 
-  Mail, 
-  Lock, 
-  Eye, 
+import {
+  Mail,
+  Lock,
+  Eye,
   EyeOff,
   Loader,
   Building2,
@@ -18,8 +17,8 @@ import {
   XCircle
 } from 'lucide-react';
 import { auth, db } from '../backend/config';;
-import { collection, query, getDocs, getDoc, setDoc, updateDoc, where, doc } from 'backend/database';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'backend/auth';
+import { getDoc, updateDoc, doc } from 'backend/database';
+import { signInWithEmailAndPassword, signOut } from 'backend/auth';
 
 const UnifiedLogin = () => {
   const navigate = useNavigate();
@@ -88,88 +87,15 @@ const UnifiedLogin = () => {
         authSucceeded = true;
         console.log('✅ Backend Auth succeeded for:', email);
       } catch (backendAuthError) {
-        // Genuine Backend Auth failure (wrong password, account not found, etc.)
-        console.log('🔍 Backend Auth failed, trying custom auth for:', email);
-
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email.toLowerCase().trim()));
-
-        // Add timeout to custom auth query
-        const queryPromise = getDocs(q);
-        const queryTimeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Custom auth query timeout')), 8000)
-        );
-
-        let querySnapshot;
-        try {
-          querySnapshot = await Promise.race([queryPromise, queryTimeoutPromise]);
-        } catch (queryError) {
-          console.error('❌ Custom auth Database query failed:', queryError.message);
-          throw new Error('Unable to verify account. Please check your internet connection and try again.');
-        }
-
-        if (querySnapshot.empty) {
-          throw new Error('Invalid email or password');
-        }
-
-        // SECURITY FIX: Use secure password verification instead of plain text comparison
-        let customAuthUser = null;
-        let passwordVerificationResult = null;
-
-        for (const userDoc of querySnapshot.docs) {
-          const data = userDoc.data();
-          if (data.password) {
-            // Verify password securely with timeout
-            const verifyPromise = verifyPasswordSecure(password, data.password);
-            const verifyTimeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Password verification timeout')), 5000)
-            );
-
-            passwordVerificationResult = await Promise.race([verifyPromise, verifyTimeoutPromise]);
-
-            if (passwordVerificationResult === true || passwordVerificationResult?.verified === true) {
-              customAuthUser = { uid: userDoc.id, ...data };
-
-              // If password needs migration, update it in Database - do this asynchronously
-              if (passwordVerificationResult?.needsMigration && passwordVerificationResult?.hashedPassword) {
-                setDoc(doc(db, 'users', userDoc.id), {
-                  password: passwordVerificationResult.hashedPassword,
-                  passwordMigrated: true,
-                  passwordMigratedAt: new Date().toISOString()
-                }, { merge: true }).catch(err => {
-                  console.error('Failed to migrate password:', err);
-                });
-              }
-              rateLimiter.reset(rateLimitKey);
-              break;
-            }
-          }
-        }
-
-        if (!customAuthUser) {
-          throw new Error('Invalid email or password');
-        }
-
-        userData = customAuthUser;
-
-        // Create Backend Auth account if it doesn't exist
-        try {
-          userCredential = await signInWithEmailAndPassword(auth, email, password);
-          user = userCredential.user;
-        } catch (createError) {
-          // If account doesn't exist in Backend Auth, create it
-          userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          user = userCredential.user;
-
-          // Update Database with Backend Auth UID - do this asynchronously
-          setDoc(doc(db, 'users', user.uid), {
-            ...userData,
-            uid: user.uid,
-            updatedAt: new Date()
-          }, { merge: true }).catch(err => {
-            console.error('Failed to update user UID:', err);
-          });
-        }
+        // The backend /auth/email-login endpoint is the single source of truth for
+        // email + password authentication. It verifies the password against the
+        // users table (bcrypt) and returns a JWT + full user profile on success.
+        //
+        // Do NOT fall back to querying /api/data/users here — that route requires
+        // authentication, so it can never work pre-login and only masks the real
+        // error with a misleading "Access token required" message.
+        console.log('🔍 Backend Auth failed for:', email, '-', backendAuthError.message);
+        throw backendAuthError;
       }
 
       // If Backend Auth succeeded, try to fetch the user profile from Database.

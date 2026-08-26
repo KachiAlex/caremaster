@@ -179,6 +179,99 @@ router.post('/create-staff', authenticateToken, async (req, res) => {
   }
 });
 
+// Create a client login account (admin only — links a users auth account to an existing clients record)
+// Body: { clientId, email, password, first_name, last_name, institution_id, phone? }
+router.post('/create-client', authenticateToken, async (req, res) => {
+  try {
+    // Only admins can create client login accounts
+    if (!['admin', 'institutionAdmin', 'super-admin', 'superadmin', 'super_admin'].includes(req.user.user_type)) {
+      return res.status(403).json({ success: false, message: 'Only admins can create client accounts' });
+    }
+
+    const { clientId, email, password, first_name, last_name, institution_id, phone } = req.body;
+
+    if (!clientId || !email || !password || !first_name) {
+      return res.status(400).json({ success: false, message: 'clientId, email, password, and first name are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    // Verify the client record exists
+    const clientRecord = await db('clients').where({ id: clientId }).first();
+    if (!clientRecord) {
+      return res.status(404).json({ success: false, message: 'Client record not found' });
+    }
+
+    // Check if a users account already exists for this email
+    const existingUser = await db('users')
+      .whereRaw('LOWER(email) = LOWER(?)', [email.trim().toLowerCase()])
+      .first();
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: 'A user with this email already exists' });
+    }
+
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+    // matric_number is required by the schema but not used for email login
+    const matric_number = `CLIENT/${Date.now().toString().slice(-6)}`;
+
+    // Create the users account and link it to the client record atomically
+    const result = await db.transaction(async (trx) => {
+      const [user] = await trx('users')
+        .insert({
+          matric_number,
+          email: email.trim().toLowerCase(),
+          password_hash,
+          first_name,
+          last_name: last_name || '',
+          phone: phone || null,
+          department: 'Client',
+          level: '100',
+          session: '2024/2025',
+          user_type: 'client',
+          institution_id: institution_id || clientRecord.institution_id || null,
+          is_active: true,
+          is_verified: true,
+          status: 'active'
+        })
+        .returning(['id', 'email', 'first_name', 'last_name', 'user_type', 'institution_id', 'phone']);
+
+      // Link the new users account to the client profile
+      await trx('clients')
+        .where({ id: clientId })
+        .update({ user_id: user.id, updated_at: new Date() });
+
+      return user;
+    });
+
+    logger.info(`Client login account created by admin ${req.user.email}: ${email} (linked to client ${clientId})`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Client login account created successfully',
+      data: {
+        user: {
+          id: result.id,
+          uid: result.id,
+          email: result.email,
+          firstName: result.first_name,
+          lastName: result.last_name,
+          phone: result.phone,
+          userType: result.user_type,
+          institutionId: result.institution_id,
+          status: 'active'
+        }
+      }
+    });
+
+  } catch (error) {
+    logger.error('Create client account error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create client account' });
+  }
+});
+
 // Login
 router.post('/login', validateRequest(schemas.login), async (req, res) => {
   try {

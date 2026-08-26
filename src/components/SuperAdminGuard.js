@@ -1,69 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getDoc, doc } from 'backend/database';
-import { signOut, onAuthStateChanged } from 'backend/auth';
-import { db, auth } from '../backend/config';
+import { useUser } from '../contexts/UserContext';
+import authManager from '../utils/authManager';
 
 const SuperAdminGuard = ({ children }) => {
-  const [loading, setLoading] = useState(true);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const { user, userProfile, userRole, loading } = useUser();
+  const [verifying, setVerifying] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        // No user logged in
-        toast.error('Please log in to access the super admin panel');
-        navigate('/super-admin/login');
-        setLoading(false);
-        return;
-      }
+    if (loading) return; // Still loading user profile
 
-      try {
-        // Check for super-admin custom claim
-        const token = await user.getIdTokenResult();
-        const hasSuperAdminClaim = token?.claims?.superAdmin === true;
-        const isSuperAdminByUserType = user.userType === 'super-admin' || user.user_type === 'super-admin';
+    if (!user) {
+      toast.error('Please log in to access the super admin panel');
+      navigate('/super-admin/login', { replace: true });
+      return;
+    }
 
-        if (hasSuperAdminClaim || isSuperAdminByUserType) {
-          setIsSuperAdmin(true);
-          setLoading(false);
-        } else {
-          // User is not super-admin - LOG THEM OUT
-          console.log('⛔ Unauthorized access attempt to Super Admin portal');
-          toast.error('Access denied. You will be logged out and redirected to Super Admin login.');
-          
-          // Get user role for logging
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const userRole = userData.userType || userData.type;
-            console.log(`User role "${userRole}" attempted to access Super Admin portal`);
-          }
-          
-          // Log out the user
-          await signOut(auth);
-          
-          // Redirect to super admin login
-          navigate('/super-admin/login', { replace: true });
-          toast.info('Please log in with super-admin credentials');
-          setLoading(false);
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking super-admin status:', error);
-        toast.error('Error verifying super-admin access');
-        await signOut(auth);
-        navigate('/super-admin/login');
-        setLoading(false);
-      }
-    });
+    const isSuperAdmin =
+      userRole === 'super-admin' ||
+      userProfile?.userType === 'super-admin' ||
+      userProfile?.user_type === 'super-admin';
 
-    return () => unsubscribe();
-  }, [navigate]);
+    if (!isSuperAdmin) {
+      console.log('⛔ Unauthorized access attempt to Super Admin portal. Role:', userRole);
+      toast.error('Access denied. Super-admin privileges required.');
+      authManager.signOutFromRole('super-admin').finally(() => {
+        window.location.href = '/super-admin/login';
+      });
+      return;
+    }
 
-  if (loading) {
+    setVerifying(false);
+  }, [user, userProfile, userRole, loading, navigate]);
+
+  if (loading || verifying) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -73,6 +45,15 @@ const SuperAdminGuard = ({ children }) => {
       </div>
     );
   }
+
+  if (!user) {
+    return <Navigate to="/super-admin/login" replace />;
+  }
+
+  const isSuperAdmin =
+    userRole === 'super-admin' ||
+    userProfile?.userType === 'super-admin' ||
+    userProfile?.user_type === 'super-admin';
 
   if (!isSuperAdmin) {
     return (

@@ -18,9 +18,10 @@ import {
   Upload,
   QrCode,
   Shield,
-  AlertTriangle
+  AlertTriangle,
+  Lock
 } from 'lucide-react';
-import { createClient } from '../api/patientsAPI';
+import { createClient, createClientLoginAccount } from '../api/patientsAPI';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import { checkForDuplicates, shouldBlockRegistration } from '../utils/clientDuplicateDetection';
@@ -88,7 +89,11 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     primaryCarePhysician: '',
     physicianPhone: '',
     notes: '',
-    nationalId: ''
+    nationalId: '',
+
+    // Login credentials (admin sets initial password so the client can sign in)
+    loginPassword: '',
+    confirmPassword: ''
   });
 
   const [tempMedicalCondition, setTempMedicalCondition] = useState('');
@@ -166,6 +171,9 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
     } else if (name === 'notes' || name === 'address') {
       // Allow more characters for text fields but sanitize HTML
       sanitizedValue = sanitizeText(value);
+    } else if (name === 'loginPassword' || name === 'confirmPassword') {
+      // Passwords must be preserved exactly as typed — do NOT sanitize (would strip characters)
+      sanitizedValue = value;
     } else {
       // Standard sanitization for other fields
       sanitizedValue = sanitizeText(value);
@@ -408,12 +416,26 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
       };
       
       const validation = validateFormInputs(formData, validationSchema);
-      
+
       if (!validation.valid) {
         const firstError = Object.values(validation.errors)[0];
         toast.error(firstError);
         setLoading(false);
         return;
+      }
+
+      // Validate login credentials when an email is provided (clients sign in with email + password)
+      if (formData.email && formData.email.trim()) {
+        if (!formData.loginPassword || formData.loginPassword.length < 6) {
+          toast.error('Login password must be at least 6 characters so the client can sign in.');
+          setLoading(false);
+          return;
+        }
+        if (formData.loginPassword !== formData.confirmPassword) {
+          toast.error('Login password and confirmation do not match.');
+          setLoading(false);
+          return;
+        }
       }
       
       // Prepare Client data with sanitized values
@@ -486,13 +508,45 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
           });
         }
       }
-      
+
+      // Create the client's login account (users table) and link it to the client record.
+      // Requires an email + password. Non-fatal: if this fails the client record still exists,
+      // but the client won't be able to sign in until an admin creates the login account.
+      let loginAccountCreated = false;
+      if (clientData.email && formData.loginPassword) {
+        try {
+          // Derive first/last name from the client name (split on first space)
+          const nameParts = clientData.name.split(/\s+/);
+          const firstName = nameParts[0] || clientData.name;
+          const lastName = nameParts.slice(1).join(' ') || '';
+          await createClientLoginAccount({
+            clientId: result.id || result.clientId,
+            email: clientData.email,
+            password: formData.loginPassword,
+            firstName,
+            lastName,
+            institutionId: effectiveInstitutionId,
+            phone: clientData.phone,
+          });
+          loginAccountCreated = true;
+        } catch (loginError) {
+          console.error('Client login account creation error:', loginError);
+          toast.warning(
+            `Client registered, but the login account could not be created: ${loginError.message}. The client cannot sign in until this is resolved.`,
+            { autoClose: 8000 }
+          );
+        }
+      }
+
       toast.success(
         <div>
           <div className="font-semibold">Client registered successfully!</div>
           <div className="text-sm mt-1">
             Client ID: <span className="font-mono font-bold text-blue-400">{result.clientId}</span>
           </div>
+          {loginAccountCreated && (
+            <div className="text-sm mt-1">Login account created — the client can now sign in with their email and password.</div>
+          )}
         </div>,
         { autoClose: 5000 }
       );
@@ -523,7 +577,9 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         primaryCarePhysician: '',
         physicianPhone: '',
         notes: '',
-        nationalId: ''
+        nationalId: '',
+        loginPassword: '',
+        confirmPassword: ''
       });
       setNationalId('');
       setUploadedDocuments({
@@ -723,6 +779,41 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                           onChange={handleInputChange}
                           className={`${inputClass} pl-10`}
                           placeholder="Client@example.com"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="loginPassword" className={labelClass}>Login Password {formData.email ? '*' : ''}</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          id="loginPassword"
+                          type="password"
+                          name="loginPassword"
+                          value={formData.loginPassword}
+                          onChange={handleInputChange}
+                          className={`${inputClass} pl-10`}
+                          placeholder="Min. 6 characters"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Sets the password the client uses to sign in. Required when an email is provided.</p>
+                    </div>
+
+                    <div>
+                      <label htmlFor="confirmPassword" className={labelClass}>Confirm Password {formData.email ? '*' : ''}</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          id="confirmPassword"
+                          type="password"
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleInputChange}
+                          className={`${inputClass} pl-10`}
+                          placeholder="Re-enter password"
+                          autoComplete="new-password"
                         />
                       </div>
                     </div>
