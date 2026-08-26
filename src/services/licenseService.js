@@ -175,20 +175,16 @@ export async function activateLicenseById(licenseId) {
     const { activateLicense: activateLicenseDirect } = await import('../api/licenseAPI');
     return await activateLicenseDirect(licenseId);
   } catch (error) {
-    console.error('Error activating license via Database:', error);
-    // Fallback to Cloud Function if Database fails
-    const functions = getFunctions(getApp(), 'us-central1');
-    const callable = httpsCallable(functions, 'activateLicenseFunction');
-    const res = await callable({ licenseId });
-    return res.data;
+    console.error('Error activating license:', error);
+    throw error;
   }
 }
 
 export async function migrateInstitutionLinks(options = {}) {
-  const functions = getFunctions(getApp(), 'us-central1');
-  const callable = httpsCallable(functions, 'migrateInstitutionLinksFunction');
-  const res = await callable(options);
-  return res.data;
+  // Cloud Functions are no longer used — backend is PostgreSQL.
+  // Institution links are generated client-side from the institution ID.
+  console.log('migrateInstitutionLinks: skipping (PostgreSQL backend)');
+  return { skipped: true, reason: 'Cloud Functions not available with PostgreSQL backend' };
 }
 
 export async function getInstitutionAdmins(institutionId) {

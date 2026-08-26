@@ -262,6 +262,13 @@ router.get('/:table', async (req, res) => {
     const ignoreKeys = ['limit', 'offset', 'orderBy', 'order', 'page'];
     for (const [key, value] of Object.entries(translatedFilters)) {
       if (!ignoreKeys.includes(key) && value !== undefined && value !== '') {
+        // Special filter: isSuperAdmin — users table uses user_type = 'super-admin'
+        if (key === 'isSuperAdmin' && tableName === 'users') {
+          if (value === 'true' || value === true) {
+            query = query.where('user_type', 'super-admin');
+          }
+          continue;
+        }
         const col = key.replace(/([A-Z])/g, '_$1').toLowerCase();
         query = query.where(col, value);
       }
@@ -275,6 +282,12 @@ router.get('/:table', async (req, res) => {
     const totalQuery = db(tableName);
     for (const [key, value] of Object.entries(translatedFilters)) {
       if (!ignoreKeys.includes(key) && value !== undefined && value !== '') {
+        if (key === 'isSuperAdmin' && tableName === 'users') {
+          if (value === 'true' || value === true) {
+            totalQuery.where('user_type', 'super-admin');
+          }
+          continue;
+        }
         const col = key.replace(/([A-Z])/g, '_$1').toLowerCase();
         totalQuery.where(col, value);
       }
