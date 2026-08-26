@@ -5,17 +5,18 @@ import { auth, db } from '../backend/config';
 import { useUser } from '../contexts/UserContext';
 import { onAuthStateChanged, signOut } from 'backend/auth';
 import { toast } from 'react-toastify';
-import { 
-  Building2, 
-  Users, 
-  Shield, 
-  CheckCircle, 
+import {
+  Building2,
+  Users,
+  Shield,
+  CheckCircle,
   ArrowRight,
   Loader,
   AlertCircle,
   Activity,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Heart
 } from 'lucide-react';
 
 const InstitutionLanding = () => {
