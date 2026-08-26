@@ -694,18 +694,43 @@ function InstitutionEntry() {
 // Sign-in route handler - focuses on caregiver/service provider access
 function SignInRouteHandler() {
   const { userRole, userProfile, loading } = useUser();
-  
+
+  // Guard against infinite redirect loops between SignInRouteHandler and guard components.
+  // If we've redirected more than 3 times in 10 seconds, stop and show an error.
+  const [redirectCount] = React.useState(() => {
+    const now = Date.now();
+    const key = '__signin_redirect_count';
+    const data = JSON.parse(sessionStorage.getItem(key) || '{"count":0,"ts":0}');
+    if (now - data.ts > 10000) {
+      sessionStorage.setItem(key, JSON.stringify({ count: 1, ts: now }));
+      return 1;
+    }
+    const newCount = data.count + 1;
+    sessionStorage.setItem(key, JSON.stringify({ count: newCount, ts: data.ts }));
+    return newCount;
+  });
+
   // Show loading while user profile is being fetched
   if (loading || !userProfile) {
     return <LoadingSpinner />;
   }
-  
+
+  // If we've redirected too many times, clear stale session and show login
+  if (redirectCount > 3) {
+    console.error('🚫 Infinite redirect loop detected — clearing session');
+    sessionStorage.removeItem('__signin_redirect_count');
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    return <Navigate to="/login" replace />;
+  }
+
   console.log('🔄 SignInRouteHandler - Checking user role:', {
     userRole,
     userType: userProfile?.userType,
     currentPath: window.location.pathname
   });
-  
+
   // Check if user came from institution login - if so, let them continue to their intended destination
   const urlParams = new URLSearchParams(window.location.search);
   const institutionId = urlParams.get('institution');

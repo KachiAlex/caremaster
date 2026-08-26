@@ -91,80 +91,39 @@ export const UserProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // Sync with Firebase auth state (for Firebase-based logins like UnifiedLogin)
-  // UnifiedLogin uses signInWithEmailAndPassword directly and navigates without
-  // calling UserContext.login(), so we MUST listen to onAuthStateChanged to
-  // populate user/userProfile when Firebase auth state changes.
+  // Sync with auth state (for logins like UnifiedLogin that use signInWithEmailAndPassword
+  // from backend/auth.js directly and navigate without calling UserContext.login()).
+  //
+  // IMPORTANT: signInWithEmailAndPassword in backend/auth.js already sets the JWT token
+  // and user profile in localStorage. This listener only syncs React state from localStorage.
+  // It must NOT overwrite localStorage.token — that would replace the JWT with the UID
+  // and break all subsequent API calls (403 "Invalid token").
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Load cached profile from localStorage first for immediate UI
-        let cachedUser = null;
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      if (authUser) {
+        // Read the user profile that signInWithEmailAndPassword already stored
+        let storedUser = null;
         try {
           const stored = localStorage.getItem('user');
           if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed && parsed.uid === firebaseUser.uid) {
-              cachedUser = parsed;
-            }
+            storedUser = JSON.parse(stored);
           }
         } catch (e) { /* ignore parse errors */ }
 
-        const baseUser = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-        };
-
-        const initialUser = cachedUser || baseUser;
-        localStorage.setItem('token', firebaseUser.uid);
-        localStorage.setItem('user', JSON.stringify(initialUser));
-
-        setUser(initialUser);
-        setUserProfile(initialUser);
-
-        const role = initialUser.userType || initialUser.type || initialUser.role || 'student';
-        setUserRole(role);
-        setUserRoles(initialUser.roles || [role]);
-        if (initialUser.institutionId) {
-          setInstitutionId(initialUser.institutionId);
-        }
-
-        // Refresh from Firestore in background (non-blocking)
-        (async () => {
-          try {
-            const userRef = doc(db, 'users', firebaseUser.uid);
-            const userDocPromise = getDoc(userRef);
-            const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Firestore query timeout')), 8000)
-            );
-            const userSnap = await Promise.race([userDocPromise, timeoutPromise]);
-
-            if (userSnap.exists()) {
-              const userData = userSnap.data();
-              const refreshedUser = { ...baseUser, ...userData };
-              localStorage.setItem('user', JSON.stringify(refreshedUser));
-              setUser(refreshedUser);
-              setUserProfile(refreshedUser);
-
-              const refreshedRole = userData.userType || userData.type || userData.role || role;
-              setUserRole(refreshedRole);
-              setUserRoles(userData.roles || [refreshedRole]);
-              if (userData.institutionId) {
-                setInstitutionId(userData.institutionId);
-              }
-            }
-          } catch (err) {
-            console.warn('Background Firestore refresh failed, using cached profile:', err.message);
+        if (storedUser) {
+          setUser(storedUser);
+          setUserProfile(storedUser);
+          const role = storedUser.userType || storedUser.type || storedUser.role || 'student';
+          setUserRole(role);
+          setUserRoles(storedUser.roles || [role]);
+          if (storedUser.institutionId) {
+            setInstitutionId(storedUser.institutionId);
           }
-        })();
+        }
       } else {
-        // Firebase user signed out — only clear if we had a Firebase-based token
+        // User signed out — clear state only if there's no token
         const token = localStorage.getItem('token');
-        if (token && !token.startsWith('Bearer')) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('user');
+        if (!token) {
           setUser(null);
           setUserProfile(null);
           setUserRole(null);

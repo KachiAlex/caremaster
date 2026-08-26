@@ -90,7 +90,11 @@ class ErrorHandler {
       return ERROR_TYPES.VALIDATION_ERROR;
     }
     
-    if (error.code?.startsWith('functions/') || error.status >= 500) {
+    if (typeof error.code === 'string' && error.code.startsWith('functions/')) {
+      return ERROR_TYPES.SERVER_ERROR;
+    }
+
+    if (typeof error.status === 'number' && error.status >= 500) {
       return ERROR_TYPES.SERVER_ERROR;
     }
     
