@@ -18,6 +18,7 @@ const ALLOWED_TABLES = [
   'patients', 'calls', 'conversations', 'elderly_profiles',
   'licenses', 'audit_logs', 'analytics_events', 'medication_logs', 'receipts', 'transactions', 'wallets',
   'institution_id_mappings',
+  'schedules',
   // Frontend collection name aliases (map to real table via COLLECTION_TO_TABLE)
   'clientAssignments', 'emergencies',
   'medicationLogs', 'auditLogs', 'careTasks', 'careLogs',
@@ -26,6 +27,15 @@ const ALLOWED_TABLES = [
   'callNotifications', 'emergencyProtocols',
   'clientActivities', 'loginLogs',
   'signaling',
+  'billingPlans', 'clientSubscriptions', 'billingSettings',
+  'bills',
+  'patientLogs',
+  'adlLogs',
+  'wages',
+  'reports',
+  'campaigns',
+  'suppliers', 'purchaseOrders', 'goodsReceived', 'stockAudit',
+  'securityAuditLogs', 'userSessions', 'loginAttempts', 'twoFactorAuth',
   // Collections with no backing DB table — return empty results (see NO_TABLE_COLLECTIONS)
   'medicalHistory', 'institutionAdmins', 'caregiverClockRecords',
   'caregiverEarnings', 'caregiverPerformance', 'caregiverActivityLog',
@@ -59,6 +69,12 @@ const NO_TABLE_COLLECTIONS = [
   'caregiverEarnings', 'caregiverPerformance', 'caregiverActivityLog',
   'doseLogs', 'sideEffects', 'failedLoginAttempts', 'blockedIps',
   'prescriptionRefills', 'messageTemplates', 'pharmacistMedicationData',
+  // Collections used by frontend that have no backing DB table yet
+  'billingPlans', 'clientSubscriptions', 'billingSettings',
+  'bills', 'patientLogs', 'adlLogs', 'wages', 'reports', 'campaigns',
+  'suppliers', 'purchaseOrders', 'goodsReceived', 'stockAudit',
+  'securityAuditLogs', 'userSessions', 'loginAttempts', 'twoFactorAuth',
+  'schedules',
 ];
 
 function resolveTable(collectionName) {
@@ -95,7 +111,8 @@ const WRITABLE_FIELDS = {
   conversations: ['participants', 'conversation_type', 'type', 'title', 'last_message_at', 'last_message_preview', 'institution_id', 'last_message', 'last_message_time'],
   elderly_profiles: ['client_id', 'medical_conditions', 'allergies', 'dietary_requirements', 'mobility_status', 'notes'],
   call_notifications: ['call_id', 'recipient_id', 'sender_id', 'type', 'status', 'created_at'],
-  signaling: ['call_id', 'from', 'to', 'type', 'sdp', 'candidate', 'created_at']
+  signaling: ['call_id', 'from', 'to', 'type', 'sdp', 'candidate', 'created_at'],
+  schedules: ['institution_id', 'institutionId', 'client_id', 'clientId', 'client_name', 'clientName', 'caregiver_id', 'caregiverId', 'caregiver_name', 'caregiverName', 'title', 'description', 'service_type', 'serviceType', 'type', 'priority', 'schedule_date', 'scheduleDate', 'end_date', 'endDate', 'start_time', 'startTime', 'end_time', 'endTime', 'comments', 'special_instructions', 'specialInstructions', 'status', 'created_at', 'updated_at']
 };
 
 // Allowed sort columns per table (to prevent SQL injection via orderBy)
