@@ -88,7 +88,7 @@ function resolveTable(collectionName) {
 // Whitelisted fields per table for create/update operations
 const WRITABLE_FIELDS = {
   users: ['first_name', 'last_name', 'phone', 'photo_url', 'department', 'level', 'session'],
-  institutions: ['name', 'domain', 'notes', 'active'],
+  institutions: ['name', 'email', 'phone', 'address', 'city', 'state', 'country', 'zip_code', 'website', 'license_key', 'plan', 'seats', 'active', 'status', 'license_starts_at', 'license_ends_at', 'features', 'settings', 'updated_at'],
   appointments: ['client_id', 'caregiver_id', 'scheduled_date', 'duration', 'status', 'notes'],
   clients: ['name', 'full_name', 'email', 'phone', 'institution_id', 'status', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship', 'medical_conditions', 'medications', 'allergies', 'blood_type', 'genotype', 'care_level', 'insurance_provider', 'insurance_policy_number', 'national_id', 'primary_care_physician', 'physician_phone', 'notes', 'user_type', 'type', 'city', 'state', 'zip_code', 'client_id', 'assigned_caregiver', 'assigned_doctor', 'user_id'],
   caregivers: ['user_id', 'first_name', 'last_name', 'phone', 'email', 'specialization', 'status'],

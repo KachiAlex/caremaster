@@ -154,30 +154,39 @@ const InstitutionSettings = ({ institutionId }) => {
 
       if (institutionDoc.exists()) {
         const data = institutionDoc.data();
+        let storedSettings = data.settings || {};
+        if (typeof storedSettings === 'string') {
+          try {
+            storedSettings = JSON.parse(storedSettings);
+          } catch {
+            storedSettings = {};
+          }
+        }
+
         setSettings(prev => ({
           ...prev,
           institutionName: data.name || '',
-          institutionType: data.type || 'healthcare',
-          contactEmail: data.contactEmail || data.email || '',
-          contactPhone: data.contactPhone || data.phone || '',
+          institutionType: storedSettings.institutionType || data.type || 'healthcare',
+          contactEmail: data.email || '',
+          contactPhone: data.phone || '',
           address: data.address || '',
-          website: data.website || '',
-          currency: data.currency || 'USD',
-          currencySymbol: data.currencySymbol || '$',
-          currencyPosition: data.currencyPosition || 'before',
-          taxRate: data.taxRate !== undefined ? data.taxRate : 0,
-          timezone: data.timezone || 'America/New_York',
-          dateFormat: data.dateFormat || 'MM/DD/YYYY',
-          timeFormat: data.timeFormat || '12h',
-          language: data.language || 'en',
-          businessHours: data.businessHours || prev.businessHours,
-          notifications: data.notifications || prev.notifications,
-          autoArchiveInactiveDays: data.autoArchiveInactiveDays || 90,
-          requireApprovalForNewUsers: data.requireApprovalForNewUsers ?? true,
-          allowSelfRegistration: data.allowSelfRegistration ?? false,
-          sessionTimeoutMinutes: data.sessionTimeoutMinutes || 480,
-          maxLoginAttempts: data.maxLoginAttempts || 5,
-          passwordExpiryDays: data.passwordExpiryDays || 90
+          website: data.website || storedSettings.website || '',
+          currency: storedSettings.currency || 'USD',
+          currencySymbol: storedSettings.currencySymbol || '$',
+          currencyPosition: storedSettings.currencyPosition || 'before',
+          taxRate: storedSettings.taxRate !== undefined ? storedSettings.taxRate : 0,
+          timezone: storedSettings.timezone || 'America/New_York',
+          dateFormat: storedSettings.dateFormat || 'MM/DD/YYYY',
+          timeFormat: storedSettings.timeFormat || '12h',
+          language: storedSettings.language || 'en',
+          businessHours: storedSettings.businessHours || prev.businessHours,
+          notifications: storedSettings.notifications || prev.notifications,
+          autoArchiveInactiveDays: storedSettings.autoArchiveInactiveDays || 90,
+          requireApprovalForNewUsers: storedSettings.requireApprovalForNewUsers ?? true,
+          allowSelfRegistration: storedSettings.allowSelfRegistration ?? false,
+          sessionTimeoutMinutes: storedSettings.sessionTimeoutMinutes || 480,
+          maxLoginAttempts: storedSettings.maxLoginAttempts || 5,
+          passwordExpiryDays: storedSettings.passwordExpiryDays || 90
         }));
       }
     } catch (error) {
@@ -192,11 +201,17 @@ const InstitutionSettings = ({ institutionId }) => {
     try {
       setSaving(true);
 
+      const { institutionName, contactEmail, contactPhone, address, website, ...extraSettings } = settings;
       const institutionRef = doc(db, 'institutions', institutionId);
+
       await updateDoc(institutionRef, {
-        ...settings,
-        updatedAt: serverTimestamp(),
-        lastModifiedBy: 'admin' // TODO: Add actual user ID
+        name: institutionName,
+        email: contactEmail,
+        phone: contactPhone,
+        address,
+        website,
+        settings: extraSettings,
+        updatedAt: serverTimestamp()
       });
 
       toast.success('Settings saved successfully!');

@@ -296,6 +296,7 @@ const InstitutionAdminDashboard = () => {
   });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [caregiverSubTab, setCaregiverSubTab] = useState('all'); // 'all' | 'inactive'
+  const [clientSubTab, setClientSubTab] = useState('active'); // 'active' | 'archived'
   const [schedulingSubTab, setSchedulingSubTab] = useState('schedule'); // 'schedule' | 'assignments'
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showCaregiverPasswordModal, setShowCaregiverPasswordModal] = useState(false);
@@ -3387,7 +3388,6 @@ const renderMessagesTab = () => {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: Activity },
     { id: 'clients', label: 'Clients', icon: User },
-    { id: 'archived-clients', label: 'Archived Clients', icon: Package },
     { id: 'caregivers', label: 'Caregivers', icon: UserCheck },
     { id: 'pharmacists', label: 'Pharmacists', icon: Pill },
     { id: 'scheduling', label: 'Scheduling', icon: Calendar },
@@ -3681,145 +3681,154 @@ const renderMessagesTab = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-2xl font-semibold text-gray-900">Clients</h3>
-                <p className="text-sm text-gray-600">Manage active Client relationships and contact details.</p>
+                <p className="text-sm text-gray-600">Manage active Client relationships, contact details, and archived records.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { setBulkImportType('client'); setShowBulkImport(true); }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-sm font-medium"
-                >
-                  <Upload className="h-4 w-4" />
-                  Bulk Import
-                </button>
-                <button
-                  onClick={() => setShowCreatePatientModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Client
-                </button>
-              </div>
-            </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
-              {clients.length === 0 ? (
-                <div className="p-12 text-center text-gray-500">No clients registered yet.</div>
-              ) : (
-                <div
-                  className="overflow-x-auto"
-                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x' }}
-                >
-                  <table
-                    className="min-w-[900px] divide-y divide-gray-200 text-sm"
-                    style={{ width: 'max-content', minWidth: '900px' }}
+              {clientSubTab === 'active' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setBulkImportType('client'); setShowBulkImport(true); }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-sm font-medium"
                   >
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Name</th>
-                        <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Contact</th>
-                        <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Status</th>
-                        <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Joined</th>
-                        <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {clients.map((client) => (
-                        <tr key={client.id || client.uid} className="hover:bg-gray-50 transition-colors">
-                          <td 
-                            className="px-6 py-4 font-medium text-gray-900 cursor-pointer"
-                            onClick={() => {
-                              setSelectedClient(client);
-                              setShowClientDetails(true);
-                            }}
-                          >
-                            {client.name || client.fullName || 'Unnamed'}
-                          </td>
-                          <td 
-                            className="px-6 py-4 text-gray-600 cursor-pointer"
-                            onClick={() => {
-                              setSelectedClient(client);
-                              setShowClientDetails(true);
-                            }}
-                          >
-                            {client.phone || client.email || '—'}
-                          </td>
-                          <td 
-                            className="px-6 py-4 cursor-pointer"
-                            onClick={() => {
-                              setSelectedClient(client);
-                              setShowClientDetails(true);
-                            }}
-                          >
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                              client.status === 'active' ? 'bg-green-100 text-green-800' :
-                              client.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              client.status === 'archived' ? 'bg-gray-100 text-gray-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {client.status || 'Pending'}
-                            </span>
-                          </td>
-                          <td 
-                            className="px-6 py-4 text-gray-600 cursor-pointer"
-                            onClick={() => {
-                              setSelectedClient(client);
-                              setShowClientDetails(true);
-                            }}
-                          >
-                            {formatDateValue(client.createdAt || client.joinedAt)}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={() => {
-                                  setSelectedClient(client);
-                                  setShowClientDetails(true);
-                                }}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="View Client Details"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleArchiveClient(client.id || client.uid)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Archive Client"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    <Upload className="h-4 w-4" />
+                    Bulk Import
+                  </button>
+                  <button
+                    onClick={() => setShowCreatePatientModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Client
+                  </button>
                 </div>
               )}
             </div>
-          </div>
-        );
-      case 'archived-clients':
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Archived Clients</h3>
-                <p className="text-sm text-gray-600">View and restore archived Client records.</p>
-              </div>
+
+            {/* Sub-tabs: Active Clients | Archived Clients */}
+            <div className="flex gap-2 border-b border-gray-200">
               <button
-                onClick={() => {
-                  setRefreshing(true);
-                  loadDashboardData().finally(() => setRefreshing(false));
-                }}
-                disabled={refreshing}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                onClick={() => setClientSubTab('active')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  clientSubTab === 'active'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
               >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
+                Active Clients
+              </button>
+              <button
+                onClick={() => setClientSubTab('archived')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  clientSubTab === 'archived'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Archived Clients
               </button>
             </div>
-            <ArchivedClients institutionId={effectiveInstitutionId} />
+
+            {clientSubTab === 'archived' ? (
+              <ArchivedClients institutionId={effectiveInstitutionId} />
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+                {clients.length === 0 ? (
+                  <div className="p-12 text-center text-gray-500">No clients registered yet.</div>
+                ) : (
+                  <div
+                    className="overflow-x-auto"
+                    style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x' }}
+                  >
+                    <table
+                      className="min-w-[900px] divide-y divide-gray-200 text-sm"
+                      style={{ width: 'max-content', minWidth: '900px' }}
+                    >
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Name</th>
+                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Contact</th>
+                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Status</th>
+                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Joined</th>
+                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {clients.map((client) => (
+                          <tr key={client.id || client.uid} className="hover:bg-gray-50 transition-colors">
+                            <td 
+                              className="px-6 py-4 font-medium text-gray-900 cursor-pointer"
+                              onClick={() => {
+                                setSelectedClient(client);
+                                setShowClientDetails(true);
+                              }}
+                            >
+                              {client.name || client.fullName || 'Unnamed'}
+                            </td>
+                            <td 
+                              className="px-6 py-4 text-gray-600 cursor-pointer"
+                              onClick={() => {
+                                setSelectedClient(client);
+                                setShowClientDetails(true);
+                              }}
+                            >
+                              {client.phone || client.email || '—'}
+                            </td>
+                            <td 
+                              className="px-6 py-4 cursor-pointer"
+                              onClick={() => {
+                                setSelectedClient(client);
+                                setShowClientDetails(true);
+                              }}
+                            >
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                client.status === 'active' ? 'bg-green-100 text-green-800' :
+                                client.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                client.status === 'archived' ? 'bg-gray-100 text-gray-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {client.status || 'Pending'}
+                              </span>
+                            </td>
+                            <td 
+                              className="px-6 py-4 text-gray-600 cursor-pointer"
+                              onClick={() => {
+                                setSelectedClient(client);
+                                setShowClientDetails(true);
+                              }}
+                            >
+                              {formatDateValue(client.createdAt || client.joinedAt)}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedClient(client);
+                                    setShowClientDetails(true);
+                                  }}
+                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="View Client Details"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleArchiveClient(client.id || client.uid)}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Archive Client"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
+
       case 'caregivers':
         return (
           <div className="space-y-6">

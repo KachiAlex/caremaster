@@ -4,29 +4,23 @@ import logger from '../utils/logger';
 
 class EncryptionService {
   constructor() {
-    // SECURITY FIX: Require encryption key in production, no fallback
     const envKey = process.env.REACT_APP_ENCRYPTION_KEY;
     const isProduction = process.env.NODE_ENV === 'production';
-    
-    if (isProduction && !envKey) {
-      const error = new Error('REACT_APP_ENCRYPTION_KEY is required in production environment');
-      logger.error('CRITICAL: Encryption key missing in production', { error: error.message });
-      errorHandler.handleError(error, { context: 'encryption_service_init' });
-      throw error; // Fail fast in production if key is missing
-    }
-    
+
     if (!envKey) {
-      // Development only: generate temporary key with warning
+      // Degrade gracefully — don't crash the entire app
       this.encryptionKey = this.generateKey();
-      logger.warn('⚠️ SECURITY WARNING: Using generated encryption key in development. Set REACT_APP_ENCRYPTION_KEY for production.');
+      const msg = isProduction
+        ? 'CRITICAL: REACT_APP_ENCRYPTION_KEY missing in production — using ephemeral key. Encrypted data will not persist across sessions.'
+        : 'Using generated encryption key in development. Set REACT_APP_ENCRYPTION_KEY for production.';
+      logger.warn(msg);
     } else {
-      // Validate key strength
       if (!this.validateKeyStrength(envKey)) {
-        logger.warn('⚠️ Encryption key may be weak. Consider using a stronger key.');
+        logger.warn('Encryption key may be weak. Consider using a stronger key.');
       }
       this.encryptionKey = envKey;
     }
-    
+
     this.algorithm = 'AES-256-CBC';
   }
 
