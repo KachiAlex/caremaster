@@ -69,7 +69,7 @@ const SecurityManagement = ({ institutionId: propInstitutionId }) => {
     if (userId) {
       loadSecurityData();
     }
-  }, [userId, activeTab]);
+  }, [userId, activeTab, institutionId]);
 
   const loadSecurityData = async () => {
     try {
@@ -81,15 +81,15 @@ const SecurityManagement = ({ institutionId: propInstitutionId }) => {
           setIs2FAEnabled(enabled);
           break;
         case 'sessions':
-          const sessions = await sessionAPI.getActiveSessions(userId);
+          const sessions = await sessionAPI.getActiveSessionsByInstitution(institutionId);
           setActiveSessions(sessions);
           break;
         case 'audit':
           await loadAuditLogs();
           break;
         case 'login-attempts':
-          if (userProfile?.email) {
-            const attempts = await loginAttemptAPI.getRecentFailedAttempts(userProfile.email, 60 * 24); // Last 24 hours
+          if (institutionId) {
+            const attempts = await loginAttemptAPI.getRecentFailedAttemptsByInstitution(institutionId, 60 * 24); // Last 24 hours
             setFailedAttempts(attempts);
           }
           break;

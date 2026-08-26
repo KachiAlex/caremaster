@@ -374,6 +374,7 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       await db('login_attempts').insert({
         email: email.trim().toLowerCase(),
         user_id: userRecord ? userRecord.id : null,
+        institution_id: userRecord ? userRecord.institution_id : null,
         ip_address: ipAddress,
         user_agent: userAgent,
         success,
@@ -459,6 +460,7 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
     await db('login_attempts').insert({
       email: user.email,
       user_id: user.id,
+      institution_id: user.institution_id,
       ip_address: req.ip,
       user_agent: req.get('User-Agent'),
       success: true,
@@ -486,6 +488,7 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
     const [session] = await db('user_sessions')
       .insert({
         user_id: user.id,
+        institution_id: user.institution_id,
         user_agent: req.get('User-Agent'),
         ip_address: req.ip,
         active: true,

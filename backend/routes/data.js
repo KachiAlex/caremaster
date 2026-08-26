@@ -133,8 +133,8 @@ const WRITABLE_FIELDS = {
   messages: ['conversation_id', 'conversationId', 'sender_id', 'senderId', 'text', 'content', 'type', 'sender_name', 'senderName', 'read', 'read_at', 'readAt', 'created_at', 'createdAt', 'message_type', 'messageType'],
   schedules: ['institution_id', 'institutionId', 'client_id', 'clientId', 'client_name', 'clientName', 'caregiver_id', 'caregiverId', 'caregiver_name', 'caregiverName', 'title', 'description', 'service_type', 'serviceType', 'type', 'priority', 'schedule_date', 'scheduleDate', 'end_date', 'endDate', 'start_time', 'startTime', 'end_time', 'endTime', 'comments', 'special_instructions', 'specialInstructions', 'status', 'created_at', 'updated_at'],
   security_audit_logs: ['user_id', 'userId', 'user_role', 'action', 'resource_type', 'resourceType', 'resource_id', 'resourceId', 'details', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'institution_id', 'institutionId', 'timestamp', 'created_at', 'updated_at'],
-  user_sessions: ['user_id', 'userId', 'user_agent', 'userAgent', 'ip_address', 'ipAddress', 'active', 'created_at', 'last_activity', 'lastActivity', 'expires_at', 'expiresAt', 'ended_at', 'endedAt', 'updated_at'],
-  login_attempts: ['email', 'user_id', 'userId', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'success', 'timestamp', 'created_at', 'updated_at'],
+  user_sessions: ['user_id', 'userId', 'institution_id', 'institutionId', 'user_agent', 'userAgent', 'ip_address', 'ipAddress', 'active', 'created_at', 'last_activity', 'lastActivity', 'expires_at', 'expiresAt', 'ended_at', 'endedAt', 'updated_at'],
+  login_attempts: ['email', 'user_id', 'userId', 'institution_id', 'institutionId', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'success', 'timestamp', 'created_at', 'updated_at'],
   two_factor_auth: ['user_id', 'userId', 'email', 'enabled', 'code', 'verified', 'expires_at', 'expiresAt', 'enabled_at', 'enabledAt', 'disabled_at', 'disabledAt', 'verified_at', 'verifiedAt', 'created_at', 'updated_at']
 };
 
@@ -212,6 +212,9 @@ function validateSortColumn(table, column) {
   const allowed = SORTABLE_COLUMNS[table];
   if (!allowed) return 'created_at';
   if (allowed.includes(column)) return column;
+  // Accept camelCase sort params from the frontend and map them to snake_case DB columns
+  const snakeColumn = column.replace(/[A-Z]/g, '_$1').toLowerCase();
+  if (allowed.includes(snakeColumn)) return snakeColumn;
   // Fallback: use the first non-id column, or 'created_at' if present
   if (allowed.includes('created_at')) return 'created_at';
   if (allowed.includes('timestamp')) return 'timestamp';

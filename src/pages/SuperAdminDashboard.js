@@ -26,8 +26,12 @@ import { collection, query, getDocs, orderBy, limit, onSnapshot } from 'backend/
 import { db } from '../backend/config';
 import DashboardLayout from '../components/DashboardLayout';
 
+// New tenant-centric components
+import TenantList from '../components/superadmin/TenantList';
+import TenantDetail from '../components/superadmin/TenantDetail';
+import OnboardingWizard from '../components/superadmin/OnboardingWizard';
+
 // Lazy-load the other super-admin pages so they render as inline tab content
-const SuperAdminLicensing = lazy(() => import('./SuperAdminLicensing'));
 const SuperAdminUserManagement = lazy(() => import('./SuperAdminUserManagement'));
 const SuperAdminAuditLogs = lazy(() => import('./SuperAdminAuditLogs'));
 const SuperAdminSettings = lazy(() => import('./SuperAdminSettings'));
@@ -67,6 +71,13 @@ const SuperAdminDashboard = () => {
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Tenant-centric state
+  const [allInstitutions, setAllInstitutions] = useState([]);
+  const [allLicenses, setAllLicenses] = useState([]);
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
 
   // Session info for the top bar / sidebar
   const session = authManager.getRoleSession('super-admin');
@@ -166,6 +177,61 @@ const SuperAdminDashboard = () => {
       unsubscribeAuditLogs();
     };
   }, []);
+
+  // Load tenant data for the Tenants tab
+  const loadTenants = async () => {
+    setTenantsLoading(true);
+    try {
+      const [instSnap, licSnap] = await Promise.all([
+        getDocs(collection(db, 'institutions')),
+        getDocs(collection(db, 'licenses')),
+      ]);
+      const insts = instSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const lics = licSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setAllInstitutions(insts);
+      setAllLicenses(lics);
+    } catch (e) {
+      console.error('Failed to load tenants:', e);
+    } finally {
+      setTenantsLoading(false);
+    }
+  };
+
+  const getLicenseForTenant = (instId) => allLicenses.find(l => l.institutionId === instId);
+
+  const handleSelectTenant = (tenant) => {
+    setSelectedTenant(tenant);
+  };
+
+  const handleBackToTenantList = () => {
+    setSelectedTenant(null);
+    loadTenants();
+  };
+
+  const handleBulkActivate = async (ids) => {
+    const { updateInstitution } = await import('../services/licenseService');
+    for (const id of ids) {
+      try { await updateInstitution(id, { active: true, status: 'active' }); } catch (e) { console.error(e); }
+    }
+    loadTenants();
+  };
+
+  const handleBulkDeactivate = async (ids) => {
+    const { updateInstitution } = await import('../services/licenseService');
+    for (const id of ids) {
+      try { await updateInstitution(id, { active: false, status: 'suspended' }); } catch (e) { console.error(e); }
+    }
+    loadTenants();
+  };
+
+  const handleBulkDelete = async (ids) => {
+    if (!window.confirm(`Delete ${ids.length} tenant(s)? This cannot be undone!`)) return;
+    const { deleteInstitution } = await import('../services/licenseService');
+    for (const id of ids) {
+      try { await deleteInstitution(id); } catch (e) { console.error(e); }
+    }
+    loadTenants();
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -369,8 +435,8 @@ const SuperAdminDashboard = () => {
   };
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Activity },
-    { id: 'licensing', label: 'Licensing', icon: FileText },
+    { id: 'dashboard', label: 'Overview', icon: Activity },
+    { id: 'tenants', label: 'Tenants', icon: Building2 },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'audit-logs', label: 'Audit Logs', icon: Eye },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -528,23 +594,23 @@ const SuperAdminDashboard = () => {
         <h2 className="text-lg font-semibold text-ink mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           <button
-            onClick={() => setActiveTab('licensing')}
+            onClick={() => { setActiveTab('tenants'); loadTenants(); }}
             className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-sage hover:bg-sage-soft/30 transition-all"
           >
             <Building2 className="h-7 w-7 text-sage mb-2" />
-            <span className="text-xs font-medium text-ink text-center">Manage Institutions</span>
+            <span className="text-xs font-medium text-ink text-center">Manage Tenants</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('licensing')}
+            onClick={() => { setActiveTab('tenants'); setShowOnboarding(true); }}
             className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-gold hover:bg-gold/5 transition-all"
           >
             <FileText className="h-7 w-7 text-gold-deep mb-2" />
-            <span className="text-xs font-medium text-ink text-center">Issue License</span>
+            <span className="text-xs font-medium text-ink text-center">Onboard Tenant</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('licensing')}
+            onClick={() => { setActiveTab('tenants'); loadTenants(); }}
             className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-sage hover:bg-sage-soft/30 transition-all"
           >
             <Users className="h-7 w-7 text-sage mb-2" />
@@ -745,18 +811,37 @@ const SuperAdminDashboard = () => {
         return (
           <div className="space-y-6">
             <div className="cm-section-head">
-              <span className="cm-eyebrow">{activeTabLabel || 'Dashboard'}</span>
+              <span className="cm-eyebrow">{activeTabLabel || 'Overview'}</span>
               <h2 className="mt-2">Super Admin Console</h2>
               <p>System-wide administration and oversight.</p>
             </div>
             {renderTabContent()}
           </div>
         );
-      case 'licensing':
-        return (
-          <Suspense fallback={<TabLoading label="Licensing" />}>
-            <SuperAdminLicensing />
-          </Suspense>
+      case 'tenants':
+        // Load tenant data on first visit
+        if (allInstitutions.length === 0 && !tenantsLoading) {
+          loadTenants();
+        }
+        return selectedTenant ? (
+          <TenantDetail
+            tenant={selectedTenant}
+            license={getLicenseForTenant(selectedTenant.id)}
+            onBack={handleBackToTenantList}
+            onRefresh={() => { loadTenants(); }}
+          />
+        ) : (
+          <TenantList
+            institutions={allInstitutions}
+            licenses={allLicenses}
+            loading={tenantsLoading}
+            onRefresh={loadTenants}
+            onSelectTenant={handleSelectTenant}
+            onCreateTenant={() => setShowOnboarding(true)}
+            onBulkActivate={handleBulkActivate}
+            onBulkDeactivate={handleBulkDeactivate}
+            onBulkDelete={handleBulkDelete}
+          />
         );
       case 'users':
         return (
@@ -786,7 +871,7 @@ const SuperAdminDashboard = () => {
         return (
           <div className="space-y-6">
             <div className="cm-section-head">
-              <span className="cm-eyebrow">{activeTabLabel || 'Dashboard'}</span>
+              <span className="cm-eyebrow">{activeTabLabel || 'Overview'}</span>
               <h2 className="mt-2">Super Admin Console</h2>
               <p>System-wide administration and oversight.</p>
             </div>
@@ -871,6 +956,16 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={() => {
+          setShowOnboarding(false);
+          loadTenants();
+        }}
+      />
     </div>
   );
 };

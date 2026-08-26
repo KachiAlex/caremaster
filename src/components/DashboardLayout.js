@@ -1,26 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Menu, X, LogOut, ChevronDown } from 'lucide-react';
 import MobileBottomNav from './MobileBottomNav';
 
 /**
+ * Sidebar content - extracted to top-level so it doesn't unmount/remount
+ * on every DashboardLayout render and lose its scroll position.
+ */
+const SidebarContent = ({
+  tabs = [],
+  activeTab,
+  onTabClick,
+  onNavigate,
+  portalLabel,
+  institutionName,
+  footerContent,
+  onLogout,
+}) => (
+  <>
+    {/* Header */}
+    <div className="cm-sidebar-header px-5 py-4">
+      <div className="flex items-center gap-2.5">
+        <span className="cm-sidebar-logo">CM</span>
+        <div className="min-w-0">
+          <p className="cm-mono text-[10px] uppercase tracking-[0.12em] text-gold">
+            {portalLabel}
+          </p>
+          <h1 className="cm-display text-sm text-sand truncate">{institutionName}</h1>
+        </div>
+      </div>
+    </div>
+
+    {/* Nav */}
+    <nav
+      className="flex-1 overflow-y-auto scroll-smooth px-3 py-4 space-y-1"
+      style={{ overscrollBehaviorY: 'contain' }}
+    >
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => {
+              onTabClick(tab.id);
+              onNavigate?.();
+            }}
+            className={`cm-nav-item ${isActive ? 'cm-nav-active' : ''}`}
+          >
+            {Icon && <Icon />}
+            <span className="truncate">{tab.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+
+    {/* Footer */}
+    <div className="px-3 py-3 border-t border-[var(--cm-ink-line)] space-y-2">
+      {footerContent}
+      <button
+        onClick={onLogout}
+        className="cm-nav-item"
+        style={{ color: '#F0A98F' }}
+      >
+        <LogOut />
+        <span>Logout</span>
+      </button>
+    </div>
+  </>
+);
+
+/**
  * CareMaster Dashboard Layout
- * 
+ *
  * A reusable layout component implementing the CareMaster design system.
  * Provides a dark green sidebar, cream background, and top bar.
- *
- * Props:
- *   tabs          - Array of { id, label, icon } objects
- *   activeTab     - Currently active tab id
- *   onTabChange   - Callback when tab changes
- *   institutionName - Name shown in sidebar header
- *   portalLabel   - Small label above institution name (e.g. "Institution admin")
- *   displayName   - User's display name for the top bar
- *   userEmail     - User's email
- *   profilePictureUrl - Optional avatar image
- *   onLogout      - Logout handler
- *   children      - Main content
- *   headerActions - Optional React node for top bar right side actions
- *   footerContent - Optional React node for sidebar footer (above logout)
  */
 const DashboardLayout = ({
   tabs = [],
@@ -51,57 +104,6 @@ const DashboardLayout = ({
     ? displayName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
     : 'U';
 
-  const SidebarContent = ({ onNavigate }) => (
-    <>
-      {/* Header */}
-      <div className="cm-sidebar-header px-5 py-4">
-        <div className="flex items-center gap-2.5">
-          <span className="cm-sidebar-logo">CM</span>
-          <div className="min-w-0">
-            <p className="cm-mono text-[10px] uppercase tracking-[0.12em] text-gold">
-              {portalLabel}
-            </p>
-            <h1 className="cm-display text-sm text-sand truncate">{institutionName}</h1>
-          </div>
-        </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto scroll-smooth px-3 py-4 space-y-1" style={{ overscrollBehaviorY: 'contain' }}>
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                handleTabClick(tab.id);
-                onNavigate?.();
-              }}
-              className={`cm-nav-item ${isActive ? 'cm-nav-active' : ''}`}
-            >
-              {Icon && <Icon />}
-              <span className="truncate">{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Footer */}
-      <div className="px-3 py-3 border-t border-[var(--cm-ink-line)] space-y-2">
-        {footerContent}
-        <button
-          onClick={onLogout}
-          className="cm-nav-item"
-          style={{ color: '#F0A98F' }}
-        >
-          <LogOut />
-          <span>Logout</span>
-        </button>
-      </div>
-    </>
-  );
-
   return (
     <div className="min-h-screen cm-dashboard-body flex">
       {/* Mobile overlay */}
@@ -124,12 +126,29 @@ const DashboardLayout = ({
         >
           <X className="h-5 w-5" />
         </button>
-        <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+        <SidebarContent
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabClick={handleTabClick}
+          onNavigate={() => setSidebarOpen(false)}
+          portalLabel={portalLabel}
+          institutionName={institutionName}
+          footerContent={footerContent}
+          onLogout={onLogout}
+        />
       </aside>
 
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 cm-sidebar flex-col fixed h-screen z-20">
-        <SidebarContent />
+        <SidebarContent
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabClick={handleTabClick}
+          portalLabel={portalLabel}
+          institutionName={institutionName}
+          footerContent={footerContent}
+          onLogout={onLogout}
+        />
       </aside>
 
       {/* Main content */}
@@ -160,28 +179,28 @@ const DashboardLayout = ({
               {/* Profile dropdown */}
               <div className="relative">
                 <button
-                  onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-ink/5 transition"
-                >
-                  {profilePictureUrl ? (
-                    <img
-                      src={profilePictureUrl}
-                      alt=""
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white"
-                      style={{ background: 'linear-gradient(155deg, var(--cm-sage), var(--cm-ink))' }}
-                    >
-                      {initials}
+                    onClick={() => setProfileOpen(!profileOpen)}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-ink/5 transition"
+                  >
+                    {profilePictureUrl ? (
+                      <img
+                        src={profilePictureUrl}
+                        alt=""
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white"
+                        style={{ background: 'linear-gradient(155deg, var(--cm-sage), var(--cm-ink))' }}
+                      >
+                        {initials}
+                      </span>
+                    )}
+                    <span className="hidden sm:block text-sm font-medium text-ink max-w-[120px] truncate">
+                      {displayName}
                     </span>
-                  )}
-                  <span className="hidden sm:block text-sm font-medium text-ink max-w-[120px] truncate">
-                    {displayName}
-                  </span>
-                  <ChevronDown className="h-4 w-4 text-text-soft hidden sm:block" />
-                </button>
+                    <ChevronDown className="h-4 w-4 text-text-soft hidden sm:block" />
+                  </button>
 
                 {profileOpen && (
                   <>
@@ -228,4 +247,4 @@ const DashboardLayout = ({
   );
 };
 
-export default DashboardLayout;
+export default memo(DashboardLayout);

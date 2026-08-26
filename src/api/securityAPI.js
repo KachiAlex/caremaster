@@ -447,6 +447,40 @@ export const sessionAPI = {
       console.error('Error fetching active sessions:', error);
       return [];
     }
+  },
+
+  /**
+   * Get active sessions for an institution (tenant-scoped)
+   */
+  getActiveSessionsByInstitution: async (institutionId) => {
+    try {
+      const q = query(
+        collection(db, SESSIONS_COLLECTION),
+        where('institutionId', '==', institutionId),
+        where('active', '==', true),
+        orderBy('lastActivity', 'desc')
+      );
+
+      const snapshot = await getDocs(q);
+      const sessions = [];
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        sessions.push({
+          id: doc.id,
+          ...data,
+          createdAt: normalizeTimestamp(data.createdAt),
+          lastActivity: normalizeTimestamp(data.lastActivity),
+          expiresAt: normalizeTimestamp(data.expiresAt)
+        });
+      });
+
+      sessions.sort((a, b) => new Date(b.lastActivity || 0) - new Date(a.lastActivity || 0));
+      return sessions;
+    } catch (error) {
+      console.error('Error fetching active sessions by institution:', error);
+      return [];
+    }
   }
 };
 
@@ -532,6 +566,41 @@ export const loginAttemptAPI = {
       return attempts;
     } catch (error) {
       console.error('Error fetching failed attempts:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get recent failed attempts for an institution (tenant-scoped)
+   */
+  getRecentFailedAttemptsByInstitution: async (institutionId, minutes = 15) => {
+    try {
+      const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
+      const q = query(
+        collection(db, LOGIN_ATTEMPTS_COLLECTION),
+        where('institutionId', '==', institutionId),
+        where('success', '==', false),
+        orderBy('timestamp', 'desc')
+      );
+
+      const snapshot = await getDocs(q);
+      const attempts = [];
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const ts = normalizeTimestamp(data.timestamp);
+        if (ts && ts >= cutoffTime) {
+          attempts.push({
+            id: doc.id,
+            ...data,
+            timestamp: ts
+          });
+        }
+      });
+
+      return attempts;
+    } catch (error) {
+      console.error('Error fetching failed attempts by institution:', error);
       return [];
     }
   }
