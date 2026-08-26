@@ -4,7 +4,7 @@ import { useUser } from '../contexts/UserContext';
 import { saveCaregiverProfile, uploadCaregiverDocument, completeOnboarding } from '../api/caregiverOnboardingAPI';
 import { caregiverAPI } from '../api/caregiverAPI';
 import { toast } from 'react-toastify';
-import { Upload, FileText, CheckCircle, AlertCircle, X, File, Shield } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, X, File, Shield, LogOut } from 'lucide-react';
 
 const InstitutionCaregiverOnboarding = () => {
   const [searchParams] = useSearchParams();
@@ -252,14 +252,23 @@ const InstitutionCaregiverOnboarding = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        {/* Back to Portal Button */}
+        {/* Logout Button */}
         <div className="mb-6">
           <button
-            onClick={() => navigate(`/onboard?institution=${effectiveInstitutionId}`)}
+            onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('user');
+              import('backend/auth').then(({ signOut, getAuth }) => {
+                signOut(getAuth()).finally(() => {
+                  window.location.href = '/login';
+                });
+              });
+            }}
             className="flex items-center px-4 py-2 text-sm bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
           >
-            <Shield className="h-4 w-4 mr-2" />
-            Back to Portal
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
           </button>
         </div>
 

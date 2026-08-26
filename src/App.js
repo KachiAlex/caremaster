@@ -419,10 +419,10 @@ function App() {
         element={<SuperAdminGuard><SuperAdminDashboard /></SuperAdminGuard>} 
       />
 
-      {/* Institution Onboarding Routes - Public */}
-      <Route 
-        path="/onboard" 
-        element={<InstitutionLanding />} 
+      {/* Old institution portal route — redirect to login */}
+      <Route
+        path="/onboard"
+        element={<Navigate to="/login" replace />}
       />
 
       {/* License Activation - Public */}
@@ -669,7 +669,7 @@ function App() {
       <Route path="/admin/*" element={<Navigate to="/institution-admin/dashboard" replace />} />
       
       {/* Institution entry: partners page OR specific institution landing when ?institution= is present */}
-      <Route path="/institution" element={<InstitutionEntry />} />
+      <Route path="/institution" element={<Navigate to="/login" replace />} />
 
       {/* Institution chooser for multi-institution users */}
       <Route path="/choose-institution" element={<ChooseInstitution />} />

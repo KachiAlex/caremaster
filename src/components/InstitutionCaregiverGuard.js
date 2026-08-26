@@ -53,11 +53,9 @@ const InstitutionCaregiverGuard = ({ children }) => {
         return;
       }
 
-      // Check if onboarding is required
-      // IMPORTANT: If caregiver is activated (status: 'active'), allow access even if onboarding is incomplete
-      // Only require onboarding completion for caregivers who are not yet activated
-      if (!userProfile.onboardingComplete && userProfile.status !== 'active') {
-        console.log('⚠️ Onboarding incomplete and not activated - redirecting to onboarding');
+      // Check if onboarding is required — mandatory for ALL caregivers regardless of status
+      if (!userProfile.onboardingComplete) {
+        console.log('⚠️ Onboarding incomplete - redirecting to onboarding');
         navigate(`/institution-caregiver/onboarding?institution=${effectiveInstitutionId}`);
         return;
       }
@@ -161,11 +159,9 @@ const InstitutionCaregiverGuard = ({ children }) => {
       return null;
     }
 
-    // CRITICAL: Redirect to onboarding if incomplete
-    // IMPORTANT: If caregiver is activated (status: 'active'), allow access even if onboarding is incomplete
-    // Only require onboarding completion for caregivers who are not yet activated
-    if (!userProfile.onboardingComplete && userProfile.status !== 'active') {
-      console.log('🚫 Blocking render - onboarding incomplete and not activated');
+    // CRITICAL: Redirect to onboarding if incomplete — mandatory for ALL caregivers
+    if (!userProfile.onboardingComplete) {
+      console.log('🚫 Blocking render - onboarding incomplete');
       return <Navigate to={`/institution-caregiver/onboarding?institution=${effectiveInstitutionId}`} replace />;
     }
 

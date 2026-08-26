@@ -194,7 +194,7 @@ const InstitutionUserManagement = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <button
-            onClick={() => navigate(`/onboard?institution=${institutionId}`)}
+            onClick={() => navigate(`/institution-admin/dashboard?institution=${institutionId}`)}
             className="flex items-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
