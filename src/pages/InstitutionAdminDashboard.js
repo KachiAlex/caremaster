@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import authManager from '../utils/authManager';
@@ -68,6 +68,9 @@ import {
   MoreVertical,
   PanelLeftClose,
   PanelLeftOpen,
+  Search,
+  Mic,
+  PhoneOff,
   Upload
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUserStatus } from '../api/usersAPI';
@@ -348,9 +351,14 @@ const InstitutionAdminDashboard = () => {
   const [callStartAt, setCallStartAt] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = React.useRef(null);
+  const messagesEndRef = React.useRef(null);
+  const localVideoRef = React.useRef(null);
+  const remoteVideoRef = React.useRef(null);
   const [showMobileChatPane, setShowMobileChatPane] = useState(false);
   const [isNarrowMessagingLayout, setIsNarrowMessagingLayout] = useState(false);
   const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
+  const [showNewChatPicker, setShowNewChatPicker] = useState(false);
+  const [incomingCall, setIncomingCall] = useState(null);
 
   const { isMobile, isTablet } = useResponsive();
   const isMobileMessagingView = isMobile || isTablet || isNarrowMessagingLayout;
@@ -385,34 +393,36 @@ const InstitutionAdminDashboard = () => {
   
   // Initialize call service
   const callService = new CallService();
-  const [webrtc] = useState(() => new WebRTCService());
+  const webrtcRef = useRef(null);
 
-  // Wire WebRTC callbacks
+  // Wire WebRTC callbacks (set up when webrtcRef is initialized)
   useEffect(() => {
-    webrtc.setCallbacks({
-      onLocalStream: (stream) => setLocalStream(stream),
-      onRemoteStream: (stream) => setRemoteStream(stream),
-      onCallStateChange: (state) => {
-        console.log('📡 Admin WebRTC connection state:', state);
-        setCallConnectionState(state);
-        
-        if (state === 'connected') {
-          console.log('✅ Admin call connected successfully!');
-          if (!callStartAt) {
-            const start = new Date();
-            setCallStartAt(start);
-            if (timerRef.current) clearInterval(timerRef.current);
-            timerRef.current = setInterval(() => {
-              setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
-            }, 1000);
+    if (webrtcRef.current) {
+      webrtcRef.current.setCallbacks({
+        onLocalStream: (stream) => setLocalStream(stream),
+        onRemoteStream: (stream) => setRemoteStream(stream),
+        onCallStateChange: (state) => {
+          console.log('📡 Admin WebRTC connection state:', state);
+          setCallConnectionState(state);
+
+          if (state === 'connected') {
+            console.log('✅ Admin call connected successfully!');
+            if (!callStartAt) {
+              const start = new Date();
+              setCallStartAt(start);
+              if (timerRef.current) clearInterval(timerRef.current);
+              timerRef.current = setInterval(() => {
+                setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+              }, 1000);
+            }
+          } else if (state === 'failed' || state === 'disconnected') {
+            console.log('❌ Admin call connection failed or disconnected');
           }
-        } else if (state === 'failed' || state === 'disconnected') {
-          console.log('❌ Admin call connection failed or disconnected');
         }
-      }
-    });
+      });
+    }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [webrtc, callStartAt]);
+  }, [callStartAt]);
 
   useEffect(() => {
     // Partner login flow: First authenticate, then determine partner status and institutionId
@@ -2339,17 +2349,51 @@ const InstitutionAdminDashboard = () => {
   useEffect(() => {
     if (selectedConversation?.conversationId || selectedConversation?.id) {
       const conversationId = selectedConversation.conversationId || selectedConversation.id;
-      
+
       const unsubscribe = subscribeToConversationMessages(conversationId, (updatedMessages) => {
         console.log(`🔄 Real-time update: ${updatedMessages.length} messages`);
         setMessages(updatedMessages);
       });
-      
+
       return () => {
         if (unsubscribe) unsubscribe();
       };
     }
   }, [selectedConversation]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Attach local/remote streams to video elements when in call
+  useEffect(() => {
+    if (isInCall && localStream && localVideoRef.current) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [isInCall, localStream]);
+
+  useEffect(() => {
+    if (isInCall && remoteStream && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [isInCall, remoteStream]);
+
+  // Listen for incoming calls
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const unsubscribe = callService.listenForIncomingCalls(user.uid, (callData) => {
+      console.log('📞 Incoming call:', callData);
+      setIncomingCall(callData);
+    });
+
+    return () => {
+      callService.stopListeningForCalls(user.uid);
+    };
+  }, [user?.uid]);
 
   // Load and subscribe to notifications
   useEffect(() => {
@@ -2397,56 +2441,32 @@ const InstitutionAdminDashboard = () => {
       toast.error('Please select a conversation first');
       return;
     }
-    
+
     if (!userProfile || (!userProfile.id && !userProfile.uid)) {
       toast.error('User profile not available');
       return;
     }
-    
+
     try {
-      // Get the recipient ID from the conversation
-      const userId = user?.uid || userProfile?.userId;
-      
-      // Debug: Log full conversation details
-      console.log('🔍 Selected conversation:', {
-        conversation: selectedConversation,
-        participants: selectedConversation.participants,
-        userId: selectedConversation.userId,
-        id: selectedConversation.id,
-        currentUserId: userId
-      });
-      
+      const userId = user?.uid || userProfile?.userId || userProfile?.id;
+
       // Find recipient from participants array
       let recipientId = null;
       if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
-        recipientId = selectedConversation.participants.find(p => p !== userId);
-        console.log('✅ Found recipient in participants:', recipientId);
+        recipientId = selectedConversation.participants.find(p => p && p !== userId);
       }
-      
-      // Fallback to userId field
       if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
         recipientId = selectedConversation.userId;
-        console.log('✅ Found recipient in userId field:', recipientId);
       }
-      
-      // Fallback to id field (only if it's not a conversation ID format)
-      if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_') && selectedConversation.id !== userId) {
+      if (!recipientId && selectedConversation.id && !String(selectedConversation.id).includes('_conv_') && selectedConversation.id !== userId) {
         recipientId = selectedConversation.id;
-        console.log('✅ Found recipient in id field:', recipientId);
       }
-      
+
       if (!recipientId) {
         toast.error('Could not identify recipient. Please check conversation data.');
-        console.error('❌ Conversation data:', selectedConversation);
         return;
       }
-      
-      console.log('🎤 Initiating voice call:', {
-        callerId: userId,
-        recipientId,
-        recipientName: selectedConversation.name
-      });
-      
+
       // Initiate call through service
       const result = await callService.initiateCall({
         callerId: userId,
@@ -2455,37 +2475,52 @@ const InstitutionAdminDashboard = () => {
         callerName: userProfile?.name || 'Admin',
         recipientName: selectedConversation.name || 'User'
       });
-      
+
       if (!result || !result.callId) {
-        const errorMsg = result?.error || 'Failed to initiate call';
-        toast.error(errorMsg);
-        console.error('❌ Call initiation failed:', result);
+        toast.error(result?.error || 'Failed to initiate call');
         return;
       }
-      
-      console.log('🔧 Initializing WebRTC for admin...');
-      
-      // Initialize WebRTC if not already initialized
-      if (!webrtc && result.callId) {
-        try {
-          const service = new WebRTCService(
-            userId,
-            recipientId,
-            result.callId,
-            result.signalingRef || result.callData?.id
-          );
-          
-          await service.init();
-          setWebrtc(service);
-          
-          const offer = await service.createOffer();
-          console.log('📤 Created offer and sent to recipient...');
-        } catch (webrtcError) {
-          console.warn('⚠️ WebRTC initialization failed, but call is still active:', webrtcError);
-          // Don't fail the call if WebRTC fails - the call can still work
-        }
+
+      // Initialize WebRTC
+      try {
+        const service = new WebRTCService();
+        await service.initialize();
+        webrtcRef.current = service;
+
+        // Start call with media (audio only for voice call)
+        await service.startCall(result.callId, recipientId, 'voice');
+
+        // Set up callbacks after initialization
+        service.setCallbacks({
+          onLocalStream: (stream) => setLocalStream(stream),
+          onRemoteStream: (stream) => setRemoteStream(stream),
+          onCallStateChange: (state) => {
+            console.log('📡 Admin WebRTC connection state:', state);
+            setCallConnectionState(state);
+            if (state === 'connected' && !callStartAt) {
+              const start = new Date();
+              setCallStartAt(start);
+              if (timerRef.current) clearInterval(timerRef.current);
+              timerRef.current = setInterval(() => {
+                setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+              }, 1000);
+            }
+          }
+        });
+
+        // Listen for signaling messages
+        service.listenForSignaling(result.callId, async (message) => {
+          if (message.type === 'answer') {
+            await service.handleAnswer(message.data?.answer || message.answer);
+          } else if (message.type === 'ice-candidate') {
+            await service.handleIceCandidate(message.data?.candidate || message.candidate);
+          }
+        });
+      } catch (webrtcError) {
+        console.warn('⚠️ WebRTC initialization failed, but call is still active:', webrtcError);
       }
-      
+
+      setCallType('voice');
       setActiveCall({
         callId: result.callId,
         participantId: recipientId,
@@ -2493,6 +2528,8 @@ const InstitutionAdminDashboard = () => {
         callType: 'voice'
       });
       setIsInCall(true);
+      setElapsedSeconds(0);
+      setCallStartAt(null);
       toast.success(`Voice call initiated with ${selectedConversation.name || 'User'}`);
     } catch (error) {
       console.error('❌ Error starting voice call:', error);
@@ -2505,65 +2542,35 @@ const InstitutionAdminDashboard = () => {
       toast.error('Please select a conversation first');
       return;
     }
-    
+
     try {
-      // Get the caller ID - try multiple sources
       const userId = user?.uid || userProfile?.uid || userProfile?.userId || userProfile?.id;
-      
-      // Validate caller ID first
+
       if (!userId) {
         toast.error('Unable to identify your user ID. Please refresh and try again.');
-        console.error('❌ Missing userId:', { user, userProfile });
         return;
       }
-      
-      // Find recipient ID - try multiple strategies
+
+      // Find recipient ID
       let recipientId = null;
-      
-      // Strategy 1: Find in participants array
       if (selectedConversation.participants && Array.isArray(selectedConversation.participants)) {
         recipientId = selectedConversation.participants.find(p => p && p !== userId);
-        if (recipientId) {
-          console.log('✅ Found recipient in participants:', recipientId);
-        }
       }
-      
-      // Strategy 2: Use userId field if different from caller
       if (!recipientId && selectedConversation.userId && selectedConversation.userId !== userId) {
         recipientId = selectedConversation.userId;
-        console.log('✅ Found recipient in userId field:', recipientId);
       }
-      
-      // Strategy 3: Use id field (only if it's not a conversation ID format and different from caller)
-      if (!recipientId && selectedConversation.id && !selectedConversation.id.includes('_conv_') && selectedConversation.id !== userId) {
+      if (!recipientId && selectedConversation.id && !String(selectedConversation.id).includes('_conv_') && selectedConversation.id !== userId) {
         recipientId = selectedConversation.id;
-        console.log('✅ Found recipient in id field:', recipientId);
       }
-      
-      // Strategy 4: If conversation has a direct user reference
       if (!recipientId && selectedConversation.user && selectedConversation.user !== userId) {
         recipientId = selectedConversation.user;
-        console.log('✅ Found recipient in user field:', recipientId);
       }
-      
-      // Validate recipient ID
+
       if (!recipientId) {
         toast.error('Could not identify recipient. Please check conversation data.');
-        console.error('❌ Missing recipientId. Conversation data:', {
-          participants: selectedConversation.participants,
-          userId: selectedConversation.userId,
-          id: selectedConversation.id,
-          fullConversation: selectedConversation
-        });
         return;
       }
-      
-      console.log('📹 Initiating video call:', {
-        callerId: userId,
-        recipientId,
-        recipientName: selectedConversation.name
-      });
-      
+
       // Initiate video call
       const result = await callService.initiateCall({
         callerId: userId,
@@ -2572,35 +2579,51 @@ const InstitutionAdminDashboard = () => {
         callerName: userProfile?.name || 'Admin',
         recipientName: selectedConversation.name || 'User'
       });
-      
+
       if (!result || !result.callId) {
-        const errorMsg = result?.error || 'Failed to initiate call';
-        toast.error(errorMsg);
-        console.error('❌ Call initiation failed:', result);
+        toast.error(result?.error || 'Failed to initiate call');
         return;
       }
-      
+
       // Initialize WebRTC
-      if (!webrtc && result.callId) {
-        try {
-          const service = new WebRTCService(
-            userId,
-            recipientId,
-            result.callId,
-            result.signalingRef || result.callData?.id
-          );
-          
-          await service.init();
-          setWebrtc(service);
-          
-          const offer = await service.createOffer();
-          console.log('📤 Created offer and sent to recipient...');
-        } catch (webrtcError) {
-          console.warn('⚠️ WebRTC initialization failed, but call is still active:', webrtcError);
-          // Don't fail the call if WebRTC fails - the call can still work
-        }
+      try {
+        const service = new WebRTCService();
+        await service.initialize();
+        webrtcRef.current = service;
+
+        // Start call with media (video + audio)
+        await service.startCall(result.callId, recipientId, 'video');
+
+        service.setCallbacks({
+          onLocalStream: (stream) => setLocalStream(stream),
+          onRemoteStream: (stream) => setRemoteStream(stream),
+          onCallStateChange: (state) => {
+            console.log('📡 Admin WebRTC connection state:', state);
+            setCallConnectionState(state);
+            if (state === 'connected' && !callStartAt) {
+              const start = new Date();
+              setCallStartAt(start);
+              if (timerRef.current) clearInterval(timerRef.current);
+              timerRef.current = setInterval(() => {
+                setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+              }, 1000);
+            }
+          }
+        });
+
+        // Listen for signaling messages
+        service.listenForSignaling(result.callId, async (message) => {
+          if (message.type === 'answer') {
+            await service.handleAnswer(message.data?.answer || message.answer);
+          } else if (message.type === 'ice-candidate') {
+            await service.handleIceCandidate(message.data?.candidate || message.candidate);
+          }
+        });
+      } catch (webrtcError) {
+        console.warn('⚠️ WebRTC initialization failed, but call is still active:', webrtcError);
       }
-      
+
+      setCallType('video');
       setActiveCall({
         callId: result.callId,
         participantId: recipientId,
@@ -2608,6 +2631,8 @@ const InstitutionAdminDashboard = () => {
         callType: 'video'
       });
       setIsInCall(true);
+      setElapsedSeconds(0);
+      setCallStartAt(null);
       toast.success(`Video call initiated with ${selectedConversation.name || 'User'}`);
     } catch (error) {
       console.error('❌ Error starting video call:', error);
@@ -2620,26 +2645,36 @@ const InstitutionAdminDashboard = () => {
       try {
         const duration = elapsedSeconds || 0;
         await callService.endCall(activeCall.callId, duration);
-        
+
         // Clean up WebRTC
-        if (webrtc) {
-          webrtc.endCall();
+        if (webrtcRef.current) {
+          webrtcRef.current.endCall();
+          webrtcRef.current = null;
         }
-        
+
         // Clean up streams
         if (localStream) {
           localStream.getTracks().forEach(track => track.stop());
         }
-        
+
         // Clean up signaling listener
         if (activeCall.unsubscribeSignaling) {
           activeCall.unsubscribeSignaling();
         }
-        
+
+        // Clean up timer
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+
         setActiveCall(null);
         setLocalStream(null);
         setRemoteStream(null);
         setIsInCall(false);
+        setCallType(null);
+        setCallStartAt(null);
+        setElapsedSeconds(0);
         console.log('✅ Call ended through service');
         toast.info('Call ended');
       } catch (error) {
@@ -2696,7 +2731,8 @@ const renderMessagesTab = () => {
           conversationId = conversationId.id;
         }
 
-        await sendMessageAPI(conversationId, user.uid, {
+        const senderId = user?.uid || user?.id || userProfile?.uid || userProfile?.id;
+        await sendMessageAPI(conversationId, senderId, {
           text: newMessage,
           type: 'text',
           senderName: userProfile?.name || 'Admin'
@@ -2705,7 +2741,7 @@ const renderMessagesTab = () => {
         const optimisticMessage = {
           id: Date.now(),
           text: newMessage,
-          senderId: user?.uid,
+          senderId: senderId,
           senderName: userProfile?.name || 'You',
           createdAt: new Date().toISOString(),
           read: false
@@ -2734,11 +2770,54 @@ const renderMessagesTab = () => {
       return styles[type] || 'bg-gray-100 text-gray-700';
     };
 
-    const formattedConversations = (conversations || []).map((conversation) => ({
+    const formattedConversations = (conversations || [])
+      .filter((conversation) => {
+        if (!messageSearchTerm) return true;
+        const name = (conversation.name || conversation.displayName || '').toLowerCase();
+        return name.includes(messageSearchTerm.toLowerCase());
+      })
+      .map((conversation) => ({
       ...conversation,
       displayName: conversation.name || conversation.displayName || 'Unknown User',
       displayType: (conversation.type || 'user').replace(/^\w/, (c) => c.toUpperCase())
     }));
+
+    const handleStartNewChat = async (targetUser) => {
+      try {
+        const userId = user?.uid || userProfile?.id;
+        if (!userId) return;
+
+        const result = await getOrCreateConversation([userId, targetUser.id], 'general');
+        const convId = result.id || result;
+
+        const newConv = {
+          id: convId,
+          conversationId: convId,
+          participants: [userId, targetUser.id],
+          name: targetUser.name || targetUser.fullName || 'User',
+          type: targetUser.userType || targetUser.type || 'user',
+          unread: 0,
+          lastMessage: 'No messages yet',
+          timestamp: new Date().toISOString()
+        };
+
+        setSelectedConversation(newConv);
+        setShowNewChatPicker(false);
+        setMessages([]);
+        if (isMobileMessagingView) setShowMobileChatPane(true);
+        loadConversations();
+      } catch (error) {
+        console.error('Error starting new chat:', error);
+        toast.error('Failed to start new conversation');
+      }
+    };
+
+    // Build list of users for new chat (caregivers + pharmacists + clients)
+    const availableUsers = [
+      ...(caregivers || []).map(c => ({ id: c.id || c.userId, name: c.name || c.fullName, userType: c.userType || c.role || 'caregiver' })),
+      ...(pharmacists || []).map(p => ({ id: p.id || p.userId, name: p.name || p.fullName, userType: 'pharmacist' })),
+      ...(clients || []).map(c => ({ id: c.id || c.userId, name: c.name || c.fullName, userType: 'client' }))
+    ].filter(u => u.id && u.id !== (user?.uid || userProfile?.id));
 
     const handleConversationSelect = (conversation) => {
       setSelectedConversation(conversation);
@@ -2793,8 +2872,31 @@ const renderMessagesTab = () => {
           {/* Conversation List */}
           <div className={conversationListClasses}>
             <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
-              <p className="text-sm text-gray-500 mt-1">{formattedConversations.length} conversations</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+                  <p className="text-sm text-gray-500 mt-1">{formattedConversations.length} conversations</p>
+                </div>
+                <button
+                  onClick={() => setShowNewChatPicker(true)}
+                  className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  title="Start new chat"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </div>
+              {conversations.length > 0 && (
+                <div className="mt-3 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={messageSearchTerm}
+                    onChange={(e) => setMessageSearchTerm(e.target.value)}
+                    placeholder="Search conversations..."
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto">
@@ -2923,27 +3025,105 @@ const renderMessagesTab = () => {
                 </div>
 
                 {isInCall ? (
-                  <div className="p-6 bg-gray-900 flex items-center justify-center h-80">
-                    <div className="text-center">
+                  <div className="flex-1 flex flex-col bg-gray-900">
+                    {/* Call header with duration */}
+                    <div className="px-4 py-3 bg-gray-800 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${callConnectionState === 'connected' ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
+                        <span className="text-white text-sm font-medium">
+                          {callType === 'video' ? 'Video' : 'Voice'} Call
+                        </span>
+                        <span className="text-gray-400 text-sm">
+                          {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:{String(elapsedSeconds % 60).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <span className="text-gray-400 text-sm">{selectedConversation.name}</span>
+                    </div>
+
+                    {/* Call content */}
+                    <div className="flex-1 flex items-center justify-center relative">
                       {callType === 'video' ? (
-                        <div className="space-y-4">
-                          <Camera className="h-16 w-16 text-white mx-auto" />
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
-                              <p className="text-white font-medium">You</p>
-                            </div>
-                            <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
-                              <p className="text-white font-medium">{selectedConversation.name}</p>
-                            </div>
+                        <div className="w-full h-full relative">
+                          {/* Remote video (full screen) */}
+                          <video
+                            ref={remoteVideoRef}
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Local video (picture-in-picture) */}
+                          <div className="absolute bottom-4 right-4 w-32 h-24 bg-gray-800 rounded-lg overflow-hidden border-2 border-gray-600">
+                            <video
+                              ref={localVideoRef}
+                              autoPlay
+                              playsInline
+                              muted
+                              className="w-full h-full object-cover"
+                            />
                           </div>
+                          {!remoteStream && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="h-20 w-20 rounded-full bg-gray-700 flex items-center justify-center text-white text-2xl font-semibold mx-auto mb-3">
+                                  {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <p className="text-white font-medium">Calling {selectedConversation.name}...</p>
+                                <p className="text-gray-400 text-sm mt-1">Waiting for answer</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ) : (
-                        <div className="space-y-4">
-                          <Phone className="h-16 w-16 text-blue-500 mx-auto animate-pulse" />
-                          <p className="text-white text-lg font-medium">Voice Call Active</p>
-                          <p className="text-gray-400">Connected with {selectedConversation.name}</p>
+                        <div className="text-center">
+                          <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-semibold mx-auto mb-4 animate-pulse">
+                            {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <p className="text-white text-lg font-medium">{selectedConversation.name}</p>
+                          <p className="text-gray-400 mt-1">
+                            {callConnectionState === 'connected' ? 'Connected' : 'Calling...'}
+                          </p>
+                          <p className="text-gray-500 text-sm mt-2">
+                            {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:{String(elapsedSeconds % 60).padStart(2, '0')}
+                          </p>
                         </div>
                       )}
+                    </div>
+
+                    {/* Call controls */}
+                    <div className="px-4 py-4 bg-gray-800 flex items-center justify-center gap-4">
+                      <button
+                        onClick={() => {
+                          if (webrtcRef.current) {
+                            const enabled = webrtcRef.current.toggleAudio();
+                            toast.info(enabled ? 'Microphone unmuted' : 'Microphone muted');
+                          }
+                        }}
+                        className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+                        title="Mute/Unmute"
+                      >
+                        <Mic className="h-5 w-5 text-white" />
+                      </button>
+                      {callType === 'video' && (
+                        <button
+                          onClick={() => {
+                            if (webrtcRef.current) {
+                              const enabled = webrtcRef.current.toggleVideo();
+                              toast.info(enabled ? 'Camera on' : 'Camera off');
+                            }
+                          }}
+                          className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+                          title="Toggle Video"
+                        >
+                          <Camera className="h-5 w-5 text-white" />
+                        </button>
+                      )}
+                      <button
+                        onClick={handleEndCall}
+                        className="px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors flex items-center gap-2 font-medium"
+                      >
+                        <PhoneOff className="h-5 w-5" />
+                        End Call
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -2958,7 +3138,7 @@ const renderMessagesTab = () => {
                         </div>
                       ) : (
                         messages.map((message) => {
-                          const isMine = (message.senderId || message.sender) === user?.uid;
+                          const isMine = (message.senderId || message.sender) === (user?.uid || user?.id || userProfile?.uid || userProfile?.id);
                           const timeStamp = message.createdAt || message.timestamp;
 
                           return (
@@ -2985,6 +3165,7 @@ const renderMessagesTab = () => {
                           );
                         })
                       )}
+                      <div ref={messagesEndRef} />
                     </div>
 
                     <div className="p-4 border-t border-gray-200 bg-white">
@@ -3020,6 +3201,110 @@ const renderMessagesTab = () => {
             )}
           </div>
         </div>
+
+        {/* New Chat Picker Modal */}
+        {showNewChatPicker && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowNewChatPicker(false)}>
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Start New Chat</h3>
+                <button onClick={() => setShowNewChatPicker(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2">
+                {availableUsers.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p>No users available to chat with</p>
+                  </div>
+                ) : (
+                  availableUsers.map((u) => (
+                    <button
+                      key={u.id}
+                      onClick={() => handleStartNewChat(u)}
+                      className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-3"
+                    >
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
+                        {(u.name || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{u.name || 'Unknown'}</p>
+                        <p className="text-xs text-gray-500 capitalize">{u.userType}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Incoming Call Notification */}
+        {incomingCall && !isInCall && (
+          <div className="fixed top-4 right-4 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[300px] animate-slide-in">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold animate-pulse">
+                {(incomingCall.callerName || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">Incoming {incomingCall.callType === 'video' ? 'Video' : 'Voice'} Call</p>
+                <p className="text-sm text-gray-500">{incomingCall.callerName || 'Unknown'}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    await callService.answerCall(incomingCall.callId, user?.uid);
+                    setIncomingCall(null);
+                    // Initialize WebRTC for answering
+                    const service = new WebRTCService();
+                    await service.initialize();
+                    webrtcRef.current = service;
+                    await service.answerCall(incomingCall.callId, incomingCall.callType || 'video');
+                    setCallType(incomingCall.callType || 'video');
+                    setActiveCall({
+                      callId: incomingCall.callId,
+                      participantId: incomingCall.callerId,
+                      participantName: incomingCall.callerName || 'User',
+                      callType: incomingCall.callType || 'video'
+                    });
+                    setIsInCall(true);
+                    setElapsedSeconds(0);
+                    setCallStartAt(null);
+
+                    // Listen for signaling
+                    service.listenForSignaling(incomingCall.callId, async (message) => {
+                      if (message.type === 'offer') {
+                        await service.handleOffer(message.data?.offer || message.offer, incomingCall.callType || 'video');
+                      } else if (message.type === 'ice-candidate') {
+                        await service.handleIceCandidate(message.data?.candidate || message.candidate);
+                      }
+                    });
+                  } catch (error) {
+                    console.error('Error answering call:', error);
+                    toast.error('Failed to answer call');
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              >
+                Answer
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await callService.rejectCall(incomingCall.callId, user?.uid);
+                  } catch (e) { console.error(e); }
+                  setIncomingCall(null);
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };

@@ -107,11 +107,12 @@ const WRITABLE_FIELDS = {
   patient_reports: ['client_id', 'report_type', 'content', 'created_by'],
   subscriptions: ['institution_id', 'plan', 'status', 'start_date', 'end_date'],
   patients: ['name', 'email', 'phone', 'institution_id', 'status', 'medical_history', 'emergency_contacts', 'notes', 'date_of_birth', 'gender', 'address', 'city', 'state', 'country', 'blood_type', 'allergies', 'medications'],
-  calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'participants', 'institution_id', 'created_at', 'answered_at'],
-  conversations: ['participants', 'conversation_type', 'type', 'title', 'last_message_at', 'last_message_preview', 'institution_id', 'last_message', 'last_message_time'],
+  calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'answeredAt', 'participants', 'institution_id', 'created_at', 'updatedAt', 'callId', 'callerId', 'recipientId', 'callType', 'callerName', 'recipientName'],
+  conversations: ['participants', 'conversation_type', 'type', 'title', 'last_message_at', 'last_message_preview', 'institution_id', 'last_message', 'last_message_time', 'conversationType', 'lastMessage', 'lastMessageTime', 'createdAt', 'updatedAt'],
   elderly_profiles: ['client_id', 'medical_conditions', 'allergies', 'dietary_requirements', 'mobility_status', 'notes'],
-  call_notifications: ['call_id', 'recipient_id', 'sender_id', 'type', 'status', 'created_at'],
-  signaling: ['call_id', 'from', 'to', 'type', 'sdp', 'candidate', 'created_at'],
+  call_notifications: ['call_id', 'recipient_id', 'sender_id', 'type', 'status', 'created_at', 'userId', 'callId', 'callerId', 'callType', 'callerName', 'timestamp', 'updatedAt'],
+  signaling: ['call_id', 'from', 'to', 'type', 'sdp', 'candidate', 'created_at', 'callId', 'data', 'timestamp'],
+  messages: ['conversation_id', 'conversationId', 'sender_id', 'senderId', 'text', 'content', 'type', 'sender_name', 'senderName', 'read', 'read_at', 'readAt', 'created_at', 'createdAt', 'message_type', 'messageType'],
   schedules: ['institution_id', 'institutionId', 'client_id', 'clientId', 'client_name', 'clientName', 'caregiver_id', 'caregiverId', 'caregiver_name', 'caregiverName', 'title', 'description', 'service_type', 'serviceType', 'type', 'priority', 'schedule_date', 'scheduleDate', 'end_date', 'endDate', 'start_time', 'startTime', 'end_time', 'endTime', 'comments', 'special_instructions', 'specialInstructions', 'status', 'created_at', 'updated_at']
 };
 
