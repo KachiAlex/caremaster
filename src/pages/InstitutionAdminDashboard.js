@@ -216,6 +216,23 @@ const InstitutionAdminDashboard = () => {
     userProfile?.name || userProfile?.displayName || userProfile?.email || 'Institution admin';
 
   const currentUserRole = useMemo(() => {
+    const isAdmin =
+      userProfile?.isInstitutionAdmin ||
+      userProfile?.isAdmin ||
+      userProfile?.role === 'admin' ||
+      userProfile?.type === 'admin' ||
+      userProfile?.userType === 'admin' ||
+      (Array.isArray(userProfile?.roles) && userProfile.roles.includes('admin'));
+
+    const isPharmacist =
+      userProfile?.userType === 'pharmacist' ||
+      userProfile?.type === 'pharmacist' ||
+      userProfile?.role === 'pharmacist' ||
+      (Array.isArray(userProfile?.roles) && userProfile.roles.includes('pharmacist')) ||
+      userProfile?.medicalQualification === 'Pharmacist';
+
+    if (isAdmin) return 'admin';
+    if (isPharmacist) return 'pharmacist';
     return userProfile?.userType || userProfile?.type || userProfile?.role || null;
   }, [userProfile]);
 

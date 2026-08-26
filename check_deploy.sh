@@ -1,3 +1,2 @@
-MAIN_JS=$(curl -s https://getcaremaster.com/ | grep -oE 'static/js/main[^"]+\.js' | head -1)
-echo "Main JS: $MAIN_JS"
-curl -s "https://getcaremaster.com/$MAIN_JS" | grep -c 'CareMaster_secure'
+PGPASSWORD=***REMOVED*** psql -h 127.0.0.1 -U elderx_user -d elderx_app -c "DELETE FROM users WHERE email='testadmin_create@test.com'" 2>&1
+echo "CLEANED"

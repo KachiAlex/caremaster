@@ -298,10 +298,14 @@ export const assignInstitutionAdmin = async ({ institutionId, email, displayName
       const firstName = names[0] || 'Admin';
       const lastName = names.slice(1).join(' ') || '';
 
-      const response = await fetch('/api/auth/create-staff', {
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+      const apiBase = process.env.REACT_APP_API_URL || '';
+      const response = await fetch(`${apiBase}/api/auth/create-staff`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           email,
           password,
