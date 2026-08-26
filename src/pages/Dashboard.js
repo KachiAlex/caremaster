@@ -13,13 +13,10 @@ import {
   Shield,
   Bell,
   Settings,
-  HelpCircle,
   Stethoscope,
   Clock,
   TrendingUp,
   FileText,
-  Home,
-  Users,
   LogOut
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
@@ -33,7 +30,7 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
-import DashboardLayout from '../components/DashboardLayout';
+
 
 const Dashboard = () => {
   const { user, userProfile } = useUser();
@@ -278,34 +275,6 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error ending call:', error);
     }
-  };
-
-  // CareMaster design system - tabs for DashboardLayout sidebar
-  const tabs = [
-    { id: 'dashboard', label: 'My Dashboard', icon: Home },
-    { id: 'caregivers', label: 'My Care Team', icon: Users },
-    { id: 'appointments', label: 'Care Appointments', icon: Calendar },
-    { id: 'vital-signs', label: 'Health Monitoring', icon: Heart },
-    { id: 'telemedicine', label: 'Video Consultations', icon: Video },
-    { id: 'medications', label: 'Medications', icon: Pill },
-    { id: 'medical-documents', label: 'Medical Documents', icon: FileText },
-    { id: 'messages', label: 'Messages', icon: MessageCircle },
-    { id: 'help', label: 'Help & Support', icon: HelpCircle },
-  ];
-
-  const handleTabChange = (tabId) => {
-    if (tabId === 'dashboard') return;
-    navigate(`/${tabId}`);
-  };
-
-  const handleLogout = () => {
-    import('backend/auth').then(({ signOut, getAuth }) => {
-      signOut(getAuth()).then(() => {
-        window.location.href = '/login';
-      }).catch((error) => {
-        console.error('Error signing out:', error);
-      });
-    });
   };
 
   return (
@@ -625,7 +594,7 @@ const Dashboard = () => {
           isIncoming={false}
         />
       )}
-    </div>
+    </>
   );
 };
 

@@ -9,10 +9,24 @@ const SuperAdminGuard = ({ children }) => {
   const [verifying, setVerifying] = useState(true);
   const navigate = useNavigate();
 
+  console.log('🛡️ SuperAdminGuard render:', {
+    loading,
+    hasUser: !!user,
+    userRole,
+    userType: userProfile?.userType,
+    verifying
+  });
+
   useEffect(() => {
-    if (loading) return; // Still loading user profile
+    console.log('🛡️ SuperAdminGuard useEffect:', { loading, hasUser: !!user, userRole });
+    
+    if (loading) {
+      console.log('🛡️ SuperAdminGuard: still loading, waiting...');
+      return;
+    }
 
     if (!user) {
+      console.log('🛡️ SuperAdminGuard: no user, redirecting to login');
       toast.error('Please log in to access the super admin panel');
       navigate('/super-admin/login', { replace: true });
       return;
@@ -23,6 +37,12 @@ const SuperAdminGuard = ({ children }) => {
       userProfile?.userType === 'super-admin' ||
       userProfile?.user_type === 'super-admin';
 
+    console.log('🛡️ SuperAdminGuard: isSuperAdmin =', isSuperAdmin, {
+      userRole,
+      userType: userProfile?.userType,
+      user_type: userProfile?.user_type
+    });
+
     if (!isSuperAdmin) {
       console.log('⛔ Unauthorized access attempt to Super Admin portal. Role:', userRole);
       toast.error('Access denied. Super-admin privileges required.');
@@ -32,6 +52,7 @@ const SuperAdminGuard = ({ children }) => {
       return;
     }
 
+    console.log('✅ SuperAdminGuard: access granted, rendering children');
     setVerifying(false);
   }, [user, userProfile, userRole, loading, navigate]);
 
@@ -40,7 +61,7 @@ const SuperAdminGuard = ({ children }) => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying super-admin access...</p>
+          <p className="text-gray-600">Verifying super-admin access... (loading: {String(loading)}, verifying: {String(verifying)})</p>
         </div>
       </div>
     );

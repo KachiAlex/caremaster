@@ -380,44 +380,44 @@ function App() {
       />
       
       {/* Super Admin Routes - Must be before other protected routes */}
-      <Route 
-        path="/super-admin/login" 
-        element={<UnifiedLogin />} 
+      <Route
+        path="/super-admin/login"
+        element={<UnifiedLogin />}
+      />
+
+      <Route
+        path="/super-admin/dashboard"
+        element={<SuperAdminRoute />}
       />
       
-      <Route 
-        path="/super-admin/dashboard" 
-        element={<SuperAdminGuard><SuperAdminDashboard /></SuperAdminGuard>} 
+      <Route
+        path="/super-admin/licensing"
+        element={<SuperAdminRoute><SuperAdminLicensing /></SuperAdminRoute>}
       />
-      
-      <Route 
-        path="/super-admin/licensing" 
-        element={<SuperAdminGuard><SuperAdminLicensing /></SuperAdminGuard>} 
+
+      <Route
+        path="/super-admin/settings"
+        element={<SuperAdminRoute><SuperAdminSettings /></SuperAdminRoute>}
       />
-      
-      <Route 
-        path="/super-admin/settings" 
-        element={<SuperAdminGuard><SuperAdminSettings /></SuperAdminGuard>} 
+
+      <Route
+        path="/super-admin/management"
+        element={<SuperAdminRoute><SuperAdminManagement /></SuperAdminRoute>}
       />
-      
-      <Route 
-        path="/super-admin/management" 
-        element={<SuperAdminGuard><SuperAdminManagement /></SuperAdminGuard>} 
+
+      <Route
+        path="/super-admin/audit-logs"
+        element={<SuperAdminRoute><SuperAdminAuditLogs /></SuperAdminRoute>}
       />
-      
-      <Route 
-        path="/super-admin/audit-logs" 
-        element={<SuperAdminGuard><SuperAdminAuditLogs /></SuperAdminGuard>} 
+
+      <Route
+        path="/super-admin/users"
+        element={<SuperAdminRoute><SuperAdminUserManagement /></SuperAdminRoute>}
       />
-      
-      <Route 
-        path="/super-admin/users" 
-        element={<SuperAdminGuard><SuperAdminUserManagement /></SuperAdminGuard>} 
-      />
-      
-      <Route 
-        path="/super-admin" 
-        element={<SuperAdminGuard><SuperAdminDashboard /></SuperAdminGuard>} 
+
+      <Route
+        path="/super-admin"
+        element={<SuperAdminRoute />}
       />
 
       {/* Old institution portal route — redirect to login */}
@@ -690,6 +690,43 @@ function InstitutionEntry() {
   const [params] = useSearchParams();
   const id = params.get('institution');
   return id ? <InstitutionLanding /> : <TenantPartners />;
+}
+
+// Super-admin route — inline guard that renders children directly
+// without a separate guard component to avoid timing/context issues.
+function SuperAdminRoute({ children }) {
+  const { user, userProfile, userRole, loading } = useUser();
+
+  console.log('🛡️ SuperAdminRoute:', { loading, hasUser: !!user, userRole, userType: userProfile?.userType });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading super-admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    console.log('🛡️ SuperAdminRoute: no user, redirecting to /super-admin/login');
+    return <Navigate to="/super-admin/login" replace />;
+  }
+
+  const isSuperAdmin =
+    userRole === 'super-admin' ||
+    userProfile?.userType === 'super-admin' ||
+    userProfile?.user_type === 'super-admin';
+
+  if (!isSuperAdmin) {
+    console.log('🛡️ SuperAdminRoute: not super-admin (role:', userRole, '), redirecting to /super-admin/login');
+    return <Navigate to="/super-admin/login" replace />;
+  }
+
+  console.log('🛡️ SuperAdminRoute: access granted, rendering children');
+  return children || <SuperAdminDashboard />;
 }
 
 // Sign-in route handler - focuses on caregiver/service provider access
