@@ -731,6 +731,12 @@ function SignInRouteHandler() {
     currentPath: window.location.pathname
   });
 
+  // Super-admin always goes to the super-admin dashboard
+  if (userRole === 'super-admin' || userProfile?.userType === 'super-admin') {
+    console.log('🚀 Redirecting super-admin to /super-admin/dashboard');
+    return <Navigate to="/super-admin/dashboard" replace />;
+  }
+
   // Check if user came from institution login - if so, let them continue to their intended destination
   const urlParams = new URLSearchParams(window.location.search);
   const institutionId = urlParams.get('institution');
@@ -796,7 +802,13 @@ function RoleBasedDashboardRoute() {
     institutionId: userProfile?.institutionId,
     redirecting: userRole === 'caregiver' || userRole === 'doctor'
   });
-  
+
+  // Super-admin always goes to the super-admin dashboard
+  if (userRole === 'super-admin' || userProfile?.userType === 'super-admin') {
+    console.log('🚀 Redirecting super-admin to /super-admin/dashboard');
+    return <Navigate to="/super-admin/dashboard" replace />;
+  }
+
   // Check if user belongs to an institution - route to institution portal
   if (userProfile?.institutionId) {
     console.log('🏢 User belongs to institution, routing to institution portal:', userProfile.institutionId);
