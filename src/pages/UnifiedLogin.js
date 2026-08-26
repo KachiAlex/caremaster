@@ -137,6 +137,17 @@ const UnifiedLogin = () => {
 
       toast.success('Login successful! Redirecting...');
 
+      // Super-admin always goes to the super-admin dashboard, regardless of institution
+      // Use window.location.href for a hard navigation so React Router state
+      // (e.g. SignInRouteHandler re-rendering) can't override the redirect.
+      if (userRole === 'super-admin' || userData?.userType === 'super-admin') {
+        console.log('🚀 Super-admin detected, redirecting to /super-admin/dashboard');
+        setLoading(false);
+        clearTimeout(loginTimeout);
+        window.location.href = '/super-admin/dashboard';
+        return;
+      }
+
       // Route based on role and institution
       if (institutionId) {
         // User belongs to an institution

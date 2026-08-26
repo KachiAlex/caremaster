@@ -207,6 +207,7 @@ const SecurityManagement = ({ institutionId: propInstitutionId }) => {
   };
 
   const getActionColor = (action) => {
+    if (!action) return 'text-gray-600';
     if (action.includes('login') || action.includes('session_created')) return 'text-green-600';
     if (action.includes('logout') || action.includes('session_ended')) return 'text-blue-600';
     if (action.includes('failed') || action.includes('lockout')) return 'text-red-600';
@@ -214,7 +215,7 @@ const SecurityManagement = ({ institutionId: propInstitutionId }) => {
     return 'text-gray-600';
   };
 
-  if (loading && activeTab === '2fa') {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

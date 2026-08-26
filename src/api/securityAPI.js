@@ -25,6 +25,25 @@ import {
 } from 'backend/database';
 import { db } from '../backend/config';
 
+// Helper: normalize Firestore-style or ISO timestamps to a Date or null
+function normalizeTimestamp(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (value.seconds !== undefined) {
+    const ms = value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6);
+    const d = new Date(ms);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  return null;
+}
+
 const AUDIT_LOGS_COLLECTION = 'securityAuditLogs';
 const SESSIONS_COLLECTION = 'userSessions';
 const LOGIN_ATTEMPTS_COLLECTION = 'loginAttempts';
@@ -50,10 +69,11 @@ const send2FACode = async (email, code) => {
     
     // Store code temporarily (expires in 10 minutes)
     const codeRef = collection(db, TWO_FACTOR_COLLECTION);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     await addDoc(codeRef, {
       email,
       code,
-      expiresAt: Timestamp.fromDate(new Date(Date.now() + 10 * 60 * 1000)), // 10 minutes
+      expiresAt,
       createdAt: serverTimestamp(),
       verified: false
     });
@@ -197,8 +217,8 @@ export const twoFactorAPI = {
       const codeData = codeDoc.data();
 
       // Check if code expired
-      const expiresAt = codeData.expiresAt?.toDate?.() || new Date(codeData.expiresAt);
-      if (expiresAt < new Date()) {
+      const expiresAt = normalizeTimestamp(codeData.expiresAt);
+      if (!expiresAt || expiresAt < new Date()) {
         return { success: false, message: 'Code has expired' };
       }
 
@@ -211,7 +231,7 @@ export const twoFactorAPI = {
       return { success: true };
     } catch (error) {
       console.error('Error verifying 2FA code:', error);
-      throw error;
+      return { success: false, message: 'Unable to verify code' };
     }
   }
 };
@@ -291,11 +311,11 @@ export const getAuditLogs = async (filters = {}) => {
     }
 
     if (startDate) {
-      q = query(q, where('timestamp', '>=', Timestamp.fromDate(startDate)));
+      q = query(q, where('timestamp', '>=', startDate.toISOString()));
     }
 
     if (endDate) {
-      q = query(q, where('timestamp', '<=', Timestamp.fromDate(endDate)));
+      q = query(q, where('timestamp', '<=', endDate.toISOString()));
     }
 
     q = query(q, limit(limitCount));
@@ -308,14 +328,16 @@ export const getAuditLogs = async (filters = {}) => {
       logs.push({
         id: doc.id,
         ...data,
-        timestamp: data.timestamp?.toDate?.() || data.timestamp
+        timestamp: normalizeTimestamp(data.timestamp)
       });
     });
 
-    return logs;
+    // Ensure newest logs appear first in case the backend doesn't honor orderBy
+    logs.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    return logs.slice(0, limitCount);
   } catch (error) {
     console.error('Error fetching audit logs:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -333,7 +355,7 @@ export const sessionAPI = {
         ...sessionData,
         createdAt: serverTimestamp(),
         lastActivity: serverTimestamp(),
-        expiresAt: Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000)), // 24 hours
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         active: true
       };
 
@@ -414,16 +436,16 @@ export const sessionAPI = {
         sessions.push({
           id: doc.id,
           ...data,
-          createdAt: data.createdAt?.toDate?.() || data.createdAt,
-          lastActivity: data.lastActivity?.toDate?.() || data.lastActivity,
-          expiresAt: data.expiresAt?.toDate?.() || data.expiresAt
+          createdAt: normalizeTimestamp(data.createdAt),
+          lastActivity: normalizeTimestamp(data.lastActivity),
+          expiresAt: normalizeTimestamp(data.expiresAt)
         });
       });
 
       return sessions;
     } catch (error) {
       console.error('Error fetching active sessions:', error);
-      throw error;
+      return [];
     }
   }
 };
@@ -489,7 +511,7 @@ export const loginAttemptAPI = {
         collection(db, LOGIN_ATTEMPTS_COLLECTION),
         where('email', '==', email),
         where('success', '==', false),
-        where('timestamp', '>=', Timestamp.fromDate(cutoffTime)),
+        where('timestamp', '>=', cutoffTime.toISOString()),
         orderBy('timestamp', 'desc')
       );
 
@@ -501,7 +523,7 @@ export const loginAttemptAPI = {
         attempts.push({
           id: doc.id,
           ...data,
-          timestamp: data.timestamp?.toDate?.() || data.timestamp
+          timestamp: normalizeTimestamp(data.timestamp) || data.timestamp
         });
       });
 
