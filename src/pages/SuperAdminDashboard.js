@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authManager from '../utils/authManager';
-import { 
+import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend
 } from 'recharts';
-import { 
-  Users, 
-  Building2, 
-  FileText, 
-  Activity, 
-  TrendingUp, 
+import {
+  Users,
+  Building2,
+  FileText,
+  Activity,
+  TrendingUp,
   AlertCircle,
   Shield,
   Settings,
@@ -25,6 +25,23 @@ import FontSizeToggle from '../components/FontSizeToggle';
 import { collection, query, getDocs, orderBy, limit, onSnapshot } from 'backend/database';
 import { db } from '../backend/config';
 import DashboardLayout from '../components/DashboardLayout';
+
+// Lazy-load the other super-admin pages so they render as inline tab content
+const SuperAdminLicensing = lazy(() => import('./SuperAdminLicensing'));
+const SuperAdminUserManagement = lazy(() => import('./SuperAdminUserManagement'));
+const SuperAdminAuditLogs = lazy(() => import('./SuperAdminAuditLogs'));
+const SuperAdminSettings = lazy(() => import('./SuperAdminSettings'));
+const SuperAdminManagement = lazy(() => import('./SuperAdminManagement'));
+
+// Loading fallback for lazy-loaded tab content
+const TabLoading = ({ label = 'Content' }) => (
+  <div className="flex items-center justify-center py-20">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gold mx-auto mb-4"></div>
+      <p className="text-sm text-text-soft">Loading {label}...</p>
+    </div>
+  </div>
+);
 
 const SuperAdminDashboard = () => {
   const navigate = useNavigate();
@@ -353,21 +370,17 @@ const SuperAdminDashboard = () => {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: Activity },
-    { id: 'licensing', label: 'Licensing', icon: FileText, route: '/super-admin/licensing' },
-    { id: 'users', label: 'Users', icon: Users, route: '/super-admin/users' },
-    { id: 'audit-logs', label: 'Audit Logs', icon: Eye, route: '/super-admin/audit-logs' },
-    { id: 'settings', label: 'Settings', icon: Settings, route: '/super-admin/settings' },
-    { id: 'management', label: 'Manage Admins', icon: Shield, route: '/super-admin/management' },
+    { id: 'licensing', label: 'Licensing', icon: FileText },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'audit-logs', label: 'Audit Logs', icon: Eye },
+    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'management', label: 'Manage Admins', icon: Shield },
   ];
 
   const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label || 'Dashboard';
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
-    const tab = tabs.find((t) => t.id === tabId);
-    if (tab?.route) {
-      navigate(tab.route);
-    }
   };
 
   const StatCard = ({ icon: Icon, label, value, trend, accent = 'from-sage to-ink' }) => (
@@ -392,10 +405,10 @@ const SuperAdminDashboard = () => {
 
   const AlertBanner = ({ type, message, action }) => {
     const styles = {
-      warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-      error: 'bg-red-50 border-red-200 text-red-800',
-      info: 'bg-blue-50 border-blue-200 text-blue-800',
-      success: 'bg-green-50 border-green-200 text-green-800'
+      warning: 'bg-gold/10 border-gold/30 text-gold-deep',
+      error: 'bg-coral-soft/40 border-coral/30 text-coral',
+      info: 'bg-sage-soft/40 border-sage/30 text-sage',
+      success: 'bg-sage-soft/40 border-sage/30 text-sage'
     };
 
     const icons = {
@@ -406,14 +419,14 @@ const SuperAdminDashboard = () => {
     };
 
     return (
-      <div className={`p-4 rounded-lg border ${styles[type]} flex items-center justify-between`}>
+      <div className={`p-4 rounded-[10px] border ${styles[type]} flex items-center justify-between`}>
         <div className="flex items-center">
           <div className="mr-3">{icons[type]}</div>
           <p className="text-sm font-medium">{message}</p>
         </div>
         {action && (
-          <button 
-            onClick={() => navigate('/super-admin')}
+          <button
+            onClick={() => setActiveTab('dashboard')}
             className="text-sm font-semibold hover:underline"
           >
             {action} →
@@ -452,28 +465,28 @@ const SuperAdminDashboard = () => {
           label="Active Institutions"
           value={stats.activeInstitutions}
           trend={5}
-          accent="from-blue-500 to-blue-600"
+          accent="from-sage to-ink"
         />
         <StatCard
           icon={FileText}
           label="Active Licenses"
           value={stats.activeLicenses}
           trend={3}
-          accent="from-green-500 to-green-600"
+          accent="from-gold to-gold-deep"
         />
         <StatCard
           icon={Users}
           label="Total Users"
           value={stats.totalUsers}
           trend={8}
-          accent="from-indigo-500 to-purple-500"
+          accent="from-sage to-ink"
         />
         <StatCard
           icon={DollarSign}
           label="Monthly Revenue"
           value={`$${stats.totalRevenue.toLocaleString()}`}
           trend={12}
-          accent="from-sage to-ink"
+          accent="from-coral to-gold"
         />
       </div>
 
@@ -482,92 +495,92 @@ const SuperAdminDashboard = () => {
         <div className="cm-card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Institutions</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900">{stats.totalInstitutions}</p>
+              <p className="cm-stat-label">Total Institutions</p>
+              <p className="cm-stat-value">{stats.totalInstitutions}</p>
             </div>
-            <Building2 className="h-8 w-8 text-gray-400" />
+            <Building2 className="h-8 w-8 text-sage" />
           </div>
         </div>
 
         <div className="cm-card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Expiring Soon</p>
-              <p className="mt-1 text-2xl font-bold text-yellow-600">{stats.expiringLicenses}</p>
+              <p className="cm-stat-label">Expiring Soon</p>
+              <p className="cm-stat-value text-gold-deep">{stats.expiringLicenses}</p>
             </div>
-            <Clock className="h-8 w-8 text-yellow-400" />
+            <Clock className="h-8 w-8 text-gold" />
           </div>
         </div>
 
         <div className="cm-card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Users</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900">{stats.activeUsers}</p>
+              <p className="cm-stat-label">Active Users</p>
+              <p className="cm-stat-value">{stats.activeUsers}</p>
             </div>
-            <Users className="h-8 w-8 text-gray-400" />
+            <Users className="h-8 w-8 text-sage" />
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="cm-card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <h2 className="text-lg font-semibold text-ink mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           <button
-            onClick={() => navigate('/super-admin/licensing')}
-            className="flex flex-col items-center p-4 rounded-lg border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            onClick={() => setActiveTab('licensing')}
+            className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-sage hover:bg-sage-soft/30 transition-all"
           >
-            <Building2 className="h-8 w-8 text-blue-600 mb-2" />
-            <span className="text-sm font-medium text-gray-900">Manage Institutions</span>
+            <Building2 className="h-7 w-7 text-sage mb-2" />
+            <span className="text-xs font-medium text-ink text-center">Manage Institutions</span>
           </button>
 
           <button
-            onClick={() => navigate('/super-admin/licensing')}
-            className="flex flex-col items-center p-4 rounded-lg border-2 border-green-200 hover:border-green-400 hover:bg-green-50 transition-colors"
+            onClick={() => setActiveTab('licensing')}
+            className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-gold hover:bg-gold/5 transition-all"
           >
-            <FileText className="h-8 w-8 text-green-600 mb-2" />
-            <span className="text-sm font-medium text-gray-900">Issue License</span>
+            <FileText className="h-7 w-7 text-gold-deep mb-2" />
+            <span className="text-xs font-medium text-ink text-center">Issue License</span>
           </button>
 
           <button
-            onClick={() => navigate('/super-admin/licensing')}
-            className="flex flex-col items-center p-4 rounded-lg border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-colors"
+            onClick={() => setActiveTab('licensing')}
+            className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-sage hover:bg-sage-soft/30 transition-all"
           >
-            <Users className="h-8 w-8 text-purple-600 mb-2" />
-            <span className="text-sm font-medium text-gray-900">Assign Admin</span>
+            <Users className="h-7 w-7 text-sage mb-2" />
+            <span className="text-xs font-medium text-ink text-center">Assign Admin</span>
           </button>
 
           <button
-            onClick={() => navigate('/super-admin/settings')}
-            className="flex flex-col items-center p-4 rounded-lg border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+            onClick={() => setActiveTab('settings')}
+            className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-ink/20 hover:bg-ink/5 transition-all"
           >
-            <Settings className="h-8 w-8 text-gray-600 mb-2" />
-            <span className="text-sm font-medium text-gray-900">System Settings</span>
+            <Settings className="h-7 w-7 text-text-soft mb-2" />
+            <span className="text-xs font-medium text-ink text-center">System Settings</span>
           </button>
 
           <button
-            onClick={() => navigate('/super-admin/management')}
-            className="flex flex-col items-center p-4 rounded-lg border-2 border-red-200 hover:border-red-400 hover:bg-red-50 transition-colors"
+            onClick={() => setActiveTab('management')}
+            className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-coral hover:bg-coral-soft/30 transition-all"
           >
-            <Shield className="h-8 w-8 text-red-600 mb-2" />
-            <span className="text-sm font-medium text-gray-900">Manage Admins</span>
+            <Shield className="h-7 w-7 text-coral mb-2" />
+            <span className="text-xs font-medium text-ink text-center">Manage Admins</span>
           </button>
 
           <button
-            onClick={() => navigate('/super-admin/users')}
-            className="flex flex-col items-center p-4 rounded-lg border-2 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+            onClick={() => setActiveTab('users')}
+            className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-sage hover:bg-sage-soft/30 transition-all"
           >
-            <Users className="h-8 w-8 text-indigo-600 mb-2" />
-            <span className="text-sm font-medium text-gray-900">All Users</span>
+            <Users className="h-7 w-7 text-sage mb-2" />
+            <span className="text-xs font-medium text-ink text-center">All Users</span>
           </button>
 
           <button
-            onClick={() => navigate('/super-admin/audit-logs')}
-            className="flex flex-col items-center p-4 rounded-lg border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 transition-colors"
+            onClick={() => setActiveTab('audit-logs')}
+            className="flex flex-col items-center p-4 rounded-[10px] border border-ink/8 hover:border-gold hover:bg-gold/5 transition-all"
           >
-            <Activity className="h-8 w-8 text-orange-600 mb-2" />
-            <span className="text-sm font-medium text-gray-900">Audit Logs</span>
+            <Activity className="h-7 w-7 text-gold-deep mb-2" />
+            <span className="text-xs font-medium text-ink text-center">Audit Logs</span>
           </button>
         </div>
       </div>
@@ -576,8 +589,8 @@ const SuperAdminDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Trend Chart */}
         <div className="cm-card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <TrendingUp className="h-5 w-5 text-green-600 mr-2" />
+          <h3 className="cm-display text-lg text-ink mb-4 flex items-center">
+            <TrendingUp className="h-5 w-5 text-sage mr-2" />
             Revenue Trend (Last 6 Months)
           </h3>
           {chartData.revenueTrend.length > 0 ? (
@@ -591,7 +604,7 @@ const SuperAdminDashboard = () => {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
+            <div className="h-64 flex items-center justify-center text-text-soft">
               No revenue data available
             </div>
           )}
@@ -599,7 +612,7 @@ const SuperAdminDashboard = () => {
 
         {/* Institution Growth Chart */}
         <div className="cm-card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <h3 className="cm-display text-lg text-ink mb-4 flex items-center">
             <Building2 className="h-5 w-5 text-gold-deep mr-2" />
             Institution Growth
           </h3>
@@ -614,7 +627,7 @@ const SuperAdminDashboard = () => {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
+            <div className="h-64 flex items-center justify-center text-text-soft">
               No growth data available
             </div>
           )}
@@ -622,8 +635,8 @@ const SuperAdminDashboard = () => {
 
         {/* License Distribution Chart */}
         <div className="cm-card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <FileText className="h-5 w-5 text-purple-600 mr-2" />
+          <h3 className="cm-display text-lg text-ink mb-4 flex items-center">
+            <FileText className="h-5 w-5 text-coral mr-2" />
             License Plan Distribution
           </h3>
           {chartData.licenseDistribution.length > 0 ? (
@@ -648,7 +661,7 @@ const SuperAdminDashboard = () => {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
+            <div className="h-64 flex items-center justify-center text-text-soft">
               No license data available
             </div>
           )}
@@ -656,8 +669,8 @@ const SuperAdminDashboard = () => {
 
         {/* User Growth Chart */}
         <div className="cm-card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Users className="h-5 w-5 text-indigo-600 mr-2" />
+          <h3 className="cm-display text-lg text-ink mb-4 flex items-center">
+            <Users className="h-5 w-5 text-sage mr-2" />
             User Growth
           </h3>
           {chartData.userGrowth.length > 0 ? (
@@ -671,7 +684,7 @@ const SuperAdminDashboard = () => {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
+            <div className="h-64 flex items-center justify-center text-text-soft">
               No user data available
             </div>
           )}
@@ -681,22 +694,22 @@ const SuperAdminDashboard = () => {
       {/* Recent Activity */}
       <div className="cm-card p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+          <h2 className="cm-display text-lg text-ink">Recent Activity</h2>
           <button
-            onClick={() => navigate('/super-admin/audit-logs')}
+            onClick={() => setActiveTab('audit-logs')}
             className="text-sm text-gold-deep hover:opacity-80 font-medium"
           >
             View All →
           </button>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {recentActivity.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">No recent activity</p>
+            <p className="text-center text-text-soft py-8">No recent activity</p>
           ) : (
             recentActivity.map((activity) => (
-              <div 
-                key={activity.id} 
-                className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              <div
+                key={activity.id}
+                className="flex items-start space-x-3 p-3 rounded-[10px] hover:bg-cream transition-colors cursor-pointer"
                 onClick={() => {
                   setSelectedActivity(activity);
                   setShowActivityModal(true);
@@ -706,17 +719,17 @@ const SuperAdminDashboard = () => {
                   <Activity className="h-5 w-5 text-gold-deep" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-ink">
                     {activity.type?.replace(/_/g, ' ').toUpperCase()}
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-text-soft">
                     {activity.email || activity.userId || 'System'}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-text-soft mt-1">
                     {activity.timestamp?.toLocaleString()}
                   </p>
                 </div>
-                <Eye className="h-4 w-4 text-gray-400" />
+                <Eye className="h-4 w-4 text-text-soft" />
               </div>
             ))
           )}
@@ -724,6 +737,64 @@ const SuperAdminDashboard = () => {
       </div>
     </>
   );
+
+  // Render content for the active tab
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <div className="space-y-6">
+            <div className="cm-section-head">
+              <span className="cm-eyebrow">{activeTabLabel || 'Dashboard'}</span>
+              <h2 className="mt-2">Super Admin Console</h2>
+              <p>System-wide administration and oversight.</p>
+            </div>
+            {renderTabContent()}
+          </div>
+        );
+      case 'licensing':
+        return (
+          <Suspense fallback={<TabLoading label="Licensing" />}>
+            <SuperAdminLicensing />
+          </Suspense>
+        );
+      case 'users':
+        return (
+          <Suspense fallback={<TabLoading label="User Management" />}>
+            <SuperAdminUserManagement />
+          </Suspense>
+        );
+      case 'audit-logs':
+        return (
+          <Suspense fallback={<TabLoading label="Audit Logs" />}>
+            <SuperAdminAuditLogs />
+          </Suspense>
+        );
+      case 'settings':
+        return (
+          <Suspense fallback={<TabLoading label="Settings" />}>
+            <SuperAdminSettings />
+          </Suspense>
+        );
+      case 'management':
+        return (
+          <Suspense fallback={<TabLoading label="Admin Management" />}>
+            <SuperAdminManagement />
+          </Suspense>
+        );
+      default:
+        return (
+          <div className="space-y-6">
+            <div className="cm-section-head">
+              <span className="cm-eyebrow">{activeTabLabel || 'Dashboard'}</span>
+              <h2 className="mt-2">Super Admin Console</h2>
+              <p>System-wide administration and oversight.</p>
+            </div>
+            {renderTabContent()}
+          </div>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen cm-dashboard-body">
@@ -738,67 +809,60 @@ const SuperAdminDashboard = () => {
         onLogout={handleLogout}
         headerActions={<FontSizeToggle />}
       >
-        <div className="space-y-6">
-          <div className="cm-section-head">
-            <span className="cm-eyebrow">{activeTabLabel || 'Dashboard'}</span>
-            <h2 className="mt-2">Super Admin Console</h2>
-            <p>System-wide administration and oversight.</p>
-          </div>
-          {renderTabContent()}
-        </div>
+        {renderActiveTab()}
       </DashboardLayout>
 
       {/* Activity Details Modal */}
       {showActivityModal && selectedActivity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Activity Details</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[14px] shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-ink/8">
+              <h3 className="cm-display text-lg text-ink">Activity Details</h3>
               <button
                 onClick={() => {
                   setShowActivityModal(false);
                   setSelectedActivity(null);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-text-soft hover:text-ink"
               >
                 <XCircle className="h-5 w-5" />
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Type</label>
-                <p className="text-sm text-gray-900 mt-1">
+                <label className="text-sm font-medium text-text-soft">Type</label>
+                <p className="text-sm text-ink mt-1">
                   {selectedActivity.type?.replace(/_/g, ' ').toUpperCase() || 'N/A'}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Action</label>
-                <p className="text-sm text-gray-900 mt-1">
+                <label className="text-sm font-medium text-text-soft">Action</label>
+                <p className="text-sm text-ink mt-1">
                   {selectedActivity.action?.replace(/_/g, ' ') || 'N/A'}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">User</label>
-                <p className="text-sm text-gray-900 mt-1">
+                <label className="text-sm font-medium text-text-soft">User</label>
+                <p className="text-sm text-ink mt-1">
                   {selectedActivity.email || selectedActivity.userId || 'System'}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Performed By</label>
-                <p className="text-sm text-gray-900 mt-1">
+                <label className="text-sm font-medium text-text-soft">Performed By</label>
+                <p className="text-sm text-ink mt-1">
                   {selectedActivity.performedByEmail || selectedActivity.performedBy || 'System'}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Timestamp</label>
-                <p className="text-sm text-gray-900 mt-1">
+                <label className="text-sm font-medium text-text-soft">Timestamp</label>
+                <p className="text-sm text-ink mt-1">
                   {selectedActivity.timestamp?.toLocaleString() || 'N/A'}
                 </p>
               </div>
               {selectedActivity.details && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Details</label>
-                  <pre className="text-xs text-gray-900 mt-1 bg-gray-50 p-3 rounded-lg overflow-x-auto">
+                  <label className="text-sm font-medium text-text-soft">Details</label>
+                  <pre className="text-xs text-ink mt-1 bg-cream p-3 rounded-[10px] overflow-x-auto">
                     {JSON.stringify(selectedActivity.details, null, 2)}
                   </pre>
                 </div>

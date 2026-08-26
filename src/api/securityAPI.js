@@ -61,7 +61,7 @@ const generateTOTP = () => {
 /**
  * Send 2FA code via email (or SMS in production)
  */
-const send2FACode = async (email, code) => {
+const send2FACode = async (userId, email, code) => {
   try {
     // In production, integrate with email service (SendGrid, AWS SES, etc.)
     // For now, we'll store it and the user can retrieve it
@@ -71,6 +71,7 @@ const send2FACode = async (email, code) => {
     const codeRef = collection(db, TWO_FACTOR_COLLECTION);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     await addDoc(codeRef, {
+      userId,
       email,
       code,
       expiresAt,
@@ -176,7 +177,7 @@ export const twoFactorAPI = {
   generateAndSendCode: async (userId, email) => {
     try {
       const code = generateTOTP();
-      await send2FACode(email, code);
+      await send2FACode(userId, email, code);
       
       await logSecurityEvent({
         userId,
@@ -310,25 +311,23 @@ export const getAuditLogs = async (filters = {}) => {
       q = query(q, where('resourceType', '==', resourceType));
     }
 
-    if (startDate) {
-      q = query(q, where('timestamp', '>=', startDate.toISOString()));
-    }
-
-    if (endDate) {
-      q = query(q, where('timestamp', '<=', endDate.toISOString()));
-    }
-
     q = query(q, limit(limitCount));
 
     const snapshot = await getDocs(q);
+    const startMs = startDate ? startDate.getTime() : null;
+    const endMs = endDate ? endDate.getTime() : null;
     const logs = [];
 
     snapshot.forEach((doc) => {
       const data = doc.data();
+      const ts = normalizeTimestamp(data.timestamp);
+      const tsMs = ts ? ts.getTime() : null;
+      if (tsMs && startMs && tsMs < startMs) return;
+      if (tsMs && endMs && tsMs > endMs) return;
       logs.push({
         id: doc.id,
         ...data,
-        timestamp: normalizeTimestamp(data.timestamp)
+        timestamp: ts
       });
     });
 
@@ -442,6 +441,7 @@ export const sessionAPI = {
         });
       });
 
+      sessions.sort((a, b) => new Date(b.lastActivity || 0) - new Date(a.lastActivity || 0));
       return sessions;
     } catch (error) {
       console.error('Error fetching active sessions:', error);
@@ -511,7 +511,6 @@ export const loginAttemptAPI = {
         collection(db, LOGIN_ATTEMPTS_COLLECTION),
         where('email', '==', email),
         where('success', '==', false),
-        where('timestamp', '>=', cutoffTime.toISOString()),
         orderBy('timestamp', 'desc')
       );
 
@@ -520,11 +519,14 @@ export const loginAttemptAPI = {
 
       snapshot.forEach((doc) => {
         const data = doc.data();
-        attempts.push({
-          id: doc.id,
-          ...data,
-          timestamp: normalizeTimestamp(data.timestamp) || data.timestamp
-        });
+        const ts = normalizeTimestamp(data.timestamp);
+        if (ts && ts >= cutoffTime) {
+          attempts.push({
+            id: doc.id,
+            ...data,
+            timestamp: ts
+          });
+        }
       });
 
       return attempts;

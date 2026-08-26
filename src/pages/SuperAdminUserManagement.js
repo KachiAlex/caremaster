@@ -309,113 +309,96 @@ const SuperAdminUserManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/super-admin/dashboard')}
-                className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 text-gray-600" />
-              </button>
-              <Users className="h-8 w-8 text-blue-600 mr-3" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-                <p className="text-sm text-gray-600">Manage all platform users</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <FontSizeToggle />
-              <div className="relative group">
-                <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                  <button
-                    onClick={() => {
-                      try {
-                        const usersData = filteredUsers.map(u => ({
-                          Email: u.email || '',
-                          'Display Name': u.displayName || u.name || '',
-                          'User Type': u.userType || u.type || '',
-                          Role: u.role || '',
-                          'Institution ID': u.institutionId || '',
-                          Status: u.active !== false ? 'Active' : 'Inactive',
-                          'Is Super Admin': u.isSuperAdmin ? 'Yes' : 'No',
-                          'Created': formatDateForExport(u.createdAt)
-                        }));
-                        exportToCSV(usersData, `users-${new Date().toISOString().split('T')[0]}`);
-                        setMessage('Users exported to CSV successfully');
-                        setTimeout(() => setMessage(''), 3000);
-                      } catch (error) {
-                        setMessage('Failed to export users');
-                      }
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
-                  >
-                    Export Users (CSV)
-                  </button>
-                  <button
-                    onClick={() => {
-                      try {
-                        const usersData = filteredUsers.map(u => ({
-                          Email: u.email || '',
-                          'Display Name': u.displayName || u.name || '',
-                          'User Type': u.userType || u.type || '',
-                          Role: u.role || '',
-                          'Institution ID': u.institutionId || '',
-                          Status: u.active !== false ? 'Active' : 'Inactive',
-                          'Is Super Admin': u.isSuperAdmin ? 'Yes' : 'No',
-                          'Created': formatDateForExport(u.createdAt)
-                        }));
-                        exportToExcel(usersData, `users-${new Date().toISOString().split('T')[0]}`, null, 'Users');
-                        setMessage('Users exported to Excel successfully');
-                        setTimeout(() => setMessage(''), 3000);
-                      } catch (error) {
-                        setMessage('Failed to export users');
-                      }
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-b-lg"
-                  >
-                    Export Users (Excel)
-                  </button>
-                </div>
-              </div>
-              <button
-                onClick={loadUsers}
-                className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </button>
-            </div>
+    <div className="space-y-6">
+      {/* Section header */}
+      <div className="cm-section-head">
+        <span className="cm-eyebrow">Users</span>
+        <h2 className="mt-2">User Management</h2>
+        <p>Manage all platform users.</p>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-end gap-2">
+        <div className="relative group">
+          <button className="cm-btn cm-btn-ghost-light">
+            <Download className="h-4 w-4" /> Export
+          </button>
+          <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-ink/8 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+            <button
+              onClick={() => {
+                try {
+                  const usersData = filteredUsers.map(u => ({
+                    Email: u.email || '',
+                    'Display Name': u.displayName || u.name || '',
+                    'User Type': u.userType || u.type || '',
+                    Role: u.role || '',
+                    'Institution ID': u.institutionId || '',
+                    Status: u.active !== false ? 'Active' : 'Inactive',
+                    'Is Super Admin': u.isSuperAdmin ? 'Yes' : 'No',
+                    'Created': formatDateForExport(u.createdAt)
+                  }));
+                  exportToCSV(usersData, `users-${new Date().toISOString().split('T')[0]}`);
+                  setMessage('Users exported to CSV successfully');
+                  setTimeout(() => setMessage(''), 3000);
+                } catch (error) {
+                  setMessage('Failed to export users');
+                }
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-ink/5"
+            >
+              Export Users (CSV)
+            </button>
+            <button
+              onClick={() => {
+                try {
+                  const usersData = filteredUsers.map(u => ({
+                    Email: u.email || '',
+                    'Display Name': u.displayName || u.name || '',
+                    'User Type': u.userType || u.type || '',
+                    Role: u.role || '',
+                    'Institution ID': u.institutionId || '',
+                    Status: u.active !== false ? 'Active' : 'Inactive',
+                    'Is Super Admin': u.isSuperAdmin ? 'Yes' : 'No',
+                    'Created': formatDateForExport(u.createdAt)
+                  }));
+                  exportToExcel(usersData, `users-${new Date().toISOString().split('T')[0]}`, null, 'Users');
+                  setMessage('Users exported to Excel successfully');
+                  setTimeout(() => setMessage(''), 3000);
+                } catch (error) {
+                  setMessage('Failed to export users');
+                }
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-ink/5"
+            >
+              Export Users (Excel)
+            </button>
           </div>
         </div>
-      </header>
+        <button
+          onClick={loadUsers}
+          className="cm-btn cm-btn-ghost-light"
+        >
+          <RefreshCw className="h-4 w-4" /> Refresh
+        </button>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {message && (
-          <div className={`mb-6 p-4 rounded-lg ${
-            message.includes('success') || message.includes('successfully')
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
-            {message}
-          </div>
-        )}
+      {message && (
+        <div className={`p-4 rounded-[10px] text-sm ${
+          message.includes('success') || message.includes('successfully')
+            ? 'bg-sage-soft/40 border border-sage/20 text-sage'
+            : 'bg-coral-soft/40 border border-coral/20 text-coral'
+        }`}>
+          {message}
+        </div>
+      )}
 
-        {/* Search and Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
+      {/* Search and Filters */}
+      <div className="cm-card p-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-text-soft" />
+            <input
                 type="text"
                 placeholder="Search users by email, name, or ID..."
                 value={searchTerm}
@@ -702,7 +685,6 @@ const SuperAdminUserManagement = () => {
             </div>
           )}
         </div>
-      </main>
     </div>
   );
 };

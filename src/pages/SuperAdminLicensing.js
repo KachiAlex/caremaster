@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Info, Download, CheckSquare, Square } from 'lucide-react';
+import { X, Info, Download, CheckSquare, Square, Building2, FileText, Shield } from 'lucide-react';
 import { createInstitution, createLicense, assignInstitutionAdmin, getInstitutions, getLicenses, updateInstitution, deleteInstitution, updateLicense, suspendLicense, activateLicenseById, migrateInstitutionLinks, getInstitutionAdmins, removeInstitutionAdmin, generateLicenseKey } from '../services/licenseService';
 import { toast } from 'react-toastify';
 import { exportToCSV, exportToExcel, exportToJSON, formatDateForExport } from '../services/exportService';
@@ -797,21 +797,33 @@ const SuperAdminLicensing = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Licensing Console</h1>
-          <p className="text-gray-600 text-sm">Manage institutions, licenses, and administrators</p>
+    <div className="space-y-6">
+      {/* Section header */}
+      <div className="cm-section-head">
+        <span className="cm-eyebrow">Licensing</span>
+        <h2 className="mt-2">Licensing Console</h2>
+        <p>Manage institutions, licenses, and administrators.</p>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-2">
+          <button onClick={() => setShowInstitutionModal(true)} className="cm-btn cm-btn-gold">
+            <Building2 className="h-4 w-4" /> New Institution
+          </button>
+          <button onClick={() => setShowLicenseModal(true)} className="cm-btn cm-btn-sage">
+            <FileText className="h-4 w-4" /> Issue License
+          </button>
+          <button onClick={() => setShowAdminModal(true)} className="cm-btn cm-btn-ghost-light">
+            <Shield className="h-4 w-4" /> Assign Admin
+          </button>
         </div>
         <div className="flex gap-2">
-          <FontSizeToggle />
-          <button onClick={handleNavigateToDashboard} className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Dashboard</button>
           <div className="relative group">
-            <button className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center">
-              <Download className="h-4 w-4 mr-1" />
-              Export
+            <button className="cm-btn cm-btn-ghost-light">
+              <Download className="h-4 w-4" /> Export
             </button>
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-ink/8 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
               <button
                 onClick={() => {
                   try {
@@ -828,7 +840,7 @@ const SuperAdminLicensing = () => {
                     toast.error('Failed to export institutions');
                   }
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
+                className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-ink/5"
               >
                 Export Institutions (CSV)
               </button>

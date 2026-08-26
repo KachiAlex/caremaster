@@ -60,6 +60,10 @@ const COLLECTION_TO_TABLE = {
   emergencyProtocols: 'emergency_protocols',
   clientActivities: 'client_activities',
   loginLogs: 'audit_logs',
+  securityAuditLogs: 'security_audit_logs',
+  userSessions: 'user_sessions',
+  loginAttempts: 'login_attempts',
+  twoFactorAuth: 'two_factor_auth',
 };
 
 // Collections that have no backing DB table — return empty results
@@ -113,7 +117,11 @@ const WRITABLE_FIELDS = {
   call_notifications: ['call_id', 'recipient_id', 'sender_id', 'type', 'status', 'created_at', 'userId', 'callId', 'callerId', 'callType', 'callerName', 'timestamp', 'updatedAt'],
   signaling: ['call_id', 'from', 'to', 'type', 'sdp', 'candidate', 'created_at', 'callId', 'data', 'timestamp'],
   messages: ['conversation_id', 'conversationId', 'sender_id', 'senderId', 'text', 'content', 'type', 'sender_name', 'senderName', 'read', 'read_at', 'readAt', 'created_at', 'createdAt', 'message_type', 'messageType'],
-  schedules: ['institution_id', 'institutionId', 'client_id', 'clientId', 'client_name', 'clientName', 'caregiver_id', 'caregiverId', 'caregiver_name', 'caregiverName', 'title', 'description', 'service_type', 'serviceType', 'type', 'priority', 'schedule_date', 'scheduleDate', 'end_date', 'endDate', 'start_time', 'startTime', 'end_time', 'endTime', 'comments', 'special_instructions', 'specialInstructions', 'status', 'created_at', 'updated_at']
+  schedules: ['institution_id', 'institutionId', 'client_id', 'clientId', 'client_name', 'clientName', 'caregiver_id', 'caregiverId', 'caregiver_name', 'caregiverName', 'title', 'description', 'service_type', 'serviceType', 'type', 'priority', 'schedule_date', 'scheduleDate', 'end_date', 'endDate', 'start_time', 'startTime', 'end_time', 'endTime', 'comments', 'special_instructions', 'specialInstructions', 'status', 'created_at', 'updated_at'],
+  security_audit_logs: ['user_id', 'userId', 'user_role', 'action', 'resource_type', 'resourceType', 'resource_id', 'resourceId', 'details', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'institution_id', 'institutionId', 'timestamp', 'created_at', 'updated_at'],
+  user_sessions: ['user_id', 'userId', 'user_agent', 'userAgent', 'ip_address', 'ipAddress', 'active', 'created_at', 'last_activity', 'lastActivity', 'expires_at', 'expiresAt', 'ended_at', 'endedAt', 'updated_at'],
+  login_attempts: ['email', 'user_id', 'userId', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'success', 'timestamp', 'created_at', 'updated_at'],
+  two_factor_auth: ['user_id', 'userId', 'email', 'enabled', 'code', 'verified', 'expires_at', 'expiresAt', 'enabled_at', 'enabledAt', 'disabled_at', 'disabledAt', 'verified_at', 'verifiedAt', 'created_at', 'updated_at']
 };
 
 // Allowed sort columns per table (to prevent SQL injection via orderBy)
@@ -133,6 +141,10 @@ const SORTABLE_COLUMNS = {
   invoices: ['id', 'due_date', 'created_at'],
   emergency_alerts: ['id', 'created_at', 'severity'],
   audit_logs: ['id', 'timestamp'],
+  security_audit_logs: ['id', 'timestamp', 'created_at'],
+  user_sessions: ['id', 'created_at', 'last_activity', 'expires_at'],
+  login_attempts: ['id', 'timestamp', 'created_at'],
+  two_factor_auth: ['id', 'created_at', 'updated_at'],
   licenses: ['id', 'institution_id', 'starts_at', 'ends_at', 'status', 'active', 'created_at', 'updated_at'],
   analytics_events: ['id', 'created_at'],
   medication_logs: ['id', 'created_at'],
@@ -234,10 +246,13 @@ router.get('/:table', async (req, res) => {
 
     // Translate filters for tables that use boolean "active" instead of "status"
     const BOOLEAN_ACTIVE_TABLES = ['caregivers', 'caregiver_profiles'];
+    const BOOLEAN_FLAG_TABLES = ['user_sessions', 'login_attempts', 'two_factor_auth'];
     const translatedFilters = {};
     for (const [key, value] of Object.entries(filters)) {
       if (key === 'status' && BOOLEAN_ACTIVE_TABLES.includes(tableName)) {
         translatedFilters['active'] = (value === 'active' || value === 'true');
+      } else if (['active', 'success', 'enabled', 'verified'].includes(key) && BOOLEAN_FLAG_TABLES.includes(tableName)) {
+        translatedFilters[key] = (value === 'true' || value === '1');
       } else {
         translatedFilters[key] = value;
       }

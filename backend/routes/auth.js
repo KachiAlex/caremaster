@@ -367,6 +367,31 @@ router.post('/login', validateRequest(schemas.login), async (req, res) => {
 router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res) => {
   try {
     const { email, password } = req.body;
+    const ipAddress = req.ip;
+    const userAgent = req.get('User-Agent');
+
+    const recordAttempt = async (success, userRecord, action) => {
+      await db('login_attempts').insert({
+        email: email.trim().toLowerCase(),
+        user_id: userRecord ? userRecord.id : null,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        success,
+        timestamp: new Date()
+      });
+
+      await db('security_audit_logs').insert({
+        user_id: userRecord ? userRecord.id : null,
+        user_role: userRecord ? userRecord.user_type : null,
+        action,
+        resource_type: 'user',
+        resource_id: userRecord ? userRecord.id : email,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        institution_id: userRecord ? userRecord.institution_id : null,
+        timestamp: new Date()
+      });
+    };
 
     // Find user by email
     const user = await db('users')
@@ -374,6 +399,7 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       .first();
 
     if (!user) {
+      await recordAttempt(false, null, 'failed_login');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -382,6 +408,7 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
 
     // Check if account is active
     if (!user.is_active) {
+      await recordAttempt(false, user, 'failed_login');
       return res.status(403).json({
         success: false,
         message: 'Your account has been deactivated. Please contact support.'
@@ -390,6 +417,7 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
 
     // Check if account is suspended
     if (user.status === 'suspended') {
+      await recordAttempt(false, user, 'failed_login');
       return res.status(403).json({
         success: false,
         message: 'Your account has been suspended. Please contact support.'
@@ -404,6 +432,7 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
     }
 
     if (!isPasswordValid) {
+      await recordAttempt(false, user, 'failed_login');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -426,7 +455,70 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
-    // Log login
+    // Record successful login attempt
+    await db('login_attempts').insert({
+      email: user.email,
+      user_id: user.id,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      success: true,
+      timestamp: new Date()
+    });
+
+    // Log to security audit log
+    await db('security_audit_logs').insert({
+      user_id: user.id,
+      user_role: user.user_type,
+      action: 'login',
+      resource_type: 'user',
+      resource_id: user.id,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      institution_id: user.institution_id,
+      timestamp: new Date()
+    });
+
+    // Create a new active session for the user
+    await db('user_sessions')
+      .where({ user_id: user.id, active: true })
+      .update({ active: false, ended_at: new Date() });
+
+    const [session] = await db('user_sessions')
+      .insert({
+        user_id: user.id,
+        user_agent: req.get('User-Agent'),
+        ip_address: req.ip,
+        active: true,
+        last_activity: new Date(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000)
+      })
+      .returning('*');
+
+    // Ensure a two-factor auth row exists for the user
+    await db('two_factor_auth')
+      .insert({
+        id: user.id,
+        user_id: user.id,
+        email: user.email,
+        enabled: false
+      })
+      .onConflict('id')
+      .merge(['email']);
+
+    // Log session creation
+    await db('security_audit_logs').insert({
+      user_id: user.id,
+      user_role: user.user_type,
+      action: 'session_created',
+      resource_type: 'session',
+      resource_id: session.id,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      institution_id: user.institution_id,
+      timestamp: new Date()
+    });
+
+    // Legacy audit log
     await db('audit_logs').insert({
       user_id: user.id,
       action: 'login',

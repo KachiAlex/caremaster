@@ -146,54 +146,38 @@ const SuperAdminManagement = () => {
   const currentUser = auth.currentUser;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/super-admin/settings')}
-                className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 text-gray-600" />
-              </button>
-              <Shield className="h-8 w-8 text-red-600 mr-3" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Super Admin Management</h1>
-                <p className="text-sm text-gray-600">Manage super admin accounts</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <FontSizeToggle />
-              <button
-                onClick={loadSuperAdmins}
-                className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="space-y-6">
+      {/* Section header */}
+      <div className="cm-section-head">
+        <span className="cm-eyebrow">Management</span>
+        <h2 className="mt-2">Admin Management</h2>
+        <p>Manage super admin accounts.</p>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {message && (
-          <div className={`mb-6 p-4 rounded-lg flex items-center ${
-            message.includes('success') || message.includes('successfully')
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
-            {message.includes('success') || message.includes('successfully') ? (
-              <CheckCircle className="h-5 w-5 mr-2" />
-            ) : (
-              <XCircle className="h-5 w-5 mr-2" />
-            )}
-            <span>{message}</span>
-          </div>
-        )}
+      {/* Toolbar */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={loadSuperAdmins}
+          className="cm-btn cm-btn-ghost-light"
+        >
+          <RefreshCw className="h-4 w-4" /> Refresh
+        </button>
+      </div>
+
+      {message && (
+        <div className={`p-4 rounded-[10px] flex items-center text-sm ${
+          message.includes('success') || message.includes('successfully')
+            ? 'bg-sage-soft/40 border border-sage/20 text-sage'
+            : 'bg-coral-soft/40 border border-coral/20 text-coral'
+        }`}>
+          {message.includes('success') || message.includes('successfully') ? (
+            <CheckCircle className="h-5 w-5 mr-2" />
+          ) : (
+            <XCircle className="h-5 w-5 mr-2" />
+          )}
+          <span>{message}</span>
+        </div>
+      )}
 
         {/* Search Bar */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
@@ -302,7 +286,6 @@ const SuperAdminManagement = () => {
             </div>
           )}
         </div>
-      </main>
 
       {/* Reset Password Modal */}
       {showResetPassword && selectedAdmin && (

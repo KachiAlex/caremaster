@@ -217,64 +217,47 @@ const SuperAdminAuditLogs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/super-admin/dashboard')}
-                className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 text-gray-600" />
-              </button>
-              <FileText className="h-8 w-8 text-blue-600 mr-3" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-                <p className="text-sm text-gray-600">View and filter system activity logs</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <FontSizeToggle />
-              <button
-                onClick={handleExport}
-                disabled={filteredLogs.length === 0}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </button>
-              <button
-                onClick={() => loadAuditLogs()}
-                className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </button>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Section header */}
+      <div className="cm-section-head">
+        <span className="cm-eyebrow">Audit Logs</span>
+        <h2 className="mt-2">System Activity Logs</h2>
+        <p>View and filter system activity logs.</p>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={handleExport}
+          disabled={filteredLogs.length === 0}
+          className="cm-btn cm-btn-sage disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" /> Export CSV
+        </button>
+        <button
+          onClick={() => loadAuditLogs()}
+          className="cm-btn cm-btn-ghost-light"
+        >
+          <RefreshCw className="h-4 w-4" /> Refresh
+        </button>
+      </div>
+
+      {message && (
+        <div className={`p-4 rounded-[10px] text-sm ${
+          message.includes('success') || message.includes('exported')
+            ? 'bg-sage-soft/40 border border-sage/20 text-sage'
+            : 'bg-coral-soft/40 border border-coral/20 text-coral'
+        }`}>
+          {message}
         </div>
-      </header>
+      )}
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {message && (
-          <div className={`mb-6 p-4 rounded-lg ${
-            message.includes('success') || message.includes('exported')
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
-            {message}
-          </div>
-        )}
-
-        {/* Search and Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+      {/* Search and Filters */}
+      <div className="cm-card p-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-text-soft" />
               <input
                 type="text"
                 placeholder="Search logs by type, action, email, or details..."
@@ -469,7 +452,6 @@ const SuperAdminAuditLogs = () => {
             </div>
           )}
         </div>
-      </main>
     </div>
   );
 };

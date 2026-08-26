@@ -466,55 +466,40 @@ const SuperAdminSettings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/super-admin/dashboard')}
-                className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 text-gray-600" />
-              </button>
-              <Shield className="h-8 w-8 text-red-600 mr-3" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Super Admin Settings</h1>
-                <p className="text-sm text-gray-600">Configure system-wide settings and preferences</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <FontSizeToggle />
-              <button
-                onClick={handleSaveSettings}
-                disabled={loading}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Section header */}
+      <div className="cm-section-head">
+        <span className="cm-eyebrow">Settings</span>
+        <h2 className="mt-2">System Settings</h2>
+        <p>Configure system-wide settings and preferences.</p>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={handleSaveSettings}
+          disabled={loading}
+          className="cm-btn cm-btn-gold disabled:opacity-50"
+        >
+          <Save className="h-4 w-4" />
+          {loading ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+
+      {message && (
+        <div className={`p-4 rounded-[10px] text-sm ${
+          message.includes('success')
+            ? 'bg-sage-soft/40 border border-sage/20 text-sage'
+            : 'bg-coral-soft/40 border border-coral/20 text-coral'
+        }`}>
+          {message}
         </div>
-      </header>
+      )}
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {message && (
-          <div className={`mb-6 p-4 rounded-lg ${
-            message.includes('success') 
-              ? 'bg-green-50 border border-green-200 text-green-800' 
-              : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
-            {message}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Settings Column */}
-          <div className="lg:col-span-2">
-            {/* Profile Management Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Settings Column */}
+        <div className="lg:col-span-2">
+          {/* Profile Management Section */}
             <SettingSection title="Profile Management" icon={Users}>
               {!editingProfile ? (
                 <div className="space-y-4">
@@ -864,7 +849,6 @@ const SuperAdminSettings = () => {
             <SystemStatus />
           </div>
         </div>
-      </main>
     </div>
   );
 };

@@ -12,6 +12,11 @@
 # production
 /build
 
+# deploy artifacts
+*.tar.gz
+deploy*.tar.gz
+node_modules_extra*.tar.gz
+
 # misc
 .DS_Store
 .env
