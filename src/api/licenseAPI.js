@@ -300,7 +300,10 @@ export const assignInstitutionAdmin = async ({ institutionId, email, displayName
 
       const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
       const apiBase = process.env.REACT_APP_API_URL || '';
-      const response = await fetch(`${apiBase}/api/auth/create-staff`, {
+      const url = apiBase.endsWith('/api')
+        ? `${apiBase}/auth/create-staff`
+        : `${apiBase}/api/auth/create-staff`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
