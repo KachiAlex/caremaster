@@ -134,17 +134,22 @@ export const signInWithRole = async (email, password, role) => {
 export const signOutFromRole = async (role) => {
   try {
     console.log(`🚪 Signing out from ${role}...`);
-    
+
     // Clear the role session
     clearRoleSession(role);
-    
-    // Only sign out from Backend if this is the current active session
-    const currentRole = getCurrentRole();
-    if (currentRole === role) {
-      await signOut(auth);
-      sessionStorage.removeItem(STORAGE_KEYS.CURRENT_ROLE);
-    }
-    
+
+    // Always sign out from auth and clear localStorage tokens.
+    // The previous check (currentRole === role) could skip signOut()
+    // when the role didn't match, leaving stale JWT tokens in localStorage
+    // which caused the user to be redirected back to the dashboard after logout.
+    await signOut(auth);
+    sessionStorage.removeItem(STORAGE_KEYS.CURRENT_ROLE);
+
+    // Belt-and-suspenders: ensure localStorage is fully cleared
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+
     console.log(`✅ Successfully signed out from ${role}`);
   } catch (error) {
     console.error(`❌ Error signing out from ${role}:`, error);

@@ -76,8 +76,10 @@ const SuperAdminLayout = ({ children }) => {
       // Clear React + localStorage state FIRST to avoid race conditions
       await logout();
       await auth.signOut();
-      toast.success('Signed out successfully');
-      navigate('/super-admin/login');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/super-admin/login';
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to sign out');

@@ -342,7 +342,10 @@ const SuperAdminDashboard = () => {
   const handleLogout = async () => {
     try {
       await authManager.signOutFromRole('super-admin');
-      navigate('/super-admin/login');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/super-admin/login';
     } catch (error) {
       console.error('Error logging out:', error);
     }

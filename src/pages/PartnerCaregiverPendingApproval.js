@@ -63,8 +63,10 @@ const PartnerCaregiverPendingApproval = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate('/login');
-      toast.info('Logged out successfully');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to logout');

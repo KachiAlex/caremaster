@@ -1039,9 +1039,21 @@ const InstitutionAdminDashboard = () => {
 
   const handleLogout = async () => {
     try {
+      // Clear all auth state
       sessionManager.clearTabSession();
       await authManager.signOutFromRole('admin');
-      navigate('/login?institution=' + institutionId);
+
+      // Ensure localStorage is fully cleared (authManager.signOutFromRole
+      // may skip signOut() if currentRole doesn't match, leaving stale tokens)
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+
+      // Use full page reload instead of navigate() — navigate() renders the
+      // /login route before onAuthStateChanged fires, so `user` state is still
+      // set and SignInRouteHandler redirects back to the dashboard.
+      // A full reload clears all React state and reads from (now empty) localStorage.
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to logout');

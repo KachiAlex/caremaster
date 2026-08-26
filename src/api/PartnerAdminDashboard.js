@@ -1107,7 +1107,10 @@ const PartnerAdminDashboard = () => {
     try {
       sessionManager.clearTabSession();
       await authManager.signOutFromRole('admin');
-      navigate('/login?institution=' + institutionId);
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to logout');

@@ -196,8 +196,10 @@ const PartnerPharmacyDashboard = () => {
       sessionManager.clearTabSession();
       const auth = getAuth();
       await signOut(auth);
-      toast.success('Logged out successfully');
-      navigate('/institution-login');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/institution-login';
     } catch (error) {
       console.error('Error logging out:', error);
       toast.error('Failed to log out');

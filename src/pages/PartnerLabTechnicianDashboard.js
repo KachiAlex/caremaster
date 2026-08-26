@@ -191,8 +191,10 @@ const PartnerLabTechnicianDashboard = () => {
       sessionManager.clearTabSession();
       const auth = getAuth();
       await signOut(auth);
-      toast.success('Logged out successfully');
-      navigate('/login');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     } catch (error) {
       console.error('Error logging out:', error);
       toast.error('Failed to log out');

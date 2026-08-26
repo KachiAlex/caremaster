@@ -782,7 +782,10 @@ const SuperAdminLicensing = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate('/super-admin/login');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/super-admin/login';
     } catch (error) {
       console.error('Error logging out:', error);
       setMessage('Failed to log out');
