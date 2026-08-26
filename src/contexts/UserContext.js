@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '../api/config';
 import { doc, getDoc } from 'backend/database';
-import { db } from '../backend/config';
+import { onAuthStateChanged } from 'backend/auth';
+import { db, auth } from '../backend/config';
 
 const UserContext = createContext();
 
@@ -88,6 +89,93 @@ export const UserProvider = ({ children }) => {
     }
     
     setLoading(false);
+  }, []);
+
+  // Sync with Firebase auth state (for Firebase-based logins like UnifiedLogin)
+  // UnifiedLogin uses signInWithEmailAndPassword directly and navigates without
+  // calling UserContext.login(), so we MUST listen to onAuthStateChanged to
+  // populate user/userProfile when Firebase auth state changes.
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Load cached profile from localStorage first for immediate UI
+        let cachedUser = null;
+        try {
+          const stored = localStorage.getItem('user');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && parsed.uid === firebaseUser.uid) {
+              cachedUser = parsed;
+            }
+          }
+        } catch (e) { /* ignore parse errors */ }
+
+        const baseUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+        };
+
+        const initialUser = cachedUser || baseUser;
+        localStorage.setItem('token', firebaseUser.uid);
+        localStorage.setItem('user', JSON.stringify(initialUser));
+
+        setUser(initialUser);
+        setUserProfile(initialUser);
+
+        const role = initialUser.userType || initialUser.type || initialUser.role || 'student';
+        setUserRole(role);
+        setUserRoles(initialUser.roles || [role]);
+        if (initialUser.institutionId) {
+          setInstitutionId(initialUser.institutionId);
+        }
+
+        // Refresh from Firestore in background (non-blocking)
+        (async () => {
+          try {
+            const userRef = doc(db, 'users', firebaseUser.uid);
+            const userDocPromise = getDoc(userRef);
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Firestore query timeout')), 8000)
+            );
+            const userSnap = await Promise.race([userDocPromise, timeoutPromise]);
+
+            if (userSnap.exists()) {
+              const userData = userSnap.data();
+              const refreshedUser = { ...baseUser, ...userData };
+              localStorage.setItem('user', JSON.stringify(refreshedUser));
+              setUser(refreshedUser);
+              setUserProfile(refreshedUser);
+
+              const refreshedRole = userData.userType || userData.type || userData.role || role;
+              setUserRole(refreshedRole);
+              setUserRoles(userData.roles || [refreshedRole]);
+              if (userData.institutionId) {
+                setInstitutionId(userData.institutionId);
+              }
+            }
+          } catch (err) {
+            console.warn('Background Firestore refresh failed, using cached profile:', err.message);
+          }
+        })();
+      } else {
+        // Firebase user signed out — only clear if we had a Firebase-based token
+        const token = localStorage.getItem('token');
+        if (token && !token.startsWith('Bearer')) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+          setUser(null);
+          setUserProfile(null);
+          setUserRole(null);
+          setUserRoles([]);
+          setInstitutionId(null);
+        }
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (credentials) => {
