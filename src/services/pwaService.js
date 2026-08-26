@@ -448,6 +448,10 @@ class PWAService {
       case 'UPDATE_AVAILABLE':
         this.showUpdateNotification();
         break;
+      case 'FORCE_RELOAD':
+        console.log('🔄 Service worker requested force reload — reloading page...');
+        window.location.reload();
+        break;
       default:
         console.log('Unknown service worker message:', data);
     }

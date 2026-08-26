@@ -1,8 +1,8 @@
 // Care Master Service Worker for PWA functionality
-const CACHE_NAME = 'Care Master-v1.3.0';
-const STATIC_CACHE = 'Care Master-static-v11';
-const DYNAMIC_CACHE = 'Care Master-dynamic-v11';
-const API_CACHE = 'Care Master-api-v11';
+const CACHE_NAME = 'Care Master-v2.0.0';
+const STATIC_CACHE = 'Care Master-static-v20';
+const DYNAMIC_CACHE = 'Care Master-dynamic-v20';
+const API_CACHE = 'Care Master-api-v20';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
@@ -71,23 +71,39 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up ALL old caches (aggressive cache busting)
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
+  console.log('Service Worker activating - v2.0.0 - purging ALL old caches...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
+      // Delete EVERY cache that doesn't match the current version exactly.
+      // This is more aggressive than before and ensures no stale JS bundles
+      // survive across deployments.
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== STATIC_CACHE && 
-              cacheName !== DYNAMIC_CACHE && 
+          if (cacheName !== STATIC_CACHE &&
+              cacheName !== DYNAMIC_CACHE &&
               cacheName !== API_CACHE) {
-            console.log('Deleting old cache:', cacheName);
+            console.log('🗑️ Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+          // Also nuke the dynamic cache (which may hold stale index.html)
+          if (cacheName === DYNAMIC_CACHE) {
+            console.log('🗑️ Clearing dynamic cache for fresh deploy:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      console.log('Service Worker activated');
+      console.log('✅ Service Worker activated - all old caches purged');
+      // Force all clients to reload so they pick up the new JS bundles
+      return self.clients.matchAll({ type: 'window' }).then((clients) => {
+        clients.forEach((client) => {
+          console.log('🔄 Notifying client to reload:', client.url);
+          client.postMessage({ type: 'FORCE_RELOAD' });
+        });
+      });
+    }).then(() => {
       return self.clients.claim();
     })
   );

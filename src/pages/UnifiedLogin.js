@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'backend/auth';
-import { doc, getDoc, collection, query, where, getDocs, setDoc } from 'backend/database';
-import { auth, db } from '../backend/config';
+import { signInWithEmailAndPassword, signOut } from 'backend/auth';
+import { auth } from '../backend/config';
 import { toast } from 'react-toastify';
-import { verifyPasswordSecure } from '../utils/securePasswordAuth';
 import rateLimiter from '../utils/rateLimiter';
 import authSecurityService from '../services/authSecurityService';
 import { fetchLicenseStatus } from '../services/licenseService';
@@ -65,94 +63,12 @@ const UnifiedLogin = () => {
         }
       }
       
-      // First, try Firebase Auth login
-      let userCredential;
-      let user;
-      let userData = null;
-
-      try {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-        // Reset rate limit on successful authentication
-        rateLimiter.reset(rateLimitKey);
-        user = userCredential.user;
-        
-        // Get user profile from Firestore
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          userData = { id: userDoc.id, ...userDoc.data() };
-        }
-      } catch (authError) {
-        // If Firebase Auth fails, try custom auth (for users created by admin)
-        console.log('🔍 Firebase Auth failed, trying custom auth for:', email);
-        
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email.toLowerCase().trim()));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          throw new Error('Invalid email or password');
-        }
-
-        // SECURITY FIX: Use secure password verification instead of plain text comparison
-        let customAuthUser = null;
-        let passwordVerificationResult = null;
-        
-        for (const userDoc of querySnapshot.docs) {
-          const data = userDoc.data();
-          if (data.password) {
-            // Verify password securely
-            passwordVerificationResult = await verifyPasswordSecure(password, data.password);
-            
-            if (passwordVerificationResult === true || passwordVerificationResult?.verified === true) {
-              customAuthUser = { uid: userDoc.id, ...data };
-              
-              // If password needs migration, update it in Firestore
-              if (passwordVerificationResult?.needsMigration && passwordVerificationResult?.hashedPassword) {
-                try {
-                  await setDoc(doc(db, 'users', userDoc.id), {
-                    password: passwordVerificationResult.hashedPassword,
-                    passwordMigrated: true,
-                    passwordMigratedAt: new Date().toISOString()
-                  }, { merge: true });
-                  console.log('✅ Password migrated to secure hash');
-                } catch (migrationError) {
-                  console.error('Failed to migrate password:', migrationError);
-                  // Continue with login even if migration fails
-                }
-              }
-              // Reset rate limit on successful custom auth
-              rateLimiter.reset(rateLimitKey);
-              break; // Found matching user, exit loop
-            }
-          }
-        }
-
-        if (!customAuthUser) {
-          // Rate limit already checked, but don't increment on "user not found" to prevent enumeration
-          throw new Error('Invalid email or password');
-        }
-
-        userData = customAuthUser;
-        
-        // Create Firebase Auth account if it doesn't exist
-        try {
-          userCredential = await signInWithEmailAndPassword(auth, email, password);
-          user = userCredential.user;
-        } catch (createError) {
-          // If account doesn't exist in Firebase Auth, create it
-          userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          user = userCredential.user;
-          
-          // Update Firestore with Firebase Auth UID
-          await import('firebase/firestore').then(({ setDoc }) => {
-            setDoc(doc(db, 'users', user.uid), {
-              ...userData,
-              uid: user.uid,
-              updatedAt: new Date()
-            }, { merge: true });
-          });
-        }
-      }
+      // Backend /auth/email-login is the single source of truth.
+      // signInWithEmailAndPassword here is the backend compat wrapper (NOT Firebase).
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      rateLimiter.reset(rateLimitKey);
+      const user = userCredential.user;
+      const userData = user;
 
       // Now we have userData - detect institution and role
       const institutionId = userData?.institutionId;
@@ -251,24 +167,11 @@ const UnifiedLogin = () => {
           navigate('/institution-admin/dashboard');
         } else if (userRole === 'pharmacist') {
           // Pharmacists should have an institution, but handle gracefully
-          // Try to get institutionId from URL params if available
           const urlParams = new URLSearchParams(window.location.search);
           const urlInstitutionId = urlParams.get('institution');
-          
+
           if (urlInstitutionId) {
-            // Update Firestore with institutionId from URL
-            try {
-              const { doc, updateDoc } = await import('firebase/firestore');
-              const { db } = await import('../backend/config');
-              const userRef = doc(db, 'users', user?.uid || userData?.uid);
-              await updateDoc(userRef, { institutionId: urlInstitutionId });
-              console.log('✅ Set institutionId from URL:', urlInstitutionId);
-              navigate(`/institution-pharmacy/dashboard?institution=${urlInstitutionId}`);
-            } catch (error) {
-              console.error('Failed to set institutionId:', error);
-              toast.warning('Pharmacist account detected but no institution found. Please contact support.');
-              navigate('/dashboard');
-            }
+            navigate(`/institution-pharmacy/dashboard?institution=${urlInstitutionId}`);
           } else {
             toast.warning('Pharmacist account detected but no institution found. Please contact support to set your institution.');
             navigate('/dashboard');
