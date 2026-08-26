@@ -67,7 +67,8 @@ import {
   Menu,
   MoreVertical,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Upload
 } from 'lucide-react';
 import { getAllUsers, createUser, updateUserStatus } from '../api/usersAPI';
 import { analyticsAPI } from '../api/analyticsAPI';
@@ -109,6 +110,7 @@ import InstitutionUserCreationModal from '../components/InstitutionUserCreationM
 import AddCaregiverModal from '../components/AddCaregiverModal';
 import CaregiverDetailsModal from '../components/CaregiverDetailsModal';
 import ClientDetailsModal from '../components/ClientDetailsModal';
+import BulkImportModal from '../components/BulkImportModal';
 import HelpSupport from '../components/HelpSupport';
 import { toast } from 'react-toastify';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, subscribeToUserConversations, subscribeToConversationMessages, markConversationAsRead } from '../api/messagesAPI';
@@ -264,6 +266,8 @@ const InstitutionAdminDashboard = () => {
   const [assignments, setAssignments] = useState([]);
   const [pendingDiagnostics, setPendingDiagnostics] = useState([]);
   const [showAddCaregiver, setShowAddCaregiver] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkImportType, setBulkImportType] = useState('client');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showAddPharmacist, setShowAddPharmacist] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
@@ -3382,13 +3386,22 @@ const renderMessagesTab = () => {
                 <h3 className="text-2xl font-semibold text-gray-900">Clients</h3>
                 <p className="text-sm text-gray-600">Manage active Client relationships and contact details.</p>
               </div>
-              <button
-                onClick={() => setShowCreatePatientModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-              >
-                <Plus className="h-4 w-4" />
-                Add Client
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setBulkImportType('client'); setShowBulkImport(true); }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-sm font-medium"
+                >
+                  <Upload className="h-4 w-4" />
+                  Bulk Import
+                </button>
+                <button
+                  onClick={() => setShowCreatePatientModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Client
+                </button>
+              </div>
             </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
               {clients.length === 0 ? (
@@ -3520,6 +3533,13 @@ const renderMessagesTab = () => {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-500">{caregivers.length} onboarded caregivers</span>
+                <button
+                  onClick={() => { setBulkImportType('caregiver'); setShowBulkImport(true); }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-sm font-medium"
+                >
+                  <Upload className="h-4 w-4" />
+                  Bulk Import
+                </button>
                 <button
                   onClick={() => setShowAddCaregiver(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
@@ -4435,6 +4455,16 @@ const renderMessagesTab = () => {
             loadDashboardData();
             setShowAddPharmacist(false);
           }}
+        />
+      )}
+
+      {showBulkImport && (
+        <BulkImportModal
+          isOpen={showBulkImport}
+          onClose={() => setShowBulkImport(false)}
+          type={bulkImportType}
+          institutionId={effectiveInstitutionId}
+          onImportComplete={() => loadDashboardData()}
         />
       )}
 
