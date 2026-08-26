@@ -2,7 +2,7 @@ import logger from '../utils/logger';
 import { collection, addDoc, serverTimestamp } from 'backend/database';
 import { db } from '../backend/config';
 
-const ANALYTICS_COLLECTION = 'analyticsEvents';
+const ANALYTICS_COLLECTION = 'analytics_events';
 
 const analyticsCollectionRef = collection(db, ANALYTICS_COLLECTION);
 
@@ -14,9 +14,13 @@ export const trackAdminEvent = async (eventType, payload = {}) => {
 
   try {
     await addDoc(analyticsCollectionRef, {
+      event_type: eventType,
       eventType,
+      institution_id: payload.institutionId || null,
+      user_id: payload.userId || payload.archivedBy || payload.restoredBy || payload.deletedBy || payload.createdBy || null,
+      details: payload,
       createdAt: serverTimestamp(),
-      ...payload
+      updatedAt: serverTimestamp()
     });
   } catch (error) {
     logger.warn('Failed to record analytics event', { error, eventType, payload });

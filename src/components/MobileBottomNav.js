@@ -14,16 +14,16 @@ const MobileBottomNav = ({
   activeTab,
   onTabChange,
 }) => {
-  // Show at most 5 tabs; prioritize the first 5
-  const visibleTabs = tabs.slice(0, 5);
-
   return (
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 safe-area-pb"
       style={{ boxShadow: '0 -2px 10px rgba(0,0,0,0.05)' }}
     >
-      <div className="flex items-center justify-around px-1 py-1">
-        {visibleTabs.map((tab) => {
+      <div
+        className="flex items-center overflow-x-auto whitespace-nowrap px-2 py-1"
+        style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain', scrollbarWidth: 'none' }}
+      >
+        {tabs.map((tab) => {
           const Icon = tab.icon || Home;
           const isActive = activeTab === tab.id;
           return (

@@ -284,9 +284,7 @@ export const assignInstitutionAdmin = async ({ institutionId, email, displayName
 
       await updateDoc(doc(db, 'users', userId), {
         institutionId,
-        type: 'admin',
         userType: 'admin',
-        role: 'admin',
         updatedAt: serverTimestamp()
       });
 
@@ -334,13 +332,11 @@ export const assignInstitutionAdmin = async ({ institutionId, email, displayName
 // Remove institution admin
 export const removeInstitutionAdmin = async ({ institutionId, adminId }) => {
   try {
-    // Remove institutionId and reset role from user document
+    // Reset user_type and clear institution_id
     const userRef = doc(db, 'users', adminId);
     await updateDoc(userRef, {
       institutionId: null,
       userType: 'caregiver',
-      type: 'caregiver',
-      role: 'caregiver',
       updatedAt: serverTimestamp()
     });
 

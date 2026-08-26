@@ -67,7 +67,7 @@ const DashboardLayout = ({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto scroll-smooth px-3 py-4 space-y-1" style={{ overscrollBehaviorY: 'contain' }}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

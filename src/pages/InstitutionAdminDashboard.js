@@ -101,7 +101,7 @@ import ArchivedClients from '../components/ArchivedClients';
 import InactiveCaregiversReport from '../components/InactiveCaregiversReport';
 import SchedulingModule from '../components/SchedulingModule';
 import ClientActivityTimeline from '../components/ClientActivityTimeline';
-import { collection, query, getDocs, getDoc, setDoc, updateDoc, addDoc, where, doc, serverTimestamp } from 'backend/database';
+import { collection, query, getDocs, getDoc, setDoc, updateDoc, addDoc, where, orderBy, limit, doc, serverTimestamp } from 'backend/database';
 import { httpsCallable, getFunctions } from 'backend/functions';
 import { db, functions } from '../backend/config';
 import CaregiverWageManagement from '../components/CaregiverWageManagement';
@@ -654,6 +654,34 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
+  const getRecentActivity = async (instId) => {
+    try {
+      const q = query(
+        collection(db, 'analytics_events'),
+        where('institutionId', '==', instId),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      );
+      const snapshot = await getDocs(q);
+      const activity = [];
+      snapshot.forEach((d) => {
+        const data = d.data();
+        activity.push({
+          id: d.id,
+          type: data.event_type || data.eventType,
+          title: data.event_type || data.eventType,
+          summary: data.details ? JSON.stringify(data.details) : '—',
+          details: data.details,
+          timestamp: data.createdAt
+        });
+      });
+      return activity;
+    } catch (error) {
+      console.warn('Failed to load recent activity:', error);
+      return [];
+    }
+  };
+
   const loadDashboardData = async () => {
     try {
       // Use effectiveInstitutionId which includes URL parameter
@@ -665,13 +693,14 @@ const InstitutionAdminDashboard = () => {
       setLoading(true);
       
       // Load all data in parallel but optimized for speed
-      const [caregiversData, clientsData, assignmentsData, users, diagnosticsData, appointmentsData] = await Promise.all([
+      const [caregiversData, clientsData, assignmentsData, users, diagnosticsData, appointmentsData, recentActivityData] = await Promise.all([
         caregiverAPI.getCaregivers({ institutionId: instId, limit: 50 }).catch(() => []),
         getAllClients(instId).catch(() => []),
         assignmentAPI.getAssignmentsByInstitution(instId).catch(() => []),
         getAllUsers().catch(() => []),
         getAllDiagnostics(instId).catch(() => []),
-        getAllAppointments(instId).catch(() => [])
+        getAllAppointments(instId).catch(() => []),
+        getRecentActivity(instId).catch(() => [])
       ]);
 
       // Load non-critical data in background (don't block UI)
@@ -938,6 +967,7 @@ const InstitutionAdminDashboard = () => {
 
       // Update state (batch updates for better performance)
       setStats(realStats);
+      setRecentActivity(recentActivityData);
       setClients(institutionClients);
       setCaregivers(allInstitutionCaregivers);
       setAssignments(assignmentsData);

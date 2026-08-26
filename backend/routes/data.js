@@ -67,6 +67,10 @@ const COLLECTION_TO_TABLE = {
   purchaseOrders: 'purchase_orders',
   goodsReceived: 'goods_received',
   stockAudit: 'stock_audit',
+  billingPlans: 'billing_plans',
+  clientSubscriptions: 'client_subscriptions',
+  billingSettings: 'billing_settings',
+  analyticsEvents: 'analytics_events',
 };
 
 // Collections that have no backing DB table — return empty results
@@ -90,7 +94,7 @@ function resolveTable(collectionName) {
 
 // Whitelisted fields per table for create/update operations
 const WRITABLE_FIELDS = {
-  users: ['first_name', 'last_name', 'phone', 'photo_url', 'department', 'level', 'session', 'institution_id', 'user_type', 'type', 'role', 'is_active', 'is_verified', 'onboarding_complete', 'display_name', 'specialization', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'profile_complete', 'account_type', 'status', 'updated_at'],
+  users: ['first_name', 'last_name', 'phone', 'photo_url', 'department', 'level', 'session', 'institution_id', 'user_type', 'is_active', 'is_verified', 'onboarding_complete', 'display_name', 'specialization', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'profile_complete', 'account_type', 'status', 'roles', 'updated_at'],
   institutions: ['name', 'email', 'phone', 'address', 'city', 'state', 'country', 'zip_code', 'website', 'license_key', 'plan', 'seats', 'active', 'status', 'license_starts_at', 'license_ends_at', 'features', 'settings', 'updated_at'],
   appointments: ['client_id', 'caregiver_id', 'scheduled_date', 'duration', 'status', 'notes'],
   clients: ['name', 'full_name', 'email', 'phone', 'institution_id', 'status', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship', 'medical_conditions', 'medications', 'allergies', 'blood_type', 'genotype', 'care_level', 'insurance_provider', 'insurance_policy_number', 'national_id', 'primary_care_physician', 'physician_phone', 'notes', 'user_type', 'type', 'city', 'state', 'zip_code', 'client_id', 'assigned_caregiver', 'assigned_doctor', 'user_id'],
@@ -107,7 +111,10 @@ const WRITABLE_FIELDS = {
   notifications: ['user_id', 'title', 'message', 'type', 'read', 'created_at'],
   attendance: ['caregiver_id', 'client_id', 'clock_in', 'clock_out', 'location_lat', 'location_lng'],
   invoices: ['patient_id', 'patientId', 'client_id', 'clientId', 'institution_id', 'institutionId', 'invoice_number', 'invoiceNumber', 'status', 'amount', 'tax_amount', 'taxAmount', 'discount', 'total_amount', 'totalAmount', 'currency', 'issue_date', 'issueDate', 'due_date', 'dueDate', 'paid_date', 'paidAt', 'paid_at', 'payment_method', 'paymentMethod', 'payment_reference', 'paymentReference', 'description', 'line_items', 'lineItems', 'items', 'metadata', 'created_at', 'updated_at'],
-  billing_plans: ['name', 'description', 'amount', 'billing_cycle', 'features'],
+  billing_plans: ['name', 'institution_id', 'institutionId', 'description', 'amount', 'billing_cycle', 'billingCycle', 'tier', 'weekly_price', 'weeklyPrice', 'monthly_price', 'monthlyPrice', 'annual_price', 'annualPrice', 'yearly_price', 'yearlyPrice', 'currency', 'features', 'is_active', 'isActive', 'sort_order', 'sortOrder', 'status', 'created_at', 'updated_at'],
+  client_subscriptions: ['institution_id', 'institutionId', 'client_id', 'clientId', 'plan_id', 'planId', 'plan_name', 'planName', 'plan_tier', 'planTier', 'billing_cycle', 'billingCycle', 'price', 'currency', 'status', 'start_date', 'startDate', 'end_date', 'endDate', 'next_billing_date', 'nextBillingDate', 'cancelled_at', 'cancelledAt', 'created_at', 'updated_at'],
+  billing_settings: ['institution_id', 'institutionId', 'currency', 'enabled_frequencies', 'enabledFrequencies', 'default_frequency', 'defaultFrequency', 'tax_rate', 'taxRate', 'tax_label', 'taxLabel', 'taxes', 'invoice_prefix', 'invoicePrefix', 'invoice_notes', 'invoiceNotes', 'payment_terms_days', 'paymentTermsDays', 'late_fee_percentage', 'lateFeePercentage', 'auto_generate_invoices', 'autoGenerateInvoices', 'send_invoice_reminders', 'sendInvoiceReminders', 'reminder_days', 'reminderDays', 'created_at', 'updated_at'],
+  analytics_events: ['event_type', 'eventType', 'institution_id', 'institutionId', 'user_id', 'userId', 'details', 'created_at', 'updated_at'],
   emergency_alerts: ['client_id', 'caregiver_id', 'alert_type', 'severity', 'status', 'message', 'created_at'],
   inventory: ['name', 'institution_id', 'institutionId', 'sku', 'category', 'description', 'quantity', 'min_stock', 'minStock', 'reorder_level', 'reorderLevel', 'unit', 'unit_price', 'unitPrice', 'cost', 'supplier', 'supplier_id', 'supplierId', 'expiry_date', 'expiryDate', 'last_restocked', 'lastRestocked', 'last_restocked_date', 'lastRestockedDate', 'batch_number', 'batchNumber', 'status', 'metadata', 'created_at', 'updated_at'],
   suppliers: ['name', 'institution_id', 'institutionId', 'contact_person', 'contactPerson', 'email', 'phone', 'address', 'city', 'state', 'country', 'notes', 'status', 'created_at', 'updated_at'],
@@ -163,7 +170,10 @@ const SORTABLE_COLUMNS = {
   goods_received: ['id', 'grn_number', 'received_date', 'created_at', 'updated_at'],
   stock_audit: ['id', 'timestamp', 'created_at', 'updated_at'],
   inventory: ['id', 'name', 'quantity', 'expiry_date', 'status', 'created_at', 'updated_at'],
-  invoices: ['id', 'invoice_number', 'due_date', 'created_at', 'updated_at']
+  invoices: ['id', 'invoice_number', 'due_date', 'created_at', 'updated_at'],
+  billing_plans: ['id', 'name', 'sort_order', 'created_at', 'updated_at'],
+  client_subscriptions: ['id', 'client_id', 'status', 'start_date', 'created_at', 'updated_at'],
+  billing_settings: ['id', 'institution_id', 'created_at', 'updated_at']
 };
 
 function validateTable(tableName) {
