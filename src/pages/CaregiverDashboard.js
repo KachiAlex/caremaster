@@ -103,10 +103,10 @@ const CaregiverDashboard = () => {
         color: 'red',
         features: ['client-care', 'medications', 'vital-signs', 'care-plans'],
         quickActions: [
-          { name: 'Client Rounds', icon: User, href: '/service-provider/clients' },
+          { name: 'Client Rounds', icon: User, href: '/service-provider/medical-records' },
           { name: 'Medication Admin', icon: Pill, href: '/service-provider/prescriptions' },
           { name: 'Vital Signs', icon: Activity, href: '/service-provider/diagnostics' },
-          { name: 'Care Plans', icon: FileText, href: '/service-provider/care-logs' }
+          { name: 'Care Logs', icon: FileText, href: '/service-provider/care-logs' }
         ]
       },
       'Physiotherapist': {
@@ -117,7 +117,7 @@ const CaregiverDashboard = () => {
         quickActions: [
           { name: 'Therapy Sessions', icon: Dumbbell, href: '/service-provider/activities' },
           { name: 'Exercise Plans', icon: FileText, href: '/service-provider/care-logs' },
-          { name: 'Progress Notes', icon: TrendingUp, href: '/service-provider/clients' },
+          { name: 'Progress Notes', icon: TrendingUp, href: '/service-provider/medical-records' },
           { name: 'Schedule Session', icon: Calendar, href: '/service-provider/schedule' }
         ]
       },
@@ -142,7 +142,7 @@ const CaregiverDashboard = () => {
           { name: 'Prescription Review', icon: Pill, href: '/service-provider/prescriptions' },
           { name: 'Drug Interactions', icon: AlertTriangle, href: '/service-provider/diagnostics' },
           { name: 'Medication Consult', icon: MessageSquare, href: '/service-provider/consultations' },
-          { name: 'Client Education', icon: FileText, href: '/service-provider/clients' }
+          { name: 'Client Education', icon: FileText, href: '/service-provider/medical-records' }
         ]
       },
       'Lab Technician': {
@@ -154,7 +154,7 @@ const CaregiverDashboard = () => {
           { name: 'Lab Results', icon: FlaskConical, href: '/service-provider/diagnostics' },
           { name: 'Collection Schedule', icon: Calendar, href: '/service-provider/schedule' },
           { name: 'Quality Control', icon: Shield, href: '/service-provider/activities' },
-          { name: 'Client Reports', icon: FileText, href: '/service-provider/clients' }
+          { name: 'Client Reports', icon: FileText, href: '/service-provider/medical-records' }
         ]
       }
     };
@@ -165,7 +165,7 @@ const CaregiverDashboard = () => {
       color: 'gray',
       features: ['client-care', 'basic-assistance', 'companionship'],
       quickActions: [
-        { name: 'Client Care', icon: User, href: '/service-provider/clients' },
+        { name: 'Client Care', icon: User, href: '/service-provider/medical-records' },
         { name: 'Daily Tasks', icon: CheckCircle, href: '/service-provider/tasks' },
         { name: 'Messages', icon: MessageSquare, href: '/service-provider/messages' },
         { name: 'Schedule', icon: Calendar, href: '/service-provider/schedule' }
@@ -175,6 +175,68 @@ const CaregiverDashboard = () => {
 
   const dashboardConfig = getDashboardConfig();
 
+  // Shared helper: build today's schedule from appointments, tasks, and assignments.
+  // Extracted to avoid triplicated logic across loadCaregiverData, handleClockIn, handleClockOut.
+  const buildTodaySchedule = async (uid) => {
+    const isDoc = (userProfile?.medicalQualification || '').includes('Doctor');
+    const appointmentRole = isDoc ? 'doctor' : 'caregiver';
+
+    const [todaysAppointments, todaysTasks, assignments] = await Promise.all([
+      getTodaysAppointments(uid, appointmentRole),
+      getTodayTasks(uid),
+      assignmentAPI.getAssignmentsByCaregiver(uid).catch(() => [])
+    ]);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const assignmentTasks = assignments
+      .filter(a => {
+        if (!a.dueDate) return false;
+        const dueDate = a.dueDate?.toDate ? a.dueDate.toDate() : new Date(a.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate.getTime() === today.getTime();
+      })
+      .map(assignment => ({
+        id: assignment.id,
+        type: 'task',
+        title: assignment.title || 'Assigned Task',
+        time: assignment.dueTime ? `${assignment.dueTime}:00` : '09:00:00',
+        scheduledTime: assignment.dueDate ? new Date(`${assignment.dueDate}T${assignment.dueTime || '09:00'}`) : new Date(),
+        client: assignment.clientName || 'Client',
+        clientId: assignment.clientId || null,
+        status: assignment.status || 'pending',
+        priority: assignment.priority || 'normal',
+        description: assignment.description,
+        instructions: assignment.instructions,
+        assignmentType: 'clientAssignment'
+      }));
+
+    const combinedSchedule = [
+      ...todaysAppointments.map(apt => ({
+        id: apt.id,
+        type: 'appointment',
+        title: apt.title || 'Appointment',
+        time: apt.scheduledTime,
+        client: apt.clientName || 'Client',
+        clientId: apt.clientId || null,
+        status: apt.status || 'scheduled'
+      })),
+      ...todaysTasks.map(task => ({
+        id: task.id,
+        type: 'task',
+        title: task.title,
+        time: task.scheduledTime,
+        client: task.clientName || 'Client',
+        clientId: task.clientId || null,
+        status: task.status || 'pending'
+      })),
+      ...assignmentTasks
+    ];
+
+    combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
+    return combinedSchedule;
+  };
+
   useEffect(() => {
     const loadCaregiverData = async () => {
       if (!userProfile) return;
@@ -182,15 +244,16 @@ const CaregiverDashboard = () => {
       try {
         setLoading(true);
         
-        // Load caregiver profile data only if user is a caregiver
+        // Load caregiver profile data — capture in local var for immediate use
+        // (setCaregiver is async and won't be available in the same render cycle)
+        let caregiverData = null;
         if (userProfile?.userType === 'caregiver') {
           try {
-        const caregiverData = await caregiverAPI.getCaregiverById(user?.uid);
-        setCaregiver(caregiverData);
+            caregiverData = await caregiverAPI.getCaregiverById(user?.uid);
+            setCaregiver(caregiverData);
           } catch (error) {
             console.log('Creating caregiver profile from user data - this is normal for new users');
-            // Create a basic caregiver profile from user profile
-            setCaregiver({
+            caregiverData = {
               id: user?.uid,
               name: userProfile?.name || userProfile?.displayName || 'Caregiver',
               email: userProfile?.email,
@@ -205,11 +268,12 @@ const CaregiverDashboard = () => {
               lastMonthEarnings: 0,
               totalEarnings: 0,
               ...userProfile
-            });
+            };
+            setCaregiver(caregiverData);
           }
         } else {
           // For non-caregivers (doctors, admins), create a mock caregiver profile from user profile
-          setCaregiver({
+          caregiverData = {
             id: user?.uid,
             name: userProfile?.name || userProfile?.displayName || 'User',
             email: userProfile?.email,
@@ -224,12 +288,13 @@ const CaregiverDashboard = () => {
             lastMonthEarnings: 0,
             totalEarnings: 0,
             ...userProfile
-          });
+          };
+          setCaregiver(caregiverData);
         }
 
-        // If doctor, load assigned clients STRICTLY from admin-created assignments
-        const isDoctor = (userProfile.medicalQualification || '').includes('Doctor');
-        if (isDoctor) {
+        // Load assigned clients for ALL caregiver types (doctors, nurses, non-medical)
+        // Clients are strictly sourced from admin-created assignments
+        {
           let clients = [];
           try {
             const assignments = await assignmentAPI.getAssignmentsByCaregiver(user?.uid);
@@ -240,8 +305,9 @@ const CaregiverDashboard = () => {
             console.log('No client assignments found - this is normal for new users');
           }
           
-          // Fallback to clients.assignedDoctor only if no assignment docs found
-          if ((!clients || clients.length === 0) && user?.uid) {
+          // Doctor fallback: clients.assignedDoctor only if no assignment docs found
+          const isDoc = (userProfile.medicalQualification || '').includes('Doctor');
+          if (isDoc && (!clients || clients.length === 0) && user?.uid) {
             try {
               const alt = await getClientsByDoctor(user.uid, institutionId);
               clients = alt || [];
@@ -258,60 +324,8 @@ const CaregiverDashboard = () => {
           }
         }
         
-        // Load today's schedule (appointments + tasks + assignments)
-        const [todaysAppointments, todaysTasks, assignments] = await Promise.all([
-          getTodaysAppointments(user?.uid, 'caregiver'),
-          getTodayTasks(user?.uid),
-          assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
-        ]);
-        
-        // Convert assignments to task format for today's schedule
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const assignmentTasks = assignments
-          .filter(a => {
-            if (!a.dueDate) return false;
-            const dueDate = new Date(a.dueDate);
-            dueDate.setHours(0, 0, 0, 0);
-            return dueDate.getTime() === today.getTime();
-          })
-          .map(assignment => ({
-            id: assignment.id,
-            type: 'task',
-            title: assignment.title || 'Assigned Task',
-            time: assignment.dueTime ? `${assignment.dueTime}:00` : '09:00:00',
-            scheduledTime: assignment.dueDate ? new Date(`${assignment.dueDate}T${assignment.dueTime || '09:00'}`) : new Date(),
-            client: assignment.clientName || 'Client',
-            status: assignment.status || 'pending',
-            priority: assignment.priority || 'normal',
-            description: assignment.description,
-            instructions: assignment.instructions,
-            assignmentType: 'clientAssignment'
-          }));
-        
-        // Combine appointments, tasks, and assignments for today's schedule
-        const combinedSchedule = [
-          ...todaysAppointments.map(apt => ({
-            id: apt.id,
-            type: 'appointment',
-            title: apt.title || 'Appointment',
-            time: apt.scheduledTime,
-            client: apt.clientName || 'Client',
-            status: apt.status || 'scheduled'
-          })),
-          ...todaysTasks.map(task => ({
-            id: task.id,
-            type: 'task',
-            title: task.title,
-            time: task.scheduledTime,
-            client: task.clientName || 'Client',
-            status: task.status || 'pending'
-          })),
-          ...assignmentTasks
-        ];
-        
-        // Sort by time
-        combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
+        // Load today's schedule using shared helper
+        const combinedSchedule = await buildTodaySchedule(user?.uid);
         setTodaySchedule(combinedSchedule);
         
         // Load recent tasks
@@ -336,12 +350,12 @@ const CaregiverDashboard = () => {
         setPerformance({
           completedTasks: completedCount,
           totalTasks: totalCount,
-          rating: caregiver?.rating || 0,
-          hoursWorked: caregiver?.thisMonthEarnings ? Math.round(caregiver.thisMonthEarnings / 50) : 0, // Estimate based on earnings
+          rating: caregiverData?.rating || 0,
+          hoursWorked: caregiverData?.thisMonthEarnings ? Math.round(caregiverData.thisMonthEarnings / 50) : 0, // Estimate based on earnings
           punctuality: 95, // Placeholder - would need attendance data
           taskCompletion: taskCompletion,
-          clientSatisfaction: caregiver?.rating || 'N/A',
-          communication: caregiver?.rating || 'N/A',
+          clientSatisfaction: caregiverData?.rating || 'N/A',
+          communication: caregiverData?.rating || 'N/A',
           safety: 100 // Placeholder - would need incident data
         });
 
@@ -374,11 +388,10 @@ const CaregiverDashboard = () => {
 
     loadCaregiverData();
     
-    // Set up real-time subscription for assignments (for doctors)
-    const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor');
-    if (isDoctor && user?.uid) {
+    // Set up real-time subscription for assignments (all caregiver types)
+    if (user?.uid) {
       const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
-        console.log(`Real-time update: Found ${assignments.length} client assignments for doctor ${user.uid}`);
+        console.log(`Real-time update: Found ${assignments.length} client assignments for caregiver ${user.uid}`);
         
         // Filter assignments for this specific caregiver
         const caregiverAssignments = assignments.filter(a => a.caregiverId === user.uid);
@@ -516,7 +529,7 @@ const CaregiverDashboard = () => {
 
   const handleCreateCarePlan = () => {
     if (!requireClient()) return;
-    window.location.href = `/service-provider/care-plans/new?clientId=${encodeURIComponent(selectedClientId)}`;
+    window.location.href = `/service-provider/care-logs?clientId=${encodeURIComponent(selectedClientId)}&action=new`;
   };
 
   const handleVideoConsultation = async () => {
@@ -533,7 +546,7 @@ const CaregiverDashboard = () => {
       nurseId = nurseAssignment?.caregiverId || '';
     } catch {}
     const query = new URLSearchParams({ clientId: selectedClientId, nurseId }).toString();
-    window.location.href = `/service-provider/messages`;
+    window.location.href = `/service-provider/messages?${query}`;
   };
 
   const handleClockIn = async (scheduleId) => {
@@ -554,62 +567,9 @@ const CaregiverDashboard = () => {
       if (scheduleItem.type === 'task' && scheduleItem.id) {
         await startTask(scheduleItem.id, user.uid);
         toast.success('Task started successfully');
-        // Reload schedule to reflect changes
-        const loadCaregiverData = async () => {
-          // Reload today's schedule
-          const [todaysAppointments, todaysTasks, assignments] = await Promise.all([
-            getTodaysAppointments(user?.uid, 'caregiver'),
-            getTodayTasks(user?.uid),
-            assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
-          ]);
-          
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const assignmentTasks = assignments
-            .filter(a => {
-              if (!a.dueDate) return false;
-              const dueDate = new Date(a.dueDate);
-              dueDate.setHours(0, 0, 0, 0);
-              return dueDate.getTime() === today.getTime();
-            })
-            .map(assignment => ({
-              id: assignment.id,
-              type: 'task',
-              title: assignment.title || 'Assigned Task',
-              time: assignment.dueTime ? `${assignment.dueTime}:00` : '09:00:00',
-              scheduledTime: assignment.dueDate ? new Date(`${assignment.dueDate}T${assignment.dueTime || '09:00'}`) : new Date(),
-              client: assignment.clientName || 'Client',
-              status: assignment.status || 'pending',
-              priority: assignment.priority || 'normal',
-              description: assignment.description,
-              instructions: assignment.instructions,
-              assignmentType: 'clientAssignment'
-            }));
-          
-          const combinedSchedule = [
-            ...todaysAppointments.map(apt => ({
-              id: apt.id,
-              type: 'appointment',
-              title: apt.title || 'Appointment',
-              time: apt.scheduledTime,
-              client: apt.clientName || 'Client',
-              status: apt.status || 'scheduled'
-            })),
-            ...todaysTasks.map(task => ({
-              id: task.id,
-              type: 'task',
-              title: task.title,
-              time: task.scheduledTime,
-              client: task.clientName || 'Client',
-              status: task.status || 'pending'
-            })),
-            ...assignmentTasks
-          ];
-          
-          combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
-          setTodaySchedule(combinedSchedule);
-        };
-        loadCaregiverData();
+        // Reload schedule using shared helper
+        const refreshed = await buildTodaySchedule(user?.uid);
+        setTodaySchedule(refreshed);
       } else {
         toast.info('Clock in is only available for tasks');
       }
@@ -625,8 +585,7 @@ const CaregiverDashboard = () => {
   const isMedicalProfessional = isDoctor || isNurse;
   const isNonMedicalCaregiver = !isMedicalProfessional;
 
-  const renderDoctorClientSelector = () => {
-    if (!isDoctor) return null;
+  const renderClientSelector = () => {
     return (
       <div className="bg-white rounded-lg border p-4 mb-4 space-y-4">
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
@@ -656,12 +615,14 @@ const CaregiverDashboard = () => {
               </div>
             </div>
           )}
+          {isDoctor && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <button onClick={handleNewConsultation} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50 text-sm" disabled={!selectedClientId}>New Consultation</button>
             <button onClick={handleWritePrescription} className="px-3 py-2 bg-indigo-600 text-white rounded disabled:opacity-50 text-sm" disabled={!selectedClientId}>Write Prescription</button>
             <button onClick={handleCreateCarePlan} className="px-3 py-2 bg-emerald-600 text-white rounded disabled:opacity-50 text-sm" disabled={!selectedClientId}>Create Care Plan</button>
             <button onClick={handleVideoConsultation} className="px-3 py-2 bg-purple-600 text-white rounded disabled:opacity-50 text-sm" disabled={!selectedClientId}>Video Consultation</button>
           </div>
+          )}
         </div>
         {selectedClient && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
@@ -701,58 +662,9 @@ const CaregiverDashboard = () => {
       if (scheduleItem.type === 'task' && scheduleItem.id) {
         await completeTask(scheduleItem.id, user.uid, 'Completed via clock out');
         toast.success('Task completed successfully');
-        // Reload schedule to reflect changes
-        const [todaysAppointments, todaysTasks, assignments] = await Promise.all([
-          getTodaysAppointments(user?.uid, 'caregiver'),
-          getTodayTasks(user?.uid),
-          assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
-        ]);
-        
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const assignmentTasks = assignments
-          .filter(a => {
-            if (!a.dueDate) return false;
-            const dueDate = new Date(a.dueDate);
-            dueDate.setHours(0, 0, 0, 0);
-            return dueDate.getTime() === today.getTime();
-          })
-          .map(assignment => ({
-            id: assignment.id,
-            type: 'task',
-            title: assignment.title || 'Assigned Task',
-            time: assignment.dueTime ? `${assignment.dueTime}:00` : '09:00:00',
-            scheduledTime: assignment.dueDate ? new Date(`${assignment.dueDate}T${assignment.dueTime || '09:00'}`) : new Date(),
-            client: assignment.clientName || 'Client',
-            status: assignment.status || 'pending',
-            priority: assignment.priority || 'normal',
-            description: assignment.description,
-            instructions: assignment.instructions,
-            assignmentType: 'clientAssignment'
-          }));
-        
-        const combinedSchedule = [
-          ...todaysAppointments.map(apt => ({
-            id: apt.id,
-            type: 'appointment',
-            title: apt.title || 'Appointment',
-            time: apt.scheduledTime,
-            client: apt.clientName || 'Client',
-            status: apt.status || 'scheduled'
-          })),
-          ...todaysTasks.map(task => ({
-            id: task.id,
-            type: 'task',
-            title: task.title,
-            time: task.scheduledTime,
-            client: task.clientName || 'Client',
-            status: task.status || 'pending'
-          })),
-          ...assignmentTasks
-        ];
-        
-        combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
-        setTodaySchedule(combinedSchedule);
+        // Reload schedule using shared helper
+        const refreshed = await buildTodaySchedule(user?.uid);
+        setTodaySchedule(refreshed);
       } else {
         toast.info('Clock out is only available for tasks');
       }
@@ -1062,7 +974,10 @@ const CaregiverDashboard = () => {
                 <span className="text-sm font-medium text-gray-700">Medications</span>
               </button>
               
-              <button className="flex flex-col items-center p-4 border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors">
+              <button
+                onClick={() => { window.location.href = '/service-provider/photos'; }}
+                className="flex flex-col items-center p-4 border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors"
+              >
                 <Camera className="h-8 w-8 text-purple-600 mb-2" />
                 <span className="text-sm font-medium text-gray-700">Photo Update</span>
               </button>
@@ -1285,7 +1200,7 @@ const CaregiverDashboard = () => {
 
         {/* Doctor Client Selector (if doctor) */}
         <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-3 sm:pt-4 md:pt-6">
-          {renderDoctorClientSelector()}
+          {renderClientSelector()}
         </div>
 
         {/* Main Content */}
@@ -1300,6 +1215,73 @@ const CaregiverDashboard = () => {
           renderConsultationsTab()
         ) : activeTab === 'diagnostics' ? (
           renderDiagnosticsTab()
+        ) : activeTab === 'help' ? (
+          <div className="space-y-6">
+            <div className="cm-card p-6">
+              <h2 className="cm-display text-xl text-ink mb-4 flex items-center">
+                <HelpCircle className="h-6 w-6 text-gold-deep mr-2" />
+                Help & Support
+              </h2>
+              <p className="text-text-soft mb-6">
+                Need assistance? Here are some resources to help you get the most out of the Caregiver Portal.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border border-ink/10 rounded-xl p-5 hover:shadow-md transition-shadow">
+                  <div className="flex items-center mb-3">
+                    <FileText className="h-6 w-6 text-blue-600 mr-3" />
+                    <h3 className="font-semibold text-ink">Getting Started Guide</h3>
+                  </div>
+                  <p className="text-sm text-text-soft mb-3">Learn the basics of navigating the portal, managing clients, and completing tasks.</p>
+                  <button onClick={() => toast.info('Guide coming soon')} className="text-sm text-gold-deep hover:text-gold font-medium">Read Guide &rarr;</button>
+                </div>
+                <div className="border border-ink/10 rounded-xl p-5 hover:shadow-md transition-shadow">
+                  <div className="flex items-center mb-3">
+                    <MessageSquare className="h-6 w-6 text-green-600 mr-3" />
+                    <h3 className="font-semibold text-ink">Contact Support</h3>
+                  </div>
+                  <p className="text-sm text-text-soft mb-3">Reach out to our support team for technical issues or questions about your account.</p>
+                  <a href="mailto:support@caremaster.com" className="text-sm text-gold-deep hover:text-gold font-medium">Email Support &rarr;</a>
+                </div>
+                <div className="border border-ink/10 rounded-xl p-5 hover:shadow-md transition-shadow">
+                  <div className="flex items-center mb-3">
+                    <Shield className="h-6 w-6 text-purple-600 mr-3" />
+                    <h3 className="font-semibold text-ink">Emergency Procedures</h3>
+                  </div>
+                  <p className="text-sm text-text-soft mb-3">Review the emergency alert process and learn how to quickly notify your team during a crisis.</p>
+                  <button onClick={() => toast.info('Use the Emergency button on any scheduled task to alert your team')} className="text-sm text-gold-deep hover:text-gold font-medium">Learn More &rarr;</button>
+                </div>
+                <div className="border border-ink/10 rounded-xl p-5 hover:shadow-md transition-shadow">
+                  <div className="flex items-center mb-3">
+                    <User className="h-6 w-6 text-coral mr-3" />
+                    <h3 className="font-semibold text-ink">Contact Your Administrator</h3>
+                  </div>
+                  <p className="text-sm text-text-soft mb-3">
+                    For client assignments, schedule changes, or access issues, contact your institution administrator.
+                  </p>
+                  <p className="text-sm text-text-soft">
+                    Institution: <span className="font-medium text-ink">{institutionData?.name || institutionId || 'Not assigned'}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="cm-card p-6">
+              <h3 className="cm-display text-lg text-ink mb-3">Frequently Asked Questions</h3>
+              <div className="space-y-3">
+                <div className="border border-ink/10 rounded-lg p-4">
+                  <h4 className="font-medium text-ink text-sm mb-1">How do I get clients assigned to me?</h4>
+                  <p className="text-sm text-text-soft">Your institution administrator assigns clients to you. Once assigned, they will appear in the Clients tab and you can begin providing care.</p>
+                </div>
+                <div className="border border-ink/10 rounded-lg p-4">
+                  <h4 className="font-medium text-ink text-sm mb-1">How do I clock in and out of tasks?</h4>
+                  <p className="text-sm text-text-soft">Use the Clock In button on any task in Today's Schedule. This starts time tracking. Click Clock Out when done to record the completed duration.</p>
+                </div>
+                <div className="border border-ink/10 rounded-lg p-4">
+                  <h4 className="font-medium text-ink text-sm mb-1">What if I have a medical emergency with a client?</h4>
+                  <p className="text-sm text-text-soft">Click the Emergency button on the scheduled task for that client. This sends an immediate alert to your care team with the client's location.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="space-y-6">
           {/* Qualification-Specific Quick Actions */}
@@ -1372,9 +1354,9 @@ const CaregiverDashboard = () => {
             schedule={todaySchedule.map(s => ({
               id: s.id,
               type: s.type || 'task',
-              title: s.clientName || s.title || 'Task',
+              title: s.client || s.title || 'Task',
               time: s.time || s.scheduledTime || '',
-              client: s.clientName || 'Client',
+              client: s.client || 'Client',
               status: s.status || 'pending',
               priority: s.priority
             }))}
@@ -1406,7 +1388,7 @@ const CaregiverDashboard = () => {
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-4 mb-4">
-                          <h3 className="cm-display text-xl text-ink">{schedule.clientName}</h3>
+                          <h3 className="cm-display text-xl text-ink">{schedule.client || schedule.title || 'Scheduled Item'}</h3>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(schedule.status)}`}>
                             {schedule.status}
                           </span>
@@ -1460,22 +1442,26 @@ const CaregiverDashboard = () => {
                         )}
                       </div>
                       <div className="flex flex-col gap-3 w-full lg:w-auto">
+                        {schedule.type === 'task' && (
+                          <>
+                            <button
+                              onClick={() => handleClockIn(schedule.id)}
+                              className="cm-btn-gold w-full sm:w-auto"
+                            >
+                              Clock In
+                            </button>
+                            <button
+                              onClick={() => handleClockOut(schedule.id)}
+                              className="w-full sm:w-auto px-6 py-3 bg-ink text-white rounded-lg hover:bg-ink/90 transition-colors font-medium"
+                            >
+                              Clock Out
+                            </button>
+                          </>
+                        )}
                         <button
-                          onClick={() => handleClockIn(schedule.id)}
-                          className="cm-btn-gold w-full sm:w-auto"
-                        >
-                          Clock In
-                        </button>
-                        <button
-                          onClick={() => handleClockOut(schedule.id)}
-                          className="w-full sm:w-auto px-6 py-3 bg-ink text-white rounded-lg hover:bg-ink/90 transition-colors font-medium"
-                        >
-                          Clock Out
-                        </button>
-                        <button
-                          onClick={() => handleEmergency(schedule.clientId || schedule.client?.id)}
+                          onClick={() => handleEmergency(schedule.clientId)}
                           className="w-full sm:w-auto px-6 py-3 bg-coral text-white rounded-lg hover:bg-coral/90 transition-colors font-medium flex items-center justify-center"
-                          disabled={!schedule.clientId && !schedule.client?.id}
+                          disabled={!schedule.clientId}
                         >
                           <AlertTriangle className="h-4 w-4 mr-2" />
                           Emergency
@@ -1504,18 +1490,24 @@ const CaregiverDashboard = () => {
                 </div>
               ) : (
               <div className="space-y-4">
-                {recentTasks.map((task) => (
+                {recentTasks.map((task) => {
+                  // Look up client name from assignedClients cache
+                  const taskClient = assignedClients.find(c => c.id === task.clientId);
+                  const taskClientName = task.clientName || taskClient?.name || taskClient?.fullName || 'Client';
+                  const taskTitle = task.title || task.task || task.description || 'Untitled Task';
+                  const completedDate = task.completedAt ? new Date(task.completedAt) : (task.updatedAt ? new Date(task.updatedAt) : null);
+                  return (
                   <div key={task.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border border-ink/10 rounded-xl hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-4">
                       <div className="p-2 bg-green-50 rounded-lg">
                         <CheckCircle className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
-                        <h4 className="text-base font-semibold text-ink">{task.task}</h4>
+                        <h4 className="text-base font-semibold text-ink">{taskTitle}</h4>
 
-                        <p className="text-sm text-text-soft">{task.clientName}</p>
+                        <p className="text-sm text-text-soft">{taskClientName}</p>
                         <p className="text-xs text-text-soft">
-                          {new Date(task.completedAt).toLocaleString()}
+                          {completedDate ? completedDate.toLocaleString() : '—'}
                         </p>
                       </div>
                     </div>
@@ -1523,12 +1515,17 @@ const CaregiverDashboard = () => {
                       <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
                         {task.status}
                       </span>
-                      <button className="w-full sm:w-auto p-2 text-gold-deep hover:text-gold hover:bg-gold-soft/30 rounded-lg transition-colors">
+                      <button
+                        onClick={() => { setSelectedTask(task); setShowTaskDetailsModal(true); }}
+                        className="w-full sm:w-auto p-2 text-gold-deep hover:text-gold hover:bg-gold-soft/30 rounded-lg transition-colors"
+                        title="View task details"
+                      >
                         <Eye className="h-5 w-5" />
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               )}
             </div>
@@ -1597,19 +1594,34 @@ const CaregiverDashboard = () => {
               </div>
               <div className="p-4 sm:p-6 lg:p-8">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all">
+                  <button
+                    onClick={() => { window.location.href = '/service-provider/messages'; }}
+                    className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all"
+                  >
                     <MessageSquare className="h-8 w-8 text-gold-deep mb-3" />
                     <span className="text-sm font-semibold text-ink">Messages</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all">
+                  <button
+                    onClick={() => { window.location.href = '/service-provider/photos'; }}
+                    className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all"
+                  >
                     <Camera className="h-8 w-8 text-sage mb-3" />
                     <span className="text-sm font-semibold text-ink">Photo Update</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all">
+                  <button
+                    onClick={() => {
+                      if (!selectedClientId) { toast.info('Select a client first to add a care log'); return; }
+                      setShowCareLogsModal(true);
+                    }}
+                    className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all"
+                  >
                     <FileText className="h-8 w-8 text-gold-deep mb-3" />
                     <span className="text-sm font-semibold text-ink">Add Note</span>
                   </button>
-                  <button className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all">
+                  <button
+                    onClick={() => { window.location.href = '/service-provider/routes'; }}
+                    className="flex flex-col items-center justify-center p-4 sm:p-6 border border-ink/10 rounded-xl hover:bg-cream hover:shadow-md transition-all"
+                  >
                     <Navigation className="h-8 w-8 text-coral mb-3" />
                     <span className="text-sm font-semibold text-ink">Navigation</span>
                   </button>
@@ -1710,6 +1722,81 @@ const CaregiverDashboard = () => {
           }}
           isIncoming={false}
         />
+      )}
+
+      {/* Task Details Modal */}
+      {showTaskDetailsModal && selectedTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowTaskDetailsModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Task Details</h3>
+              <button onClick={() => setShowTaskDetailsModal(false)} className="text-gray-400 hover:text-gray-600">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <span className="text-sm text-gray-500">Title</span>
+                <p className="font-medium text-gray-900">{selectedTask.title || selectedTask.task || 'Untitled Task'}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Client</span>
+                <p className="font-medium text-gray-900">{selectedTask.client || selectedTask.clientName || 'Client'}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Type</span>
+                <p className="font-medium text-gray-900 capitalize">{selectedTask.type || 'task'}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Status</span>
+                <p className="font-medium text-gray-900 capitalize">{selectedTask.status || 'pending'}</p>
+              </div>
+              {selectedTask.time && (
+                <div>
+                  <span className="text-sm text-gray-500">Scheduled Time</span>
+                  <p className="font-medium text-gray-900">{formatTime(selectedTask.time)}</p>
+                </div>
+              )}
+              {selectedTask.description && (
+                <div>
+                  <span className="text-sm text-gray-500">Description</span>
+                  <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedTask.description}</p>
+                </div>
+              )}
+              {selectedTask.instructions && (
+                <div>
+                  <span className="text-sm text-gray-500">Instructions</span>
+                  <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedTask.instructions}</p>
+                </div>
+              )}
+              {selectedTask.priority && (
+                <div>
+                  <span className="text-sm text-gray-500">Priority</span>
+                  <p className="font-medium text-gray-900 capitalize">{selectedTask.priority}</p>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+              {selectedTask.type === 'task' && selectedTask.status !== 'completed' && (
+                <button
+                  onClick={() => {
+                    handleClockIn(selectedTask.id);
+                    setShowTaskDetailsModal(false);
+                  }}
+                  className="px-4 py-2 bg-gold text-white rounded-lg hover:bg-gold-deep"
+                >
+                  Clock In
+                </button>
+              )}
+              <button
+                onClick={() => setShowTaskDetailsModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
     </CaregiverGuard>
