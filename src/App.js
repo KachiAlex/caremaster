@@ -526,10 +526,16 @@ function App() {
         element={user ? <InstitutionPharmacyDashboard /> : <Navigate to="/login" replace />} 
       />
 
+      {/* Lab Technician Dashboard */}
+      <Route 
+        path="/institution-lab-technician/dashboard" 
+        element={user ? <InstitutionLabTechnicianDashboard /> : <Navigate to="/login" replace />} 
+      />
+
       {/* Institution Pharmacist Routes */}
       <Route 
         path="/institution-pharmacist/dashboard" 
-        element={user ? <InstitutionCaregiverDashboard /> : <Navigate to="/login" replace />} 
+        element={user ? <InstitutionPharmacyDashboard /> : <Navigate to="/login" replace />} 
       />
 
       <Route 
@@ -805,6 +811,8 @@ function SignInRouteHandler() {
       return <Navigate to={`/institution-admin/dashboard?institution=${institutionId}`} replace />;
     } else if (roleParam === 'pharmacist') {
       return <Navigate to={`/institution-pharmacy/dashboard?institution=${institutionId}`} replace />;
+    } else if (roleParam === 'lab_technician' || roleParam === 'lab-technician') {
+      return <Navigate to={`/institution-lab-technician/dashboard?institution=${institutionId}`} replace />;
     } else if (roleParam === 'caregiver') {
       return <Navigate to={`/institution-caregiver/dashboard?institution=${institutionId}`} replace />;
     }
@@ -818,6 +826,8 @@ function SignInRouteHandler() {
       return <Navigate to={`/institution-admin/dashboard?institution=${userProfile.institutionId}`} replace />;
     } else if (userRole === 'pharmacist') {
       return <Navigate to={`/institution-pharmacy/dashboard?institution=${userProfile.institutionId}`} replace />;
+    } else if (userRole === 'lab_technician' || userRole === 'lab-technician') {
+      return <Navigate to={`/institution-lab-technician/dashboard?institution=${userProfile.institutionId}`} replace />;
     } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
       return <Navigate to={`/institution-caregiver/dashboard?institution=${userProfile.institutionId}`} replace />;
     }
@@ -873,6 +883,8 @@ function RoleBasedDashboardRoute() {
       return <Navigate to={`/institution-admin/dashboard?institution=${userProfile.institutionId}`} replace />;
     } else if (userRole === 'pharmacist') {
       return <Navigate to={`/institution-pharmacy/dashboard?institution=${userProfile.institutionId}`} replace />;
+    } else if (userRole === 'lab_technician' || userRole === 'lab-technician') {
+      return <Navigate to={`/institution-lab-technician/dashboard?institution=${userProfile.institutionId}`} replace />;
     } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
       return <Navigate to={`/institution-caregiver/dashboard?institution=${userProfile.institutionId}`} replace />;
     }

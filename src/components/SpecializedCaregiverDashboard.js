@@ -85,7 +85,7 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
         { name: 'Vital Signs Monitoring', icon: Heart, route: '/service-provider/diagnostics', color: 'bg-red-600' },
         { name: 'Medical Documentation', icon: FileText, route: '/service-provider/medical-records', color: 'bg-green-600' },
         { name: 'Emergency Response', icon: AlertTriangle, route: '/service-provider/emergency', color: 'bg-red-700' },
-        { name: 'Health Assessments', icon: Stethoscope, route: '/service-provider/assessments', color: 'bg-purple-600' }
+        { name: 'Health Assessments', icon: Stethoscope, route: '/service-provider/consultations', color: 'bg-purple-600' }
       ];
     }
     
@@ -93,10 +93,10 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
     else if (specializations.includes('Physical Therapist') || specializations.includes('Occupational Therapist')) {
       level = 'therapy';
       features = [
-        { name: 'Exercise Programs', icon: Activity, route: '/service-provider/therapy', color: 'bg-orange-600' },
-        { name: 'Mobility Assessment', icon: TrendingUp, route: '/service-provider/mobility', color: 'bg-blue-600' },
-        { name: 'Progress Tracking', icon: FileText, route: '/service-provider/progress', color: 'bg-green-600' },
-        { name: 'Equipment Management', icon: Shield, route: '/service-provider/equipment', color: 'bg-gray-600' }
+        { name: 'Exercise Programs', icon: Activity, route: '/service-provider/activities', color: 'bg-orange-600' },
+        { name: 'Mobility Assessment', icon: TrendingUp, route: '/service-provider/medical-records', color: 'bg-blue-600' },
+        { name: 'Progress Tracking', icon: FileText, route: '/service-provider/care-logs', color: 'bg-green-600' },
+        { name: 'Equipment Management', icon: Shield, route: '/service-provider/settings', color: 'bg-gray-600' }
       ];
     }
     
@@ -104,10 +104,10 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
     else if (specializations.includes('Dementia Care') || specializations.includes('Memory Care Specialist')) {
       level = 'dementia';
       features = [
-        { name: 'Cognitive Monitoring', icon: Brain, route: '/service-provider/cognitive', color: 'bg-purple-600' },
-        { name: 'Behavioral Tracking', icon: Eye, route: '/service-provider/behavior', color: 'bg-indigo-600' },
-        { name: 'Safety Protocols', icon: Shield, route: '/service-provider/safety', color: 'bg-red-600' },
-        { name: 'Family Communication', icon: MessageSquare, route: '/service-provider/family', color: 'bg-blue-600' },
+        { name: 'Cognitive Monitoring', icon: Brain, route: '/service-provider/medical-records', color: 'bg-purple-600' },
+        { name: 'Behavioral Tracking', icon: Eye, route: '/service-provider/care-logs', color: 'bg-indigo-600' },
+        { name: 'Safety Protocols', icon: Shield, route: '/service-provider/emergency', color: 'bg-red-600' },
+        { name: 'Family Communication', icon: MessageSquare, route: '/service-provider/messages', color: 'bg-blue-600' },
         { name: 'Memory Activities', icon: Users, route: '/service-provider/activities', color: 'bg-green-600' }
       ];
     }
@@ -116,10 +116,10 @@ const SpecializedCaregiverDashboard = ({ onPatientClick, assignedPatients = [] }
     else if (specializations.includes('Companion Care') || specializations.includes('Social Worker')) {
       level = 'companion';
       features = [
-        { name: 'Social Activities', icon: Users, route: '/service-provider/social', color: 'bg-green-600' },
-        { name: 'Mental Health Support', icon: Heart, route: '/service-provider/mental-health', color: 'bg-pink-600' },
-        { name: 'Daily Living Assistance', icon: Clock, route: '/service-provider/daily-care', color: 'bg-blue-600' },
-        { name: 'Recreation Planning', icon: Calendar, route: '/service-provider/recreation', color: 'bg-purple-600' }
+        { name: 'Social Activities', icon: Users, route: '/service-provider/activities', color: 'bg-green-600' },
+        { name: 'Mental Health Support', icon: Heart, route: '/service-provider/consultations', color: 'bg-pink-600' },
+        { name: 'Daily Living Assistance', icon: Clock, route: '/service-provider/tasks', color: 'bg-blue-600' },
+        { name: 'Recreation Planning', icon: Calendar, route: '/service-provider/schedule', color: 'bg-purple-600' }
       ];
     }
     

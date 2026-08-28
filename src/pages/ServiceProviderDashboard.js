@@ -239,18 +239,18 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
         <div className="p-6">
           <div className="space-y-4">
             {assignedPatients.length > 0 ? (
-              assignedPatients.slice(0, 5).map((Client) => (
-                <div key={client.id} className="flex items-center justify-between">
+              assignedPatients.slice(0, 5).map((patient) => (
+                <div key={patient.id} className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{client.name}</p>
-                    <p className="text-xs text-gray-500">{client.medicalConditions || 'General care'}</p>
+                    <p className="text-sm font-medium text-gray-900">{patient.name}</p>
+                    <p className="text-xs text-gray-500">{patient.medicalConditions || 'General care'}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500">{client.lastVisit ? new Date(client.lastVisit).toLocaleDateString() : 'No visits'}</p>
+                    <p className="text-xs text-gray-500">{patient.lastVisit ? new Date(patient.lastVisit).toLocaleDateString() : 'No visits'}</p>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      client.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      patient.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {client.status || 'active'}
+                      {patient.status || 'active'}
                     </span>
                   </div>
                 </div>
@@ -332,7 +332,7 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
                   />
                   <div>
                     <p className="text-sm font-medium text-gray-900">{task.title}</p>
-                    <p className="text-xs text-gray-500">{task.Client}</p>
+                    <p className="text-xs text-gray-500">{task.client || task.clientName || 'Client'}</p>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">
@@ -358,7 +358,7 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
               <div key={task.id} className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-900">{task.title}</p>
-                  <p className="text-xs text-gray-500">{task.Client} - {task.priority} priority</p>
+                  <p className="text-xs text-gray-500">{task.client || task.clientName || 'Client'} - {task.priority} priority</p>
                 </div>
                 <p className="text-xs text-gray-500">
                   {task.scheduledTime ? new Date(task.scheduledTime).toLocaleDateString() : 'No date set'}
@@ -698,13 +698,13 @@ const ServiceProviderDashboard = () => {
   }
 
   // Client modal handlers
-  const handlePatientClick = (Client) => {
-    setSelectedPatient(Client);
+  const handlePatientClick = (patient) => {
+    setSelectedPatient(patient);
     setShowPatientModal(true);
     
     // Load nurse reports from Database (for doctors view)
-    if (isDoctor && Client?.id) {
-      getNurseReportsByPatient(client.id)
+    if (isDoctor && patient?.id) {
+      getNurseReportsByPatient(patient.id)
         .then((reports) => setNurseReports(reports))
         .catch(() => setNurseReports([]));
     }
@@ -857,14 +857,14 @@ const ServiceProviderDashboard = () => {
   const handleTabChange = (tabId) => {
     if (tabId === 'dashboard') return; // stay on dashboard
     const routeMap = {
-      clients: '/service-provider/clients',
+      clients: '/service-provider/medical-records',
       tasks: '/service-provider/tasks',
       schedule: '/service-provider/schedule',
       messages: '/service-provider/messages',
       consultations: '/service-provider/consultations',
       prescriptions: '/service-provider/prescriptions',
       records: '/service-provider/medical-records',
-      help: '/service-provider/help',
+      help: '/service-provider/settings',
     };
     const route = routeMap[tabId];
     if (route) navigate(route);

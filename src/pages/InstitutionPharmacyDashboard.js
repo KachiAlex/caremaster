@@ -8,7 +8,7 @@ import PharmacyTab from '../components/PharmacyTab';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import { fetchLicenseStatus } from '../services/licenseService';
 import { query, getDocs, updateDoc, where, doc } from 'backend/database';
-import { signOut } from 'backend/auth';
+import { signOut, getAuth } from 'backend/auth';
 import { db, auth } from '../backend/config';
 
 const InstitutionPharmacyDashboard = () => {

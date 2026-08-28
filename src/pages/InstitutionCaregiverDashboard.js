@@ -57,7 +57,7 @@ import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import { caregiverAPI } from '../api/caregiverAPI';
 import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
-import { getActiveTasks } from '../api/taskTimeTrackingAPI';
+import { getActiveTasks, startTask, completeTask } from '../api/taskTimeTrackingAPI';
 import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
 import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
@@ -93,6 +93,7 @@ import CallInterface from '../components/CallInterface';
 import PortalSwitcher from '../components/PortalSwitcher';
 import WebRTCService from '../services/webrtcService';
 import AdlLogger from '../components/AdlLogger';
+import { emergencyAPI } from '../api/emergencyAPI';
 import UserProfileSettings from '../components/UserProfileSettings';
 import HelpSupport from '../components/HelpSupport';
 import TaskCompletionModal from '../components/TaskCompletionModal';
@@ -215,7 +216,8 @@ const InstitutionCaregiverDashboard = () => {
   const [activeCall, setActiveCall] = useState(null);
   const [callConnectionState, setCallConnectionState] = useState('connecting'); // Track WebRTC connection state
   const [callService] = useState(() => new CallService());
-  const [webrtc] = useState(() => new WebRTCService());
+  const [webrtc, setWebrtc] = useState(() => new WebRTCService());
+  const [currentCallId, setCurrentCallId] = useState(null);
   const [callStartAt, setCallStartAt] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = React.useRef(null);
@@ -373,7 +375,7 @@ const InstitutionCaregiverDashboard = () => {
           { name: 'Prescription Review', icon: Pill, href: '/service-provider/prescriptions' },
           { name: 'Drug Interactions', icon: AlertTriangle, href: '/service-provider/diagnostics' },
           { name: 'Medication Consult', icon: MessageSquare, href: '/service-provider/consultations' },
-          { name: 'Client Education', icon: FileText, href: '/service-provider/clients' }
+          { name: 'Client Education', icon: FileText, href: '/service-provider/medical-records' }
         ]
       };
     }
@@ -397,7 +399,7 @@ const InstitutionCaregiverDashboard = () => {
         color: 'red',
         features: ['client-care', 'medications', 'vital-signs', 'care-plans'],
         quickActions: [
-          { name: 'Client Rounds', icon: User, href: '/service-provider/clients' },
+          { name: 'Client Rounds', icon: User, href: '/service-provider/medical-records' },
           { name: 'Medication Admin', icon: Pill, href: '/service-provider/prescriptions' },
           { name: 'Vital Signs', icon: Activity, href: '/service-provider/diagnostics' },
           { name: 'Care Plans', icon: FileText, href: '/service-provider/care-logs' }
@@ -411,7 +413,7 @@ const InstitutionCaregiverDashboard = () => {
         quickActions: [
           { name: 'Therapy Sessions', icon: Dumbbell, href: '/service-provider/activities' },
           { name: 'Exercise Plans', icon: FileText, href: '/service-provider/care-logs' },
-          { name: 'Progress Notes', icon: TrendingUp, href: '/service-provider/clients' },
+          { name: 'Progress Notes', icon: TrendingUp, href: '/service-provider/medical-records' },
           { name: 'Schedule Session', icon: Calendar, href: '/service-provider/schedule' }
         ]
       },
@@ -436,7 +438,7 @@ const InstitutionCaregiverDashboard = () => {
           { name: 'Prescription Review', icon: Pill, href: '/service-provider/prescriptions' },
           { name: 'Drug Interactions', icon: AlertTriangle, href: '/service-provider/diagnostics' },
           { name: 'Medication Consult', icon: MessageSquare, href: '/service-provider/consultations' },
-          { name: 'Client Education', icon: FileText, href: '/service-provider/clients' }
+          { name: 'Client Education', icon: FileText, href: '/service-provider/medical-records' }
         ]
       },
       'Lab Technician': {
@@ -448,7 +450,7 @@ const InstitutionCaregiverDashboard = () => {
           { name: 'Lab Results', icon: FlaskConical, href: '/service-provider/diagnostics' },
           { name: 'Collection Schedule', icon: Calendar, href: '/service-provider/schedule' },
           { name: 'Quality Control', icon: Shield, href: '/service-provider/activities' },
-          { name: 'Client Reports', icon: FileText, href: '/service-provider/clients' }
+          { name: 'Client Reports', icon: FileText, href: '/service-provider/medical-records' }
         ]
       }
     };
@@ -459,7 +461,7 @@ const InstitutionCaregiverDashboard = () => {
       color: 'gray',
       features: ['client-care', 'basic-assistance', 'companionship'],
       quickActions: [
-        { name: 'Client Care', icon: User, href: '/service-provider/clients' },
+        { name: 'Client Care', icon: User, href: '/service-provider/medical-records' },
         { name: 'Daily Tasks', icon: CheckCircle, href: '/service-provider/tasks' },
         { name: 'Messages', icon: MessageSquare, href: '/service-provider/messages' },
         { name: 'Schedule', icon: Calendar, href: '/service-provider/schedule' }
@@ -778,12 +780,20 @@ const InstitutionCaregiverDashboard = () => {
           setRecentTasks([]);
         }
         
-        // Load performance data
+        // Load performance data with calculated metrics
+        const completedCount = loadedRecentTasks.filter(task => task.status === 'completed').length;
+        const totalCount = loadedRecentTasks.length;
+        const taskCompletion = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
         setPerformance({
-          completedTasks: loadedRecentTasks.filter(task => task.status === 'completed').length,
-          totalTasks: loadedRecentTasks.length,
-          rating: caregiver?.rating || 4.8,
-          hoursWorked: 40
+          completedTasks: completedCount,
+          totalTasks: totalCount,
+          rating: caregiver?.rating || 0,
+          hoursWorked: caregiver?.thisMonthEarnings ? Math.round(caregiver.thisMonthEarnings / 50) : 0,
+          punctuality: 95, // Placeholder - would need attendance data
+          taskCompletion: taskCompletion,
+          clientSatisfaction: caregiver?.rating || 'N/A',
+          communication: caregiver?.rating || 'N/A',
+          safety: 100 // Placeholder - would need incident data
         });
 
         // Load profile image from settings
@@ -1169,9 +1179,28 @@ const InstitutionCaregiverDashboard = () => {
     }
   };
 
-  const handleClockIn = (scheduleId) => {
-    // Handle clock in
-    console.log('Clock in for schedule:', scheduleId);
+  const handleClockIn = async (scheduleId) => {
+    if (!user?.uid) {
+      toast.error('User not authenticated');
+      return;
+    }
+    try {
+      const scheduleItem = todaySchedule.find(s => s.id === scheduleId);
+      if (!scheduleItem) {
+        toast.error('Schedule item not found');
+        return;
+      }
+      if (scheduleItem.type === 'task' && scheduleItem.id) {
+        await startTask(scheduleItem.id, user.uid);
+        toast.success('Task started successfully');
+        loadCaregiverData();
+      } else {
+        toast.info('Clock in is only available for tasks');
+      }
+    } catch (error) {
+      console.error('Error clocking in:', error);
+      toast.error(error.message || 'Failed to clock in');
+    }
   };
 
   // --- Role-specific UI helpers ---
@@ -1225,7 +1254,7 @@ const InstitutionCaregiverDashboard = () => {
   };
 
   const renderDoctorClientSelector = () => {
-    if (!isDoctor) return null;
+    if (!isDoctor && !isNurse && !isPharmacist) return null;
     return (
       <div className="bg-white rounded-lg border p-4 mb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -1287,10 +1316,56 @@ const InstitutionCaregiverDashboard = () => {
     );
   };
 
-  // Removed unused placeholder functions:
-  // - handleClockOut: Clock in/out functionality not currently implemented
-  // - handleTaskComplete: Task completion is handled by TaskCompletionModal
-  // - handleEmergency: Emergency functionality should use emergencyAPI.triggerEmergencyAlert if needed
+  const handleClockOut = async (scheduleId) => {
+    if (!user?.uid) {
+      toast.error('User not authenticated');
+      return;
+    }
+    try {
+      const scheduleItem = todaySchedule.find(s => s.id === scheduleId);
+      if (!scheduleItem) {
+        toast.error('Schedule item not found');
+        return;
+      }
+      if (scheduleItem.type === 'task' && scheduleItem.id) {
+        await completeTask(scheduleItem.id, user.uid, 'Completed via clock out');
+        toast.success('Task completed successfully');
+        // Reload schedule
+        loadCaregiverData();
+      } else {
+        toast.info('Clock out is only available for tasks');
+      }
+    } catch (error) {
+      console.error('Error clocking out:', error);
+      toast.error(error.message || 'Failed to clock out');
+    }
+  };
+
+  const handleEmergency = async (clientId) => {
+    if (!user?.uid || !clientId) {
+      toast.error('Missing required information');
+      return;
+    }
+    try {
+      const client = assignedClients.find(c => c.id === clientId) || selectedClient;
+      const result = await emergencyAPI.triggerEmergencyAlert({
+        userId: clientId,
+        caregiverId: user.uid,
+        type: 'medical',
+        severity: 'high',
+        location: client?.address || client?.location || 'Unknown location',
+        description: `Emergency assistance requested by caregiver ${userProfile?.name || 'Caregiver'} for client ${client?.name || client?.fullName || 'Client'}`
+      });
+      if (result.success) {
+        toast.success('Emergency alert sent! Help is on the way.');
+      } else {
+        toast.error('Failed to send emergency alert');
+      }
+    } catch (error) {
+      console.error('Error sending emergency alert:', error);
+      toast.error('Failed to send emergency alert. Please call emergency services directly.');
+    }
+  };
 
   const loadProfileImage = () => {
     // Load profile image from localStorage or settings
@@ -2617,7 +2692,7 @@ const InstitutionCaregiverDashboard = () => {
       ratio: `1:${assignedClients.length}`
     };
 
-    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const today = new Date().getDay();
     
     // Get tasks for the selected date (fixed timezone issues)
@@ -2727,7 +2802,7 @@ const InstitutionCaregiverDashboard = () => {
               
               // Check if this day is selected
               const isSelected = selectedScheduleDate.toDateString() === dayDate.toDateString();
-              const isToday = index + 1 === today;
+              const isToday = index === today;
               
               return (
                 <button
@@ -4430,7 +4505,7 @@ const InstitutionCaregiverDashboard = () => {
                     ) : (
                       <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
                         <p className="text-gray-500 text-sm">No specializations added yet</p>
-                        <button className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        <button onClick={() => { setActiveTab('settings'); setShowSettings(true); }} className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
                           Add Specializations
                         </button>
                       </div>
@@ -4450,7 +4525,7 @@ const InstitutionCaregiverDashboard = () => {
                     ) : (
                       <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
                         <p className="text-gray-500 text-sm">No certifications added yet</p>
-                        <button className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        <button onClick={() => { setActiveTab('settings'); setShowSettings(true); }} className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
                           Add Certifications
                         </button>
                       </div>
@@ -4644,19 +4719,24 @@ const InstitutionCaregiverDashboard = () => {
                       <p className="text-xs mt-1">Start documenting care</p>
                     </div>
                   ) : (
-                    recentTasks.slice(0, 5).map((task) => (
+                    recentTasks.slice(0, 5).map((task) => {
+                      const taskClient = assignedClients.find(c => c.id === task.clientId);
+                      const taskClientName = task.clientName || taskClient?.name || taskClient?.fullName || 'Client';
+                      const taskTitle = task.title || task.task || task.description || 'Untitled Task';
+                      return (
                       <div key={task.id} className="flex items-start gap-3">
                         <div className="flex-shrink-0">
                           <CheckCircle className="h-5 w-5 text-green-600" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{task.task || task.title}</p>
+                          <p className="text-sm font-medium text-gray-900">{taskTitle}</p>
                           <p className="text-xs text-gray-500">
-                            {task.clientName} • {task.completedAt ? new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending'}
+                            {taskClientName} • {task.completedAt ? new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending'}
                           </p>
                         </div>
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -4675,7 +4755,7 @@ const InstitutionCaregiverDashboard = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-4 mb-4">
-                          <h3 className="text-xl font-semibold text-gray-900">{schedule.clientName}</h3>
+                          <h3 className="text-xl font-semibold text-gray-900">{schedule.client || schedule.title || 'Scheduled Item'}</h3>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(schedule.status)}`}>
                             {schedule.status}
                           </span>
@@ -4683,12 +4763,14 @@ const InstitutionCaregiverDashboard = () => {
                         <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
                           <div className="flex items-center">
                             <Clock className="h-5 w-5 mr-2 text-gray-500" />
-                            <span className="font-medium">{formatTime(schedule.time)} ({schedule.duration})</span>
+                            <span className="font-medium">{formatTime(schedule.time)}{schedule.duration ? ` (${schedule.duration})` : ''}</span>
                           </div>
+                          {schedule.address && (
                           <div className="flex items-center">
                             <MapPin className="h-5 w-5 mr-2 text-gray-500" />
                             <span className="font-medium">{schedule.address}</span>
                           </div>
+                          )}
                         </div>
                         {schedule.tasks && Array.isArray(schedule.tasks) && schedule.tasks.length > 0 && (
                           <div className="mb-4">
@@ -4711,21 +4793,26 @@ const InstitutionCaregiverDashboard = () => {
                         )}
                       </div>
                       <div className="flex flex-col space-y-3 ml-8">
-                        <button
-                          onClick={() => handleClockIn(schedule.id)}
-                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                        >
-                          Clock In
-                        </button>
-                        <button
-                          onClick={() => handleClockOut(schedule.id)}
-                          className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
-                        >
-                          Clock Out
-                        </button>
+                        {schedule.type === 'task' && (
+                          <>
+                            <button
+                              onClick={() => handleClockIn(schedule.id)}
+                              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            >
+                              Clock In
+                            </button>
+                            <button
+                              onClick={() => handleClockOut(schedule.id)}
+                              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                            >
+                              Clock Out
+                            </button>
+                          </>
+                        )}
                         <button
                           onClick={() => handleEmergency(schedule.clientId)}
                           className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center"
+                          disabled={!schedule.clientId}
                         >
                           <AlertTriangle className="h-4 w-4 mr-2" />
                           Emergency
@@ -4745,17 +4832,22 @@ const InstitutionCaregiverDashboard = () => {
             </div>
             <div className="p-8">
               <div className="space-y-4">
-                {recentTasks.map((task) => (
+                {recentTasks.map((task) => {
+                  const taskClient = assignedClients.find(c => c.id === task.clientId);
+                  const taskClientName = task.clientName || taskClient?.name || taskClient?.fullName || 'Client';
+                  const taskTitle = task.title || task.task || task.description || 'Untitled Task';
+                  const completedDate = task.completedAt ? new Date(task.completedAt) : (task.updatedAt ? new Date(task.updatedAt) : null);
+                  return (
                   <div key={task.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-4">
                       <div className="p-2 bg-green-50 rounded-lg">
                         <CheckCircle className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
-                        <h4 className="text-base font-semibold text-gray-900">{task.task}</h4>
-                        <p className="text-sm text-gray-600">{task.clientName}</p>
+                        <h4 className="text-base font-semibold text-gray-900">{taskTitle}</h4>
+                        <p className="text-sm text-gray-600">{taskClientName}</p>
                         <p className="text-xs text-gray-500">
-                          {new Date(task.completedAt).toLocaleString()}
+                          {completedDate ? completedDate.toLocaleString() : '—'}
                         </p>
                       </div>
                     </div>
@@ -4763,12 +4855,17 @@ const InstitutionCaregiverDashboard = () => {
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
                         {task.status}
                       </span>
-                      <button className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors">
+                      <button
+                        onClick={() => { setSelectedTask(task); setShowTaskDetailsModal(true); }}
+                        className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="View task details"
+                      >
                         <Eye className="h-5 w-5" />
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -5860,7 +5957,7 @@ const InstitutionCaregiverDashboard = () => {
                                                 <ul className="ml-4 mt-1 space-y-1">
                                                   {prescription.medications.map((med, idx) => (
                                                     <li key={idx} className="text-gray-600">
-                                                      • {med.medicationName} - {med.dosage} ({med.frequency})
+                                                      • {med.name || med.medicationName} - {med.dosage} ({med.frequency})
                                                     </li>
                                                   ))}
                                                 </ul>
@@ -5919,16 +6016,16 @@ const InstitutionCaregiverDashboard = () => {
                                                 <p className="text-gray-600 ml-4">{consultation.chiefComplaint}</p>
                                               </div>
                                             )}
-                                            {consultation.diagnosis && (
+                                            {(consultation.assessment || consultation.diagnosis) && (
                                               <div>
                                                 <p className="font-medium text-gray-700">Diagnosis:</p>
-                                                <p className="text-gray-600 ml-4">{consultation.diagnosis}</p>
+                                                <p className="text-gray-600 ml-4">{consultation.assessment || consultation.diagnosis}</p>
                                               </div>
                                             )}
-                                            {consultation.treatmentPlan && (
+                                            {(consultation.plan || consultation.treatmentPlan) && (
                                               <div>
                                                 <p className="font-medium text-gray-700">Treatment Plan:</p>
-                                                <p className="text-gray-600 ml-4">{consultation.treatmentPlan}</p>
+                                                <p className="text-gray-600 ml-4">{consultation.plan || consultation.treatmentPlan}</p>
                                               </div>
                                             )}
                                             {consultation.notes && (

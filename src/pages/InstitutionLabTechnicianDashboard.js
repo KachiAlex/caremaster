@@ -39,7 +39,7 @@ import {
   getSampleCollectionsByTechnician
 } from '../api/homeLabServicesAPI';
 import { getPatientById } from '../api/patientsAPI';
-import { signOut } from 'backend/auth';
+import { signOut, getAuth } from 'backend/auth';
 import { auth } from '../backend/config';
 
 const InstitutionLabTechnicianDashboard = () => {
