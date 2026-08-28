@@ -428,13 +428,18 @@ const BILLING_SETTINGS_COLLECTION = 'billingSettings';
 // Get institution billing settings
 export const getBillingSettings = async (institutionId) => {
   try {
-    const settingsRef = doc(db, BILLING_SETTINGS_COLLECTION, institutionId);
-    const settingsDoc = await getDoc(settingsRef);
-    
-    if (!settingsDoc.exists()) {
+    const q = query(
+      collection(db, BILLING_SETTINGS_COLLECTION),
+      where('institutionId', '==', institutionId),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
       // Return default settings
       return {
-        id: institutionId,
+        id: null,
+        institutionId,
         currency: 'USD',
         enabledFrequencies: ['monthly', 'annual'],
         defaultFrequency: 'monthly',
@@ -452,8 +457,10 @@ export const getBillingSettings = async (institutionId) => {
         updatedAt: null
       };
     }
-    
+
+    const settingsDoc = querySnapshot.docs[0];
     const data = settingsDoc.data();
+
     // Migrate legacy taxRate/taxLabel to taxes array if needed
     if (!data.taxes && (data.taxRate || data.taxLabel)) {
       data.taxes = [{
@@ -465,7 +472,7 @@ export const getBillingSettings = async (institutionId) => {
     } else if (!data.taxes) {
       data.taxes = [];
     }
-    
+
     return {
       id: settingsDoc.id,
       ...data,
@@ -481,25 +488,33 @@ export const getBillingSettings = async (institutionId) => {
 // Save institution billing settings
 export const saveBillingSettings = async (institutionId, settings) => {
   try {
-    const settingsRef = doc(db, BILLING_SETTINGS_COLLECTION, institutionId);
-    
     const settingsPayload = {
       ...settings,
       institutionId,
       updatedAt: serverTimestamp(),
     };
-    
-    // Check if settings exist
-    const existingDoc = await getDoc(settingsRef);
-    
-    if (existingDoc.exists()) {
+
+    // Always store institution-scoped settings keyed by the real DB row id;
+    // the billing_settings table has a unique institution_id constraint.
+    const q = query(
+      collection(db, BILLING_SETTINGS_COLLECTION),
+      where('institutionId', '==', institutionId),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const existingDoc = querySnapshot.docs[0];
+      const settingsRef = doc(db, BILLING_SETTINGS_COLLECTION, existingDoc.id);
+      // Avoid overwriting createdAt on update
+      delete settingsPayload.createdAt;
       await updateDoc(settingsRef, settingsPayload);
-    } else {
-      settingsPayload.createdAt = serverTimestamp();
-      await setDoc(settingsRef, settingsPayload);
+      return existingDoc.id;
     }
-    
-    return institutionId;
+
+    settingsPayload.createdAt = serverTimestamp();
+    const newDoc = await addDoc(collection(db, BILLING_SETTINGS_COLLECTION), settingsPayload);
+    return newDoc.id;
   } catch (error) {
     console.error('Error saving billing settings:', error);
     throw error;

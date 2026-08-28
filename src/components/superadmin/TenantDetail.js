@@ -29,6 +29,8 @@ const TenantDetail = ({ tenant, license, onBack, onRefresh }) => {
   const [adminForm, setAdminForm] = useState({ email: '', displayName: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [editingLicense, setEditingLicense] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Load admins and user count
   useEffect(() => {
@@ -171,6 +173,55 @@ const TenantDetail = ({ tenant, license, onBack, onRefresh }) => {
       toast.error(e.message || 'Failed to update license');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleStartEdit = () => {
+    setEditForm({
+      name: tenant.name || '',
+      email: tenant.email || '',
+      phone: tenant.phone || '',
+      website: tenant.website || '',
+      address: tenant.address || '',
+      city: tenant.city || '',
+      state: tenant.state || '',
+      country: tenant.country || '',
+      zipCode: tenant.zipCode || '',
+      notes: tenant.notes || '',
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditForm(null);
+  };
+
+  const handleSaveSettings = async () => {
+    if (!editForm) return;
+    if (!editForm.name?.trim()) {
+      toast.error('Institution name is required');
+      return;
+    }
+    setSavingSettings(true);
+    try {
+      await updateInstitution(tenant.id, {
+        name: editForm.name.trim(),
+        email: editForm.email?.trim() || '',
+        phone: editForm.phone?.trim() || '',
+        website: editForm.website?.trim() || '',
+        address: editForm.address?.trim() || '',
+        city: editForm.city?.trim() || '',
+        state: editForm.state?.trim() || '',
+        country: editForm.country?.trim() || '',
+        zipCode: editForm.zipCode?.trim() || '',
+        notes: editForm.notes?.trim() || '',
+      });
+      toast.success('Tenant settings updated');
+      setEditForm(null);
+      onRefresh();
+    } catch (e) {
+      toast.error(e.message || 'Failed to update tenant settings');
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -483,42 +534,152 @@ const TenantDetail = ({ tenant, license, onBack, onRefresh }) => {
       )}
 
       {subTab === 'settings' && (
-        <SectionCard title="Tenant Settings">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-              <KVRow label="Tenant ID" value={tenant.id} />
-              <KVRow label="Name" value={tenant.name} />
-              <KVRow label="Email" value={tenant.email} />
-              <KVRow label="Phone" value={tenant.phone} />
-              <KVRow label="Website" value={tenant.website} />
-              <KVRow label="Address" value={tenant.address} />
-              <KVRow label="City" value={tenant.city} />
-              <KVRow label="State" value={tenant.state} />
-              <KVRow label="Country" value={tenant.country} />
-              <KVRow label="Zip Code" value={tenant.zipCode} />
-            </div>
-            <div className="pt-4 border-t border-gray-100">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Danger Zone</h4>
-              <div className="flex gap-3">
-                {isActive && (
-                  <>
-                    <button onClick={() => setShowSuspendModal(true)} className="px-4 py-2 rounded-lg bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-sm font-medium transition">
-                      <Pause className="h-4 w-4 inline mr-1" /> Suspend Tenant
-                    </button>
-                    <button onClick={() => setShowTerminateModal(true)} className="px-4 py-2 rounded-lg bg-red-100 text-red-800 hover:bg-red-200 text-sm font-medium transition">
-                      <AlertTriangle className="h-4 w-4 inline mr-1" /> Terminate Tenant
-                    </button>
-                  </>
-                )}
-                {!isActive && (
-                  <button onClick={handleReactivate} className="px-4 py-2 rounded-lg bg-green-100 text-green-800 hover:bg-green-200 text-sm font-medium transition">
-                    <Play className="h-4 w-4 inline mr-1" /> Reactivate Tenant
+        <div className="space-y-6">
+          <SectionCard
+            title="Tenant Details"
+            action={
+              editForm ? (
+                <div className="flex gap-2">
+                  <button onClick={handleCancelEdit} className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium transition">
+                    Cancel
                   </button>
-                )}
+                  <button onClick={handleSaveSettings} disabled={savingSettings} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium transition disabled:opacity-50">
+                    {savingSettings ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              ) : (
+                <button onClick={handleStartEdit} className="cm-btn cm-btn-ghost-light text-sm">
+                  <SettingsIcon className="h-4 w-4" /> Edit Details
+                </button>
+              )
+            }
+          >
+            {editForm ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Institution Name *</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      value={editForm.name}
+                      onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      value={editForm.email}
+                      onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      value={editForm.phone}
+                      onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      placeholder="https://example.com"
+                      value={editForm.website}
+                      onChange={e => setEditForm({ ...editForm, website: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      value={editForm.zipCode}
+                      onChange={e => setEditForm({ ...editForm, zipCode: e.target.value })}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      value={editForm.address}
+                      onChange={e => setEditForm({ ...editForm, address: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      value={editForm.city}
+                      onChange={e => setEditForm({ ...editForm, city: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">State / Province</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      value={editForm.state}
+                      onChange={e => setEditForm({ ...editForm, state: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30"
+                      value={editForm.country}
+                      onChange={e => setEditForm({ ...editForm, country: e.target.value })}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sage/30 min-h-[80px]"
+                      placeholder="Internal notes about this tenant..."
+                      value={editForm.notes}
+                      onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                  <KVRow label="Tenant ID" value={tenant.id} />
+                  <KVRow label="Name" value={tenant.name} />
+                  <KVRow label="Email" value={tenant.email} />
+                  <KVRow label="Phone" value={tenant.phone} />
+                  <KVRow label="Website" value={tenant.website} />
+                  <KVRow label="Address" value={tenant.address} />
+                  <KVRow label="City" value={tenant.city} />
+                  <KVRow label="State" value={tenant.state} />
+                  <KVRow label="Country" value={tenant.country} />
+                  <KVRow label="Zip Code" value={tenant.zipCode} />
+                  <KVRow label="Notes" value={tenant.notes} />
+                </div>
+              </div>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Danger Zone">
+            <div className="flex gap-3">
+              {isActive ? (
+                <>
+                  <button onClick={() => setShowSuspendModal(true)} className="px-4 py-2 rounded-lg bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-sm font-medium transition">
+                    <Pause className="h-4 w-4 inline mr-1" /> Suspend Tenant
+                  </button>
+                  <button onClick={() => setShowTerminateModal(true)} className="px-4 py-2 rounded-lg bg-red-100 text-red-800 hover:bg-red-200 text-sm font-medium transition">
+                    <AlertTriangle className="h-4 w-4 inline mr-1" /> Terminate Tenant
+                  </button>
+                </>
+              ) : (
+                <button onClick={handleReactivate} className="px-4 py-2 rounded-lg bg-green-100 text-green-800 hover:bg-green-200 text-sm font-medium transition">
+                  <Play className="h-4 w-4 inline mr-1" /> Reactivate Tenant
+                </button>
+              )}
             </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
+        </div>
       )}
 
       {/* Suspend Modal */}
