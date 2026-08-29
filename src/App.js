@@ -228,7 +228,7 @@ function App() {
         if (params.text) {
           const navText = params.text.toLowerCase();
           if (navText.includes('client')) {
-            window.location.href = '/service-provider/clients';
+            window.location.href = '/service-provider/medical-records';
           } else if (navText.includes('schedule')) {
             window.location.href = '/service-provider/schedule';
           } else if (navText.includes('task')) {
@@ -650,6 +650,7 @@ function App() {
         <Route path="prescriptions" element={<Medications />} />
         <Route path="consultations" element={<Consultation />} />
         <Route path="diagnostics" element={<VitalSigns />} />
+        <Route path="emergency" element={<CaregiverEmergency />} />
         <Route path="settings" element={<CaregiverSettings />} />
       </Route>
       <Route 

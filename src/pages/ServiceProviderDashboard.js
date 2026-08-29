@@ -358,7 +358,7 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
               <div key={task.id} className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-900">{task.title}</p>
-                  <p className="text-xs text-gray-500">{task.client || task.clientName || 'Client'} - {task.priority} priority</p>
+                  <p className="text-xs text-gray-500">{task.client || task.clientName || 'Client'} - {task.priority || 'normal'} priority</p>
                 </div>
                 <p className="text-xs text-gray-500">
                   {task.scheduledTime ? new Date(task.scheduledTime).toLocaleDateString() : 'No date set'}
@@ -382,7 +382,7 @@ const ServiceProviderDashboard = () => {
   
   // Fix role detection - prioritize userRole from context
   const isDoctor = userRole === 'doctor';
-  const isCaregiver = userRole === 'caregiver';
+  const isCaregiver = userRole === 'caregiver' || userRole === 'nurse';
   const effectiveRole = userRole || 'caregiver';
   
   // Check if caregiver is a nurse (can submit nurse reports)
@@ -536,13 +536,13 @@ const ServiceProviderDashboard = () => {
       console.log('  - isArray:', Array.isArray(clients));
       console.log('  - clients data:', clients);
       
-      const mergedPending = [...(pendingTasks || []), ...(taskAssignments || [])].filter(Boolean);
-      const mergedToday = [...(todaysTasks || []), ...(taskAssignments || []).filter(t => {
+      const mergedPending = [...(pendingTasks || []).map(t => ({ ...t, collection: 'careTasks' })), ...(taskAssignments || []).map(t => ({ ...t, collection: 'taskAssignments' }))].filter(Boolean);
+      const mergedToday = [...(todaysTasks || []).map(t => ({ ...t, collection: 'careTasks' })), ...(taskAssignments || []).filter(t => {
         const d = t.scheduledTime ? new Date(t.scheduledTime) : null;
         if (!d) return false;
         const now = new Date();
         return d.toDateString() === now.toDateString();
-      })];
+      }).map(t => ({ ...t, collection: 'taskAssignments' }))];
 
       // Update stats with actual data
       const actualPatients = clients || [];
@@ -1073,7 +1073,7 @@ const ServiceProviderDashboard = () => {
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center">
                               <span className="font-medium text-gray-900">{report.nurseName}</span>
-                              <span className="ml-2 text-sm text-gray-500">â€¢ {report.date}</span>
+                              <span className="ml-2 text-sm text-gray-500">â€¢ {report.date || (report.createdAt ? new Date(report.createdAt.seconds ? report.createdAt.seconds * 1000 : report.createdAt).toLocaleDateString() : '—')}</span>
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               report.status === 'stable' ? 'bg-green-100 text-green-800' : 
@@ -1397,7 +1397,7 @@ const ServiceProviderDashboard = () => {
       {showTaskCompletion && selectedTask && (
         <TaskCompletionModal
           task={selectedTask}
-          Client={selectedPatient}
+          Client={selectedPatient || { id: selectedTask?.clientId, name: selectedTask?.client || selectedTask?.clientName || 'Client' }}
           onClose={() => {
             setShowTaskCompletion(false);
             setSelectedTask(null);

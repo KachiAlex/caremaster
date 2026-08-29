@@ -89,8 +89,8 @@ const VitalsQuickEntry = ({ Client, onClose, onSave }) => {
       setSaving(true);
 
       const vitalData = {
-        clientId: client.id,
-        clientName: client.name,
+        clientId: Client?.id,
+        clientName: Client?.name,
         bloodPressure: vitals.bloodPressureSystolic && vitals.bloodPressureDiastolic 
           ? `${vitals.bloodPressureSystolic}/${vitals.bloodPressureDiastolic}`
           : null,

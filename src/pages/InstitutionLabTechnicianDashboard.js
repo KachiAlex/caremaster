@@ -96,10 +96,8 @@ const InstitutionLabTechnicianDashboard = () => {
     try {
       setLoading(true);
       
-      // Load home visits
-      const visits = await getHomeLabVisitsByTechnician(user.uid, {
-        status: activeTab === 'visits' ? 'scheduled' : undefined
-      });
+      // Load home visits - fetch all and filter client-side
+      const visits = await getHomeLabVisitsByTechnician(user.uid, {});
       setHomeVisits(visits);
 
       // Load sample collections
@@ -307,13 +305,17 @@ const InstitutionLabTechnicianDashboard = () => {
         {activeTab === 'visits' && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-50 mb-4">Scheduled Home Visits</h2>
-            {homeVisits.length === 0 ? (
-              <div className="text-center py-12 rounded-2xl border border-slate-800/60 bg-slate-900/50">
-                <Calendar className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400">No scheduled home visits</p>
-              </div>
-            ) : (
-              homeVisits.map((visit) => (
+            {(() => {
+              const activeVisits = homeVisits.filter(v => v.status !== 'completed' && v.status !== 'cancelled');
+              if (activeVisits.length === 0) {
+                return (
+                  <div className="text-center py-12 rounded-2xl border border-slate-800/60 bg-slate-900/50">
+                    <Calendar className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+                    <p className="text-slate-400">No scheduled home visits</p>
+                  </div>
+                );
+              }
+              return activeVisits.map((visit) => (
                 <div
                   key={visit.id}
                   className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6"
@@ -386,8 +388,8 @@ const InstitutionLabTechnicianDashboard = () => {
                     )}
                   </div>
                 </div>
-              ))
-            )}
+              ));
+            })()}
           </div>
         )}
 
@@ -458,7 +460,42 @@ const InstitutionLabTechnicianDashboard = () => {
         {activeTab === 'history' && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-50 mb-4">Visit History</h2>
-            {/* History content */}
+            {(() => {
+              const historyVisits = homeVisits.filter(v => v.status === 'completed' || v.status === 'cancelled');
+              if (historyVisits.length === 0) {
+                return (
+                  <div className="text-center py-12 rounded-2xl border border-slate-800/60 bg-slate-900/50">
+                    <Calendar className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+                    <p className="text-slate-400">No visit history</p>
+                  </div>
+                );
+              }
+              return historyVisits.map((visit) => (
+                <div key={visit.id} className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-50">
+                        {visit.testName || visit.testType || 'Lab Visit'}
+                      </h3>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Client: {visit.clientName || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {visit.scheduledTime ? new Date(visit.scheduledTime).toLocaleString() : '—'}
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                      visit.status === 'completed' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
+                    }`}>
+                      {visit.status}
+                    </span>
+                  </div>
+                  {visit.reason && (
+                    <p className="text-sm text-slate-400 mt-2">Reason: {visit.reason}</p>
+                  )}
+                </div>
+              ));
+            })()}
           </div>
         )}
       </div>

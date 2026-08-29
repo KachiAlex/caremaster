@@ -196,7 +196,7 @@ const InstitutionPharmacyDashboard = () => {
       localStorage.removeItem('token');
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
-      window.location.href = '/institution-login';
+      window.location.href = '/login';
     } catch (error) {
       console.error('Error logging out:', error);
       toast.error('Failed to log out');

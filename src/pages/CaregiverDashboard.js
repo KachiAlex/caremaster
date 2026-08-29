@@ -215,7 +215,7 @@ const CaregiverDashboard = () => {
       ...todaysAppointments.map(apt => ({
         id: apt.id,
         type: 'appointment',
-        title: apt.title || 'Appointment',
+        title: apt.careType || apt.type || apt.title || 'Appointment',
         time: apt.scheduledTime,
         client: apt.clientName || 'Client',
         clientId: apt.clientId || null,
@@ -563,13 +563,15 @@ const CaregiverDashboard = () => {
         return;
       }
       
-      // If it's a task, use task time tracking API
-      if (scheduleItem.type === 'task' && scheduleItem.id) {
+      // If it's a care task (not an assignment), use task time tracking API
+      if (scheduleItem.type === 'task' && scheduleItem.id && !scheduleItem.assignmentType) {
         await startTask(scheduleItem.id, user.uid);
         toast.success('Task started successfully');
         // Reload schedule using shared helper
         const refreshed = await buildTodaySchedule(user?.uid);
         setTodaySchedule(refreshed);
+      } else if (scheduleItem.assignmentType) {
+        toast.info('Clock in is not available for client assignments');
       } else {
         toast.info('Clock in is only available for tasks');
       }
@@ -658,13 +660,15 @@ const CaregiverDashboard = () => {
         return;
       }
       
-      // If it's a task, use task time tracking API to complete it
-      if (scheduleItem.type === 'task' && scheduleItem.id) {
+      // If it's a care task (not an assignment), use task time tracking API
+      if (scheduleItem.type === 'task' && scheduleItem.id && !scheduleItem.assignmentType) {
         await completeTask(scheduleItem.id, user.uid, 'Completed via clock out');
         toast.success('Task completed successfully');
         // Reload schedule using shared helper
         const refreshed = await buildTodaySchedule(user?.uid);
         setTodaySchedule(refreshed);
+      } else if (scheduleItem.assignmentType) {
+        toast.info('Clock out is not available for client assignments');
       } else {
         toast.info('Clock out is only available for tasks');
       }
@@ -700,7 +704,7 @@ const CaregiverDashboard = () => {
     
     try {
       const client = assignedClients.find(c => c.id === clientId) || selectedClient;
-      const result = await emergencyAPI.triggerEmergencyAlert({
+      const result = await emergencyAPI.createEmergency({
         userId: clientId,
         caregiverId: user.uid,
         type: 'medical',
@@ -1442,7 +1446,7 @@ const CaregiverDashboard = () => {
                         )}
                       </div>
                       <div className="flex flex-col gap-3 w-full lg:w-auto">
-                        {schedule.type === 'task' && (
+                        {schedule.type === 'task' && !schedule.assignmentType && (
                           <>
                             <button
                               onClick={() => handleClockIn(schedule.id)}

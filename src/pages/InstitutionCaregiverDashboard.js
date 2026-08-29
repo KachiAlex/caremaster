@@ -632,9 +632,10 @@ const InstitutionCaregiverDashboard = () => {
                           userProfile.userType === 'doctor' || 
                           userProfile.type === 'doctor';
         const isCaregiver = userProfile.userType === 'caregiver' || userProfile.type === 'caregiver';
+        const isNurse = (userProfile.medicalQualification || '').includes('Nurse') || userProfile.role === 'nurse' || userProfile.userType === 'nurse';
         const isPharmacist = userProfile.userType === 'pharmacist' || userProfile.type === 'pharmacist' || userProfile.role === 'pharmacist';
         
-        if (isDoctor || isCaregiver || isPharmacist) {
+        if (isDoctor || isCaregiver || isPharmacist || isNurse) {
           let clients = [];
           try {
             // Load assignments for this caregiver/doctor
@@ -715,7 +716,7 @@ const InstitutionCaregiverDashboard = () => {
           ...allTasks.map(task => ({
             id: task.id,
             type: 'task',
-            title: task.title,
+            title: task.title || task.task || task.description || 'Care Task',
             time: dateToString(task.scheduledTime),
             client: task.clientName || 'Client',
             status: task.status || 'pending',
@@ -838,7 +839,7 @@ const InstitutionCaregiverDashboard = () => {
     const isPharmacist = userProfile?.userType === 'pharmacist' || userProfile?.type === 'pharmacist' || userProfile?.role === 'pharmacist';
     const isNonMedicalCaregiver = isCaregiver && !isDoctor && !isNurse && !isPharmacist;
     
-    if ((isDoctor || isCaregiver || isPharmacist) && user?.uid) {
+    if ((isDoctor || isCaregiver || isPharmacist || isNurse) && user?.uid) {
       const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
         console.log(`🔄 Real-time update: Found ${assignments.length} total assignments`);
         
@@ -1348,7 +1349,7 @@ const InstitutionCaregiverDashboard = () => {
     }
     try {
       const client = assignedClients.find(c => c.id === clientId) || selectedClient;
-      const result = await emergencyAPI.triggerEmergencyAlert({
+      const result = await emergencyAPI.createEmergency({
         userId: clientId,
         caregiverId: user.uid,
         type: 'medical',
@@ -1636,7 +1637,10 @@ const InstitutionCaregiverDashboard = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button
-                        onClick={() => setSelectedClient(client)}
+                        onClick={() => {
+                          setSelectedClient(client);
+                          setSelectedClientId(client.id);
+                        }}
                         className="text-blue-600 hover:text-blue-900 flex items-center"
                 >
                         <Eye className="h-4 w-4 mr-1" />
@@ -2028,13 +2032,20 @@ const InstitutionCaregiverDashboard = () => {
   
   // Handle prescription deletion
   const handleDeletePrescription = async (prescriptionId) => {
+    if (!prescriptionId) {
+      toast.error('Invalid prescription ID');
+      return;
+    }
     try {
+      await prescriptionsAPI.deletePrescription(prescriptionId);
+      toast.success('Prescription deleted successfully');
       // Reload prescriptions after deletion
       if (selectedClient) {
         await loadPrescriptions(selectedClient.id);
       }
     } catch (error) {
-      console.error('Error reloading prescriptions after deletion:', error);
+      console.error('Error deleting prescription:', error);
+      toast.error(error.message || 'Failed to delete prescription');
     }
   };
   
@@ -4386,8 +4397,17 @@ const InstitutionCaregiverDashboard = () => {
               <PortalSwitcher />
             </div>
           </div>
-        {showSettings ? (
-          <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
+        {activeTab === 'settings' ? (
+          <div>
+            <button
+              onClick={() => { setShowSettings(false); setActiveTab('overview'); }}
+              className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              Back to Dashboard
+            </button>
+            <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
+          </div>
         ) : activeTab === 'messages' ? (
           renderMessagesTab()
         ) : activeTab === 'schedule' ? (
@@ -4656,9 +4676,9 @@ const InstitutionCaregiverDashboard = () => {
             schedule={(todaySchedule || []).map(s => ({
               id: s.id,
               type: s.type || 'task',
-              title: s.clientName || s.title || 'Task',
+              title: s.title || s.client || 'Task',
               time: s.time || s.scheduledTime || '',
-              client: s.clientName || 'Client',
+              client: s.client || s.clientName || 'Client',
               status: s.status || 'pending',
               priority: s.priority
             }))}
@@ -6818,7 +6838,7 @@ const InstitutionCaregiverDashboard = () => {
                   ...allTasks.map(task => ({
                     id: task.id,
                     type: 'task',
-                    title: task.title,
+                    title: task.title || task.task || task.description || 'Care Task',
                     time: dateToString(task.scheduledTime),
                     client: task.clientName || 'Client',
                     status: task.status || 'pending',
@@ -6848,6 +6868,127 @@ const InstitutionCaregiverDashboard = () => {
             }
           }}
         />
+      )}
+
+      {/* Medical Report Modal */}
+      {showMedicalReportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+              <div className="flex items-center space-x-3">
+                <Stethoscope className="h-8 w-8 text-white" />
+                <h2 className="text-2xl font-bold text-white">Write Medical Report</h2>
+              </div>
+              <button
+                onClick={() => setShowMedicalReportModal(false)}
+                className="text-white hover:bg-white/20 rounded-lg p-2"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {!selectedClient && (
+                <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">Please select a client first.</p>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Report Date</label>
+                <input
+                  type="date"
+                  value={medicalReportData.reportDate}
+                  onChange={(e) => setMedicalReportData(prev => ({ ...prev, reportDate: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis</label>
+                <input
+                  type="text"
+                  value={medicalReportData.diagnosis}
+                  onChange={(e) => setMedicalReportData(prev => ({ ...prev, diagnosis: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="Primary diagnosis"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Symptoms</label>
+                <textarea
+                  value={medicalReportData.symptoms}
+                  onChange={(e) => setMedicalReportData(prev => ({ ...prev, symptoms: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  rows={3}
+                  placeholder="Observed symptoms"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Treatment</label>
+                <textarea
+                  value={medicalReportData.treatment}
+                  onChange={(e) => setMedicalReportData(prev => ({ ...prev, treatment: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  rows={3}
+                  placeholder="Treatment plan"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Prescriptions</label>
+                <textarea
+                  value={medicalReportData.prescriptions}
+                  onChange={(e) => setMedicalReportData(prev => ({ ...prev, prescriptions: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  rows={2}
+                  placeholder="Prescribed medications"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={medicalReportData.notes}
+                  onChange={(e) => setMedicalReportData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  rows={3}
+                  placeholder="Additional notes"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setShowMedicalReportModal(false)}
+                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!selectedClient) {
+                      toast.error('Please select a client first');
+                      return;
+                    }
+                    try {
+                      await createMedicalReport({
+                        clientId: selectedClient.id,
+                        clientName: selectedClient.name || selectedClient.fullName,
+                        doctorId: user.uid,
+                        doctorName: userProfile?.name || userProfile?.fullName || 'Doctor',
+                        ...medicalReportData
+                      });
+                      toast.success('Medical report created successfully');
+                      setShowMedicalReportModal(false);
+                      setMedicalReportData({
+                        reportDate: new Date().toISOString().split('T')[0],
+                        diagnosis: '', symptoms: '', treatment: '', prescriptions: '', notes: ''
+                      });
+                    } catch (error) {
+                      console.error('Error creating medical report:', error);
+                      toast.error('Failed to create medical report');
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Save Report
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
