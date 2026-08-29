@@ -10,9 +10,7 @@ import {
   Plus,
   Edit,
   Trash2,
-  Play,
-  Pause,
-  RotateCcw
+  Play
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { getClientsByCaregiver } from '../api/patientsAPI';
@@ -68,7 +66,7 @@ const Consultation = () => {
       if (!selectedPatientId) return;
       
       try {
-        const plans = await carePlansAPI.getCarePlansByPatient(selectedPatientId);
+        const plans = await carePlansAPI.getCarePlansByClient(selectedPatientId);
         setCarePlans(plans);
       } catch (error) {
         console.error('Error loading care plans:', error);
@@ -121,7 +119,7 @@ const Consultation = () => {
       setShowCreatePlan(false);
       
       // Reload care plans
-      const plans = await carePlansAPI.getCarePlansByPatient(selectedPatientId);
+      const plans = await carePlansAPI.getCarePlansByClient(selectedPatientId);
       setCarePlans(plans);
       
     } catch (error) {
@@ -136,7 +134,7 @@ const Consultation = () => {
       toast.success('Care plan updated successfully');
       
       // Reload care plans
-      const plans = await carePlansAPI.getCarePlansByPatient(selectedPatientId);
+      const plans = await carePlansAPI.getCarePlansByClient(selectedPatientId);
       setCarePlans(plans);
       
     } catch (error) {
@@ -153,7 +151,7 @@ const Consultation = () => {
       toast.success('Care plan deleted successfully');
       
       // Reload care plans
-      const plans = await carePlansAPI.getCarePlansByPatient(selectedPatientId);
+      const plans = await carePlansAPI.getCarePlansByClient(selectedPatientId);
       setCarePlans(plans);
       
     } catch (error) {
@@ -219,7 +217,7 @@ const Consultation = () => {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Select client...</option>
-              {assignedPatients.map(Client => (
+              {assignedPatients.map(client => (
                 <option key={client.id} value={client.id}>
                   {client.name || client.fullName || client.email || client.id}
                 </option>

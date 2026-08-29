@@ -369,7 +369,11 @@ const CaregiverSchedule = () => {
           ) : (
             appointments
               .filter(apt => apt.status === 'scheduled')
-              .sort((a, b) => a.appointmentTime.localeCompare(b.appointmentTime))
+              .sort((a, b) => {
+                const ta = new Date(a.scheduledTime || a.appointmentTime || 0).getTime() || 0;
+                const tb = new Date(b.scheduledTime || b.appointmentTime || 0).getTime() || 0;
+                return ta - tb;
+              })
               .map((appointment) => (
             <div key={appointment.id} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-start justify-between">
@@ -377,7 +381,7 @@ const CaregiverSchedule = () => {
                   <div className="flex-shrink-0">
                     <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
                       <span className="text-green-600 font-medium">
-                        {appointment.clientName.split(' ').map(n => n[0]).join('')}
+                        {(appointment.clientName || '').split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
                   </div>
@@ -416,7 +420,7 @@ const CaregiverSchedule = () => {
                     <div className="mb-3">
                       <h4 className="text-sm font-medium text-gray-700 mb-2">Tasks:</h4>
                       <div className="flex flex-wrap gap-2">
-                        {appointment.tasks.map((task, index) => (
+                        {(appointment.tasks || []).map((task, index) => (
                           <span
                             key={index}
                             className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -444,19 +448,12 @@ const CaregiverSchedule = () => {
                     <Phone className="h-4 w-4 mr-2" />
                     Call
                   </button>
-                  <button 
+                  <button
                     onClick={() => window.location.href = `/service-provider/messages?client=${appointment.clientName}`}
                     className="btn btn-secondary"
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Message
-                  </button>
-                  <button 
-                    onClick={() => handleCompleteTask(appointment.id)}
-                    className="btn btn-primary"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Complete
                   </button>
                 </div>
               </div>

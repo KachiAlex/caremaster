@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle, 
-  User, 
-  Calendar, 
-  Plus, 
-  Search, 
-  Filter, 
-  Eye, 
-  Edit, 
+import {
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  User,
+  Calendar,
+  Plus,
+  Search,
+  Filter,
   Trash2,
-  Star,
   FileText,
   Heart,
   Phone,
@@ -505,14 +502,6 @@ const CaregiverTasks = () => {
                         Completed
                       </div>
                     )}
-                    <div className="flex space-x-1">
-                      <button className="p-2 text-gray-400 hover:text-gray-600">
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button className="p-2 text-gray-400 hover:text-gray-600">
-                        <Edit className="h-4 w-4" />
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>

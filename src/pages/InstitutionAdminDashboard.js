@@ -23,8 +23,6 @@ import {
   ClipboardList,
   Briefcase,
   CheckCircle2,
-  Circle,
-  Dot,
   FileText,
   MessageSquare,
   ArrowLeft,
@@ -51,21 +49,11 @@ import {
   Package,
   Camera,
   Bell,
-  ClipboardCheck,
   HelpCircle,
-  RotateCcw,
   Loader,
   TestTube,
-  XCircle,
-  ShieldCheck,
-  Bed,
   UserCog,
-  UserPlus,
-  Database,
-  CreditCard,
   Ban,
-  Menu,
-  MoreVertical,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -465,81 +453,9 @@ const InstitutionAdminDashboard = () => {
       return;
     }
     
-    if (['caregiver', 'doctor', 'nurse'].includes(currentUserRole)) {
-      console.log(`🚫 ${currentUserRole} detected in admin dashboard, redirecting to caregiver dashboard...`);
-      const instId = userProfile.institutionId || institutionId || effectiveInstitutionId;
-      if (instId) {
-        navigate(`/institution-caregiver/dashboard?institution=${instId}`, { replace: true });
-      } else {
-        navigate('/institution-caregiver/dashboard', { replace: true });
-      }
-      return;
-    }
-    
-    // Get institutionId from profile (partner flow) or URL params
-    const instIdForSession = userProfile.institutionId || institutionId || effectiveInstitutionId || searchParams.get('institution');
-    
-    // If user is a partner but no institutionId found, show error
-    if (currentUserRole === 'admin' && !instIdForSession) {
-      console.error('❌ Partner admin detected but no institutionId found in profile');
-      setLoading(false);
-      toast.error('Unable to determine your institution. Please contact support.');
-      return;
-    }
-    
-    // If we have user, profile, and institutionId, proceed with dashboard load
-    if (userProfile && instIdForSession && user) {
-      console.log('✅ Partner login flow - Loading dashboard:', {
-        userRole: currentUserRole,
-        institutionId: instIdForSession,
-        isPartner
-      });
-      
-      // Validate tab session for role conflicts
-      const validation = sessionManager.validateTabSession(user, currentUserRole);
-
-      if (validation.needsInit) {
-        // First load - set tab session
-        sessionManager.setTabSession(currentUserRole, user.uid, instIdForSession);
-      } else if (!validation.valid) {
-        // Session conflict detected
-        sessionManager.handleSessionConflict(validation, navigate, toast);
-        return;
-      }
-      
-      loadDashboardData();
-      loadInstitutionData();
-      
-      // Safety timeout: Force loading to false after 10 seconds if stuck
-      const timeout = setTimeout(() => {
-        setLoading(false);
-        console.warn('Loading timeout reached - forcing UI to show');
-      }, 10000);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [userProfile, institutionId, effectiveInstitutionId, user, navigate, searchParams]);
-
-  useEffect(() => {
-    // Partner login flow: First authenticate, then determine partner status and institutionId
-    // Wait for user and userProfile to be loaded
-    if (!user || !userProfile) {
-      console.log('⏳ Waiting for user authentication and profile...');
-      return;
-    }
-    
-    // Check if user is a partner (admin with institutionId)
-    const isPartner = currentUserRole === 'admin' && (userProfile.institutionId || institutionId || effectiveInstitutionId);
-    
-    // IMPORTANT: Redirect non-admin users to their appropriate dashboards
-    if (currentUserRole === 'pharmacist' || userProfile?.medicalQualification === 'Pharmacist') {
-      console.log('🚫 Pharmacist detected in admin dashboard, redirecting to pharmacy dashboard...');
-      const instId = userProfile.institutionId || institutionId || effectiveInstitutionId;
-      if (instId) {
-        navigate(`/institution-pharmacy/dashboard?institution=${instId}`, { replace: true });
-      } else {
-        navigate('/institution-pharmacy/dashboard', { replace: true });
-      }
+    if (currentUserRole === 'lab_technician' || currentUserRole === 'lab-technician') {
+      const instId = userProfile?.institutionId || effectiveInstitutionId || institutionId;
+      navigate(`/institution-lab-technician/dashboard${instId ? `?institution=${instId}` : ''}`, { replace: true });
       return;
     }
     
@@ -614,13 +530,6 @@ const InstitutionAdminDashboard = () => {
   useEffect(() => {
     if (activeTab === 'billing-plans') {
       loadBillingPlans();
-    }
-  }, [activeTab, effectiveInstitutionId]);
-
-  // Load payment gateway config when tab is active
-  useEffect(() => {
-    if (activeTab === 'payment-gateway') {
-      loadPaymentGatewayConfig();
     }
   }, [activeTab, effectiveInstitutionId]);
 
@@ -1057,44 +966,6 @@ const InstitutionAdminDashboard = () => {
     }
   };
 
-  // Load payment gateway configuration
-  const loadPaymentGatewayConfig = async () => {
-    try {
-      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
-      if (!instId) return;
-      
-      const config = await paymentGatewayAPI.getPaymentGatewayConfig(instId);
-      setPaymentGatewayConfig(config);
-    } catch (error) {
-      console.error('Error loading payment gateway config:', error);
-      toast.error('Failed to load payment gateway configuration');
-    }
-  };
-
-  // Save payment gateway configuration
-  const handleSavePaymentGatewayConfig = async (configData) => {
-    try {
-      const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
-      if (!instId) {
-        toast.error('Institution ID not found');
-        return;
-      }
-
-      await paymentGatewayAPI.savePaymentGatewayConfig(instId, configData);
-      toast.success('Payment gateway configured successfully');
-      setShowPaymentGatewayModal(false);
-      setSelectedGateway(null);
-      await loadPaymentGatewayConfig();
-    } catch (error) {
-      console.error('Error saving payment gateway config:', error);
-      toast.error('Failed to save payment gateway configuration');
-    }
-  };
-
-  const handlePaymentGatewayFormChange = (field, value) => {
-    setPaymentGatewayForm(prev => ({ ...prev, [field]: value }));
-  };
-
   const handleLogout = async () => {
     try {
       // Clear all auth state
@@ -1191,7 +1062,7 @@ const InstitutionAdminDashboard = () => {
     try {
       const instId = userProfile?.institutionId || effectiveInstitutionId || institutionId;
       if (!instId) {
-        if (userLoading) {
+        if (!userProfile) {
           toast.info('Loading your profile... Please wait a moment and try again.');
           return;
         }

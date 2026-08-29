@@ -150,7 +150,7 @@ const CaregiverMessages = () => {
   };
 
   const filteredConversations = conversations.filter(conversation =>
-    conversation.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+    (conversation.clientName || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSendMessage = () => {

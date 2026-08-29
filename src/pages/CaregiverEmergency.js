@@ -18,8 +18,7 @@ import {
   Send,
   Activity,
   Zap,
-  Shield,
-  Cross
+  Shield
 } from 'lucide-react';
 
 const CaregiverEmergency = () => {
@@ -127,8 +126,8 @@ const CaregiverEmergency = () => {
   }, []);
 
   const filteredEmergencies = emergencies.filter(emergency => {
-    const matchesSearch = emergency.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         emergency.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (emergency.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (emergency.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || emergency.status === filterStatus;
     return matchesSearch && matchesStatus;
   });

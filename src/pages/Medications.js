@@ -22,7 +22,6 @@ import { medicationAPI } from '../api/medicationAPI';
 import { getClientsByCaregiver } from '../api/patientsAPI';
 import { createCareLog } from '../api/careLogsAPI';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { query } from 'backend/database';
 
 const Medications = () => {
   const { user, userProfile } = useUser();
@@ -32,7 +31,6 @@ const Medications = () => {
   const [editingMed, setEditingMed] = useState(null);
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCaregiverContact, setShowCaregiverContact] = useState(false);
 
   // Client selection (for doctors/caregivers writing prescriptions)
   const [assignedPatients, setAssignedPatients] = useState([]);
@@ -58,7 +56,7 @@ const Medications = () => {
     const loadAssignedPatients = async () => {
       try {
         if (!userProfile) return;
-        const isServiceProvider = ['doctor', 'caregiver', 'admin'].includes((userProfile.userType || '').toLowerCase());
+        const isServiceProvider = ['doctor', 'caregiver', 'nurse', 'admin'].includes((userProfile.userType || '').toLowerCase());
         if (!isServiceProvider) return;
         const clients = await getClientsByCaregiver(userProfile.id || userProfile.uid);
         setAssignedPatients(clients || []);
@@ -187,16 +185,29 @@ const Medications = () => {
     }
   };
 
-  const handleToggleTaken = (id) => {
-    setMedications(medications.map(med => 
-      med.id === id ? { ...med, taken: !med.taken } : med
-    ));
-    toast.success('Medication status updated');
+  const handleToggleTaken = async (id) => {
+    try {
+      const med = medications.find(m => m.id === id);
+      if (med.taken) {
+        await medicationAPI.recordMissedDose(id, { missedAt: new Date() });
+      } else {
+        await medicationAPI.recordDoseTaken(id, { takenAt: new Date() });
+      }
+      setMedications(medications.map(med => med.id === id ? { ...med, taken: !med.taken } : med));
+      toast.success('Medication status updated');
+    } catch (error) {
+      toast.error('Failed to update medication status');
+    }
   };
 
-  const handleDeleteMedication = (id) => {
-    setMedications(medications.filter(med => med.id !== id));
-    toast.success('Medication deleted successfully');
+  const handleDeleteMedication = async (id) => {
+    try {
+      await medicationAPI.deleteMedication(id);
+      setMedications(medications.filter(med => med.id !== id));
+      toast.success('Medication deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete medication');
+    }
   };
 
 

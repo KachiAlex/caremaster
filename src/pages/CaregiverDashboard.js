@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Phone, 
-  MessageSquare, 
-  CheckCircle, 
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Phone,
+  MessageSquare,
+  CheckCircle,
   AlertTriangle,
   Heart,
   User,
@@ -13,16 +13,11 @@ import {
   Navigation,
   Camera,
   FileText,
-  Bell,
   Settings,
-  LogOut,
   TrendingUp,
-  Award,
   Activity,
   Shield,
-  Plus,
   Eye,
-  Edit,
   Stethoscope,
   Pill,
   Brain,
@@ -31,13 +26,12 @@ import {
   UserCheck,
   Home,
   Users,
-  CheckSquare,
   HelpCircle
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { caregiverAPI } from '../api/caregiverAPI';
-import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
-import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
+import { getCareTasksByCaregiver, getTodayTasks } from '../api/careTasksAPI';
+import { getTodaysAppointments } from '../api/appointmentsAPI';
 import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { startTask, completeTask } from '../api/taskTimeTrackingAPI';
@@ -178,12 +172,13 @@ const CaregiverDashboard = () => {
   // Shared helper: build today's schedule from appointments, tasks, and assignments.
   // Extracted to avoid triplicated logic across loadCaregiverData, handleClockIn, handleClockOut.
   const buildTodaySchedule = async (uid) => {
+    if (!uid) return [];
     const isDoc = (userProfile?.medicalQualification || '').includes('Doctor');
     const appointmentRole = isDoc ? 'doctor' : 'caregiver';
 
     const [todaysAppointments, todaysTasks, assignments] = await Promise.all([
-      getTodaysAppointments(uid, appointmentRole),
-      getTodayTasks(uid),
+      getTodaysAppointments(uid, appointmentRole).catch(() => []),
+      getTodayTasks(uid).catch(() => []),
       assignmentAPI.getAssignmentsByCaregiver(uid).catch(() => [])
     ]);
 
@@ -197,7 +192,8 @@ const CaregiverDashboard = () => {
         return dueDate.getTime() === today.getTime();
       })
       .map(assignment => {
-        const scheduled = assignment.dueDate ? new Date(assignment.dueDate) : new Date();
+        const rawDue = assignment.dueDate?.toDate ? assignment.dueDate.toDate() : (assignment.dueDate ? new Date(assignment.dueDate) : null);
+        const scheduled = rawDue && !isNaN(rawDue.getTime()) ? rawDue : new Date();
         if (assignment.dueTime) {
           const [h, m] = assignment.dueTime.split(':');
           scheduled.setHours(parseInt(h, 10) || 9, parseInt(m, 10) || 0, 0, 0);
@@ -240,7 +236,11 @@ const CaregiverDashboard = () => {
       ...assignmentTasks
     ];
 
-    combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
+    combinedSchedule.sort((a, b) => {
+      const ta = a.time ? (a.time instanceof Date ? a.time.getTime() : new Date(a.time).getTime()) || Infinity : Infinity;
+      const tb = b.time ? (b.time instanceof Date ? b.time.getTime() : new Date(b.time).getTime()) || Infinity : Infinity;
+      return ta - tb;
+    });
     return combinedSchedule;
   };
 
@@ -421,7 +421,7 @@ const CaregiverDashboard = () => {
       
       return () => unsubscribe();
     }
-  }, [userProfile, user?.uid, selectedClientId]);
+  }, [userProfile, user?.uid]);
 
   useEffect(() => {
     // when selectedClientId changes, refresh selectedClient from cache/list
@@ -685,24 +685,6 @@ const CaregiverDashboard = () => {
     }
   };
 
-  const handleTaskComplete = async (taskId) => {
-    if (!user?.uid) {
-      toast.error('User not authenticated');
-      return;
-    }
-    
-    try {
-      await completeTask(taskId, user.uid, 'Task completed');
-      toast.success('Task completed successfully');
-      // Reload recent tasks
-      const loadedRecentTasks = await getCareTasksByCaregiver(user.uid);
-      setRecentTasks(loadedRecentTasks.slice(0, 5));
-    } catch (error) {
-      console.error('Error completing task:', error);
-      toast.error(error.message || 'Failed to complete task');
-    }
-  };
-
   const handleEmergency = async (clientId) => {
     if (!user?.uid || !clientId) {
       toast.error('Missing required information');
@@ -762,6 +744,7 @@ const CaregiverDashboard = () => {
     
     // Handle Date objects
     if (timeString instanceof Date) {
+      if (isNaN(timeString.getTime())) return '--:--';
       return timeString.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
     

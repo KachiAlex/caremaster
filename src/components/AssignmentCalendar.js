@@ -8,8 +8,9 @@ import {
   FileText,
   Users,
   Activity,
-  X,
 } from 'lucide-react';
+
+const toDate = (val) => val?.toDate ? val.toDate() : new Date(val);
 
 /**
  * AssignmentCalendar — a month-grid calendar that displays assignments,
@@ -56,7 +57,7 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
     const buckets = {};
     (Array.isArray(schedule) ? schedule : []).forEach((item) => {
       if (!item || !item.time) return;
-      const d = new Date(item.time);
+      const d = toDate(item.time);
       if (isNaN(d.getTime())) {
         // Try dueDate as fallback
         if (item.dueDate) {
@@ -82,7 +83,7 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
 
   const isPast = (item) => {
     if (!item?.time) return false;
-    const d = new Date(item.time);
+    const d = toDate(item.time);
     return item.status !== 'completed' && d < new Date();
   };
 
@@ -232,10 +233,10 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
               </div>
             ) : (
               selectedDayItems
-                .sort((a, b) => new Date(a.time) - new Date(b.time))
+                .sort((a, b) => toDate(a.time) - toDate(b.time))
                 .map((item) => {
                   const past = isPast(item);
-                  const itemTime = new Date(item.time);
+                  const itemTime = toDate(item.time);
                   return (
                     <div
                       key={item.id}

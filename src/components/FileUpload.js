@@ -88,6 +88,7 @@ const FileUpload = ({
   };
 
   const removeFile = (index) => {
+    if (!onFileRemove) return;
     if (multiple) {
       const newFiles = files.filter((_, i) => i !== index);
       onFileRemove(newFiles);

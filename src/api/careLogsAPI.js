@@ -22,9 +22,10 @@ const CARE_LOGS_COLLECTION = 'careLogs';
 export const createCareLog = async (careLogData) => {
   try {
     // Normalize logDate/logTime from alternative field names
+    const normalizedLogDate = careLogData.logDate || careLogData.activityDate || new Date().toISOString().split('T')[0];
     const normalizedData = {
       ...careLogData,
-      logDate: careLogData.logDate || careLogData.activityDate || new Date().toISOString().split('T')[0],
+      logDate: Timestamp.fromDate(new Date(normalizedLogDate + 'T00:00:00')),
       logTime: careLogData.logTime || careLogData.activityTime || new Date().toTimeString().split(' ')[0],
     };
 
@@ -35,7 +36,7 @@ export const createCareLog = async (careLogData) => {
     });
 
     console.log('✅ Care log created:', docRef.id);
-    return { id: docRef.id, ...normalizedData };
+    return { id: docRef.id, ...normalizedData, logDate: normalizedData.logDate?.toDate ? normalizedData.logDate.toDate() : normalizedData.logDate };
   } catch (error) {
     console.error('❌ Error creating care log:', error);
     throw error;

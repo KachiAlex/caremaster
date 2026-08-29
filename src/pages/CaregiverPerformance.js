@@ -36,13 +36,13 @@ const CaregiverPerformance = () => {
   }, [userProfile]);
 
   const loadPerformanceData = async () => {
+    if (!userProfile?.id && !userProfile?.uid) {
+      console.warn('No user profile available');
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      
-      if (!userProfile?.id && !userProfile?.uid) {
-        console.warn('No user profile available');
-        return;
-      }
       
       const caregiverId = userProfile.id || userProfile.uid;
       
@@ -199,7 +199,7 @@ const CaregiverPerformance = () => {
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
             >
-              <option value="week">This Week</option>
+              <option value="weekly">This Week</option>
               <option value="monthly">This Month</option>
               <option value="overall">Overall</option>
             </select>

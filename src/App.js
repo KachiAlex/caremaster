@@ -12,7 +12,6 @@ import biometricAuthService from './services/biometricAuthService';
 import secureConfigService from './services/secureConfigService';
 import Layout from './components/Layout';
 import ClientPortalLayout from './components/ClientPortalLayout';
-import SuperAdminGuard from './components/SuperAdminGuard';
 import InstitutionAdminGuard from './components/InstitutionAdminGuard';
 // Old admin components removed - using new admin system
 import ServiceProviderLayout from './components/ServiceProviderLayout';
@@ -29,7 +28,6 @@ const SecurityDashboard = lazy(() => import('./components/SecurityDashboard'));
 const Landing = lazy(() => import('./pages/Landing'));
 const ChooseInstitution = lazy(() => import('./pages/ChooseInstitution'));
 const TenantPartners = lazy(() => import('./pages/TenantPartners'));
-const Auth = lazy(() => import('./pages/Auth'));
 // Admin routes deprecated
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Medications = lazy(() => import('./pages/Medications'));
@@ -38,13 +36,11 @@ const Appointments = lazy(() => import('./pages/Appointments'));
 const Consultation = lazy(() => import('./pages/Consultation'));
 const Profile = lazy(() => import('./pages/Profile'));
 const CaregiverDashboard = lazy(() => import('./pages/CaregiverDashboard'));
-const PreclinicCaregiverDashboard = lazy(() => import('./pages/PreclinicCaregiverDashboard'));
 const CaregiverSchedule = lazy(() => import('./pages/CaregiverSchedule'));
 const CaregiverClients = lazy(() => import('./pages/CaregiverPatients'));
 const CaregiverTasks = lazy(() => import('./pages/CaregiverTasks'));
 const CaregiverOnboarding = lazy(() => import('./pages/CaregiverOnboarding'));
 const SuperAdminLicensing = lazy(() => import('./pages/SuperAdminLicensing'));
-const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const SuperAdminSettings = lazy(() => import('./pages/SuperAdminSettings'));
 const SuperAdminManagement = lazy(() => import('./pages/SuperAdminManagement'));
@@ -54,7 +50,6 @@ const InstitutionAdminDashboard = lazy(() => import('./pages/InstitutionAdminDas
 const InstitutionUserManagement = lazy(() => import('./pages/InstitutionUserManagement'));
 const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
 const InstitutionLanding = lazy(() => import('./pages/InstitutionLanding'));
-const InstitutionLogin = lazy(() => import('./pages/InstitutionLogin'));
 const UnifiedLogin = lazy(() => import('./pages/UnifiedLogin'));
 const LicenseRequired = lazy(() => import('./pages/LicenseRequired'));
 const InstitutionCaregiverOnboarding = lazy(() => import('./pages/InstitutionCaregiverOnboarding'));
@@ -76,11 +71,9 @@ const ClientCaregivers = lazy(() => import('./pages/PatientCaregivers'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 // All onboarding is now integrated into Auth.js
 // Standalone admin pages removed - Institution Admin is the primary admin interface
-const SystemStatus = lazy(() => import('./pages/SystemStatus'));
 const MedicalDocuments = lazy(() => import('./pages/MedicalDocuments'));
 const ServiceProviderDashboard = lazy(() => import('./pages/ServiceProviderDashboard'));
 const RouteOptimization = lazy(() => import('./pages/RouteOptimization'));
-const UserManagement = lazy(() => import('./pages/UserManagement'));
 const WebRTCTest = lazy(() => import('./pages/WebRTCTest'));
 const PatientAccount = lazy(() => import('./pages/PatientAccount'));
 const InstitutionLabTechnicianDashboard = lazy(() => import('./pages/InstitutionLabTechnicianDashboard'));
@@ -677,7 +670,7 @@ function App() {
       <Route path="/admin/*" element={<Navigate to="/institution-admin/dashboard" replace />} />
       
       {/* Institution entry: partners page OR specific institution landing when ?institution= is present */}
-      <Route path="/institution" element={<Navigate to="/login" replace />} />
+      <Route path="/institution" element={<InstitutionEntry />} />
 
       {/* Institution chooser for multi-institution users */}
       <Route path="/choose-institution" element={<ChooseInstitution />} />

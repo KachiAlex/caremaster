@@ -108,11 +108,17 @@ const CaregiverClients = () => {
   }, [userProfile?.id]);
 
   const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.medicalCondition.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (client.medicalCondition || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'all' || client.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
+
+  const formatDateSafe = (v) => {
+    if (!v) return '—';
+    const d = v?.toDate ? v.toDate() : new Date(v);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -204,7 +210,7 @@ const CaregiverClients = () => {
                   <div className="flex items-center space-x-3">
                     <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
                       <span className="text-blue-600 font-semibold text-lg">
-                        {client.name.split(' ').map(n => n[0]).join('')}
+                        {(client.name || '').split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
                     <div>
@@ -248,14 +254,14 @@ const CaregiverClients = () => {
                       <Star
                         key={i}
                         className={`h-4 w-4 ${
-                          i < Math.floor(client.rating)
+                          i < Math.floor(client.rating || 0)
                             ? 'text-yellow-400 fill-current'
                             : 'text-gray-300'
                         }`}
                       />
                     ))}
                   </div>
-                  <span className="ml-2 text-sm text-gray-600">{client.rating}</span>
+                  <span className="ml-2 text-sm text-gray-600">{client.rating || 0}</span>
                 </div>
 
                 {/* Action Buttons */}
@@ -418,8 +424,8 @@ const CaregiverClients = () => {
                     <h4 className="font-semibold text-gray-900 mb-2">Emergency Contact</h4>
                     <div className="space-y-2 text-sm">
                       <p><span className="font-medium">Phone:</span> {selectedClient.emergencyContact}</p>
-                      <p><span className="font-medium">Last Visit:</span> {new Date(selectedClient.lastVisit).toLocaleDateString()}</p>
-                      <p><span className="font-medium">Next Appointment:</span> {new Date(selectedClient.nextAppointment).toLocaleDateString()}</p>
+                      <p><span className="font-medium">Last Visit:</span> {formatDateSafe(selectedClient.lastVisit)}</p>
+                      <p><span className="font-medium">Next Appointment:</span> {formatDateSafe(selectedClient.nextAppointment)}</p>
                     </div>
                   </div>
                 </div>

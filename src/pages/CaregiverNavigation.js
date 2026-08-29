@@ -1,32 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Navigation, 
-  MapPin, 
-  Clock, 
-  Phone, 
-  MessageCircle, 
+import {
+  Navigation,
+  MapPin,
+  Clock,
+  Phone,
+  MessageCircle,
   Calendar,
-  Star,
-  AlertTriangle,
   CheckCircle,
   Route,
   Car,
   Walking,
   Search,
-  Filter,
-  User,
-  Home,
-  Building,
   Navigation as NavIcon,
-  Target,
-  ArrowRight,
   ExternalLink
 } from 'lucide-react';
 
 const CaregiverNavigation = () => {
   const [routes, setRoutes] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState(null);
-  const [currentLocation, setCurrentLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');

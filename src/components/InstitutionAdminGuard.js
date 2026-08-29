@@ -112,6 +112,14 @@ const InstitutionAdminGuard = ({ children }) => {
             return;
           }
           
+          // Redirect lab technicians to lab technician dashboard
+          if (userType === 'lab_technician' || userType === 'lab-technician') {
+            const instId = userProfile?.institutionId || searchParams.get('institution');
+            navigate(`/institution-lab-technician/dashboard${instId ? `?institution=${instId}` : ''}`, { replace: true });
+            setLoading(false);
+            return;
+          }
+          
           // Redirect caregivers/doctors/nurses to caregiver dashboard
           if (['caregiver', 'doctor', 'nurse'].includes(userType)) {
             toast.info('Redirecting to caregiver dashboard...');
@@ -212,7 +220,7 @@ const InstitutionAdminGuard = ({ children }) => {
     });
 
     return () => unsubscribe();
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   if (loading) {
     return (

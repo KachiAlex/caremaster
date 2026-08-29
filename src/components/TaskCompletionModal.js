@@ -281,7 +281,7 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
               Photo Documentation (Optional)
             </label>
             <FileUpload
-              onUpload={handlePhotoCapture}
+              onFileSelect={handlePhotoCapture}
               accept="image/*"
               multiple
               maxSize={5} // 5MB

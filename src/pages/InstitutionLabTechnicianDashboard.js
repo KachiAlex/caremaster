@@ -16,19 +16,10 @@ import {
   TestTube, 
   Calendar, 
   MapPin, 
-  Camera, 
-  CheckCircle, 
   Clock, 
-  AlertCircle,
   Navigation,
   FileText,
-  Upload,
-  LogOut,
-  Building2,
-  Bell,
-  User,
-  Phone,
-  Mail
+  LogOut
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import sessionManager from '../utils/sessionManager';
@@ -38,7 +29,6 @@ import {
   recordSampleCollection,
   getSampleCollectionsByTechnician
 } from '../api/homeLabServicesAPI';
-import { getPatientById } from '../api/patientsAPI';
 import { signOut, getAuth } from 'backend/auth';
 import { auth } from '../backend/config';
 
@@ -84,11 +74,6 @@ const InstitutionLabTechnicianDashboard = () => {
         sessionManager.handleSessionConflict(validation, navigate, toast);
         return;
       }
-    }
-
-    // Load data
-    if (user?.uid && institutionId) {
-      loadDashboardData();
     }
   }, [user, userProfile, institutionId, isLabTechnician, navigate]);
 

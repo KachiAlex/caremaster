@@ -37,124 +37,30 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { 
-  getClientsByCaregiver, 
-  getClientsByDoctor, 
-  getPatientStats 
+import {
+  getClientsByCaregiver,
+  getClientsByDoctor
 } from '../api/patientsAPI';
-import { 
-  getTodaysAppointments, 
-  getUpcomingAppointments, 
-  getAppointmentStats 
+import {
+  getTodaysAppointments,
+  getUpcomingAppointments
 } from '../api/appointmentsAPI';
-import { 
-  getTodaysCareTasks, 
-  getPendingCareTasks, 
-  getCareTaskStats 
+import {
+  getTodaysCareTasks,
+  getPendingCareTasks
 } from '../api/careTasksAPI';
 import { getTaskAssignmentsByCaregiver } from '../api/taskAssignmentAPI';
-import { 
-  getUnreadMessageCount, 
-  getConversationsByUser 
+import {
+  getUnreadMessageCount
 } from '../api/messagesAPI';
-import { 
-  getUnreadNotificationCount, 
-  getNotificationsByUser 
-} from '../api/notificationsAPI';
 import { getNurseReportsByPatient, createNurseReport } from '../api/nurseReportsAPI';
 import { carePlansAPI } from '../api/carePlansAPI';
 import MorningBriefing from '../components/MorningBriefing';
 import TaskCompletionModal from '../components/TaskCompletionModal';
-import VitalsQuickEntry from '../components/VitalsQuickEntry';
-import WeeklyCalendar from '../components/WeeklyCalendar';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 import { createVitalSign } from '../api/vitalSignsAPI';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
-
-// Shared Components
-const DashboardHeader = ({ userProfile, userRole, user }) => {
-  const getRoleIcon = () => {
-    switch (userRole) {
-      case 'doctor': return <Stethoscope className="h-6 w-6 text-blue-600" />;
-      case 'caregiver': return <UserCheck className="h-6 w-6 text-green-600" />;
-      default: return <Users className="h-6 w-6 text-gray-600" />;
-    }
-  };
-
-  const getRoleTitle = () => {
-    // Check for specializations in userProfile
-    const specializations = userProfile?.specializations || [];
-    
-    if (userRole === 'doctor') {
-      return 'Medical Dashboard';
-    } else if (userRole === 'caregiver' || userRole === 'nurse') {
-      if (specializations.includes('Registered Nurse') || specializations.includes('LPN')) {
-        return 'Medical Care Specialist Dashboard';
-      } else if (specializations.includes('Physical Therapist')) {
-        return 'Physical Therapy Dashboard';
-      } else if (specializations.includes('Dementia Care') || specializations.includes('Memory Care Specialist')) {
-        return 'Memory Care Specialist Dashboard';
-      } else if (specializations.includes('Companion Care')) {
-        return 'Companion Care Dashboard';
-      } else {
-        return 'General Care Dashboard';
-      }
-    }
-    return 'Service Provider Dashboard';
-  };
-
-  return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="p-3 bg-blue-100 rounded-lg">
-            {getRoleIcon()}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{getRoleTitle()}</h1>
-            <p className="text-gray-600">
-              Welcome back, {userProfile?.name || 'User'}
-            </p>
-            {userProfile?.specializations && userProfile.specializations.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {userProfile.specializations.slice(0, 3).map((spec, index) => (
-                  <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    {spec}
-                  </span>
-                ))}
-                {userProfile.specializations.length > 3 && (
-                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                    +{userProfile.specializations.length - 3} more
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
-          </button>
-          <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">{userProfile?.name}</p>
-            <p className="text-xs text-gray-500 capitalize">{userRole}</p>
-          </div>
-          <UserAvatarDropdown
-            userProfile={userProfile}
-            user={user}
-            profileImageUrl={userProfile?.photoURL || userProfile?.profilePictureUrl}
-            size="md"
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onShowAppointments, onShowMessages }) => {
   const navigate = useNavigate();
@@ -415,8 +321,6 @@ const ServiceProviderDashboard = () => {
   const [showMorningBriefing, setShowMorningBriefing] = useState(false);
   const [showTaskCompletion, setShowTaskCompletion] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [showVitalsEntry, setShowVitalsEntry] = useState(false);
-  const [showWeeklyCalendar, setShowWeeklyCalendar] = useState(false);
   const [nurseReport, setNurseReport] = useState({
     bloodPressure: '',
     heartRate: '',
@@ -536,12 +440,11 @@ const ServiceProviderDashboard = () => {
       console.log('  - isArray:', Array.isArray(clients));
       console.log('  - clients data:', clients);
       
-      const mergedPending = [...(pendingTasks || []).map(t => ({ ...t, collection: 'careTasks' })), ...(taskAssignments || []).map(t => ({ ...t, collection: 'taskAssignments' }))].filter(Boolean);
-      const mergedToday = [...(todaysTasks || []).map(t => ({ ...t, collection: 'careTasks' })), ...(taskAssignments || []).filter(t => {
-        const d = t.scheduledTime ? new Date(t.scheduledTime) : null;
-        if (!d) return false;
-        const now = new Date();
-        return d.toDateString() === now.toDateString();
+      const activeAssignments = (taskAssignments || []).filter(t => t.status !== 'completed' && t.status !== 'cancelled');
+      const mergedPending = [...(pendingTasks || []).map(t => ({ ...t, collection: 'careTasks' })), ...activeAssignments.map(t => ({ ...t, collection: 'taskAssignments' }))].filter(Boolean);
+      const mergedToday = [...(todaysTasks || []).map(t => ({ ...t, collection: 'careTasks' })), ...activeAssignments.filter(t => {
+        const d = t.scheduledTime ? new Date(t.scheduledTime?.toDate ? t.scheduledTime.toDate() : t.scheduledTime) : null;
+        return d && d.toDateString() === new Date().toDateString();
       }).map(t => ({ ...t, collection: 'taskAssignments' }))];
 
       // Update stats with actual data
@@ -738,8 +641,8 @@ const ServiceProviderDashboard = () => {
       }
       await createNurseReport({
         clientId: selectedPatient.id,
-        nurseId: userProfile.id,
-        nurseName: userProfile.name,
+        nurseId: userProfile?.id || userProfile?.uid || user?.uid,
+        nurseName: userProfile?.name || userProfile?.displayName || 'Nurse',
         ...nurseReport,
       });
       toast.success('Nurse report submitted successfully!');
@@ -828,14 +731,6 @@ const ServiceProviderDashboard = () => {
   };
 
   const handleTaskComplete = () => {
-    // Reload dashboard data
-    const userId = userProfile?.id || userProfile?.uid;
-    if (userId && isCaregiver) {
-      getTodaysCareTasks(userId)
-        .then(tasks => setTodaysTasksData(tasks))
-        .catch(() => {});
-    }
-    // Refresh the entire dashboard
     loadDashboardData();
   };
 
@@ -939,21 +834,21 @@ const ServiceProviderDashboard = () => {
         />
         <AssignmentCalendar
           schedule={[
-            ...(todaysAppointmentsData || []).map(a => ({
-              id: a.id, type: 'appointment', title: a.title || a.clientName || 'Appointment',
-              time: a.scheduledTime || '', client: a.clientName || 'Client', status: a.status || 'scheduled'
-            })),
-            ...(upcomingAppointmentsData || []).map(a => ({
-              id: a.id, type: 'appointment', title: a.title || a.clientName || 'Appointment',
-              time: a.scheduledTime || '', client: a.clientName || 'Client', status: a.status || 'scheduled'
-            })),
+            ...(() => {
+              const allAppointments = [...(todaysAppointmentsData || []), ...(upcomingAppointmentsData || [])];
+              const dedupedAppts = allAppointments.filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i);
+              return dedupedAppts.map(a => ({
+                id: a.id, type: 'appointment', title: a.careType || a.type || a.title || a.clientName || 'Appointment',
+                time: a.scheduledTime || '', client: a.clientName || 'Client', status: a.status || 'scheduled'
+              }));
+            })(),
             ...(todaysTasksData || []).map(t => ({
-              id: t.id, type: 'task', title: t.title || 'Task',
+              id: t.id, type: 'task', title: t.title || t.task || t.description || 'Task',
               time: t.scheduledTime || '', client: t.clientName || 'Client', clientId: t.clientId,
               status: t.status || 'pending', collection: t.collection || 'careTasks'
             })),
             ...(pendingTasksData || []).map(t => ({
-              id: t.id, type: 'task', title: t.title || 'Task',
+              id: t.id, type: 'task', title: t.title || t.task || t.description || 'Task',
               time: t.scheduledTime || '', client: t.clientName || 'Client', clientId: t.clientId,
               status: t.status || 'pending', collection: t.collection || 'taskAssignments'
             })),
@@ -1408,27 +1303,6 @@ const ServiceProviderDashboard = () => {
         />
       )}
 
-      {/* Vitals Quick Entry */}
-      {showVitalsEntry && selectedPatient && (
-        <VitalsQuickEntry
-          Client={selectedPatient}
-          onClose={() => {
-            setShowVitalsEntry(false);
-            setSelectedPatient(null);
-          }}
-          onSave={handleSaveVitals}
-        />
-      )}
-
-      {/* Weekly Calendar Modal */}
-      {showWeeklyCalendar && (
-        <WeeklyCalendar
-          onClose={() => setShowWeeklyCalendar(false)}
-          tasks={[...(todaysTasksData || []), ...(pendingTasksData || [])]}
-          appointments={[...(todaysAppointmentsData || []), ...(upcomingAppointmentsData || [])]}
-        />
-      )}
-      
       {/* Incoming Call Interface */}
       {incomingCall && (
         <CallInterface

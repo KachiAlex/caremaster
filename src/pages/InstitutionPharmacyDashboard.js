@@ -2,14 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useUser } from '../contexts/UserContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import sessionManager from '../utils/sessionManager';
-import { Pill, LogOut, Building2, Bell } from 'lucide-react';
+import { Pill, Building2, Bell } from 'lucide-react';
 import { toast } from 'react-toastify';
 import PharmacyTab from '../components/PharmacyTab';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import { fetchLicenseStatus } from '../services/licenseService';
-import { query, getDocs, updateDoc, where, doc } from 'backend/database';
 import { signOut, getAuth } from 'backend/auth';
-import { db, auth } from '../backend/config';
 
 const InstitutionPharmacyDashboard = () => {
   const { user, userProfile, institutionId: contextInstitutionId, institutionData } = useUser();
@@ -185,21 +183,6 @@ const InstitutionPharmacyDashboard = () => {
       setAssignedClients([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      sessionManager.clearTabSession();
-      const auth = getAuth();
-      await signOut(auth);
-      localStorage.removeItem('token');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Error logging out:', error);
-      toast.error('Failed to log out');
     }
   };
 

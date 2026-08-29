@@ -1,43 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Settings, 
-  User, 
-  Bell, 
-  Shield, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Calendar,
+import {
+  Settings,
+  User,
+  Bell,
+  Shield,
   Save,
-  Edit,
   Camera,
   Eye,
   EyeOff,
   CheckCircle,
-  AlertTriangle,
-  Clock,
-  Globe,
-  Heart,
-  FileText,
   Download,
   Upload,
-  Trash2,
   RefreshCw,
-  Key,
-  Smartphone,
-  Monitor,
-  Sun,
-  Moon,
-  Languages,
-  Map,
   Lock,
-  Unlock,
-  Activity,
-  AlertCircle,
-  Info,
-  X,
-  Plus,
-  Minus
+  Activity
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import caregiverSettingsService from '../services/caregiverSettingsService';
@@ -106,21 +82,21 @@ const CaregiverSettings = () => {
   };
 
   const handleSaveSettings = async () => {
+    // Validate required fields
+    if (!settings.profile?.firstName || !settings.profile?.lastName || !settings.profile?.email) {
+      toast.error('Please fill in all required fields (First Name, Last Name, Email)');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(settings.profile?.email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
     try {
       setSaving(true);
-      
-      // Validate required fields
-      if (!settings.profile?.firstName || !settings.profile?.lastName || !settings.profile?.email) {
-        toast.error('Please fill in all required fields (First Name, Last Name, Email)');
-        return;
-      }
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(settings.profile?.email)) {
-        toast.error('Please enter a valid email address');
-        return;
-      }
 
       // Save settings
       await caregiverSettingsService.saveSettings(user?.uid, settings);
@@ -935,7 +911,7 @@ const CaregiverSettings = () => {
                                 <p className="text-xs text-gray-600">{activity.type}</p>
                               </div>
                               <div className="text-xs text-gray-500">
-                                {activity.timestamp?.toLocaleString() || 'Unknown time'}
+                                {activity.timestamp?.toDate ? activity.timestamp.toDate().toLocaleString() : (activity.timestamp?.toLocaleString?.() || 'Unknown time')}
                               </div>
                             </div>
                           </div>

@@ -13,14 +13,9 @@ import {
   Heart,
   User,
   Star,
-  Navigation,
   Camera,
   FileText,
-  Bell,
-  Settings,
-  LogOut,
   TrendingUp,
-  Award,
   Activity,
   Shield,
   Plus,
@@ -44,7 +39,6 @@ import {
   Download,
   Receipt,
   HelpCircle,
-  Menu,
   Play,
   ArrowLeft,
   ChevronDown,
@@ -54,16 +48,15 @@ import {
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
-import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import { caregiverAPI } from '../api/caregiverAPI';
-import { getCareTasksByCaregiver, getTodayTasks, getUpcomingTasks } from '../api/careTasksAPI';
+import { getCareTasksByCaregiver, getTodayTasks } from '../api/careTasksAPI';
 import { getActiveTasks, startTask, completeTask } from '../api/taskTimeTrackingAPI';
-import { getTodaysAppointments, getUpcomingAppointments } from '../api/appointmentsAPI';
+import { getTodaysAppointments } from '../api/appointmentsAPI';
 import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
-import { createMedicalReport, getMedicalReportsByClient, updateMedicalReport, deleteMedicalReport, subscribeToMedicalReportsByClient } from '../api/medicalReportsAPI';
-import { createCarePlan, getCarePlansByClient, updateCarePlan, deleteCarePlan, subscribeToCarePlansByClient } from '../api/carePlansAPI';
-import { createCareLog, getCareLogsByClient, subscribeToCareLogsByClient } from '../api/careLogsAPI';
+import { createMedicalReport, subscribeToMedicalReportsByClient } from '../api/medicalReportsAPI';
+import { createCarePlan, updateCarePlan, deleteCarePlan, subscribeToCarePlansByClient } from '../api/carePlansAPI';
+import { createCareLog, subscribeToCareLogsByClient } from '../api/careLogsAPI';
 import InstitutionCaregiverGuard from '../components/InstitutionCaregiverGuard';
 import CaregiverSettings from '../components/CaregiverSettings';
 import NurseVitalsInput from '../components/NurseVitalsInput';
@@ -73,8 +66,7 @@ import NurseMedicationManager from '../components/NurseMedicationManager';
 import CareLogFormModal from '../components/CareLogFormModal';
 import DashboardSwitcher from '../components/DashboardSwitcher';
 import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
-import { careLogsAPI } from '../api/careLogsAPI';
-import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
+import { exportCarePlanToPDF } from '../utils/pdfExport';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, markConversationAsRead } from '../api/messagesAPI';
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import { toast } from 'react-toastify';
@@ -98,7 +90,6 @@ import UserProfileSettings from '../components/UserProfileSettings';
 import HelpSupport from '../components/HelpSupport';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import { collection, query, getDocs, setDoc, updateDoc, where, doc } from 'backend/database';
-import { signOut } from 'backend/auth';
 import { db } from '../backend/config';
 import DashboardLayout from '../components/DashboardLayout';
 import AssignmentCalendar from '../components/AssignmentCalendar';
@@ -119,6 +110,10 @@ const InstitutionCaregiverDashboard = () => {
     fromProfile: userProfile?.institutionId,
     effective: effectiveInstitutionId
   });
+
+  // Helper to convert Firestore Timestamps (or any date-like value) to JS Date
+  const toDate = (v) => v?.toDate ? v.toDate() : new Date(v);
+
   const [caregiver, setCaregiver] = useState(null);
   const [todaySchedule, setTodaySchedule] = useState([]);
   const [recentTasks, setRecentTasks] = useState([]);
@@ -130,7 +125,6 @@ const InstitutionCaregiverDashboard = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [expandedClients, setExpandedClients] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [showSettings, setShowSettings] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showVitalsModal, setShowVitalsModal] = useState(false);
   const [showCareLogsModal, setShowCareLogsModal] = useState(false);
@@ -285,27 +279,31 @@ const InstitutionCaregiverDashboard = () => {
         if (state === 'connected') {
           console.log('✅ Call connected successfully!');
           if (!callStartAt) {
-            const start = new Date();
-            setCallStartAt(start);
-            if (timerRef.current) clearInterval(timerRef.current);
-            timerRef.current = setInterval(() => {
-              setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
-            }, 1000);
+            setCallStartAt(new Date());
           }
         } else if (state === 'failed' || state === 'disconnected') {
           console.log('❌ Call connection failed or disconnected');
         }
       }
     });
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [webrtc, callStartAt]);
+
+  // Call timer: start/stop interval based on callStartAt
+  useEffect(() => {
+    if (callStartAt) {
+      const start = callStartAt;
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+      }, 1000);
+      return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }
+  }, [callStartAt]);
   
   // Activities states
   const [activities, setActivities] = useState([]);
   const [todayActivities, setTodayActivities] = useState([]);
   const [activityStats, setActivityStats] = useState(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
-  const [selectedActivityCategory, setSelectedActivityCategory] = useState(null);
   const [activityFormData, setActivityFormData] = useState({
     category: '',
     activityType: '',
@@ -873,7 +871,7 @@ const InstitutionCaregiverDashboard = () => {
       
       return () => unsubscribe();
     }
-  }, [userProfile, user?.uid, selectedClientId, effectiveInstitutionId, refreshTrigger]);
+  }, [userProfile, user?.uid, effectiveInstitutionId, refreshTrigger]);
 
   useEffect(() => {
     // when selectedClientId changes, refresh selectedClient from cache/list
@@ -1059,27 +1057,6 @@ const InstitutionCaregiverDashboard = () => {
     setCallStartAt(null);
   };
 
-  // Inline call logs for caregiver/doctor view
-  const renderCallLogs = () => {
-    const uid = user?.uid || userProfile?.uid || userProfile?.id;
-    if (!uid) return null;
-    const CallLogsPanel = require('../components/CallLogsPanel').default;
-    return (
-      <div className="mt-6">
-        <CallLogsPanel userId={uid} />
-      </div>
-    );
-  };
-
-  // Doctor action guards and navigation helpers
-  const requireClient = () => {
-    if (!selectedClientId) {
-      alert('Please select a client first.');
-      return false;
-    }
-    return true;
-  };
-
   const handleNewConsultation = () => {
     if (!selectedClient) {
       toast.warning('Please select a client first');
@@ -1151,36 +1128,6 @@ const InstitutionCaregiverDashboard = () => {
     }
   };
 
-  const handleVideoConsultation = async () => {
-    // Clients don't have accounts - cannot initiate calls to clients
-    toast.warning('Clients do not have accounts. Calls can only be made to caregivers, doctors, nurses, and administrators.');
-  };
-
-  const handleCareLogSave = async (careLogData) => {
-    try {
-      const careLogWithMetadata = {
-        ...careLogData,
-        caregiverId: user?.uid,
-        caregiverName: userProfile?.name || userProfile?.displayName,
-        institutionId: effectiveInstitutionId,
-        timestamp: new Date().toISOString()
-      };
-
-      await careLogsAPI.createCareLog(careLogWithMetadata);
-      toast.success('Care log saved successfully');
-      
-      // Refresh care logs if the modal is open
-      if (showCareLogsModal) {
-        // Trigger a refresh of care logs data
-        setShowCareLogsModal(false);
-        setTimeout(() => setShowCareLogsModal(true), 100);
-      }
-    } catch (error) {
-      console.error('Error saving care log:', error);
-      throw error;
-    }
-  };
-
   const handleClockIn = async (scheduleId) => {
     if (!user?.uid) {
       toast.error('User not authenticated');
@@ -1204,10 +1151,6 @@ const InstitutionCaregiverDashboard = () => {
       toast.error(error.message || 'Failed to clock in');
     }
   };
-
-  // --- Role-specific UI helpers ---
-  // Note: Role flags are already defined at component level (line 457)
-  const isMedicalProfessional = isDoctor || isNurse;
 
   // Toggle expand/collapse for medical records
   const toggleRecordDetails = (recordId) => {
@@ -1310,7 +1253,7 @@ const InstitutionCaregiverDashboard = () => {
             </div>
             <div>
               <div className="text-gray-500">Last Visit</div>
-              <div className="text-gray-900">{selectedClient.lastVisit ? new Date(selectedClient.lastVisit).toLocaleDateString() : '—'}</div>
+              <div className="text-gray-900">{selectedClient.lastVisit ? toDate(selectedClient.lastVisit).toLocaleDateString() : '—'}</div>
             </div>
           </div>
         )}
@@ -1350,6 +1293,10 @@ const InstitutionCaregiverDashboard = () => {
     }
     try {
       const client = assignedClients.find(c => c.id === clientId) || selectedClient;
+      if (!client) {
+        toast.error('Client not found');
+        return;
+      }
       const result = await emergencyAPI.createEmergency({
         userId: clientId,
         caregiverId: user.uid,
@@ -1834,7 +1781,7 @@ const InstitutionCaregiverDashboard = () => {
       console.error('Error loading conversations:', error);
       toast.error('Failed to load conversations');
     }
-  }, [user?.uid, assignedClients, loadPlatformUsers]);
+  }, [user?.uid, loadPlatformUsers]);
 
   // Load conversations when user changes (placed after loadConversations definition)
   useEffect(() => {
@@ -2280,7 +2227,7 @@ const InstitutionCaregiverDashboard = () => {
         read: false
       };
       
-      setMessages([...messages, message]);
+      setMessages(prev => [...prev, message]);
       setNewMessage('');
       
         toast.success('Message sent successfully');
@@ -2441,7 +2388,7 @@ const InstitutionCaregiverDashboard = () => {
                         />
                       ) : null}
                       <span className={conversation.photoURL || conversation.avatar ? 'hidden' : 'flex'}>
-                      {(conversation.name || 'U').charAt(0).toUpperCase()}
+                      {String(conversation.name || 'U').charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -2506,7 +2453,7 @@ const InstitutionCaregiverDashboard = () => {
                         />
                       ) : null}
                       <span className={selectedConversation.photoURL || selectedConversation.avatar ? 'hidden' : 'flex'}>
-                        {(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                        {String(selectedConversation.name || 'U').charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div>
@@ -2615,7 +2562,7 @@ const InstitutionCaregiverDashboard = () => {
                                     />
                                   ) : null}
                                   <span className={message.senderPhotoURL ? 'hidden' : 'flex'}>
-                                    {(message.senderName || 'U').charAt(0).toUpperCase()}
+                                    {String(message.senderName || 'U').charAt(0).toUpperCase()}
                                   </span>
                                 </div>
                               )}
@@ -2646,7 +2593,7 @@ const InstitutionCaregiverDashboard = () => {
                                     />
                                   ) : null}
                                   <span className={userProfile?.photoURL || userProfile?.profilePicture || userProfile?.profilePictureUrl ? 'hidden' : 'flex'}>
-                                    {(userProfile?.name || userProfile?.displayName || 'Y').charAt(0).toUpperCase()}
+                                    {String(userProfile?.name || userProfile?.displayName || 'Y').charAt(0).toUpperCase()}
                                   </span>
                                 </div>
                               )}
@@ -2860,7 +2807,7 @@ const InstitutionCaregiverDashboard = () => {
                             <span className="font-semibold">
                               {itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>{' '}
-                            {item.title.substring(0, 10)}
+                            {item.title?.substring(0, 10)}
                             {isPast && <span className="ml-1">⚠️</span>}
                           </div>
                         );
@@ -3238,7 +3185,7 @@ const InstitutionCaregiverDashboard = () => {
     };
 
     loadPharmacistMedicationData();
-  }, [selectedClient, user, isPharmacist]);
+  }, [selectedClient, user?.uid, isPharmacist]);
 
   // Save pharmacist medication data
   const savePharmacistMedicationData = async () => {
@@ -3719,14 +3666,14 @@ const InstitutionCaregiverDashboard = () => {
   const renderTasksTab = () => {
     const todayTasks = recentTasks.filter(task => {
       if (!task.scheduledTime && !task.dueDate) return false;
-      const taskDate = new Date(task.scheduledTime || task.dueDate);
+      const taskDate = toDate(task.scheduledTime || task.dueDate);
       const today = new Date();
       return taskDate.toDateString() === today.toDateString();
     });
 
     const upcomingTasks = recentTasks.filter(task => {
       if (!task.scheduledTime && !task.dueDate) return false;
-      const taskDate = new Date(task.scheduledTime || task.dueDate);
+      const taskDate = toDate(task.scheduledTime || task.dueDate);
       const today = new Date();
       return taskDate > today && taskDate.toDateString() !== today.toDateString();
     });
@@ -3824,7 +3771,7 @@ const InstitutionCaregiverDashboard = () => {
                             <div className="flex items-center space-x-2">
                               <Clock className="h-4 w-4 text-gray-400" />
                               <span className="text-gray-700">
-                                <span className="font-medium">Due:</span> {new Date(task.scheduledTime || task.dueDate).toLocaleString()}
+                                <span className="font-medium">Due:</span> {toDate(task.scheduledTime || task.dueDate).toLocaleString()}
                               </span>
                             </div>
                           )}
@@ -4018,9 +3965,7 @@ const InstitutionCaregiverDashboard = () => {
                         </span>
                       </div>
                       <span className="text-sm text-gray-500">
-                        {log.logDate instanceof Date 
-                          ? log.logDate.toLocaleDateString() 
-                          : new Date(log.logDate).toLocaleDateString()}
+                        {toDate(log.logDate).toLocaleDateString()}
                         {' at '}{log.logTime}
                       </span>
                     </div>
@@ -4076,44 +4021,6 @@ const InstitutionCaregiverDashboard = () => {
         </div>
       </div>
     );
-  };
-
-  // Quick Log Activity
-  const handleQuickLogActivity = async (category, activityType) => {
-    if (!selectedClientId) {
-      toast.error('Please select a client first');
-      return;
-    }
-
-    try {
-      const client = assignedClients.find(c => c.id === selectedClientId);
-      const activityData = {
-        caregiverId: user.uid,
-        caregiverName: userProfile?.name || userProfile?.displayName || 'Caregiver',
-        clientId: selectedClientId,
-        clientName: client?.name || client?.displayName || 'Client',
-        institutionId: effectiveInstitutionId,
-        category,
-        activityType,
-        description: `${activityType} performed`,
-        notes: '',
-        duration: 15,
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString(),
-        status: 'completed',
-        qualityRating: 5
-      };
-
-      await activitiesAPI.logActivity(activityData);
-      toast.success(`${activityType} logged successfully!`);
-      // Reload activities to show the new entry
-      if (activeTab === 'activities') {
-        loadActivities();
-      }
-    } catch (error) {
-      console.error('Error logging activity:', error);
-      toast.error('Failed to log activity');
-    }
   };
 
   // Log custom activity
@@ -4402,7 +4309,7 @@ const InstitutionCaregiverDashboard = () => {
         {activeTab === 'settings' ? (
           <div>
             <button
-              onClick={() => { setShowSettings(false); setActiveTab('dashboard'); }}
+              onClick={() => { setActiveTab('dashboard'); }}
               className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -4527,7 +4434,7 @@ const InstitutionCaregiverDashboard = () => {
                     ) : (
                       <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
                         <p className="text-gray-500 text-sm">No specializations added yet</p>
-                        <button onClick={() => { setActiveTab('settings'); setShowSettings(true); }} className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        <button onClick={() => { setActiveTab('settings'); }} className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
                           Add Specializations
                         </button>
                       </div>
@@ -4547,7 +4454,7 @@ const InstitutionCaregiverDashboard = () => {
                     ) : (
                       <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
                         <p className="text-gray-500 text-sm">No certifications added yet</p>
-                        <button onClick={() => { setActiveTab('settings'); setShowSettings(true); }} className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        <button onClick={() => { setActiveTab('settings'); }} className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
                           Add Certifications
                         </button>
                       </div>
@@ -4613,14 +4520,14 @@ const InstitutionCaregiverDashboard = () => {
             <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4 truncate">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {dashboardConfig.quickActions.map((action, index) => (
-                <a
+                <button
                   key={index}
-                  href={action.href}
+                  onClick={() => navigate(action.href)}
                   className={`flex flex-col items-center p-4 rounded-lg border-2 border-gray-200 hover:border-${dashboardConfig.color}-300 hover:bg-${dashboardConfig.color}-50 transition-colors group`}
                 >
                   <action.icon className={`h-8 w-8 text-${dashboardConfig.color}-600 mb-2 group-hover:text-${dashboardConfig.color}-700`} />
                   <span className="text-sm font-medium text-gray-700 text-center">{action.name}</span>
-                </a>
+                </button>
               ))}
             </div>
           </div>
@@ -4753,7 +4660,7 @@ const InstitutionCaregiverDashboard = () => {
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">{taskTitle}</p>
                           <p className="text-xs text-gray-500">
-                            {taskClientName} • {task.completedAt ? new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending'}
+                            {taskClientName} • {task.completedAt ? toDate(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending'}
                           </p>
                         </div>
                       </div>
@@ -4858,7 +4765,7 @@ const InstitutionCaregiverDashboard = () => {
                   const taskClient = assignedClients.find(c => c.id === task.clientId);
                   const taskClientName = task.clientName || taskClient?.name || taskClient?.fullName || 'Client';
                   const taskTitle = task.title || task.task || task.description || 'Untitled Task';
-                  const completedDate = task.completedAt ? new Date(task.completedAt) : (task.updatedAt ? new Date(task.updatedAt) : null);
+                  const completedDate = task.completedAt ? toDate(task.completedAt) : (task.updatedAt ? toDate(task.updatedAt) : null);
                   return (
                   <div key={task.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
                     <div className="flex items-center space-x-4">
@@ -4897,7 +4804,7 @@ const InstitutionCaregiverDashboard = () => {
             <div className="cm-card hover:shadow-md transition cursor-pointer">
               <div 
                 className="px-8 py-6 border-b border-gray-100"
-                onClick={() => setActiveTab('analytics')}
+                onClick={() => setActiveTab('dashboard')}
               >
                 <h2 className="text-xl font-bold text-gray-900">Performance Overview</h2>
               </div>
@@ -5591,7 +5498,7 @@ const InstitutionCaregiverDashboard = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Scheduled Time</label>
                       <p className="text-gray-900 flex items-center">
                         <Clock className="h-4 w-4 mr-2 text-gray-400" />
-                        {new Date(selectedTask.scheduledTime).toLocaleString('en-US', { 
+                        {toDate(selectedTask.scheduledTime).toLocaleString('en-US', { 
                           month: 'long', 
                           day: 'numeric', 
                           year: 'numeric',
@@ -5607,7 +5514,7 @@ const InstitutionCaregiverDashboard = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
                       <p className="text-gray-900 flex items-center">
                         <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                        {new Date(selectedTask.dueDate).toLocaleString('en-US', { 
+                        {toDate(selectedTask.dueDate).toLocaleString('en-US', { 
                           month: 'long', 
                           day: 'numeric', 
                           year: 'numeric'
@@ -5628,7 +5535,7 @@ const InstitutionCaregiverDashboard = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Created</label>
                       <p className="text-gray-900">
-                        {new Date(selectedTask.createdAt).toLocaleString('en-US', { 
+                        {toDate(selectedTask.createdAt).toLocaleString('en-US', { 
                           month: 'short', 
                           day: 'numeric', 
                           year: 'numeric',
@@ -5960,9 +5867,7 @@ const InstitutionCaregiverDashboard = () => {
                                             </p>
                                           </div>
                                           <p className="text-xs text-gray-500 ml-4 mt-1">
-                                            {prescription.createdAt instanceof Date 
-                                              ? prescription.createdAt.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                              : new Date(prescription.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            {toDate(prescription.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             {prescription.doctorName && ` • By: ${prescription.doctorName}`}
                                           </p>
                                         </div>
@@ -6019,9 +5924,7 @@ const InstitutionCaregiverDashboard = () => {
                                             </p>
                                           </div>
                                           <p className="text-xs text-gray-500 ml-4 mt-1">
-                                            {consultation.consultationDate instanceof Date 
-                                              ? consultation.consultationDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                              : new Date(consultation.consultationDate).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            {toDate(consultation.consultationDate).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             {consultation.doctorName && ` • By: ${consultation.doctorName}`}
                                           </p>
                                         </div>
@@ -6060,9 +5963,7 @@ const InstitutionCaregiverDashboard = () => {
                                               <div>
                                                 <p className="font-medium text-gray-700">Follow-up Date:</p>
                                                 <p className="text-gray-600 ml-4">
-                                                  {consultation.followUpDate instanceof Date 
-                                                    ? consultation.followUpDate.toLocaleDateString() 
-                                                    : new Date(consultation.followUpDate).toLocaleDateString()}
+                                                  {toDate(consultation.followUpDate).toLocaleDateString()}
                                                 </p>
                                               </div>
                                             )}
@@ -6101,9 +6002,7 @@ const InstitutionCaregiverDashboard = () => {
                                             </span>
                                           </div>
                                           <p className="text-xs text-gray-500 ml-4 mt-1">
-                                            {diagnostic.orderDate instanceof Date 
-                                              ? diagnostic.orderDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                              : new Date(diagnostic.orderDate || diagnostic.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            {toDate(diagnostic.orderDate || diagnostic.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             {diagnostic.doctorName && ` • Ordered by: ${diagnostic.doctorName}`}
                                           </p>
                                         </div>
@@ -6162,7 +6061,7 @@ const InstitutionCaregiverDashboard = () => {
                                           <div className="flex items-center gap-2">
                                             <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
                                             <p className="text-sm font-medium text-gray-900">
-                                              Invoice #{invoice.invoiceNumber || invoice.id.substring(0, 8).toUpperCase()}
+                                              Invoice #{invoice.invoiceNumber || (invoice.id || '').substring(0, 8).toUpperCase()}
                                             </p>
                                             <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
                                               invoice.status === 'paid' ? 'bg-green-100 text-green-700' :
@@ -6173,9 +6072,7 @@ const InstitutionCaregiverDashboard = () => {
                                             </span>
                                           </div>
                                           <p className="text-xs text-gray-500 ml-4 mt-1">
-                                            {invoice.createdAt instanceof Date 
-                                              ? invoice.createdAt.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                              : new Date(invoice.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            {toDate(invoice.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             {invoice.pharmacistName && ` • By: ${invoice.pharmacistName}`}
                                             {invoice.total && ` • Total: ₦${invoice.total.toLocaleString()}`}
                                           </p>
@@ -6313,16 +6210,14 @@ const InstitutionCaregiverDashboard = () => {
                                         {plan.status || 'Active'}
                                       </span>
                                       <span className="text-xs text-gray-500">
-                                        {plan.startDate instanceof Date 
-                                          ? plan.startDate.toLocaleDateString() 
-                                          : new Date(plan.startDate).toLocaleDateString()}
-                                        {plan.reviewDate && ` - ${plan.reviewDate instanceof Date ? plan.reviewDate.toLocaleDateString() : new Date(plan.reviewDate).toLocaleDateString()}`}
+                                        {toDate(plan.startDate).toLocaleDateString()}
+                                        {plan.reviewDate && ` - ${toDate(plan.reviewDate).toLocaleDateString()}`}
                                       </span>
                                     </div>
                                     {plan.careObjectives && (
                                       <p className="text-sm text-gray-900 mb-2">
-                                        <span className="font-medium">Objectives:</span> {plan.careObjectives.substring(0, 100)}
-                                        {plan.careObjectives.length > 100 && '...'}
+                                        <span className="font-medium">Objectives:</span> {String(plan.careObjectives || '').substring(0, 100)}
+                                        {(plan.careObjectives || '').length > 100 && '...'}
                                       </p>
                                     )}
                                     <p className="text-xs text-gray-500">
@@ -6362,12 +6257,8 @@ const InstitutionCaregiverDashboard = () => {
                                             // Load plan data for editing
                                             setEditingPlanId(plan.id);
                                             setCarePlanData({
-                                              startDate: plan.startDate instanceof Date 
-                                                ? plan.startDate.toISOString().split('T')[0]
-                                                : new Date(plan.startDate).toISOString().split('T')[0],
-                                              reviewDate: plan.reviewDate ? (plan.reviewDate instanceof Date 
-                                                ? plan.reviewDate.toISOString().split('T')[0]
-                                                : new Date(plan.reviewDate).toISOString().split('T')[0]) : '',
+                                              startDate: toDate(plan.startDate).toISOString().split('T')[0],
+                                              reviewDate: plan.reviewDate ? toDate(plan.reviewDate).toISOString().split('T')[0] : '',
                                               objectives: plan.careObjectives || '',
                                               activities: plan.dailyCareActivities || '',
                                               medicationSchedule: plan.medicationSchedule || '',
@@ -6687,8 +6578,8 @@ const InstitutionCaregiverDashboard = () => {
                                   </span>
                                   <span className="text-xs text-gray-400">•</span>
                                   <p className="text-xs text-gray-500">
-                                    {new Date(log.timestamp || log.createdAt).toLocaleDateString()} at{' '}
-                                    {new Date(log.timestamp || log.createdAt).toLocaleTimeString()}
+                                    {toDate(log.timestamp || log.createdAt).toLocaleDateString()} at{' '}
+                                    {toDate(log.timestamp || log.createdAt).toLocaleTimeString()}
                                   </p>
                                 </div>
                               </div>

@@ -13,7 +13,6 @@ import {
   Maximize,
   Minimize,
   Settings,
-  MoreVertical,
   Users,
   MessageSquare,
   Clock,
@@ -22,10 +21,7 @@ import {
   AlertCircle,
   Loader2,
   Monitor,
-  MonitorOff,
-  Wifi,
-  WifiOff,
-  Signal
+  MonitorOff
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import WebRTCService from '../services/webrtcService';
@@ -36,6 +32,7 @@ const CallInterface = ({
   callType = 'video', 
   participantInfo = null,
   isIncoming = false,
+  callId = null, // The actual call ID from the incoming call event
   onCallAccepted,
   onCallRejected,
   externalWebrtcService = null, // Optional: use parent's WebRTC service
@@ -281,7 +278,8 @@ const CallInterface = ({
   const handleAcceptCall = async () => {
     if (webrtcService && isIncoming) {
       setCallState('connecting');
-      await webrtcService.answerCall('call-id', callType);
+      // TODO: callId should come from the incoming call event; using the prop when available
+      await webrtcService.answerCall(callId, callType);
       if (onCallAccepted) {
         onCallAccepted();
       }

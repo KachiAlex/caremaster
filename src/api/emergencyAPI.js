@@ -1,8 +1,8 @@
-import { collection, query, getDocs, doc, updateDoc, deleteDoc, addDoc, where, orderBy, limit, onSnapshot, serverTimestamp, getDoc } from 'backend/database';;
+import { collection, query, getDocs, doc, updateDoc, deleteDoc, addDoc, where, orderBy, limit, onSnapshot, serverTimestamp, getDoc } from 'backend/database';
 import errorHandler from '../utils/errorHandler';
 import logger from '../utils/logger';
 import { httpsCallable } from 'backend/functions';
-import { db, functions } from '../backend/config';;
+import { db, functions } from '../backend/config';
 
 // Backend Functions
 const processEmergencyAlert = httpsCallable(functions, 'processEmergencyAlert');
