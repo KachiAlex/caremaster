@@ -124,6 +124,7 @@ const InstitutionCaregiverDashboard = () => {
   const [recentTasks, setRecentTasks] = useState([]);
   const [performance, setPerformance] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [assignedClients, setAssignedClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
@@ -872,7 +873,7 @@ const InstitutionCaregiverDashboard = () => {
       
       return () => unsubscribe();
     }
-  }, [userProfile, user?.uid, selectedClientId, effectiveInstitutionId]);
+  }, [userProfile, user?.uid, selectedClientId, effectiveInstitutionId, refreshTrigger]);
 
   useEffect(() => {
     // when selectedClientId changes, refresh selectedClient from cache/list
@@ -1194,7 +1195,7 @@ const InstitutionCaregiverDashboard = () => {
       if (scheduleItem.type === 'task' && scheduleItem.id) {
         await startTask(scheduleItem.id, user.uid);
         toast.success('Task started successfully');
-        loadCaregiverData();
+        setRefreshTrigger(prev => prev + 1);
       } else {
         toast.info('Clock in is only available for tasks');
       }
@@ -1332,7 +1333,7 @@ const InstitutionCaregiverDashboard = () => {
         await completeTask(scheduleItem.id, user.uid, 'Completed via clock out');
         toast.success('Task completed successfully');
         // Reload schedule
-        loadCaregiverData();
+        setRefreshTrigger(prev => prev + 1);
       } else {
         toast.info('Clock out is only available for tasks');
       }
@@ -1488,7 +1489,7 @@ const InstitutionCaregiverDashboard = () => {
                       <p className="text-base font-semibold text-gray-900">
                         {client.name || client.fullName || 'Unknown Client'}
                       </p>
-                      <p className="text-xs text-gray-500">ID: {client.id.substring(0, 8)}...</p>
+                      <p className="text-xs text-gray-500">ID: {(client?.id || '').substring(0, 8)}...</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -1606,7 +1607,7 @@ const InstitutionCaregiverDashboard = () => {
                           size="medium"
                           className="mr-4"
                         />
-                        <div className="text-sm text-gray-500">ID: {client.id.substring(0, 8)}...</div>
+                        <div className="text-sm text-gray-500">ID: {(client?.id || '').substring(0, 8)}...</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -3271,7 +3272,8 @@ const InstitutionCaregiverDashboard = () => {
         await updateDoc(medDataSnap.docs[0].ref, dataToSave);
       } else {
         // Create new
-        await setDoc(doc(collection(db, 'pharmacistMedicationData')), {
+        const newDocId = `${user.uid}_${selectedClient.id}_${Date.now()}`;
+        await setDoc(doc(db, 'pharmacistMedicationData', newDocId), {
           ...dataToSave,
           createdAt: new Date().toISOString()
         });
@@ -4400,7 +4402,7 @@ const InstitutionCaregiverDashboard = () => {
         {activeTab === 'settings' ? (
           <div>
             <button
-              onClick={() => { setShowSettings(false); setActiveTab('overview'); }}
+              onClick={() => { setShowSettings(false); setActiveTab('dashboard'); }}
               className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -5708,7 +5710,7 @@ const InstitutionCaregiverDashboard = () => {
                   <h2 className="text-2xl font-bold text-white">
                     {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                   </h2>
-                  <p className="text-blue-100">Client ID: {selectedClient.id.substring(0, 12)}...</p>
+                  <p className="text-blue-100">Client ID: {(selectedClient?.id || '').substring(0, 12)}...</p>
                 </div>
               </div>
               <button

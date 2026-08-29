@@ -53,7 +53,12 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
         toast.error('Could not identify caregiver');
         return;
       }
-      
+
+      if (task?.collection && task.collection !== 'careTasks') {
+        toast.info('Time tracking is only available for care tasks');
+        return;
+      }
+
       await startTask(task.id, caregiverId);
       setTaskStarted(true);
       toast.success('Task started! Timer is now running.');

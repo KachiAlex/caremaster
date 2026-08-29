@@ -88,7 +88,7 @@ const DashboardHeader = ({ userProfile, userRole, user }) => {
     
     if (userRole === 'doctor') {
       return 'Medical Dashboard';
-    } else if (userRole === 'caregiver') {
+    } else if (userRole === 'caregiver' || userRole === 'nurse') {
       if (specializations.includes('Registered Nurse') || specializations.includes('LPN')) {
         return 'Medical Care Specialist Dashboard';
       } else if (specializations.includes('Physical Therapist')) {
@@ -167,7 +167,7 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
         { label: 'Upcoming', value: stats.upcomingAppointments || 0, icon: Clock, color: 'purple', action: () => navigate('/service-provider/consultations') },
         { label: 'Unread Messages', value: stats.unreadMessages || 0, icon: MessageSquare, color: 'orange', action: onShowMessages },
       ];
-    } else if (userRole === 'caregiver') {
+    } else if (userRole === 'caregiver' || userRole === 'nurse') {
       return [
         { label: 'Assigned clients', value: stats.clients || 0, icon: Users, color: 'blue', action: () => navigate('/service-provider/medical-records') },
         { label: 'Today\'s Tasks', value: stats.todaysTasks || 0, icon: ClipboardList, color: 'green', action: onShowTasks },
@@ -949,11 +949,13 @@ const ServiceProviderDashboard = () => {
             })),
             ...(todaysTasksData || []).map(t => ({
               id: t.id, type: 'task', title: t.title || 'Task',
-              time: t.scheduledTime || '', client: t.clientName || 'Client', status: t.status || 'pending'
+              time: t.scheduledTime || '', client: t.clientName || 'Client', clientId: t.clientId,
+              status: t.status || 'pending', collection: t.collection || 'careTasks'
             })),
             ...(pendingTasksData || []).map(t => ({
               id: t.id, type: 'task', title: t.title || 'Task',
-              time: t.scheduledTime || '', client: t.clientName || 'Client', status: t.status || 'pending'
+              time: t.scheduledTime || '', client: t.clientName || 'Client', clientId: t.clientId,
+              status: t.status || 'pending', collection: t.collection || 'taskAssignments'
             })),
           ]}
           onItemSelect={(item) => {

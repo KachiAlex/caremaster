@@ -32,39 +32,16 @@ export const getNurseReportsByPatient = async (clientId) => {
   }
 };
 
-export const createNurseReport = async ({
-  clientId,
-  nurseId,
-  nurseName,
-  bloodPressure,
-  heartRate,
-  temperature,
-  weight,
-  height,
-  oxygenSaturation,
-  painLevel,
-  notes,
-  status
-}) => {
+export const createNurseReport = async (reportData) => {
   try {
     const reportsRef = collection(db, NURSE_REPORTS_COLLECTION);
     const payload = {
-      clientId,
-      nurseId,
-      nurseName,
-      bloodPressure,
-      heartRate,
-      temperature,
-      weight,
-      height,
-      oxygenSaturation,
-      painLevel,
-      notes,
-      status: status || 'stable',
+      ...reportData,
+      status: reportData.status || 'stable',
       createdAt: serverTimestamp()
     };
-    await addDoc(reportsRef, payload);
-    return payload;
+    const docRef = await addDoc(reportsRef, payload);
+    return { id: docRef.id, ...payload };
   } catch (error) {
     console.error('Error creating nurse report:', error);
     throw error;

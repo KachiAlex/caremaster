@@ -135,7 +135,7 @@ export const createVitalSign = async (vitalSignData, institutionId = null) => {
     const newVitalSign = {
       ...vitalSignData,
       institutionId: institutionId || vitalSignData.institutionId,
-      recordedAt: serverTimestamp(),
+      recordedAt: vitalSignData.recordedAt || serverTimestamp(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };

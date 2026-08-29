@@ -444,14 +444,14 @@ function App() {
         element={<InstitutionAdminGuard><InstitutionAdminDashboard /></InstitutionAdminGuard>} 
       />
       
-      <Route 
-        path="/institution-admin/users" 
-        element={<InstitutionUserManagement />} 
+      <Route
+        path="/institution-admin/users"
+        element={user ? <InstitutionAdminGuard><InstitutionUserManagement /></InstitutionAdminGuard> : <Navigate to="/login" replace />}
       />
-      
-      <Route 
-        path="/institution-admin/settings" 
-        element={<InstitutionSettings />} 
+
+      <Route
+        path="/institution-admin/settings"
+        element={user ? <InstitutionAdminGuard><InstitutionSettings /></InstitutionAdminGuard> : <Navigate to="/login" replace />}
       />
       
       <Route 
@@ -1046,14 +1046,14 @@ function ServiceProviderGuard() {
     return <ServiceProviderLayout />;
   }
   
-  // Allow caregivers to access service provider dashboard (after onboarding)
-  if (userProfile?.userType === 'caregiver') {
+  // Allow caregivers and nurses to access service provider dashboard (after onboarding)
+  if (userProfile?.userType === 'caregiver' || userProfile?.userType === 'nurse') {
     if (!userProfile?.onboardingComplete) {
       console.log('🚫 SERVICE PROVIDER: Caregiver onboarding required - redirecting to onboarding');
       window.location.replace('/caregiver/onboarding');
       return <LoadingSpinner />;
     }
-    console.log('✅ Caregiver access granted to service provider dashboard');
+    console.log('✅ Caregiver/nurse access granted to service provider dashboard');
     return <ServiceProviderLayout />;
   }
   

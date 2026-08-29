@@ -872,7 +872,7 @@ const PrescriptionRow = ({
       <td className="px-6 py-4">
         <div className="text-sm text-gray-900">{prescription.prescribedBy || 'Doctor'}</div>
         <div className="text-xs text-gray-500">
-          {prescription.createdAt?.toLocaleDateString()}
+          {prescription.createdAt ? (prescription.createdAt.toDate ? prescription.createdAt.toDate().toLocaleDateString() : new Date(prescription.createdAt).toLocaleDateString()) : '—'}
         </div>
       </td>
       <td className="px-6 py-4">

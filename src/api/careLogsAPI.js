@@ -21,14 +21,21 @@ const CARE_LOGS_COLLECTION = 'careLogs';
 // Create a new care log entry (All roles)
 export const createCareLog = async (careLogData) => {
   try {
-    const docRef = await addDoc(collection(db, CARE_LOGS_COLLECTION), {
+    // Normalize logDate/logTime from alternative field names
+    const normalizedData = {
       ...careLogData,
+      logDate: careLogData.logDate || careLogData.activityDate || new Date().toISOString().split('T')[0],
+      logTime: careLogData.logTime || careLogData.activityTime || new Date().toTimeString().split(' ')[0],
+    };
+
+    const docRef = await addDoc(collection(db, CARE_LOGS_COLLECTION), {
+      ...normalizedData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    
+
     console.log('✅ Care log created:', docRef.id);
-    return { id: docRef.id, ...careLogData };
+    return { id: docRef.id, ...normalizedData };
   } catch (error) {
     console.error('❌ Error creating care log:', error);
     throw error;

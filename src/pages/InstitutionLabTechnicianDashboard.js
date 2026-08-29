@@ -481,7 +481,7 @@ const InstitutionLabTechnicianDashboard = () => {
                         Client: {visit.clientName || 'Unknown'}
                       </p>
                       <p className="text-xs text-slate-500 mt-1">
-                        {visit.scheduledTime ? new Date(visit.scheduledTime).toLocaleString() : '—'}
+                        {(visit.scheduledAt || visit.scheduledTime) ? new Date(visit.scheduledAt || visit.scheduledTime).toLocaleString() : '—'}
                       </p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${

@@ -329,7 +329,7 @@ export const getTodaysAppointments = async (userId, userRole, options = {}) => {
       q = query(appointmentsRef);
     } else if (userRole === 'doctor') {
       q = query(appointmentsRef, where('doctorId', '==', userId));
-    } else if (userRole === 'caregiver') {
+    } else if (userRole === 'caregiver' || userRole === 'nurse') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
     } else if (userRole === 'elderly') {
       q = query(appointmentsRef, where('clientId', '==', userId));
@@ -393,7 +393,7 @@ export const getUpcomingAppointments = async (userId, userRole) => {
       q = query(appointmentsRef);
     } else if (userRole === 'doctor') {
       q = query(appointmentsRef, where('doctorId', '==', userId));
-    } else if (userRole === 'caregiver') {
+    } else if (userRole === 'caregiver' || userRole === 'nurse') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
     } else if (userRole === 'elderly') {
       q = query(appointmentsRef, where('clientId', '==', userId));
@@ -464,7 +464,7 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
     q = query(appointmentsRef, orderBy('scheduledTime', 'asc'));
   } else if (userRole === 'doctor') {
     q = query(appointmentsRef, where('doctorId', '==', userId), orderBy('scheduledTime', 'asc'));
-  } else if (userRole === 'caregiver') {
+  } else if (userRole === 'caregiver' || userRole === 'nurse') {
     q = query(appointmentsRef, where('caregiverId', '==', userId), orderBy('scheduledTime', 'asc'));
   } else if (userRole === 'elderly') {
     q = query(appointmentsRef, where('clientId', '==', userId), orderBy('scheduledTime', 'asc'));
@@ -504,7 +504,7 @@ export const getAppointmentAnalytics = async (userId, userRole, dateRange = 30) 
       q = query(appointmentsRef);
     } else if (userRole === 'doctor') {
       q = query(appointmentsRef, where('doctorId', '==', userId));
-    } else if (userRole === 'caregiver') {
+    } else if (userRole === 'caregiver' || userRole === 'nurse') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
     } else if (userRole === 'elderly') {
       q = query(appointmentsRef, where('clientId', '==', userId));

@@ -196,12 +196,18 @@ const CaregiverDashboard = () => {
         dueDate.setHours(0, 0, 0, 0);
         return dueDate.getTime() === today.getTime();
       })
-      .map(assignment => ({
+      .map(assignment => {
+        const scheduled = assignment.dueDate ? new Date(assignment.dueDate) : new Date();
+        if (assignment.dueTime) {
+          const [h, m] = assignment.dueTime.split(':');
+          scheduled.setHours(parseInt(h, 10) || 9, parseInt(m, 10) || 0, 0, 0);
+        }
+        return {
         id: assignment.id,
         type: 'task',
         title: assignment.title || 'Assigned Task',
-        time: assignment.dueTime ? `${assignment.dueTime}:00` : '09:00:00',
-        scheduledTime: assignment.dueDate ? new Date(`${assignment.dueDate}T${assignment.dueTime || '09:00'}`) : new Date(),
+        time: scheduled,
+        scheduledTime: scheduled,
         client: assignment.clientName || 'Client',
         clientId: assignment.clientId || null,
         status: assignment.status || 'pending',
@@ -209,7 +215,8 @@ const CaregiverDashboard = () => {
         description: assignment.description,
         instructions: assignment.instructions,
         assignmentType: 'clientAssignment'
-      }));
+        };
+      });
 
     const combinedSchedule = [
       ...todaysAppointments.map(apt => ({
@@ -1358,7 +1365,7 @@ const CaregiverDashboard = () => {
             schedule={todaySchedule.map(s => ({
               id: s.id,
               type: s.type || 'task',
-              title: s.client || s.title || 'Task',
+              title: s.title || s.client || 'Task',
               time: s.time || s.scheduledTime || '',
               client: s.client || 'Client',
               status: s.status || 'pending',
