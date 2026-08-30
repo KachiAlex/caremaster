@@ -64,7 +64,26 @@ export const medicationAPI = {
         medicationsQuery = query(medicationsQuery, limit(filters.limit));
       }
 
-      const medicationsSnapshot = await getDocs(medicationsQuery);
+      let medicationsSnapshot;
+      try {
+        medicationsSnapshot = await getDocs(medicationsQuery);
+      } catch (error) {
+        if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+          console.warn('Index missing, using fallback query:', error.message);
+          if (filters.clientId) {
+            const fallbackQ = query(
+              collection(db, 'medications'),
+              where('clientId', '==', filters.clientId)
+            );
+            medicationsSnapshot = await getDocs(fallbackQ);
+          } else {
+            const fallbackQ = query(collection(db, 'medications'));
+            medicationsSnapshot = await getDocs(fallbackQ);
+          }
+        } else {
+          throw error;
+        }
+      }
       let medications = [];
 
       medicationsSnapshot.forEach((doc) => {
@@ -85,13 +104,20 @@ export const medicationAPI = {
         medications = medications.filter(med => med.status === filters.status);
       }
 
-      // Apply client-side sorting if clientId filter was used
+      // Apply client-side sorting if clientId filter was used or fallback was used
       if (filters.clientId) {
         medications.sort((a, b) => {
           const aDate = a.startDate || new Date(0);
           const bDate = b.startDate || new Date(0);
           return bDate - aDate;
         });
+      } else {
+        // Sort by startDate desc (covers fallback path for non-clientId queries)
+        medications.sort((a, b) => {
+          const toMs = (v) => v instanceof Date ? v.getTime() : (v?.toDate ? v.toDate().getTime() : (v ? new Date(v).getTime() : 0));
+          return toMs(b.startDate) - toMs(a.startDate);
+        });
+        medications = medications.slice(0, filters.limit || 50);
       }
 
       return medications;
@@ -573,7 +599,8 @@ export const medicationAPI = {
       orderBy('updatedAt', 'desc')
     );
     
-    return onSnapshot(medicationsQuery, (snapshot) => {
+    let unsubscribeFallback = null;
+    const unsubscribe = onSnapshot(medicationsQuery, (snapshot) => {
       const medications = [];
       snapshot.forEach((doc) => {
         medications.push({
@@ -588,7 +615,38 @@ export const medicationAPI = {
         });
       });
       callback(medications);
+    }, (error) => {
+      if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+        console.warn('Index missing, using fallback subscription:', error.message);
+        const fallbackQ = query(collection(db, 'medications'));
+        unsubscribeFallback = onSnapshot(fallbackQ, (snap) => {
+          const results = [];
+          snap.forEach((doc) => {
+            results.push({
+              id: doc.id,
+              ...doc.data(),
+              startDate: doc.data().startDate?.toDate(),
+              endDate: doc.data().endDate?.toDate(),
+              lastTaken: doc.data().lastTaken?.toDate(),
+              nextDose: doc.data().nextDose?.toDate(),
+              createdAt: doc.data().createdAt?.toDate(),
+              updatedAt: doc.data().updatedAt?.toDate()
+            });
+          });
+          results.sort((a, b) => {
+            const toMs = (v) => v instanceof Date ? v.getTime() : (v?.toDate ? v.toDate().getTime() : (v ? new Date(v).getTime() : 0));
+            return toMs(b.updatedAt) - toMs(a.updatedAt);
+          });
+          callback(results);
+        });
+      } else {
+        console.error('Medications subscription error:', error);
+      }
     });
+    return () => {
+      unsubscribe();
+      if (unsubscribeFallback) unsubscribeFallback();
+    };
   },
 
   // Create medication reminder (using Backend Functions)

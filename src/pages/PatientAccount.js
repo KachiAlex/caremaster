@@ -36,6 +36,7 @@ const PatientAccount = () => {
   
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -65,6 +66,7 @@ const PatientAccount = () => {
   const loadPatientData = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       let clientData;
 
       // Try to get by clientId (registration number) first, then by document ID
@@ -103,6 +105,7 @@ const PatientAccount = () => {
     } catch (error) {
       console.error('Error loading Client data:', error);
       toast.error('Failed to load Client information');
+      setLoadError('Failed to load profile data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -120,24 +123,17 @@ const PatientAccount = () => {
     try {
       setLoading(true);
       const patientIdToUse = client?.id || clientId;
-      
-      const updateData = {
-        name: formData.name,
-        fullName: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        phoneNumber: formData.phone,
-        address: formData.address,
-        dateOfBirth: formData.dateOfBirth,
-        dob: formData.dateOfBirth,
-        gender: formData.gender,
-        emergencyContactName: formData.emergencyContactName,
-        emergencyContactPhone: formData.emergencyContactPhone,
-        medicalConditions: formData.medicalConditions,
-        allergies: formData.allergies,
-        medications: formData.medications,
-        updatedAt: new Date().toISOString()
-      };
+
+      if (!patientIdToUse) {
+        toast.error('Cannot save: no patient ID found');
+        setLoading(false);
+        return;
+      }
+
+      const updateData = Object.fromEntries(
+        Object.entries(formData).filter(([_, v]) => v !== '' && v !== undefined && v !== null)
+      );
+      updateData.updatedAt = new Date().toISOString();
 
       await updatePatient(patientIdToUse, updateData);
       
@@ -258,6 +254,13 @@ const PatientAccount = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loadError && !client && !loading && (
+          <div className="p-6 text-center">
+            <p className="text-red-600 mb-4">{loadError}</p>
+            <button onClick={() => loadPatientData()} className="btn btn-primary">Retry</button>
+          </div>
+        )}
+        {client && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
@@ -533,6 +536,7 @@ const PatientAccount = () => {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

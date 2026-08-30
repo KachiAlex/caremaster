@@ -275,7 +275,8 @@ export const getConsultationsByDoctor = async (doctorId, limitCount = 50) => {
         consultations.push({
           id: doc.id,
           ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          consultationDate: data.consultationDate || data.createdAt
         });
       });
 
@@ -331,7 +332,8 @@ export const getRecentConsultations = async (institutionId, limitCount = 20) => 
         consultations.push({
           id: doc.id,
           ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          consultationDate: data.consultationDate || data.createdAt
         });
       });
 

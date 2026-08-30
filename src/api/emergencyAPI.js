@@ -17,7 +17,8 @@ export const emergencyAPI = {
       orderBy('triggeredAt', 'desc')
     );
     
-    return onSnapshot(emergenciesQuery, (snapshot) => {
+    let unsubscribeFallback = null;
+    const unsubscribe = onSnapshot(emergenciesQuery, (snapshot) => {
       const emergencies = [];
       snapshot.forEach((doc) => {
         emergencies.push({
@@ -28,7 +29,34 @@ export const emergencyAPI = {
         });
       });
       callback(emergencies);
+    }, (error) => {
+      if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+        console.warn('Index missing, using fallback subscription:', error.message);
+        const fallbackQ = query(collection(db, 'emergencies'));
+        unsubscribeFallback = onSnapshot(fallbackQ, (snap) => {
+          const results = [];
+          snap.forEach((doc) => {
+            results.push({
+              id: doc.id,
+              ...doc.data(),
+              triggeredAt: doc.data().triggeredAt?.toDate(),
+              resolvedAt: doc.data().resolvedAt?.toDate()
+            });
+          });
+          results.sort((a, b) => {
+            const toMs = (v) => v instanceof Date ? v.getTime() : (v?.toDate ? v.toDate().getTime() : (v ? new Date(v).getTime() : 0));
+            return toMs(b.triggeredAt) - toMs(a.triggeredAt);
+          });
+          callback(results);
+        });
+      } else {
+        console.error('Emergencies subscription error:', error);
+      }
     });
+    return () => {
+      unsubscribe();
+      if (unsubscribeFallback) unsubscribeFallback();
+    };
   },
 
   // Get Emergency Statistics

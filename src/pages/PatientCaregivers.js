@@ -17,9 +17,11 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const ClientCaregivers = () => {
   const { userProfile } = useUser();
+  const navigate = useNavigate();
   const [caregivers, setCaregivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,10 +38,11 @@ const ClientCaregivers = () => {
 
       // Load assigned caregivers from admin-created assignments
       const assignments = await assignmentAPI.getAssignmentsByClient(clientId);
-      console.log(`Found ${assignments.length} caregiver assignments for client ${clientId}`);
+      const list = assignments || [];
+      console.log(`Found ${list.length} caregiver assignments for client ${clientId}`);
 
       // Extract caregiver information from assignments
-      const caregiversData = assignments.map(assignment => ({
+      const caregiversData = list.map(assignment => ({
         id: assignment.caregiverId || assignment.assignedTo,
         name: assignment.caregiverName || assignment.assignedToName || 'Unknown',
         email: assignment.caregiverEmail || '',
@@ -66,10 +69,11 @@ const ClientCaregivers = () => {
 
       // Set up real-time subscription for assignments
       const unsubscribe = assignmentAPI.subscribeToAssignmentsByClient(clientId, (assignments) => {
-        console.log(`Real-time update: Found ${assignments.length} caregiver assignments for client ${clientId}`);
+        const list = assignments || [];
+        console.log(`Real-time update: Found ${list.length} caregiver assignments for client ${clientId}`);
 
         // Extract caregiver information from assignments
-        const caregiversData = assignments.map(assignment => ({
+        const caregiversData = list.map(assignment => ({
           id: assignment.caregiverId || assignment.assignedTo,
           name: assignment.caregiverName || assignment.assignedToName || 'Unknown',
           email: assignment.caregiverEmail || '',
@@ -82,7 +86,7 @@ const ClientCaregivers = () => {
         setCaregivers(caregiversData || []);
       });
 
-      return () => unsubscribe();
+      return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
     }
   }, [userProfile?.id, userProfile?.uid]);
 
@@ -218,11 +222,11 @@ const ClientCaregivers = () => {
                 </div>
 
                 <div className="flex space-x-2">
-                  <button className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                  <button onClick={() => navigate('/messages')} className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
                     <MessageSquare className="h-4 w-4 mr-1" />
                     Message
                   </button>
-                  <button className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                  <button onClick={() => navigate('/telemedicine')} className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
                     <Video className="h-4 w-4 mr-1" />
                     Video Call
                   </button>
@@ -280,11 +284,11 @@ const ClientCaregivers = () => {
                 </div>
 
                 <div className="flex space-x-3 pt-4">
-                  <button className="flex-1 flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                  <button onClick={() => navigate('/messages')} className="flex-1 flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Send Message
                   </button>
-                  <button className="flex-1 flex items-center justify-center px-4 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                  <button onClick={() => navigate('/telemedicine')} className="flex-1 flex items-center justify-center px-4 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
                     <Video className="h-4 w-4 mr-2" />
                     Video Call
                   </button>

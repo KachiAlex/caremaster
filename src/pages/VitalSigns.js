@@ -37,7 +37,7 @@ const VitalSigns = () => {
         setLoading(true);
         
         // Fetch recent vital signs
-        const vitalSigns = await getVitalSignsByClient(user.uid);
+        const vitalSigns = (await getVitalSignsByClient(user.uid)) || [];
         
         // Get the latest reading for each type
         const latestByType = {};
@@ -62,7 +62,7 @@ const VitalSigns = () => {
         setCurrentVitals(currentVitalsData);
         
         // Fetch trends
-        const trends = await getVitalSignsTrends(user.uid);
+        const trends = (await getVitalSignsTrends(user.uid)) || {};
         const trendsData = Object.keys(trends).map(type => ({
           id: type,
           type: type,
@@ -87,6 +87,7 @@ const VitalSigns = () => {
 
   // Helper function to get icon for vital type
   const getVitalIcon = (type) => {
+    if (!type) return Heart;
     switch (type.toLowerCase()) {
       case 'blood pressure':
         return Heart;
@@ -135,6 +136,27 @@ const VitalSigns = () => {
       return;
     }
 
+    if (formData.vitalType === 'Temperature') {
+      const val = parseFloat(formData.reading);
+      if (isNaN(val) || val < 90 || val > 110) {
+        toast.error('Temperature must be between 90 and 110°F');
+        return;
+      }
+    }
+    if (formData.vitalType === 'Blood Pressure') {
+      if (!/^\d{2,3}\/\d{2,3}$/.test(formData.reading)) {
+        toast.error('Blood pressure must be in format systolic/diastolic (e.g. 120/80)');
+        return;
+      }
+    }
+    if (formData.vitalType === 'Heart Rate') {
+      const val = parseFloat(formData.reading);
+      if (isNaN(val) || val < 30 || val > 220) {
+        toast.error('Heart rate must be between 30 and 220 bpm');
+        return;
+      }
+    }
+
     try {
       setSubmitting(true);
       const vitalSignData = {
@@ -159,7 +181,7 @@ const VitalSigns = () => {
       });
 
       // Refresh the data
-      const vitalSigns = await getVitalSignsByClient(user.uid);
+      const vitalSigns = (await getVitalSignsByClient(user.uid)) || [];
       
       // Get the latest reading for each type
       const latestByType = {};
@@ -184,7 +206,7 @@ const VitalSigns = () => {
       setCurrentVitals(currentVitalsData);
 
       // Refresh health trends after save
-      const trends = await getVitalSignsTrends(user.uid);
+      const trends = (await getVitalSignsTrends(user.uid)) || {};
       const trendsData = Object.keys(trends).map(type => ({
         id: type,
         type: type,
@@ -229,14 +251,22 @@ const VitalSigns = () => {
 
   // Helper function to determine status based on reading
   const getVitalStatus = (type, reading) => {
+    if (type === 'Blood Pressure') {
+      const parts = String(reading).split('/');
+      if (parts.length !== 2) return 'Unknown';
+      const systolic = parseFloat(parts[0]);
+      const diastolic = parseFloat(parts[1]);
+      if (isNaN(systolic) || isNaN(diastolic)) return 'Unknown';
+      if (systolic >= 140 || diastolic >= 90) return 'High';
+      if (systolic < 90 || diastolic < 60) return 'Low';
+      return 'Normal';
+    }
+
     const value = parseFloat(reading);
-    
+
     if (isNaN(value)) return 'Unknown';
-    
+
     switch (type) {
-      case 'Blood Pressure':
-        if (value >= 140 || value <= 90) return 'Warning';
-        return 'Normal';
       case 'Blood Sugar':
         if (value >= 140 || value <= 70) return 'Warning';
         return 'Normal';
@@ -265,6 +295,15 @@ const VitalSigns = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const formatVitalDisplay = (val) => {
+    if (val == null) return '--';
+    if (typeof val === 'object') {
+      if (val.systolic != null && val.diastolic != null) return `${val.systolic}/${val.diastolic}`;
+      return '--';
+    }
+    return String(val);
   };
 
   if (loading) {
@@ -305,7 +344,7 @@ const VitalSigns = () => {
                     </span>
                   </div>
                   <div className="mb-2">
-                    <span className="text-3xl font-bold text-gray-900">{vital.value}</span>
+                    <span className="text-3xl font-bold text-gray-900">{formatVitalDisplay(vital.value)}</span>
                     <span className="text-lg text-gray-600 ml-2">{vital.unit}</span>
                   </div>
                   <p className="text-sm text-gray-500">{vital.timestamp}</p>

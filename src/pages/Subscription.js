@@ -21,9 +21,14 @@ import {
   assignSubscriptionToClient,
   cancelClientSubscription,
   getBillingSettings,
-  getPlanPrice,
   formatCurrency
 } from '../api/billingPlansAPI';
+
+const safeFormatCurrency = (amount, currencyCode) => {
+  const num = Number(amount);
+  if (!Number.isFinite(num)) return '—';
+  return formatCurrency(num, currencyCode);
+};
 
 // Map a plan tier to an icon component
 const getPlanIcon = (tier) => {
@@ -71,7 +76,7 @@ const normalizePlan = (plan) => {
 };
 
 const Subscription = () => {
-  const { user, userProfile, institutionId } = useUser();
+  const { user, userProfile, institutionId, loading: userLoading } = useUser();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -93,7 +98,8 @@ const Subscription = () => {
       const sub = await getClientSubscription(clientId);
       setSubscription(sub);
       if (sub?.billingCycle) {
-        setBillingCycle(sub.billingCycle === 'annual' ? 'yearly' : sub.billingCycle);
+        const uiCycle = sub.billingCycle === 'annual' ? 'yearly' : sub.billingCycle;
+        setBillingCycle(uiCycle === 'monthly' || uiCycle === 'yearly' ? uiCycle : 'monthly');
       }
     } catch (err) {
       console.error('Error fetching subscription:', err);
@@ -106,6 +112,7 @@ const Subscription = () => {
     let cancelled = false;
 
     const loadData = async () => {
+      if (userLoading) return;
       if (!instId || !clientId) {
         setLoading(false);
         return;
@@ -135,7 +142,8 @@ const Subscription = () => {
         setBillingSettings(settingsData);
 
         if (subData?.billingCycle) {
-          setBillingCycle(subData.billingCycle === 'annual' ? 'yearly' : subData.billingCycle);
+          const uiCycle = subData.billingCycle === 'annual' ? 'yearly' : subData.billingCycle;
+          setBillingCycle(uiCycle === 'monthly' || uiCycle === 'yearly' ? uiCycle : 'monthly');
         }
       } catch (err) {
         if (!cancelled) {
@@ -152,7 +160,7 @@ const Subscription = () => {
     return () => {
       cancelled = true;
     };
-  }, [instId, clientId]);
+  }, [instId, clientId, userLoading]);
 
   // Determine the current plan id from the active subscription
   const currentPlanId = subscription?.status === 'active' ? subscription?.planId : null;
@@ -214,8 +222,9 @@ const Subscription = () => {
 
   const formatDate = (date) => {
     if (!date) return '—';
-    if (date.toDate) date = date.toDate();
-    if (!(date instanceof Date) || isNaN(date)) return '—';
+    if (typeof date.toDate === 'function') date = date.toDate();
+    if (typeof date === 'string' || typeof date === 'number') date = new Date(date);
+    if (!(date instanceof Date) || isNaN(date.getTime?.())) return '—';
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
@@ -317,7 +326,7 @@ const Subscription = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Amount:</span>
                     <span className="font-semibold">
-                      {formatCurrency(subscription.price, subscription.currency || currencyCode)}
+                      {safeFormatCurrency(subscription.price, subscription.currency || currencyCode)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -360,14 +369,17 @@ const Subscription = () => {
                   <h3 className="text-lg font-semibold text-gray-900">Benefits</h3>
                 </div>
                 <div className="space-y-1">
-                  {(subscription.plan?.features || currentPlanObj?.features || [])
-                    .slice(0, 4)
-                    .map((feature, index) => (
+                  {(() => {
+                    const subFeatures = subscription.plan?.features;
+                    const planFeatures = currentPlanObj?.features;
+                    const featuresList = Array.isArray(subFeatures) ? subFeatures : Array.isArray(planFeatures) ? planFeatures : [];
+                    return featuresList.slice(0, 4).map((feature, index) => (
                       <div key={index} className="flex items-center">
                         <Check className="h-4 w-4 text-green-500 mr-2" />
                         <span className="text-sm text-gray-600">{feature}</span>
                       </div>
-                    ))}
+                    ));
+                  })()}
                   {(!subscription.plan?.features && !currentPlanObj?.features) && (
                     <p className="text-sm text-gray-500">No benefit details available.</p>
                   )}
@@ -461,7 +473,7 @@ const Subscription = () => {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  {plan.popular && (
+                  {plan.popular && !isCurrentPlan && (
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
                         Most Popular
@@ -490,7 +502,7 @@ const Subscription = () => {
                     <p className="text-gray-600 mb-4">{plan.description}</p>
                     <div className="mb-2">
                       <span className="text-3xl font-bold text-gray-900">
-                        {formatCurrency(price, plan.currency || currencyCode)}
+                        {safeFormatCurrency(price, plan.currency || currencyCode)}
                       </span>
                       <span className="text-gray-600">
                         /{billingCycle === 'monthly' ? 'month' : 'year'}

@@ -120,6 +120,17 @@ const Telemedicine = () => {
         toast.success('Connected to call');
       } else if (curState === 'DISCONNECTED') {
         toast.warning('Connection lost');
+        // Clean up call state on unexpected disconnect
+        if (activeCall?.timer) {
+          clearInterval(activeCall.timer);
+        }
+        setIsInCall(false);
+        setActiveCall(null);
+        setCallDuration(0);
+        setRemoteUsers([]);
+        setIsVideoOn(true);
+        setIsAudioOn(true);
+        setIsRecording(false);
       }
     };
 
@@ -494,10 +505,12 @@ const Telemedicine = () => {
   };
 
   const formatDateTime = (dateTime) => {
-    const date = new Date(dateTime);
+    if (!dateTime) return { date: 'N/A', time: 'N/A' };
+    const d = dateTime?.toDate ? dateTime.toDate() : new Date(dateTime);
+    if (isNaN(d.getTime())) return { date: 'N/A', time: 'N/A' };
     return {
-      date: date.toLocaleDateString(),
-      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      date: d.toLocaleDateString(),
+      time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
   };
 

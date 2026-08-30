@@ -38,6 +38,7 @@ const SecuritySettings = () => {
   }, []);
 
   const loadSecuritySettings = async () => {
+    setLoading(true);
     try {
       const response = await api.get('/auth/security-settings');
       if (response.data && response.data.success) {
@@ -49,6 +50,9 @@ const SecuritySettings = () => {
     } catch (error) {
       console.error('Failed to load security settings:', error);
       logger.error('Failed to load security settings from backend', { error: error.message });
+      toast.error('Failed to load security settings');
+    } finally {
+      setLoading(false);
     }
     // Still load feature flags for display purposes
     const features = secureConfigService.getFeatureFlags();
@@ -56,8 +60,11 @@ const SecuritySettings = () => {
   };
 
   // Persist security settings to the backend
-  const persistSecuritySettings = async (payload) => {
-    const response = await api.put('/auth/security-settings', payload);
+  const persistSecuritySettings = async (settings) => {
+    const response = await api.put('/auth/security-settings', settings);
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to update security settings');
+    }
     return response.data;
   };
 
@@ -91,24 +98,17 @@ const SecuritySettings = () => {
     setLoading(true);
     try {
       await authSecurityService.verifyTwoFactorAuth(verificationId, verificationCode);
-
-      // Persist 2FA enablement to the backend
-      try {
-        await persistSecuritySettings({
-          twoFactorEnabled: true,
-          twoFactorPhone: phoneNumber
-        });
-      } catch (persistError) {
-        logger.error('Failed to persist 2FA settings to backend', { error: persistError.message });
-      }
-
+      await persistSecuritySettings({
+        twoFactorEnabled: true,
+        twoFactorPhone: phoneNumber
+      });
       setTwoFactorEnabled(true);
       setShowVerification(false);
       setVerificationCode('');
       toast.success('Two-factor authentication enabled successfully!');
       logger.info('2FA verification successful');
     } catch (error) {
-      toast.error('Verification failed: ' + error.message);
+      toast.error('Failed to enable 2FA: ' + (error.message || 'Unknown error'));
       logger.error('2FA verification failed', { error: error.message });
     } finally {
       setLoading(false);
@@ -118,10 +118,26 @@ const SecuritySettings = () => {
   const handle2FADisable = async () => {
     setLoading(true);
     try {
+      // Unenroll Firebase MFA factor(s) before persisting disablement
+      try {
+        const { multiFactor, getAuth } = await import('firebase/auth');
+        const firebaseUser = authSecurityService.getCurrentUser?.() || getAuth().currentUser;
+        if (firebaseUser && multiFactor(firebaseUser).enrolledFactors.length > 0) {
+          for (const factor of multiFactor(firebaseUser).enrolledFactors) {
+            await multiFactor(firebaseUser).unenroll(factor);
+          }
+        }
+      } catch (unenrollError) {
+        logger.warn('Failed to unenroll Firebase MFA factor:', { error: unenrollError.message });
+        // Continue anyway - the backend flag is the source of truth for UI
+      }
+
       await persistSecuritySettings({ twoFactorEnabled: false, twoFactorPhone: null });
       setTwoFactorEnabled(false);
       setShowVerification(false);
       setVerificationCode('');
+      setPhoneNumber('');
+      setVerificationId('');
       toast.success('Two-factor authentication disabled');
       logger.info('2FA disabled');
     } catch (error) {
@@ -143,22 +159,23 @@ const SecuritySettings = () => {
       setLoading(true);
       try {
         // Register biometric credential via the shared service
+        const userId = user?.uid || userProfile?.id;
+        if (!userId) {
+          toast.error('User not loaded yet. Please try again.');
+          return;
+        }
         const credential = await biometricAuthService.registerBiometric({
-          id: user?.uid || userProfile?.id || 'user',
+          id: userId,
           name: userProfile?.name || userProfile?.displayName || 'User',
           displayName: userProfile?.name || userProfile?.displayName || 'User',
           email: userProfile?.email || user?.email || ''
         });
 
         // Persist biometric enablement to the backend
-        try {
-          await persistSecuritySettings({
-            biometricEnabled: true,
-            biometricCredentialId: credential?.credentialId || credential?.id || 'registered'
-          });
-        } catch (persistError) {
-          logger.error('Failed to persist biometric settings to backend', { error: persistError.message });
-        }
+        await persistSecuritySettings({
+          biometricEnabled: true,
+          biometricCredentialId: credential?.credentialId || credential?.id || 'registered'
+        });
 
         setBiometricEnabled(true);
         toast.success('Biometric authentication enabled!');
@@ -177,14 +194,10 @@ const SecuritySettings = () => {
         await biometricAuthService.removeBiometric();
 
         // Persist biometric disablement to the backend
-        try {
-          await persistSecuritySettings({
-            biometricEnabled: false,
-            biometricCredentialId: null
-          });
-        } catch (persistError) {
-          logger.error('Failed to persist biometric disable to backend', { error: persistError.message });
-        }
+        await persistSecuritySettings({
+          biometricEnabled: false,
+          biometricCredentialId: null
+        });
 
         setBiometricEnabled(false);
         toast.success('Biometric authentication disabled');

@@ -128,34 +128,21 @@ export const getCareTasksByClient = async (clientId) => {
 export const getCareTasksByCaregiver = async (caregiverId, options = {}) => {
   try {
     const tasksRef = collection(db, CARE_TASKS_COLLECTION);
-    let q = query(
-      tasksRef, 
-      where('caregiverId', '==', caregiverId),
-      orderBy('scheduledTime', 'asc')
-    );
+    let q = query(tasksRef, where('caregiverId', '==', caregiverId));
     
     // Add status filtering if provided
     if (options.status) {
-      q = query(
-        tasksRef, 
-        where('caregiverId', '==', caregiverId),
-        where('status', '==', options.status),
-        orderBy('scheduledTime', 'asc')
-      );
+      q = query(q, where('status', '==', options.status));
     }
     
     // Add date range filtering if provided
     if (options.startDate && options.endDate) {
       const startTimestamp = Timestamp.fromDate(new Date(options.startDate));
       const endTimestamp = Timestamp.fromDate(new Date(options.endDate));
-      q = query(
-        tasksRef, 
-        where('caregiverId', '==', caregiverId),
-        where('scheduledTime', '>=', startTimestamp),
-        where('scheduledTime', '<=', endTimestamp),
-        orderBy('scheduledTime', 'asc')
-      );
+      q = query(q, where('scheduledTime', '>=', startTimestamp), where('scheduledTime', '<=', endTimestamp));
     }
+    
+    q = query(q, orderBy('scheduledTime', 'asc'));
     
     // Add limit if provided
     if (options.limit) {
@@ -208,7 +195,7 @@ export const getCareTasksByCaregiver = async (caregiverId, options = {}) => {
       });
       // Apply limit in memory if needed
       if (options.limit) {
-        return tasks.slice(0, options.limit);
+        tasks = tasks.slice(0, options.limit);
       }
     }
     

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   MessageCircle,
   Send,
@@ -29,8 +29,17 @@ const Messages = () => {
 
   const [filteredConversations, setFilteredConversations] = useState(conversations);
 
+  const messagesEndRef = useRef(null);
+
   useEffect(() => {
-    if (!user?.uid) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     getConversationsByUser(user.uid)
       .then(data => {
@@ -43,10 +52,15 @@ const Messages = () => {
 
   useEffect(() => {
     if (searchTerm) {
-      const filtered = conversations.filter(conv =>
-        (conv.lastMessage || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (conv.conversationType || '').toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const filtered = conversations.filter(conv => {
+        const term = searchTerm.toLowerCase();
+        return (conv.lastMessage || '').toLowerCase().includes(term) ||
+               (conv.conversationType || '').toLowerCase().includes(term) ||
+               (conv.title || '').toLowerCase().includes(term) ||
+               (Array.isArray(conv.participants) && conv.participants.some(p =>
+                 (p.name || p.displayName || '').toLowerCase().includes(term)
+               ));
+      });
       setFilteredConversations(filtered);
     } else {
       setFilteredConversations(conversations);
@@ -131,7 +145,10 @@ const Messages = () => {
 
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
-          {filteredConversations.map((conversation) => (
+          {filteredConversations.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">No conversations found</div>
+          ) : (
+            filteredConversations.map((conversation) => (
             <div
               key={conversation.id}
               onClick={() => handleSelectChat(conversation)}
@@ -163,7 +180,8 @@ const Messages = () => {
                 </div>
               </div>
             </div>
-          ))}
+          ))
+        )}
         </div>
       </div>
 
@@ -222,6 +240,7 @@ const Messages = () => {
                   </div>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}

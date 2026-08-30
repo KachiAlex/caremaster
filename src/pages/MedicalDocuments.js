@@ -35,11 +35,7 @@ const MedicalDocuments = () => {
       setLoading(true);
       
       // Load completed appointments that can have documents
-      const allAppointments = await telemedicineAPI.getAppointments(userProfile?.id || userProfile?.uid, 'Client')
-        .catch(err => {
-          console.warn('Failed to fetch appointments:', err);
-          return [];
-        });
+      const allAppointments = await telemedicineAPI.getAppointments(userProfile?.id || userProfile?.uid, 'Client');
       const completedAppointments = (allAppointments || []).filter(apt => apt.status === 'completed');
 
       setAppointments(completedAppointments);
@@ -107,7 +103,7 @@ const MedicalDocuments = () => {
           <p className="text-gray-600">Download invoices and prescriptions from your consultations</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="btn btn-secondary">
+          <button className="btn btn-secondary" onClick={() => toast.info('Download all will be available in a future update')}>
             <Download className="h-4 w-4 mr-2" />
             Download All
           </button>

@@ -72,6 +72,7 @@ const Dashboard = () => {
     if (val == null) return '--';
     if (typeof val === 'object') {
       if (val.systolic != null && val.diastolic != null) return `${val.systolic}/${val.diastolic}`;
+      if (typeof val === 'object' && val !== null) return '--';
       return String(val);
     }
     return val ?? '--';
@@ -84,6 +85,10 @@ const Dashboard = () => {
 
   // Emergency alert function
   const handleEmergencyAlert = async () => {
+    if (!user?.uid) {
+      toast.error('You must be logged in to send an emergency alert');
+      return;
+    }
     try {
       const result = await emergencyAPI.createEmergency({
         userId: user.uid,
@@ -199,6 +204,7 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        toast.error('Could not load dashboard data. Please refresh the page.');
         if (!isCancelled) {
           setDashboardData(prev => ({ ...prev, loading: false }));
         }
@@ -211,11 +217,11 @@ const Dashboard = () => {
 
   // Set up incoming call listener
   useEffect(() => {
-    if (!user?.uid || (!userProfile?.id && !userProfile?.uid)) {
+    if (!user?.uid) {
       return;
     }
 
-    const userId = userProfile.id || userProfile.uid || user?.uid;
+    const userId = userProfile?.id || userProfile?.uid || user?.uid;
     console.log('🎧 Setting up call listener for user:', userId);
 
     const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {

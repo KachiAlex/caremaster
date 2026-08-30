@@ -54,12 +54,20 @@ export const getAllAppointments = async (institutionId = null) => {
       }
       
       // Sort by scheduledTime
+      const toMs = (v) => {
+        if (!v) return 0;
+        if (v.toDate) return v.toDate().getTime() || 0;
+        if (v.getTime) return v.getTime();
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? 0 : d.getTime();
+      };
       appointments.sort((a, b) => {
-        const aTime = a.scheduledTime?.getTime?.() || 0;
-        const bTime = b.scheduledTime?.getTime?.() || 0;
-        return aTime - bTime;
+        return toMs(a.scheduledTime) - toMs(b.scheduledTime);
       });
     } catch (indexError) {
+      if (indexError.code !== 'failed-precondition' && !indexError.message?.includes('index') && !indexError.message?.includes('query requires an index')) {
+        throw indexError; // Re-throw non-index errors
+      }
       // Fallback: query without orderBy if index doesn't exist
       console.warn('Database index not found for appointments, using simpler query:', indexError);
       let q = query(appointmentsRef);
@@ -81,10 +89,15 @@ export const getAllAppointments = async (institutionId = null) => {
       });
       
       // Sort in memory by scheduledTime
+      const toMs = (v) => {
+        if (!v) return 0;
+        if (v.toDate) return v.toDate().getTime() || 0;
+        if (v.getTime) return v.getTime();
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? 0 : d.getTime();
+      };
       appointments.sort((a, b) => {
-        const aTime = a.scheduledTime?.getTime?.() || 0;
-        const bTime = b.scheduledTime?.getTime?.() || 0;
-        return aTime - bTime;
+        return toMs(a.scheduledTime) - toMs(b.scheduledTime);
       });
     }
     

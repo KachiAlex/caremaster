@@ -74,29 +74,40 @@ export const getAllClients = async (institutionId = null) => {
         
         return clients;
       } catch (indexError) {
+        if (indexError.code !== 'failed-precondition' && !indexError.message?.includes('index') && !indexError.message?.includes('query requires an index')) {
+          throw indexError; // Re-throw non-index errors
+        }
         console.warn('Database index not found, using simpler query:', indexError);
         // Fallback: query without orderBy, then sort in memory
         q = query(clientsRef, where('institutionId', '==', institutionId));
         const querySnapshot = await getDocs(q);
         
         const clients = [];
+        const shouldDecrypt = secureConfigService.get('security.encryptPatientData', true);
         querySnapshot.forEach((doc) => {
           const clientData = doc.data();
+          // SECURITY FIX: Decrypt sensitive patient data if encrypted (same as success path)
+          const decryptedData = shouldDecrypt ? decryptPatientData(clientData) : clientData;
           clients.push({
             id: doc.id,
-            ...clientData,
-            dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-            createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-            updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-            lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
+            ...decryptedData,
+            dateOfBirth: decryptedData.dateOfBirth?.toDate?.() || decryptedData.dateOfBirth,
+            createdAt: decryptedData.createdAt?.toDate?.() || decryptedData.createdAt,
+            updatedAt: decryptedData.updatedAt?.toDate?.() || decryptedData.updatedAt,
+            lastVisit: decryptedData.lastVisit?.toDate?.() || decryptedData.lastVisit,
           });
         });
         
-        // Sort in memory by createdAt
+        // Sort in memory by createdAt (handles Firestore Timestamps, Date objects, and strings)
+        const toMs = (v) => {
+          if (!v) return 0;
+          if (v.toDate) return v.toDate().getTime() || 0;
+          if (v.getTime) return v.getTime();
+          const d = new Date(v);
+          return isNaN(d.getTime()) ? 0 : d.getTime();
+        };
         clients.sort((a, b) => {
-          const aTime = a.createdAt?.getTime?.() || 0;
-          const bTime = b.createdAt?.getTime?.() || 0;
-          return bTime - aTime; // Descending order
+          return toMs(b.createdAt) - toMs(a.createdAt); // Descending order
         });
         
         return clients;

@@ -143,38 +143,37 @@ export async function getAllClientFeedback(dateRange = {}) {
   );
   
   if (dateRange.startDate && dateRange.endDate) {
-    try {
-      q = query(
-        collection(db, PATIENT_FEEDBACK_COLLECTION),
-        where('weekOf', '>=', dateRange.startDate),
-        where('weekOf', '<=', dateRange.endDate),
-        orderBy('weekOf', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (error) {
-      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
-        console.warn('Index missing, using fallback query:', error.message);
-        const fallbackQ = query(
-          collection(db, PATIENT_FEEDBACK_COLLECTION),
-          where('weekOf', '>=', dateRange.startDate),
-          where('weekOf', '<=', dateRange.endDate)
-        );
-        const fallbackSnap = await getDocs(fallbackQ);
-        const results = fallbackSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        results.sort((a, b) => {
-          const av = a.weekOf?.toDate ? a.weekOf.toDate().getTime() : new Date(a.weekOf).getTime();
-          const bv = b.weekOf?.toDate ? b.weekOf.toDate().getTime() : new Date(b.weekOf).getTime();
-          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
-        });
-        return results;
-      }
-      throw error;
-    }
+    q = query(
+      collection(db, PATIENT_FEEDBACK_COLLECTION),
+      where('weekOf', '>=', dateRange.startDate),
+      where('weekOf', '<=', dateRange.endDate),
+      orderBy('weekOf', 'desc')
+    );
   }
   
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      console.warn('Index missing, using fallback query:', error.message);
+      const fallbackQ = dateRange.startDate && dateRange.endDate
+        ? query(
+            collection(db, PATIENT_FEEDBACK_COLLECTION),
+            where('weekOf', '>=', dateRange.startDate),
+            where('weekOf', '<=', dateRange.endDate)
+          )
+        : query(collection(db, PATIENT_FEEDBACK_COLLECTION));
+      const fallbackSnap = await getDocs(fallbackQ);
+      const results = fallbackSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      results.sort((a, b) => {
+        const toMs = (v) => v?.toDate ? v.toDate().getTime() : new Date(v).getTime() || 0;
+        return toMs(b.weekOf) - toMs(a.weekOf);
+      });
+      return results;
+    }
+    throw error;
+  }
 }
 
 // Calculate caregiver rating based on feedback
