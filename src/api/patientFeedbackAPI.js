@@ -143,12 +143,34 @@ export async function getAllClientFeedback(dateRange = {}) {
   );
   
   if (dateRange.startDate && dateRange.endDate) {
-    q = query(
-      collection(db, PATIENT_FEEDBACK_COLLECTION),
-      where('weekOf', '>=', dateRange.startDate),
-      where('weekOf', '<=', dateRange.endDate),
-      orderBy('weekOf', 'desc')
-    );
+    try {
+      q = query(
+        collection(db, PATIENT_FEEDBACK_COLLECTION),
+        where('weekOf', '>=', dateRange.startDate),
+        where('weekOf', '<=', dateRange.endDate),
+        orderBy('weekOf', 'desc')
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQ = query(
+          collection(db, PATIENT_FEEDBACK_COLLECTION),
+          where('weekOf', '>=', dateRange.startDate),
+          where('weekOf', '<=', dateRange.endDate)
+        );
+        const fallbackSnap = await getDocs(fallbackQ);
+        const results = fallbackSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        results.sort((a, b) => {
+          const av = a.weekOf?.toDate ? a.weekOf.toDate().getTime() : new Date(a.weekOf).getTime();
+          const bv = b.weekOf?.toDate ? b.weekOf.toDate().getTime() : new Date(b.weekOf).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return results;
+      }
+      throw error;
+    }
   }
   
   const snap = await getDocs(q);
@@ -242,24 +264,18 @@ export function getFeedbackStatistics(feedbackList) {
     weeklyData[weekKey].overallSatisfaction.push(feedback.overallSatisfaction);
   });
   
-  // Calculate weekly averages
+  // Calculate weekly averages (filter out non-numeric values to avoid NaN)
+  const safeAvg = (arr) => {
+    const valid = arr.filter(v => typeof v === 'number' && !isNaN(v));
+    return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+  };
   Object.keys(weeklyData).sort().forEach(week => {
     const weekData = weeklyData[week];
-    trends.punctuality.push(
-      weekData.punctuality.reduce((a, b) => a + b, 0) / weekData.punctuality.length
-    );
-    trends.communication.push(
-      weekData.communication.reduce((a, b) => a + b, 0) / weekData.communication.length
-    );
-    trends.careQuality.push(
-      weekData.careQuality.reduce((a, b) => a + b, 0) / weekData.careQuality.length
-    );
-    trends.responsiveness.push(
-      weekData.responsiveness.reduce((a, b) => a + b, 0) / weekData.responsiveness.length
-    );
-    trends.overallSatisfaction.push(
-      weekData.overallSatisfaction.reduce((a, b) => a + b, 0) / weekData.overallSatisfaction.length
-    );
+    trends.punctuality.push(safeAvg(weekData.punctuality));
+    trends.communication.push(safeAvg(weekData.communication));
+    trends.careQuality.push(safeAvg(weekData.careQuality));
+    trends.responsiveness.push(safeAvg(weekData.responsiveness));
+    trends.overallSatisfaction.push(safeAvg(weekData.overallSatisfaction));
   });
   
   return {

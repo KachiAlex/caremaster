@@ -611,7 +611,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
                                   <span className="font-medium text-gray-500">Scheduled:</span>
                                   <span className="ml-2 text-gray-700">{
                                     (() => {
-                                      const d = activity.details.scheduleDate?.toDate ? activity.details.scheduleDate.toDate() : new Date(activity.details.scheduleDate);
+                                      const d = activity.details.scheduleDate?.toDate?.() || new Date(activity.details.scheduleDate);
                                       return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
                                     })()
                                   }</span>

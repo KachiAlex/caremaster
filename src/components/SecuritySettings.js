@@ -146,7 +146,7 @@ const SecuritySettings = () => {
         const credential = await biometricAuthService.registerBiometric({
           id: user?.uid || userProfile?.id || 'user',
           name: userProfile?.name || userProfile?.displayName || 'User',
-          displayName: userProfile?.name || userProfile?.displayName || 'Care Master User',
+          displayName: userProfile?.name || userProfile?.displayName || 'User',
           email: userProfile?.email || user?.email || ''
         });
 
