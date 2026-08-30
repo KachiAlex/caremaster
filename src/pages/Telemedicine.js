@@ -18,16 +18,8 @@ import {
   Download,
   Upload,
   FileText,
-  Heart,
-  Activity,
   AlertTriangle,
   CheckCircle,
-  Star,
-  MapPin,
-  Phone as PhoneIcon,
-  Mail,
-  Camera as CameraIcon,
-  Users,
   Plus,
   Search,
   Filter,
@@ -36,7 +28,7 @@ import {
 import telemedicineService from '../services/telemedicineService';
 import telemedicineAPI from '../api/telemedicineAPI';
 import { toast } from 'react-toastify';
-import { testTelemedicineService, quickTest } from '../utils/telemedicineTest';
+import { testTelemedicineService } from '../utils/telemedicineTest';
 import { useAuthState } from 'react-backend-hooks/auth';
 import DocumentManager from '../components/DocumentManager';
 import { auth } from '../backend/config';
@@ -44,8 +36,6 @@ import { auth } from '../backend/config';
 const Telemedicine = () => {
   const [user, userLoading] = useAuthState(auth);
   const [appointments, setAppointments] = useState([]);
-  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
-  const [completedAppointments, setCompletedAppointments] = useState([]);
   const [activeCall, setActiveCall] = useState(null);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isAudioOn, setIsAudioOn] = useState(true);
@@ -74,6 +64,12 @@ const Telemedicine = () => {
       if (isInCall) {
         telemedicineService.leaveChannel();
       }
+      // Clear any active timer
+      if (activeCall?.timer) {
+        clearInterval(activeCall.timer);
+      }
+      // Remove Agora event listeners
+      removeAgoraEventListeners();
     };
   }, [user, userLoading]);
 
@@ -97,23 +93,25 @@ const Telemedicine = () => {
   };
 
   // Set up Agora event listeners
+  const agoraEventHandlers = {};
+
   const setupAgoraEventListeners = () => {
     // User joined
-    window.addEventListener('agora-user-published', (event) => {
+    agoraEventHandlers['agora-user-published'] = (event) => {
       const { user } = event.detail;
       setRemoteUsers(prev => [...prev, user]);
       toast.success(`${user.uid} joined the call`);
-    });
+    };
 
     // User left
-    window.addEventListener('agora-user-left', (event) => {
+    agoraEventHandlers['agora-user-left'] = (event) => {
       const { user } = event.detail;
       setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
       toast.info(`${user.uid} left the call`);
-    });
+    };
 
     // Connection state changed
-    window.addEventListener('agora-connection-state-change', (event) => {
+    agoraEventHandlers['agora-connection-state-change'] = (event) => {
       const { curState } = event.detail;
       setConnectionState(curState);
       console.log('Connection state:', curState);
@@ -123,10 +121,10 @@ const Telemedicine = () => {
       } else if (curState === 'DISCONNECTED') {
         toast.warning('Connection lost');
       }
-    });
+    };
 
     // Error handling
-    window.addEventListener('agora-error', (event) => {
+    agoraEventHandlers['agora-error'] = (event) => {
       const { type, error } = event.detail;
       setError(error);
       console.error('Agora error:', type, error);
@@ -151,10 +149,10 @@ const Telemedicine = () => {
         default:
           toast.error('Video call error occurred');
       }
-    });
+    };
 
     // Tracks created
-    window.addEventListener('agora-tracks-created', (event) => {
+    agoraEventHandlers['agora-tracks-created'] = (event) => {
       const { hasVideo, hasAudio } = event.detail;
       setIsVideoOn(hasVideo);
       setIsAudioOn(hasAudio);
@@ -166,17 +164,28 @@ const Telemedicine = () => {
       } else if (!hasAudio) {
         toast.warning('Microphone access not available - video only');
       }
-    });
+    };
 
     // Recording events
-    window.addEventListener('agora-recording-started', (event) => {
+    agoraEventHandlers['agora-recording-started'] = (event) => {
       setIsRecording(true);
       toast.success('Recording started');
-    });
+    };
 
-    window.addEventListener('agora-recording-stopped', (event) => {
+    agoraEventHandlers['agora-recording-stopped'] = (event) => {
       setIsRecording(false);
       toast.success('Recording stopped');
+    };
+
+    // Register all listeners
+    Object.entries(agoraEventHandlers).forEach(([event, handler]) => {
+      window.addEventListener(event, handler);
+    });
+  };
+
+  const removeAgoraEventListeners = () => {
+    Object.entries(agoraEventHandlers).forEach(([event, handler]) => {
+      window.removeEventListener(event, handler);
     });
   };
 
@@ -207,8 +216,6 @@ const Telemedicine = () => {
       
       // No fallback - use empty data if Backend fails
       setAppointments([]);
-      setUpcomingAppointments([]);
-      setCompletedAppointments([]);
       setLoading(false);
     }
   };
@@ -865,7 +872,7 @@ const Telemedicine = () => {
                       {appointment.symptoms && (
                         <div className="mt-2">
                           <span className="text-sm font-medium text-gray-700">Symptoms: </span>
-                          <span className="text-sm text-gray-600">{appointment.symptoms.join(', ')}</span>
+                          <span className="text-sm text-gray-600">{Array.isArray(appointment.symptoms) ? appointment.symptoms.join(', ') : (appointment.symptoms || 'N/A')}</span>
                         </div>
                       )}
                     </div>

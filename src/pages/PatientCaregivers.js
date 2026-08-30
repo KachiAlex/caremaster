@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  MessageSquare, 
-  Video, 
+import {
+  User,
+  Mail,
+  Calendar,
+  Clock,
+  MessageSquare,
+  Video,
   Heart,
   Stethoscope,
   Shield,
-  Star,
   Search,
-  Filter,
   Eye,
   Activity,
   X
@@ -32,27 +28,28 @@ const ClientCaregivers = () => {
   const [showCaregiverDetails, setShowCaregiverDetails] = useState(false);
 
   const loadCaregivers = async () => {
-    if (!userProfile?.id) return;
-    
+    if (!userProfile?.id && !userProfile?.uid) return;
+    const clientId = userProfile?.id || userProfile?.uid;
+
     try {
       setLoading(true);
-      
+
       // Load assigned caregivers from admin-created assignments
-      const assignments = await assignmentAPI.getAssignmentsByClient(userProfile.id);
-      console.log(`Found ${assignments.length} caregiver assignments for client ${userProfile.id}`);
-      
+      const assignments = await assignmentAPI.getAssignmentsByClient(clientId);
+      console.log(`Found ${assignments.length} caregiver assignments for client ${clientId}`);
+
       // Extract caregiver information from assignments
       const caregiversData = assignments.map(assignment => ({
-        id: assignment.caregiverId,
-        name: assignment.caregiverName,
-        email: assignment.caregiverEmail,
-        role: assignment.caregiverRole,
-        assignedAt: assignment.assignedAt,
+        id: assignment.caregiverId || assignment.assignedTo,
+        name: assignment.caregiverName || assignment.assignedToName || 'Unknown',
+        email: assignment.caregiverEmail || '',
+        role: assignment.caregiverRole || assignment.assignedToRole || 'Caregiver',
+        assignedAt: assignment.createdAt || assignment.assignedAt,
         status: assignment.status,
         assignmentId: assignment.id
       }));
 
-      console.log(`Loading assigned caregivers for client ${userProfile.id}:`, caregiversData.length);
+      console.log(`Loading assigned caregivers for client ${clientId}:`, caregiversData.length);
       setCaregivers(caregiversData || []);
     } catch (error) {
       console.error('Error loading caregivers:', error);
@@ -63,39 +60,41 @@ const ClientCaregivers = () => {
   };
 
   useEffect(() => {
-    if (userProfile?.id) {
+    if (userProfile?.id || userProfile?.uid) {
+      const clientId = userProfile?.id || userProfile?.uid;
       loadCaregivers();
-      
+
       // Set up real-time subscription for assignments
-      const unsubscribe = assignmentAPI.subscribeToAssignmentsByClient(userProfile.id, (assignments) => {
-        console.log(`Real-time update: Found ${assignments.length} caregiver assignments for client ${userProfile.id}`);
-        
+      const unsubscribe = assignmentAPI.subscribeToAssignmentsByClient(clientId, (assignments) => {
+        console.log(`Real-time update: Found ${assignments.length} caregiver assignments for client ${clientId}`);
+
         // Extract caregiver information from assignments
         const caregiversData = assignments.map(assignment => ({
-          id: assignment.caregiverId,
-          name: assignment.caregiverName,
-          email: assignment.caregiverEmail,
-          role: assignment.caregiverRole,
-          assignedAt: assignment.assignedAt,
+          id: assignment.caregiverId || assignment.assignedTo,
+          name: assignment.caregiverName || assignment.assignedToName || 'Unknown',
+          email: assignment.caregiverEmail || '',
+          role: assignment.caregiverRole || assignment.assignedToRole || 'Caregiver',
+          assignedAt: assignment.createdAt || assignment.assignedAt,
           status: assignment.status,
           assignmentId: assignment.id
         }));
-        
+
         setCaregivers(caregiversData || []);
       });
-      
+
       return () => unsubscribe();
     }
-  }, [userProfile?.id]);
+  }, [userProfile?.id, userProfile?.uid]);
 
   const filteredCaregivers = caregivers.filter(caregiver => {
-    const matchesSearch = caregiver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         caregiver.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || caregiver.role.toLowerCase().includes(filterRole.toLowerCase());
+    const matchesSearch = (caregiver.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (caregiver.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = filterRole === 'all' || (caregiver.role || '').toLowerCase().includes(filterRole.toLowerCase());
     return matchesSearch && matchesRole;
   });
 
   const getRoleIcon = (role) => {
+    if (!role) return User;
     if (role.toLowerCase().includes('doctor')) return Stethoscope;
     if (role.toLowerCase().includes('nurse')) return Heart;
     if (role.toLowerCase().includes('therapist')) return Activity;
@@ -103,10 +102,17 @@ const ClientCaregivers = () => {
   };
 
   const getRoleColor = (role) => {
+    if (!role) return 'bg-gray-100 text-gray-800';
     if (role.toLowerCase().includes('doctor')) return 'bg-blue-100 text-blue-800';
     if (role.toLowerCase().includes('nurse')) return 'bg-red-100 text-red-800';
     if (role.toLowerCase().includes('therapist')) return 'bg-green-100 text-green-800';
     return 'bg-gray-100 text-gray-800';
+  };
+
+  const formatDateSafe = (v) => {
+    if (!v) return 'N/A';
+    const d = v?.toDate ? v.toDate() : new Date(v);
+    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
   };
 
   return (
@@ -197,7 +203,7 @@ const ClientCaregivers = () => {
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Calendar className="h-4 w-4 mr-2" />
-                    <span>Assigned: {new Date(caregiver.assignedAt).toLocaleDateString()}</span>
+                    <span>Assigned: {formatDateSafe(caregiver.assignedAt)}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Clock className="h-4 w-4 mr-2" />
@@ -265,7 +271,7 @@ const ClientCaregivers = () => {
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Calendar className="h-4 w-4 mr-2" />
-                    <span>Assigned: {new Date(selectedCaregiver.assignedAt).toLocaleDateString()}</span>
+                    <span>Assigned: {formatDateSafe(selectedCaregiver.assignedAt)}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Shield className="h-4 w-4 mr-2" />

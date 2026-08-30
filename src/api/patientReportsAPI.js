@@ -32,7 +32,10 @@ export const getClientReports = async (clientId) => {
     querySnapshot.forEach((doc) => {
       reports.push({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt,
+        updatedAt: doc.data().updatedAt?.toDate ? doc.data().updatedAt.toDate() : doc.data().updatedAt,
+        timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
       });
     });
     
@@ -103,7 +106,10 @@ export const getClientCareLogs = async (clientId) => {
     querySnapshot.forEach((doc) => {
       careLogs.push({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt,
+        updatedAt: doc.data().updatedAt?.toDate ? doc.data().updatedAt.toDate() : doc.data().updatedAt,
+        timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
       });
     });
     
@@ -121,7 +127,7 @@ export const createClientCareLog = async (clientId, logData) => {
     const newLog = {
       clientId,
       ...logData,
-      timestamp: logData.timestamp || new Date().toISOString(),
+      timestamp: logData.timestamp || serverTimestamp(),
       createdAt: serverTimestamp()
     };
     

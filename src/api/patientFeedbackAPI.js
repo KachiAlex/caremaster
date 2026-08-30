@@ -17,7 +17,8 @@ export async function createClientFeedback(feedback) {
   };
   
   const ref = await addDoc(collection(db, PATIENT_FEEDBACK_COLLECTION), payload);
-  return { id: ref.id, ...payload };
+  const savedDoc = await getDoc(ref);
+  return { id: ref.id, ...savedDoc.data() };
 }
 
 export async function updateClientFeedback(feedbackId, updates) {
@@ -142,10 +143,14 @@ export function getFeedbackStatistics(feedbackList) {
   // Calculate rating distribution
   const ratingDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   feedbackList.forEach(feedback => {
-    const avgScore = Math.round(
-      (feedback.punctuality + feedback.communication + feedback.careQuality + 
-       feedback.responsiveness + feedback.overallSatisfaction) / 5
-    );
+    const scores = [
+      feedback.punctuality,
+      feedback.communication,
+      feedback.careQuality,
+      feedback.responsiveness,
+      feedback.overallSatisfaction
+    ].filter(s => typeof s === 'number' && !isNaN(s));
+    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
     if (avgScore >= 5) ratingDistribution[5]++;
     else if (avgScore >= 4) ratingDistribution[4]++;
     else if (avgScore >= 3) ratingDistribution[3]++;

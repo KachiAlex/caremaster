@@ -1,25 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FileText, 
-  Download, 
-  Calendar, 
-  User, 
-  Search, 
+import {
+  FileText,
+  Download,
+  Calendar,
+  User,
+  Search,
   Filter,
   Eye,
   DollarSign,
-  Pill,
-  Clock,
-  CheckCircle,
-  AlertTriangle
+  Pill
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { useNavigate } from 'react-router-dom';
 import telemedicineAPI from '../api/telemedicineAPI';
 import DocumentManager from '../components/DocumentManager';
 import { toast } from 'react-toastify';
 
 const MedicalDocuments = () => {
   const { userProfile } = useUser();
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,12 +35,12 @@ const MedicalDocuments = () => {
       setLoading(true);
       
       // Load completed appointments that can have documents
-      const completedAppointments = await telemedicineAPI.getAppointmentsByClient(userProfile.id)
-        .then(apts => apts.filter(apt => apt.status === 'completed'))
+      const allAppointments = await telemedicineAPI.getAppointments(userProfile?.id || userProfile?.uid, 'Client')
         .catch(err => {
           console.warn('Failed to fetch appointments:', err);
           return [];
         });
+      const completedAppointments = (allAppointments || []).filter(apt => apt.status === 'completed');
 
       setAppointments(completedAppointments);
     } catch (error) {
@@ -59,8 +58,8 @@ const MedicalDocuments = () => {
 
   const getFilteredAppointments = () => {
     return appointments.filter(appointment => {
-      const matchesSearch = appointment.doctorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           appointment.notes?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (appointment.doctorName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (appointment.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
       
       let matchesFilter = true;
       switch (filterType) {
@@ -83,11 +82,10 @@ const MedicalDocuments = () => {
   };
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-NG', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    if (!date) return '—';
+    const d = date?.toDate ? date.toDate() : new Date(date);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   const filteredAppointments = getFilteredAppointments();
@@ -210,7 +208,7 @@ const MedicalDocuments = () => {
               {searchTerm ? 'No documents match your search criteria' : 'You don\'t have any completed consultations yet'}
             </p>
             <button 
-              onClick={() => window.location.href = '/telemedicine'}
+              onClick={() => navigate('/telemedicine')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               Schedule Consultation

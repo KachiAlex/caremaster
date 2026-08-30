@@ -6,18 +6,10 @@ import {
   MessageCircle,
   AlertTriangle,
   User,
-  Plus,
-  Activity,
   Pill,
   Video,
-  Shield,
-  Bell,
-  Settings,
-  Stethoscope,
   Clock,
-  TrendingUp,
-  FileText,
-  LogOut
+  FileText
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { getUpcomingAppointments } from '../api/appointmentsAPI';
@@ -68,7 +60,21 @@ const Dashboard = () => {
   // Format medical conditions for display
   const formatMedicalConditions = (conditions) => {
     if (!conditions) return [];
+    if (Array.isArray(conditions)) return conditions.filter(c => c);
+    if (typeof conditions !== 'string') return [];
     return conditions.split(',').map(condition => condition.trim()).filter(condition => condition);
+  };
+
+  // Format vital sign value for display
+  const formatVitalValue = (vital) => {
+    if (!vital) return '--';
+    const val = vital.value;
+    if (val == null) return '--';
+    if (typeof val === 'object') {
+      if (val.systolic != null && val.diastolic != null) return `${val.systolic}/${val.diastolic}`;
+      return String(val);
+    }
+    return val ?? '--';
   };
 
   // Get subscription status (placeholder for now)
@@ -79,12 +85,14 @@ const Dashboard = () => {
   // Emergency alert function
   const handleEmergencyAlert = async () => {
     try {
-      const result = await emergencyAPI.triggerEmergencyAlert({
+      const result = await emergencyAPI.createEmergency({
         userId: user.uid,
         type: 'medical',
         severity: 'high',
-        location: userProfile?.address || 'Unknown location',
-        description: 'Emergency assistance requested from client dashboard'
+        location: userProfile?.address || 'Unknown',
+        description: 'Emergency alert triggered from client dashboard',
+        clientId: user.uid,
+        clientName: userProfile?.name || userProfile?.displayName || 'Client',
       });
       
       if (result.success) {
@@ -146,15 +154,16 @@ const Dashboard = () => {
 
   // Fetch dashboard data
   useEffect(() => {
+    let isCancelled = false;
     const fetchDashboardData = async () => {
       if (!user?.uid) return;
-      
+
       try {
         setDashboardData(prev => ({ ...prev, loading: true }));
-        
+
         // Fetch data in parallel
         const [appointments, vitalSigns, unreadCount, medications, assignments] = await Promise.all([
-          getUpcomingAppointments(user.uid, 'elderly').catch(err => {
+          getUpcomingAppointments(user.uid, userProfile?.userType || 'elderly').catch(err => {
             console.warn('Failed to fetch appointments:', err);
             return [];
           }),
@@ -175,38 +184,43 @@ const Dashboard = () => {
             return [];
           })
         ]);
-        
+
         console.log('📋 Client assignments loaded:', assignments?.length || 0);
-        
-        setDashboardData({
-          upcomingAppointments: appointments || [],
-          latestVitalSigns: vitalSigns,
-          unreadMessages: unreadCount || 0,
-          caregiverTasks: assignments || [],
-          activeMedications: medications || [],
-          loading: false
-        });
+
+        if (!isCancelled) {
+          setDashboardData({
+            upcomingAppointments: appointments || [],
+            latestVitalSigns: vitalSigns,
+            unreadMessages: unreadCount || 0,
+            caregiverTasks: assignments || [],
+            activeMedications: medications || [],
+            loading: false
+          });
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        setDashboardData(prev => ({ ...prev, loading: false }));
+        if (!isCancelled) {
+          setDashboardData(prev => ({ ...prev, loading: false }));
+        }
       }
     };
 
     fetchDashboardData();
+    return () => { isCancelled = true; };
   }, [user?.uid]);
 
   // Set up incoming call listener
   useEffect(() => {
-    if (!userProfile || (!userProfile.id && !userProfile.uid)) {
+    if (!user?.uid || (!userProfile?.id && !userProfile?.uid)) {
       return;
     }
-    
+
     const userId = userProfile.id || userProfile.uid || user?.uid;
     console.log('🎧 Setting up call listener for user:', userId);
-    
+
     const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {
       console.log('📞 Incoming call notification:', callNotification);
-      
+
       if (callNotification.status === 'incoming') {
         setIncomingCall({
           callId: callNotification.callId,
@@ -217,12 +231,12 @@ const Dashboard = () => {
         toast.info(`Incoming ${callNotification.callType} call...`);
       }
     });
-    
+
     return () => {
       console.log('🔌 Cleaning up call listener');
       if (unsubscribe) unsubscribe();
     };
-  }, [userProfile, user, callService]);
+  }, [userProfile?.id, userProfile?.uid, user?.uid]);
 
   // Handle incoming call acceptance
   const handleAcceptCall = async () => {
@@ -276,6 +290,8 @@ const Dashboard = () => {
       console.error('Error ending call:', error);
     }
   };
+
+  const visibleTasks = (dashboardData.caregiverTasks || []).filter(t => t.status !== 'completed' && t.status !== 'cancelled');
 
   return (
     <>
@@ -396,11 +412,7 @@ const Dashboard = () => {
         >
           <Heart className="h-8 w-8 text-coral mx-auto mb-2" />
           <div className="text-2xl font-bold text-ink">
-            {dashboardData.loading ? '...' : (
-              dashboardData.latestVitalSigns?.type === 'Blood Pressure'
-                ? dashboardData.latestVitalSigns.value
-                : dashboardData.latestVitalSigns?.value || '--'
-            )}
+            {dashboardData.loading ? '...' : formatVitalValue(dashboardData.latestVitalSigns)}
           </div>
           <div className="text-sm text-text-soft">
             {dashboardData.latestVitalSigns?.type || 'Last Reading'}
@@ -500,7 +512,7 @@ const Dashboard = () => {
           </div>
         ) : dashboardData.caregiverTasks.length > 0 ? (
           <div className="space-y-3">
-            {dashboardData.caregiverTasks.filter(task => task.status !== 'completed' && task.status !== 'cancelled').slice(0, 5).map((task) => (
+            {visibleTasks.slice(0, 5).map((task) => (
               <div key={task.id} className="bg-white border border-l-4 border-l-gold rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
@@ -547,9 +559,9 @@ const Dashboard = () => {
                 </div>
               </div>
             ))}
-            {dashboardData.caregiverTasks.filter(t => t.status !== 'completed').length > 5 && (
+            {visibleTasks.length > 5 && (
               <p className="text-sm text-text-soft text-center mt-2">
-                + {dashboardData.caregiverTasks.filter(t => t.status !== 'completed').length - 5} more tasks
+                + {visibleTasks.length - 5} more tasks
               </p>
             )}
           </div>

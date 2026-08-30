@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import UserNameWithAvatar from './UserNameWithAvatar';
-import { collection, query, getDocs, where, orderBy } from 'backend/database';
+import { collection, query, getDocs, where, orderBy, limit as databaseLimit } from 'backend/database';
 import { db } from '../backend/config';
 
 /**
@@ -248,7 +248,11 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
       }
 
       // Sort all activities by timestamp (most recent first)
-      allActivities.sort((a, b) => b.timestamp - a.timestamp);
+      allActivities.sort((a, b) => {
+        const ta = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+        const tb = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+        return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
+      });
 
       setActivities(allActivities);
       console.log(`✅ Loaded ${allActivities.length} activities for client ${clientName}`);
@@ -277,7 +281,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(activity =>
-        activity.activityName.toLowerCase().includes(searchLower) ||
+        (activity.activityName || '').toLowerCase().includes(searchLower) ||
         activity.performerName?.toLowerCase().includes(searchLower) ||
         activity.notes?.toLowerCase().includes(searchLower)
       );
@@ -492,20 +496,29 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
               const color = getActivityColor(activity.type);
               const isExpanded = expandedActivities.has(activity.id);
 
+              const colorClasses = {
+                purple: { bg: 'bg-purple-500', border: 'border-purple-500', light: 'bg-purple-100 text-purple-600' },
+                blue: { bg: 'bg-blue-500', border: 'border-blue-500', light: 'bg-blue-100 text-blue-600' },
+                green: { bg: 'bg-green-500', border: 'border-green-500', light: 'bg-green-100 text-green-600' },
+                orange: { bg: 'bg-orange-500', border: 'border-orange-500', light: 'bg-orange-100 text-orange-600' },
+                red: { bg: 'bg-red-500', border: 'border-red-500', light: 'bg-red-100 text-red-600' },
+              };
+              const cls = colorClasses[color] || colorClasses.blue;
+
               return (
                 <div key={activity.id} className="relative pl-16">
                   {/* Timeline Dot */}
-                  <div className={`absolute left-6 top-6 w-4 h-4 rounded-full border-4 border-white bg-${color}-500`} style={{
+                  <div className={`absolute left-6 top-6 w-4 h-4 rounded-full border-4 border-white ${cls.bg}`} style={{
                     backgroundColor: `var(--${color}-500, #3B82F6)`
                   }}></div>
 
                   {/* Activity Card */}
-                  <div className={`bg-white rounded-lg shadow-sm border-l-4 border-${color}-500 hover:shadow-md transition-shadow`}>
+                  <div className={`bg-white rounded-lg shadow-sm border-l-4 ${cls.border} hover:shadow-md transition-shadow`}>
                     <div className="p-4">
                       {/* Header */}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-start space-x-3 flex-1">
-                          <div className={`p-2 rounded-lg bg-${color}-100 text-${color}-600`}>
+                          <div className={`p-2 rounded-lg ${cls.light}`}>
                             {getActivityIcon(activity.type)}
                           </div>
                           <div className="flex-1">
@@ -514,7 +527,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
                               {activity.status && (
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(activity.status)}`}>
                                   {getStatusIcon(activity.status)}
-                                  <span className="ml-1">{activity.status.toUpperCase()}</span>
+                                  <span className="ml-1">{(activity.status || 'N/A').toUpperCase()}</span>
                                 </span>
                               )}
                             </div>
@@ -596,7 +609,12 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
                               {activity.details.scheduleDate && (
                                 <div>
                                   <span className="font-medium text-gray-500">Scheduled:</span>
-                                  <span className="ml-2 text-gray-700">{new Date(activity.details.scheduleDate).toLocaleDateString()}</span>
+                                  <span className="ml-2 text-gray-700">{
+                                    (() => {
+                                      const d = activity.details.scheduleDate?.toDate ? activity.details.scheduleDate.toDate() : new Date(activity.details.scheduleDate);
+                                      return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+                                    })()
+                                  }</span>
                                 </div>
                               )}
                               {activity.details.comments && (

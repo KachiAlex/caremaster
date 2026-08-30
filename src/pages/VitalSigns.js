@@ -11,11 +11,13 @@ import {
   FileText
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { getVitalSignsByClient, createVitalSign, getVitalSignsTrends } from '../api/vitalSignsAPI';
 
 const VitalSigns = () => {
   const { user, userProfile } = useUser();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     vitalType: 'Blood Pressure',
     reading: '',
@@ -24,6 +26,7 @@ const VitalSigns = () => {
   const [currentVitals, setCurrentVitals] = useState([]);
   const [healthTrends, setHealthTrends] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   // Fetch vital signs data
   useEffect(() => {
@@ -133,6 +136,7 @@ const VitalSigns = () => {
     }
 
     try {
+      setSubmitting(true);
       const vitalSignData = {
         clientId: user.uid,
         clientName: userProfile?.name || userProfile?.displayName || user?.displayName || 'Client',
@@ -178,10 +182,24 @@ const VitalSigns = () => {
       }));
       
       setCurrentVitals(currentVitalsData);
+
+      // Refresh health trends after save
+      const trends = await getVitalSignsTrends(user.uid);
+      const trendsData = Object.keys(trends).map(type => ({
+        id: type,
+        type: type,
+        trend: trends[type].trend || 'Stable',
+        trendColor: getTrendColor(trends[type].trend || 'Stable'),
+        average: trends[type].average || 'N/A',
+        icon: getVitalIcon(type)
+      }));
+      setHealthTrends(trendsData);
       
     } catch (error) {
       console.error('Error saving vital sign:', error);
       toast.error('Failed to save vital reading. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -212,6 +230,8 @@ const VitalSigns = () => {
   // Helper function to determine status based on reading
   const getVitalStatus = (type, reading) => {
     const value = parseFloat(reading);
+    
+    if (isNaN(value)) return 'Unknown';
     
     switch (type) {
       case 'Blood Pressure':
@@ -358,10 +378,11 @@ const VitalSigns = () => {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center hover:bg-blue-700 transition-colors"
+              disabled={submitting}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               <Plus className="h-5 w-5 mr-2" />
-              Save Reading
+              {submitting ? 'Saving...' : 'Save Reading'}
             </button>
           </div>
         </form>
@@ -413,21 +434,21 @@ const VitalSigns = () => {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Share with Your Care Team</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <button 
-            onClick={() => window.location.href = '/messages?topic=vital-signs'}
+            onClick={() => navigate('/messages?topic=vital-signs')}
             className="flex items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
           >
             <MessageCircle className="h-5 w-5 mr-2" />
             Share with Caregiver
           </button>
           <button 
-            onClick={() => window.location.href = '/telemedicine?type=health-review'}
+            onClick={() => navigate('/telemedicine?type=health-review')}
             className="flex items-center justify-center p-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
           >
             <Stethoscope className="h-5 w-5 mr-2" />
             Doctor Review
           </button>
           <button 
-            onClick={() => window.location.href = '/appointments?type=health-checkup'}
+            onClick={() => navigate('/appointments?type=health-checkup')}
             className="flex items-center justify-center p-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
           >
             <Calendar className="h-5 w-5 mr-2" />

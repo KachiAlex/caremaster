@@ -41,7 +41,7 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
       setLoading(true);
       try {
         // If search term looks like a Client ID (UC-YYYY-NNNN format), try direct lookup first
-        if (/^UC-\d{4}-\d{4}/i.test(searchTerm.trim())) {
+        if (/^UC-\d{4}-\d{4}$/i.test(searchTerm.trim())) {
           try {
             const Client = await getPatientByPatientId(searchTerm.trim().toUpperCase());
             setResults([Client]);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Smartphone, Fingerprint, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { Shield, Smartphone, Fingerprint, Eye, CheckCircle, AlertCircle } from 'lucide-react';
 import authSecurityService from '../services/authSecurityService';
 import secureConfigService from '../services/secureConfigService';
 import { toast } from 'react-toastify';
@@ -11,6 +11,7 @@ const SecuritySettings = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [showVerification, setShowVerification] = useState(false);
+  const [verificationId, setVerificationId] = useState('');
   const [loading, setLoading] = useState(false);
   const [securityFeatures, setSecurityFeatures] = useState({
     twoFactorAuth: false,
@@ -39,7 +40,8 @@ const SecuritySettings = () => {
 
     setLoading(true);
     try {
-      const verificationId = await authSecurityService.setupTwoFactorAuth(phoneNumber);
+      const returnedVerificationId = await authSecurityService.setupTwoFactorAuth(phoneNumber);
+      setVerificationId(returnedVerificationId);
       setShowVerification(true);
       toast.success('Verification code sent to your phone');
       logger.info('2FA setup initiated', { phoneNumber });
@@ -59,7 +61,7 @@ const SecuritySettings = () => {
 
     setLoading(true);
     try {
-      await authSecurityService.verifyTwoFactorAuth(verificationCode);
+      await authSecurityService.verifyTwoFactorAuth(verificationId, verificationCode);
       setTwoFactorEnabled(true);
       setShowVerification(false);
       toast.success('Two-factor authentication enabled successfully!');
@@ -141,10 +143,6 @@ const SecuritySettings = () => {
     }
   };
 
-  const handleSecurityEvent = (event, details) => {
-    authSecurityService.logSecurityEvent(event, details);
-  };
-
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       {/* Header */}
@@ -207,6 +205,7 @@ const SecuritySettings = () => {
 
         {!twoFactorEnabled && !showVerification && (
           <div className="space-y-4">
+            <div id="recaptcha-container"></div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Phone Number

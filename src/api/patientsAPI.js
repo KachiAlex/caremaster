@@ -602,7 +602,7 @@ export const createClient = async (clientData = {}, registeredBy = null) => {
     console.error('Error creating Client:', error);
     
     // Re-throw with enhanced error message if it's our custom error
-    if (error.message && error.message.includes('required') || error.message.includes('Permission denied') || error.message.includes('Service temporarily')) {
+    if (error.message && (error.message.includes('required') || error.message.includes('Permission denied') || error.message.includes('Service temporarily'))) {
       throw error;
     }
     
@@ -702,7 +702,7 @@ export const getClientStats = async () => {
 
 // Search patients/clients by ID, name, or email
 // SECURITY FIX: Added input validation and sanitization
-export const searchPatients = async (searchTerm) => {
+export const searchPatients = async (searchTerm, institutionId = null) => {
   try {
     if (!searchTerm || searchTerm.trim() === '') {
       return [];
@@ -715,7 +715,13 @@ export const searchPatients = async (searchTerm) => {
     }
     
     const clientsRef = collection(db, CLIENTS_COLLECTION);
-    const querySnapshot = await getDocs(clientsRef);
+    let q;
+    if (institutionId) {
+      q = query(clientsRef, where('institutionId', '==', institutionId));
+    } else {
+      q = clientsRef;
+    }
+    const querySnapshot = await getDocs(q);
     
     const searchLower = sanitizedTerm.toLowerCase();
     const results = [];

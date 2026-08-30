@@ -2,19 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Pill, 
-  Clock, 
   CheckCircle, 
   XCircle, 
-  Edit, 
   Trash2, 
   Calendar,
   AlertTriangle,
   User,
-  MessageCircle,
-  Bell,
-  Activity,
-  FileText,
-  Camera
+  MessageCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
@@ -28,7 +22,6 @@ const Medications = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingMed, setEditingMed] = useState(null);
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +37,16 @@ const Medications = () => {
     startDate: new Date().toISOString().split('T')[0],
     endDate: ''
   });
+
+  // Safe date helpers that handle Firestore Timestamps and invalid dates
+  const safeISO = (d) => {
+    const x = d?.toDate ? d.toDate() : new Date(d);
+    return isNaN(x.getTime()) ? null : x.toISOString().split('T')[0];
+  };
+  const safeTime = (d) => {
+    const x = d?.toDate ? d.toDate() : new Date(d);
+    return isNaN(x.getTime()) ? 'N/A' : x.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  };
 
   // Initial load: parse Client from URL and load assigned clients if service provider
   useEffect(() => {
@@ -86,10 +89,10 @@ const Medications = () => {
           dosage: med.dosage || 'N/A',
           frequency: med.frequency || 'As needed',
           instructions: med.instructions || 'No instructions',
-          nextDose: med.nextDose ? new Date(med.nextDose).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A',
+          nextDose: med.nextDose ? safeTime(med.nextDose) : 'N/A',
           taken: false, // This would need to be calculated based on dose logs
-          startDate: med.startDate ? new Date(med.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          endDate: med.endDate ? new Date(med.endDate).toISOString().split('T')[0] : null,
+          startDate: med.startDate ? safeISO(med.startDate) : new Date().toISOString().split('T')[0],
+          endDate: med.endDate ? safeISO(med.endDate) : null,
           status: med.status || 'active'
         }));
         
@@ -166,7 +169,7 @@ const Medications = () => {
           taken: false,
           status: 'active'
         };
-        setMedications([...medications, localMedication]);
+        setMedications(prev => [...prev, localMedication]);
         
         setNewMedication({
           name: '',
@@ -193,7 +196,7 @@ const Medications = () => {
       } else {
         await medicationAPI.recordDoseTaken(id, { takenAt: new Date() });
       }
-      setMedications(medications.map(med => med.id === id ? { ...med, taken: !med.taken } : med));
+      setMedications(prev => prev.map(med => med.id === id ? { ...med, taken: !med.taken } : med));
       toast.success('Medication status updated');
     } catch (error) {
       toast.error('Failed to update medication status');
@@ -203,7 +206,7 @@ const Medications = () => {
   const handleDeleteMedication = async (id) => {
     try {
       await medicationAPI.deleteMedication(id);
-      setMedications(medications.filter(med => med.id !== id));
+      setMedications(prev => prev.filter(med => med.id !== id));
       toast.success('Medication deleted successfully');
     } catch (error) {
       toast.error('Failed to delete medication');
@@ -367,19 +370,13 @@ const Medications = () => {
                   </div>
                 </div>
                 <div className="flex space-x-2">
-                  <button 
+                  <button
                     onClick={() => handleToggleTaken(medication.id)}
                     className={`btn ${medication.taken ? 'btn-outline' : 'btn-success'}`}
                   >
                     {medication.taken ? 'Mark as Missed' : 'Mark as Taken'}
                   </button>
-                  <button 
-                    onClick={() => setEditingMed(medication)}
-                    className="btn btn-outline"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button 
+                  <button
                     onClick={() => handleDeleteMedication(medication.id)}
                     className="btn btn-danger"
                   >

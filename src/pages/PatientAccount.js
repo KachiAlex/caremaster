@@ -10,25 +10,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  User, 
-  Heart, 
-  Calendar, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Edit, 
-  Save, 
-  X, 
+import {
+  User,
+  Heart,
+  Phone,
+  Edit,
+  Save,
+  X,
   Shield,
-  Activity,
   FileText,
   Pill,
   Stethoscope,
-  Settings,
-  ArrowLeft,
-  Eye,
-  EyeOff
+  ArrowLeft
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
@@ -41,10 +34,9 @@ const PatientAccount = () => {
   const navigate = useNavigate();
   const { user, userProfile } = useUser();
   
-  const [Client, setPatient] = useState(null);
+  const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -63,11 +55,18 @@ const PatientAccount = () => {
     loadPatientData();
   }, [clientId]);
 
+  const toDateInput = (v) => {
+    if (!v) return '';
+    const d = v?.toDate ? v.toDate() : new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().split('T')[0];
+  };
+
   const loadPatientData = async () => {
     try {
       setLoading(true);
       let clientData;
-      
+
       // Try to get by clientId (registration number) first, then by document ID
       if (clientId) {
         try {
@@ -78,19 +77,21 @@ const PatientAccount = () => {
       } else if (userProfile?.clientId) {
         // If no clientId in URL, try to get from user profile
         clientData = await getPatientByPatientId(userProfile.clientId);
+      } else if (userProfile?.id) {
+        clientData = await getPatientById(userProfile.id);
       } else if (user?.uid) {
         // Fallback to user ID
         clientData = await getPatientById(user.uid);
       }
 
       if (clientData) {
-        setPatient(clientData);
+        setClient(clientData);
         setFormData({
           name: clientData.name || clientData.fullName || '',
           email: clientData.email || userProfile?.email || '',
           phone: clientData.phone || clientData.phoneNumber || '',
           address: clientData.address || '',
-          dateOfBirth: clientData.dateOfBirth || clientData.dob || '',
+          dateOfBirth: toDateInput(clientData.dateOfBirth || clientData.dob),
           gender: clientData.gender || '',
           emergencyContactName: clientData.emergencyContactName || '',
           emergencyContactPhone: clientData.emergencyContactPhone || clientData.emergencyContact?.phone || '',
@@ -118,11 +119,12 @@ const PatientAccount = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      const patientIdToUse = Client?.clientId || Client?.id || clientId;
+      const patientIdToUse = client?.id || clientId;
       
       const updateData = {
         name: formData.name,
         fullName: formData.name,
+        email: formData.email,
         phone: formData.phone,
         phoneNumber: formData.phone,
         address: formData.address,
@@ -139,12 +141,15 @@ const PatientAccount = () => {
 
       await updatePatient(patientIdToUse, updateData);
       
-      // Also update user document if it exists
+      // Also update user document if it exists.
+      // The backend PUT /api/data/:table/:id uses a partial update (Knex .update),
+      // so only the fields passed here are merged — existing fields are preserved.
       if (user?.uid) {
         try {
           await updateDoc(doc(db, 'users', user.uid), {
             name: formData.name,
             displayName: formData.name,
+            email: formData.email,
             phone: formData.phone,
             address: formData.address,
             dateOfBirth: formData.dateOfBirth,
@@ -183,7 +188,7 @@ const PatientAccount = () => {
     return age;
   };
 
-  if (loading && !Client) {
+  if (loading && !client) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
@@ -212,7 +217,7 @@ const PatientAccount = () => {
               <div>
                 <h1 className="text-2xl font-bold text-slate-50">My Account</h1>
                 <p className="text-sm text-slate-400 mt-1">
-                  {Client?.clientId ? `Client ID: ${client.clientId}` : 'Manage your account information'}
+                  {client?.clientId ? `Client ID: ${client.clientId}` : 'Manage your account information'}
                 </p>
               </div>
             </div>
@@ -474,21 +479,21 @@ const PatientAccount = () => {
               <h3 className="text-lg font-semibold text-slate-50 mb-4">Quick Actions</h3>
               <div className="space-y-3">
                 <button
-                  onClick={() => navigate('/prescriptions')}
+                  onClick={() => navigate('/medications')}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 transition-colors text-left"
                 >
                   <Pill className="h-5 w-5 text-slate-400" />
                   <span className="text-slate-50">View Prescriptions</span>
                 </button>
                 <button
-                  onClick={() => navigate('/consultations')}
+                  onClick={() => navigate('/telemedicine')}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 transition-colors text-left"
                 >
                   <Stethoscope className="h-5 w-5 text-slate-400" />
                   <span className="text-slate-50">Consultations</span>
                 </button>
                 <button
-                  onClick={() => navigate('/diagnostics')}
+                  onClick={() => navigate('/medical-documents')}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 transition-colors text-left"
                 >
                   <FileText className="h-5 w-5 text-slate-400" />
@@ -508,15 +513,15 @@ const PatientAccount = () => {
               <div className="space-y-2 text-sm">
                 <div>
                   <span className="text-slate-400">Client ID:</span>
-                  <p className="text-slate-50 font-medium">{Client?.clientId || Client?.id || 'N/A'}</p>
+                  <p className="text-slate-50 font-medium">{client?.clientId || client?.id || 'N/A'}</p>
                 </div>
-                {Client?.institutionId && (
+                {client?.institutionId && (
                   <div>
                     <span className="text-slate-400">Institution:</span>
                     <p className="text-slate-50 font-medium">{client.institutionName || 'N/A'}</p>
                   </div>
                 )}
-                {Client?.createdAt && (
+                {client?.createdAt && (
                   <div>
                     <span className="text-slate-400">Member Since:</span>
                     <p className="text-slate-50 font-medium">

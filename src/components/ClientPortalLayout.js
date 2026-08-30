@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Home,
@@ -49,6 +49,19 @@ const ClientPortalLayout = () => {
   const { pathname } = useLocation();
   const { user, userProfile } = useUser();
 
+  // Client-role authorization check
+  useEffect(() => {
+    if (user && userProfile) {
+      const userType = userProfile?.userType || userProfile?.type;
+      // Allow client, elderly, patient roles
+      const allowedTypes = ['client', 'elderly', 'patient', 'Client'];
+      if (userType && !allowedTypes.includes(userType)) {
+        // Redirect non-clients to their appropriate dashboard
+        navigate('/login', { replace: true });
+      }
+    }
+  }, [user, userProfile, navigate]);
+
   const activeTab = ROUTE_TO_TAB[pathname] || 'dashboard';
 
   const displayName =
@@ -68,7 +81,7 @@ const ClientPortalLayout = () => {
   const handleLogout = () => {
     import('backend/auth').then(({ signOut, getAuth }) => {
       signOut(getAuth()).then(() => {
-        window.location.href = '/login';
+        navigate('/login', { replace: true });
       });
     });
   };

@@ -36,12 +36,17 @@ const ClientDetailsModal = ({
   onAssignTask, 
   onDelete, 
   onUnarchive,
-  pharmacists,
-  institutionId,
-  onAssignPharmacist
+  institutionId
 }) => {
   const { userProfile, user } = useUser();
   const [activeTab, setActiveTab] = useState('overview');
+
+  const formatList = (val) => {
+    if (!val) return 'None Recorded';
+    if (Array.isArray(val)) return val.join(', ');
+    if (typeof val === 'string') return val;
+    return 'None Recorded';
+  };
 
   // Quick Action Modal States
   const [showVitalsModal, setShowVitalsModal] = useState(false);
@@ -264,25 +269,19 @@ const ClientDetailsModal = ({
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Medical Conditions</h3>
                 <p className="text-sm text-gray-600">
-                  {client.medicalConditions?.length > 0 
-                    ? client.medicalConditions.join(', ')
-                    : 'No medical conditions recorded'}
+                  {formatList(client.medicalConditions)}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Allergies</h3>
                 <p className="text-sm text-gray-600">
-                  {client.allergies?.length > 0 
-                    ? client.allergies.join(', ')
-                    : 'No known allergies'}
+                  {formatList(client.allergies)}
                 </p>
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Current Medications</h3>
                 <p className="text-sm text-gray-600">
-                  {client.medications?.length > 0 
-                    ? client.medications.join(', ')
-                    : 'No current medications'}
+                  {formatList(client.medications)}
                 </p>
               </div>
             </div>

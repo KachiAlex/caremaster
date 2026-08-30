@@ -10,7 +10,8 @@ import {
   orderBy, 
   limit,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  Timestamp
 } from 'backend/database';
 import { db } from '../backend/config';
 
@@ -28,7 +29,7 @@ export const clientActivitiesAPI = {
       const activityRecord = {
         ...activityData,
         timestamp: serverTimestamp(),
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
         institutionId: activityData.institutionId || null
       };
 
@@ -58,7 +59,8 @@ export const clientActivitiesAPI = {
         activities.push({
           id: doc.id,
           ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt)
+          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+          timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
         });
       });
 
@@ -86,7 +88,8 @@ export const clientActivitiesAPI = {
         activities.push({
           id: doc.id,
           ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt)
+          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+          timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
         });
       });
 
@@ -126,7 +129,8 @@ export const clientActivitiesAPI = {
         activities.push({
           id: doc.id,
           ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt)
+          createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+          timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
         });
       });
 
@@ -218,7 +222,7 @@ export const clientActivitiesAPI = {
       const activitiesQuery = query(
         collection(db, CLIENT_ACTIVITIES_COLLECTION),
         where('institutionId', '==', institutionId),
-        where('createdAt', '>=', startDate)
+        where('createdAt', '>=', Timestamp.fromDate(startDate))
       );
 
       const querySnapshot = await getDocs(activitiesQuery);

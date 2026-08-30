@@ -1,27 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  MessageCircle, 
-  Send, 
-  Search, 
-  Phone, 
-  Video, 
+import {
+  MessageCircle,
+  Send,
+  Search,
+  Phone,
+  Video,
   MoreVertical,
-  Clock,
   Check,
   CheckCheck,
   Paperclip,
   Smile,
-  User,
-  Heart,
-  AlertTriangle,
-  Calendar,
-  MapPin
+  User
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { getConversationsByUser, getMessagesByConversation, sendMessage } from '../api/messagesAPI';
+import { toast } from 'react-toastify';
 
 const Messages = () => {
-  const { user } = useUser();
+  const { user, userProfile } = useUser();
   const [selectedChat, setSelectedChat] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,14 +25,27 @@ const Messages = () => {
 
   // Real conversations data
   const [conversations, setConversations] = useState([]);
+  const [messages, setMessages] = useState([]);
 
   const [filteredConversations, setFilteredConversations] = useState(conversations);
 
   useEffect(() => {
+    if (!user?.uid) return;
+    setLoading(true);
+    getConversationsByUser(user.uid)
+      .then(data => {
+        setConversations(data || []);
+        setFilteredConversations(data || []);
+      })
+      .catch(err => console.error('Error loading conversations:', err))
+      .finally(() => setLoading(false));
+  }, [user?.uid]);
+
+  useEffect(() => {
     if (searchTerm) {
-      const filtered = conversations.filter(conv => 
-        conv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conv.role.toLowerCase().includes(searchTerm.toLowerCase())
+      const filtered = conversations.filter(conv =>
+        (conv.lastMessage || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (conv.conversationType || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredConversations(filtered);
     } else {
@@ -44,30 +53,40 @@ const Messages = () => {
     }
   }, [searchTerm, conversations]);
 
-  const handleSendMessage = (e) => {
+  const handleSelectChat = async (conversation) => {
+    setSelectedChat(conversation);
+    if (conversation?.id) {
+      try {
+        const msgs = await getMessagesByConversation(conversation.id);
+        setMessages(msgs || []);
+      } catch (err) {
+        console.error('Error loading messages:', err);
+        setMessages([]);
+      }
+    }
+  };
+
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedChat) return;
-
-    const message = {
-      id: Date.now(),
-      text: newMessage,
-      sender: 'Client',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      read: false
-    };
-
-    setConversations(prev => prev.map(conv => 
-      conv.id === selectedChat.id 
-        ? {
-            ...conv,
-            messages: [...conv.messages, message],
-            lastMessage: newMessage,
-            timestamp: 'Just now'
-          }
-        : conv
-    ));
-
-    setNewMessage('');
+    try {
+      await sendMessage(selectedChat.id, user.uid, { text: newMessage });
+      const message = {
+        id: Date.now(),
+        text: newMessage,
+        senderId: user.uid,
+        senderName: userProfile?.name || 'Client',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, message]);
+      setNewMessage('');
+      // Reload conversations to update lastMessage
+      const updatedConvs = await getConversationsByUser(user.uid);
+      setConversations(updatedConvs || []);
+      setFilteredConversations(updatedConvs || []);
+    } catch (err) {
+      toast.error('Failed to send message');
+    }
   };
 
   const getStatusColor = (status) => {
@@ -82,7 +101,7 @@ const Messages = () => {
   };
 
   const getReadStatus = (message) => {
-    if (message.sender === 'Client') {
+    if (message.senderId === user?.uid) {
       return message.read ? <CheckCheck className="h-4 w-4 text-blue-500" /> : <Check className="h-4 w-4 text-gray-400" />;
     }
     return null;
@@ -115,7 +134,7 @@ const Messages = () => {
           {filteredConversations.map((conversation) => (
             <div
               key={conversation.id}
-              onClick={() => setSelectedChat(conversation)}
+              onClick={() => handleSelectChat(conversation)}
               className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
                 selectedChat?.id === conversation.id ? 'bg-blue-50 border-blue-200' : ''
               }`}
@@ -129,10 +148,10 @@ const Messages = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">{conversation.name}</h3>
-                    <span className="text-xs text-gray-500">{conversation.timestamp}</span>
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{conversation.conversationType || 'Conversation'}</h3>
+                    <span className="text-xs text-gray-500">{conversation.lastMessageTime || ''}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mb-1">{conversation.role}</p>
+                  <p className="text-xs text-gray-500 mb-1">{conversation.conversationType || ''}</p>
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-gray-600 truncate">{conversation.lastMessage}</p>
                     {conversation.unreadCount > 0 && (
@@ -163,8 +182,8 @@ const Messages = () => {
                     <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(selectedChat.status)}`}></div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{selectedChat.name}</h3>
-                    <p className="text-sm text-gray-500">{selectedChat.role}</p>
+                    <h3 className="text-lg font-semibold text-gray-900">{selectedChat.conversationType || 'Conversation'}</h3>
+                    <p className="text-sm text-gray-500">{selectedChat.conversationType || ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -183,21 +202,21 @@ const Messages = () => {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {selectedChat.messages.map((message) => (
+              {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.sender === 'Client' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    message.sender === 'Client' 
-                      ? 'bg-blue-600 text-white' 
+                    message.senderId === user?.uid
+                      ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-900'
                   }`}>
                     <p className="text-sm">{message.text}</p>
                     <div className={`flex items-center justify-between mt-1 ${
-                      message.sender === 'Client' ? 'text-blue-100' : 'text-gray-500'
+                      message.senderId === user?.uid ? 'text-blue-100' : 'text-gray-500'
                     }`}>
-                      <span className="text-xs">{message.timestamp}</span>
+                      <span className="text-xs">{message.timestamp instanceof Date ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (message.timestamp || '')}</span>
                       {getReadStatus(message)}
                     </div>
                   </div>

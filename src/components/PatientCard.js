@@ -14,7 +14,8 @@ import {
   Calendar
 } from 'lucide-react';
 import { getCareTasksByClient } from '../api/careTasksAPI';
-import { getTaskAssignmentsByCaregiver } from '../api/taskAssignmentAPI';
+
+const toDate = (v) => v?.toDate ? v.toDate() : new Date(v);
 
 const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => {
   const [todaysTasks, setTodaysTasks] = useState([]);
@@ -29,7 +30,7 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
         const tasks = await getCareTasksByClient(client.id).catch(() => []);
         const today = new Date().toDateString();
         const todayTasksFiltered = tasks.filter(task => {
-          const taskDate = task.scheduledTime ? new Date(task.scheduledTime).toDateString() : null;
+          const taskDate = task.scheduledTime ? toDate(task.scheduledTime).toDateString() : null;
           return taskDate === today && task.status !== 'completed';
         });
         
@@ -46,8 +47,8 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
 
   const getNextVisitTime = () => {
     if (todaysTasks.length === 0) return null;
-    const sortedTasks = todaysTasks.sort((a, b) => 
-      new Date(a.scheduledTime) - new Date(b.scheduledTime)
+    const sortedTasks = [...todaysTasks].sort((a, b) => 
+      toDate(a.scheduledTime) - toDate(b.scheduledTime)
     );
     return sortedTasks[0]?.scheduledTime;
   };
@@ -156,7 +157,7 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
               <div>
                 <p className="text-sm font-medium text-blue-900">Next Visit</p>
                 <p className="text-xs text-blue-700">
-                  {new Date(nextVisit).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  {toDate(nextVisit).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                 </p>
               </div>
             </div>
@@ -191,7 +192,7 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
               <div key={index} className="flex items-center space-x-2 text-sm">
                 <CheckCircle className={`h-4 w-4 ${task.status === 'completed' ? 'text-green-600' : 'text-gray-300'}`} />
                 <span className={task.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-700'}>
-                  {task.title || task.type}
+                  {task.title || task.type || 'Task'}
                 </span>
                 {task.priority === 'high' && (
                   <span className="text-xs text-red-600 font-medium">URGENT</span>

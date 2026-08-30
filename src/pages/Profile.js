@@ -1,16 +1,22 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, Calendar, Heart, Shield, FileText } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import FileViewer from '../components/FileViewer';
 
 const Profile = () => {
   const { user, userProfile } = useUser();
+  const navigate = useNavigate();
+
+  // Convert Firestore Timestamp or date value to JS Date
+  const toDate = (v) => v?.toDate ? v.toDate() : new Date(v);
 
   // Calculate age from date of birth
   const calculateAge = (dateOfBirth) => {
     if (!dateOfBirth) return null;
     const today = new Date();
-    const birthDate = new Date(dateOfBirth);
+    const birthDate = toDate(dateOfBirth);
+    if (isNaN(birthDate.getTime())) return null;
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -22,7 +28,9 @@ const Profile = () => {
   // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return 'Not provided';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = toDate(dateString);
+    if (isNaN(date.getTime())) return 'Not provided';
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -77,7 +85,7 @@ const Profile = () => {
               </div>
             </div>
           </div>
-          <button className="btn btn-outline mt-4">Edit Personal Info</button>
+          <button className="btn btn-outline mt-4" onClick={() => navigate('/profile/edit')}>Edit Personal Info</button>
         </div>
 
         {/* Medical Information */}
@@ -97,7 +105,7 @@ const Profile = () => {
               <p className="font-medium text-gray-900">{userProfile?.medicalConditions || 'None listed'}</p>
             </div>
           </div>
-          <button className="btn btn-outline mt-4">Edit Medical Info</button>
+          <button className="btn btn-outline mt-4" onClick={() => navigate('/profile/edit')}>Edit Medical Info</button>
           
           {/* Medical Documents */}
           {userProfile?.medicalDocuments && userProfile.medicalDocuments.length > 0 && (
@@ -130,7 +138,7 @@ const Profile = () => {
               </div>
             </div>
           </div>
-          <button className="btn btn-outline mt-4">Edit Emergency Contact</button>
+          <button className="btn btn-outline mt-4" onClick={() => navigate('/profile/edit')}>Edit Emergency Contact</button>
         </div>
 
         {/* Health Summary */}
@@ -154,7 +162,7 @@ const Profile = () => {
               <span className="font-semibold text-green-600">95%</span>
             </div>
           </div>
-          <button className="btn btn-primary mt-4">
+          <button className="btn btn-primary mt-4" onClick={() => navigate('/vital-signs')}>
             <Heart className="h-4 w-4 mr-2" />
             View Health Reports
           </button>

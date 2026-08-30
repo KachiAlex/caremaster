@@ -16,7 +16,6 @@ import { toast } from 'react-toastify';
 
 const Appointments = () => {
   const { user, userProfile } = useUser();
-  const [careType, setCareType] = useState('scheduled'); // 'scheduled' only
   const [formData, setFormData] = useState({
     careType: 'Blood Pressure Check',
     preferredDate: '',
@@ -64,7 +63,7 @@ const Appointments = () => {
           status: appointment.status === 'scheduled' ? 'Scheduled' : 
                   appointment.status === 'completed' ? 'Completed' :
                   appointment.status === 'cancelled' ? 'Cancelled' : 'Pending',
-          priority: appointment.priority || 'Medium'
+          priority: (appointment.priority || 'medium').charAt(0).toUpperCase() + (appointment.priority || 'medium').slice(1)
         })));
         
       } catch (error) {
@@ -125,7 +124,7 @@ const Appointments = () => {
     setSubmitting(true);
 
     try {
-      console.log('Starting appointment creation...', { careType, formData, user: user?.uid });
+      console.log('Starting appointment creation...', { formData, user: user?.uid });
       
       const appointmentData = {
         clientId: user.uid,
@@ -170,7 +169,7 @@ const Appointments = () => {
         status: appointment.status === 'scheduled' ? 'Scheduled' : 
                 appointment.status === 'completed' ? 'Completed' :
                 appointment.status === 'cancelled' ? 'Cancelled' : 'Pending',
-        priority: appointment.priority || 'Medium'
+        priority: (appointment.priority || 'medium').charAt(0).toUpperCase() + (appointment.priority || 'medium').slice(1)
       })));
       
     } catch (error) {
