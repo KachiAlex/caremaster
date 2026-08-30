@@ -272,39 +272,46 @@ const UnifiedLogin = () => {
         );
         
         if (hasAdminRole) {
-          navigate(`/institution-admin/dashboard?institution=${institutionId}`);
+          window.location.href = `/institution-admin/dashboard?institution=${institutionId}`;
+          return;
         } else if (userRole === 'pharmacist') {
-          navigate(`/institution-pharmacy/dashboard?institution=${institutionId}`);
+          window.location.href = `/institution-pharmacy/dashboard?institution=${institutionId}`;
+          return;
         } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
           // Check if onboarding is complete
           if (!userData?.onboardingComplete) {
-            navigate(`/institution-caregiver/onboarding?institution=${institutionId}`);
+            window.location.href = `/institution-caregiver/onboarding?institution=${institutionId}`;
           } else {
-            navigate(`/institution-caregiver/dashboard?institution=${institutionId}&role=${userRole}`);
+            window.location.href = `/institution-caregiver/dashboard?institution=${institutionId}&role=${userRole}`;
           }
+          return;
         } else if (userRole === 'client' || userRole === 'patient' || userRole === 'elderly') {
-          navigate('/dashboard');
+          window.location.href = '/dashboard';
+          return;
         } else if (userRole) {
           // Unknown role - route to onboarding so admin can fix it, not client dashboard
           console.warn(`⚠️ Unrecognized role "${userRole}" for institution user. Routing to onboarding.`);
           toast.warning('Account type not recognized. Please contact your administrator.');
-          navigate('/onboard');
+          window.location.href = '/onboard';
+          return;
         } else {
           // No role info at all (likely Database failure)
           console.warn('⚠️ No role information for institution user. Routing to onboarding instead of client dashboard.');
           toast.error('Unable to determine your account type. Please try again or contact support.');
-          navigate('/onboard');
+          window.location.href = '/onboard';
+          return;
         }
       } else {
         // Standalone user (no institution)
         if (userRole === 'admin' || userRole === 'institutionAdmin') {
-          navigate('/admin');
+          window.location.href = '/admin';
+          return;
         } else if (userRole === 'pharmacist') {
           // Pharmacists should have an institution, but handle gracefully
           // Try to get institutionId from URL params if available
           const urlParams = new URLSearchParams(window.location.search);
           const urlInstitutionId = urlParams.get('institution');
-          
+
           if (urlInstitutionId) {
             // Update Database with institutionId from URL
             try {
@@ -313,28 +320,32 @@ const UnifiedLogin = () => {
               const userRef = doc(db, 'users', user?.uid || userData?.uid);
               await updateDoc(userRef, { institutionId: urlInstitutionId });
               console.log('✅ Set institutionId from URL:', urlInstitutionId);
-              navigate(`/institution-pharmacy/dashboard?institution=${urlInstitutionId}`);
+              window.location.href = `/institution-pharmacy/dashboard?institution=${urlInstitutionId}`;
             } catch (error) {
               console.error('Failed to set institutionId:', error);
               toast.warning('Pharmacist account detected but no institution found. Please contact support.');
-              navigate('/dashboard');
+              window.location.href = '/dashboard';
             }
           } else {
             toast.warning('Pharmacist account detected but no institution found. Please contact support to set your institution.');
-            navigate('/dashboard');
+            window.location.href = '/dashboard';
           }
+          return;
         } else if (userRole === 'caregiver' || userRole === 'doctor') {
-          navigate('/service-provider');
+          window.location.href = '/service-provider';
+          return;
         } else if (userRole) {
           // Unknown role - don't assume client; show warning and route to onboarding
           console.warn(`⚠️ Unrecognized role "${userRole}" for standalone user`);
           toast.warning('Role not recognized. Please contact support.');
-          navigate('/onboard');
+          window.location.href = '/onboard';
+          return;
         } else {
           // No role info at all (likely Database failure) - route to onboarding instead of client dashboard
           console.warn('⚠️ No role information available after login. Routing to onboarding instead of client dashboard.');
           toast.error('Unable to determine your account type. Please try again or contact support.');
-          navigate('/onboard');
+          window.location.href = '/onboard';
+          return;
         }
       }
     } catch (error) {

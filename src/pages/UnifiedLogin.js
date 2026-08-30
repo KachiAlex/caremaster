@@ -149,44 +149,55 @@ const UnifiedLogin = () => {
       }
 
       // Route based on role and institution
+      // Use window.location.href for ALL roles (not just super-admin) so that
+      // SignInRouteHandler re-rendering can't override the redirect.
       if (institutionId) {
         // User belongs to an institution
         if (userRole === 'admin') {
-          navigate(`/institution-admin/dashboard?institution=${institutionId}`);
+          window.location.href = `/institution-admin/dashboard?institution=${institutionId}`;
+          return;
         } else if (userRole === 'pharmacist') {
-          navigate(`/institution-pharmacy/dashboard?institution=${institutionId}`);
+          window.location.href = `/institution-pharmacy/dashboard?institution=${institutionId}`;
+          return;
         } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
           // Check if onboarding is complete
           if (!userData?.onboardingComplete) {
-            navigate(`/institution-caregiver/onboarding?institution=${institutionId}`);
+            window.location.href = `/institution-caregiver/onboarding?institution=${institutionId}`;
           } else {
-            navigate(`/institution-caregiver/dashboard?institution=${institutionId}`);
+            window.location.href = `/institution-caregiver/dashboard?institution=${institutionId}`;
           }
+          return;
         } else if (userRole === 'client' || userRole === 'elderly' || userRole === 'patient') {
-          navigate('/dashboard');
+          window.location.href = '/dashboard';
+          return;
         } else {
           // Default institution user
-          navigate(`/institution-caregiver/dashboard?institution=${institutionId}`);
+          window.location.href = `/institution-caregiver/dashboard?institution=${institutionId}`;
+          return;
         }
       } else {
         // Standalone user (no institution)
         if (userRole === 'admin') {
-          navigate('/institution-admin/dashboard');
+          window.location.href = '/institution-admin/dashboard';
+          return;
         } else if (userRole === 'pharmacist') {
           // Pharmacists should have an institution, but handle gracefully
           const urlParams = new URLSearchParams(window.location.search);
           const urlInstitutionId = urlParams.get('institution');
 
           if (urlInstitutionId) {
-            navigate(`/institution-pharmacy/dashboard?institution=${urlInstitutionId}`);
+            window.location.href = `/institution-pharmacy/dashboard?institution=${urlInstitutionId}`;
           } else {
             toast.warning('Pharmacist account detected but no institution found. Please contact support to set your institution.');
-            navigate('/dashboard');
+            window.location.href = '/dashboard';
           }
+          return;
         } else if (userRole === 'caregiver' || userRole === 'doctor') {
-          navigate('/service-provider');
+          window.location.href = '/service-provider';
+          return;
         } else {
-          navigate('/dashboard');
+          window.location.href = '/dashboard';
+          return;
         }
       }
     } catch (error) {
