@@ -36,7 +36,7 @@ const ClientActivityLog = ({ clientId, clientName }) => {
       }
     );
 
-    return () => unsubscribe();
+    return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
   }, [clientId]);
 
   // Get activity icon
@@ -105,6 +105,7 @@ const ClientActivityLog = ({ clientId, clientName }) => {
 
   // Format activity type for display
   const formatActivityType = (type) => {
+    if (!type) return 'Unknown';
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
@@ -193,6 +194,7 @@ const ClientActivityLog = ({ clientId, clientName }) => {
 
                     {(() => {
                       const d = activity.timestamp?.toDate ? activity.timestamp.toDate() : (activity.createdAt?.toDate ? activity.createdAt.toDate() : new Date(activity.timestamp || activity.createdAt));
+                      if (isNaN(d.getTime())) return <span>—</span>;
                       return (
                         <div className="flex items-center space-x-2 text-sm text-gray-500">
                           <Calendar className="w-3 h-3" />

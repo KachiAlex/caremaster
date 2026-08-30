@@ -82,7 +82,7 @@ const ClientPortalLayout = () => {
     import('backend/auth').then(({ signOut, getAuth }) => {
       signOut(getAuth()).then(() => {
         navigate('/login', { replace: true });
-      });
+      }).catch(err => console.error('Logout failed', err));
     });
   };
 

@@ -25,6 +25,7 @@ import {
 } from '../api/billingPlansAPI';
 
 const safeFormatCurrency = (amount, currencyCode) => {
+  if (amount === null || amount === '' || amount === undefined) return '—';
   const num = Number(amount);
   if (!Number.isFinite(num)) return '—';
   return formatCurrency(num, currencyCode);
@@ -168,6 +169,7 @@ const Subscription = () => {
 
   const handlePlanChange = async (planId) => {
     if (!clientId) return;
+    if (actionLoading) return;
     setActionLoading(true);
     setError(null);
     try {

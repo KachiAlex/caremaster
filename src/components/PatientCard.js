@@ -27,7 +27,7 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
       
       try {
         // Get today's tasks for this client
-        const tasks = await getCareTasksByClient(client.id).catch(() => []);
+        const tasks = (await getCareTasksByClient(client.id).catch(() => [])) || [];
         const today = new Date().toDateString();
         const todayTasksFiltered = tasks.filter(task => {
           const taskDate = task.scheduledTime ? toDate(task.scheduledTime).toDateString() : null;
@@ -47,9 +47,11 @@ const ClientCard = ({ client, onViewDetails, onStartCare, compact = false }) => 
 
   const getNextVisitTime = () => {
     if (todaysTasks.length === 0) return null;
-    const sortedTasks = [...todaysTasks].sort((a, b) => 
-      toDate(a.scheduledTime) - toDate(b.scheduledTime)
-    );
+    const sortedTasks = [...todaysTasks].sort((a, b) => {
+      const timeA = toDate(a.scheduledTime);
+      const timeB = toDate(b.scheduledTime);
+      return (isNaN(timeA) || isNaN(timeB)) ? 0 : timeA - timeB;
+    });
     return sortedTasks[0]?.scheduledTime;
   };
 

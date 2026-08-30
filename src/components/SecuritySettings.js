@@ -46,6 +46,8 @@ const SecuritySettings = () => {
         setTwoFactorEnabled(!!data.twoFactorEnabled);
         setBiometricEnabled(!!data.biometricEnabled);
         if (data.twoFactorPhone) setPhoneNumber(data.twoFactorPhone);
+      } else {
+        throw new Error(response.data?.error || 'Failed to load security settings');
       }
     } catch (error) {
       console.error('Failed to load security settings:', error);
@@ -71,6 +73,12 @@ const SecuritySettings = () => {
   const handle2FASetup = async () => {
     if (!phoneNumber) {
       toast.error('Please enter your phone number');
+      return;
+    }
+
+    const e164 = /^\+[1-9]\d{1,14}$/;
+    if (!e164.test(phoneNumber)) {
+      toast.error('Enter a valid phone number in +1234567890 format');
       return;
     }
 
@@ -118,20 +126,6 @@ const SecuritySettings = () => {
   const handle2FADisable = async () => {
     setLoading(true);
     try {
-      // Unenroll Firebase MFA factor(s) before persisting disablement
-      try {
-        const { multiFactor, getAuth } = await import('firebase/auth');
-        const firebaseUser = authSecurityService.getCurrentUser?.() || getAuth().currentUser;
-        if (firebaseUser && multiFactor(firebaseUser).enrolledFactors.length > 0) {
-          for (const factor of multiFactor(firebaseUser).enrolledFactors) {
-            await multiFactor(firebaseUser).unenroll(factor);
-          }
-        }
-      } catch (unenrollError) {
-        logger.warn('Failed to unenroll Firebase MFA factor:', { error: unenrollError.message });
-        // Continue anyway - the backend flag is the source of truth for UI
-      }
-
       await persistSecuritySettings({ twoFactorEnabled: false, twoFactorPhone: null });
       setTwoFactorEnabled(false);
       setShowVerification(false);
@@ -157,11 +151,13 @@ const SecuritySettings = () => {
       }
 
       setLoading(true);
+      let biometricRegistered = false;
       try {
         // Register biometric credential via the shared service
         const userId = user?.uid || userProfile?.id;
         if (!userId) {
           toast.error('User not loaded yet. Please try again.');
+          setLoading(false);
           return;
         }
         const credential = await biometricAuthService.registerBiometric({
@@ -170,6 +166,7 @@ const SecuritySettings = () => {
           displayName: userProfile?.name || userProfile?.displayName || 'User',
           email: userProfile?.email || user?.email || ''
         });
+        biometricRegistered = true;
 
         // Persist biometric enablement to the backend
         await persistSecuritySettings({
@@ -181,6 +178,13 @@ const SecuritySettings = () => {
         toast.success('Biometric authentication enabled!');
         logger.info('Biometric authentication enabled');
       } catch (error) {
+        if (biometricRegistered) {
+          try {
+            await biometricAuthService.removeBiometric();
+          } catch (rollbackError) {
+            logger.error('Failed to rollback biometric registration', { error: rollbackError.message });
+          }
+        }
         const userMessage = biometricAuthService.handleBiometricError(error);
         toast.error(userMessage);
         logger.error('Biometric setup failed', { error: error.message });

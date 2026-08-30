@@ -104,8 +104,11 @@ export const getAllAppointments = async (institutionId = null) => {
     return appointments;
   } catch (error) {
     console.error('Error fetching appointments:', error);
-    // Return empty array instead of throwing to prevent UI crashes
-    return [];
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      // Return empty array only for genuine index errors to prevent UI crashes
+      return [];
+    }
+    throw error;
   }
 };
 
@@ -477,7 +480,8 @@ export const getTodaysAppointments = async (userId, userRole, options = {}) => {
     });
     
     // Sort by scheduled time
-    appointments.sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
+    const toMs = (v) => !v ? 0 : (v.toDate ? v.toDate().getTime() : (v.getTime ? v.getTime() : new Date(v).getTime() || 0));
+    appointments.sort((a, b) => toMs(a.scheduledTime) - toMs(b.scheduledTime));
     
     return appointments;
   } catch (error) {
@@ -531,7 +535,8 @@ export const getUpcomingAppointments = async (userId, userRole) => {
     });
     
     // Sort by scheduled time
-    appointments.sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
+    const toMs = (v) => !v ? 0 : (v.toDate ? v.toDate().getTime() : (v.getTime ? v.getTime() : new Date(v).getTime() || 0));
+    appointments.sort((a, b) => toMs(a.scheduledTime) - toMs(b.scheduledTime));
     
     return appointments;
   } catch (error) {

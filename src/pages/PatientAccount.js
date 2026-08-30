@@ -54,7 +54,7 @@ const PatientAccount = () => {
 
   useEffect(() => {
     loadPatientData();
-  }, [clientId]);
+  }, [clientId, userProfile, user]);
 
   const toDateInput = (v) => {
     if (!v) return '';
@@ -64,6 +64,10 @@ const PatientAccount = () => {
   };
 
   const loadPatientData = async () => {
+    if (!clientId && !userProfile?.clientId && !userProfile?.id && !user?.uid) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setLoadError(null);
@@ -142,20 +146,10 @@ const PatientAccount = () => {
       // so only the fields passed here are merged — existing fields are preserved.
       if (user?.uid) {
         try {
-          await updateDoc(doc(db, 'users', user.uid), {
-            name: formData.name,
-            displayName: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            address: formData.address,
-            dateOfBirth: formData.dateOfBirth,
-            gender: formData.gender,
-            emergencyContactName: formData.emergencyContactName,
-            emergencyContactPhone: formData.emergencyContactPhone,
-            medicalConditions: formData.medicalConditions,
-            allergies: formData.allergies,
-            medications: formData.medications
-          });
+          const usersUpdateData = Object.fromEntries(
+            Object.entries(updateData).filter(([_, v]) => v !== '' && v != null)
+          );
+          await updateDoc(doc(db, 'users', user.uid), usersUpdateData);
         } catch (userUpdateError) {
           console.warn('Could not update user document:', userUpdateError);
         }

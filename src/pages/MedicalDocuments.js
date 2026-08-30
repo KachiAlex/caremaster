@@ -47,6 +47,8 @@ const MedicalDocuments = () => {
     }
   };
 
+  const toDate = (v) => v?.toDate ? v.toDate() : new Date(v);
+
   const openDocuments = (appointment) => {
     setSelectedAppointment(appointment);
     setShowDocuments(true);
@@ -67,7 +69,8 @@ const MedicalDocuments = () => {
           break;
         case 'recent':
           const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-          matchesFilter = new Date(appointment.appointmentDate) > thirtyDaysAgo;
+          const recentDate = toDate(appointment.appointmentDate);
+          matchesFilter = !isNaN(recentDate.getTime()) && recentDate > thirtyDaysAgo;
           break;
         default:
           matchesFilter = true;
@@ -154,7 +157,8 @@ const MedicalDocuments = () => {
               <p className="text-sm font-medium text-gray-600">This Month</p>
               <p className="text-2xl font-semibold text-gray-900">
                 {appointments.filter(apt => {
-                  const aptDate = new Date(apt.appointmentDate);
+                  const aptDate = toDate(apt.appointmentDate);
+                  if (isNaN(aptDate.getTime())) return false;
                   const now = new Date();
                   return aptDate.getMonth() === now.getMonth() && aptDate.getFullYear() === now.getFullYear();
                 }).length}

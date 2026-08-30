@@ -129,7 +129,7 @@ export const createPrescription = async (prescriptionData) => {
       // Don't throw - prescription was created successfully, billing can be done manually
     }
 
-    return { id: prescriptionId, ...newPrescription };
+    return { id: prescriptionId, ...newPrescription, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   } catch (error) {
     console.error('Error creating prescription:', error);
     throw error;
@@ -273,7 +273,8 @@ export const getPrescriptionsByClient = async (clientId) => {
         ...data,
         medications: items,
         createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        prescriptionDate: data.prescriptionDate || data.createdAt
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        prescriptionDate: data.prescriptionDate?.toDate?.() || data.prescriptionDate
       });
     }
 
@@ -299,9 +300,14 @@ export const getPrescriptionItems = async (prescriptionId) => {
       const items = [];
       
       querySnapshot.forEach((doc) => {
+        const data = doc.data();
         items.push({
           id: doc.id,
-          ...doc.data()
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+          availabilityCheckedAt: data.availabilityCheckedAt?.toDate?.() || data.availabilityCheckedAt,
+          dispensedAt: data.dispensedAt?.toDate?.() || data.dispensedAt,
         });
       });
 
@@ -314,9 +320,14 @@ export const getPrescriptionItems = async (prescriptionId) => {
         const items = [];
         
         querySnapshot.forEach((doc) => {
+          const data = doc.data();
           items.push({
             id: doc.id,
-            ...doc.data()
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || data.createdAt,
+            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+            availabilityCheckedAt: data.availabilityCheckedAt?.toDate?.() || data.availabilityCheckedAt,
+            dispensedAt: data.dispensedAt?.toDate?.() || data.dispensedAt,
           });
         });
         items.sort((a, b) => {
@@ -377,7 +388,9 @@ export const getPendingPrescriptions = async (institutionId) => {
         id: doc.id,
         ...data,
         medications: items,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        prescriptionDate: data.prescriptionDate?.toDate?.() || data.prescriptionDate
       });
     }
 
@@ -461,21 +474,26 @@ export const subscribeToPrescriptionsByClient = (clientId, callback) => {
   let fallbackUnsubscribe = null;
   
   const processSnapshot = async (querySnapshot) => {
-    const prescriptions = [];
-    
-    for (const doc of querySnapshot.docs) {
-      const data = doc.data();
-      const items = await getPrescriptionItems(doc.id);
+    try {
+      const prescriptions = [];
       
-      prescriptions.push({
-        id: doc.id,
-        ...data,
-        medications: items,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
-      });
+      for (const doc of querySnapshot.docs) {
+        const data = doc.data();
+        const items = await getPrescriptionItems(doc.id);
+        
+        prescriptions.push({
+          id: doc.id,
+          ...data,
+          medications: items,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+        });
+      }
+      
+      callback(prescriptions);
+    } catch (error) {
+      console.error('Error processing prescriptions snapshot:', error);
+      callback([]);
     }
-    
-    callback(prescriptions);
   };
   
   const unsubscribe = onSnapshot(q, processSnapshot, (error) => {

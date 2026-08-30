@@ -69,6 +69,8 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
   useEffect(() => {
     if (clientId) {
       loadAllActivities();
+    } else {
+      setLoading(false);
     }
   }, [clientId, limit]);
 
@@ -350,7 +352,7 @@ const ClientActivityTimeline = ({ clientId, clientName, userRole }) => {
 
   const formatTimestamp = (timestamp) => {
     const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
-    return date.toLocaleString('en-US', {
+    return isNaN(date.getTime()) ? '—' : date.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

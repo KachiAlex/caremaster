@@ -170,10 +170,12 @@ const Dashboard = () => {
         const [appointments, vitalSigns, unreadCount, medications, assignments] = await Promise.all([
           getUpcomingAppointments(user.uid, userProfile?.userType || 'elderly').catch(err => {
             console.warn('Failed to fetch appointments:', err);
+            toast.error('Could not load appointments.');
             return [];
           }),
           getLatestVitalSigns(user.uid).catch(err => {
             console.warn('Failed to fetch vital signs:', err);
+            toast.error('Could not load vitals.');
             return null;
           }),
           getUnreadMessageCount(user.uid).catch(err => {
@@ -182,10 +184,12 @@ const Dashboard = () => {
           }),
           medicationAPI.getMedications({ clientId: user.uid, status: 'active' }).catch(err => {
             console.warn('Failed to fetch medications:', err);
+            toast.error('Could not load medications.');
             return [];
           }),
           assignmentAPI.getAssignmentsByClient(user.uid).catch(err => {
             console.warn('Failed to fetch caregiver tasks:', err);
+            toast.error('Could not load care tasks.');
             return [];
           })
         ]);
@@ -249,7 +253,7 @@ const Dashboard = () => {
     if (!incomingCall) return;
     
     try {
-      const userId = userProfile.id || userProfile.uid || user?.uid;
+      const userId = userProfile?.id || userProfile?.uid || user?.uid;
       await callService.answerCall(incomingCall.callId, userId);
       
       setActiveCall({
@@ -272,7 +276,7 @@ const Dashboard = () => {
     if (!incomingCall) return;
     
     try {
-      const userId = userProfile.id || userProfile.uid || user?.uid;
+      const userId = userProfile?.id || userProfile?.uid || user?.uid;
       await callService.rejectCall(incomingCall.callId, userId);
       setIncomingCall(null);
       console.log('❌ Call rejected');

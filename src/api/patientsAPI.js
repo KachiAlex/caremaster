@@ -118,15 +118,7 @@ export const getAllClients = async (institutionId = null) => {
       
       const clients = [];
       querySnapshot.forEach((doc) => {
-        const clientData = doc.data();
-        clients.push({
-          id: doc.id,
-          ...clientData,
-          dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-          createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-          updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-          lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
-        });
+        clients.push(normalizeClientDoc(doc));
       });
       
       return clients;
@@ -150,15 +142,7 @@ export const getClientsByInstitution = async (institutionId) => {
       
       const clients = [];
       querySnapshot.forEach((doc) => {
-        const clientData = doc.data();
-        clients.push({
-          id: doc.id,
-          ...clientData,
-          dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-          createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-          updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-          lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
-        });
+        clients.push(normalizeClientDoc(doc));
       });
       
       return clients;
@@ -169,15 +153,7 @@ export const getClientsByInstitution = async (institutionId) => {
         const querySnapshot = await getDocs(q);
         const clients = [];
         querySnapshot.forEach((doc) => {
-          const clientData = doc.data();
-          clients.push({
-            id: doc.id,
-            ...clientData,
-            dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-            createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-            updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-            lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
-          });
+          clients.push(normalizeClientDoc(doc));
         });
         clients.sort((a, b) => {
           const av = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
@@ -289,15 +265,7 @@ export const getClientsByCaregiver = async (caregiverId, institutionId = null) =
     
     const directClients = [];
     directSnapshot.forEach((doc) => {
-      const clientData = doc.data();
-      directClients.push({
-        id: doc.id,
-        ...clientData,
-        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
-      });
+      directClients.push(normalizeClientDoc(doc));
     });
 
     // Also get clients from tasks assigned to this caregiver
@@ -345,15 +313,7 @@ export const getClientsByCaregiver = async (caregiverId, institutionId = null) =
       try {
         const clientDoc = await getDoc(doc(db, CLIENTS_COLLECTION, clientId));
         if (clientDoc.exists()) {
-          const clientData = clientDoc.data();
-          taskClients.push({
-            id: clientDoc.id,
-            ...clientData,
-            dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-            createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-            updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-            lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
-          });
+          taskClients.push(normalizeClientDoc(clientDoc));
         } else {
           // Client doc is missing; create a placeholder so UI can still show the assignment
           const assignment = assignmentByClientId.get(clientId) || {};
@@ -444,15 +404,7 @@ export const getClientsByDoctor = async (doctorId, institutionId = null) => {
     
     const clients = [];
     querySnapshot.forEach((doc) => {
-      const clientData = doc.data();
-      clients.push({
-        id: doc.id,
-        ...clientData,
-        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
-      });
+      clients.push(normalizeClientDoc(doc));
     });
     
     // Sort by createdAt in memory (newest first)
@@ -866,19 +818,34 @@ export const subscribeToClients = (callback) => {
   const clientsRef = collection(db, CLIENTS_COLLECTION);
   const q = query(clientsRef, orderBy('createdAt', 'desc'));
   
-  return onSnapshot(q, (querySnapshot) => {
+  let fallbackUnsubscribe = null;
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
     const clients = [];
     querySnapshot.forEach((doc) => {
-      const clientData = doc.data();
-      clients.push({
-        id: doc.id,
-        ...clientData,
-        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
-      });
+      clients.push(normalizeClientDoc(doc));
     });
     callback(clients);
+  }, (error) => {
+    if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+      console.warn('Index missing, using fallback subscription:', error.message);
+      const fallbackQ = query(clientsRef);
+      fallbackUnsubscribe = onSnapshot(fallbackQ, (snap) => {
+        const clients = [];
+        snap.forEach((doc) => {
+          clients.push(normalizeClientDoc(doc));
+        });
+        clients.sort((a, b) => {
+          const toMs = (v) => v instanceof Date ? v.getTime() : (v?.toDate ? v.toDate().getTime() : (v ? new Date(v).getTime() : 0));
+          return toMs(b.createdAt) - toMs(a.createdAt);
+        });
+        callback(clients);
+      });
+    } else {
+      console.error('Clients subscription error:', error);
+    }
   });
+  return () => {
+    unsubscribe();
+    if (fallbackUnsubscribe) fallbackUnsubscribe();
+  };
 };

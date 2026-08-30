@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Video, 
   Phone, 
@@ -51,6 +51,7 @@ const Telemedicine = () => {
   const [userType, setUserType] = useState('Client'); // 'Client' or 'doctor'
   const [showDocuments, setShowDocuments] = useState(false);
   const [selectedAppointmentForDocs, setSelectedAppointmentForDocs] = useState(null);
+  const callTimerRef = useRef(null);
 
   useEffect(() => {
     if (user && !userLoading) {
@@ -65,23 +66,14 @@ const Telemedicine = () => {
         telemedicineService.leaveChannel();
       }
       // Clear any active timer
-      if (activeCall?.timer) {
-        clearInterval(activeCall.timer);
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
       }
       // Remove Agora event listeners
       removeAgoraEventListeners();
     };
   }, [user, userLoading]);
-
-  // Determine user type based on user data
-  useEffect(() => {
-    if (user) {
-      // In a real app, you'd check user roles from Database
-      // For now, we'll use a simple check or default to Client
-      const userRole = user.displayName?.includes('Dr.') ? 'doctor' : 'Client';
-      setUserType(userRole);
-    }
-  }, [user]);
 
   const loadAvailableDevices = async () => {
     try {
@@ -121,8 +113,9 @@ const Telemedicine = () => {
       } else if (curState === 'DISCONNECTED') {
         toast.warning('Connection lost');
         // Clean up call state on unexpected disconnect
-        if (activeCall?.timer) {
-          clearInterval(activeCall.timer);
+        if (callTimerRef.current) {
+          clearInterval(callTimerRef.current);
+          callTimerRef.current = null;
         }
         setIsInCall(false);
         setActiveCall(null);
@@ -210,8 +203,12 @@ const Telemedicine = () => {
         return;
       }
 
+      // Determine user type based on user data
+      const currentUserType = user.displayName?.includes('Dr.') ? 'doctor' : 'Client';
+      setUserType(currentUserType);
+
       // Load appointments from Backend
-      const appointmentsData = await telemedicineAPI.getAppointments(user.uid, userType);
+      const appointmentsData = await telemedicineAPI.getAppointments(user.uid, currentUserType);
       
       // Format appointments for display
       const formattedAppointments = appointmentsData.map(appointment => 
@@ -278,6 +275,7 @@ const Telemedicine = () => {
       }, 1000);
       
       // Store timer for cleanup
+      callTimerRef.current = timer;
       setActiveCall(prev => ({ ...prev, timer, channelName, uid, callId }));
       
     } catch (error) {
@@ -294,8 +292,9 @@ const Telemedicine = () => {
   const endCall = async () => {
     try {
       // Clear timer
-      if (activeCall?.timer) {
-        clearInterval(activeCall.timer);
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
       }
       
       // Leave Agora channel

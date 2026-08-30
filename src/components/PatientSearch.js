@@ -161,7 +161,10 @@ const PatientSearch = ({ onSelectPatient, placeholder }) => {
             {results.map((client, index) => (
               <div
                 key={client.id || client.clientId || index}
-                onClick={() => handleSelect(client)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(client);
+                }}
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
                   index === selectedIndex
                     ? 'bg-blue-500/20 border border-blue-500/30'

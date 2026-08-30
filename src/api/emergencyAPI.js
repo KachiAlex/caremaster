@@ -270,22 +270,12 @@ export const emergencyAPI = {
   // Get Emergency History
   getEmergencyHistory: async (filters = {}) => {
     try {
-      let emergenciesQuery = query(
-        collection(db, 'emergencies'),
-        orderBy('triggeredAt', 'desc')
-      );
-
-      if (filters.status) {
-        emergenciesQuery = query(emergenciesQuery, where('status', '==', filters.status));
-      }
-
-      if (filters.severity) {
-        emergenciesQuery = query(emergenciesQuery, where('severity', '==', filters.severity));
-      }
-
-      if (filters.limit) {
-        emergenciesQuery = query(emergenciesQuery, limit(filters.limit));
-      }
+      let constraints = [];
+      if (filters.status) constraints.push(where('status', '==', filters.status));
+      if (filters.severity) constraints.push(where('severity', '==', filters.severity));
+      constraints.push(orderBy('triggeredAt', 'desc'));
+      if (filters.limit) constraints.push(limit(filters.limit));
+      let emergenciesQuery = query(collection(db, 'emergencies'), ...constraints);
 
       try {
         const emergenciesSnapshot = await getDocs(emergenciesQuery);

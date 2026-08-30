@@ -46,7 +46,10 @@ const Messages = () => {
         setConversations(data || []);
         setFilteredConversations(data || []);
       })
-      .catch(err => console.error('Error loading conversations:', err))
+      .catch(err => {
+        console.error('Error loading conversations:', err);
+        toast.error('Could not load conversations');
+      })
       .finally(() => setLoading(false));
   }, [user?.uid]);
 
@@ -58,7 +61,7 @@ const Messages = () => {
                (conv.conversationType || '').toLowerCase().includes(term) ||
                (conv.title || '').toLowerCase().includes(term) ||
                (Array.isArray(conv.participants) && conv.participants.some(p =>
-                 (p.name || p.displayName || '').toLowerCase().includes(term)
+                 (typeof p === 'object' ? (p?.name || p?.displayName || '') : (p || '')).toLowerCase().includes(term)
                ));
       });
       setFilteredConversations(filtered);
@@ -75,6 +78,7 @@ const Messages = () => {
         setMessages(msgs || []);
       } catch (err) {
         console.error('Error loading messages:', err);
+        toast.error('Could not load messages');
         setMessages([]);
       }
     }
@@ -82,7 +86,7 @@ const Messages = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedChat) return;
+    if (!user?.uid || !newMessage.trim() || !selectedChat) return;
     try {
       await sendMessage(selectedChat.id, user.uid, { text: newMessage });
       const message = {
@@ -95,9 +99,13 @@ const Messages = () => {
       setMessages(prev => [...prev, message]);
       setNewMessage('');
       // Reload conversations to update lastMessage
-      const updatedConvs = await getConversationsByUser(user.uid);
-      setConversations(updatedConvs || []);
-      setFilteredConversations(updatedConvs || []);
+      try {
+        const updatedConvs = await getConversationsByUser(user.uid);
+        setConversations(updatedConvs || []);
+        setFilteredConversations(updatedConvs || []);
+      } catch (refreshErr) {
+        console.error('Error refreshing conversations:', refreshErr);
+      }
     } catch (err) {
       toast.error('Failed to send message');
     }
@@ -145,9 +153,8 @@ const Messages = () => {
 
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
-          {filteredConversations.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">No conversations found</div>
-          ) : (
+          {loading ? <div className="p-4 text-center text-gray-500">Loading conversations...</div> :
+           filteredConversations.length === 0 ? <div className="p-4 text-center text-gray-500">No conversations found</div> : (
             filteredConversations.map((conversation) => (
             <div
               key={conversation.id}
@@ -234,7 +241,10 @@ const Messages = () => {
                     <div className={`flex items-center justify-between mt-1 ${
                       message.senderId === user?.uid ? 'text-blue-100' : 'text-gray-500'
                     }`}>
-                      <span className="text-xs">{message.timestamp instanceof Date ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (message.timestamp || '')}</span>
+                      <span className="text-xs">{(() => {
+                        const ts = message.createdAt || message.timestamp;
+                        return ts instanceof Date ? ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (ts || '');
+                      })()}</span>
                       {getReadStatus(message)}
                     </div>
                   </div>

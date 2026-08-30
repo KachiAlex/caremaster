@@ -120,15 +120,10 @@ export const createHomeLabVisit = async (visitData) => {
 export const getHomeLabVisitsByTechnician = async (labTechnicianId, filters = {}) => {
   try {
     const visitsRef = collection(db, HOME_LAB_VISITS_COLLECTION);
-    let visitsQuery = query(
-      visitsRef,
-      where('assignedLabTechnicianId', '==', labTechnicianId),
-      orderBy('scheduledAt', 'asc')
-    );
-
-    if (filters.status) {
-      visitsQuery = query(visitsQuery, where('status', '==', filters.status));
-    }
+    let constraints = [where('assignedLabTechnicianId', '==', labTechnicianId)];
+    if (filters.status) constraints.push(where('status', '==', filters.status));
+    constraints.push(orderBy('scheduledAt', 'asc'));
+    let visitsQuery = query(visitsRef, ...constraints);
 
     try {
       const snapshot = await getDocs(visitsQuery);

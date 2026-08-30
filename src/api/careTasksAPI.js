@@ -22,23 +22,37 @@ const CARE_TASKS_COLLECTION = 'careTasks';
 export const getAllCareTasks = async () => {
   try {
     const tasksRef = collection(db, CARE_TASKS_COLLECTION);
-    const q = query(tasksRef, orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    const tasks = [];
-    querySnapshot.forEach((doc) => {
-      const taskData = doc.data();
-      tasks.push({
-        id: doc.id,
-        ...taskData,
-        scheduledTime: taskData.scheduledTime?.toDate?.() || taskData.scheduledTime,
-        completedAt: taskData.completedAt?.toDate?.() || taskData.completedAt,
-        createdAt: taskData.createdAt?.toDate?.() || taskData.createdAt,
-        updatedAt: taskData.updatedAt?.toDate?.() || taskData.updatedAt,
+    try {
+      const q = query(tasksRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      
+      const tasks = [];
+      querySnapshot.forEach((doc) => {
+        const taskData = doc.data();
+        tasks.push({
+          id: doc.id,
+          ...taskData,
+          scheduledTime: taskData.scheduledTime?.toDate?.() || taskData.scheduledTime,
+          completedAt: taskData.completedAt?.toDate?.() || taskData.completedAt,
+          createdAt: taskData.createdAt?.toDate?.() || taskData.createdAt,
+          updatedAt: taskData.updatedAt?.toDate?.() || taskData.updatedAt,
+        });
       });
-    });
-    
-    return tasks;
+      
+      return tasks;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+        // Fallback: fetch without orderBy, sort in memory
+        const snapshot = await getDocs(query(tasksRef));
+        const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        tasks.sort((a, b) => {
+          const toMs = (v) => !v ? 0 : (v.toDate ? v.toDate().getTime() : (v.getTime ? v.getTime() : new Date(v).getTime() || 0));
+          return toMs(b.createdAt) - toMs(a.createdAt);
+        });
+        return tasks;
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error fetching care tasks:', error);
     throw error;

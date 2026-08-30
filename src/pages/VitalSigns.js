@@ -88,7 +88,7 @@ const VitalSigns = () => {
   // Helper function to get icon for vital type
   const getVitalIcon = (type) => {
     if (!type) return Heart;
-    switch (type.toLowerCase()) {
+    switch (String(type).toLowerCase()) {
       case 'blood pressure':
         return Heart;
       case 'blood sugar':
@@ -156,6 +156,41 @@ const VitalSigns = () => {
         return;
       }
     }
+    if (formData.vitalType === 'Blood Sugar') {
+      const val = parseFloat(formData.reading);
+      if (isNaN(val) || val < 0 || val > 1000) {
+        toast.error('Blood sugar must be a number between 0 and 1000 mg/dL');
+        return;
+      }
+    }
+    if (formData.vitalType === 'Weight') {
+      const val = parseFloat(formData.reading);
+      if (isNaN(val) || val < 0 || val > 1000) {
+        toast.error('Weight must be a number between 0 and 1000 kg');
+        return;
+      }
+    }
+    if (formData.vitalType === 'Oxygen Saturation') {
+      const val = parseFloat(formData.reading);
+      if (isNaN(val) || val < 0 || val > 100) {
+        toast.error('Oxygen saturation must be a number between 0 and 100%');
+        return;
+      }
+    }
+    if (formData.vitalType === 'Respiratory Rate') {
+      const val = parseFloat(formData.reading);
+      if (isNaN(val) || val < 0 || val > 100) {
+        toast.error('Respiratory rate must be a number between 0 and 100 breaths/min');
+        return;
+      }
+    }
+    if (formData.vitalType === 'Pain Level') {
+      const val = parseFloat(formData.reading);
+      if (isNaN(val) || val < 0 || val > 10) {
+        toast.error('Pain level must be a number between 0 and 10');
+        return;
+      }
+    }
 
     try {
       setSubmitting(true);
@@ -181,41 +216,46 @@ const VitalSigns = () => {
       });
 
       // Refresh the data
-      const vitalSigns = (await getVitalSignsByClient(user.uid)) || [];
-      
-      // Get the latest reading for each type
-      const latestByType = {};
-      vitalSigns.forEach(vital => {
-        if (!latestByType[vital.type] || new Date(vital.recordedAt) > new Date(latestByType[vital.type].recordedAt)) {
-          latestByType[vital.type] = vital;
-        }
-      });
-      
-      // Convert to display format
-      const currentVitalsData = Object.values(latestByType).map(vital => ({
-        id: vital.id,
-        type: vital.type,
-        value: vital.value,
-        unit: vital.unit,
-        timestamp: new Date(vital.recordedAt).toLocaleString(),
-        status: vital.status || 'Normal',
-        statusColor: getStatusColor(vital.status || 'Normal'),
-        icon: getVitalIcon(vital.type)
-      }));
-      
-      setCurrentVitals(currentVitalsData);
+      try {
+        const vitalSigns = (await getVitalSignsByClient(user.uid)) || [];
+        
+        // Get the latest reading for each type
+        const latestByType = {};
+        vitalSigns.forEach(vital => {
+          if (!latestByType[vital.type] || new Date(vital.recordedAt) > new Date(latestByType[vital.type].recordedAt)) {
+            latestByType[vital.type] = vital;
+          }
+        });
+        
+        // Convert to display format
+        const currentVitalsData = Object.values(latestByType).map(vital => ({
+          id: vital.id,
+          type: vital.type,
+          value: vital.value,
+          unit: vital.unit,
+          timestamp: new Date(vital.recordedAt).toLocaleString(),
+          status: vital.status || 'Normal',
+          statusColor: getStatusColor(vital.status || 'Normal'),
+          icon: getVitalIcon(vital.type)
+        }));
+        
+        setCurrentVitals(currentVitalsData);
 
-      // Refresh health trends after save
-      const trends = (await getVitalSignsTrends(user.uid)) || {};
-      const trendsData = Object.keys(trends).map(type => ({
-        id: type,
-        type: type,
-        trend: trends[type].trend || 'Stable',
-        trendColor: getTrendColor(trends[type].trend || 'Stable'),
-        average: trends[type].average || 'N/A',
-        icon: getVitalIcon(type)
-      }));
-      setHealthTrends(trendsData);
+        // Refresh health trends after save
+        const trends = (await getVitalSignsTrends(user.uid)) || {};
+        const trendsData = Object.keys(trends).map(type => ({
+          id: type,
+          type: type,
+          trend: trends[type].trend || 'Stable',
+          trendColor: getTrendColor(trends[type].trend || 'Stable'),
+          average: trends[type].average || 'N/A',
+          icon: getVitalIcon(type)
+        }));
+        setHealthTrends(trendsData);
+      } catch (refreshError) {
+        console.error('Error refreshing vital signs:', refreshError);
+        toast.warn('Saved, but could not refresh the view.');
+      }
       
     } catch (error) {
       console.error('Error saving vital sign:', error);
@@ -278,6 +318,16 @@ const VitalSigns = () => {
         return 'Normal';
       case 'Oxygen Saturation':
         if (value < 95) return 'Warning';
+        return 'Normal';
+      case 'Weight':
+        if (value < 50 || value > 500) return 'Warning';
+        return 'Normal';
+      case 'Respiratory Rate':
+        if (value < 10 || value > 35) return 'Critical';
+        if (value < 8 || value > 40) return 'Warning';
+        return 'Normal';
+      case 'Pain Level':
+        if (value >= 7) return 'Warning';
         return 'Normal';
       default:
         return 'Normal';
@@ -496,9 +546,15 @@ const VitalSigns = () => {
           <button 
             onClick={() => {
               const vitalsData = currentVitals.map(v => `${v.type}: ${v.value} ${v.unit || ''}`).join('\n');
-              navigator.share ? 
-                navigator.share({title: 'My Vital Signs', text: vitalsData}) :
-                navigator.clipboard.writeText(vitalsData).then(() => toast.success('Vital signs copied to clipboard'));
+              if (navigator.share) {
+                navigator.share({title: 'My Vital Signs', text: vitalsData}).catch(err => {
+                  if (err.name !== 'AbortError') toast.error('Could not share');
+                });
+              } else {
+                navigator.clipboard.writeText(vitalsData)
+                  .then(() => toast.success('Vital signs copied to clipboard'))
+                  .catch(() => toast.error('Could not copy to clipboard'));
+              }
             }}
             className="flex items-center justify-center p-4 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
           >

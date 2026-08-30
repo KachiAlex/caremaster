@@ -106,11 +106,8 @@ export const medicationAPI = {
 
       // Apply client-side sorting if clientId filter was used or fallback was used
       if (filters.clientId) {
-        medications.sort((a, b) => {
-          const aDate = a.startDate || new Date(0);
-          const bDate = b.startDate || new Date(0);
-          return bDate - aDate;
-        });
+        const toMs = (v) => !v ? 0 : (v.toDate ? v.toDate().getTime() : (v.getTime ? v.getTime() : new Date(v).getTime() || 0));
+        medications.sort((a, b) => toMs(b.startDate) - toMs(a.startDate));
       } else {
         // Sort by startDate desc (covers fallback path for non-clientId queries)
         medications.sort((a, b) => {
@@ -309,19 +306,11 @@ export const medicationAPI = {
   // Get dose logs for a medication
   getDoseLogs: async (medicationId, filters = {}) => {
     try {
-      let doseLogsQuery = query(
-        collection(db, 'doseLogs'),
-        where('medicationId', '==', medicationId),
-        orderBy('timestamp', 'desc')
-      );
-      
-      if (filters.type) {
-        doseLogsQuery = query(doseLogsQuery, where('type', '==', filters.type));
-      }
-      
-      if (filters.limit) {
-        doseLogsQuery = query(doseLogsQuery, limit(filters.limit));
-      }
+      let constraints = [where('medicationId', '==', medicationId)];
+      if (filters.type) constraints.push(where('type', '==', filters.type));
+      constraints.push(orderBy('timestamp', 'desc'));
+      if (filters.limit) constraints.push(limit(filters.limit));
+      let doseLogsQuery = query(collection(db, 'doseLogs'), ...constraints);
 
       try {
         const doseLogsSnapshot = await getDocs(doseLogsQuery);

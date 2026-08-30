@@ -190,7 +190,7 @@ export const createConsultation = async (consultationData) => {
       // Don't throw - consultation was created successfully, billing can be done manually
     }
     
-    return { id: docRef.id, ...newConsultation };
+    return { id: docRef.id, ...newConsultation, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   } catch (error) {
     return handleAPIError(error, 'create_consultation', {
       defaultMessage: 'Failed to create consultation'
@@ -376,9 +376,13 @@ export const getConsultation = async (consultationId) => {
     const consultationDoc = await getDoc(consultationRef);
     
     if (consultationDoc.exists()) {
+      const data = consultationDoc.data();
       return {
         id: consultationDoc.id,
-        ...consultationDoc.data()
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        consultationDate: data.consultationDate?.toDate?.() || data.consultationDate,
       };
     }
     return null;

@@ -30,7 +30,10 @@ const Appointments = () => {
   // Fetch available caregivers and recent appointments
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.uid) return;
+      if (!user?.uid) {
+        setLoading(false);
+        return;
+      }
       
       try {
         setLoading(true);
@@ -39,7 +42,7 @@ const Appointments = () => {
         const caregivers = await caregiverAPI.getCaregivers({ 
           status: 'active',
           limit: 10 
-        });
+        }) || [];
         setAvailableCaregivers(caregivers.map(caregiver => ({
           id: caregiver.id,
           name: caregiver.name || caregiver.displayName || 'Caregiver',
