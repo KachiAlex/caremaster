@@ -5,7 +5,7 @@ import { Building, Shield, Stethoscope, Users } from 'lucide-react';
 
 const PortalSwitcher = () => {
   const navigate = useNavigate();
-  const { user, userProfile, institutionId } = useUser();
+  const { userProfile, institutionId } = useUser();
 
   const portals = [];
   const role = userProfile?.userType || userProfile?.type || userProfile?.role;

@@ -13,7 +13,6 @@ import {
   Clock,
   TrendingUp,
   AlertTriangle,
-  Zap,
   Eye,
   MessageSquare,
   Calendar,

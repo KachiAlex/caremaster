@@ -92,13 +92,10 @@ const CaregiverPhotos = () => {
     return startOk && endOk && categoryOk && keywordOk;
   });
 
-  const pagedPhotos = filteredPhotos.slice((page-1)*pageSize, page*pageSize);
-  const totalPages = Math.max(1, Math.ceil(filteredPhotos.length / pageSize));
-
   const filteredPhotos = photos.filter(photo => {
-    const matchesSearch = photo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         photo.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         photo.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (photo.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (photo.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (photo.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPatient = filterPatient === 'all' || photo.clientId === filterPatient;
     const matchesCategory = filterCategory === 'all' || photo.category === filterCategory;
     const createdTime = photo.uploadedAt ? new Date(photo.uploadedAt).getTime() : 0;
@@ -106,6 +103,9 @@ const CaregiverPhotos = () => {
     const endOk = filters.endDate ? createdTime <= new Date(filters.endDate).getTime() + 86399999 : true;
     return matchesSearch && matchesPatient && matchesCategory && startOk && endOk;
   });
+
+  const pagedPhotos = filteredPhotos.slice((page-1)*pageSize, page*pageSize);
+  const totalPages = Math.max(1, Math.ceil(filteredPhotos.length / pageSize));
 
   const getStatusColor = (status) => {
     switch (status) {

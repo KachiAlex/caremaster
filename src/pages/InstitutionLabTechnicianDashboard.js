@@ -30,7 +30,6 @@ import {
   getSampleCollectionsByTechnician
 } from '../api/homeLabServicesAPI';
 import { signOut, getAuth } from 'backend/auth';
-import { auth } from '../backend/config';
 
 const InstitutionLabTechnicianDashboard = () => {
   const { user, userProfile, institutionId, institutionData } = useUser();

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LogOut, User, Settings, ChevronDown, X } from 'lucide-react';
+import { LogOut, Settings, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import UserProfileSettings from './UserProfileSettings';
