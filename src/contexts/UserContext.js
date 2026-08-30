@@ -55,9 +55,11 @@ export const UserProvider = ({ children }) => {
           setInstitutionId(userData.institutionId);
         }
 
-        // Fetch fresh profile from database using firebase_uid or id
+        // Fetch fresh profile from database using firebase_uid or id.
+        // Skip when on /login — SignInRouteHandler will clear the stale session
+        // and a fresh profile fetch with a stale token only produces a 401.
         const userId = userData.uid || userData.id;
-        if (userId) {
+        if (userId && !window.location.pathname.startsWith('/login')) {
           getDoc(doc(db, 'users', userId))
             .then((userDoc) => {
               if (userDoc.exists()) {

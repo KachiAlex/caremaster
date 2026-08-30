@@ -173,6 +173,9 @@ function App() {
     const ensureCreatedAt = async () => {
       try {
         if (!user?.uid) return;
+        // Skip when on /login — SignInRouteHandler clears stale sessions there,
+        // and a getDoc with a stale token only produces a 401.
+        if (window.location.pathname.startsWith('/login')) return;
         const userDocRef = doc(db, 'users', user.uid);
         const snap = await getDoc(userDocRef);
         if (!snap.exists()) {
