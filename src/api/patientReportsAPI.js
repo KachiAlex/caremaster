@@ -20,26 +20,52 @@ const CARE_LOGS_COLLECTION = 'clientCareLogs';
 export const getClientReports = async (clientId) => {
   try {
     const reportsRef = collection(db, REPORTS_COLLECTION);
-    const q = query(
-      reportsRef,
-      where('clientId', '==', clientId),
-      orderBy('createdAt', 'desc')
-    );
-    
-    const querySnapshot = await getDocs(q);
-    const reports = [];
-    
-    querySnapshot.forEach((doc) => {
-      reports.push({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt,
-        updatedAt: doc.data().updatedAt?.toDate ? doc.data().updatedAt.toDate() : doc.data().updatedAt,
-        timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
+    try {
+      const q = query(
+        reportsRef,
+        where('clientId', '==', clientId),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const reports = [];
+      
+      querySnapshot.forEach((doc) => {
+        reports.push({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt,
+          updatedAt: doc.data().updatedAt?.toDate ? doc.data().updatedAt.toDate() : doc.data().updatedAt,
+          timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
+        });
       });
-    });
-    
-    return reports;
+      
+      return reports;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(reportsRef, where('clientId', '==', clientId));
+        const querySnapshot = await getDocs(q);
+        const reports = [];
+        
+        querySnapshot.forEach((doc) => {
+          reports.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt,
+            updatedAt: doc.data().updatedAt?.toDate ? doc.data().updatedAt.toDate() : doc.data().updatedAt,
+            timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
+          });
+        });
+        reports.sort((a, b) => {
+          const av = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+          const bv = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return reports;
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error fetching client reports:', error);
     return [];
@@ -94,26 +120,52 @@ export const deleteClientReport = async (reportId) => {
 export const getClientCareLogs = async (clientId) => {
   try {
     const careLogsRef = collection(db, CARE_LOGS_COLLECTION);
-    const q = query(
-      careLogsRef,
-      where('clientId', '==', clientId),
-      orderBy('timestamp', 'desc')
-    );
-    
-    const querySnapshot = await getDocs(q);
-    const careLogs = [];
-    
-    querySnapshot.forEach((doc) => {
-      careLogs.push({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt,
-        updatedAt: doc.data().updatedAt?.toDate ? doc.data().updatedAt.toDate() : doc.data().updatedAt,
-        timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
+    try {
+      const q = query(
+        careLogsRef,
+        where('clientId', '==', clientId),
+        orderBy('timestamp', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const careLogs = [];
+      
+      querySnapshot.forEach((doc) => {
+        careLogs.push({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt,
+          updatedAt: doc.data().updatedAt?.toDate ? doc.data().updatedAt.toDate() : doc.data().updatedAt,
+          timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
+        });
       });
-    });
-    
-    return careLogs;
+      
+      return careLogs;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(careLogsRef, where('clientId', '==', clientId));
+        const querySnapshot = await getDocs(q);
+        const careLogs = [];
+        
+        querySnapshot.forEach((doc) => {
+          careLogs.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt,
+            updatedAt: doc.data().updatedAt?.toDate ? doc.data().updatedAt.toDate() : doc.data().updatedAt,
+            timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
+          });
+        });
+        careLogs.sort((a, b) => {
+          const av = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime();
+          const bv = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return careLogs;
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error fetching client care logs:', error);
     return [];

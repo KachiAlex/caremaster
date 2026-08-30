@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Smartphone, Fingerprint, Eye, CheckCircle, AlertCircle } from 'lucide-react';
 import authSecurityService from '../services/authSecurityService';
 import secureConfigService from '../services/secureConfigService';
+import biometricAuthService from '../services/biometricAuthService';
+import { useUser } from '../contexts/UserContext';
+import api from '../api/config';
 import { toast } from 'react-toastify';
 import logger from '../utils/logger';
 
 const SecuritySettings = () => {
+  const { user, userProfile } = useUser();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -21,15 +25,40 @@ const SecuritySettings = () => {
     rateLimiting: true
   });
 
+  // Password change form state (replaces prompt()-based flow)
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
   useEffect(() => {
     loadSecuritySettings();
   }, []);
 
-  const loadSecuritySettings = () => {
+  const loadSecuritySettings = async () => {
+    try {
+      const response = await api.get('/auth/security-settings');
+      if (response.data && response.data.success) {
+        const data = response.data.data || {};
+        setTwoFactorEnabled(!!data.twoFactorEnabled);
+        setBiometricEnabled(!!data.biometricEnabled);
+        if (data.twoFactorPhone) setPhoneNumber(data.twoFactorPhone);
+      }
+    } catch (error) {
+      console.error('Failed to load security settings:', error);
+      logger.error('Failed to load security settings from backend', { error: error.message });
+    }
+    // Still load feature flags for display purposes
     const features = secureConfigService.getFeatureFlags();
     setSecurityFeatures(features);
-    setTwoFactorEnabled(features.twoFactorAuth);
-    setBiometricEnabled(features.biometricAuth);
+  };
+
+  // Persist security settings to the backend
+  const persistSecuritySettings = async (payload) => {
+    const response = await api.put('/auth/security-settings', payload);
+    return response.data;
   };
 
   const handle2FASetup = async () => {
@@ -62,8 +91,20 @@ const SecuritySettings = () => {
     setLoading(true);
     try {
       await authSecurityService.verifyTwoFactorAuth(verificationId, verificationCode);
+
+      // Persist 2FA enablement to the backend
+      try {
+        await persistSecuritySettings({
+          twoFactorEnabled: true,
+          twoFactorPhone: phoneNumber
+        });
+      } catch (persistError) {
+        logger.error('Failed to persist 2FA settings to backend', { error: persistError.message });
+      }
+
       setTwoFactorEnabled(true);
       setShowVerification(false);
+      setVerificationCode('');
       toast.success('Two-factor authentication enabled successfully!');
       logger.info('2FA verification successful');
     } catch (error) {
@@ -74,51 +115,91 @@ const SecuritySettings = () => {
     }
   };
 
+  const handle2FADisable = async () => {
+    setLoading(true);
+    try {
+      await persistSecuritySettings({ twoFactorEnabled: false, twoFactorPhone: null });
+      setTwoFactorEnabled(false);
+      setShowVerification(false);
+      setVerificationCode('');
+      toast.success('Two-factor authentication disabled');
+      logger.info('2FA disabled');
+    } catch (error) {
+      toast.error('Failed to disable 2FA: ' + error.message);
+      logger.error('2FA disable failed', { error: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleBiometricToggle = async () => {
     if (!biometricEnabled) {
       // Check if biometric authentication is supported
-      if (!navigator.credentials || !navigator.credentials.create) {
+      if (!biometricAuthService.isSupported) {
         toast.error('Biometric authentication not supported on this device');
         return;
       }
 
+      setLoading(true);
       try {
-        // Request biometric authentication
-        const credential = await navigator.credentials.create({
-          publicKey: {
-            challenge: new Uint8Array(32),
-            rp: { name: "Care Master" },
-            user: {
-              id: new Uint8Array(16),
-              name: "user@Care Master.com",
-              displayName: "Care Master User"
-            },
-            pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-            authenticatorSelection: {
-              authenticatorAttachment: "platform",
-              userVerification: "required"
-            }
-          }
+        // Register biometric credential via the shared service
+        const credential = await biometricAuthService.registerBiometric({
+          id: user?.uid || userProfile?.id || 'user',
+          name: userProfile?.name || userProfile?.displayName || 'User',
+          displayName: userProfile?.name || userProfile?.displayName || 'Care Master User',
+          email: userProfile?.email || user?.email || ''
         });
+
+        // Persist biometric enablement to the backend
+        try {
+          await persistSecuritySettings({
+            biometricEnabled: true,
+            biometricCredentialId: credential?.credentialId || credential?.id || 'registered'
+          });
+        } catch (persistError) {
+          logger.error('Failed to persist biometric settings to backend', { error: persistError.message });
+        }
 
         setBiometricEnabled(true);
         toast.success('Biometric authentication enabled!');
         logger.info('Biometric authentication enabled');
       } catch (error) {
-        toast.error('Failed to enable biometric authentication: ' + error.message);
+        const userMessage = biometricAuthService.handleBiometricError(error);
+        toast.error(userMessage);
         logger.error('Biometric setup failed', { error: error.message });
+      } finally {
+        setLoading(false);
       }
     } else {
-      setBiometricEnabled(false);
-      toast.success('Biometric authentication disabled');
-      logger.info('Biometric authentication disabled');
+      setLoading(true);
+      try {
+        // Remove local biometric credential
+        await biometricAuthService.removeBiometric();
+
+        // Persist biometric disablement to the backend
+        try {
+          await persistSecuritySettings({
+            biometricEnabled: false,
+            biometricCredentialId: null
+          });
+        } catch (persistError) {
+          logger.error('Failed to persist biometric disable to backend', { error: persistError.message });
+        }
+
+        setBiometricEnabled(false);
+        toast.success('Biometric authentication disabled');
+        logger.info('Biometric authentication disabled');
+      } catch (error) {
+        toast.error('Failed to disable biometric authentication: ' + error.message);
+        logger.error('Biometric disable failed', { error: error.message });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   const handlePasswordChange = async () => {
-    const currentPassword = prompt('Enter current password:');
-    const newPassword = prompt('Enter new password:');
-    const confirmPassword = prompt('Confirm new password:');
+    const { currentPassword, newPassword, confirmPassword } = passwordForm;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error('All fields are required');
@@ -135,12 +216,19 @@ const SecuritySettings = () => {
       await authSecurityService.securePasswordChange(currentPassword, newPassword);
       toast.success('Password changed successfully!');
       logger.info('Password changed successfully');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordForm(false);
     } catch (error) {
       toast.error('Failed to change password: ' + error.message);
       logger.error('Password change failed', { error: error.message });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePasswordFormCancel = () => {
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setShowPasswordForm(false);
   };
 
   return (
@@ -259,6 +347,18 @@ const SecuritySettings = () => {
             </div>
           </div>
         )}
+
+        {twoFactorEnabled && (
+          <div className="mt-4">
+            <button
+              onClick={handle2FADisable}
+              disabled={loading}
+              className="btn btn-outline text-red-600"
+            >
+              {loading ? 'Disabling...' : 'Disable 2FA'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Biometric Authentication */}
@@ -305,13 +405,70 @@ const SecuritySettings = () => {
           </div>
         </div>
 
-        <button
-          onClick={handlePasswordChange}
-          disabled={loading}
-          className="btn btn-outline"
-        >
-          Change Password
-        </button>
+        {!showPasswordForm ? (
+          <button
+            onClick={() => setShowPasswordForm(true)}
+            disabled={loading}
+            className="btn btn-outline"
+          >
+            Change Password
+          </button>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Current Password
+              </label>
+              <input
+                type="password"
+                value={passwordForm.currentPassword}
+                onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                placeholder="Enter current password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                placeholder="Enter new password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                placeholder="Confirm new password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={handlePasswordChange}
+                disabled={loading}
+                className="btn btn-primary"
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={handlePasswordFormCancel}
+                disabled={loading}
+                className="btn btn-outline"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Security Features Status */}

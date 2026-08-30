@@ -236,13 +236,30 @@ export const updatePrescription = async (prescriptionId, prescriptionData) => {
 export const getPrescriptionsByClient = async (clientId) => {
   try {
     const prescriptionsRef = collection(db, PRESCRIPTIONS_COLLECTION);
-    const q = query(
-      prescriptionsRef,
-      where('clientId', '==', clientId),
-      orderBy('createdAt', 'desc')
-    );
+    let querySnapshot;
+    try {
+      const q = query(
+        prescriptionsRef,
+        where('clientId', '==', clientId),
+        orderBy('createdAt', 'desc')
+      );
 
-    const querySnapshot = await getDocs(q);
+      querySnapshot = await getDocs(q);
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(prescriptionsRef, where('clientId', '==', clientId));
+        const fallbackSnapshot = await getDocs(q);
+        const sortedDocs = [...fallbackSnapshot.docs].sort((a, b) => {
+          const av = a.data().createdAt?.toDate ? a.data().createdAt.toDate().getTime() : new Date(a.data().createdAt).getTime();
+          const bv = b.data().createdAt?.toDate ? b.data().createdAt.toDate().getTime() : new Date(b.data().createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        querySnapshot = { docs: sortedDocs };
+      } else {
+        throw error;
+      }
+    }
     const prescriptions = [];
     
     for (const doc of querySnapshot.docs) {
@@ -271,23 +288,46 @@ export const getPrescriptionsByClient = async (clientId) => {
 export const getPrescriptionItems = async (prescriptionId) => {
   try {
     const itemsRef = collection(db, PRESCRIPTION_ITEMS_COLLECTION);
-    const q = query(
-      itemsRef,
-      where('prescriptionId', '==', prescriptionId),
-      orderBy('itemNumber', 'asc')
-    );
+    try {
+      const q = query(
+        itemsRef,
+        where('prescriptionId', '==', prescriptionId),
+        orderBy('itemNumber', 'asc')
+      );
 
-    const querySnapshot = await getDocs(q);
-    const items = [];
-    
-    querySnapshot.forEach((doc) => {
-      items.push({
-        id: doc.id,
-        ...doc.data()
+      const querySnapshot = await getDocs(q);
+      const items = [];
+      
+      querySnapshot.forEach((doc) => {
+        items.push({
+          id: doc.id,
+          ...doc.data()
+        });
       });
-    });
 
-    return items;
+      return items;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(itemsRef, where('prescriptionId', '==', prescriptionId));
+        const querySnapshot = await getDocs(q);
+        const items = [];
+        
+        querySnapshot.forEach((doc) => {
+          items.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        items.sort((a, b) => {
+          const av = a.itemNumber ?? 0;
+          const bv = b.itemNumber ?? 0;
+          return av - bv;
+        });
+        return items;
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error fetching prescription items:', error);
     return [];
@@ -298,14 +338,35 @@ export const getPrescriptionItems = async (prescriptionId) => {
 export const getPendingPrescriptions = async (institutionId) => {
   try {
     const prescriptionsRef = collection(db, PRESCRIPTIONS_COLLECTION);
-    const q = query(
-      prescriptionsRef,
-      where('institutionId', '==', institutionId),
-      where('status', 'in', ['active', 'dispensed']),
-      orderBy('createdAt', 'desc')
-    );
+    let querySnapshot;
+    try {
+      const q = query(
+        prescriptionsRef,
+        where('institutionId', '==', institutionId),
+        where('status', 'in', ['active', 'dispensed']),
+        orderBy('createdAt', 'desc')
+      );
 
-    const querySnapshot = await getDocs(q);
+      querySnapshot = await getDocs(q);
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(
+          prescriptionsRef,
+          where('institutionId', '==', institutionId),
+          where('status', 'in', ['active', 'dispensed'])
+        );
+        const fallbackSnapshot = await getDocs(q);
+        const sortedDocs = [...fallbackSnapshot.docs].sort((a, b) => {
+          const av = a.data().createdAt?.toDate ? a.data().createdAt.toDate().getTime() : new Date(a.data().createdAt).getTime();
+          const bv = b.data().createdAt?.toDate ? b.data().createdAt.toDate().getTime() : new Date(b.data().createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        querySnapshot = { docs: sortedDocs };
+      } else {
+        throw error;
+      }
+    }
     const prescriptions = [];
     
     for (const doc of querySnapshot.docs) {
@@ -397,7 +458,9 @@ export const subscribeToPrescriptionsByClient = (clientId, callback) => {
     orderBy('createdAt', 'desc')
   );
   
-  return onSnapshot(q, async (querySnapshot) => {
+  let fallbackUnsubscribe = null;
+  
+  const processSnapshot = async (querySnapshot) => {
     const prescriptions = [];
     
     for (const doc of querySnapshot.docs) {
@@ -413,7 +476,31 @@ export const subscribeToPrescriptionsByClient = (clientId, callback) => {
     }
     
     callback(prescriptions);
+  };
+  
+  const unsubscribe = onSnapshot(q, processSnapshot, (error) => {
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      console.warn('Index missing, using fallback query for subscription:', error.message);
+      const fallbackQuery = query(prescriptionsRef, where('clientId', '==', clientId));
+      fallbackUnsubscribe = onSnapshot(fallbackQuery, async (querySnapshot) => {
+        const sortedDocs = [...querySnapshot.docs].sort((a, b) => {
+          const av = a.data().createdAt?.toDate ? a.data().createdAt.toDate().getTime() : new Date(a.data().createdAt).getTime();
+          const bv = b.data().createdAt?.toDate ? b.data().createdAt.toDate().getTime() : new Date(b.data().createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        await processSnapshot({ docs: sortedDocs });
+      }, (fallbackError) => {
+        console.error('Fallback subscription error:', fallbackError);
+      });
+    } else {
+      console.error('Subscription error:', error);
+    }
   });
+  
+  return () => {
+    unsubscribe();
+    if (fallbackUnsubscribe) fallbackUnsubscribe();
+  };
 };
 
 // Delete prescription

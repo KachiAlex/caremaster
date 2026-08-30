@@ -143,25 +143,53 @@ export const emergencyAPI = {
   // Get Emergency Protocols
   getEmergencyProtocols: async () => {
     try {
-      const protocolsQuery = query(
-        collection(db, 'emergencyProtocols'),
-        where('isActive', '==', true),
-        orderBy('name', 'asc')
-      );
-      
-      const protocolsSnapshot = await getDocs(protocolsQuery);
-      const protocols = [];
+      try {
+        const protocolsQuery = query(
+          collection(db, 'emergencyProtocols'),
+          where('isActive', '==', true),
+          orderBy('name', 'asc')
+        );
+        
+        const protocolsSnapshot = await getDocs(protocolsQuery);
+        const protocols = [];
 
-      protocolsSnapshot.forEach((doc) => {
-        protocols.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
+        protocolsSnapshot.forEach((doc) => {
+          protocols.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate()
+          });
         });
-      });
 
-      return protocols;
+        return protocols;
+      } catch (error) {
+        if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+          console.warn('Index missing, using fallback query:', error.message);
+          const fallbackQuery = query(
+            collection(db, 'emergencyProtocols'),
+            where('isActive', '==', true)
+          );
+          const protocolsSnapshot = await getDocs(fallbackQuery);
+          const protocols = [];
+
+          protocolsSnapshot.forEach((doc) => {
+            protocols.push({
+              id: doc.id,
+              ...doc.data(),
+              createdAt: doc.data().createdAt?.toDate(),
+              updatedAt: doc.data().updatedAt?.toDate()
+            });
+          });
+          protocols.sort((a, b) => {
+            const av = a.name ?? '';
+            const bv = b.name ?? '';
+            return av.localeCompare(bv);
+          });
+          return protocols;
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error fetching emergency protocols:', error);
       throw error;
@@ -231,19 +259,54 @@ export const emergencyAPI = {
         emergenciesQuery = query(emergenciesQuery, limit(filters.limit));
       }
 
-      const emergenciesSnapshot = await getDocs(emergenciesQuery);
-      const emergencies = [];
+      try {
+        const emergenciesSnapshot = await getDocs(emergenciesQuery);
+        const emergencies = [];
 
-      emergenciesSnapshot.forEach((doc) => {
-        emergencies.push({
-          id: doc.id,
-          ...doc.data(),
-          triggeredAt: doc.data().triggeredAt?.toDate(),
-          resolvedAt: doc.data().resolvedAt?.toDate()
+        emergenciesSnapshot.forEach((doc) => {
+          emergencies.push({
+            id: doc.id,
+            ...doc.data(),
+            triggeredAt: doc.data().triggeredAt?.toDate(),
+            resolvedAt: doc.data().resolvedAt?.toDate()
+          });
         });
-      });
 
-      return emergencies;
+        return emergencies;
+      } catch (error) {
+        if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+          console.warn('Index missing, using fallback query:', error.message);
+          // Rebuild from base without orderBy
+          let fallbackQuery = query(collection(db, 'emergencies'));
+          if (filters.status) {
+            fallbackQuery = query(fallbackQuery, where('status', '==', filters.status));
+          }
+          if (filters.severity) {
+            fallbackQuery = query(fallbackQuery, where('severity', '==', filters.severity));
+          }
+          const fallbackSnapshot = await getDocs(fallbackQuery);
+          const emergencies = [];
+
+          fallbackSnapshot.forEach((doc) => {
+            emergencies.push({
+              id: doc.id,
+              ...doc.data(),
+              triggeredAt: doc.data().triggeredAt?.toDate(),
+              resolvedAt: doc.data().resolvedAt?.toDate()
+            });
+          });
+          emergencies.sort((a, b) => {
+            const av = a.triggeredAt?.toDate ? a.triggeredAt.toDate().getTime() : (a.triggeredAt ? new Date(a.triggeredAt).getTime() : 0);
+            const bv = b.triggeredAt?.toDate ? b.triggeredAt.toDate().getTime() : (b.triggeredAt ? new Date(b.triggeredAt).getTime() : 0);
+            return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+          });
+          if (filters.limit) {
+            return emergencies.slice(0, filters.limit);
+          }
+          return emergencies;
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error fetching emergency history:', error);
       throw error;

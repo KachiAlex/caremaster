@@ -130,22 +130,56 @@ export const getHomeLabVisitsByTechnician = async (labTechnicianId, filters = {}
       visitsQuery = query(visitsQuery, where('status', '==', filters.status));
     }
 
-    const snapshot = await getDocs(visitsQuery);
-    const visits = [];
+    try {
+      const snapshot = await getDocs(visitsQuery);
+      const visits = [];
 
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      visits.push({
-        id: doc.id,
-        ...data,
-        scheduledAt: data.scheduledAt?.toDate?.() || data.scheduledAt,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-        sampleCollectionTime: data.sampleCollectionTime?.toDate?.() || data.sampleCollectionTime
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        visits.push({
+          id: doc.id,
+          ...data,
+          scheduledAt: data.scheduledAt?.toDate?.() || data.scheduledAt,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+          sampleCollectionTime: data.sampleCollectionTime?.toDate?.() || data.sampleCollectionTime
+        });
       });
-    });
 
-    return visits;
+      return visits;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        let fallbackQuery = query(
+          visitsRef,
+          where('assignedLabTechnicianId', '==', labTechnicianId)
+        );
+        if (filters.status) {
+          fallbackQuery = query(fallbackQuery, where('status', '==', filters.status));
+        }
+        const snapshot = await getDocs(fallbackQuery);
+        const visits = [];
+
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          visits.push({
+            id: doc.id,
+            ...data,
+            scheduledAt: data.scheduledAt?.toDate?.() || data.scheduledAt,
+            createdAt: data.createdAt?.toDate?.() || data.createdAt,
+            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+            sampleCollectionTime: data.sampleCollectionTime?.toDate?.() || data.sampleCollectionTime
+          });
+        });
+        visits.sort((a, b) => {
+          const av = a.scheduledAt?.toDate ? a.scheduledAt.toDate().getTime() : new Date(a.scheduledAt).getTime();
+          const bv = b.scheduledAt?.toDate ? b.scheduledAt.toDate().getTime() : new Date(b.scheduledAt).getTime();
+          return (isNaN(av) ? 0 : av) - (isNaN(bv) ? 0 : bv);
+        });
+        return visits;
+      }
+      throw error;
+    }
   } catch (error) {
     logger.error('Error fetching home lab visits', { error });
     throw error;
@@ -160,28 +194,56 @@ export const getHomeLabVisitsByTechnician = async (labTechnicianId, filters = {}
 export const getHomeLabVisitsByClient = async (clientId) => {
   try {
     const visitsRef = collection(db, HOME_LAB_VISITS_COLLECTION);
-    const visitsQuery = query(
-      visitsRef,
-      where('clientId', '==', clientId),
-      orderBy('scheduledAt', 'desc')
-    );
+    try {
+      const visitsQuery = query(
+        visitsRef,
+        where('clientId', '==', clientId),
+        orderBy('scheduledAt', 'desc')
+      );
 
-    const snapshot = await getDocs(visitsQuery);
-    const visits = [];
+      const snapshot = await getDocs(visitsQuery);
+      const visits = [];
 
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      visits.push({
-        id: doc.id,
-        ...data,
-        scheduledAt: data.scheduledAt?.toDate?.() || data.scheduledAt,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-        sampleCollectionTime: data.sampleCollectionTime?.toDate?.() || data.sampleCollectionTime
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        visits.push({
+          id: doc.id,
+          ...data,
+          scheduledAt: data.scheduledAt?.toDate?.() || data.scheduledAt,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+          sampleCollectionTime: data.sampleCollectionTime?.toDate?.() || data.sampleCollectionTime
+        });
       });
-    });
 
-    return visits;
+      return visits;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQuery = query(visitsRef, where('clientId', '==', clientId));
+        const snapshot = await getDocs(fallbackQuery);
+        const visits = [];
+
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          visits.push({
+            id: doc.id,
+            ...data,
+            scheduledAt: data.scheduledAt?.toDate?.() || data.scheduledAt,
+            createdAt: data.createdAt?.toDate?.() || data.createdAt,
+            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+            sampleCollectionTime: data.sampleCollectionTime?.toDate?.() || data.sampleCollectionTime
+          });
+        });
+        visits.sort((a, b) => {
+          const av = a.scheduledAt?.toDate ? a.scheduledAt.toDate().getTime() : new Date(a.scheduledAt).getTime();
+          const bv = b.scheduledAt?.toDate ? b.scheduledAt.toDate().getTime() : new Date(b.scheduledAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return visits;
+      }
+      throw error;
+    }
   } catch (error) {
     logger.error('Error fetching Client home lab visits', { error });
     throw error;
@@ -372,27 +434,54 @@ export const getSampleCollection = async (collectionId) => {
 export const getSampleCollectionsByTechnician = async (labTechnicianId) => {
   try {
     const collectionsRef = collection(db, SAMPLE_COLLECTIONS_COLLECTION);
-    const collectionsQuery = query(
-      collectionsRef,
-      where('labTechnicianId', '==', labTechnicianId),
-      orderBy('collectionTime', 'desc')
-    );
+    try {
+      const collectionsQuery = query(
+        collectionsRef,
+        where('labTechnicianId', '==', labTechnicianId),
+        orderBy('collectionTime', 'desc')
+      );
 
-    const snapshot = await getDocs(collectionsQuery);
-    const collections = [];
+      const snapshot = await getDocs(collectionsQuery);
+      const collections = [];
 
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      collections.push({
-        id: doc.id,
-        ...data,
-        collectionTime: data.collectionTime?.toDate?.() || data.collectionTime,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        collections.push({
+          id: doc.id,
+          ...data,
+          collectionTime: data.collectionTime?.toDate?.() || data.collectionTime,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+        });
       });
-    });
 
-    return collections;
+      return collections;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQuery = query(collectionsRef, where('labTechnicianId', '==', labTechnicianId));
+        const snapshot = await getDocs(fallbackQuery);
+        const collections = [];
+
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          collections.push({
+            id: doc.id,
+            ...data,
+            collectionTime: data.collectionTime?.toDate?.() || data.collectionTime,
+            createdAt: data.createdAt?.toDate?.() || data.createdAt,
+            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+          });
+        });
+        collections.sort((a, b) => {
+          const av = a.collectionTime?.toDate ? a.collectionTime.toDate().getTime() : new Date(a.collectionTime).getTime();
+          const bv = b.collectionTime?.toDate ? b.collectionTime.toDate().getTime() : new Date(b.collectionTime).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return collections;
+      }
+      throw error;
+    }
   } catch (error) {
     logger.error('Error fetching sample collections', { error });
     throw error;

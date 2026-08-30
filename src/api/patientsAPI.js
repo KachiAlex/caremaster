@@ -130,26 +130,53 @@ export const getAllClients = async (institutionId = null) => {
 export const getClientsByInstitution = async (institutionId) => {
   try {
     const clientsRef = collection(db, CLIENTS_COLLECTION);
-    const q = query(clientsRef, 
-      where('institutionId', '==', institutionId),
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    
-    const clients = [];
-    querySnapshot.forEach((doc) => {
-      const clientData = doc.data();
-      clients.push({
-        id: doc.id,
-        ...clientData,
-        dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
-        createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
-        updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
-        lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
+    try {
+      const q = query(clientsRef, 
+        where('institutionId', '==', institutionId),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      
+      const clients = [];
+      querySnapshot.forEach((doc) => {
+        const clientData = doc.data();
+        clients.push({
+          id: doc.id,
+          ...clientData,
+          dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+          createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+          updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+          lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
+        });
       });
-    });
-    
-    return clients;
+      
+      return clients;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(clientsRef, where('institutionId', '==', institutionId));
+        const querySnapshot = await getDocs(q);
+        const clients = [];
+        querySnapshot.forEach((doc) => {
+          const clientData = doc.data();
+          clients.push({
+            id: doc.id,
+            ...clientData,
+            dateOfBirth: clientData.dateOfBirth?.toDate?.() || clientData.dateOfBirth,
+            createdAt: clientData.createdAt?.toDate?.() || clientData.createdAt,
+            updatedAt: clientData.updatedAt?.toDate?.() || clientData.updatedAt,
+            lastVisit: clientData.lastVisit?.toDate?.() || clientData.lastVisit,
+          });
+        });
+        clients.sort((a, b) => {
+          const av = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+          const bv = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return clients;
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error fetching clients by institution:', error);
     throw error;
@@ -226,7 +253,26 @@ export const getClientsByCaregiver = async (caregiverId, institutionId = null) =
       );
     }
     
-    const directSnapshot = await getDocs(directQuery);
+    let directSnapshot;
+    try {
+      directSnapshot = await getDocs(directQuery);
+    } catch (error) {
+      if (institutionId && (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index'))) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQuery = query(clientsRef, where('assignedCaregiver', '==', caregiverId));
+        directSnapshot = await getDocs(fallbackQuery);
+        // Filter by institutionId in memory
+        const filteredDocs = [];
+        directSnapshot.forEach((d) => {
+          if (d.data().institutionId === institutionId) {
+            filteredDocs.push(d);
+          }
+        });
+        directSnapshot = { size: filteredDocs.length, forEach: (cb) => filteredDocs.forEach(cb), docs: filteredDocs };
+      } else {
+        throw error;
+      }
+    }
     
     console.log(`  → Found ${directSnapshot.size} clients in 'clients' collection with assignedCaregiver`);
     
@@ -365,7 +411,25 @@ export const getClientsByDoctor = async (doctorId, institutionId = null) => {
       );
     }
     
-    const querySnapshot = await getDocs(q);
+    let querySnapshot;
+    try {
+      querySnapshot = await getDocs(q);
+    } catch (error) {
+      if (institutionId && (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index'))) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQuery = query(clientsRef, where('assignedDoctor', '==', doctorId));
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const filteredDocs = [];
+        fallbackSnapshot.forEach((d) => {
+          if (d.data().institutionId === institutionId) {
+            filteredDocs.push(d);
+          }
+        });
+        querySnapshot = { forEach: (cb) => filteredDocs.forEach(cb) };
+      } else {
+        throw error;
+      }
+    }
     
     const clients = [];
     querySnapshot.forEach((doc) => {
@@ -618,21 +682,46 @@ export const createClient = async (clientData = {}, registeredBy = null) => {
 export const getClientMedicalHistory = async (clientId) => {
   try {
     const medicalHistoryRef = collection(db, 'medicalHistory');
-    const q = query(medicalHistoryRef, where('clientId', '==', clientId), orderBy('date', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    const history = [];
-    querySnapshot.forEach((doc) => {
-      const historyData = doc.data();
-      history.push({
-        id: doc.id,
-        ...historyData,
-        date: historyData.date?.toDate?.() || historyData.date,
-        createdAt: historyData.createdAt?.toDate?.() || historyData.createdAt,
+    try {
+      const q = query(medicalHistoryRef, where('clientId', '==', clientId), orderBy('date', 'desc'));
+      const querySnapshot = await getDocs(q);
+      
+      const history = [];
+      querySnapshot.forEach((doc) => {
+        const historyData = doc.data();
+        history.push({
+          id: doc.id,
+          ...historyData,
+          date: historyData.date?.toDate?.() || historyData.date,
+          createdAt: historyData.createdAt?.toDate?.() || historyData.createdAt,
+        });
       });
-    });
-    
-    return history;
+      
+      return history;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(medicalHistoryRef, where('clientId', '==', clientId));
+        const querySnapshot = await getDocs(q);
+        const history = [];
+        querySnapshot.forEach((doc) => {
+          const historyData = doc.data();
+          history.push({
+            id: doc.id,
+            ...historyData,
+            date: historyData.date?.toDate?.() || historyData.date,
+            createdAt: historyData.createdAt?.toDate?.() || historyData.createdAt,
+          });
+        });
+        history.sort((a, b) => {
+          const av = a.date?.toDate ? a.date.toDate().getTime() : new Date(a.date).getTime();
+          const bv = b.date?.toDate ? b.date.toDate().getTime() : new Date(b.date).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return history;
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error fetching client medical history:', error);
     throw error;

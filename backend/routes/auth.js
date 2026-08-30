@@ -892,4 +892,69 @@ router.get('/license-status/:institutionId', async (req, res) => {
   }
 });
 
+// Get user security settings
+router.get('/security-settings', authenticateToken, async (req, res) => {
+  try {
+    const user = await db('users').where({ id: req.user.id }).first();
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    res.json({
+      success: true,
+      data: {
+        twoFactorEnabled: !!user.two_factor_enabled,
+        twoFactorPhone: user.two_factor_phone || null,
+        biometricEnabled: !!user.biometric_enabled,
+        biometricCredentialId: user.biometric_credential_id || null
+      }
+    });
+  } catch (error) {
+    console.error('Get security settings error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get security settings' });
+  }
+});
+
+// Update user security settings
+router.put('/security-settings', authenticateToken, async (req, res) => {
+  try {
+    const { twoFactorEnabled, twoFactorPhone, biometricEnabled, biometricCredentialId } = req.body;
+    const updateData = {};
+    
+    if (typeof twoFactorEnabled === 'boolean') {
+      updateData.two_factor_enabled = twoFactorEnabled;
+    }
+    if (twoFactorPhone !== undefined) {
+      updateData.two_factor_phone = twoFactorPhone;
+    }
+    if (typeof biometricEnabled === 'boolean') {
+      updateData.biometric_enabled = biometricEnabled;
+    }
+    if (biometricCredentialId !== undefined) {
+      updateData.biometric_credential_id = biometricCredentialId;
+    }
+    
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, error: 'No valid fields to update' });
+    }
+    
+    updateData.updated_at = new Date();
+    
+    await db('users').where({ id: req.user.id }).update(updateData);
+    
+    res.json({
+      success: true,
+      message: 'Security settings updated successfully',
+      data: {
+        twoFactorEnabled: updateData.two_factor_enabled !== undefined ? updateData.two_factor_enabled : undefined,
+        twoFactorPhone: updateData.two_factor_phone !== undefined ? updateData.two_factor_phone : undefined,
+        biometricEnabled: updateData.biometric_enabled !== undefined ? updateData.biometric_enabled : undefined,
+        biometricCredentialId: updateData.biometric_credential_id !== undefined ? updateData.biometric_credential_id : undefined
+      }
+    });
+  } catch (error) {
+    console.error('Update security settings error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update security settings' });
+  }
+});
+
 module.exports = router;

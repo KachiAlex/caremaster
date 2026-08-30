@@ -297,18 +297,51 @@ export const medicationAPI = {
         doseLogsQuery = query(doseLogsQuery, limit(filters.limit));
       }
 
-      const doseLogsSnapshot = await getDocs(doseLogsQuery);
-      const doseLogs = [];
+      try {
+        const doseLogsSnapshot = await getDocs(doseLogsQuery);
+        const doseLogs = [];
 
-      doseLogsSnapshot.forEach((doc) => {
-        doseLogs.push({
-          id: doc.id,
-          ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate()
+        doseLogsSnapshot.forEach((doc) => {
+          doseLogs.push({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate()
+          });
         });
-      });
 
-      return doseLogs;
+        return doseLogs;
+      } catch (error) {
+        if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+          console.warn('Index missing, using fallback query:', error.message);
+          let fallbackQuery = query(
+            collection(db, 'doseLogs'),
+            where('medicationId', '==', medicationId)
+          );
+          if (filters.type) {
+            fallbackQuery = query(fallbackQuery, where('type', '==', filters.type));
+          }
+          const doseLogsSnapshot = await getDocs(fallbackQuery);
+          const doseLogs = [];
+
+          doseLogsSnapshot.forEach((doc) => {
+            doseLogs.push({
+              id: doc.id,
+              ...doc.data(),
+              timestamp: doc.data().timestamp?.toDate()
+            });
+          });
+          doseLogs.sort((a, b) => {
+            const av = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime();
+            const bv = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime();
+            return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+          });
+          if (filters.limit) {
+            return doseLogs.slice(0, filters.limit);
+          }
+          return doseLogs;
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error fetching dose logs:', error);
       throw error;
@@ -370,27 +403,57 @@ export const medicationAPI = {
   getOverdueMedications: async () => {
     try {
       const now = new Date();
-      const medicationsQuery = query(
-        collection(db, 'medications'),
-        where('status', '==', 'active'),
-        where('nextDose', '<=', now)
-      );
-      
-      const medicationsSnapshot = await getDocs(medicationsQuery);
-      const overdueMedications = [];
+      try {
+        const medicationsQuery = query(
+          collection(db, 'medications'),
+          where('status', '==', 'active'),
+          where('nextDose', '<=', now)
+        );
+        
+        const medicationsSnapshot = await getDocs(medicationsQuery);
+        const overdueMedications = [];
 
-      medicationsSnapshot.forEach((doc) => {
-        overdueMedications.push({
-          id: doc.id,
-          ...doc.data(),
-          startDate: doc.data().startDate?.toDate(),
-          endDate: doc.data().endDate?.toDate(),
-          lastTaken: doc.data().lastTaken?.toDate(),
-          nextDose: doc.data().nextDose?.toDate()
+        medicationsSnapshot.forEach((doc) => {
+          overdueMedications.push({
+            id: doc.id,
+            ...doc.data(),
+            startDate: doc.data().startDate?.toDate(),
+            endDate: doc.data().endDate?.toDate(),
+            lastTaken: doc.data().lastTaken?.toDate(),
+            nextDose: doc.data().nextDose?.toDate()
+          });
         });
-      });
 
-      return overdueMedications;
+        return overdueMedications;
+      } catch (error) {
+        if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+          console.warn('Index missing, using fallback query:', error.message);
+          const fallbackQuery = query(
+            collection(db, 'medications'),
+            where('status', '==', 'active')
+          );
+          const medicationsSnapshot = await getDocs(fallbackQuery);
+          const overdueMedications = [];
+
+          medicationsSnapshot.forEach((doc) => {
+            const data = doc.data();
+            const nextDose = data.nextDose?.toDate ? data.nextDose.toDate() : (data.nextDose ? new Date(data.nextDose) : null);
+            if (nextDose && nextDose <= now) {
+              overdueMedications.push({
+                id: doc.id,
+                ...data,
+                startDate: data.startDate?.toDate(),
+                endDate: data.endDate?.toDate(),
+                lastTaken: data.lastTaken?.toDate(),
+                nextDose: nextDose
+              });
+            }
+          });
+
+          return overdueMedications;
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error fetching overdue medications:', error);
       throw error;
@@ -415,24 +478,51 @@ export const medicationAPI = {
   // Get medication side effects
   getSideEffects: async (medicationId) => {
     try {
-      const sideEffectsQuery = query(
-        collection(db, 'sideEffects'),
-        where('medicationId', '==', medicationId),
-        orderBy('reportedAt', 'desc')
-      );
-      
-      const sideEffectsSnapshot = await getDocs(sideEffectsQuery);
-      const sideEffects = [];
+      try {
+        const sideEffectsQuery = query(
+          collection(db, 'sideEffects'),
+          where('medicationId', '==', medicationId),
+          orderBy('reportedAt', 'desc')
+        );
+        
+        const sideEffectsSnapshot = await getDocs(sideEffectsQuery);
+        const sideEffects = [];
 
-      sideEffectsSnapshot.forEach((doc) => {
-        sideEffects.push({
-          id: doc.id,
-          ...doc.data(),
-          reportedAt: doc.data().reportedAt?.toDate()
+        sideEffectsSnapshot.forEach((doc) => {
+          sideEffects.push({
+            id: doc.id,
+            ...doc.data(),
+            reportedAt: doc.data().reportedAt?.toDate()
+          });
         });
-      });
 
-      return sideEffects;
+        return sideEffects;
+      } catch (error) {
+        if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+          console.warn('Index missing, using fallback query:', error.message);
+          const fallbackQuery = query(
+            collection(db, 'sideEffects'),
+            where('medicationId', '==', medicationId)
+          );
+          const sideEffectsSnapshot = await getDocs(fallbackQuery);
+          const sideEffects = [];
+
+          sideEffectsSnapshot.forEach((doc) => {
+            sideEffects.push({
+              id: doc.id,
+              ...doc.data(),
+              reportedAt: doc.data().reportedAt?.toDate()
+            });
+          });
+          sideEffects.sort((a, b) => {
+            const av = a.reportedAt?.toDate ? a.reportedAt.toDate().getTime() : new Date(a.reportedAt).getTime();
+            const bv = b.reportedAt?.toDate ? b.reportedAt.toDate().getTime() : new Date(b.reportedAt).getTime();
+            return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+          });
+          return sideEffects;
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error fetching side effects:', error);
       throw error;

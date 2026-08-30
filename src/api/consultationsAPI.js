@@ -202,27 +202,53 @@ export const createConsultation = async (consultationData) => {
 export const getConsultationsByClient = async (clientId, limitCount = 50) => {
   try {
     const consultationsRef = collection(db, CONSULTATIONS_COLLECTION);
-    const q = query(
-      consultationsRef,
-      where('clientId', '==', clientId),
-      orderBy('consultationDate', 'desc'),
-      limit(limitCount)
-    );
+    try {
+      const q = query(
+        consultationsRef,
+        where('clientId', '==', clientId),
+        orderBy('consultationDate', 'desc'),
+        limit(limitCount)
+      );
 
-    const querySnapshot = await getDocs(q);
-    const consultations = [];
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      consultations.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        consultationDate: data.consultationDate || data.createdAt
+      const querySnapshot = await getDocs(q);
+      const consultations = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        consultations.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          consultationDate: data.consultationDate || data.createdAt
+        });
       });
-    });
 
-    return consultations;
+      return consultations;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(consultationsRef, where('clientId', '==', clientId));
+        const querySnapshot = await getDocs(q);
+        const consultations = [];
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          consultations.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            consultationDate: data.consultationDate || data.createdAt
+          });
+        });
+        consultations.sort((a, b) => {
+          const av = a.consultationDate?.toDate ? a.consultationDate.toDate().getTime() : new Date(a.consultationDate).getTime();
+          const bv = b.consultationDate?.toDate ? b.consultationDate.toDate().getTime() : new Date(b.consultationDate).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return consultations.slice(0, limitCount);
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error fetching consultations:', error);
     return [];
@@ -233,26 +259,52 @@ export const getConsultationsByClient = async (clientId, limitCount = 50) => {
 export const getConsultationsByDoctor = async (doctorId, limitCount = 50) => {
   try {
     const consultationsRef = collection(db, CONSULTATIONS_COLLECTION);
-    const q = query(
-      consultationsRef,
-      where('doctorId', '==', doctorId),
-      orderBy('consultationDate', 'desc'),
-      limit(limitCount)
-    );
+    try {
+      const q = query(
+        consultationsRef,
+        where('doctorId', '==', doctorId),
+        orderBy('consultationDate', 'desc'),
+        limit(limitCount)
+      );
 
-    const querySnapshot = await getDocs(q);
-    const consultations = [];
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      consultations.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+      const querySnapshot = await getDocs(q);
+      const consultations = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        consultations.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+        });
       });
-    });
 
-    return consultations;
+      return consultations;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(consultationsRef, where('doctorId', '==', doctorId));
+        const querySnapshot = await getDocs(q);
+        const consultations = [];
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          consultations.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            consultationDate: data.consultationDate || data.createdAt
+          });
+        });
+        consultations.sort((a, b) => {
+          const av = a.consultationDate?.toDate ? a.consultationDate.toDate().getTime() : new Date(a.consultationDate).getTime();
+          const bv = b.consultationDate?.toDate ? b.consultationDate.toDate().getTime() : new Date(b.consultationDate).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return consultations.slice(0, limitCount);
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error fetching consultations by doctor:', error);
     return [];
@@ -263,26 +315,52 @@ export const getConsultationsByDoctor = async (doctorId, limitCount = 50) => {
 export const getRecentConsultations = async (institutionId, limitCount = 20) => {
   try {
     const consultationsRef = collection(db, CONSULTATIONS_COLLECTION);
-    const q = query(
-      consultationsRef,
-      where('institutionId', '==', institutionId),
-      orderBy('consultationDate', 'desc'),
-      limit(limitCount)
-    );
+    try {
+      const q = query(
+        consultationsRef,
+        where('institutionId', '==', institutionId),
+        orderBy('consultationDate', 'desc'),
+        limit(limitCount)
+      );
 
-    const querySnapshot = await getDocs(q);
-    const consultations = [];
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      consultations.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+      const querySnapshot = await getDocs(q);
+      const consultations = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        consultations.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+        });
       });
-    });
 
-    return consultations;
+      return consultations;
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const q = query(consultationsRef, where('institutionId', '==', institutionId));
+        const querySnapshot = await getDocs(q);
+        const consultations = [];
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          consultations.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            consultationDate: data.consultationDate || data.createdAt
+          });
+        });
+        consultations.sort((a, b) => {
+          const av = a.consultationDate?.toDate ? a.consultationDate.toDate().getTime() : new Date(a.consultationDate).getTime();
+          const bv = b.consultationDate?.toDate ? b.consultationDate.toDate().getTime() : new Date(b.consultationDate).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+        return consultations.slice(0, limitCount);
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error fetching recent consultations:', error);
     return [];
@@ -395,7 +473,25 @@ const sendAdminNotification = async (notificationData) => {
       where('institutionId', '==', notificationData.institutionId || null)
     );
     
-    const adminsSnapshot = await getDocs(adminsQuery);
+    let adminsSnapshot;
+    try {
+      adminsSnapshot = await getDocs(adminsQuery);
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQuery = query(
+          collection(db, 'users'),
+          where('userType', '==', 'admin')
+        );
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const filteredDocs = fallbackSnapshot.docs.filter((d) => 
+          d.data().institutionId === (notificationData.institutionId || null)
+        );
+        adminsSnapshot = { docs: filteredDocs, size: filteredDocs.length };
+      } else {
+        throw error;
+      }
+    }
     
     // Send notification to each admin
     const notificationPromises = adminsSnapshot.docs.map(async (adminDoc) => {

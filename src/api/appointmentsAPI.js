@@ -129,7 +129,21 @@ export const getAppointmentsByClient = async (clientId) => {
       where('clientId', '==', clientId),
       orderBy('scheduledTime', 'desc')
     );
-    const querySnapshot = await getDocs(q);
+    
+    let querySnapshot;
+    let usedFallback = false;
+    try {
+      querySnapshot = await getDocs(q);
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQ = query(appointmentsRef, where('clientId', '==', clientId));
+        querySnapshot = await getDocs(fallbackQ);
+        usedFallback = true;
+      } else {
+        throw error;
+      }
+    }
     
     const appointments = [];
     querySnapshot.forEach((doc) => {
@@ -142,6 +156,15 @@ export const getAppointmentsByClient = async (clientId) => {
         updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
       });
     });
+    
+    if (usedFallback) {
+      // Sort in memory by scheduledTime desc (original orderBy)
+      appointments.sort((a, b) => {
+        const aTime = a.scheduledTime?.getTime?.() || new Date(a.scheduledTime).getTime() || 0;
+        const bTime = b.scheduledTime?.getTime?.() || new Date(b.scheduledTime).getTime() || 0;
+        return bTime - aTime; // desc
+      });
+    }
     
     return appointments;
   } catch (error) {
@@ -159,7 +182,21 @@ export const getAppointmentsByDoctor = async (doctorId) => {
       where('doctorId', '==', doctorId),
       orderBy('scheduledTime', 'asc')
     );
-    const querySnapshot = await getDocs(q);
+    
+    let querySnapshot;
+    let usedFallback = false;
+    try {
+      querySnapshot = await getDocs(q);
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQ = query(appointmentsRef, where('doctorId', '==', doctorId));
+        querySnapshot = await getDocs(fallbackQ);
+        usedFallback = true;
+      } else {
+        throw error;
+      }
+    }
     
     const appointments = [];
     querySnapshot.forEach((doc) => {
@@ -172,6 +209,15 @@ export const getAppointmentsByDoctor = async (doctorId) => {
         updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
       });
     });
+    
+    if (usedFallback) {
+      // Sort in memory by scheduledTime asc (original orderBy)
+      appointments.sort((a, b) => {
+        const aTime = a.scheduledTime?.getTime?.() || new Date(a.scheduledTime).getTime() || 0;
+        const bTime = b.scheduledTime?.getTime?.() || new Date(b.scheduledTime).getTime() || 0;
+        return aTime - bTime; // asc
+      });
+    }
     
     return appointments;
   } catch (error) {
@@ -189,7 +235,21 @@ export const getAppointmentsByCaregiver = async (caregiverId) => {
       where('caregiverId', '==', caregiverId),
       orderBy('scheduledTime', 'asc')
     );
-    const querySnapshot = await getDocs(q);
+    
+    let querySnapshot;
+    let usedFallback = false;
+    try {
+      querySnapshot = await getDocs(q);
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQ = query(appointmentsRef, where('caregiverId', '==', caregiverId));
+        querySnapshot = await getDocs(fallbackQ);
+        usedFallback = true;
+      } else {
+        throw error;
+      }
+    }
     
     const appointments = [];
     querySnapshot.forEach((doc) => {
@@ -202,6 +262,15 @@ export const getAppointmentsByCaregiver = async (caregiverId) => {
         updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
       });
     });
+    
+    if (usedFallback) {
+      // Sort in memory by scheduledTime asc (original orderBy)
+      appointments.sort((a, b) => {
+        const aTime = a.scheduledTime?.getTime?.() || new Date(a.scheduledTime).getTime() || 0;
+        const bTime = b.scheduledTime?.getTime?.() || new Date(b.scheduledTime).getTime() || 0;
+        return aTime - bTime; // asc
+      });
+    }
     
     return appointments;
   } catch (error) {
@@ -347,7 +416,30 @@ export const getTodaysAppointments = async (userId, userRole, options = {}) => {
       q = query(q, where('institutionId', '==', options.institutionId));
     }
 
-    const querySnapshot = await getDocs(q);
+    let querySnapshot;
+    let usedFallback = false;
+    try {
+      querySnapshot = await getDocs(q);
+    } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        // Rebuild query from base where clause only, filter rest in memory
+        if (userRole === 'admin') {
+          q = query(appointmentsRef);
+        } else if (userRole === 'doctor') {
+          q = query(appointmentsRef, where('doctorId', '==', userId));
+        } else if (userRole === 'caregiver' || userRole === 'nurse') {
+          q = query(appointmentsRef, where('caregiverId', '==', userId));
+        } else if (userRole === 'elderly') {
+          q = query(appointmentsRef, where('clientId', '==', userId));
+        }
+        querySnapshot = await getDocs(q);
+        usedFallback = true;
+      } else {
+        throw error;
+      }
+    }
+
     const appointments = [];
     
     querySnapshot.forEach((doc) => {
@@ -356,6 +448,11 @@ export const getTodaysAppointments = async (userId, userRole, options = {}) => {
       
       // Filter for today's appointments on client side
       if (scheduledTime && scheduledTime >= today && scheduledTime < tomorrow) {
+        // If fallback was used, also filter by status and institution in memory
+        if (usedFallback) {
+          if (options.status && appointmentData.status !== options.status) return;
+          if (options.institutionId && appointmentData.institutionId !== options.institutionId) return;
+        }
         appointments.push({
           id: doc.id,
           ...appointmentData,
@@ -472,7 +569,7 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
     q = query(appointmentsRef, orderBy('scheduledTime', 'asc'));
   }
   
-  return onSnapshot(q, (querySnapshot) => {
+  const processSnapshot = (querySnapshot) => {
     const appointments = [];
     querySnapshot.forEach((doc) => {
       const appointmentData = doc.data();
@@ -485,7 +582,63 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
       });
     });
     callback(appointments);
+  };
+  
+  // Build fallback query (without orderBy) for index error recovery
+  const buildFallbackQuery = () => {
+    if (userRole === 'admin') {
+      return query(appointmentsRef);
+    } else if (userRole === 'doctor') {
+      return query(appointmentsRef, where('doctorId', '==', userId));
+    } else if (userRole === 'caregiver' || userRole === 'nurse') {
+      return query(appointmentsRef, where('caregiverId', '==', userId));
+    } else if (userRole === 'elderly') {
+      return query(appointmentsRef, where('clientId', '==', userId));
+    } else {
+      return query(appointmentsRef);
+    }
+  };
+  
+  let fallbackUnsubscribe = null;
+  
+  const unsubscribe = onSnapshot(q, processSnapshot, (error) => {
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      console.warn('Index missing, using fallback snapshot query:', error.message);
+      // Fallback: query without orderBy, sort in memory
+      const fallbackQ = buildFallbackQuery();
+      fallbackUnsubscribe = onSnapshot(fallbackQ, (snapshot) => {
+        const appointments = [];
+        snapshot.forEach((doc) => {
+          const appointmentData = doc.data();
+          appointments.push({
+            id: doc.id,
+            ...appointmentData,
+            scheduledTime: appointmentData.scheduledTime?.toDate?.() || appointmentData.scheduledTime,
+            createdAt: appointmentData.createdAt?.toDate?.() || appointmentData.createdAt,
+            updatedAt: appointmentData.updatedAt?.toDate?.() || appointmentData.updatedAt,
+          });
+        });
+        // Sort in memory by scheduledTime asc (original orderBy)
+        appointments.sort((a, b) => {
+          const aTime = a.scheduledTime?.getTime?.() || new Date(a.scheduledTime).getTime() || 0;
+          const bTime = b.scheduledTime?.getTime?.() || new Date(b.scheduledTime).getTime() || 0;
+          return aTime - bTime; // asc
+        });
+        callback(appointments);
+      }, (err) => {
+        console.error('Fallback snapshot error:', err);
+        callback([]);
+      });
+    } else {
+      console.error('Snapshot error:', error);
+      callback([]);
+    }
   });
+  
+  return () => {
+    unsubscribe();
+    if (fallbackUnsubscribe) fallbackUnsubscribe();
+  };
 };
 
 

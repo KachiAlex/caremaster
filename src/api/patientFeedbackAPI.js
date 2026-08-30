@@ -55,8 +55,35 @@ export async function getClientFeedbackByCaregiver(caregiverId, dateRange = {}) 
     );
   }
   
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      console.warn('Index missing, using fallback query:', error.message);
+      let fallbackQ = query(
+        collection(db, PATIENT_FEEDBACK_COLLECTION),
+        where('caregiverId', '==', caregiverId)
+      );
+      if (dateRange.startDate && dateRange.endDate) {
+        fallbackQ = query(
+          collection(db, PATIENT_FEEDBACK_COLLECTION),
+          where('caregiverId', '==', caregiverId),
+          where('weekOf', '>=', dateRange.startDate),
+          where('weekOf', '<=', dateRange.endDate)
+        );
+      }
+      const snap = await getDocs(fallbackQ);
+      const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      results.sort((a, b) => {
+        const av = a.weekOf?.toDate ? a.weekOf.toDate().getTime() : new Date(a.weekOf).getTime();
+        const bv = b.weekOf?.toDate ? b.weekOf.toDate().getTime() : new Date(b.weekOf).getTime();
+        return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+      });
+      return results;
+    }
+    throw error;
+  }
 }
 
 export async function getClientFeedbackByClient(clientId, dateRange = {}) {
@@ -78,8 +105,35 @@ export async function getClientFeedbackByClient(clientId, dateRange = {}) {
     );
   }
   
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      console.warn('Index missing, using fallback query:', error.message);
+      let fallbackQ = query(
+        collection(db, PATIENT_FEEDBACK_COLLECTION),
+        where('clientId', '==', clientId)
+      );
+      if (dateRange.startDate && dateRange.endDate) {
+        fallbackQ = query(
+          collection(db, PATIENT_FEEDBACK_COLLECTION),
+          where('clientId', '==', clientId),
+          where('weekOf', '>=', dateRange.startDate),
+          where('weekOf', '<=', dateRange.endDate)
+        );
+      }
+      const snap = await getDocs(fallbackQ);
+      const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      results.sort((a, b) => {
+        const av = a.weekOf?.toDate ? a.weekOf.toDate().getTime() : new Date(a.weekOf).getTime();
+        const bv = b.weekOf?.toDate ? b.weekOf.toDate().getTime() : new Date(b.weekOf).getTime();
+        return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+      });
+      return results;
+    }
+    throw error;
+  }
 }
 
 export async function getAllClientFeedback(dateRange = {}) {

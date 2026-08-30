@@ -54,6 +54,34 @@ export const getVitalSignsByClient = async (clientId, institutionId = null) => {
     
     return vitalSigns;
   } catch (error) {
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      console.warn('Index missing, using fallback query:', error.message);
+      const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
+      const fallbackQuery = query(
+        vitalSignsRef, 
+        where('clientId', '==', clientId)
+      );
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+      const results = [];
+      fallbackSnapshot.forEach((doc) => {
+        const vitalData = doc.data();
+        results.push({
+          id: doc.id,
+          ...vitalData,
+          recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
+          createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
+          updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
+        });
+      });
+      // Filter by institutionId in memory if provided
+      const filtered = institutionId ? results.filter(v => v.institutionId === institutionId) : results;
+      filtered.sort((a, b) => {
+        const av = a.recordedAt?.getTime ? a.recordedAt.getTime() : new Date(a.recordedAt).getTime();
+        const bv = b.recordedAt?.getTime ? b.recordedAt.getTime() : new Date(b.recordedAt).getTime();
+        return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+      });
+      return filtered;
+    }
     console.error('Error fetching vital signs:', error);
     throw error;
   }
@@ -123,6 +151,33 @@ export const getVitalSignsByType = async (clientId, vitalType) => {
     
     return vitalSigns;
   } catch (error) {
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      console.warn('Index missing, using fallback query:', error.message);
+      const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
+      const fallbackQuery = query(
+        vitalSignsRef, 
+        where('clientId', '==', clientId),
+        where('type', '==', vitalType)
+      );
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+      const results = [];
+      fallbackSnapshot.forEach((doc) => {
+        const vitalData = doc.data();
+        results.push({
+          id: doc.id,
+          ...vitalData,
+          recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
+          createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
+          updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
+        });
+      });
+      results.sort((a, b) => {
+        const av = a.recordedAt?.getTime ? a.recordedAt.getTime() : new Date(a.recordedAt).getTime();
+        const bv = b.recordedAt?.getTime ? b.recordedAt.getTime() : new Date(b.recordedAt).getTime();
+        return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+      });
+      return results;
+    }
     console.error('Error fetching vital signs by type:', error);
     throw error;
   }
@@ -204,6 +259,38 @@ export const getVitalSignsByDateRange = async (clientId, startDate, endDate) => 
     
     return vitalSigns;
   } catch (error) {
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      console.warn('Index missing, using fallback query:', error.message);
+      const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
+      const fallbackQuery = query(
+        vitalSignsRef, 
+        where('clientId', '==', clientId)
+      );
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+      const startMs = startDate.getTime();
+      const endMs = endDate.getTime();
+      const results = [];
+      fallbackSnapshot.forEach((doc) => {
+        const vitalData = doc.data();
+        const recordedAt = vitalData.recordedAt?.toDate?.() || new Date(vitalData.recordedAt);
+        // Filter by date range in memory
+        const recordedMs = recordedAt.getTime();
+        if (recordedMs < startMs || recordedMs > endMs) return;
+        results.push({
+          id: doc.id,
+          ...vitalData,
+          recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
+          createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
+          updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
+        });
+      });
+      results.sort((a, b) => {
+        const av = a.recordedAt?.getTime ? a.recordedAt.getTime() : new Date(a.recordedAt).getTime();
+        const bv = b.recordedAt?.getTime ? b.recordedAt.getTime() : new Date(b.recordedAt).getTime();
+        return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+      });
+      return results;
+    }
     console.error('Error fetching vital signs by date range:', error);
     throw error;
   }
@@ -291,6 +378,7 @@ export const getVitalSignById = async (vitalSignId) => {
 
 // Real-time listener for vital signs
 export const subscribeToVitalSigns = (callback, clientId) => {
+  let unsubscribeFallback = null;
   const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
   const q = query(
     vitalSignsRef, 
@@ -298,7 +386,7 @@ export const subscribeToVitalSigns = (callback, clientId) => {
     orderBy('recordedAt', 'desc')
   );
   
-  return onSnapshot(q, (querySnapshot) => {
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
     const vitalSigns = [];
     querySnapshot.forEach((doc) => {
       const vitalData = doc.data();
@@ -311,7 +399,41 @@ export const subscribeToVitalSigns = (callback, clientId) => {
       });
     });
     callback(vitalSigns);
+  }, (error) => {
+    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+      console.warn('Index missing, using fallback subscription:', error.message);
+      const fallbackQuery = query(
+        vitalSignsRef, 
+        where('clientId', '==', clientId)
+      );
+      unsubscribeFallback = onSnapshot(fallbackQuery, (querySnapshot) => {
+        const vitalSigns = [];
+        querySnapshot.forEach((doc) => {
+          const vitalData = doc.data();
+          vitalSigns.push({
+            id: doc.id,
+            ...vitalData,
+            recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
+            createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
+            updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
+          });
+        });
+        vitalSigns.sort((a, b) => {
+          const av = a.recordedAt?.getTime ? a.recordedAt.getTime() : new Date(a.recordedAt).getTime();
+          const bv = b.recordedAt?.getTime ? b.recordedAt.getTime() : new Date(b.recordedAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+        });
+        callback(vitalSigns);
+      });
+    } else {
+      console.error('Error in vital signs subscription:', error);
+    }
   });
+
+  return () => {
+    unsubscribe();
+    if (unsubscribeFallback) unsubscribeFallback();
+  };
 };
 
 // Get vital signs statistics

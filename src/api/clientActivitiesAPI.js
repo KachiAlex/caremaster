@@ -66,6 +66,29 @@ export const clientActivitiesAPI = {
 
       return activities;
     } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQuery = query(
+          collection(db, CLIENT_ACTIVITIES_COLLECTION),
+          where('clientId', '==', clientId)
+        );
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const results = [];
+        fallbackSnapshot.forEach((doc) => {
+          results.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+            timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
+          });
+        });
+        results.sort((a, b) => {
+          const av = a.createdAt?.getTime ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+          const bv = b.createdAt?.getTime ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+        });
+        return results.slice(0, limitCount);
+      }
       console.error('Error fetching client activities:', error);
       throw error;
     }
@@ -95,6 +118,29 @@ export const clientActivitiesAPI = {
 
       return activities;
     } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQuery = query(
+          collection(db, CLIENT_ACTIVITIES_COLLECTION),
+          where('performedBy', '==', performerId)
+        );
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const results = [];
+        fallbackSnapshot.forEach((doc) => {
+          results.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+            timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
+          });
+        });
+        results.sort((a, b) => {
+          const av = a.createdAt?.getTime ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+          const bv = b.createdAt?.getTime ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+        });
+        return results.slice(0, limitCount);
+      }
       console.error('Error fetching activities by performer:', error);
       throw error;
     }
@@ -136,6 +182,38 @@ export const clientActivitiesAPI = {
 
       return activities;
     } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        let fallbackQuery;
+        if (institutionId) {
+          fallbackQuery = query(
+            collection(db, CLIENT_ACTIVITIES_COLLECTION),
+            where('activityType', '==', activityType),
+            where('institutionId', '==', institutionId)
+          );
+        } else {
+          fallbackQuery = query(
+            collection(db, CLIENT_ACTIVITIES_COLLECTION),
+            where('activityType', '==', activityType)
+          );
+        }
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const results = [];
+        fallbackSnapshot.forEach((doc) => {
+          results.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+            timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : doc.data().timestamp,
+          });
+        });
+        results.sort((a, b) => {
+          const av = a.createdAt?.getTime ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+          const bv = b.createdAt?.getTime ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+        });
+        return results.slice(0, limitCount);
+      }
       console.error('Error fetching activities by type:', error);
       throw error;
     }
@@ -164,6 +242,28 @@ export const clientActivitiesAPI = {
 
       return activities;
     } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const fallbackQuery = query(
+          collection(db, CLIENT_ACTIVITIES_COLLECTION),
+          where('institutionId', '==', institutionId)
+        );
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const results = [];
+        fallbackSnapshot.forEach((doc) => {
+          results.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt)
+          });
+        });
+        results.sort((a, b) => {
+          const av = a.createdAt?.getTime ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+          const bv = b.createdAt?.getTime ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+        });
+        return results.slice(0, limitCount);
+      }
       console.error('Error fetching recent activities:', error);
       throw error;
     }
@@ -171,6 +271,7 @@ export const clientActivitiesAPI = {
 
   // Subscribe to client activities for real-time updates
   subscribeToClientActivities: (clientId, callback) => {
+    let unsubscribeFallback = null;
     const activitiesQuery = query(
       collection(db, CLIENT_ACTIVITIES_COLLECTION),
       where('clientId', '==', clientId),
@@ -178,7 +279,7 @@ export const clientActivitiesAPI = {
       limit(50)
     );
 
-    return onSnapshot(activitiesQuery, (querySnapshot) => {
+    const unsubscribe = onSnapshot(activitiesQuery, (querySnapshot) => {
       const activities = [];
       querySnapshot.forEach((doc) => {
         activities.push({
@@ -188,11 +289,43 @@ export const clientActivitiesAPI = {
         });
       });
       callback(activities);
+    }, (error) => {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback subscription:', error.message);
+        const fallbackQuery = query(
+          collection(db, CLIENT_ACTIVITIES_COLLECTION),
+          where('clientId', '==', clientId)
+        );
+        unsubscribeFallback = onSnapshot(fallbackQuery, (querySnapshot) => {
+          const activities = [];
+          querySnapshot.forEach((doc) => {
+            activities.push({
+              id: doc.id,
+              ...doc.data(),
+              createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt)
+            });
+          });
+          activities.sort((a, b) => {
+            const av = a.createdAt?.getTime ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+            const bv = b.createdAt?.getTime ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+            return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+          });
+          callback(activities.slice(0, 50));
+        });
+      } else {
+        console.error('Error in client activities subscription:', error);
+      }
     });
+
+    return () => {
+      unsubscribe();
+      if (unsubscribeFallback) unsubscribeFallback();
+    };
   },
 
   // Subscribe to recent activities for admin dashboard
   subscribeToRecentActivities: (institutionId, callback) => {
+    let unsubscribeFallback = null;
     const activitiesQuery = query(
       collection(db, CLIENT_ACTIVITIES_COLLECTION),
       where('institutionId', '==', institutionId),
@@ -200,7 +333,7 @@ export const clientActivitiesAPI = {
       limit(20)
     );
 
-    return onSnapshot(activitiesQuery, (querySnapshot) => {
+    const unsubscribe = onSnapshot(activitiesQuery, (querySnapshot) => {
       const activities = [];
       querySnapshot.forEach((doc) => {
         activities.push({
@@ -210,7 +343,38 @@ export const clientActivitiesAPI = {
         });
       });
       callback(activities);
+    }, (error) => {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback subscription:', error.message);
+        const fallbackQuery = query(
+          collection(db, CLIENT_ACTIVITIES_COLLECTION),
+          where('institutionId', '==', institutionId)
+        );
+        unsubscribeFallback = onSnapshot(fallbackQuery, (querySnapshot) => {
+          const activities = [];
+          querySnapshot.forEach((doc) => {
+            activities.push({
+              id: doc.id,
+              ...doc.data(),
+              createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt)
+            });
+          });
+          activities.sort((a, b) => {
+            const av = a.createdAt?.getTime ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+            const bv = b.createdAt?.getTime ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+            return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
+          });
+          callback(activities.slice(0, 20));
+        });
+      } else {
+        console.error('Error in recent activities subscription:', error);
+      }
     });
+
+    return () => {
+      unsubscribe();
+      if (unsubscribeFallback) unsubscribeFallback();
+    };
   },
 
   // Get activity statistics
@@ -251,6 +415,47 @@ export const clientActivitiesAPI = {
 
       return stats;
     } catch (error) {
+      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+        console.warn('Index missing, using fallback query:', error.message);
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - dateRange);
+        const startDateTimestamp = Timestamp.fromDate(startDate);
+
+        const fallbackQuery = query(
+          collection(db, CLIENT_ACTIVITIES_COLLECTION),
+          where('institutionId', '==', institutionId)
+        );
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const stats = {
+          total: 0,
+          byType: {},
+          byPerformer: {},
+          byDate: {}
+        };
+
+        fallbackSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const createdAt = data.createdAt?.toDate?.() || new Date(data.createdAt);
+          // Filter by date range in memory
+          if (createdAt < startDate) return;
+
+          stats.total++;
+          const activityType = data.activityType || 'unknown';
+          const performerRole = data.performerRole || 'unknown';
+          const date = createdAt.toDateString();
+
+          // Count by type
+          stats.byType[activityType] = (stats.byType[activityType] || 0) + 1;
+
+          // Count by performer role
+          stats.byPerformer[performerRole] = (stats.byPerformer[performerRole] || 0) + 1;
+
+          // Count by date
+          stats.byDate[date] = (stats.byDate[date] || 0) + 1;
+        });
+
+        return stats;
+      }
       console.error('Error fetching activity stats:', error);
       throw error;
     }
