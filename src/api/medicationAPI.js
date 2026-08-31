@@ -29,77 +29,96 @@ export const medicationAPI = {
   getMedications: async (filters = {}) => {
     try {
       logger.debug('Fetching medications', { filters });
-      
-      // When a specific clientId is provided (doctor/caregiver views), use Database directly.
-      // Data Connect often expects a Client profile context and can fail for provider lookups.
-      if (!filters.clientId) {
-        // Try Data Connect only for current-user context (likely Client portal)
-        try {
-          const result = await dataConnectService.getCurrentUserMedications();
-          return result.data || [];
-        } catch (dataConnectError) {
-          logger.warn('Data Connect failed, falling back to Database', { error: dataConnectError });
-        }
-      }
-      
-      // Fallback to Database with simplified query to avoid index requirements
-      let medicationsQuery;
-      
+
+      // When a clientId is provided, fetch from the prescriptions table
+      // (patient medication records). The medications table is a drug
+      // catalog and doesn't have patient-specific data.
       if (filters.clientId) {
-        // Primary filter by clientId only, sort client-side
-        medicationsQuery = query(
-          collection(db, 'medications'),
+        let prescriptionsQuery = query(
+          collection(db, 'prescriptions'),
           where('clientId', '==', filters.clientId)
         );
-      } else {
-        // If no clientId filter, get recent medications
-        medicationsQuery = query(
-          collection(db, 'medications'),
-          orderBy('startDate', 'desc'),
-          limit(50)
-        );
-      }
-      
-      if (filters.limit) {
-        medicationsQuery = query(medicationsQuery, limit(filters.limit));
-      }
 
-      let medicationsSnapshot;
-      try {
-        medicationsSnapshot = await getDocs(medicationsQuery);
-      } catch (error) {
-        if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
-          console.warn('Index missing, using fallback query:', error.message);
-          if (filters.clientId) {
+        if (filters.limit) {
+          prescriptionsQuery = query(prescriptionsQuery, limit(filters.limit));
+        }
+
+        let snapshot;
+        try {
+          snapshot = await getDocs(prescriptionsQuery);
+        } catch (error) {
+          if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
+            console.warn('Index missing, using fallback query:', error.message);
             const fallbackQ = query(
-              collection(db, 'medications'),
+              collection(db, 'prescriptions'),
               where('clientId', '==', filters.clientId)
             );
-            medicationsSnapshot = await getDocs(fallbackQ);
+            snapshot = await getDocs(fallbackQ);
           } else {
-            const fallbackQ = query(collection(db, 'medications'));
-            medicationsSnapshot = await getDocs(fallbackQ);
+            throw error;
           }
-        } else {
-          throw error;
         }
-      }
-      let medications = [];
 
-      medicationsSnapshot.forEach((doc) => {
+        let medications = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          medications.push({
+            id: doc.id,
+            name: data.medicationName || data.name || 'Unknown',
+            dosage: data.dosage || 'N/A',
+            frequency: data.frequency || 'As needed',
+            instructions: data.instructions || 'No instructions',
+            startDate: data.startDate?.toDate?.() || data.startDate,
+            endDate: data.endDate?.toDate?.() || data.endDate,
+            status: data.status || 'active',
+            createdAt: data.createdAt?.toDate?.() || data.createdAt,
+            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+          });
+        });
+
+        // Sort client-side by createdAt desc
+        medications.sort((a, b) => {
+          const av = a.createdAt?.getTime ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+          const bv = b.createdAt?.getTime ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+          return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
+        });
+
+        // Apply client-side filtering for status if needed
+        if (filters.status) {
+          medications = medications.filter(med => med.status === filters.status);
+        }
+
+        return medications;
+      }
+
+      // No clientId — try Data Connect for current-user context
+      try {
+        const result = await dataConnectService.getCurrentUserMedications();
+        return result.data || [];
+      } catch (dataConnectError) {
+        logger.warn('Data Connect failed, falling back to Database', { error: dataConnectError });
+      }
+
+      // Fallback: get from prescriptions collection without filter
+      const fallbackQuery = query(collection(db, 'prescriptions'), limit(50));
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+      let medications = [];
+      fallbackSnapshot.forEach((doc) => {
+        const data = doc.data();
         medications.push({
           id: doc.id,
-          ...doc.data(),
-          startDate: doc.data().startDate?.toDate(),
-          endDate: doc.data().endDate?.toDate(),
-          lastTaken: doc.data().lastTaken?.toDate(),
-          nextDose: doc.data().nextDose?.toDate(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
+          name: data.medicationName || data.name || 'Unknown',
+          dosage: data.dosage || 'N/A',
+          frequency: data.frequency || 'As needed',
+          instructions: data.instructions || 'No instructions',
+          startDate: data.startDate?.toDate?.() || data.startDate,
+          endDate: data.endDate?.toDate?.() || data.endDate,
+          status: data.status || 'active',
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
         });
       });
 
-      // Apply client-side filtering for status if needed
       if (filters.status) {
         medications = medications.filter(med => med.status === filters.status);
       }
@@ -150,20 +169,25 @@ export const medicationAPI = {
     }
   },
 
-  // Create new medication
+  // Create new medication (saved as a prescription for the patient)
   createMedication: async (medicationData) => {
     try {
-      const medicationRef = await addDoc(collection(db, 'medications'), {
-        ...medicationData,
-        status: 'active',
-        complianceRate: 0,
-        totalDoses: 0,
-        takenDoses: 0,
-        missedDoses: 0,
+      // Use the prescriptions table — it has patient_id, medication_name,
+      // dosage, frequency, instructions, start_date, end_date, status.
+      // The medications table is a drug catalog, not patient records.
+      const prescriptionRef = await addDoc(collection(db, 'prescriptions'), {
+        clientId: medicationData.clientId,
+        medicationName: medicationData.name,
+        dosage: medicationData.dosage,
+        frequency: medicationData.frequency,
+        instructions: medicationData.instructions || '',
+        startDate: medicationData.startDate || serverTimestamp(),
+        endDate: medicationData.endDate || null,
+        status: medicationData.status || 'active',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      return { id: medicationRef.id, success: true };
+      return { id: prescriptionRef.id, success: true };
     } catch (error) {
       console.error('Error creating medication:', error);
       throw error;

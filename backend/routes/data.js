@@ -143,7 +143,7 @@ const WRITABLE_FIELDS = {
   care_logs: ['assignment_id', 'caregiver_id', 'client_id', 'patient_id', 'recorded_by', 'source', 'notes', 'mood', 'timestamp', 'metadata', 'created_at', 'updated_at'],
   care_plans: ['client_id', 'title', 'description', 'start_date', 'end_date', 'status'],
   vital_signs: ['patient_id', 'recorded_by', 'institution_id', 'source', 'recorded_at', 'temperature', 'temperature_unit', 'heart_rate', 'respiratory_rate', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'oxygen_saturation', 'weight', 'weight_unit', 'height', 'height_unit', 'blood_glucose', 'pain_level', 'notes', 'metadata', 'created_at', 'updated_at'],
-  prescriptions: ['client_id', 'medication_name', 'dosage', 'frequency', 'start_date', 'end_date', 'prescribed_by'],
+  prescriptions: ['patient_id', 'doctor_id', 'institution_id', 'source', 'medication_name', 'dosage', 'frequency', 'route', 'start_date', 'end_date', 'instructions', 'side_effects', 'status', 'metadata', 'created_at', 'updated_at'],
   consultations: ['client_id', 'client_name', 'doctor_id', 'doctor_name', 'institution_id', 'consultation_type', 'consultation_date', 'chief_complaint', 'subjective', 'objective', 'assessment', 'plan', 'vital_signs', 'related_medical_reports', 'related_care_logs', 'related_prescriptions', 'follow_up_required', 'follow_up_date', 'follow_up_notes', 'notes', 'private_notes', 'status', 'created_at', 'updated_at'],
   diagnostics: ['client_id', 'diagnosis', 'diagnosis_date', 'notes', 'diagnosed_by'],
   notifications: ['user_id', 'title', 'message', 'type', 'read', 'created_at'],
@@ -465,7 +465,7 @@ router.get('/:table/:id', async (req, res) => {
 // The backend auto-fills `source` and `recorded_by` from the authenticated
 // user so the frontend can't spoof it.
 const HEALTH_RECORD_TABLES = [
-  'vital_signs', 'emergency_alerts', 'medication_logs', 'care_logs',
+  'vital_signs', 'emergency_alerts', 'medication_logs', 'care_logs', 'prescriptions',
 ];
 
 // Map user_type from the users table to a source label
@@ -511,14 +511,15 @@ router.post('/:table', async (req, res) => {
       } else if (!data.source) {
         data.source = source;
       }
-      // Set recorded_by if the table has it and it's not already set
-      if (!data.recorded_by && !data.triggered_by) {
-        // vital_signs uses recorded_by, emergency_alerts uses triggered_by
-        if (tableName === 'emergency_alerts') {
-          if (!data.triggered_by) data.triggered_by = req.user.id;
-        } else {
-          data.recorded_by = req.user.id;
-        }
+      // Set the "who entered this" column — different tables use different
+      // column names for this. Only set if the column is in WRITABLE_FIELDS.
+      const writable = WRITABLE_FIELDS[tableName] || [];
+      if (writable.includes('recorded_by') && !data.recorded_by) {
+        data.recorded_by = req.user.id;
+      } else if (writable.includes('triggered_by') && !data.triggered_by) {
+        data.triggered_by = req.user.id;
+      } else if (writable.includes('doctor_id') && !data.doctor_id && source === 'doctor') {
+        data.doctor_id = req.user.id;
       }
     }
 
