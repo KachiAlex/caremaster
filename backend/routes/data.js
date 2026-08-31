@@ -138,7 +138,7 @@ const WRITABLE_FIELDS = {
   messages: ['conversation_id', 'sender_id', 'receiver_id', 'recipient_id', 'content', 'text', 'message_type', 'attachments', 'read', 'sent_at', 'read_at', 'created_at', 'sender_id'],
   care_logs: ['assignment_id', 'caregiver_id', 'client_id', 'notes', 'mood', 'timestamp'],
   care_plans: ['client_id', 'title', 'description', 'start_date', 'end_date', 'status'],
-  vital_signs: ['client_id', 'temperature', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'heart_rate', 'respiratory_rate', 'oxygen_saturation', 'recorded_at'],
+  vital_signs: ['patient_id', 'recorded_by', 'institution_id', 'recorded_at', 'temperature', 'temperature_unit', 'heart_rate', 'respiratory_rate', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'oxygen_saturation', 'weight', 'weight_unit', 'height', 'height_unit', 'blood_glucose', 'pain_level', 'notes', 'metadata', 'created_at', 'updated_at'],
   prescriptions: ['client_id', 'medication_name', 'dosage', 'frequency', 'start_date', 'end_date', 'prescribed_by'],
   consultations: ['client_id', 'client_name', 'doctor_id', 'doctor_name', 'institution_id', 'consultation_type', 'consultation_date', 'chief_complaint', 'subjective', 'objective', 'assessment', 'plan', 'vital_signs', 'related_medical_reports', 'related_care_logs', 'related_prescriptions', 'follow_up_required', 'follow_up_date', 'follow_up_notes', 'notes', 'private_notes', 'status', 'created_at', 'updated_at'],
   diagnostics: ['client_id', 'diagnosis', 'diagnosis_date', 'notes', 'diagnosed_by'],
@@ -265,6 +265,29 @@ const WRITE_COLUMN_ALIASES = {
     triggered_at: 'created_at',
     response_time: 'metadata',
     actions: 'metadata',
+  },
+  vital_signs: {
+    client_id: 'patient_id',
+    user_id: 'recorded_by',
+    recorded_at: 'recorded_at',
+  },
+  prescriptions: {
+    client_id: 'patient_id',
+  },
+  consultations: {
+    client_id: 'patient_id',
+  },
+  diagnostics: {
+    client_id: 'patient_id',
+  },
+  care_logs: {
+    client_id: 'patient_id',
+  },
+  care_plans: {
+    client_id: 'patient_id',
+  },
+  appointments: {
+    client_id: 'patient_id',
   },
 };
 
