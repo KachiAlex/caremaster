@@ -149,7 +149,7 @@ const WRITABLE_FIELDS = {
   client_subscriptions: ['institution_id', 'institutionId', 'client_id', 'clientId', 'plan_id', 'planId', 'plan_name', 'planName', 'plan_tier', 'planTier', 'billing_cycle', 'billingCycle', 'price', 'currency', 'status', 'start_date', 'startDate', 'end_date', 'endDate', 'next_billing_date', 'nextBillingDate', 'cancelled_at', 'cancelledAt', 'created_at', 'updated_at'],
   billing_settings: ['institution_id', 'institutionId', 'currency', 'enabled_frequencies', 'enabledFrequencies', 'default_frequency', 'defaultFrequency', 'tax_rate', 'taxRate', 'tax_label', 'taxLabel', 'taxes', 'invoice_prefix', 'invoicePrefix', 'invoice_notes', 'invoiceNotes', 'payment_terms_days', 'paymentTermsDays', 'late_fee_percentage', 'lateFeePercentage', 'auto_generate_invoices', 'autoGenerateInvoices', 'send_invoice_reminders', 'sendInvoiceReminders', 'reminder_days', 'reminderDays', 'created_at', 'updated_at'],
   analytics_events: ['event_type', 'eventType', 'institution_id', 'institutionId', 'user_id', 'userId', 'details', 'created_at', 'updated_at'],
-  emergency_alerts: ['client_id', 'caregiver_id', 'alert_type', 'severity', 'status', 'message', 'created_at'],
+  emergency_alerts: ['patient_id', 'triggered_by', 'institution_id', 'type', 'severity', 'status', 'description', 'location', 'resolved_at', 'resolved_by', 'metadata', 'created_at', 'updated_at'],
   inventory: ['name', 'institution_id', 'institutionId', 'sku', 'category', 'description', 'quantity', 'min_stock', 'minStock', 'reorder_level', 'reorderLevel', 'unit', 'unit_price', 'unitPrice', 'cost', 'supplier', 'supplier_id', 'supplierId', 'expiry_date', 'expiryDate', 'last_restocked', 'lastRestocked', 'last_restocked_date', 'lastRestockedDate', 'batch_number', 'batchNumber', 'status', 'metadata', 'created_at', 'updated_at'],
   suppliers: ['name', 'institution_id', 'institutionId', 'contact_person', 'contactPerson', 'email', 'phone', 'address', 'city', 'state', 'country', 'notes', 'status', 'created_at', 'updated_at'],
   purchase_orders: ['institution_id', 'institutionId', 'supplier_id', 'supplierId', 'po_number', 'poNumber', 'status', 'items', 'expected_delivery_date', 'expectedDeliveryDate', 'total_amount', 'totalAmount', 'received_quantity', 'receivedQuantity', 'created_by', 'createdBy', 'approved_by', 'approvedBy', 'approved_at', 'approvedAt', 'notes', 'created_at', 'updated_at'],
@@ -255,10 +255,32 @@ function validateSortColumn(table, column) {
   return allowed[0] !== 'id' ? allowed[0] : (allowed[1] || 'id');
 }
 
-function mapToSnakeCase(obj) {
+// Map frontend field names to actual DB column names for writes (POST/PUT).
+// Keyed by table name, maps snake_case frontend field → actual DB column.
+const WRITE_COLUMN_ALIASES = {
+  emergency_alerts: {
+    client_id: 'patient_id',
+    user_id: 'triggered_by',
+    client_name: 'description', // fold client_name into description if no description
+    triggered_at: 'created_at',
+    response_time: 'metadata',
+    actions: 'metadata',
+  },
+};
+
+function mapToSnakeCase(obj, tableName) {
   const result = {};
+  const aliases = tableName ? WRITE_COLUMN_ALIASES[tableName] : null;
   for (const [key, value] of Object.entries(obj)) {
     const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    if (aliases && aliases[snakeKey]) {
+      const target = aliases[snakeKey];
+      // Don't overwrite if the target column already has a value
+      if (result[target] === undefined) {
+        result[target] = value;
+      }
+      continue;
+    }
     result[snakeKey] = value;
   }
   return result;
@@ -423,7 +445,7 @@ router.post('/:table', async (req, res) => {
     }
     const tableName = resolveTable(table);
 
-    const data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body)));
+    const data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body, tableName)));
     // Remove id if present so DB generates one
     delete data.id;
 
@@ -452,7 +474,7 @@ router.put('/:table/:id', async (req, res) => {
     }
     const tableName = resolveTable(table);
 
-    const data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body)));
+    const data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body, tableName)));
     delete data.id;
     delete data.created_at;
 
