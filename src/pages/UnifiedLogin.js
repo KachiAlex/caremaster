@@ -37,6 +37,12 @@ const UnifiedLogin = () => {
 
     setLoading(true);
 
+    // Set fresh-login flag BEFORE signInWithEmailAndPassword so that
+    // SignInRouteHandler (which re-renders synchronously when onAuthStateChanged
+    // fires inside signInWithEmailAndPassword) doesn't clear localStorage
+    // before we can navigate to the dashboard.
+    sessionStorage.setItem('__fresh_login', Date.now().toString());
+
     try {
       // SECURITY FIX: Check rate limit before authentication
       const rateLimitKey = email.toLowerCase().trim();
@@ -136,10 +142,6 @@ const UnifiedLogin = () => {
       }
 
       toast.success('Login successful! Redirecting...');
-
-      // Mark a fresh login so SignInRouteHandler doesn't clear localStorage
-      // before the browser processes the window.location.href navigation.
-      sessionStorage.setItem('__fresh_login', Date.now().toString());
 
       // Super-admin always goes to the super-admin dashboard, regardless of institution
       // Use window.location.href for a hard navigation so React Router state
