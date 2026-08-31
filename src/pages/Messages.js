@@ -339,11 +339,10 @@ const Messages = () => {
             </div>
             <button
               onClick={handleOpenNewChat}
-              className="flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               title="Start a new conversation"
             >
-              <Plus className="h-4 w-4 mr-1" />
-              New Chat
+              <Plus className="h-5 w-5" />
             </button>
           </div>
           <div className="relative">
