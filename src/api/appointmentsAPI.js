@@ -416,7 +416,7 @@ export const getTodaysAppointments = async (userId, userRole, options = {}) => {
       q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver' || userRole === 'nurse') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
-    } else if (userRole === 'elderly') {
+    } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
       q = query(appointmentsRef, where('clientId', '==', userId));
     } else {
       throw new Error('Invalid user role');
@@ -509,7 +509,7 @@ export const getUpcomingAppointments = async (userId, userRole) => {
       q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver' || userRole === 'nurse') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
-    } else if (userRole === 'elderly') {
+    } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
       q = query(appointmentsRef, where('clientId', '==', userId));
     } else {
       throw new Error('Invalid user role');
@@ -677,7 +677,7 @@ export const getAppointmentAnalytics = async (userId, userRole, dateRange = 30) 
       q = query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver' || userRole === 'nurse') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
-    } else if (userRole === 'elderly') {
+    } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
       q = query(appointmentsRef, where('clientId', '==', userId));
     } else {
       throw new Error('Invalid user role');

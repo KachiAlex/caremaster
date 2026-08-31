@@ -16,7 +16,7 @@ import {
 } from 'backend/database';
 import { db } from '../backend/config';
 
-const VITAL_SIGNS_COLLECTION = 'vitalSigns';
+const VITAL_SIGNS_COLLECTION = 'vital_signs';
 
 // Get all vital signs for a Client
 export const getVitalSignsByClient = async (clientId, institutionId = null) => {

@@ -89,6 +89,14 @@ const COLUMN_ALIASES = {
   elderly_profiles: { client_id: 'patient_id' },
 };
 
+// Filters to silently ignore per table (column doesn't exist in that table).
+// e.g. medications is a catalog table with no patient/client column —
+// when the frontend sends clientId, just drop the filter instead of 500ing.
+const IGNORE_FILTERS = {
+  medications: ['client_id', 'patient_id', 'caregiver_id', 'doctor_id'],
+  institutions: ['client_id', 'patient_id', 'caregiver_id'],
+};
+
 function resolveColumn(table, key) {
   const col = key.replace(/([A-Z])/g, '_$1').toLowerCase();
   const aliases = COLUMN_ALIASES[table];
@@ -322,6 +330,11 @@ router.get('/:table', async (req, res) => {
           continue;
         }
         const col = resolveColumn(tableName, key);
+        // Skip filters for columns that don't exist in this table
+        const ignoreForTable = IGNORE_FILTERS[tableName];
+        if (ignoreForTable && ignoreForTable.includes(col)) {
+          continue;
+        }
         query = query.where(col, value);
       }
     }
@@ -341,6 +354,10 @@ router.get('/:table', async (req, res) => {
           continue;
         }
         const col = resolveColumn(tableName, key);
+        const ignoreForTable = IGNORE_FILTERS[tableName];
+        if (ignoreForTable && ignoreForTable.includes(col)) {
+          continue;
+        }
         totalQuery.where(col, value);
       }
     }
