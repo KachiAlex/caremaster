@@ -3161,7 +3161,7 @@ const renderMessagesTab = () => {
 
         {/* Incoming Call Notification */}
         {incomingCall && !isInCall && (
-          <div className="fixed top-4 right-4 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 min-w-[300px] animate-slide-in">
+          <div className="fixed top-4 right-2 left-2 sm:left-auto sm:right-4 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 w-full sm:w-auto sm:min-w-[300px] max-w-[380px] mx-auto sm:mx-0 animate-slide-in">
             <div className="flex items-center gap-3 mb-3">
               <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold animate-pulse">
                 {(incomingCall.callerName || 'U').charAt(0).toUpperCase()}
@@ -3657,16 +3657,16 @@ const renderMessagesTab = () => {
                     style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x' }}
                   >
                     <table
-                      className="min-w-[900px] divide-y divide-gray-200 text-sm"
-                      style={{ width: 'max-content', minWidth: '900px' }}
+                      className="min-w-[640px] sm:min-w-[900px] divide-y divide-gray-200 text-sm"
+                      style={{ width: 'max-content', minWidth: '640px' }}
                     >
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Name</th>
-                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Contact</th>
-                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Status</th>
-                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Joined</th>
-                          <th className="px-6 py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Actions</th>
+                          <th className="px-3 sm:px-6 py-2 sm:py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Name</th>
+                          <th className="px-3 sm:px-6 py-2 sm:py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Contact</th>
+                          <th className="px-3 sm:px-6 py-2 sm:py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Status</th>
+                          <th className="px-3 sm:px-6 py-2 sm:py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Joined</th>
+                          <th className="px-3 sm:px-6 py-2 sm:py-3 text-left uppercase tracking-wide text-xs font-semibold text-gray-500">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -3715,7 +3715,7 @@ const renderMessagesTab = () => {
                             >
                               {formatDateValue(client.createdAt || client.joinedAt)}
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-3 sm:px-6 py-2 sm:py-4">
                               <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={() => {
@@ -3808,8 +3808,8 @@ const renderMessagesTab = () => {
                   style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
                 >
                   <table
-                    className="min-w-[900px] divide-y divide-gray-200 text-sm"
-                    style={{ width: 'max-content', minWidth: '900px' }}
+                    className="min-w-[640px] sm:min-w-[900px] divide-y divide-gray-200 text-sm"
+                    style={{ width: 'max-content', minWidth: '640px' }}
                   >
                     <thead className="bg-gray-50">
                       <tr>
@@ -3825,7 +3825,7 @@ const renderMessagesTab = () => {
                         const onboardingStatus = caregiver.onboardingComplete ? 'completed' : (caregiver.onboardingStarted ? 'in-progress' : 'not-started');
                         return (
                         <tr key={caregiver.id || caregiver.uid} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4">
+                            <td className="px-3 sm:px-6 py-2 sm:py-4">
                               <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold overflow-hidden flex-shrink-0">
                                   {caregiver.photoURL || caregiver.profilePicture ? (
@@ -3845,8 +3845,8 @@ const renderMessagesTab = () => {
                                 <span className="font-medium text-gray-900">{caregiver.name || 'Caregiver'}</span>
                               </div>
                             </td>
-                          <td className="px-6 py-4 text-gray-600 capitalize">{caregiver.role || caregiver.userType || 'Caregiver'}</td>
-                            <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 text-gray-600 capitalize">{caregiver.role || caregiver.userType || 'Caregiver'}</td>
+                            <td className="px-3 sm:px-6 py-2 sm:py-4">
                               <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                                 onboardingStatus === 'completed' ? 'bg-green-100 text-green-800' :
                                 onboardingStatus === 'in-progress' ? 'bg-blue-100 text-blue-800' :
@@ -3857,7 +3857,7 @@ const renderMessagesTab = () => {
                                  'Not Started'}
                               </span>
                             </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                               caregiver.status === 'active' ? 'bg-green-100 text-green-800' :
                               caregiver.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -3867,7 +3867,7 @@ const renderMessagesTab = () => {
                                 {caregiver.status || 'Pending'}
                             </span>
                           </td>
-                            <td className="px-6 py-4">
+                            <td className="px-3 sm:px-6 py-2 sm:py-4">
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => {
@@ -4047,8 +4047,8 @@ const renderMessagesTab = () => {
                   style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
                 >
                   <table
-                    className="min-w-[900px] divide-y divide-gray-200 text-sm"
-                    style={{ width: 'max-content', minWidth: '900px' }}
+                    className="min-w-[640px] sm:min-w-[900px] divide-y divide-gray-200 text-sm"
+                    style={{ width: 'max-content', minWidth: '640px' }}
                   >
                     <thead className="bg-gray-50">
                       <tr>
@@ -4062,10 +4062,10 @@ const renderMessagesTab = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {pharmacists.map((pharmacist) => (
                         <tr key={pharmacist.id || pharmacist.uid} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-gray-900">{pharmacist.name || pharmacist.fullName || 'Pharmacist'}</td>
-                          <td className="px-6 py-4 text-gray-600">{pharmacist.licenseNumber || '—'}</td>
-                          <td className="px-6 py-4 text-gray-600">{pharmacist.specialization || 'General'}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 font-medium text-gray-900">{pharmacist.name || pharmacist.fullName || 'Pharmacist'}</td>
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 text-gray-600">{pharmacist.licenseNumber || '—'}</td>
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 text-gray-600">{pharmacist.specialization || 'General'}</td>
+                          <td className="px-3 sm:px-6 py-2 sm:py-4">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                               pharmacist.status === 'active' ? 'bg-green-100 text-green-800' :
                               pharmacist.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -4076,7 +4076,7 @@ const renderMessagesTab = () => {
                               {pharmacist.status || 'Active'}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4">
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => {
@@ -4235,9 +4235,9 @@ const renderMessagesTab = () => {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {assignments.map((assignment) => (
                           <tr key={assignment.id || assignment.assignmentId} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 font-medium text-gray-900">{assignment.title || 'Assignment'}</td>
-                            <td className="px-6 py-4 text-gray-600">{assignment.clientName || 'Client'}</td>
-                            <td className="px-6 py-4">
+                            <td className="px-3 sm:px-6 py-2 sm:py-4 font-medium text-gray-900">{assignment.title || 'Assignment'}</td>
+                            <td className="px-3 sm:px-6 py-2 sm:py-4 text-gray-600">{assignment.clientName || 'Client'}</td>
+                            <td className="px-3 sm:px-6 py-2 sm:py-4">
                               {(() => {
                                 const caregiver = caregivers.find(c =>
                                   (c.id === assignment.caregiverId) ||
@@ -4266,7 +4266,7 @@ const renderMessagesTab = () => {
                                 );
                               })()}
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-3 sm:px-6 py-2 sm:py-4">
                               <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                                 assignment.status === 'completed' ? 'bg-green-100 text-green-800' :
                                 assignment.status === 'active' ? 'bg-blue-100 text-blue-800' :
@@ -4276,8 +4276,8 @@ const renderMessagesTab = () => {
                                 {assignment.status || 'Pending'}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-gray-600">{formatDateValue(assignment.dueDate || assignment.dueAt)}</td>
-                            <td className="px-6 py-4">
+                            <td className="px-3 sm:px-6 py-2 sm:py-4 text-gray-600">{formatDateValue(assignment.dueDate || assignment.dueAt)}</td>
+                            <td className="px-3 sm:px-6 py-2 sm:py-4">
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => {

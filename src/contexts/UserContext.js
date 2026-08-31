@@ -177,11 +177,29 @@ export const UserProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      // Call backend logout to invalidate the session server-side
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const API_URL = process.env.REACT_APP_API_URL || process.env.REACT_APP_API_BASE_URL || '';
+          await fetch(`${API_URL}/api/auth/logout`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+        } catch (e) {
+          // Best-effort: even if the server call fails, clear local state
+          console.warn('Server logout failed (clearing local state anyway):', e);
+        }
+      }
+
       // Clear local storage (must clear all token keys)
       localStorage.removeItem('token');
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
-      
+
       // Clear state
       setUser(null);
       setUserProfile(null);
@@ -189,7 +207,7 @@ export const UserProvider = ({ children }) => {
       setUserRoles([]);
       setInstitutionId(null);
       setInstitutionData(null);
-      
+
       // Clear logout timeout
       if (logoutTimeoutRef.current) {
         clearTimeout(logoutTimeoutRef.current);

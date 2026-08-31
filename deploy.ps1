@@ -67,8 +67,25 @@ if ($DeployBackend) {
     scp -r "$PSScriptRoot/backend/middleware" "$VpsUser@$VpsHost`:$RemoteBackendPath/middleware" 2>$null
     scp -r "$PSScriptRoot/backend/services" "$VpsUser@$VpsHost`:$RemoteBackendPath/services" 2>$null
     scp -r "$PSScriptRoot/backend/utils" "$VpsUser@$VpsHost`:$RemoteBackendPath/utils" 2>$null
+    scp -r "$PSScriptRoot/backend/database" "$VpsUser@$VpsHost`:$RemoteBackendPath/database" 2>$null
     scp "$PSScriptRoot/backend/server.js" "$VpsUser@$VpsHost`:$RemoteBackendPath/server.js" 2>$null
     scp "$PSScriptRoot/backend/package.json" "$VpsUser@$VpsHost`:$RemoteBackendPath/package.json" 2>$null
+    scp "$PSScriptRoot/backend/knexfile.js" "$VpsUser@$VpsHost`:$RemoteBackendPath/knexfile.js" 2>$null
+
+    # Install new dependencies (knex upgrade, etc.)
+    Write-Step "Installing backend dependencies"
+    ssh "$VpsUser@$VpsHost" "cd $RemoteBackendPath && npm install --production 2>&1 | tail -5"
+    Write-Ok "Dependencies installed"
+
+    # Run database migrations
+    Write-Step "Running database migrations"
+    $migrationOutput = ssh "$VpsUser@$VpsHost" "cd $RemoteBackendPath && npx knex migrate:latest --env production 2>&1"
+    Write-Host $migrationOutput
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "Migrations completed"
+    } else {
+        Write-Err "Migration failed (may need manual intervention)"
+    }
 
     # Restart PM2
     ssh "$VpsUser@$VpsHost" "cd $RemoteBackendPath && pm2 restart caremaster-backend --update-env && sleep 2 && pm2 logs caremaster-backend --lines 3 --nostream"

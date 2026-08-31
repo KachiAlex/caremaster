@@ -535,8 +535,8 @@ const SchedulingModule = ({ institutionId }) => {
             <span className="text-sm font-medium text-gray-600">{formatWeekRangeLabel(weekDates)}</span>
           </div>
           <div className="overflow-x-auto">
-            <div className="min-w-[980px]">
-              <div className="grid grid-cols-[220px_repeat(7,_minmax(160px,1fr))] border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-widest text-gray-500">
+            <div className="min-w-[720px] sm:min-w-[980px]">
+              <div className="grid grid-cols-[140px_repeat(7,_minmax(80px,1fr))] sm:grid-cols-[220px_repeat(7,_minmax(160px,1fr))] border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-widest text-gray-500">
                 <div className="border-r border-gray-200 px-3 py-2">Caregiver</div>
                 {weekDates.map((date) => (
                   <div key={date.toDateString()} className="px-3 py-2 text-center">

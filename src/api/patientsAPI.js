@@ -624,7 +624,7 @@ export const createClient = async (clientData = {}, registeredBy = null) => {
       }
     }
 
-    return { id: docRef.id, clientId };
+    return { id: docRef.id, clientId, loginAccount: docRef.loginAccount || null };
   } catch (error) {
     console.error('Error creating Client:', error);
     

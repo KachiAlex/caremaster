@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   HeartPulse,
   Stethoscope,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 
 const UnifiedLogin = () => {
@@ -314,12 +316,14 @@ const UnifiedLogin = () => {
           </div>
 
           {/* Card */}
-          <div className="cm-card p-6 sm:p-8">
+          <div className="cm-card p-6 sm:p-8 bg-white/95 backdrop-blur-sm">
             {/* Header */}
-            <div className="mb-7">
-              <span className="cm-eyebrow">Account Access</span>
-              <h2 className="cm-display text-[26px] text-ink mt-3">Welcome back</h2>
-              <p className="text-sm text-[var(--cm-text-soft)] mt-1.5 leading-relaxed">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#E8F3E8] to-[#F5F0E3] border border-[#D4E4D4] shadow-sm mb-4">
+                <Sparkles className="w-6 h-6 text-[#6B9080]" />
+              </div>
+              <h2 className="cm-display text-[28px] text-ink tracking-tight">Welcome back</h2>
+              <p className="text-sm text-[var(--cm-text-soft)] mt-2 leading-relaxed">
                 Sign in to manage care with confidence.
               </p>
             </div>
@@ -338,10 +342,10 @@ const UnifiedLogin = () => {
                 <label htmlFor="email" className="block text-[13px] font-semibold text-ink mb-2">
                   Email address
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <Mail
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 flex-shrink-0"
-                    style={{ width: 18, height: 18, color: '#6B9080' }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B9080] pointer-events-none"
+                    style={{ width: 20, height: 20, zIndex: 10 }}
                   />
                   <input
                     id="email"
@@ -351,7 +355,8 @@ const UnifiedLogin = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="cm-input pl-11"
+                    className="cm-input h-12 rounded-xl"
+                    style={{ paddingLeft: '52px' }}
                     placeholder="you@example.com"
                   />
                 </div>
@@ -359,13 +364,25 @@ const UnifiedLogin = () => {
 
               {/* Password field */}
               <div>
-                <label htmlFor="password" className="block text-[13px] font-semibold text-ink mb-2">
-                  Password
-                </label>
-                <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="password" className="block text-[13px] font-semibold text-ink">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(email || '');
+                      setShowResetModal(true);
+                    }}
+                    className="text-[12px] font-medium text-[#6B9080] hover:text-[#D4A43D] transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative group">
                   <Lock
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 flex-shrink-0"
-                    style={{ width: 18, height: 18, color: '#6B9080' }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B9080] pointer-events-none"
+                    style={{ width: 20, height: 20, zIndex: 10 }}
                   />
                   <input
                     id="password"
@@ -375,13 +392,14 @@ const UnifiedLogin = () => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="cm-input pl-11 pr-11"
+                    className="cm-input h-12 rounded-xl"
+                    style={{ paddingLeft: '52px', paddingRight: '48px' }}
                     placeholder="Enter your password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--cm-text-soft)] hover:text-ink transition-colors"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-lg flex items-center justify-center text-[var(--cm-text-soft)] hover:text-ink hover:bg-gray-100 transition-colors z-10"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                     tabIndex={-1}
                   >
@@ -390,52 +408,41 @@ const UnifiedLogin = () => {
                 </div>
               </div>
 
-              {/* Forgot password */}
-              <div className="flex justify-end -mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResetEmail(email || '');
-                    setShowResetModal(true);
-                  }}
-                  className="text-[13px] font-medium text-[var(--cm-text-soft)] hover:text-gold-deep transition-colors"
-                >
-                  Forgot password?
-                </button>
-              </div>
-
               {/* Submit button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="cm-btn cm-btn-gold w-full justify-center text-[15px] py-3 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+                className="cm-btn cm-btn-gold w-full justify-center text-[15px] py-3.5 h-12 rounded-full shadow-lg shadow-[rgba(217,164,65,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none group"
               >
                 {loading ? (
                   <>
                     <Loader className="w-4 h-4 animate-spin" />
-                    Signing in...
+                    <span>Signing in...</span>
                   </>
                 ) : (
-                  'Sign In'
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                  </>
                 )}
               </button>
 
               {/* Trust note */}
-              <div className="flex items-center justify-center gap-2 pt-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-sage" />
+              <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-full bg-[#F8F8F5] border border-[#E8E8E0]">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#6B9080]" />
                 <p className="text-xs text-[var(--cm-text-soft)]">
-                  Secure login · We detect your role automatically
+                  Secure login · Role detected automatically
                 </p>
               </div>
             </form>
 
             {/* Divider + help */}
-            <div className="mt-7 pt-5 border-t border-ink/8 text-center">
-              <p className="text-xs text-[var(--cm-text-soft)]">
+            <div className="mt-7 pt-5 border-t border-[rgba(28,38,36,0.08)] text-center">
+              <p className="text-sm text-[var(--cm-text-soft)]">
                 Need help?{' '}
                 <a
                   href="/support"
-                  className="text-ink hover:text-gold-deep font-semibold transition-colors"
+                  className="text-ink hover:text-[#D4A43D] font-semibold transition-colors underline-offset-2 hover:underline"
                 >
                   Contact Support
                 </a>

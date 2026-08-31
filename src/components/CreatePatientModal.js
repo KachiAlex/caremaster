@@ -19,9 +19,13 @@ import {
   QrCode,
   Shield,
   AlertTriangle,
-  Lock
+  Lock,
+  CreditCard,
+  Check,
+  Crown
 } from 'lucide-react';
 import { createClient, createClientLoginAccount } from '../api/patientsAPI';
+import { getBillingPlans, assignSubscriptionToClient, BILLING_FREQUENCIES } from '../api/billingPlansAPI';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import { checkForDuplicates, shouldBlockRegistration } from '../utils/clientDuplicateDetection';
@@ -93,12 +97,20 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
     // Login credentials (admin sets initial password so the client can sign in)
     loginPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+
+    // Subscription plan
+    subscriptionPlanId: '',
+    billingCycle: 'monthly'
   });
 
   const [tempMedicalCondition, setTempMedicalCondition] = useState('');
   const [tempMedication, setTempMedication] = useState('');
   const [tempAllergy, setTempAllergy] = useState('');
+
+  // Billing plans for subscription selection
+  const [billingPlans, setBillingPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
   
   // Enhanced registration features
   const [duplicateCheck, setDuplicateCheck] = useState(null);
@@ -113,6 +125,27 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
   const [uploading, setUploading] = useState({});
   const [fileError, setFileError] = useState('');
   const [nationalId, setNationalId] = useState('');
+
+  // Compute the institution ID at the component level so it's available
+  // for both the billing plans fetch and the submit handler
+  const effectiveInstitutionId = institutionId || userProfile?.institutionId;
+
+  // Fetch billing plans for the institution when modal opens
+  React.useEffect(() => {
+    if (open && effectiveInstitutionId) {
+      setLoadingPlans(true);
+      getBillingPlans(effectiveInstitutionId)
+        .then((plans) => {
+          setBillingPlans(plans || []);
+          setLoadingPlans(false);
+        })
+        .catch((err) => {
+          console.error('Failed to load billing plans:', err);
+          setBillingPlans([]);
+          setLoadingPlans(false);
+        });
+    }
+  }, [open, effectiveInstitutionId]);
 
   const careLevels = [
     { 
@@ -265,7 +298,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 3));
+      setCurrentStep(prev => Math.min(prev + 1, 4));
     }
   };
 
@@ -396,8 +429,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
     setLoading(true);
     try {
-      // Validate institutionId is present
-      const effectiveInstitutionId = institutionId || userProfile?.institutionId;
+      // Validate institutionId is present (computed at component level)
       if (!effectiveInstitutionId) {
         toast.error('Institution ID is required. Please ensure you are logged in with an institution account.');
         setLoading(false);
@@ -468,7 +500,11 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         institutionId: effectiveInstitutionId,
         userType: 'Client',
         type: 'Client',
-        status: 'active'
+        status: 'active',
+        // Include login password so the backend can use it when auto-creating
+        // the user account. This field is NOT stored in the clients table —
+        // the backend reads it from req.body and uses it for the users table.
+        loginPassword: formData.loginPassword || null
       };
 
       // Create client with improved error handling
@@ -509,13 +545,21 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         }
       }
 
-      // Create the client's login account (users table) and link it to the client record.
-      // Requires an email + password. Non-fatal: if this fails the client record still exists,
-      // but the client won't be able to sign in until an admin creates the login account.
+      // The backend automatically creates a user account when a client record
+      // is created via POST /api/data/clients. Check if the auto-account was
+      // created successfully. If not (e.g. email conflict), fall back to the
+      // explicit create-client endpoint.
       let loginAccountCreated = false;
-      if (clientData.email && formData.loginPassword) {
+      let loginAccountInfo = null;
+
+      if (result.loginAccount) {
+        // Backend auto-created the account
+        loginAccountCreated = true;
+        loginAccountInfo = result.loginAccount;
+      } else if (clientData.email && formData.loginPassword) {
+        // Fallback: explicitly create the login account if the backend
+        // didn't auto-create one (e.g. older backend version or error)
         try {
-          // Derive first/last name from the client name (split on first space)
           const nameParts = clientData.name.split(/\s+/);
           const firstName = nameParts[0] || clientData.name;
           const lastName = nameParts.slice(1).join(' ') || '';
@@ -538,6 +582,25 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         }
       }
 
+      // Assign subscription plan if one was selected
+      let subscriptionAssigned = false;
+      if (formData.subscriptionPlanId && (result.id || result.clientId)) {
+        try {
+          await assignSubscriptionToClient(
+            result.id || result.clientId,
+            formData.subscriptionPlanId,
+            formData.billingCycle || 'monthly'
+          );
+          subscriptionAssigned = true;
+        } catch (subError) {
+          console.error('Subscription assignment error:', subError);
+          toast.warning(
+            `Client registered, but the subscription plan could not be assigned: ${subError.message}. You can assign it later from the billing page.`,
+            { autoClose: 8000 }
+          );
+        }
+      }
+
       toast.success(
         <div>
           <div className="font-semibold">Client registered successfully!</div>
@@ -545,7 +608,17 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
             Client ID: <span className="font-mono font-bold text-blue-400">{result.clientId}</span>
           </div>
           {loginAccountCreated && (
-            <div className="text-sm mt-1">Login account created — the client can now sign in with their email and password.</div>
+            <div className="text-sm mt-1">
+              Login account created — the client can now sign in
+              {loginAccountInfo?.temporaryPassword && loginAccountInfo.password
+                ? ` with temporary password: ${loginAccountInfo.password}`
+                : ' with their email and password.'}
+            </div>
+          )}
+          {subscriptionAssigned && (
+            <div className="text-sm mt-1">
+              Subscription plan assigned ({formData.billingCycle} billing).
+            </div>
           )}
         </div>,
         { autoClose: 5000 }
@@ -579,7 +652,9 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         notes: '',
         nationalId: '',
         loginPassword: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        subscriptionPlanId: '',
+        billingCycle: 'monthly'
       });
       setNationalId('');
       setUploadedDocuments({
@@ -642,38 +717,38 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
       data-testid="modal-backdrop"
       onClick={handleBackdropClick}
     >
-      <div className="w-full max-w-4xl max-h-[90vh] rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-4xl max-h-[90vh] rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden flex flex-col mx-2 sm:mx-4">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-50">
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-50 to-blue-50">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 shadow-md">
               <Heart className="h-5 w-5 text-white" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Register New Client</h3>
-              <p className="text-xs text-gray-500">Step {currentStep} of 3</p>
+              <p className="text-xs text-gray-500">Step {currentStep} of 4</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+            className="rounded-lg border border-gray-300 bg-white min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
           >
-            <X className="h-4 w-4" aria-hidden="true" />
+            <X className="h-5 w-5" aria-hidden="true" />
             <span className="sr-only">Close</span>
           </button>
         </div>
 
         {/* Progress Steps */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
-            {[1, 2, 3].map((step) => (
+            {[1, 2, 3, 4].map((step) => (
               <React.Fragment key={step}>
                 <div className="flex items-center">
                   <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                    currentStep >= step 
-                      ? 'bg-blue-600 text-white' 
+                    currentStep >= step
+                      ? 'bg-blue-600 text-white'
                       : 'bg-gray-200 text-gray-500'
                   } transition-colors`}>
                     {currentStep > step ? (
@@ -685,10 +760,10 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                   <span className={`ml-2 text-xs font-medium ${
                     currentStep >= step ? 'text-blue-600' : 'text-gray-500'
                   }`}>
-                    {step === 1 ? 'Patient Demographics' : step === 2 ? 'Emergency Contact & Next of Kin' : 'Clinical & Medical Profile'}
+                    {step === 1 ? 'Patient Demographics' : step === 2 ? 'Emergency Contact' : step === 3 ? 'Clinical Profile' : 'Subscription Plan'}
                   </span>
                 </div>
-                {step < 3 && (
+                {step < 4 && (
                   <div className={`flex-1 h-0.5 mx-4 ${
                     currentStep > step ? 'bg-blue-600' : 'bg-gray-200'
                   } transition-colors`} />
@@ -699,7 +774,7 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
         </div>
 
         {/* Form Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
           {createdPatientId ? (
             <div className="text-center py-8">
               <div className="flex items-center justify-center mb-4">
@@ -1335,26 +1410,162 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
                   </div>
                 </div>
               )}
+
+              {/* Step 4: Subscription Plan */}
+              {currentStep === 4 && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                    <h4 className="text-base font-semibold text-gray-900">Subscription Plan</h4>
+                  </div>
+
+                  {loadingPlans ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader className="h-6 w-6 animate-spin text-blue-600" />
+                      <span className="ml-2 text-gray-600">Loading available plans...</span>
+                    </div>
+                  ) : billingPlans.length === 0 ? (
+                    <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-900">No subscription plans configured</p>
+                          <p className="text-sm text-amber-700 mt-1">
+                            Your institution doesn't have any billing plans set up yet. You can create this client now
+                            and assign a subscription plan later from the Billing Configuration page.
+                          </p>
+                          <p className="text-xs text-amber-600 mt-2">
+                            Navigate to <strong>Admin Dashboard → Billing → Plans</strong> to create plans.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        Select a subscription plan for this client. You can change it later from the billing settings.
+                      </p>
+
+                      {/* Plan selection cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {billingPlans.filter(p => p.isActive).map((plan) => (
+                          <div
+                            key={plan.id}
+                            onClick={() => setFormData(prev => ({ ...prev, subscriptionPlanId: plan.id }))}
+                            className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all ${
+                              formData.subscriptionPlanId === plan.id
+                                ? 'border-blue-600 bg-blue-50 shadow-md'
+                                : 'border-gray-200 bg-white hover:border-blue-300'
+                            }`}
+                          >
+                            {formData.subscriptionPlanId === plan.id && (
+                              <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center">
+                                <Check className="h-4 w-4 text-white" />
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 mb-2">
+                              {plan.tier === 'basic' && <Shield className="h-5 w-5 text-gray-500" />}
+                              {plan.tier === 'standard' && <Heart className="h-5 w-5 text-blue-500" />}
+                              {plan.tier === 'premium' && <Crown className="h-5 w-5 text-purple-500" />}
+                              <h5 className="font-semibold text-gray-900">{plan.name}</h5>
+                            </div>
+                            {plan.description && (
+                              <p className="text-xs text-gray-500 mb-3">{plan.description}</p>
+                            )}
+                            <div className="space-y-1 mb-3">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-500">Weekly</span>
+                                <span className="font-medium text-gray-900">
+                                  {plan.currency === 'NGN' ? '₦' : plan.currency === 'USD' ? '$' : plan.currency || '$'}{plan.weeklyPrice}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-500">Monthly</span>
+                                <span className="font-medium text-gray-900">
+                                  {plan.currency === 'NGN' ? '₦' : plan.currency === 'USD' ? '$' : plan.currency || '$'}{plan.monthlyPrice}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-500">Annual</span>
+                                <span className="font-medium text-gray-900">
+                                  {plan.currency === 'NGN' ? '₦' : plan.currency === 'USD' ? '$' : plan.currency || '$'}{plan.annualPrice || plan.yearlyPrice}
+                                </span>
+                              </div>
+                            </div>
+                            {plan.features && plan.features.length > 0 && (
+                              <ul className="space-y-1">
+                                {plan.features.slice(0, 4).map((feature, i) => (
+                                  <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600">
+                                    <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+                                    <span>{feature}</span>
+                                  </li>
+                                ))}
+                                {plan.features.length > 4 && (
+                                  <li className="text-xs text-gray-400">+{plan.features.length - 4} more</li>
+                                )}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Billing cycle selector */}
+                      {formData.subscriptionPlanId && (
+                        <div>
+                          <label className={labelClass}>Billing Cycle</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+                            {BILLING_FREQUENCIES.map((freq) => (
+                              <button
+                                key={freq.id}
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, billingCycle: freq.id }))}
+                                className={`rounded-lg border-2 px-4 py-3 text-center transition-all ${
+                                  formData.billingCycle === freq.id
+                                    ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                    : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300'
+                                }`}
+                              >
+                                <div className="font-semibold text-sm">{freq.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Skip option */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, subscriptionPlanId: '' }))}
+                          className={`text-sm ${!formData.subscriptionPlanId ? 'text-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                          Skip — assign a plan later
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </form>
           )}
         </div>
 
         {/* Footer Actions */}
         {!createdPatientId && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 bg-gray-50">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-gray-200 px-4 sm:px-6 py-4 bg-gray-50 gap-3">
             <button
               type="button"
               onClick={currentStep === 1 ? onClose : handlePrevious}
-              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+              className="px-4 py-3 sm:py-2 min-h-[44px] rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
             >
               {currentStep === 1 ? 'Cancel' : 'Previous'}
             </button>
             <div className="flex gap-3">
-              {currentStep < 3 ? (
+              {currentStep < 4 ? (
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                  className="px-4 sm:px-6 py-3 sm:py-2 min-h-[44px] rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2"
                 >
                   Next
                   <UserPlus className="h-4 w-4" />

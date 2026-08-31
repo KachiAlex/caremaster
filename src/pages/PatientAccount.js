@@ -200,7 +200,7 @@ const PatientAccount = () => {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 rounded-lg hover:bg-slate-800/80 transition-colors"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg hover:bg-slate-800/80 transition-colors"
               >
                 <ArrowLeft className="h-5 w-5 text-slate-400" />
               </button>

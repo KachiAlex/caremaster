@@ -203,7 +203,9 @@ export async function addDoc(collectionRef, data) {
     body: JSON.stringify(data),
   });
   const record = body.data || {};
-  return { id: record.id || 'unknown' };
+  // Return the id plus any extra fields the backend may have added
+  // (e.g. loginAccount for auto-created client accounts)
+  return { id: record.id || 'unknown', ...record };
 }
 
 export async function setDoc(docRef, data, _options) {

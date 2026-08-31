@@ -128,22 +128,22 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
-            className="p-2 rounded-lg hover:bg-gray-100 transition"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 transition"
             aria-label="Previous month"
           >
             <ChevronLeft className="h-5 w-5 text-gray-600" />
           </button>
-          <span className="text-sm font-semibold text-gray-900 min-w-[140px] text-center">{monthLabel}</span>
+          <span className="text-sm font-semibold text-gray-900 min-w-0 flex-1 text-center truncate px-2">{monthLabel}</span>
           <button
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
-            className="p-2 rounded-lg hover:bg-gray-100 transition"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 transition"
             aria-label="Next month"
           >
             <ChevronRight className="h-5 w-5 text-gray-600" />
           </button>
           <button
             onClick={() => { setCurrentMonth(new Date()); setSelectedDate(new Date()); }}
-            className="ml-2 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+            className="ml-2 px-3 py-1.5 min-h-[44px] text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
           >
             Today
           </button>
@@ -192,7 +192,7 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
                       return (
                         <div
                           key={idx}
-                          className={`text-[10px] leading-tight rounded px-1 py-0.5 truncate flex items-center gap-1 ${typeColor(item.type, past)}`}
+                          className={`text-[11px] leading-tight rounded px-1 py-0.5 truncate flex items-center gap-1 ${typeColor(item.type, past)}`}
                           title={item.title}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -206,7 +206,7 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
                       );
                     })}
                     {items.length > 3 && (
-                      <div className="text-[10px] text-gray-500 font-medium">+{items.length - 3} more</div>
+                      <div className="text-[11px] text-gray-500 font-medium">+{items.length - 3} more</div>
                     )}
                   </div>
                 </button>
@@ -269,7 +269,7 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium capitalize ${
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium capitalize ${
                           past ? 'bg-red-100 text-red-700' :
                           item.type === 'appointment' ? 'bg-blue-100 text-blue-700' :
                           item.type === 'task' ? 'bg-green-100 text-green-700' :
@@ -278,7 +278,7 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
                           {item.type}
                         </span>
                         {item.priority && (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                          <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${
                             item.priority === 'urgent' ? 'bg-red-100 text-red-700' :
                             item.priority === 'high' ? 'bg-orange-100 text-orange-700' :
                             item.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
@@ -287,7 +287,7 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
                             {item.priority}
                           </span>
                         )}
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${
                           item.status === 'completed' ? 'bg-green-100 text-green-700' :
                           item.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
                           past ? 'bg-red-100 text-red-700' :

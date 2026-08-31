@@ -425,6 +425,31 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       });
     }
 
+    // ─── Account lockout check ───
+    // After 5 consecutive failed attempts, lock the account for 15 minutes.
+    const MAX_FAILED_ATTEMPTS = 5;
+    const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      const remainingMs = new Date(user.locked_until) - new Date();
+      const remainingMin = Math.ceil(remainingMs / 60000);
+      await recordAttempt(false, user, 'failed_login_locked');
+      return res.status(423).json({
+        success: false,
+        message: `Account is temporarily locked due to repeated failed login attempts. Please try again in ${remainingMin} minute(s).`
+      });
+    }
+
+    // If the lock period has expired, reset the counter
+    if (user.locked_until && new Date(user.locked_until) <= new Date()) {
+      await db('users').where({ id: user.id }).update({
+        failed_login_count: 0,
+        locked_until: null,
+      });
+      user.failed_login_count = 0;
+      user.locked_until = null;
+    }
+
     // Verify password
     let isPasswordValid = false;
     let passwordMigrated = false;
@@ -434,9 +459,35 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
 
     if (!isPasswordValid) {
       await recordAttempt(false, user, 'failed_login');
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
+
+      // Increment failed login count and lock if threshold reached
+      const newFailedCount = (user.failed_login_count || 0) + 1;
+      if (newFailedCount >= MAX_FAILED_ATTEMPTS) {
+        await db('users').where({ id: user.id }).update({
+          failed_login_count: newFailedCount,
+          locked_until: new Date(Date.now() + LOCK_DURATION_MS),
+        });
+        return res.status(423).json({
+          success: false,
+          message: `Account has been locked for 15 minutes due to ${MAX_FAILED_ATTEMPTS} failed login attempts.`
+        });
+      } else {
+        await db('users').where({ id: user.id }).update({
+          failed_login_count: newFailedCount,
+        });
+        const remaining = MAX_FAILED_ATTEMPTS - newFailedCount;
+        return res.status(401).json({
+          success: false,
+          message: `Invalid email or password. ${remaining} attempt(s) remaining before account lockout.`
+        });
+      }
+    }
+
+    // ─── Successful login: reset failed attempt counter ───
+    if (user.failed_login_count > 0 || user.locked_until) {
+      await db('users').where({ id: user.id }).update({
+        failed_login_count: 0,
+        locked_until: null,
       });
     }
 
@@ -445,15 +496,15 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       .where({ id: user.id })
       .update({ last_login: new Date() });
 
-    // Generate JWT token
-    const token = jwt.sign(
+    // Generate JWT token (sessionId is added after session creation below)
+    let token = jwt.sign(
       {
         userId: user.id,
         email: user.email,
         user_type: user.user_type
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
     // Record successful login attempt
@@ -521,6 +572,19 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       timestamp: new Date()
     });
 
+    // Re-issue token with sessionId embedded so the auth middleware
+    // can enforce session validity (logout invalidation, expiry checks)
+    token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        user_type: user.user_type,
+        sessionId: session.id,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    );
+
     // Legacy audit log
     await db('audit_logs').insert({
       user_id: user.id,
@@ -554,6 +618,46 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       is_verified: user.is_verified,
       two_factor_enabled: user.two_factor_enabled
     };
+
+    // For client/patient users, merge in their client profile data
+    // (date of birth, emergency contact, blood type, etc. live in the
+    // clients table, not the users table)
+    if (['client', 'patient', 'elderly'].includes(user.user_type)) {
+      try {
+        const clientRecord = await db('clients').where({ user_id: user.id }).first();
+        if (clientRecord) {
+          Object.assign(userProfile, {
+            clientId: clientRecord.client_id,
+            clientDocId: clientRecord.id,
+            name: clientRecord.name || clientRecord.full_name,
+            fullName: clientRecord.full_name,
+            dateOfBirth: clientRecord.date_of_birth,
+            gender: clientRecord.gender,
+            address: clientRecord.address,
+            city: clientRecord.city,
+            state: clientRecord.state,
+            zipCode: clientRecord.zip_code,
+            bloodType: clientRecord.blood_type,
+            genotype: clientRecord.genotype,
+            careLevel: clientRecord.care_level,
+            emergencyContactName: clientRecord.emergency_contact_name,
+            emergencyContactPhone: clientRecord.emergency_contact_phone,
+            emergencyContactRelationship: clientRecord.emergency_contact_relationship,
+            medicalConditions: clientRecord.medical_conditions || [],
+            medications: clientRecord.medications || [],
+            allergies: clientRecord.allergies || [],
+            insuranceProvider: clientRecord.insurance_provider,
+            insurancePolicyNumber: clientRecord.insurance_policy_number,
+            nationalId: clientRecord.national_id,
+            primaryCarePhysician: clientRecord.primary_care_physician,
+            physicianPhone: clientRecord.physician_phone,
+            notes: clientRecord.notes,
+          });
+        }
+      } catch (clientErr) {
+        logger.warn(`Failed to fetch client profile for user ${user.id}:`, clientErr);
+      }
+    }
 
     res.json({
       success: true,
@@ -767,14 +871,22 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    // Generate reset token
+    // Generate reset token (plaintext — sent to user via email, never stored)
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetExpires = new Date(Date.now() + 3600000); // 1 hour
+
+    // Store only the SHA-256 hash of the token, so a DB leak cannot
+    // be used to reset passwords. The plaintext token is sent to the
+    // user via email and never persisted.
+    const resetTokenHash = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
 
     await db('users')
       .where({ id: user.id })
       .update({
-        password_reset_token: resetToken,
+        password_reset_token: resetTokenHash,
         password_reset_expires: resetExpires
       });
 
@@ -804,8 +916,14 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Token and new password are required' });
     }
 
+    // Hash the incoming token to compare with the stored hash
+    const resetTokenHash = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
     const user = await db('users')
-      .where({ password_reset_token: token })
+      .where({ password_reset_token: resetTokenHash })
       .andWhere('password_reset_expires', '>', new Date())
       .first();
 
@@ -825,6 +943,12 @@ router.post('/reset-password', async (req, res) => {
         password_reset_token: null,
         password_reset_expires: null
       });
+
+    // Invalidate all active sessions so the user must log in again
+    // with the new password — any old JWT becomes useless.
+    await db('user_sessions')
+      .where({ user_id: user.id, active: true })
+      .update({ active: false, ended_at: new Date() });
 
     res.json({
       success: true,
@@ -954,6 +1078,75 @@ router.put('/security-settings', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Update security settings error:', error);
     res.status(500).json({ success: false, error: 'Failed to update security settings' });
+  }
+});
+
+// ─── Logout endpoint ───
+// Invalidates the current session so the JWT can no longer be used,
+// even before it expires. The auth middleware checks session validity
+// on every request, so a logged-out token is immediately rejected.
+router.post('/logout', authenticateToken, async (req, res) => {
+  try {
+    const sessionId = req.tokenPayload?.sessionId;
+    const userId = req.user.id;
+
+    // Invalidate the session in the database
+    if (sessionId) {
+      await db('user_sessions')
+        .where({ id: sessionId, user_id: userId })
+        .update({ active: false, ended_at: new Date() });
+    }
+
+    // Also invalidate any other active sessions for this user (optional —
+    // comment out if you want to only log out the current device)
+    // await db('user_sessions').where({ user_id: userId, active: true }).update({ active: false, ended_at: new Date() });
+
+    // Log the logout
+    await db('security_audit_logs').insert({
+      user_id: userId,
+      user_role: req.user.user_type,
+      action: 'logout',
+      resource_type: 'session',
+      resource_id: sessionId,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      institution_id: req.user.institution_id,
+      timestamp: new Date()
+    });
+
+    logger.info(`User logged out: ${req.user.email}`);
+
+    res.json({ success: true, message: 'Logged out successfully' });
+  } catch (error) {
+    logger.error('Logout error:', error);
+    res.status(500).json({ success: false, message: 'Logout failed' });
+  }
+});
+
+// ─── Invalidate all sessions (used after password change/reset) ───
+router.post('/invalidate-all-sessions', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    await db('user_sessions')
+      .where({ user_id: userId, active: true })
+      .update({ active: false, ended_at: new Date() });
+
+    await db('security_audit_logs').insert({
+      user_id: userId,
+      user_role: req.user.user_type,
+      action: 'all_sessions_invalidated',
+      resource_type: 'session',
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      institution_id: req.user.institution_id,
+      timestamp: new Date()
+    });
+
+    res.json({ success: true, message: 'All sessions invalidated' });
+  } catch (error) {
+    logger.error('Invalidate sessions error:', error);
+    res.status(500).json({ success: false, message: 'Failed to invalidate sessions' });
   }
 });
 

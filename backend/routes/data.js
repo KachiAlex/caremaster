@@ -1,5 +1,7 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const { authenticateToken } = require('../middleware/auth');
+const { scopeQuery, canAccessTable, canModifyRecord, ADMIN_ONLY_TABLES, PATIENT_ROLES, OWNER_COLUMN } = require('../middleware/authorization');
 const { logger } = require('../utils/logger');
 const db = require('../utils/database');
 
@@ -9,15 +11,21 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Whitelist of allowed tables
+// NOTE: Sensitive tables (login_attempts, user_sessions, security_audit_logs,
+// wallets, transactions, receipts) are REMOVED from this list. They must be
+// accessed via dedicated admin routes with proper role checks.
+// 'users' is included but row-level authorization restricts non-admins to
+// their own record only.
 const ALLOWED_TABLES = [
-  'users', 'institutions',
+  'users',
+  'institutions',
   'appointments', 'clients', 'caregivers', 'caregiver_profiles', 'care_tasks', 'assignments',
   'messages', 'care_logs', 'care_plans', 'vital_signs', 'prescriptions',
   'consultations',
   'diagnostics', 'notifications', 'attendance', 'invoices', 'billing_plans',
   'emergency_alerts', 'inventory', 'medications', 'patient_reports', 'subscriptions',
   'patients', 'calls', 'conversations', 'elderly_profiles',
-  'licenses', 'audit_logs', 'analytics_events', 'medication_logs', 'receipts', 'transactions', 'wallets',
+  'licenses', 'analytics_events', 'medication_logs',
   'institution_id_mappings',
   'schedules',
   // Frontend collection name aliases (map to real table via COLLECTION_TO_TABLE)
@@ -36,7 +44,6 @@ const ALLOWED_TABLES = [
   'reports',
   'campaigns',
   'suppliers', 'purchaseOrders', 'goodsReceived', 'stockAudit',
-  'securityAuditLogs', 'userSessions', 'loginAttempts', 'twoFactorAuth',
   'telemedicine_appointments', 'telemedicine_calls', 'telemedicine_recordings',
   // Collections with no backing DB table — return empty results (see NO_TABLE_COLLECTIONS)
   'medicalHistory', 'institutionAdmins', 'caregiverClockRecords',
@@ -116,7 +123,9 @@ const NO_TABLE_COLLECTIONS = [
   'doseLogs', 'sideEffects', 'failedLoginAttempts', 'blockedIps',
   'prescriptionRefills', 'messageTemplates', 'pharmacistMedicationData',
   // Collections used by frontend that have no backing DB table yet
-  'billingPlans', 'clientSubscriptions', 'billingSettings',
+  // NOTE: billingPlans, clientSubscriptions, and billingSettings have been
+  // removed from this list because they DO have backing DB tables
+  // (billing_plans, client_subscriptions, billing_settings).
   'bills', 'patientLogs', 'adlLogs', 'wages', 'reports', 'campaigns',
   'suppliers', 'purchaseOrders', 'goodsReceived', 'stockAudit',
   'securityAuditLogs', 'userSessions', 'loginAttempts', 'twoFactorAuth',
@@ -153,7 +162,7 @@ const WRITABLE_FIELDS = {
   billing_plans: ['name', 'institution_id', 'institutionId', 'description', 'amount', 'billing_cycle', 'billingCycle', 'tier', 'weekly_price', 'weeklyPrice', 'monthly_price', 'monthlyPrice', 'annual_price', 'annualPrice', 'yearly_price', 'yearlyPrice', 'currency', 'features', 'is_active', 'isActive', 'sort_order', 'sortOrder', 'status', 'created_at', 'updated_at'],
   client_subscriptions: ['institution_id', 'institutionId', 'client_id', 'clientId', 'plan_id', 'planId', 'plan_name', 'planName', 'plan_tier', 'planTier', 'billing_cycle', 'billingCycle', 'price', 'currency', 'status', 'start_date', 'startDate', 'end_date', 'endDate', 'next_billing_date', 'nextBillingDate', 'cancelled_at', 'cancelledAt', 'created_at', 'updated_at'],
   billing_settings: ['institution_id', 'institutionId', 'currency', 'enabled_frequencies', 'enabledFrequencies', 'default_frequency', 'defaultFrequency', 'tax_rate', 'taxRate', 'tax_label', 'taxLabel', 'taxes', 'invoice_prefix', 'invoicePrefix', 'invoice_notes', 'invoiceNotes', 'payment_terms_days', 'paymentTermsDays', 'late_fee_percentage', 'lateFeePercentage', 'auto_generate_invoices', 'autoGenerateInvoices', 'send_invoice_reminders', 'sendInvoiceReminders', 'reminder_days', 'reminderDays', 'created_at', 'updated_at'],
-  analytics_events: ['event_type', 'eventType', 'institution_id', 'institutionId', 'user_id', 'userId', 'details', 'created_at', 'updated_at'],
+  analytics_events: ['event_type', 'eventType', 'institution_id', 'institutionId', 'user_id', 'userId', 'data', 'details', 'created_at', 'updated_at'],
   medication_logs: ['patient_id', 'caregiver_id', 'institution_id', 'medication_id', 'medication_name', 'recorded_by', 'source', 'status', 'scheduled_time', 'taken_time', 'dosage', 'notes', 'metadata', 'created_at', 'updated_at'],
   emergency_alerts: ['patient_id', 'triggered_by', 'institution_id', 'source', 'type', 'severity', 'status', 'description', 'location', 'resolved_at', 'resolved_by', 'metadata', 'created_at', 'updated_at'],
   inventory: ['name', 'institution_id', 'institutionId', 'sku', 'category', 'description', 'quantity', 'min_stock', 'minStock', 'reorder_level', 'reorderLevel', 'unit', 'unit_price', 'unitPrice', 'cost', 'supplier', 'supplier_id', 'supplierId', 'expiry_date', 'expiryDate', 'last_restocked', 'lastRestocked', 'last_restocked_date', 'lastRestockedDate', 'batch_number', 'batchNumber', 'status', 'metadata', 'created_at', 'updated_at'],
@@ -296,6 +305,9 @@ const WRITE_COLUMN_ALIASES = {
   appointments: {
     client_id: 'patient_id',
   },
+  analytics_events: {
+    details: 'data',
+  },
 };
 
 function mapToSnakeCase(obj, tableName) {
@@ -331,6 +343,27 @@ function mapToCamelCase(obj) {
   return result;
 }
 
+// Fields that must never be exposed via the generic data API
+const SENSITIVE_FIELDS = [
+  'password_hash',
+  'password_reset_token',
+  'password_reset_expires',
+  'two_factor_secret',
+  'two_factor_backup_codes',
+  'biometric_credential_id',
+  'failed_login_count',
+  'locked_until',
+];
+
+function stripSensitiveFields(record) {
+  if (!record || typeof record !== 'object') return record;
+  const cleaned = { ...record };
+  for (const field of SENSITIVE_FIELDS) {
+    delete cleaned[field];
+  }
+  return cleaned;
+}
+
 // GET /api/data/:table - List all records with optional filtering
 router.get('/:table', async (req, res) => {
   try {
@@ -349,22 +382,32 @@ router.get('/:table', async (req, res) => {
     }
 
     const tableName = resolveTable(table);
+
+    // Row-level authorization: check if user can access this table
+    const access = canAccessTable(req.user.user_type, tableName);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, message: access.reason });
+    }
+
     const { limit = 100, offset = 0, orderBy = 'created_at', order = 'desc', ...filters } = req.query;
+
+    // Cap limit to prevent excessive data extraction
+    const cappedLimit = Math.min(parseInt(limit), 200);
 
     const validOrderBy = validateSortColumn(tableName, orderBy);
     const validOrder = ['asc', 'desc', 'ASC', 'DESC'].includes(order) ? order : 'desc';
 
     let query = db(tableName);
 
+    // ─── Row-level authorization: scope the query ───
+    await scopeQuery(query, req.user, tableName);
+
     // Translate filters for tables that use boolean "active" instead of "status"
     const BOOLEAN_ACTIVE_TABLES = ['caregivers', 'caregiver_profiles'];
-    const BOOLEAN_FLAG_TABLES = ['user_sessions', 'login_attempts', 'two_factor_auth'];
     const translatedFilters = {};
     for (const [key, value] of Object.entries(filters)) {
       if (key === 'status' && BOOLEAN_ACTIVE_TABLES.includes(tableName)) {
         translatedFilters['active'] = (value === 'active' || value === 'true');
-      } else if (['active', 'success', 'enabled', 'verified'].includes(key) && BOOLEAN_FLAG_TABLES.includes(tableName)) {
-        translatedFilters[key] = (value === 'true' || value === '1');
       } else {
         translatedFilters[key] = value;
       }
@@ -374,13 +417,6 @@ router.get('/:table', async (req, res) => {
     const ignoreKeys = ['limit', 'offset', 'orderBy', 'order', 'page'];
     for (const [key, value] of Object.entries(translatedFilters)) {
       if (!ignoreKeys.includes(key) && value !== undefined && value !== '') {
-        // Special filter: isSuperAdmin — users table uses user_type = 'super-admin'
-        if (key === 'isSuperAdmin' && tableName === 'users') {
-          if (value === 'true' || value === true) {
-            query = query.where('user_type', 'super-admin');
-          }
-          continue;
-        }
         const col = resolveColumn(tableName, key);
         // Skip filters for columns that don't exist in this table
         const ignoreForTable = IGNORE_FILTERS[tableName];
@@ -393,18 +429,14 @@ router.get('/:table', async (req, res) => {
 
     const records = await query
       .orderBy(validOrderBy, validOrder)
-      .limit(parseInt(limit))
+      .limit(cappedLimit)
       .offset(parseInt(offset));
 
+    // Build total count query with same scoping
     const totalQuery = db(tableName);
+    await scopeQuery(totalQuery, req.user, tableName);
     for (const [key, value] of Object.entries(translatedFilters)) {
       if (!ignoreKeys.includes(key) && value !== undefined && value !== '') {
-        if (key === 'isSuperAdmin' && tableName === 'users') {
-          if (value === 'true' || value === true) {
-            totalQuery.where('user_type', 'super-admin');
-          }
-          continue;
-        }
         const col = resolveColumn(tableName, key);
         const ignoreForTable = IGNORE_FILTERS[tableName];
         if (ignoreForTable && ignoreForTable.includes(col)) {
@@ -417,10 +449,10 @@ router.get('/:table', async (req, res) => {
 
     res.json({
       success: true,
-      data: records.map(mapToCamelCase),
+      data: records.map(r => stripSensitiveFields(mapToCamelCase(r))),
       pagination: {
         total: parseInt(totalResult.count),
-        limit: parseInt(limit),
+        limit: cappedLimit,
         offset: parseInt(offset)
       }
     });
@@ -439,6 +471,12 @@ router.get('/:table/:id', async (req, res) => {
     }
     const tableName = resolveTable(table);
 
+    // Row-level authorization: check table access
+    const access = canAccessTable(req.user.user_type, tableName);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, message: access.reason });
+    }
+
     let record = null;
 
     // Only query by id if it looks like a UUID
@@ -446,16 +484,25 @@ router.get('/:table/:id', async (req, res) => {
       record = await db(tableName).where({ id }).first();
     }
 
-    // Fallback: for users table, try firebase_uid if id lookup fails or id is not a UUID
-    if (!record && tableName === 'users' && id) {
-      record = await db('users').where({ firebase_uid: id }).first();
+    // Fallback: for caregivers table, try looking up via firebase_uid
+    if (!record && tableName === 'caregivers' && id) {
+      const user = await db('users').where({ firebase_uid: id }).first();
+      if (user) {
+        record = await db('caregivers').where({ user_id: user.id }).first();
+      }
     }
 
     if (!record) {
       return res.status(404).json({ success: false, message: 'Record not found' });
     }
 
-    res.json({ success: true, data: mapToCamelCase(record) });
+    // Row-level authorization: verify the user can see this specific record
+    const canAccess = await canModifyRecord(req.user, tableName, record);
+    if (!canAccess) {
+      return res.status(403).json({ success: false, message: 'You do not have access to this record' });
+    }
+
+    res.json({ success: true, data: stripSensitiveFields(mapToCamelCase(record)) });
   } catch (error) {
     logger.error(`Failed to fetch ${req.params.table}/${req.params.id}:`, error);
     res.status(500).json({ success: false, message: 'Failed to fetch record' });
@@ -482,6 +529,121 @@ function userTypeToSource(userType) {
   return map[userType] || 'system';
 }
 
+/**
+ * Automatically create a users account for a newly created client record.
+ * - If the client has an email, use it; otherwise generate a temporary one.
+ * - If the request body includes a `loginPassword`, use it; otherwise
+ *   generate a default password from the client's phone number.
+ * - Links the new user account to the client record via `clients.user_id`.
+ * - If a user account already exists for the email, skip creation and
+ *   just link it to the client record.
+ *
+ * Returns { email, password, temporaryPassword } or null if skipped.
+ */
+async function autoCreateClientAccount(clientRecord, requestBody, creatingUser) {
+  const clientEmail = (clientRecord.email || '').trim().toLowerCase();
+  const clientName = clientRecord.name || clientRecord.full_name || '';
+  const clientPhone = clientRecord.phone || '';
+  const institutionId = clientRecord.institution_id || creatingUser?.institution_id || null;
+
+  // Determine the email to use
+  let email = clientEmail;
+  if (!email) {
+    // No email provided — generate a temporary one so the client can still
+    // be assigned an account. They can update it later.
+    email = `client.${clientRecord.id.substring(0, 8)}@caremaster.temp`;
+  }
+
+  // Determine the password
+  let password = requestBody.loginPassword || requestBody.login_password || '';
+  let isTemporary = false;
+  if (!password) {
+    // Use the phone number as the default password (meets 6 char minimum
+    // since phone numbers are typically 10+ digits). Strip non-digits.
+    password = (clientPhone || '').replace(/\D/g, '');
+    if (password.length < 6) {
+      // Fallback: use a generated password based on the client ID
+      password = `Care${clientRecord.id.substring(0, 6)}`;
+    }
+    isTemporary = true;
+  }
+
+  if (password.length < 6) {
+    logger.warn(`Auto-account: password too short for client ${clientRecord.id}, skipping`);
+    return null;
+  }
+
+  // Split name into first/last
+  const nameParts = clientName.split(/\s+/);
+  const firstName = nameParts[0] || 'Client';
+  const lastName = nameParts.slice(1).join(' ') || '';
+
+  // Check if a user account already exists for this email
+  const existingUser = await db('users')
+    .whereRaw('LOWER(email) = LOWER(?)', [email])
+    .first();
+
+  if (existingUser) {
+    // Link the existing user account to the client record
+    await db('clients').where({ id: clientRecord.id }).update({
+      user_id: existingUser.id,
+      email: existingUser.email,
+      updated_at: new Date(),
+    });
+    logger.info(`Auto-account: linked existing user ${existingUser.email} to client ${clientRecord.id}`);
+    return {
+      email: existingUser.email,
+      password: null,
+      temporaryPassword: false,
+      linked: true,
+      userId: existingUser.id,
+    };
+  }
+
+  // Create the user account and link it to the client record in a transaction
+  const saltRounds = 12;
+  const passwordHash = await bcrypt.hash(password, saltRounds);
+  const matricNumber = `CLIENT/${Date.now().toString().slice(-6)}`;
+
+  const [newUser] = await db.transaction(async (trx) => {
+    const [user] = await trx('users').insert({
+      matric_number: matricNumber,
+      email,
+      password_hash: passwordHash,
+      first_name: firstName,
+      last_name: lastName,
+      phone: clientPhone || null,
+      department: 'Client',
+      level: '100',
+      session: '2024/2025',
+      user_type: 'client',
+      institution_id: institutionId,
+      is_active: true,
+      is_verified: true,
+      status: 'active',
+    }).returning(['id', 'email']);
+
+    // Link the user account to the client record
+    await trx('clients').where({ id: clientRecord.id }).update({
+      user_id: user.id,
+      email: email,
+      updated_at: new Date(),
+    });
+
+    return [user];
+  });
+
+  logger.info(`Auto-account: created user ${newUser.email} for client ${clientRecord.id} (by ${creatingUser?.email || 'system'})`);
+
+  return {
+    email: newUser.email,
+    password: isTemporary ? password : null, // Only return temp password to admin
+    temporaryPassword: isTemporary,
+    linked: false,
+    userId: newUser.id,
+  };
+}
+
 // POST /api/data/:table - Create record
 router.post('/:table', async (req, res) => {
   try {
@@ -495,7 +657,23 @@ router.post('/:table', async (req, res) => {
     }
     const tableName = resolveTable(table);
 
+    // Row-level authorization: check table access
+    const access = canAccessTable(req.user.user_type, tableName);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, message: access.reason });
+    }
+
     const data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body, tableName)));
+
+    // ─── Row-level authorization: enforce ownership on create ───
+    // Patients can only create records for themselves. If they try to set
+    // patient_id to someone else's ID, override it with their own.
+    if (PATIENT_ROLES.includes(req.user.user_type)) {
+      const ownerCol = OWNER_COLUMN[tableName];
+      if (ownerCol && ownerCol !== 'id') {
+        data[ownerCol] = req.user.id; // Force ownership
+      }
+    }
     // Remove id if present so DB generates one
     delete data.id;
 
@@ -530,7 +708,26 @@ router.post('/:table', async (req, res) => {
 
     const [record] = await db(tableName).insert(data).returning('*');
 
-    res.status(201).json({ success: true, data: mapToCamelCase(record) });
+    // ─── Auto-create a user account when a client record is created ───
+    // This ensures every client can log in immediately without the admin
+    // needing to perform a separate "create login account" step.
+    let autoAccount = null;
+    if (tableName === 'clients' && record.id) {
+      try {
+        autoAccount = await autoCreateClientAccount(record, req.body, req.user);
+      } catch (acctErr) {
+        // Non-fatal: the client record was created successfully.
+        // Log the error but don't fail the request — the admin can
+        // manually create the login account later.
+        logger.error(`Auto-account creation failed for client ${record.id}:`, acctErr);
+      }
+    }
+
+    const responseData = stripSensitiveFields(mapToCamelCase(record));
+    if (autoAccount) {
+      responseData.loginAccount = autoAccount;
+    }
+    res.status(201).json({ success: true, data: responseData });
   } catch (error) {
     logger.error(`Failed to create ${req.params.table}:`, error);
     res.status(500).json({ success: false, message: 'Failed to create record' });
@@ -549,6 +746,12 @@ router.put('/:table/:id', async (req, res) => {
     }
     const tableName = resolveTable(table);
 
+    // Row-level authorization: check table access
+    const access = canAccessTable(req.user.user_type, tableName);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, message: access.reason });
+    }
+
     const data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body, tableName)));
     delete data.id;
     delete data.created_at;
@@ -557,30 +760,42 @@ router.put('/:table/:id', async (req, res) => {
       return res.status(400).json({ success: false, message: 'No valid fields to update' });
     }
 
-    let query = db(tableName);
+    // First fetch the record to check ownership
+    let existingRecord = null;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
     if (isUuid) {
-      query = query.where({ id });
-    } else if (tableName === 'users') {
-      query = query.where({ firebase_uid: id });
+      existingRecord = await db(tableName).where({ id }).first();
     } else if (tableName === 'caregivers') {
       const user = await db('users').where({ firebase_uid: id }).first();
       if (user) {
-        query = query.where({ user_id: user.id });
-      } else {
-        return res.status(404).json({ success: false, message: 'Record not found' });
+        existingRecord = await db('caregivers').where({ user_id: user.id }).first();
       }
     } else {
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
     }
 
-    const [record] = await query.update(data).returning('*');
-    if (!record) {
+    if (!existingRecord) {
       return res.status(404).json({ success: false, message: 'Record not found' });
     }
 
-    res.json({ success: true, data: mapToCamelCase(record) });
+    // Row-level authorization: verify the user can modify this record
+    const canModify = await canModifyRecord(req.user, tableName, existingRecord);
+    if (!canModify) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to modify this record' });
+    }
+
+    // Patients cannot change ownership of their records
+    if (PATIENT_ROLES.includes(req.user.user_type)) {
+      const ownerCol = OWNER_COLUMN[tableName];
+      if (ownerCol && ownerCol !== 'id') {
+        delete data[ownerCol]; // Strip any attempt to reassign
+      }
+    }
+
+    const [record] = await db(tableName).where({ id: existingRecord.id }).update(data).returning('*');
+
+    res.json({ success: true, data: stripSensitiveFields(mapToCamelCase(record)) });
   } catch (error) {
     logger.error(`Failed to update ${req.params.table}/${req.params.id}:`, error);
     res.status(500).json({ success: false, message: 'Failed to update record' });
@@ -599,27 +814,38 @@ router.delete('/:table/:id', async (req, res) => {
     }
     const tableName = resolveTable(table);
 
-    let query = db(tableName);
+    // Row-level authorization: check table access
+    const access = canAccessTable(req.user.user_type, tableName);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, message: access.reason });
+    }
+
+    // Fetch the record first to check ownership
+    let existingRecord = null;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
     if (isUuid) {
-      query = query.where({ id });
-    } else if (tableName === 'users') {
-      // Non-UUID IDs in users table are firebase_uids
-      query = query.where({ firebase_uid: id });
+      existingRecord = await db(tableName).where({ id }).first();
     } else if (tableName === 'caregivers') {
-      // For caregivers, non-UUID IDs might be firebase_uids — look up the user first
       const user = await db('users').where({ firebase_uid: id }).first();
       if (user) {
-        query = query.where({ user_id: user.id });
-      } else {
-        return res.status(404).json({ success: false, message: 'Record not found' });
+        existingRecord = await db('caregivers').where({ user_id: user.id }).first();
       }
     } else {
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
     }
 
-    const count = await query.del();
+    if (!existingRecord) {
+      return res.status(404).json({ success: false, message: 'Record not found' });
+    }
+
+    // Row-level authorization: verify the user can delete this record
+    const canDelete = await canModifyRecord(req.user, tableName, existingRecord);
+    if (!canDelete) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to delete this record' });
+    }
+
+    const count = await db(tableName).where({ id: existingRecord.id }).del();
     if (count === 0) {
       return res.status(404).json({ success: false, message: 'Record not found' });
     }
@@ -640,9 +866,21 @@ router.post('/:table/bulk', async (req, res) => {
     }
     const tableName = resolveTable(table);
 
+    // Row-level authorization: check table access
+    const access = canAccessTable(req.user.user_type, tableName);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, message: access.reason });
+    }
+
     const records = req.body.records || req.body;
     if (!Array.isArray(records) || records.length === 0) {
       return res.status(400).json({ success: false, message: 'Records array required' });
+    }
+
+    // Cap bulk inserts to prevent DoS
+    const MAX_BULK = 100;
+    if (records.length > MAX_BULK) {
+      return res.status(400).json({ success: false, message: `Bulk insert limited to ${MAX_BULK} records` });
     }
 
     const inserted = [];
