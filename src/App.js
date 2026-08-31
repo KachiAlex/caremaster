@@ -72,6 +72,7 @@ const Pricing = lazy(() => import('./pages/Pricing'));
 // All onboarding is now integrated into Auth.js
 // Standalone admin pages removed - Institution Admin is the primary admin interface
 const MedicalDocuments = lazy(() => import('./pages/MedicalDocuments'));
+const ClientPortalHelp = lazy(() => import('./pages/ClientPortalHelp'));
 const ServiceProviderDashboard = lazy(() => import('./pages/ServiceProviderDashboard'));
 const RouteOptimization = lazy(() => import('./pages/RouteOptimization'));
 const WebRTCTest = lazy(() => import('./pages/WebRTCTest'));
@@ -590,11 +591,11 @@ function App() {
       >
         <Route index element={<Messages />} />
       </Route>
-      <Route 
-        path="/subscription" 
-        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />} 
+      <Route
+        path="/subscription"
+        element={user ? <ClientPortalLayout /> : <Navigate to="/login" replace />}
       >
-        <Route index element={<Subscription />} />
+        <Route index element={<ClientPortalHelp />} />
       </Route>
       <Route 
         path="/client-caregivers" 
