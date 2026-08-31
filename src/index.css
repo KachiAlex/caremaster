@@ -1123,9 +1123,20 @@ code {
 
 /* Mobile-optimized animations */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  /*
+   * Exclude Toastify elements from reduced-motion.
+   *
+   * react-toastify uses a CSS animation on the progress bar as its
+   * autoClose timer: the inline `animationDuration` is set to the
+   * autoClose delay (e.g. 6000ms) and `onAnimationEnd` calls
+   * closeToast(). If `animation-duration: 0.01ms !important` is
+   * applied to the progress bar, the animation finishes instantly,
+   * `onAnimationEnd` fires immediately, and the toast closes before
+   * the user can read it.
+   */
+  *:not([class*="Toastify"]):not([class*="toastify"]),
+  *:not([class*="Toastify"]):not([class*="toastify"])::before,
+  *:not([class*="Toastify"]):not([class*="toastify"])::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -1154,5 +1165,63 @@ code {
   .mobile-full-screen {
     height: 100vh;
   }
+}
+
+/* ========================================
+   Toast Notification Protection
+   ========================================
+   The global `* { margin: 0; padding: 0; box-sizing: border-box; }`
+   reset and the `prefers-reduced-motion` media query above can break
+   react-toastify. These rules ensure toasts render and animate
+   correctly regardless of other global CSS.
+   */
+
+/* Ensure the toast container is always on top */
+.Toastify {
+  z-index: 9999 !important;
+}
+
+/* Ensure toast animations are never overridden by global CSS.
+   The progress bar animation IS the autoClose timer — if its
+   duration is shortened, the toast closes prematurely. */
+.Toastify__progress-bar--animated {
+  animation-name: Toastify__trackProgress !important;
+  animation-timing-function: linear !important;
+  animation-fill-mode: forwards !important;
+  animation-iteration-count: 1 !important;
+  /* animation-duration is set inline by react-toastify JS —
+     do NOT override it here or in any global rule. */
+}
+
+/* Ensure toast enter/exit animations keep their duration */
+.Toastify--animate {
+  animation-fill-mode: both !important;
+}
+
+/* Prevent the global `* { margin: 0; padding: 0; }` reset from
+   breaking the toast's internal layout */
+.Toastify__toast {
+  margin: 0.5rem 0 !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.Toastify__toast-body {
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.Toastify__close-button {
+  padding: 0 !important;
+  margin: 0 0 0 0.5rem !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  opacity: 0.7 !important;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1 !important;
 }
 

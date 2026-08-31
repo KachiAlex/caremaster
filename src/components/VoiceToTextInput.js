@@ -37,7 +37,7 @@ const VoiceToTextInput = ({
 
       recognition.onstart = () => {
         setIsListening(true);
-        toast.info('Listening...', { autoClose: 2000 });
+        toast.info('Listening...', { autoClose: 4000 });
       };
 
       recognition.onresult = (event) => {

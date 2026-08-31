@@ -89,7 +89,7 @@ const LicenseRequired = () => {
 
       // License is now active!
       toast.success('✅ License activated successfully! Redirecting to dashboard...', {
-        autoClose: 2000
+        autoClose: 4000
       });
       
       // Redirect back to dashboard with a slight delay for the toast
