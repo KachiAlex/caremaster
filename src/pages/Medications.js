@@ -237,25 +237,25 @@ const Medications = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Add New Medication</h2>
           <form onSubmit={handleAddMedication} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Client selector (required when acting as doctor/caregiver) */}
-              <div className="md:col-span-2">
-                <label className="form-label">Client</label>
-                <select
-                  className="form-input"
-                  value={selectedPatientId}
-                  onChange={(e) => setSelectedPatientId(e.target.value)}
-                  required
-                >
-                  <option value="">{assignedPatients.length ? 'Select client...' : (user?.uid ? 'Self' : 'Select client...')}</option>
-                  {assignedPatients.map(p => (
-                    <option key={p.id} value={p.id}>{p.name || p.fullName || p.email || p.id}</option>
-                  ))}
-                  {/* Allow self if no assigned list present */}
-                  {(!assignedPatients.length && user?.uid) && (
-                    <option value={user.uid}>Myself</option>
-                  )}
-                </select>
-              </div>
+              {/* Client selector — only shown for doctors/caregivers who
+                  manage multiple patients. Patients manage their own
+                  medications, so no selector is needed. */}
+              {assignedPatients.length > 0 && (
+                <div className="md:col-span-2">
+                  <label className="form-label">Client</label>
+                  <select
+                    className="form-input"
+                    value={selectedPatientId}
+                    onChange={(e) => setSelectedPatientId(e.target.value)}
+                    required
+                  >
+                    <option value="">Select client...</option>
+                    {assignedPatients.map(p => (
+                      <option key={p.id} value={p.id}>{p.name || p.fullName || p.email || p.id}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="form-label">Medication Name</label>
                 <input
