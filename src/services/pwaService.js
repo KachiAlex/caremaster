@@ -33,9 +33,14 @@ class PWAService {
     
     if ('serviceWorker' in navigator) {
       try {
-        this.swRegistration = await navigator.serviceWorker.register('/sw.js');
+        // updateViaCache: 'none' forces the browser to always fetch sw.js
+        // from the network (bypassing HTTP cache) so new deploys are picked
+        // up immediately instead of waiting up to 24 hours.
+        this.swRegistration = await navigator.serviceWorker.register('/sw.js', {
+          updateViaCache: 'none'
+        });
         console.log('Service Worker registered successfully:', this.swRegistration);
-        // Force update check
+        // Force update check on every page load
         try { this.swRegistration.update && this.swRegistration.update(); } catch {}
         // Only reload on controllerchange if there's already a controller
         // (i.e. a new SW took over). Without this check, the first install

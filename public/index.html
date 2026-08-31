@@ -58,8 +58,23 @@
     <!-- Removed manifest and icon preloads to avoid unsupported/unused preload warnings -->
     
     <title>Care Master</title>
-    
-    <!-- PWA Service Worker Registration is disabled in development to avoid caching issues -->
+
+    <!-- Force service worker update on every page load.
+         This inline script runs BEFORE the React bundle and ensures the
+         browser always checks for a new sw.js (bypassing the 24-hour
+         HTTP cache). Without this, stale SW versions can serve old JS
+         bundles for up to 24 hours after a deploy. -->
+    <script>
+      (function() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            registrations.forEach(function(reg) {
+              reg.update();
+            });
+          });
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
