@@ -137,6 +137,10 @@ const UnifiedLogin = () => {
 
       toast.success('Login successful! Redirecting...');
 
+      // Mark a fresh login so SignInRouteHandler doesn't clear localStorage
+      // before the browser processes the window.location.href navigation.
+      sessionStorage.setItem('__fresh_login', Date.now().toString());
+
       // Super-admin always goes to the super-admin dashboard, regardless of institution
       // Use window.location.href for a hard navigation so React Router state
       // (e.g. SignInRouteHandler re-rendering) can't override the redirect.

@@ -785,7 +785,17 @@ function SignInRouteHandler() {
   // If the user is on /login (not coming from another route), show the login
   // form so they can log in with a different account. This prevents stale
   // sessions from trapping users in a redirect loop.
+  //
+  // BUT: if a fresh login just happened (UnifiedLogin set __fresh_login before
+  // calling window.location.href), do NOT clear localStorage — the browser is
+  // mid-navigation to the dashboard and clearing the token would cause a
+  // redirect back to /login.
   if (window.location.pathname === '/login') {
+    const freshLogin = sessionStorage.getItem('__fresh_login');
+    if (freshLogin && Date.now() - parseInt(freshLogin) < 15000) {
+      console.log('🔄 Fresh login in progress — waiting for navigation, not clearing session');
+      return <LoadingSpinner />;
+    }
     console.log('📝 User on /login page — showing login form (stale session will be replaced on new login)');
     // Clear the stale session so UnifiedLogin can render
     localStorage.removeItem('token');
