@@ -6,13 +6,16 @@ import { toast } from 'react-toastify';
 import rateLimiter from '../utils/rateLimiter';
 import authSecurityService from '../services/authSecurityService';
 import { fetchLicenseStatus } from '../services/licenseService';
-import { 
-  Mail, 
-  Lock, 
-  Eye, 
+import {
+  Mail,
+  Lock,
+  Eye,
   EyeOff,
   Loader,
-  XCircle
+  XCircle,
+  ShieldCheck,
+  HeartPulse,
+  Stethoscope,
 } from 'lucide-react';
 
 const UnifiedLogin = () => {
@@ -225,149 +228,258 @@ const UnifiedLogin = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-cream flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-md cm-animate-in">
-        {/* Brand header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-sage to-ink shadow-lg shadow-ink/20 mb-4">
-            <img
-              src="/images/caremaster-logo.jpg"
-              alt="Care Master Logo"
-              className="w-10 h-10 object-contain rounded-lg"
-            />
-          </div>
-          <h1 className="font-display text-3xl text-ink tracking-tight">Care Master</h1>
-          <p className="mt-1 text-sm text-[var(--cm-text-soft)]">One Stop Health Care Solution</p>
-        </div>
+    <div className="min-h-dvh w-full flex flex-col lg:flex-row bg-cream">
+      {/* ===== Left brand panel (desktop only) ===== */}
+      <div
+        className="hidden lg:flex lg:w-[44%] xl:w-[48%] flex-col justify-between p-10 xl:p-14 relative overflow-hidden"
+        style={{ background: 'linear-gradient(160deg, #12302C 0%, #0E2622 60%, #1D423C 100%)' }}
+      >
+        {/* Decorative blobs */}
+        <div
+          className="absolute top-[-60px] right-[-60px] w-72 h-72 rounded-full opacity-20"
+          style={{ background: 'radial-gradient(circle, #6B9080 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute bottom-[-80px] left-[-40px] w-80 h-80 rounded-full opacity-15"
+          style={{ background: 'radial-gradient(circle, #D9A441 0%, transparent 70%)' }}
+        />
 
-        <div className="cm-card p-6 sm:p-8">
-          <div className="mb-6">
-            <span className="cm-eyebrow">Account Access</span>
-            <h2 className="cm-display text-2xl text-ink mt-3">Welcome back</h2>
-            <p className="text-sm text-[var(--cm-text-soft)] mt-1">Sign in to manage care with confidence.</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="rounded-[10px] bg-coral-soft/40 border border-coral/20 text-coral px-4 py-3 text-sm">
-                {error}
-              </div>
-            )}
-
+        {/* Logo + tagline */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/15">
+              <img
+                src="/images/caremaster-logo.jpg"
+                alt="Care Master"
+                className="w-8 h-8 object-contain rounded-lg"
+              />
+            </div>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-ink mb-1.5">
-                Email address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-sage" />
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="cm-input pl-10"
-                  placeholder="you@example.com"
-                />
-              </div>
+              <h1 className="font-display text-2xl text-sand tracking-tight">Care Master</h1>
+              <p className="text-xs text-sand/60 font-mono tracking-wide">ONE STOP HEALTH CARE</p>
             </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-ink mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-sage" />
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="cm-input pl-10 pr-10"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sage hover:text-ink transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={() => {
-                  setResetEmail(email || '');
-                  setShowResetModal(true);
-                }}
-                className="text-sm font-medium text-ink hover:text-gold transition-colors"
-              >
-                Forgot password?
-              </button>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="cm-btn cm-btn-gold w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <Loader className="h-5 w-5 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-
-            <p className="text-center text-xs text-[var(--cm-text-soft)]">
-              We'll automatically detect your institution and role.
-            </p>
-          </form>
-
-          <div className="mt-6 pt-6 border-t border-ink/5 text-center">
-            <p className="text-xs text-[var(--cm-text-soft)]">
-              Need help?{' '}
-              <a href="/support" className="text-ink hover:text-gold font-medium transition-colors">
-                Contact Support
-              </a>
-            </p>
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-[var(--cm-text-soft)]/70">
-          Care Master — Compassionate care, connected.
-        </p>
+        {/* Hero message */}
+        <div className="relative z-10 max-w-md">
+          <h2 className="font-display text-3xl xl:text-4xl text-sand leading-tight tracking-tight">
+            Compassionate care,
+            <br />
+            <span className="text-gold">connected.</span>
+          </h2>
+          <p className="mt-4 text-sand/70 text-base leading-relaxed">
+            Manage appointments, vital signs, medications, and consultations — all in one secure platform built for patients, caregivers, and institutions.
+          </p>
+
+          {/* Feature pills */}
+          <div className="mt-8 space-y-3">
+            {[
+              { icon: HeartPulse, label: 'Real-time vital signs monitoring' },
+              { icon: Stethoscope, label: 'Telemedicine & consultation tools' },
+              { icon: ShieldCheck, label: 'HIPAA-compliant secure access' },
+            ].map((f, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-white/8 border border-white/10 flex items-center justify-center flex-shrink-0">
+                  <f.icon className="w-4.5 h-4.5 text-sage" style={{ width: 18, height: 18 }} />
+                </div>
+                <span className="text-sm text-sand/80">{f.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="relative z-10 text-xs text-sand/40 font-mono">
+          © {new Date().getFullYear()} Care Master. All rights reserved.
+        </div>
       </div>
 
-      {/* Password Reset Modal */}
-      {showResetModal && (
-        <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="cm-card w-full max-w-md overflow-hidden">
-            <div className="bg-ink text-sand px-6 py-4 rounded-t-[var(--cm-radius)] flex items-center justify-between">
+      {/* ===== Right login form panel ===== */}
+      <div className="flex-1 flex items-center justify-center p-5 sm:p-8 lg:p-10">
+        <div className="w-full max-w-[400px] cm-animate-in">
+          {/* Mobile logo (hidden on desktop) */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-sage to-ink shadow-lg shadow-ink/20 mb-3">
+              <img
+                src="/images/caremaster-logo.jpg"
+                alt="Care Master"
+                className="w-9 h-9 object-contain rounded-lg"
+              />
+            </div>
+            <h1 className="font-display text-2xl text-ink tracking-tight">Care Master</h1>
+            <p className="mt-0.5 text-xs text-[var(--cm-text-soft)] font-mono tracking-wide">
+              ONE STOP HEALTH CARE
+            </p>
+          </div>
+
+          {/* Card */}
+          <div className="cm-card p-6 sm:p-8">
+            {/* Header */}
+            <div className="mb-7">
+              <span className="cm-eyebrow">Account Access</span>
+              <h2 className="cm-display text-[26px] text-ink mt-3">Welcome back</h2>
+              <p className="text-sm text-[var(--cm-text-soft)] mt-1.5 leading-relaxed">
+                Sign in to manage care with confidence.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Error banner */}
+              {error && (
+                <div className="flex items-start gap-2.5 rounded-xl bg-coral-soft/50 border border-coral/25 px-4 py-3 text-sm text-coral">
+                  <XCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Email field */}
               <div>
-                <h3 className="font-display text-lg">Reset your password</h3>
-                <p className="text-sm text-sand/70 mt-0.5">Enter your email to receive a reset link.</p>
+                <label htmlFor="email" className="block text-[13px] font-semibold text-ink mb-2">
+                  Email address
+                </label>
+                <div className="relative">
+                  <Mail
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 flex-shrink-0"
+                    style={{ width: 18, height: 18, color: '#6B9080' }}
+                  />
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="cm-input pl-11"
+                    placeholder="you@example.com"
+                  />
+                </div>
+              </div>
+
+              {/* Password field */}
+              <div>
+                <label htmlFor="password" className="block text-[13px] font-semibold text-ink mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 flex-shrink-0"
+                    style={{ width: 18, height: 18, color: '#6B9080' }}
+                  />
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="cm-input pl-11 pr-11"
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--cm-text-soft)] hover:text-ink transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff style={{ width: 18, height: 18 }} /> : <Eye style={{ width: 18, height: 18 }} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Forgot password */}
+              <div className="flex justify-end -mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetEmail(email || '');
+                    setShowResetModal(true);
+                  }}
+                  className="text-[13px] font-medium text-[var(--cm-text-soft)] hover:text-gold-deep transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              {/* Submit button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="cm-btn cm-btn-gold w-full justify-center text-[15px] py-3 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </button>
+
+              {/* Trust note */}
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-sage" />
+                <p className="text-xs text-[var(--cm-text-soft)]">
+                  Secure login · We detect your role automatically
+                </p>
+              </div>
+            </form>
+
+            {/* Divider + help */}
+            <div className="mt-7 pt-5 border-t border-ink/8 text-center">
+              <p className="text-xs text-[var(--cm-text-soft)]">
+                Need help?{' '}
+                <a
+                  href="/support"
+                  className="text-ink hover:text-gold-deep font-semibold transition-colors"
+                >
+                  Contact Support
+                </a>
+              </p>
+            </div>
+          </div>
+
+          {/* Mobile footer */}
+          <p className="mt-6 text-center text-xs text-[var(--cm-text-soft)]/60 lg:hidden">
+            © {new Date().getFullYear()} Care Master — Compassionate care, connected.
+          </p>
+        </div>
+      </div>
+
+      {/* ===== Password Reset Modal ===== */}
+      {showResetModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(18, 48, 44, 0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowResetModal(false)}
+        >
+          <div
+            className="cm-card w-full max-w-[420px] overflow-hidden cm-animate-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div
+              className="px-6 py-5 flex items-center justify-between"
+              style={{ background: 'var(--cm-ink)', color: 'var(--cm-sand)' }}
+            >
+              <div>
+                <h3 className="font-display text-lg text-sand">Reset your password</h3>
+                <p className="text-sm text-sand/60 mt-0.5">Enter your email to receive a reset link.</p>
               </div>
               <button
                 onClick={() => setShowResetModal(false)}
-                className="p-2 text-sand/80 hover:text-sand hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 text-sand/70 hover:text-sand hover:bg-white/10 rounded-lg transition-colors"
                 aria-label="Close reset password modal"
               >
-                <XCircle className="h-5 w-5" />
+                <XCircle style={{ width: 20, height: 20 }} />
               </button>
             </div>
 
+            {/* Modal body */}
             <form
               onSubmit={async (event) => {
                 event.preventDefault();
@@ -395,25 +507,28 @@ const UnifiedLogin = () => {
               className="px-6 py-6 space-y-5"
             >
               <div>
-                <label htmlFor="reset-email" className="block text-sm font-medium text-ink mb-1.5">
+                <label htmlFor="reset-email" className="block text-[13px] font-semibold text-ink mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-sage" />
+                  <Mail
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 flex-shrink-0"
+                    style={{ width: 18, height: 18, color: '#6B9080' }}
+                  />
                   <input
                     id="reset-email"
                     type="email"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     required
-                    className="cm-input pl-10"
+                    className="cm-input pl-11"
                     placeholder="Enter your account email"
                     autoComplete="email"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-1">
+              <div className="flex justify-end gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -431,7 +546,7 @@ const UnifiedLogin = () => {
                 >
                   {resettingPassword ? (
                     <>
-                      <Loader className="animate-spin h-4 w-4" />
+                      <Loader className="w-4 h-4 animate-spin" />
                       Sending...
                     </>
                   ) : (
