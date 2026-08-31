@@ -18,6 +18,100 @@ import { db } from '../backend/config';
 
 const VITAL_SIGNS_COLLECTION = 'vital_signs';
 
+// ─── Type/value/unit ↔ structured DB columns transformation ───
+// The DB table stores vitals as structured columns (temperature, heart_rate,
+// blood_pressure_systolic, etc.) but the frontend uses a denormalized
+// { type, value, unit } format. These functions convert between the two.
+
+const VITAL_FIELD_MAP = {
+  'Blood Pressure': { fields: ['bloodPressureSystolic', 'bloodPressureDiastolic'], unit: 'mmHg', join: '/' },
+  'Heart Rate':     { fields: ['heartRate'], unit: 'bpm' },
+  'Temperature':    { fields: ['temperature'], unit: '°C' },
+  'Oxygen Saturation': { fields: ['oxygenSaturation'], unit: '%' },
+  'Respiratory Rate': { fields: ['respiratoryRate'], unit: 'breaths/min' },
+  'Blood Sugar':    { fields: ['bloodGlucose'], unit: 'mg/dL' },
+  'Weight':         { fields: ['weight'], unit: 'kg' },
+  'Height':         { fields: ['height'], unit: 'cm' },
+  'Pain Level':     { fields: ['painLevel'], unit: '/10' },
+};
+
+// Convert frontend { type, value, unit } → structured DB columns for POST
+function toStructuredFields(data) {
+  const result = { ...data };
+  if (data.type && data.value !== undefined) {
+    const mapping = VITAL_FIELD_MAP[data.type];
+    if (mapping) {
+      if (mapping.join) {
+        // Blood Pressure: "120/80" → systolic=120, diastolic=80
+        const parts = String(data.value).split(mapping.join).map(p => p.trim());
+        mapping.fields.forEach((field, i) => {
+          if (parts[i] !== undefined && parts[i] !== '') result[field] = parts[i];
+        });
+      } else {
+        result[mapping.fields[0]] = data.value;
+      }
+      // Clean up the denormalized fields — DB doesn't have these columns
+      delete result.type;
+      delete result.value;
+      delete result.unit;
+    }
+  }
+  return result;
+}
+
+// Convert structured DB record → array of { type, value, unit } for display
+function fromStructuredFields(record) {
+  const vitals = [];
+  for (const [type, mapping] of Object.entries(VITAL_FIELD_MAP)) {
+    const values = mapping.fields.map(f => record[f]);
+    // Skip if all values are null/undefined/empty
+    if (values.every(v => v === null || v === undefined || v === '')) continue;
+
+    let displayValue;
+    if (mapping.join) {
+      displayValue = values.join(mapping.join);
+    } else {
+      displayValue = values[0];
+    }
+
+    vitals.push({
+      ...record,
+      type,
+      value: displayValue,
+      unit: record.unit || mapping.unit,
+    });
+  }
+  return vitals;
+}
+
+// Normalize a single doc snapshot into a record with converted dates
+function normalizeVitalDoc(doc) {
+  const vitalData = doc.data();
+  return {
+    id: doc.id,
+    ...vitalData,
+    recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
+    createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
+    updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
+  };
+}
+
+// Expand an array of normalized records: if a record has a `type` field
+// (old Firestore format), keep as-is. Otherwise, expand structured DB
+// columns into multiple { type, value, unit } display records.
+function expandVitalRecords(records) {
+  const result = [];
+  for (const record of records) {
+    if (record.type) {
+      result.push(record);
+    } else {
+      result.push(...fromStructuredFields(record));
+    }
+  }
+  return result;
+}
+
+
 // Get all vital signs for a Client
 export const getVitalSignsByClient = async (clientId, institutionId = null) => {
   try {
@@ -39,40 +133,22 @@ export const getVitalSignsByClient = async (clientId, institutionId = null) => {
     }
     
     const querySnapshot = await getDocs(q);
-    
-    const vitalSigns = [];
-    querySnapshot.forEach((doc) => {
-      const vitalData = doc.data();
-      vitalSigns.push({
-        id: doc.id,
-        ...vitalData,
-        recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-        createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-        updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
-      });
-    });
-    
-    return vitalSigns;
+
+    const records = [];
+    querySnapshot.forEach((doc) => records.push(normalizeVitalDoc(doc)));
+
+    return expandVitalRecords(records);
   } catch (error) {
     if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
       console.warn('Index missing, using fallback query:', error.message);
       const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
       const fallbackQuery = query(
-        vitalSignsRef, 
+        vitalSignsRef,
         where('clientId', '==', clientId)
       );
       const fallbackSnapshot = await getDocs(fallbackQuery);
       const results = [];
-      fallbackSnapshot.forEach((doc) => {
-        const vitalData = doc.data();
-        results.push({
-          id: doc.id,
-          ...vitalData,
-          recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-          createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-          updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
-        });
-      });
+      fallbackSnapshot.forEach((doc) => results.push(normalizeVitalDoc(doc)));
       // Filter by institutionId in memory if provided
       const filtered = institutionId ? results.filter(v => v.institutionId === institutionId) : results;
       filtered.sort((a, b) => {
@@ -80,7 +156,7 @@ export const getVitalSignsByClient = async (clientId, institutionId = null) => {
         const bv = b.recordedAt?.getTime ? b.recordedAt.getTime() : new Date(b.recordedAt).getTime();
         return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
       });
-      return filtered;
+      return expandVitalRecords(filtered);
     }
     console.error('Error fetching vital signs:', error);
     throw error;
@@ -106,18 +182,13 @@ export const getLatestVitalSigns = async (clientId) => {
         const bTime = b.data().recordedAt?.toDate?.() || new Date(b.data().recordedAt);
         return bTime - aTime;
       });
-      
-      const doc = sortedDocs[0];
-      const vitalData = doc.data();
-      return {
-        id: doc.id,
-        ...vitalData,
-        recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-        createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-        updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
-      };
+
+      const latestRecord = normalizeVitalDoc(sortedDocs[0]);
+      // Expand structured fields and return the first vital type found
+      const expanded = expandVitalRecords([latestRecord]);
+      return expanded.length > 0 ? expanded[0] : latestRecord;
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error fetching latest vital signs:', error);
@@ -128,56 +199,11 @@ export const getLatestVitalSigns = async (clientId) => {
 // Get vital signs by type for a Client
 export const getVitalSignsByType = async (clientId, vitalType) => {
   try {
-    const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
-    const q = query(
-      vitalSignsRef, 
-      where('clientId', '==', clientId),
-      where('type', '==', vitalType),
-      orderBy('recordedAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    
-    const vitalSigns = [];
-    querySnapshot.forEach((doc) => {
-      const vitalData = doc.data();
-      vitalSigns.push({
-        id: doc.id,
-        ...vitalData,
-        recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-        createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-        updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
-      });
-    });
-    
-    return vitalSigns;
+    // The DB stores vitals as structured columns (not a `type` field), so we
+    // fetch all vitals for the client and filter by type after expansion.
+    const allVitals = await getVitalSignsByClient(clientId);
+    return allVitals.filter(v => v.type === vitalType);
   } catch (error) {
-    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
-      console.warn('Index missing, using fallback query:', error.message);
-      const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
-      const fallbackQuery = query(
-        vitalSignsRef, 
-        where('clientId', '==', clientId),
-        where('type', '==', vitalType)
-      );
-      const fallbackSnapshot = await getDocs(fallbackQuery);
-      const results = [];
-      fallbackSnapshot.forEach((doc) => {
-        const vitalData = doc.data();
-        results.push({
-          id: doc.id,
-          ...vitalData,
-          recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-          createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-          updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
-        });
-      });
-      results.sort((a, b) => {
-        const av = a.recordedAt?.getTime ? a.recordedAt.getTime() : new Date(a.recordedAt).getTime();
-        const bv = b.recordedAt?.getTime ? b.recordedAt.getTime() : new Date(b.recordedAt).getTime();
-        return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
-      });
-      return results;
-    }
     console.error('Error fetching vital signs by type:', error);
     throw error;
   }
@@ -188,13 +214,13 @@ export const createVitalSign = async (vitalSignData, institutionId = null) => {
   try {
     const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
     const newVitalSign = {
-      ...vitalSignData,
+      ...toStructuredFields(vitalSignData),
       institutionId: institutionId || vitalSignData.institutionId,
       recordedAt: vitalSignData.recordedAt || serverTimestamp(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
-    
+
     const docRef = await addDoc(vitalSignsRef, newVitalSign);
     return docRef.id;
   } catch (error) {
@@ -244,26 +270,17 @@ export const getVitalSignsByDateRange = async (clientId, startDate, endDate) => 
       orderBy('recordedAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    
-    const vitalSigns = [];
-    querySnapshot.forEach((doc) => {
-      const vitalData = doc.data();
-      vitalSigns.push({
-        id: doc.id,
-        ...vitalData,
-        recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-        createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-        updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
-      });
-    });
-    
-    return vitalSigns;
+
+    const records = [];
+    querySnapshot.forEach((doc) => records.push(normalizeVitalDoc(doc)));
+
+    return expandVitalRecords(records);
   } catch (error) {
     if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
       console.warn('Index missing, using fallback query:', error.message);
       const vitalSignsRef = collection(db, VITAL_SIGNS_COLLECTION);
       const fallbackQuery = query(
-        vitalSignsRef, 
+        vitalSignsRef,
         where('clientId', '==', clientId)
       );
       const fallbackSnapshot = await getDocs(fallbackQuery);
@@ -271,25 +288,17 @@ export const getVitalSignsByDateRange = async (clientId, startDate, endDate) => 
       const endMs = endDate.getTime();
       const results = [];
       fallbackSnapshot.forEach((doc) => {
-        const vitalData = doc.data();
-        const recordedAt = vitalData.recordedAt?.toDate?.() || new Date(vitalData.recordedAt);
-        // Filter by date range in memory
-        const recordedMs = recordedAt.getTime();
+        const record = normalizeVitalDoc(doc);
+        const recordedMs = record.recordedAt?.getTime ? record.recordedAt.getTime() : new Date(record.recordedAt).getTime();
         if (recordedMs < startMs || recordedMs > endMs) return;
-        results.push({
-          id: doc.id,
-          ...vitalData,
-          recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-          createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-          updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
-        });
+        results.push(record);
       });
       results.sort((a, b) => {
         const av = a.recordedAt?.getTime ? a.recordedAt.getTime() : new Date(a.recordedAt).getTime();
         const bv = b.recordedAt?.getTime ? b.recordedAt.getTime() : new Date(b.recordedAt).getTime();
         return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
       });
-      return results;
+      return expandVitalRecords(results);
     }
     console.error('Error fetching vital signs by date range:', error);
     throw error;
@@ -359,14 +368,17 @@ export const getVitalSignById = async (vitalSignId) => {
     const vitalSignSnap = await getDoc(vitalSignRef);
     
     if (vitalSignSnap.exists()) {
-      const vitalData = vitalSignSnap.data();
-      return {
+      const record = {
         id: vitalSignSnap.id,
-        ...vitalData,
-        recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-        createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-        updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
+        ...vitalSignSnap.data(),
+        recordedAt: vitalSignSnap.data().recordedAt?.toDate?.() || vitalSignSnap.data().recordedAt,
+        createdAt: vitalSignSnap.data().createdAt?.toDate?.() || vitalSignSnap.data().createdAt,
+        updatedAt: vitalSignSnap.data().updatedAt?.toDate?.() || vitalSignSnap.data().updatedAt,
       };
+      // Expand structured fields if no `type` field (DB format)
+      if (record.type) return record;
+      const expanded = expandVitalRecords([record]);
+      return expanded.length > 0 ? expanded[0] : record;
     } else {
       throw new Error('Vital sign not found');
     }
@@ -387,43 +399,25 @@ export const subscribeToVitalSigns = (callback, clientId) => {
   );
   
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const vitalSigns = [];
-    querySnapshot.forEach((doc) => {
-      const vitalData = doc.data();
-      vitalSigns.push({
-        id: doc.id,
-        ...vitalData,
-        recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-        createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-        updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
-      });
-    });
-    callback(vitalSigns);
+    const records = [];
+    querySnapshot.forEach((doc) => records.push(normalizeVitalDoc(doc)));
+    callback(expandVitalRecords(records));
   }, (error) => {
     if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
       console.warn('Index missing, using fallback subscription:', error.message);
       const fallbackQuery = query(
-        vitalSignsRef, 
+        vitalSignsRef,
         where('clientId', '==', clientId)
       );
       unsubscribeFallback = onSnapshot(fallbackQuery, (querySnapshot) => {
-        const vitalSigns = [];
-        querySnapshot.forEach((doc) => {
-          const vitalData = doc.data();
-          vitalSigns.push({
-            id: doc.id,
-            ...vitalData,
-            recordedAt: vitalData.recordedAt?.toDate?.() || vitalData.recordedAt,
-            createdAt: vitalData.createdAt?.toDate?.() || vitalData.createdAt,
-            updatedAt: vitalData.updatedAt?.toDate?.() || vitalData.updatedAt,
-          });
-        });
-        vitalSigns.sort((a, b) => {
+        const records = [];
+        querySnapshot.forEach((doc) => records.push(normalizeVitalDoc(doc)));
+        records.sort((a, b) => {
           const av = a.recordedAt?.getTime ? a.recordedAt.getTime() : new Date(a.recordedAt).getTime();
           const bv = b.recordedAt?.getTime ? b.recordedAt.getTime() : new Date(b.recordedAt).getTime();
           return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc
         });
-        callback(vitalSigns);
+        callback(expandVitalRecords(records));
       });
     } else {
       console.error('Error in vital signs subscription:', error);
