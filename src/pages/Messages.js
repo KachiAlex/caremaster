@@ -10,10 +10,13 @@ import {
   CheckCheck,
   Paperclip,
   Smile,
-  User
+  User,
+  Plus,
+  X
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { getConversationsByUser, getMessagesByConversation, sendMessage } from '../api/messagesAPI';
+import { getConversationsByUser, getMessagesByConversation, sendMessage, getOrCreateConversation } from '../api/messagesAPI';
+import { assignmentAPI } from '../api/assignmentAPI';
 import { toast } from 'react-toastify';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
@@ -35,6 +38,11 @@ const Messages = () => {
   const [callService] = useState(() => new CallService());
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
+
+  // New chat dialog
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [assignedCaregivers, setAssignedCaregivers] = useState([]);
+  const [loadingCaregivers, setLoadingCaregivers] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -216,6 +224,63 @@ const Messages = () => {
     }
   };
 
+  // ─── New chat functionality ───
+
+  // Load assigned caregivers for the "New Chat" dialog
+  const handleOpenNewChat = async () => {
+    setShowNewChat(true);
+    if (assignedCaregivers.length > 0) return; // already loaded
+
+    const clientId = userProfile?.id || userProfile?.uid || user?.uid;
+    if (!clientId) return;
+
+    setLoadingCaregivers(true);
+    try {
+      const assignments = await assignmentAPI.getAssignmentsByClient(clientId);
+      // Extract unique caregiver IDs and names
+      const caregivers = (assignments || [])
+        .map(a => ({
+          id: a.caregiverId || a.caregiver_id,
+          name: a.caregiverName || a.caregiver_name || 'Caregiver',
+          role: a.caregiverRole || a.role || 'Caregiver',
+        }))
+        .filter(c => c.id && c.id !== clientId);
+      setAssignedCaregivers(caregivers);
+    } catch (err) {
+      console.error('Error loading caregivers:', err);
+      toast.error('Could not load your assigned caregivers');
+    } finally {
+      setLoadingCaregivers(false);
+    }
+  };
+
+  // Start a new conversation with a caregiver
+  const handleStartNewChat = async (caregiver) => {
+    const clientId = userProfile?.id || userProfile?.uid || user?.uid;
+    if (!clientId || !caregiver?.id) return;
+
+    try {
+      const conversation = await getOrCreateConversation(clientId, caregiver.id, 'general');
+      // Add to conversations list and select it
+      const newConv = {
+        id: conversation.id,
+        participants: [clientId, caregiver.id],
+        conversationType: 'general',
+        lastMessage: '',
+        lastMessageTime: new Date(),
+        caregiverName: caregiver.name,
+      };
+      setConversations(prev => [newConv, ...prev]);
+      setFilteredConversations(prev => [newConv, ...prev]);
+      handleSelectChat(newConv);
+      setShowNewChat(false);
+      toast.success(`Chat started with ${caregiver.name}`);
+    } catch (err) {
+      console.error('Error starting new chat:', err);
+      toast.error('Failed to start conversation');
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!user?.uid || !newMessage.trim() || !selectedChat) return;
@@ -267,9 +332,19 @@ const Messages = () => {
       <div className="w-1/3 border-r border-gray-200 flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center mb-4">
-            <MessageCircle className="h-6 w-6 text-gray-700 mr-3" />
-            <h1 className="text-xl font-bold text-gray-900">Messages</h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <MessageCircle className="h-6 w-6 text-gray-700 mr-3" />
+              <h1 className="text-xl font-bold text-gray-900">Messages</h1>
+            </div>
+            <button
+              onClick={handleOpenNewChat}
+              className="flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              title="Start a new conversation"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New Chat
+            </button>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -460,6 +535,53 @@ const Messages = () => {
           isIncoming={false}
           onEnd={handleEndCall}
         />
+      )}
+
+      {/* New Chat Modal */}
+      {showNewChat && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Start New Chat</h2>
+              <button
+                onClick={() => setShowNewChat(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {loadingCaregivers ? (
+                <div className="text-center py-8 text-gray-500">Loading your caregivers...</div>
+              ) : assignedCaregivers.length === 0 ? (
+                <div className="text-center py-8">
+                  <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No assigned caregivers found.</p>
+                  <p className="text-sm text-gray-400 mt-1">Ask your institution to assign a caregiver to start chatting.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {assignedCaregivers.map((caregiver) => (
+                    <button
+                      key={caregiver.id}
+                      onClick={() => handleStartNewChat(caregiver)}
+                      className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 transition-colors text-left border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{caregiver.name}</p>
+                        <p className="text-sm text-gray-500">{caregiver.role}</p>
+                      </div>
+                      <MessageCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
