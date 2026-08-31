@@ -43,7 +43,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     
     <!-- Enhanced Security Headers (note: some headers like X-Frame-Options must be set via server) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' http: https: ws: wss: https://api.ipify.org; media-src 'self' https: blob:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https: ws: wss:; media-src 'self' https: blob:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(self), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()" />
@@ -59,22 +59,9 @@
     
     <title>Care Master</title>
 
-    <!-- Force service worker update on every page load.
-         This inline script runs BEFORE the React bundle and ensures the
-         browser always checks for a new sw.js (bypassing the 24-hour
-         HTTP cache). Without this, stale SW versions can serve old JS
-         bundles for up to 24 hours after a deploy. -->
-    <script>
-      (function() {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            registrations.forEach(function(reg) {
-              reg.update();
-            });
-          });
-        }
-      })();
-    </script>
+    <!-- Force service worker update on every page load (external file
+         to comply with strict CSP — no inline scripts allowed). -->
+    <script src="/sw-update.js"></script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
