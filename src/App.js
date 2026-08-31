@@ -787,14 +787,47 @@ function SignInRouteHandler() {
   // sessions from trapping users in a redirect loop.
   //
   // BUT: if a fresh login just happened (UnifiedLogin set __fresh_login before
-  // calling window.location.href), do NOT clear localStorage — the browser is
-  // mid-navigation to the dashboard and clearing the token would cause a
-  // redirect back to /login.
+  // calling window.location.href), redirect to the appropriate dashboard based
+  // on the user data in localStorage. The page reload from window.location.href
+  // resets React state, so UserContext.user is null and /dashboard would bounce
+  // back to /login — we must handle the redirect here instead.
   if (window.location.pathname === '/login') {
     const freshLogin = sessionStorage.getItem('__fresh_login');
-    if (freshLogin && Date.now() - parseInt(freshLogin) < 15000) {
-      console.log('🔄 Fresh login in progress — waiting for navigation, not clearing session');
-      return <LoadingSpinner />;
+    if (freshLogin && Date.now() - parseInt(freshLogin) < 30000) {
+      console.log('🔄 Fresh login detected — redirecting to dashboard from localStorage');
+      sessionStorage.removeItem('__fresh_login');
+
+      // Read user from localStorage to determine role-based redirect
+      try {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          const u = JSON.parse(stored);
+          const role = u.userType || u.type || u.role || (Array.isArray(u.roles) ? u.roles[0] : null);
+          const instId = u.institutionId;
+
+          if (role === 'super-admin') {
+            return <Navigate to="/super-admin/dashboard" replace />;
+          }
+          if (role === 'admin' && instId) {
+            return <Navigate to={`/institution-admin/dashboard?institution=${instId}`} replace />;
+          }
+          if (role === 'pharmacist' && instId) {
+            return <Navigate to={`/institution-pharmacy/dashboard?institution=${instId}`} replace />;
+          }
+          if ((role === 'caregiver' || role === 'doctor' || role === 'nurse') && instId) {
+            if (u.onboardingComplete) {
+              return <Navigate to={`/institution-caregiver/dashboard?institution=${instId}&role=${role}`} replace />;
+            }
+            return <Navigate to={`/institution-caregiver/onboarding?institution=${instId}`} replace />;
+          }
+          // client, patient, elderly, or unknown → client dashboard
+          return <Navigate to="/dashboard" replace />;
+        }
+      } catch (e) {
+        console.warn('Failed to parse stored user for fresh login redirect:', e);
+      }
+      // Fallback: if we can't parse user, just go to /dashboard
+      return <Navigate to="/dashboard" replace />;
     }
     console.log('📝 User on /login page — showing login form (stale session will be replaced on new login)');
     // Clear the stale session so UnifiedLogin can render
