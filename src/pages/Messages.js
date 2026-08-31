@@ -15,6 +15,8 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { getConversationsByUser, getMessagesByConversation, sendMessage } from '../api/messagesAPI';
 import { toast } from 'react-toastify';
+import CallService from '../services/callService';
+import CallInterface from '../components/CallInterface';
 
 const Messages = () => {
   const { user, userProfile } = useUser();
@@ -28,6 +30,11 @@ const Messages = () => {
   const [messages, setMessages] = useState([]);
 
   const [filteredConversations, setFilteredConversations] = useState(conversations);
+
+  // Call-related state
+  const [callService] = useState(() => new CallService());
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [activeCall, setActiveCall] = useState(null);
 
   const messagesEndRef = useRef(null);
 
@@ -81,6 +88,131 @@ const Messages = () => {
         toast.error('Could not load messages');
         setMessages([]);
       }
+    }
+  };
+
+  // ─── Call functionality ───
+
+  // Get the other participant's ID from the selected chat
+  const getOtherParticipantId = () => {
+    if (!selectedChat || !user?.uid) return null;
+    const participants = selectedChat.participants || [];
+    // Find a participant that isn't the current user
+    const other = participants.find(p => {
+      const pid = typeof p === 'object' ? (p?.id || p?.uid) : p;
+      return pid && pid !== user.uid;
+    });
+    if (other) return typeof other === 'object' ? (other?.id || other?.uid) : other;
+    // Fallback: use receiverId/senderId from conversation
+    return selectedChat.receiverId || selectedChat.senderId || null;
+  };
+
+  const getOtherParticipantName = () => {
+    if (!selectedChat) return 'Participant';
+    const participants = selectedChat.participants || [];
+    const other = participants.find(p => {
+      const pid = typeof p === 'object' ? (p?.id || p?.uid) : p;
+      return pid && pid !== user?.uid;
+    });
+    if (other) return typeof other === 'object' ? (other?.name || other?.displayName || 'Participant') : 'Participant';
+    return selectedChat.conversationType || 'Participant';
+  };
+
+  // Listen for incoming calls
+  useEffect(() => {
+    const userId = userProfile?.id || userProfile?.uid || user?.uid;
+    if (!userId) return;
+
+    const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {
+      if (callNotification.status === 'incoming') {
+        setIncomingCall({
+          callId: callNotification.callId,
+          callerId: callNotification.callerId,
+          callerName: callNotification.callerName || 'Caller',
+          callType: callNotification.callType || 'video',
+        });
+      }
+    });
+
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [userProfile, user, callService]);
+
+  // Initiate an outgoing call
+  const handleStartCall = async (callType = 'video') => {
+    const recipientId = getOtherParticipantId();
+    if (!recipientId) {
+      toast.error('No recipient available to call');
+      return;
+    }
+
+    const callerId = userProfile?.id || userProfile?.uid || user?.uid;
+    const callerName = userProfile?.name || userProfile?.displayName || 'Client';
+    const recipientName = getOtherParticipantName();
+
+    try {
+      const result = await callService.initiateCall({
+        callerId,
+        recipientId,
+        callType,
+        callerName,
+        recipientName,
+      });
+
+      setActiveCall({
+        callId: result.callId,
+        participantId: recipientId,
+        participantName: recipientName,
+        callType,
+      });
+    } catch (error) {
+      console.error('Error starting call:', error);
+      toast.error('Failed to start call. Please try again.');
+    }
+  };
+
+  // Accept an incoming call
+  const handleAcceptCall = async () => {
+    if (!incomingCall) return;
+    try {
+      const userId = userProfile?.id || userProfile?.uid || user?.uid;
+      await callService.answerCall(incomingCall.callId, userId);
+      setActiveCall({
+        callId: incomingCall.callId,
+        participantId: incomingCall.callerId,
+        participantName: incomingCall.callerName || 'Caller',
+        callType: incomingCall.callType,
+      });
+      setIncomingCall(null);
+    } catch (error) {
+      console.error('Error accepting call:', error);
+      toast.error('Failed to accept call');
+    }
+  };
+
+  // Reject an incoming call
+  const handleRejectCall = async () => {
+    if (!incomingCall) return;
+    try {
+      const userId = userProfile?.id || userProfile?.uid || user?.uid;
+      await callService.rejectCall(incomingCall.callId, userId);
+      setIncomingCall(null);
+      toast.info('Call rejected');
+    } catch (error) {
+      console.error('Error rejecting call:', error);
+      setIncomingCall(null);
+    }
+  };
+
+  // End the active call
+  const handleEndCall = async () => {
+    if (!activeCall) return;
+    try {
+      await callService.endCall(activeCall.callId);
+      setActiveCall(null);
+      toast.info('Call ended');
+    } catch (error) {
+      console.error('Error ending call:', error);
+      setActiveCall(null);
     }
   };
 
@@ -212,10 +344,18 @@ const Messages = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                  <button
+                    onClick={() => handleStartCall('audio')}
+                    className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    title="Voice Call"
+                  >
                     <Phone className="h-5 w-5" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                  <button
+                    onClick={() => handleStartCall('video')}
+                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Video Call"
+                  >
                     <Video className="h-5 w-5" />
                   </button>
                   <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
@@ -290,6 +430,37 @@ const Messages = () => {
           </div>
         )}
       </div>
+
+      {/* Incoming Call Interface */}
+      {incomingCall && (
+        <CallInterface
+          isOpen={!!incomingCall}
+          onClose={handleRejectCall}
+          callType={incomingCall.callType}
+          participantInfo={{
+            id: incomingCall.callerId,
+            name: incomingCall.callerName || 'Caller',
+          }}
+          isIncoming={true}
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+        />
+      )}
+
+      {/* Active Call Interface */}
+      {activeCall && (
+        <CallInterface
+          isOpen={!!activeCall}
+          onClose={handleEndCall}
+          callType={activeCall.callType}
+          participantInfo={{
+            id: activeCall.participantId,
+            name: activeCall.participantName,
+          }}
+          isIncoming={false}
+          onEnd={handleEndCall}
+        />
+      )}
     </div>
   );
 };

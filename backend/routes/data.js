@@ -88,6 +88,7 @@ const COLUMN_ALIASES = {
   care_plans: { client_id: 'patient_id' },
   patient_reports: { client_id: 'patient_id' },
   elderly_profiles: { client_id: 'patient_id' },
+  invoices: { client_id: 'patient_id' },
 };
 
 // Filters to silently ignore per table (column doesn't exist in that table).
