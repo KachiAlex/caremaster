@@ -56,7 +56,8 @@ const VitalSigns = () => {
           timestamp: new Date(vital.recordedAt).toLocaleString(),
           status: vital.status || 'Normal',
           statusColor: getStatusColor(vital.status || 'Normal'),
-          icon: getVitalIcon(vital.type)
+          icon: getVitalIcon(vital.type),
+          source: vital.source || null,
         }));
         
         setCurrentVitals(currentVitalsData);
@@ -236,7 +237,8 @@ const VitalSigns = () => {
           timestamp: new Date(vital.recordedAt).toLocaleString(),
           status: vital.status || 'Normal',
           statusColor: getStatusColor(vital.status || 'Normal'),
-          icon: getVitalIcon(vital.type)
+          icon: getVitalIcon(vital.type),
+          source: vital.source || null,
         }));
         
         setCurrentVitals(currentVitalsData);
@@ -397,7 +399,29 @@ const VitalSigns = () => {
                     <span className="text-3xl font-bold text-gray-900">{formatVitalDisplay(vital.value)}</span>
                     <span className="text-lg text-gray-600 ml-2">{vital.unit}</span>
                   </div>
-                  <p className="text-sm text-gray-500">{vital.timestamp}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm text-gray-500">{vital.timestamp}</p>
+                    {vital.source && (
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        vital.source === 'patient'
+                          ? 'bg-blue-100 text-blue-700'
+                          : vital.source === 'caregiver'
+                          ? 'bg-green-100 text-green-700'
+                          : vital.source === 'doctor'
+                          ? 'bg-purple-100 text-purple-700'
+                          : vital.source === 'nurse'
+                          ? 'bg-teal-100 text-teal-700'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {vital.source === 'patient' ? 'Self-reported' :
+                         vital.source === 'caregiver' ? 'Caregiver' :
+                         vital.source === 'doctor' ? 'Doctor' :
+                         vital.source === 'nurse' ? 'Nurse' :
+                         vital.source === 'pharmacist' ? 'Pharmacist' :
+                         vital.source === 'admin' ? 'Admin' : 'System'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })

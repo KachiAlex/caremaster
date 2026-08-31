@@ -136,9 +136,9 @@ const WRITABLE_FIELDS = {
   care_tasks: ['assignment_id', 'title', 'description', 'status', 'completed_at'],
   assignments: ['client_id', 'caregiver_id', 'institution_id', 'patient_id', 'start_date', 'end_date', 'status', 'type', 'notes', 'metadata'],
   messages: ['conversation_id', 'sender_id', 'receiver_id', 'recipient_id', 'content', 'text', 'message_type', 'attachments', 'read', 'sent_at', 'read_at', 'created_at', 'sender_id'],
-  care_logs: ['assignment_id', 'caregiver_id', 'client_id', 'notes', 'mood', 'timestamp'],
+  care_logs: ['assignment_id', 'caregiver_id', 'client_id', 'patient_id', 'recorded_by', 'source', 'notes', 'mood', 'timestamp', 'metadata', 'created_at', 'updated_at'],
   care_plans: ['client_id', 'title', 'description', 'start_date', 'end_date', 'status'],
-  vital_signs: ['patient_id', 'recorded_by', 'institution_id', 'recorded_at', 'temperature', 'temperature_unit', 'heart_rate', 'respiratory_rate', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'oxygen_saturation', 'weight', 'weight_unit', 'height', 'height_unit', 'blood_glucose', 'pain_level', 'notes', 'metadata', 'created_at', 'updated_at'],
+  vital_signs: ['patient_id', 'recorded_by', 'institution_id', 'source', 'recorded_at', 'temperature', 'temperature_unit', 'heart_rate', 'respiratory_rate', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'oxygen_saturation', 'weight', 'weight_unit', 'height', 'height_unit', 'blood_glucose', 'pain_level', 'notes', 'metadata', 'created_at', 'updated_at'],
   prescriptions: ['client_id', 'medication_name', 'dosage', 'frequency', 'start_date', 'end_date', 'prescribed_by'],
   consultations: ['client_id', 'client_name', 'doctor_id', 'doctor_name', 'institution_id', 'consultation_type', 'consultation_date', 'chief_complaint', 'subjective', 'objective', 'assessment', 'plan', 'vital_signs', 'related_medical_reports', 'related_care_logs', 'related_prescriptions', 'follow_up_required', 'follow_up_date', 'follow_up_notes', 'notes', 'private_notes', 'status', 'created_at', 'updated_at'],
   diagnostics: ['client_id', 'diagnosis', 'diagnosis_date', 'notes', 'diagnosed_by'],
@@ -149,7 +149,8 @@ const WRITABLE_FIELDS = {
   client_subscriptions: ['institution_id', 'institutionId', 'client_id', 'clientId', 'plan_id', 'planId', 'plan_name', 'planName', 'plan_tier', 'planTier', 'billing_cycle', 'billingCycle', 'price', 'currency', 'status', 'start_date', 'startDate', 'end_date', 'endDate', 'next_billing_date', 'nextBillingDate', 'cancelled_at', 'cancelledAt', 'created_at', 'updated_at'],
   billing_settings: ['institution_id', 'institutionId', 'currency', 'enabled_frequencies', 'enabledFrequencies', 'default_frequency', 'defaultFrequency', 'tax_rate', 'taxRate', 'tax_label', 'taxLabel', 'taxes', 'invoice_prefix', 'invoicePrefix', 'invoice_notes', 'invoiceNotes', 'payment_terms_days', 'paymentTermsDays', 'late_fee_percentage', 'lateFeePercentage', 'auto_generate_invoices', 'autoGenerateInvoices', 'send_invoice_reminders', 'sendInvoiceReminders', 'reminder_days', 'reminderDays', 'created_at', 'updated_at'],
   analytics_events: ['event_type', 'eventType', 'institution_id', 'institutionId', 'user_id', 'userId', 'details', 'created_at', 'updated_at'],
-  emergency_alerts: ['patient_id', 'triggered_by', 'institution_id', 'type', 'severity', 'status', 'description', 'location', 'resolved_at', 'resolved_by', 'metadata', 'created_at', 'updated_at'],
+  medication_logs: ['patient_id', 'caregiver_id', 'institution_id', 'medication_id', 'medication_name', 'recorded_by', 'source', 'status', 'scheduled_time', 'taken_time', 'dosage', 'notes', 'metadata', 'created_at', 'updated_at'],
+  emergency_alerts: ['patient_id', 'triggered_by', 'institution_id', 'source', 'type', 'severity', 'status', 'description', 'location', 'resolved_at', 'resolved_by', 'metadata', 'created_at', 'updated_at'],
   inventory: ['name', 'institution_id', 'institutionId', 'sku', 'category', 'description', 'quantity', 'min_stock', 'minStock', 'reorder_level', 'reorderLevel', 'unit', 'unit_price', 'unitPrice', 'cost', 'supplier', 'supplier_id', 'supplierId', 'expiry_date', 'expiryDate', 'last_restocked', 'lastRestocked', 'last_restocked_date', 'lastRestockedDate', 'batch_number', 'batchNumber', 'status', 'metadata', 'created_at', 'updated_at'],
   suppliers: ['name', 'institution_id', 'institutionId', 'contact_person', 'contactPerson', 'email', 'phone', 'address', 'city', 'state', 'country', 'notes', 'status', 'created_at', 'updated_at'],
   purchase_orders: ['institution_id', 'institutionId', 'supplier_id', 'supplierId', 'po_number', 'poNumber', 'status', 'items', 'expected_delivery_date', 'expectedDeliveryDate', 'total_amount', 'totalAmount', 'received_quantity', 'receivedQuantity', 'created_by', 'createdBy', 'approved_by', 'approvedBy', 'approved_at', 'approvedAt', 'notes', 'created_at', 'updated_at'],
@@ -455,6 +456,26 @@ router.get('/:table/:id', async (req, res) => {
   }
 });
 
+// Tables that track who entered a health record and in what role.
+// The backend auto-fills `source` and `recorded_by` from the authenticated
+// user so the frontend can't spoof it.
+const HEALTH_RECORD_TABLES = [
+  'vital_signs', 'emergency_alerts', 'medication_logs', 'care_logs',
+];
+
+// Map user_type from the users table to a source label
+function userTypeToSource(userType) {
+  if (!userType) return 'system';
+  const map = {
+    'client': 'patient', 'patient': 'patient', 'elderly': 'patient',
+    'caregiver': 'caregiver', 'nurse': 'nurse',
+    'doctor': 'doctor', 'pharmacist': 'pharmacist',
+    'admin': 'admin', 'institution-admin': 'admin',
+    'super-admin': 'admin',
+  };
+  return map[userType] || 'system';
+}
+
 // POST /api/data/:table - Create record
 router.post('/:table', async (req, res) => {
   try {
@@ -471,6 +492,30 @@ router.post('/:table', async (req, res) => {
     const data = serializeJsonValues(filterWritableFields(tableName, mapToSnakeCase(req.body, tableName)));
     // Remove id if present so DB generates one
     delete data.id;
+
+    // Auto-set source + recorded_by for health-record tables.
+    // The backend derives these from the authenticated user — the frontend
+    // cannot override them. This lets admin/doctor/caregiver distinguish
+    // patient self-reported records from staff-entered ones.
+    if (HEALTH_RECORD_TABLES.includes(tableName) && req.user) {
+      const source = userTypeToSource(req.user.user_type);
+      // Don't overwrite if source was explicitly provided AND the user is staff
+      // (patients can never set source — it's always derived from their role)
+      if (req.user.user_type === 'client' || req.user.user_type === 'patient' || req.user.user_type === 'elderly') {
+        data.source = 'patient';
+      } else if (!data.source) {
+        data.source = source;
+      }
+      // Set recorded_by if the table has it and it's not already set
+      if (!data.recorded_by && !data.triggered_by) {
+        // vital_signs uses recorded_by, emergency_alerts uses triggered_by
+        if (tableName === 'emergency_alerts') {
+          if (!data.triggered_by) data.triggered_by = req.user.id;
+        } else {
+          data.recorded_by = req.user.id;
+        }
+      }
+    }
 
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ success: false, message: 'No valid fields to create' });
