@@ -74,6 +74,30 @@ const COLLECTION_TO_TABLE = {
   analyticsEvents: 'analytics_events',
 };
 
+// Column aliases: maps frontend filter keys to actual DB column names per table.
+// The frontend sends "clientId" which becomes "client_id" via camelToSnake,
+// but many tables use "patient_id" instead.
+const COLUMN_ALIASES = {
+  appointments: { client_id: 'patient_id' },
+  vital_signs: { client_id: 'patient_id' },
+  prescriptions: { client_id: 'patient_id' },
+  diagnostics: { client_id: 'patient_id' },
+  emergency_alerts: { client_id: 'patient_id' },
+  care_logs: { client_id: 'patient_id' },
+  care_plans: { client_id: 'patient_id' },
+  patient_reports: { client_id: 'patient_id' },
+  elderly_profiles: { client_id: 'patient_id' },
+};
+
+function resolveColumn(table, key) {
+  const col = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+  const aliases = COLUMN_ALIASES[table];
+  if (aliases && aliases[col]) {
+    return aliases[col];
+  }
+  return col;
+}
+
 // Collections that have no backing DB table — return empty results
 // instead of 400 errors so the frontend doesn't crash
 const NO_TABLE_COLLECTIONS = [
@@ -297,7 +321,7 @@ router.get('/:table', async (req, res) => {
           }
           continue;
         }
-        const col = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        const col = resolveColumn(tableName, key);
         query = query.where(col, value);
       }
     }
@@ -316,7 +340,7 @@ router.get('/:table', async (req, res) => {
           }
           continue;
         }
-        const col = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        const col = resolveColumn(tableName, key);
         totalQuery.where(col, value);
       }
     }
