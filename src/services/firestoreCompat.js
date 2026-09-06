@@ -1,7 +1,6 @@
 import { dataAPI } from '../api/dataAPI';
 import { collection, query, getDocs, getDoc, setDoc, updateDoc, deleteDoc, addDoc, where, orderBy, limit, onSnapshot, doc, serverTimestamp, writeBatch, runTransaction, Timestamp, increment, arrayUnion, arrayRemove, startAt, startAfter, endAt, endBefore } from 'backend/database';
 import { db } from '../backend/config';
-import { Timestamp } from 'backend/auth';
 
 // Database compatibility layer - routes all Database calls to PostgreSQL backend
 // This allows existing API files to work without modification

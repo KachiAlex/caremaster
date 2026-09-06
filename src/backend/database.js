@@ -9,6 +9,10 @@
 
 // --- HTTP helper ---
 
+import { onAuthExpired } from '../utils/authEvents';
+import { offlineCache } from '../services/offlineCacheService';
+import { sseService } from '../services/sseService';
+
 const API_BASE = () =>
   process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -25,13 +29,26 @@ async function apiFetch(path, options = {}) {
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(url, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(url, { ...options, headers, credentials: 'include' });
+  } catch (networkError) {
+    // Network failures (offline, timeout, etc.) should not clear auth state.
+    const err = new Error('Network unavailable. Please check your connection and try again.');
+    err.code = 'network-error';
+    throw err;
+  }
 
   if (res.status === 401 || res.status === 403) {
+    // Clear stored credentials and let the application layer handle navigation
+    // so that background API calls don't force a full page reload.
     localStorage.removeItem('token');
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
-    // Redirect to login if not already there
+
+    onAuthExpired();
+
+    // Fallback: if no handler is registered, redirect to login
     if (!window.location.pathname.startsWith('/login')) {
       window.location.href = '/login';
     }
@@ -106,6 +123,10 @@ function buildQueryParams(constraints) {
     if (c.type === 'where') {
       if (c.op === '==') {
         params.set(c.field, c.value);
+      } else if (c.op === 'in' && Array.isArray(c.value)) {
+        // Translate array-contains 'in' operator to a comma-separated query param.
+        // The backend converts it back to a WHERE IN clause.
+        params.set(`${c.field}__in`, c.value.join(','));
       } else {
         filters.push(c);
       }
@@ -141,19 +162,19 @@ function applyClientFilter(records, filters) {
 
 // --- Snapshot helpers ---
 
-function makeDocSnapshot(id, data) {
+function makeDocSnapshot(id, data, collectionName = '') {
   return {
     id,
     exists: () => true,
     data: () => data,
-    ref: { __type: 'doc', collection: '', id },
+    ref: { __type: 'doc', collection: collectionName, id },
   };
 }
 
-function makeQuerySnapshot(records) {
+function makeQuerySnapshot(records, collectionName = '') {
   const docs = records.map((r) => {
     const { id, ...rest } = r;
-    return makeDocSnapshot(id || r.id, rest);
+    return makeDocSnapshot(id || r.id, rest, collectionName);
   });
   return {
     docs,
@@ -161,6 +182,10 @@ function makeQuerySnapshot(records) {
     size: docs.length,
     forEach: (cb) => docs.forEach(cb),
     map: (cb) => docs.map(cb),
+    // Firebase-compatible docChanges — returns all docs as "added" type.
+    // onSnapshot re-fetches the full query each poll, so we track which docs
+    // we've already seen via a closure on the snapshot instance.
+    docChanges: () => docs.map((d) => ({ type: 'added', doc: d })),
   };
 }
 
@@ -171,16 +196,33 @@ export async function getDocs(queryRef) {
   const qs = params.toString();
   const collectionName = queryRef.collection || queryRef.path;
   const path = `/data/${collectionName}${qs ? `?${qs}` : ''}`;
-  const body = await apiFetch(path);
-  const records = body.data || [];
-  const filtered = applyClientFilter(records, filters);
-  return makeQuerySnapshot(filtered);
+  const cacheKey = offlineCache.keyForRequest(`/data/${collectionName}`, Object.fromEntries(params));
+
+  try {
+    const body = await apiFetch(path);
+    const records = body.data || [];
+    const filtered = applyClientFilter(records, filters);
+    offlineCache.set(cacheKey, records);
+    return makeQuerySnapshot(filtered, collectionName);
+  } catch (error) {
+    if ((error.code === 'network-error' || !offlineCache.isOnline())) {
+      const cached = offlineCache.get(cacheKey);
+      if (cached) {
+        const filtered = applyClientFilter(cached, filters);
+        return { ...makeQuerySnapshot(filtered, collectionName), __offline: true };
+      }
+    }
+    throw error;
+  }
 }
 
 export async function getDoc(docRef) {
+  const cacheKey = offlineCache.keyForRequest(`/data/${docRef.collection}/${docRef.id}`, {});
+
   try {
     const body = await apiFetch(`/data/${docRef.collection}/${docRef.id}`);
     const record = body.data || {};
+    offlineCache.set(cacheKey, record);
     return {
       id: record.id || docRef.id,
       exists: () => true,
@@ -189,7 +231,20 @@ export async function getDoc(docRef) {
     };
   } catch (err) {
     if (err.code === 404) {
+      offlineCache.remove(cacheKey);
       return { id: docRef.id, exists: () => false, data: () => null, ref: docRef };
+    }
+    if ((err.code === 'network-error' || !offlineCache.isOnline())) {
+      const cached = offlineCache.get(cacheKey);
+      if (cached) {
+        return {
+          id: cached.id || docRef.id,
+          exists: () => true,
+          data: () => cached,
+          ref: docRef,
+          __offline: true,
+        };
+      }
     }
     throw err;
   }
@@ -231,19 +286,67 @@ export async function deleteDoc(docRef) {
 // --- Real-time listeners (polling-based) ---
 
 const POLL_INTERVAL = 5000;
+const FAST_POLL_INTERVAL = 1000; // For signaling/call notifications
 
 export function onSnapshot(queryRef, callback, errorCallback) {
-  getDocs(queryRef)
-    .then((snap) => callback(snap))
-    .catch((err) => errorCallback && errorCallback(err));
+  // Determine poll interval — use faster polling for signaling and
+  // callNotifications collections where near-real-time delivery is critical
+  const collectionName = queryRef.collection || queryRef.path || '';
+  const isFastCollection = collectionName === 'signaling' || collectionName === 'callNotifications';
+  const interval = isFastCollection ? FAST_POLL_INTERVAL : POLL_INTERVAL;
 
-  const intervalId = setInterval(() => {
+  // Track which doc IDs we've already emitted so docChanges only reports
+  // genuinely new documents (matching Firebase onSnapshot semantics).
+  const seenIds = new Set();
+  let isFirstPoll = true;
+
+  const poll = () => {
     getDocs(queryRef)
-      .then((snap) => callback(snap))
-      .catch((err) => errorCallback && errorCallback(err));
-  }, POLL_INTERVAL);
+      .then((snap) => {
+        // Build a filtered snapshot that only includes new docs in docChanges
+        const newDocs = snap.docs.filter((d) => {
+          const isNew = !seenIds.has(d.id);
+          if (isNew) seenIds.add(d.id);
+          return isNew;
+        });
 
-  return () => clearInterval(intervalId);
+        // On first poll, all docs are "added". On subsequent polls, only
+        // genuinely new docs are "added". Return the full docs list but
+        // with docChanges reflecting only new additions.
+        const changes = newDocs.map((d) => ({ type: 'added', doc: d }));
+
+        const enrichedSnap = {
+          ...snap,
+          docs: snap.docs,
+          empty: snap.empty,
+          size: snap.size,
+          docChanges: () => changes,
+        };
+
+        // Only call back if there are actual changes (or it's the first poll)
+        if (changes.length > 0 || isFirstPoll) {
+          callback(enrichedSnap);
+          isFirstPoll = false;
+        }
+      })
+      .catch((err) => errorCallback && errorCallback(err));
+  };
+
+  poll();
+  const intervalId = setInterval(poll, interval);
+
+  // Subscribe to SSE push events for this collection. When the backend
+  // reports a change, poll immediately instead of waiting for the interval.
+  const unsubscribeSSE = collectionName
+    ? sseService.subscribe(collectionName, () => {
+        poll();
+      })
+    : null;
+
+  return () => {
+    clearInterval(intervalId);
+    if (unsubscribeSSE) unsubscribeSSE();
+  };
 }
 
 // --- Batch & Transaction ---

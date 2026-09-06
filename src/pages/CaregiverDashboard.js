@@ -29,10 +29,11 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { useRole } from '../hooks';
 import { caregiverAPI } from '../api/caregiverAPI';
 import { getCareTasksByCaregiver, getTodayTasks } from '../api/careTasksAPI';
 import { getTodaysAppointments } from '../api/appointmentsAPI';
-import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
+import { getClientsByDoctor, getClientById, getClientsByIds } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { startTask, completeTask } from '../api/taskTimeTrackingAPI';
 import { emergencyAPI } from '../api/emergencyAPI';
@@ -306,10 +307,10 @@ const CaregiverDashboard = () => {
           try {
             const assignments = await assignmentAPI.getAssignmentsByCaregiver(user?.uid);
             const uniqueClientIds = Array.from(new Set(assignments.map(a => a.clientId).filter(Boolean)));
-            const fetched = await Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)));
-            clients = fetched.filter(Boolean);
+            const fetched = await getClientsByIds(uniqueClientIds).catch(() => []);
+            clients = Array.isArray(fetched) ? fetched.filter(Boolean) : [];
           } catch (error) {
-            console.log('No client assignments found - this is normal for new users');
+            // No client assignments found - this is normal for new users
           }
           
           // Doctor fallback: clients.assignedDoctor only if no assignment docs found
@@ -589,10 +590,7 @@ const CaregiverDashboard = () => {
   };
 
   // --- Role-specific UI helpers ---
-  const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor');
-  const isNurse = (userProfile?.medicalQualification || '').includes('Nurse');
-  const isMedicalProfessional = isDoctor || isNurse;
-  const isNonMedicalCaregiver = !isMedicalProfessional;
+  const { isDoctor, isNurse, isMedicalProfessional, isNonMedicalCaregiver } = useRole(userProfile);
 
   const renderClientSelector = () => {
     return (

@@ -55,7 +55,7 @@ const CaregiverOnboarding = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6">
       {step === 1 && (
         <div>
           <h2 className="text-xl font-semibold mb-4">Caregiver Profile</h2>

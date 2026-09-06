@@ -1,5 +1,6 @@
 import { collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, limit } from 'backend/database';;
 import { auth, db } from '../backend/config';;
+import { buildConstraints } from './deviceSettingsService';;
 
 class WebRTCService {
   constructor() {
@@ -26,41 +27,64 @@ class WebRTCService {
       onStatsUpdate: null,
       onScreenShare: null
     };
-    
-    this.configuration = {
-      iceServers: [
-        // STUN servers for NAT discovery
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        // Public TURN servers (for production, use your own TURN servers)
-        {
-          urls: 'turn:openrelay.metered.ca:80',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
+
+    // ICE config is fetched from the backend so TURN credentials are not
+    // exposed in the frontend bundle. Until it is loaded, we start with STUN only.
+    this.configuration = null;
+    this.iceConfigPromise = null;
+  }
+
+  // Fetch ICE configuration from the backend (cached for the service lifetime)
+  async getIceConfiguration() {
+    if (this.configuration) return this.configuration;
+    if (this.iceConfigPromise) return this.iceConfigPromise;
+
+    this.iceConfigPromise = (async () => {
+      try {
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+        const baseUrl = process.env.REACT_APP_API_URL || '';
+        const res = await fetch(`${baseUrl}/api/turn-credentials`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data;
         }
-      ],
-      iceCandidatePoolSize: 10,
-      bundlePolicy: 'max-bundle',
-      rtcpMuxPolicy: 'require'
-    };
+      } catch (error) {
+        console.error('Failed to fetch TURN credentials, falling back to STUN only:', error);
+      }
+      return {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' },
+        ],
+        iceCandidatePoolSize: 10,
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require'
+      };
+    })();
+
+    this.configuration = await this.iceConfigPromise;
+    return this.configuration;
   }
 
   // Initialize the WebRTC service
   async initialize() {
     try {
+      // Close any existing peer connection from a previous call
+      if (this.peerConnection) {
+        try { this.peerConnection.close(); } catch (e) { /* ignore */ }
+        this.peerConnection = null;
+      }
+      // Reset state from any previous call
+      this.callId = null;
+      this.isInitiator = false;
+      this.remoteStream = null;
+      this.localStream = null;
+
       await this.setupPeerConnection();
       return true;
     } catch (error) {
@@ -71,7 +95,8 @@ class WebRTCService {
 
   // Setup peer connection
   async setupPeerConnection() {
-    this.peerConnection = new RTCPeerConnection(this.configuration);
+    const config = await this.getIceConfiguration();
+    this.peerConnection = new RTCPeerConnection(config);
 
     // Handle ICE candidates
     this.peerConnection.onicecandidate = (event) => {
@@ -110,9 +135,10 @@ class WebRTCService {
     // Handle ICE connection state changes
     this.peerConnection.oniceconnectionstatechange = () => {
       console.log('ICE connection state:', this.peerConnection.iceConnectionState);
-      if (this.peerConnection.iceConnectionState === 'failed' ||
-          this.peerConnection.iceConnectionState === 'disconnected' ||
-          this.peerConnection.iceConnectionState === 'closed') {
+      // Only end call on 'failed' — 'disconnected' can fire temporarily
+      // during ICE restarts or brief network changes and shouldn't
+      // immediately terminate the call.
+      if (this.peerConnection.iceConnectionState === 'failed') {
         this.endCall();
       }
     };
@@ -186,11 +212,9 @@ class WebRTCService {
       this.callId = callId;
       this.isInitiator = false;
 
-      // Get user media
-      const mediaConstraints = callType === 'video' 
-        ? { video: true, audio: true }
-        : { video: false, audio: true };
-      
+      // Get user media — use saved device preferences if available
+      const mediaConstraints = buildConstraints(callType);
+
       await this.getUserMedia(mediaConstraints);
 
       return true;
@@ -272,24 +296,45 @@ class WebRTCService {
     }
 
     try {
-      // Serialize RTCIceCandidate if present
-      let serializedData = data;
-      if (type === 'ice-candidate' && data.candidate) {
-        serializedData = {
-          candidate: data.candidate.candidate,
-          sdpMLineIndex: data.candidate.sdpMLineIndex,
-          sdpMid: data.candidate.sdpMid,
-          usernameFragment: data.candidate.usernameFragment
-        };
-      }
-      
-      await addDoc(collection(db, 'signaling'), {
+      const from = this.getCurrentUserId();
+      const baseDoc = {
         callId: this.callId,
         type: type,
-        data: serializedData,
-        from: this.getCurrentUserId(),
+        from: from,
         timestamp: serverTimestamp()
-      });
+      };
+
+      if (type === 'ice-candidate' && data.candidate) {
+        // Store ICE candidate in the `candidate` jsonb column
+        await addDoc(collection(db, 'signaling'), {
+          ...baseDoc,
+          candidate: {
+            candidate: data.candidate.candidate,
+            sdpMLineIndex: data.candidate.sdpMLineIndex,
+            sdpMid: data.candidate.sdpMid,
+            usernameFragment: data.candidate.usernameFragment
+          }
+        });
+      } else if (type === 'offer' || type === 'answer') {
+        // Store SDP in the `sdp` text column (serialize RTCSessionDescription)
+        const sdp = data.offer?.sdp || data.answer?.sdp || (typeof data === 'string' ? data : JSON.stringify(data));
+        await addDoc(collection(db, 'signaling'), {
+          ...baseDoc,
+          sdp: sdp,
+          // Also store the full type info so the receiver knows if it's an offer or answer
+          // The `type` column already stores this
+        });
+      } else if (type === 'reject') {
+        await addDoc(collection(db, 'signaling'), {
+          ...baseDoc
+        });
+      } else {
+        // Generic fallback — store as sdp text
+        await addDoc(collection(db, 'signaling'), {
+          ...baseDoc,
+          sdp: JSON.stringify(data)
+        });
+      }
     } catch (error) {
       console.error('Error sending signaling message:', error);
       throw error;
@@ -307,10 +352,38 @@ class WebRTCService {
     return onSnapshot(signalingQuery, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
-          const message = change.doc.data();
-          if (message.from !== this.getCurrentUserId()) {
-            onMessage(message);
+          const raw = change.doc.data();
+          // Skip our own messages
+          if (raw.from === this.getCurrentUserId()) return;
+
+          // Reconstruct the signaling message from the DB columns.
+          // The DB stores SDP in `sdp` (text) and ICE in `candidate` (jsonb).
+          // We normalize back to the format the handlers expect.
+          const message = {
+            id: change.doc.id,
+            callId: raw.callId,
+            type: raw.type,
+            from: raw.from,
+            timestamp: raw.timestamp,
+          };
+
+          if (raw.type === 'offer' || raw.type === 'answer') {
+            // Reconstruct RTCSessionDescriptionInit
+            message.data = {
+              [raw.type]: {
+                type: raw.type,
+                sdp: raw.sdp
+              }
+            };
+          } else if (raw.type === 'ice-candidate') {
+            message.data = {
+              candidate: raw.candidate
+            };
+          } else {
+            message.data = raw.sdp ? JSON.parse(raw.sdp) : {};
           }
+
+          onMessage(message);
         }
       });
     });
@@ -430,27 +503,21 @@ class WebRTCService {
   }
 
   // Get call history
-  async getCallHistory(userId, limit = 50) {
+  async getCallHistory(userId, resultLimit = 50) {
     try {
       const callsQuery = query(
         collection(db, 'calls'),
         where('callerId', '==', userId),
         orderBy('createdAt', 'desc'),
-        limit(limit)
+        limit(resultLimit)
       );
 
-      return new Promise((resolve, reject) => {
-        const unsubscribe = onSnapshot(callsQuery, (snapshot) => {
-          const calls = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          resolve(calls);
-        }, reject);
-        
-        // Return unsubscribe function
-        setTimeout(() => unsubscribe(), 5000);
-      });
+      // Use a one-time fetch instead of opening/closing a real-time subscription.
+      const snapshot = await getDocs(callsQuery);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
     } catch (error) {
       console.error('Error getting call history:', error);
       throw error;
@@ -658,7 +725,20 @@ class WebRTCService {
 
   // Get current user ID from Backend Auth
   getCurrentUserId() {
-    return auth.currentUser?.uid || null;
+    // The auth stub builds currentUser from the backend user object which uses
+    // `id` (not `uid`). Check both, plus fall back to localStorage.
+    if (auth.currentUser?.uid) return auth.currentUser.uid;
+    if (auth.currentUser?.id) return auth.currentUser.id;
+    // Fallback: read from localStorage (set by the auth shim on login)
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.id) return parsed.id;
+        if (parsed?.uid) return parsed.uid;
+      }
+    } catch (e) { /* ignore */ }
+    return null;
   }
 
   // Check if browser supports WebRTC

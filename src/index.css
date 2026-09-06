@@ -143,16 +143,28 @@
 
 /* ---------- Stat Cards ---------- */
 .cm-stat {
+  position: relative;
   background: #FFFFFF;
   border-radius: var(--cm-radius);
   border: 1px solid rgba(28,38,36,0.08);
   padding: 18px 20px;
   box-shadow: var(--cm-shadow-sm);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+  overflow: hidden;
 }
 .cm-stat:hover {
   transform: translateY(-2px);
   box-shadow: var(--cm-shadow);
+}
+.cm-stat::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--cm-sage);
+  border-radius: var(--cm-radius) 0 0 var(--cm-radius);
 }
 .cm-stat-label {
   font-size: 11px;
@@ -169,17 +181,94 @@
   margin-top: 6px;
 }
 .cm-stat-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(107,144,128,0.12), rgba(107,144,128,0.04));
+  box-shadow: inset 0 0 0 1px rgba(107,144,128,0.1);
+}
+.cm-stat-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Accent variants for stat cards */
+.cm-stat-gold::before { background: var(--cm-gold); }
+.cm-stat-gold .cm-stat-icon { background: linear-gradient(135deg, rgba(217,164,65,0.15), rgba(217,164,65,0.04)); box-shadow: inset 0 0 0 1px rgba(217,164,65,0.12); }
+.cm-stat-gold .cm-stat-icon svg { color: var(--cm-gold-deep); }
+
+.cm-stat-coral::before { background: var(--cm-coral); }
+.cm-stat-coral .cm-stat-icon { background: linear-gradient(135deg, rgba(221,110,79,0.12), rgba(221,110,79,0.04)); box-shadow: inset 0 0 0 1px rgba(221,110,79,0.1); }
+.cm-stat-coral .cm-stat-icon svg { color: var(--cm-coral); }
+
+.cm-stat-ink::before { background: var(--cm-ink); }
+.cm-stat-ink .cm-stat-icon { background: linear-gradient(135deg, rgba(18,48,44,0.08), rgba(18,48,44,0.02)); box-shadow: inset 0 0 0 1px rgba(18,48,44,0.08); }
+.cm-stat-ink .cm-stat-icon svg { color: var(--cm-ink); }
+
+/* ---------- Branded accents / gradients ---------- */
+.cm-card {
+  position: relative;
+}
+.cm-card-accent-sage {
+  border-top: 3px solid var(--cm-sage);
+}
+.cm-card-accent-gold {
+  border-top: 3px solid var(--cm-gold);
+}
+.cm-card-accent-coral {
+  border-top: 3px solid var(--cm-coral);
+}
+.cm-card-gradient-ink {
+  background: linear-gradient(135deg, var(--cm-ink) 0%, var(--cm-ink-soft) 100%);
+  color: var(--cm-sand);
+  border: 1px solid rgba(242,234,216,0.12);
+}
+.cm-card-gradient-sage {
+  background: linear-gradient(135deg, var(--cm-sage) 0%, #3E5D50 100%);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.cm-card-gradient-gold {
+  background: linear-gradient(135deg, var(--cm-gold) 0%, var(--cm-gold-deep) 100%);
+  color: var(--cm-ink);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Gradient icon badge */
+.cm-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.cm-stat-icon svg {
-  width: 18px;
-  height: 18px;
+.cm-icon-badge svg { width: 20px; height: 20px; }
+.cm-icon-badge-sage { background: linear-gradient(135deg, rgba(107,144,128,0.18), rgba(107,144,128,0.06)); color: var(--cm-sage); box-shadow: inset 0 0 0 1px rgba(107,144,128,0.1); }
+.cm-icon-badge-gold { background: linear-gradient(135deg, rgba(217,164,65,0.18), rgba(217,164,65,0.06)); color: var(--cm-gold-deep); box-shadow: inset 0 0 0 1px rgba(217,164,65,0.12); }
+.cm-icon-badge-coral { background: linear-gradient(135deg, rgba(221,110,79,0.16), rgba(221,110,79,0.04)); color: var(--cm-coral); box-shadow: inset 0 0 0 1px rgba(221,110,79,0.1); }
+.cm-icon-badge-ink { background: linear-gradient(135deg, rgba(18,48,44,0.09), rgba(18,48,44,0.02)); color: var(--cm-ink); box-shadow: inset 0 0 0 1px rgba(18,48,44,0.08); }
+
+/* Branded gradient text */
+.cm-text-gradient {
+  background: linear-gradient(135deg, var(--cm-sage) 0%, var(--cm-gold-deep) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Decorative blur orbs (subtle brand color blobs) */
+.cm-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.08;
+  pointer-events: none;
 }
 
 /* ---------- Buttons ---------- */

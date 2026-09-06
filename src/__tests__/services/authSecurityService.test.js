@@ -8,7 +8,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, se
 import { auth } from '../../backend/config';
 
 // Mock Firebase Auth
-jest.mock('firebase/auth', () => ({
+jest.mock('backend/auth', () => ({
   signInWithEmailAndPassword: jest.fn(),
   createUserWithEmailAndPassword: jest.fn(),
   signOut: jest.fn(),

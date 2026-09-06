@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import sessionManager from '../utils/sessionManager';
-import { useResponsive } from '../hooks';
+import { useResponsive, useRole } from '../hooks';
 import { 
   Calendar, 
   Clock, 
@@ -13,6 +13,7 @@ import {
   Heart,
   User,
   Star,
+  Award,
   Camera,
   FileText,
   TrendingUp,
@@ -44,7 +45,11 @@ import {
   ChevronDown,
   ChevronUp,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Search,
+  Settings,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
@@ -52,7 +57,7 @@ import { caregiverAPI } from '../api/caregiverAPI';
 import { getCareTasksByCaregiver, getTodayTasks } from '../api/careTasksAPI';
 import { getActiveTasks, startTask, completeTask } from '../api/taskTimeTrackingAPI';
 import { getTodaysAppointments } from '../api/appointmentsAPI';
-import { getClientsByDoctor, getClientById } from '../api/patientsAPI';
+import { getClientsByDoctor, getClientById, getClientsByIds } from '../api/patientsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { createMedicalReport, subscribeToMedicalReportsByClient } from '../api/medicalReportsAPI';
 import { createCarePlan, updateCarePlan, deleteCarePlan, subscribeToCarePlansByClient } from '../api/carePlansAPI';
@@ -87,29 +92,30 @@ import WebRTCService from '../services/webrtcService';
 import AdlLogger from '../components/AdlLogger';
 import { emergencyAPI } from '../api/emergencyAPI';
 import UserProfileSettings from '../components/UserProfileSettings';
+import DeviceSettingsModal from '../components/DeviceSettingsModal';
+import { buildConstraints, getSavedDevices, setAudioOutput as setOutputDevice } from '../services/deviceSettingsService';
 import HelpSupport from '../components/HelpSupport';
 import TaskCompletionModal from '../components/TaskCompletionModal';
-import { collection, query, getDocs, setDoc, updateDoc, where, doc } from 'backend/database';
+import UnifiedActivityModal from '../components/UnifiedActivityModal';
+import CareActivityTab from '../components/CareActivityTab';
+import { collection, query, getDocs, setDoc, updateDoc, where, doc, onSnapshot } from 'backend/database';
 import { db } from '../backend/config';
 import DashboardLayout from '../components/DashboardLayout';
 import AssignmentCalendar from '../components/AssignmentCalendar';
+import DashboardOverview from '../components/dashboard/DashboardOverview';
+import NewConversationModal from '../components/NewConversationModal';
 
 const InstitutionCaregiverDashboard = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, userProfile, institutionId, institutionData, userRoles } = useUser();
+  const { user, userProfile, institutionId, institutionData, userRoles, refreshUserProfile } = useUser();
   const { isMobile, isTablet } = useResponsive();
   
   // Get institution ID from URL params or user context
   const urlInstitutionId = searchParams.get('institution');
   const effectiveInstitutionId = urlInstitutionId || institutionId || userProfile?.institutionId;
   
-  console.log('🏥 Institution ID resolution:', {
-    fromURL: urlInstitutionId,
-    fromContext: institutionId,
-    fromProfile: userProfile?.institutionId,
-    effective: effectiveInstitutionId
-  });
+  // Institution resolution: effectiveInstitutionId is derived above.
 
   // Helper to convert Firestore Timestamps (or any date-like value) to JS Date
   const toDate = (v) => v?.toDate ? v.toDate() : new Date(v);
@@ -126,6 +132,7 @@ const InstitutionCaregiverDashboard = () => {
   const [expandedClients, setExpandedClients] = useState({});
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [showDeviceSettings, setShowDeviceSettings] = useState(false);
   const [showVitalsModal, setShowVitalsModal] = useState(false);
   const [showCareLogsModal, setShowCareLogsModal] = useState(false);
   const [showNurseReportModal, setShowNurseReportModal] = useState(false);
@@ -133,16 +140,12 @@ const InstitutionCaregiverDashboard = () => {
   const [showCareLogForm, setShowCareLogForm] = useState(false);
   const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
   const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
+  const [showUnifiedActivityModal, setShowUnifiedActivityModal] = useState(false);
+  const [unifiedActivityTask, setUnifiedActivityTask] = useState(null); // pending task for completion
   const [selectedTask, setSelectedTask] = useState(null);
   const [clientModalTab, setClientModalTab] = useState('info'); // 'info', 'medical', 'carelog'
 
-  // Debug effect to monitor showCareLogForm state changes
-  useEffect(() => {
-    console.log('🔍 showCareLogForm state changed:', showCareLogForm);
-    if (showCareLogForm && selectedClient) {
-      console.log('✅ Modal should be visible for client:', selectedClient.name || selectedClient.fullName);
-    }
-  }, [showCareLogForm, selectedClient]);
+  // showCareLogForm state is managed via React state; no side effects needed.
 
   // Set default tab for pharmacists
   useEffect(() => {
@@ -182,6 +185,54 @@ const InstitutionCaregiverDashboard = () => {
   const [medicalReports, setMedicalReports] = useState([]);
   const [carePlans, setCarePlans] = useState([]);
   const [careLogs, setCareLogs] = useState([]);
+
+  // Recompute caregiver performance metrics whenever underlying data changes
+  useEffect(() => {
+    const completedTasks = recentTasks.filter(t => t.status === 'completed');
+    const totalTasks = recentTasks.length;
+    const taskCompletion = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
+
+    const onTime = completedTasks.filter(t => {
+      const due = t.dueDate || t.scheduledTime;
+      const completedAt = t.completedAt || t.updatedAt || t.completed_at;
+      if (!due || !completedAt) return true;
+      return new Date(completedAt) <= new Date(due);
+    }).length;
+    const punctuality = completedTasks.length > 0 ? Math.round((onTime / completedTasks.length) * 100) : 100;
+
+    const totalMinutes = recentTasks.reduce(
+      (sum, t) => sum + (t.elapsedMinutes || t.durationMinutes || t.estimatedDuration || 0),
+      0
+    );
+    const hoursWorked = Math.round(totalMinutes / 60);
+
+    const incidentLogs = careLogs.filter(log => {
+      const mood = String(log.mood || '').toLowerCase();
+      const category = String(log.category || '').toLowerCase();
+      return (
+        ['distressed', 'anxious', 'pain', 'incident', 'fall', 'injury'].includes(mood) ||
+        category.includes('incident') ||
+        log.isIncident === true
+      );
+    });
+    const safetyScore = careLogs.length > 0
+      ? Math.max(0, 100 - Math.round((incidentLogs.length / careLogs.length) * 100))
+      : 100;
+
+    const rating = caregiver?.rating || 0;
+    setPerformance({
+      completedTasks: completedTasks.length,
+      totalTasks,
+      rating,
+      hoursWorked,
+      punctuality,
+      taskCompletion,
+      clientSatisfaction: rating || 'N/A',
+      communication: rating || 'N/A',
+      safety: safetyScore,
+    });
+  }, [recentTasks, careLogs, caregiver]);
+
   const [loadingReports, setLoadingReports] = useState(false);
   const [clientPrescriptions, setClientPrescriptions] = useState([]);
   const [clientConsultations, setClientConsultations] = useState([]);
@@ -194,6 +245,15 @@ const InstitutionCaregiverDashboard = () => {
   // Messaging states
   const [conversations, setConversations] = useState([]);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState(new Date());
+  // Week navigation: default to start of current week (Sunday)
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 1=Mon, ...
+    const start = new Date(now);
+    start.setDate(now.getDate() - day);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  });
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -205,11 +265,18 @@ const InstitutionCaregiverDashboard = () => {
   const [showMobileChatPane, setShowMobileChatPane] = useState(false);
   const [isNarrowMessagingLayout, setIsNarrowMessagingLayout] = useState(false);
   const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
+  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
   // Call-related states
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
   const [callConnectionState, setCallConnectionState] = useState('connecting'); // Track WebRTC connection state
+  const [callPhase, setCallPhase] = useState('idle'); // 'idle' | 'calling' | 'connecting' | 'connected' | 'ended'
+  const [callRecipient, setCallRecipient] = useState(null); // who we're calling
+  const callSignalingUnsubRef = React.useRef(null);
+  const callStatusUnsubRef = React.useRef(null);
+  const callTimeoutRef = React.useRef(null); // 45s no-answer timeout
+  const callPhaseRef = React.useRef('idle'); // mirror of callPhase for use in async closures
   const [callService] = useState(() => new CallService());
   const [webrtc, setWebrtc] = useState(() => new WebRTCService());
   const [currentCallId, setCurrentCallId] = useState(null);
@@ -273,20 +340,29 @@ const InstitutionCaregiverDashboard = () => {
       onLocalStream: (stream) => setLocalStream(stream),
       onRemoteStream: (stream) => setRemoteStream(stream),
       onCallStateChange: (state) => {
-        console.log('📡 WebRTC connection state:', state);
         setCallConnectionState(state);
-        
+
         if (state === 'connected') {
-          console.log('✅ Call connected successfully!');
-          if (!callStartAt) {
-            setCallStartAt(new Date());
-          }
+          setCallPhase('connected');
+          callPhaseRef.current = 'connected';
+          // Use functional setter to avoid needing callStartAt in dependency array
+          setCallStartAt(prev => prev || new Date());
         } else if (state === 'failed' || state === 'disconnected') {
-          console.log('❌ Call connection failed or disconnected');
+          setCallPhase('ended');
+          callPhaseRef.current = 'ended';
+          // Auto-cleanup after a brief delay
+          setTimeout(() => {
+            cleanupCall();
+          }, 1500);
         }
       }
     });
-  }, [webrtc, callStartAt]);
+  }, [webrtc]);
+
+  // Keep callPhaseRef in sync with callPhase state for use in async closures
+  useEffect(() => {
+    callPhaseRef.current = callPhase;
+  }, [callPhase]);
 
   // Call timer: start/stop interval based on callStartAt
   useEffect(() => {
@@ -470,17 +546,46 @@ const InstitutionCaregiverDashboard = () => {
 
   const dashboardConfig = getDashboardConfig();
 
-  // Function to reload tasks from both careTasks and clientAssignments collections
+  // Function to reload tasks from careTasks, clientAssignments, and schedules collections
   const reloadTasks = async (caregiverId) => {
     try {
       // Load from careTasks collection (old way)
       const careTasksData = await getCareTasksByCaregiver(caregiverId).catch(() => []);
-      console.log(`📋 Loaded ${careTasksData.length} tasks from careTasks collection`);
-      
+
       // Load from clientAssignments collection (admin-created assignments)
       const assignments = await assignmentAPI.getAssignmentsByCaregiver(caregiverId).catch(() => []);
-      console.log(`📋 Loaded ${assignments.length} assignments from clientAssignments collection`);
-      
+
+      // Load from schedules collection (admin-created schedules)
+      let scheduleTasks = [];
+      try {
+        const schedulesQuery = query(
+          collection(db, 'schedules'),
+          where('caregiverId', '==', caregiverId)
+        );
+        const schedulesSnapshot = await getDocs(schedulesQuery);
+        scheduleTasks = schedulesSnapshot.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            task: data.title || 'Scheduled Visit',
+            title: data.title || 'Scheduled Visit',
+            description: data.description,
+            clientId: data.clientId,
+            clientName: data.clientName || 'Client',
+            caregiverId: data.caregiverId,
+            status: data.status || 'scheduled',
+            priority: data.priority || 'normal',
+            dueDate: data.scheduleDate,
+            dueTime: data.startTime,
+            scheduledTime: data.scheduleDate,
+            instructions: data.specialInstructions || data.comments,
+            createdAt: data.createdAt instanceof Date ? data.createdAt.toISOString() : (data.createdAt?.toDate?.()?.toISOString() || data.createdAt),
+            collection: 'schedules',
+            assignmentType: 'schedule'
+          };
+        });
+      } catch { /* schedules optional */ }
+
       // Convert assignments to task format for display
       const assignmentTasks = assignments.map(assignment => ({
         id: assignment.id,
@@ -507,8 +612,7 @@ const InstitutionCaregiverDashboard = () => {
         collection: 'careTasks' // Mark which collection this came from
       }));
       
-      const allTasks = [...normalizedCareTasks, ...assignmentTasks];
-      console.log(`✅ Total tasks (merged): ${allTasks.length}`);
+      const allTasks = [...normalizedCareTasks, ...assignmentTasks, ...scheduleTasks];
       
       // Sort by created date (most recent first)
       allTasks.sort((a, b) => {
@@ -526,24 +630,8 @@ const InstitutionCaregiverDashboard = () => {
     }
   };
 
-  // Define role flags at component level for use throughout
-  // Defensive checks: Default to non-medical caregiver if role is unclear
-  const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor') || 
-                    userProfile?.role === 'doctor' || 
-                    userProfile?.userType === 'doctor' || 
-                    userProfile?.type === 'doctor';
-  const isNurse = (userProfile?.medicalQualification || '').includes('Nurse') || 
-                  userProfile?.role === 'nurse' || 
-                  userProfile?.userType === 'nurse' || 
-                  userProfile?.type === 'nurse';
-  const isPharmacist = userProfile?.userType === 'pharmacist' || 
-                       userProfile?.type === 'pharmacist' || 
-                       userProfile?.role === 'pharmacist';
-  const isCaregiver = userProfile?.userType === 'caregiver' || 
-                      userProfile?.type === 'caregiver' ||
-                      // Default to caregiver if no role is set (defensive fallback)
-                      (!userProfile?.userType && !userProfile?.type && !userProfile?.role);
-  const isNonMedicalCaregiver = isCaregiver && !isDoctor && !isNurse && !isPharmacist;
+  // Role flags from central hook to avoid duplicated defensive checks
+  const { isDoctor, isNurse, isPharmacist, isCaregiver, isNonMedicalCaregiver } = useRole(userProfile);
 
   useEffect(() => {
     const loadCaregiverData = async () => {
@@ -571,12 +659,11 @@ const InstitutionCaregiverDashboard = () => {
         
         // Auto-fix profile if institutionId or status is missing
         if (effectiveInstitutionId && (!userProfile.institutionId || !userProfile.status)) {
-          console.log('🔄 Auto-fixing caregiver profile with missing fields...');
           await autoFixCurrentUser(user, userProfile, effectiveInstitutionId);
-          // Reload page to get updated profile
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
+          // Refetch user profile instead of reloading the whole page
+          if (refreshUserProfile) {
+            await refreshUserProfile();
+          }
           return;
         }
         
@@ -586,7 +673,6 @@ const InstitutionCaregiverDashboard = () => {
         const caregiverData = await caregiverAPI.getCaregiverById(user?.uid);
         setCaregiver(caregiverData);
           } catch (error) {
-            console.log('Creating caregiver profile from user data - this is normal for new users');
             // Create a basic caregiver profile from user profile
             setCaregiver({
               id: user?.uid,
@@ -626,30 +712,18 @@ const InstitutionCaregiverDashboard = () => {
         }
 
         // Load assigned clients from admin-created assignments (for ALL caregivers, doctors, and pharmacists)
-        const isDoctor = (userProfile.medicalQualification || '').includes('Doctor') || 
-                          userProfile.role === 'doctor' || 
-                          userProfile.userType === 'doctor' || 
-                          userProfile.type === 'doctor';
-        const isCaregiver = userProfile.userType === 'caregiver' || userProfile.type === 'caregiver';
-        const isNurse = (userProfile.medicalQualification || '').includes('Nurse') || userProfile.role === 'nurse' || userProfile.userType === 'nurse';
-        const isPharmacist = userProfile.userType === 'pharmacist' || userProfile.type === 'pharmacist' || userProfile.role === 'pharmacist';
-        
         if (isDoctor || isCaregiver || isPharmacist || isNurse) {
           let clients = [];
           try {
             // Load assignments for this caregiver/doctor
             const assignments = await assignmentAPI.getAssignmentsByCaregiver(user?.uid);
-            console.log(`📋 Found ${assignments.length} assignments for caregiver ${user?.uid}`);
-            
             const uniqueClientIds = Array.from(new Set(assignments.map(a => a.clientId).filter(Boolean)));
-            console.log(`👥 Fetching ${uniqueClientIds.length} unique clients...`);
-            
-            const fetched = await Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)));
-            clients = fetched.filter(Boolean);
-            
-            console.log(`✅ Loaded ${clients.length} client details`);
+
+            // Batch fetch all assigned clients in one request (fixes N+1)
+            const fetched = await getClientsByIds(uniqueClientIds).catch(() => []);
+            clients = Array.isArray(fetched) ? fetched.filter(Boolean) : [];
           } catch (error) {
-            console.log('No client assignments found - this is normal for new users');
+            // No client assignments found - this is normal for new users
           }
           
           // For doctors only: Fallback to clients.assignedDoctor field if no assignment docs found
@@ -657,9 +731,8 @@ const InstitutionCaregiverDashboard = () => {
             try {
               const alt = await getClientsByDoctor(user.uid, institutionId);
               clients = alt || [];
-              console.log(`📋 Fallback: Loaded ${clients.length} clients from assignedDoctor field`);
             } catch (error) {
-              console.log('No clients assigned via assignedDoctor field');
+              // No clients assigned via assignedDoctor field
             }
           }
           
@@ -673,25 +746,35 @@ const InstitutionCaregiverDashboard = () => {
           }
         }
         
-        // Load schedule for the entire week (appointments + tasks + assignments)
-        const [allAppointments, allTasks, allAssignments] = await Promise.all([
+        // Load schedule for the entire week (appointments + tasks + assignments + schedules)
+        const [allAppointments, allTasks, allAssignments, allSchedules] = await Promise.all([
           getTodaysAppointments(user?.uid, 'caregiver').catch(() => []),
           getTodayTasks(user?.uid).catch(() => []),
-          assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
+          assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => []),
+          // Fetch schedules from the schedules table for this caregiver
+          (async () => {
+            try {
+              const schedulesQuery = query(
+                collection(db, 'schedules'),
+                where('caregiverId', '==', user?.uid)
+              );
+              const snapshot = await getDocs(schedulesQuery);
+              return snapshot.docs.map(d => {
+                const data = d.data();
+                return {
+                  id: d.id,
+                  ...data,
+                  scheduleDate: data.scheduleDate || (data.scheduledDate ? new Date(data.scheduledDate).toISOString().split('T')[0] : null)
+                };
+              });
+            } catch { return []; }
+          })().catch(() => [])
         ]);
-        
-        console.log('📊 Schedule data loaded:', {
-          appointments: allAppointments,
-          tasks: allTasks,
-          assignments: allAssignments
-        });
         
         // Don't filter by today - keep all assignments for the week view
         // Assignments already have dueDate and dueTime set by admin
         const allAdminAssignments = allAssignments;
-        
-        console.log('📅 All assignments (unfiltered):', allAdminAssignments);
-        
+
         // Combine appointments, tasks, and admin-created assignments for the full schedule
         // Helper function to convert date to string
         const dateToString = (dateValue) => {
@@ -761,17 +844,52 @@ const InstitutionCaregiverDashboard = () => {
               instructions: assignment.instructions,
               dueDate: assignment.dueDate
             };
+          }),
+          ...allSchedules.map(sched => {
+            // Convert schedule date + start time to a datetime string
+            let combinedTime = '';
+            if (sched.scheduleDate) {
+              const dateStr = sched.scheduleDate instanceof Date
+                ? sched.scheduleDate.toISOString().split('T')[0]
+                : String(sched.scheduleDate).split('T')[0];
+              const startTime = sched.startTime || '09:00';
+              try {
+                const dateParts = dateStr.split('-');
+                if (dateParts.length === 3) {
+                  const year = parseInt(dateParts[0]);
+                  const month = parseInt(dateParts[1]) - 1;
+                  const day = parseInt(dateParts[2]);
+                  const [hours, minutes] = startTime.split(':');
+                  const localDate = new Date(year, month, day, parseInt(hours) || 9, parseInt(minutes) || 0);
+                  combinedTime = localDate.toISOString();
+                } else {
+                  combinedTime = `${dateStr}T${startTime}:00`;
+                }
+              } catch {
+                combinedTime = `${dateStr}T${startTime}:00`;
+              }
+            }
+            return {
+              id: sched.id,
+              type: 'schedule',
+              title: sched.title || 'Scheduled Visit',
+              time: combinedTime,
+              client: sched.clientName || 'Client',
+              clientId: sched.clientId,
+              status: sched.status || 'scheduled',
+              description: sched.description,
+              scheduleDate: sched.scheduleDate,
+              startTime: sched.startTime,
+              endTime: sched.endTime
+            };
           })
         ];
         
         // Sort by time
         combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
         
-        console.log('📅 Combined schedule (full week):', combinedSchedule);
-        
         setTodaySchedule(combinedSchedule);
-        console.log(`📅 Full schedule loaded: ${combinedSchedule.length} items (${allAppointments.length} appointments, ${allTasks.length} tasks, ${allAdminAssignments.length} assignments)`);
-        
+
         // Load recent tasks from both careTasks AND clientAssignments collections
         let loadedRecentTasks = [];
         if (user?.uid) {
@@ -780,21 +898,8 @@ const InstitutionCaregiverDashboard = () => {
           setRecentTasks([]);
         }
         
-        // Load performance data with calculated metrics
-        const completedCount = loadedRecentTasks.filter(task => task.status === 'completed').length;
-        const totalCount = loadedRecentTasks.length;
-        const taskCompletion = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-        setPerformance({
-          completedTasks: completedCount,
-          totalTasks: totalCount,
-          rating: caregiver?.rating || 0,
-          hoursWorked: caregiver?.thisMonthEarnings ? Math.round(caregiver.thisMonthEarnings / 50) : 0,
-          punctuality: 95, // Placeholder - would need attendance data
-          taskCompletion: taskCompletion,
-          clientSatisfaction: caregiver?.rating || 'N/A',
-          communication: caregiver?.rating || 'N/A',
-          safety: 100 // Placeholder - would need incident data
-        });
+        // Performance metrics are recomputed automatically by the dedicated
+        // useEffect whenever recentTasks, careLogs, or caregiver change.
 
         // Load profile image from settings
         loadProfileImage();
@@ -826,46 +931,29 @@ const InstitutionCaregiverDashboard = () => {
     loadCaregiverData();
     
     // Set up real-time subscription for assignments (for caregivers, doctors, and pharmacists)
-    const isDoctor = (userProfile?.medicalQualification || '').includes('Doctor') || 
-                      userProfile?.role === 'doctor' || 
-                      userProfile?.userType === 'doctor' || 
-                      userProfile?.type === 'doctor';
-    const isNurse = (userProfile?.medicalQualification || '').includes('Nurse') || 
-                    userProfile?.role === 'nurse' || 
-                    userProfile?.userType === 'nurse' || 
-                    userProfile?.type === 'nurse';
-    const isCaregiver = userProfile?.userType === 'caregiver' || userProfile?.type === 'caregiver';
-    const isPharmacist = userProfile?.userType === 'pharmacist' || userProfile?.type === 'pharmacist' || userProfile?.role === 'pharmacist';
-    const isNonMedicalCaregiver = isCaregiver && !isDoctor && !isNurse && !isPharmacist;
-    
     if ((isDoctor || isCaregiver || isPharmacist || isNurse) && user?.uid) {
       const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
-        console.log(`🔄 Real-time update: Found ${assignments.length} total assignments`);
-        
         // Filter assignments for this specific caregiver/doctor
         const caregiverAssignments = assignments.filter(a => a.caregiverId === user.uid);
-        console.log(`📋 ${caregiverAssignments.length} assignments for this caregiver`);
         
         const uniqueClientIds = Array.from(new Set(caregiverAssignments.map(a => a.clientId).filter(Boolean)));
-        
+
         if (uniqueClientIds.length > 0) {
-        Promise.all(uniqueClientIds.map(pid => getClientById(pid).catch(() => null)))
-          .then(fetched => {
-            const clients = fetched.filter(Boolean);
-            console.log(`✅ Real-time: Loaded ${clients.length} clients`);
-            // Exclude archived clients from visible list in real-time updates
-            const visibleClients = clients.filter(c => (c?.status || '').toLowerCase() !== 'archived');
-            setAssignedClients(visibleClients);
-            
-            // Auto-select first client if not set
-            if (visibleClients.length > 0 && !selectedClientId) {
-              setSelectedClientId(visibleClients[0].id);
-              setSelectedClient(visibleClients[0]);
-            }
-          })
-          .catch(error => {
-            console.log('Error fetching client details from assignments:', error);
-          });
+          // Batch fetch all assigned clients in one request (fixes N+1)
+          getClientsByIds(uniqueClientIds)
+            .then(clients => {
+              const visibleClients = (clients || []).filter(c => (c?.status || '').toLowerCase() !== 'archived');
+              setAssignedClients(visibleClients);
+
+              // Auto-select first client if not set
+              if (visibleClients.length > 0 && !selectedClientId) {
+                setSelectedClientId(visibleClients[0].id);
+                setSelectedClient(visibleClients[0]);
+              }
+            })
+            .catch(() => {
+              // Silently ignore real-time client fetch errors
+            });
         }
       }, user.uid);
       
@@ -929,18 +1017,6 @@ const InstitutionCaregiverDashboard = () => {
           setClientDiagnostics(diagnostics);
           setClientInvoices(invoices);
           setLoadingReports(false);
-          
-          console.log('📊 Loaded medical data:', {
-            prescriptions: prescriptions.length,
-            consultations: consultations.length,
-            diagnostics: diagnostics.length,
-            invoices: invoices.length
-          });
-          
-          console.log('📋 Prescriptions data:', prescriptions);
-          console.log('💬 Consultations data:', consultations);
-          console.log('🔬 Diagnostics data:', diagnostics);
-          console.log('🧾 Invoices data:', invoices);
         } catch (error) {
           console.error('Error loading medical data:', error);
           setLoadingReports(false);
@@ -954,7 +1030,6 @@ const InstitutionCaregiverDashboard = () => {
         unsubscribeReports();
         unsubscribePlans();
         unsubscribeLogs();
-        console.log('🔄 Unsubscribed from real-time updates');
       };
     }
   }, [selectedClient]);
@@ -966,11 +1041,8 @@ const InstitutionCaregiverDashboard = () => {
     }
     
     const userId = userProfile.id || userProfile.uid || user?.uid;
-    console.log('🎧 Setting up call listener for user:', userId, 'role:', userProfile.userType);
-    
+
     const unsubscribe = callService.listenForIncomingCalls(userId, (callNotification) => {
-      console.log('📞 Incoming call notification:', callNotification);
-      
       if (callNotification.status === 'incoming') {
         setIncomingCall({
           callId: callNotification.callId,
@@ -983,7 +1055,6 @@ const InstitutionCaregiverDashboard = () => {
     });
     
     return () => {
-      console.log('🔌 Cleaning up call listener');
       if (unsubscribe) unsubscribe();
     };
   }, [userProfile, user, callService]);
@@ -991,7 +1062,7 @@ const InstitutionCaregiverDashboard = () => {
   // Handle incoming call acceptance
   const handleAcceptCall = async () => {
     if (!incomingCall) return;
-    
+
     try {
       const userId = userProfile.id || userProfile.uid || user?.uid;
       await callService.answerCall(incomingCall.callId, userId);
@@ -1006,7 +1077,8 @@ const InstitutionCaregiverDashboard = () => {
           await webrtc.handleIceCandidate(msg.data.candidate);
         }
       });
-      // Store unsubscribe if needed later (omitted for brevity)
+      // Store unsubscribe for cleanup
+      callSignalingUnsubRef.current = unsubscribeSignaling;
 
       setActiveCall({
         callId: incomingCall.callId,
@@ -1014,8 +1086,10 @@ const InstitutionCaregiverDashboard = () => {
         participantName: 'Admin',
         callType: incomingCall.callType
       });
+      setCallType(incomingCall.callType);
+      setCallPhase('connecting');
+      setIsInCall(true);
       setIncomingCall(null);
-      console.log('✅ Call accepted');
       toast.success('Call accepted');
     } catch (error) {
       console.error('Error accepting call:', error);
@@ -1031,7 +1105,6 @@ const InstitutionCaregiverDashboard = () => {
       const userId = userProfile.id || userProfile.uid || user?.uid;
       await callService.rejectCall(incomingCall.callId, userId);
       setIncomingCall(null);
-      console.log('❌ Call rejected');
       toast.info('Call rejected');
     } catch (error) {
       console.error('Error rejecting call:', error);
@@ -1039,22 +1112,47 @@ const InstitutionCaregiverDashboard = () => {
     }
   };
 
-  // Handle active call end
+  // Handle active call end (incoming call flow)
   const handleEndCall = async () => {
     if (!activeCall) return;
-    
+
     try {
       const duration = elapsedSeconds || 0;
       await callService.endCall(activeCall.callId, duration);
-      setActiveCall(null);
-      console.log('✅ Call ended');
-      toast.info('Call ended');
     } catch (error) {
       console.error('Error ending call:', error);
     }
-    if (timerRef.current) clearInterval(timerRef.current);
-    setElapsedSeconds(0);
+    // Clean up signaling + notification records
+    callService.cleanupSignalingRecords(activeCall.callId).catch(() => {});
+    callService.cleanupCallNotifications(activeCall.callId).catch(() => {});
+    setActiveCall(null);
+    // Full cleanup
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
+    }
+    if (remoteStream) {
+      remoteStream.getTracks().forEach(track => track.stop());
+      setRemoteStream(null);
+    }
+    if (callSignalingUnsubRef.current) {
+      callSignalingUnsubRef.current();
+      callSignalingUnsubRef.current = null;
+    }
+    webrtc.endCall().catch(err => console.error('WebRTC endCall error:', err));
+    setIsInCall(false);
+    setCallType(null);
+    setCallPhase('idle');
+    callPhaseRef.current = 'idle';
+    setCallConnectionState('connecting');
+    setCurrentCallId(null);
     setCallStartAt(null);
+    setElapsedSeconds(0);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    toast.info('Call ended');
   };
 
   const handleNewConsultation = () => {
@@ -1103,18 +1201,12 @@ const InstitutionCaregiverDashboard = () => {
         // Set up WebRTC callbacks
         webrtcService.setCallbacks({
           onCallStateChange: (state) => {
-            console.log('📡 Call state changed:', state);
             setCallConnectionState(state);
-            if (state === 'connected') {
-              console.log('✅ Call connected!');
-            }
           },
           onLocalStream: (stream) => {
-            console.log('📹 Local stream received');
             setLocalStream(stream);
           },
           onRemoteStream: (stream) => {
-            console.log('📺 Remote stream received');
             setRemoteStream(stream);
           }
         });
@@ -1171,7 +1263,6 @@ const InstitutionCaregiverDashboard = () => {
         })
       );
       await Promise.all(promises);
-      console.log(`✅ Sent ${userIds.length} notifications`);
     } catch (error) {
       console.error('Error sending notifications:', error);
     }
@@ -1319,22 +1410,15 @@ const InstitutionCaregiverDashboard = () => {
   const loadProfileImage = () => {
     // Load profile image from localStorage or settings
     const savedSettings = localStorage.getItem('caregiverSettings');
-    console.log('Loading profile image from localStorage:', savedSettings);
     if (savedSettings) {
       try {
         const settings = JSON.parse(savedSettings);
-        console.log('Parsed settings:', settings);
         if (settings.profile?.profileImage) {
-          console.log('Setting profile image:', settings.profile.profileImage);
           setProfileImage(settings.profile.profileImage);
-        } else {
-          console.log('No profile image found in settings');
         }
       } catch (error) {
-        console.log('Error parsing saved settings:', error);
+        // Ignore corrupt saved settings
       }
-    } else {
-      console.log('No saved settings found in localStorage');
     }
   };
 
@@ -1642,46 +1726,34 @@ const InstitutionCaregiverDashboard = () => {
     );
   };
 
-  // Load all platform users (caregivers and admins)
+  // Load all platform users within the tenant (caregivers, admins, doctors, nurses, pharmacists, clients)
   const loadPlatformUsers = useCallback(async () => {
     if (!effectiveInstitutionId || !user?.uid) return;
-    
+
     try {
-      // Load all users from the institution
+      // Load ALL users from the institution — every member of the tenant
       const usersRef = collection(db, 'users');
       const q = query(
         usersRef,
         where('institutionId', '==', effectiveInstitutionId)
       );
-      
+
       const querySnapshot = await getDocs(q);
       const users = [];
-      
+
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
-        // Include all users for message lookup (caregivers, admins, doctors, nurses, pharmacists)
-        // We'll filter for display purposes but need all for message sender lookup
-        const userType = userData.userType || userData.type || userData.role;
-        if (userType === 'caregiver' || 
-            userType === 'admin' || 
-            userType === 'doctor' ||
-            userType === 'nurse' ||
-            userType === 'pharmacist' ||
-            userType === 'institutionAdmin' ||
-            userData.roles?.includes('admin') ||
-            userData.roles?.includes('institutionAdmin')) {
-          users.push({
-            id: doc.id,
-            ...userData,
-            name: userData.name || userData.displayName || userData.fullName || userData.email || 'Unknown User',
-            role: userType || 'User',
-            photoURL: userData.photoURL || userData.profilePicture || userData.profilePictureUrl || null,
-            avatar: userData.photoURL || userData.profilePicture || userData.profilePictureUrl || null
-          });
-        }
+        const userType = userData.userType || userData.type || userData.role || 'user';
+        users.push({
+          id: doc.id,
+          ...userData,
+          name: userData.name || userData.displayName || userData.fullName || userData.email || 'Unknown User',
+          role: userType,
+          photoURL: userData.photoURL || userData.profilePicture || userData.profilePictureUrl || null,
+          avatar: userData.photoURL || userData.profilePicture || userData.profilePictureUrl || null
+        });
       });
-      
-      console.log(`👥 Loaded ${users.length} platform users:`, users.map(u => ({ id: u.id, name: u.name, email: u.email })));
+
       setPlatformUsers(users);
       return users;
     } catch (error) {
@@ -1712,12 +1784,11 @@ const InstitutionCaregiverDashboard = () => {
     try {
       // Load existing conversations
       const existingConversations = await getConversationsByUser(user.uid);
-      console.log(`💬 Loaded ${existingConversations.length} conversations`);
       
       // Load all platform users to map user IDs to names
       const users = await loadPlatformUsers();
       const userMap = new Map(users.map(u => [u.id, u]));
-      
+
       // Enrich existing conversations with participant names and unread counts
       const enrichedConversations = await Promise.all(
         existingConversations.map(async (conv) => {
@@ -1751,9 +1822,7 @@ const InstitutionCaregiverDashboard = () => {
       // Add platform users as potential conversation partners
       const newUserConversations = users
         .filter(u => !existingUserIds.has(u.id))
-        .map(u => {
-          console.log('👤 Creating conversation entry for user:', u.id, { name: u.name, displayName: u.displayName, email: u.email });
-          return {
+        .map(u => ({
             id: `new-${u.id}`,
             name: u.name || u.displayName || u.email || 'Unknown User',
             avatar: u.avatar || u.photoURL || u.profilePicture || u.profilePictureUrl || null,
@@ -1765,9 +1834,8 @@ const InstitutionCaregiverDashboard = () => {
             participants: [user.uid, u.id],
             isNew: true,
             userData: u
-          };
-        });
-      
+          }));
+
       // Merge existing conversations with new user entries
       const allConversations = [
         ...enrichedConversations,
@@ -1790,6 +1858,17 @@ const InstitutionCaregiverDashboard = () => {
     }
   }, [user?.uid, loadConversations]);
 
+  // Reload platform users when messages tab is opened to ensure fresh tenant list
+  useEffect(() => {
+    if (activeTab === 'messages' && user?.uid && effectiveInstitutionId) {
+      loadPlatformUsers().then(users => {
+        if (users && users.length > 0) {
+          setPlatformUsers(users);
+        }
+      }).catch(() => {});
+    }
+  }, [activeTab, user?.uid, effectiveInstitutionId, loadPlatformUsers]);
+
   // Load activities function - memoized with useCallback to prevent infinite loops
   const loadActivities = useCallback(async () => {
     if (!user?.uid) return;
@@ -1804,12 +1883,6 @@ const InstitutionCaregiverDashboard = () => {
       setActivities(allActivities);
       setTodayActivities(todayActs);
       setActivityStats(stats);
-      
-      console.log('📊 Activities loaded:', {
-        total: allActivities.length,
-        today: todayActs.length,
-        stats
-      });
     } catch (error) {
       console.error('Error loading activities:', error);
       toast.error('Failed to load activities');
@@ -1826,19 +1899,10 @@ const InstitutionCaregiverDashboard = () => {
   // Load prescriptions for selected client
   const loadPrescriptions = async (clientId) => {
     if (!clientId) return;
-    
+
     try {
-      console.log('💊 Loading prescriptions for client:', clientId);
       const data = await prescriptionsAPI.getPrescriptionsByClient(clientId);
       setPrescriptions(data);
-      console.log('✅ Prescriptions loaded:', data.length);
-      console.log('🔍 Prescription details:', data.map(p => ({
-        id: p.id,
-        prescriptionNumber: p.prescriptionNumber,
-        diagnosis: p.diagnosis,
-        medicationsCount: p.medications?.length || 0,
-        medications: p.medications
-      })));
     } catch (error) {
       console.error('Error loading prescriptions:', error);
       toast.error('Failed to load prescriptions');
@@ -1911,12 +1975,10 @@ const InstitutionCaregiverDashboard = () => {
       
       if (editingPrescriptionId) {
         // Update existing prescription
-        console.log('✏️ Updating prescription:', editingPrescriptionId, prescriptionData);
         await prescriptionsAPI.updatePrescription(editingPrescriptionId, prescriptionData);
         toast.success('Prescription updated successfully!');
       } else {
         // Create new prescription
-        console.log('💊 Creating prescription:', prescriptionData);
         await prescriptionsAPI.createPrescription(prescriptionData);
         toast.success('Prescription created successfully!');
       }
@@ -2021,12 +2083,10 @@ const InstitutionCaregiverDashboard = () => {
   // Load consultations for selected client
   const loadConsultations = async (clientId) => {
     if (!clientId) return;
-    
+
     try {
-      console.log('🩺 Loading consultations for client:', clientId);
       const data = await consultationsAPI.getConsultationsByClient(clientId);
       setConsultations(data);
-      console.log('✅ Consultations loaded:', data.length);
     } catch (error) {
       console.error('Error loading consultations:', error);
       toast.error('Failed to load consultations');
@@ -2065,7 +2125,6 @@ const InstitutionCaregiverDashboard = () => {
         ...consultationFormData
       };
       
-      console.log('🩺 Creating consultation:', consultationData);
       await consultationsAPI.createConsultation(consultationData);
       
       toast.success('Consultation note saved successfully!');
@@ -2102,13 +2161,11 @@ const InstitutionCaregiverDashboard = () => {
   const loadMessagesForConversation = async (conversationId) => {
     try {
       const conversationMessages = await getMessagesByConversation(conversationId);
-      console.log(`💬 Loaded ${conversationMessages.length} messages`);
-      
+
       // Mark conversation as read when opening it
       if (user?.uid && conversationId) {
         try {
           await markConversationAsRead(conversationId, user.uid);
-          console.log('✅ Marked conversation as read');
           // Refresh conversations to update unread counts
           loadConversations();
         } catch (markReadError) {
@@ -2190,52 +2247,39 @@ const InstitutionCaregiverDashboard = () => {
   const renderMessagesTab = () => {
     const handleSendMessage = async () => {
       if (!newMessage.trim() || !selectedConversation) return;
-      
+
       try {
-        // Get or create conversation
         let conversationId = selectedConversation.conversationId || selectedConversation.id;
-        
-        // If conversation doesn't exist in Database yet, create it
+
+        // If conversation doesn't exist in DB yet, create it
         if (!selectedConversation.conversationId && selectedConversation.participants) {
           const conversationResult = await getOrCreateConversation(selectedConversation.participants, 'care');
-          // getOrCreateConversation returns an object with id property
           conversationId = conversationResult.id || conversationResult;
-          console.log(`✅ Created new conversation: ${conversationId}`);
         }
-        
-        // Ensure conversationId is a string, not an object
+
         if (typeof conversationId === 'object' && conversationId.id) {
           conversationId = conversationId.id;
         }
-        
-        console.log('📤 Sending message to conversation:', conversationId);
-        
-        // Send message to Database
+
         await sendMessageAPI(conversationId, user.uid, {
           text: newMessage,
           type: 'text',
           senderName: userProfile?.name || 'Caregiver'
         });
-        
-        // Add message to local state for immediate display
-      const message = {
-        id: Date.now(),
-        text: newMessage,
+
+        const message = {
+          id: Date.now(),
+          text: newMessage,
           senderId: user?.uid,
-        senderName: userProfile?.name || 'You',
+          senderName: userProfile?.name || 'You',
           createdAt: new Date().toISOString(),
-        read: false
-      };
-      
-      setMessages(prev => [...prev, message]);
-      setNewMessage('');
-      
-        toast.success('Message sent successfully');
-        
-        // Reload conversations to update last message and unread counts
+          read: false
+        };
+
+        setMessages(prev => [...prev, message]);
+        setNewMessage('');
+
         loadConversations();
-        
-        // Reload messages to show the new message
         if (conversationId) {
           loadMessagesForConversation(conversationId);
         }
@@ -2245,73 +2289,298 @@ const InstitutionCaregiverDashboard = () => {
       }
     };
 
-    const startVoiceCall = async () => {
-      if (!selectedConversation) {
-        toast.error('Please select a conversation first');
-        return;
+    // ─── Call helpers ───────────────────────────────────────
+
+    // Determine the recipient user ID from the selected conversation
+    const getRecipientId = () => {
+      if (!selectedConversation) return null;
+      // For existing conversations, the other participant
+      if (selectedConversation.participants) {
+        const otherId = selectedConversation.participants.find(id => id !== user?.uid);
+        if (otherId) return otherId;
       }
-      
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        setLocalStream(stream);
-        setCallType('voice');
-        setIsInCall(true);
-        toast.success('Voice call started');
-        
-        // TODO: Initialize WebRTC connection
-      } catch (error) {
-        console.error('Error starting voice call:', error);
-        toast.error('Failed to start voice call. Please check microphone permissions.');
-      }
+      // For new conversations, extract from the id (format: new-{userId})
+      const id = selectedConversation.id || '';
+      if (id.startsWith('new-')) return id.substring(4);
+      // Fallback: userData
+      if (selectedConversation.userData?.id) return selectedConversation.userData.id;
+      return null;
     };
 
-    const startVideoCall = async () => {
-      if (!selectedConversation) {
-        toast.error('Please select a conversation first');
-        return;
-      }
-      
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        setLocalStream(stream);
-        setCallType('video');
-        setIsInCall(true);
-        toast.success('Video call started');
-        
-        // TODO: Initialize WebRTC connection
-      } catch (error) {
-        console.error('Error starting video call:', error);
-        toast.error('Failed to start video call. Please check camera and microphone permissions.');
-      }
-    };
-
-    const endCall = () => {
+    // Clean up all call resources
+    const cleanupCall = () => {
+      // Stop local stream
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         setLocalStream(null);
       }
+      // Stop remote stream
       if (remoteStream) {
         remoteStream.getTracks().forEach(track => track.stop());
         setRemoteStream(null);
       }
+      // Unsubscribe signaling listener
+      if (callSignalingUnsubRef.current) {
+        callSignalingUnsubRef.current();
+        callSignalingUnsubRef.current = null;
+      }
+      // Unsubscribe call status listener
+      if (callStatusUnsubRef.current) {
+        callStatusUnsubRef.current();
+        callStatusUnsubRef.current = null;
+      }
+      // End WebRTC
+      webrtc.endCall().catch(() => {});
+      // Clean up signaling + notification records for the call
+      if (currentCallId) {
+        callService.cleanupSignalingRecords(currentCallId).catch(() => {});
+        callService.cleanupCallNotifications(currentCallId).catch(() => {});
+      }
+      // Reset state
       setIsInCall(false);
       setCallType(null);
+      setCallPhase('idle');
+      callPhaseRef.current = 'idle';
+      setCallConnectionState('connecting');
+      setCallRecipient(null);
+      setCurrentCallId(null);
+      setCallStartAt(null);
+      setElapsedSeconds(0);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      // Clear the no-answer timeout
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
+    };
+
+    // Start an outgoing call (voice or video)
+    const startCall = async (type) => {
+      if (!selectedConversation) {
+        toast.error('Please select a conversation first');
+        return;
+      }
+
+      const recipientId = getRecipientId();
+      if (!recipientId) {
+        toast.error('Could not determine call recipient');
+        return;
+      }
+
+      const callerId = userProfile?.id || userProfile?.uid || user?.uid;
+      if (!callerId) {
+        toast.error('User not authenticated');
+        return;
+      }
+
+      const callerName = userProfile?.name || userProfile?.displayName || 'Caregiver';
+      const recipientName = selectedConversation.name || 'User';
+
+      // Already in a call?
+      if (isInCall) {
+        toast.warning('Already in a call. End the current call first.');
+        return;
+      }
+
+      setCallType(type);
+      setCallPhase('calling');
+      callPhaseRef.current = 'calling';
+      setCallRecipient({ id: recipientId, name: recipientName });
+      setIsInCall(true);
+
+      try {
+        // 1. Initiate the call via CallService (creates call record + sends notification)
+        const callResult = await callService.initiateCall({
+          callerId,
+          recipientId,
+          callType: type,
+          callerName,
+          recipientName,
+        });
+
+        if (!callResult?.callId) {
+          throw new Error('Call service did not return a call ID');
+        }
+
+        setCurrentCallId(callResult.callId);
+
+        // 2. Initialize WebRTC and set the call ID on the service
+        //    (sendSignalingMessage requires this.callId to be set)
+        const initialized = await webrtc.initialize();
+        if (!initialized || !webrtc.peerConnection) {
+          throw new Error('Failed to initialize WebRTC peer connection');
+        }
+        webrtc.callId = callResult.callId;
+        webrtc.isInitiator = true;
+
+        // 3. Get local media — use saved device preferences if available
+        const mediaConstraints = buildConstraints(type);
+        await webrtc.getUserMedia(mediaConstraints);
+
+        // 4. Create and send the WebRTC offer (null-check peerConnection)
+        if (!webrtc.peerConnection) {
+          throw new Error('Peer connection not available after initialization');
+        }
+        const offer = await webrtc.peerConnection.createOffer();
+        await webrtc.peerConnection.setLocalDescription(offer);
+        await webrtc.sendSignalingMessage('offer', { offer, callType: type });
+
+        // 5. Listen for signaling messages (answer + ICE candidates from recipient)
+        callSignalingUnsubRef.current = webrtc.listenForSignaling(callResult.callId, async (msg) => {
+          if (msg.type === 'answer') {
+            try {
+              await webrtc.handleAnswer(msg.data.answer);
+              setCallPhase('connecting');
+              callPhaseRef.current = 'connecting';
+            } catch (err) {
+              console.error('Error handling answer:', err);
+            }
+          } else if (msg.type === 'ice-candidate') {
+            try {
+              await webrtc.handleIceCandidate(msg.data.candidate);
+            } catch (err) {
+              console.error('Error handling ICE candidate:', err);
+            }
+          } else if (msg.type === 'reject') {
+            toast.info(`${recipientName} rejected the call`);
+            cleanupCall();
+          }
+        });
+
+        // 6. Listen for call status changes (e.g., recipient rejects or times out)
+        const callsQuery = query(
+          collection(db, 'calls'),
+          where('callId', '==', callResult.callId)
+        );
+        callStatusUnsubRef.current = onSnapshot(callsQuery, (snapshot) => {
+          snapshot.docChanges().forEach((change) => {
+            const callData = change.doc.data();
+            if (callData.status === 'rejected') {
+              toast.info(`${recipientName} rejected the call`);
+              cleanupCall();
+            } else if (callData.status === 'answered') {
+              setCallPhase('connecting');
+              callPhaseRef.current = 'connecting';
+            } else if (callData.status === 'ended' || callData.status === 'missed') {
+              toast.info('Call ended by recipient');
+              cleanupCall();
+            }
+          });
+        });
+
+        // 7. Auto-timeout: if no answer in 45 seconds, end the call.
+        //    Use callPhaseRef (not callPhase state) to avoid stale closure.
+        callTimeoutRef.current = setTimeout(() => {
+          if (callPhaseRef.current === 'calling') {
+            toast.info(`${recipientName} did not answer`);
+            cleanupCall();
+          }
+        }, 45000);
+
+      } catch (error) {
+        console.error('Error starting call:', error);
+        toast.error(`Failed to start call: ${error.message}`);
+        cleanupCall();
+      }
+    };
+
+    const startVoiceCall = () => startCall('voice');
+    const startVideoCall = () => startCall('video');
+
+    const endCall = async () => {
+      // Notify the recipient that the call has ended
+      if (currentCallId) {
+        try {
+          await callService.endCall(currentCallId, elapsedSeconds || 0);
+        } catch (err) {
+          console.error('Error ending call via service:', err);
+        }
+      }
+      cleanupCall();
       toast.info('Call ended');
     };
 
-    // Use real conversations only - clients don't have accounts
-    const displayConversations = conversations.length > 0 ? conversations : [
-      {
-        id: 'admin-1',
-        name: institutionData?.name || 'Institution Admin',
-        avatar: null,
-        lastMessage: 'Welcome to the team!',
+    // Show real conversations (those with a conversationId from the DB) plus
+    // tenant members who don't have an existing conversation yet, so the
+    // caregiver can start chatting directly from the list.
+    const existingConversationUserIds = new Set(
+      conversations
+        .filter(c => c.conversationId || (!c.isNew && c.id && !String(c.id).startsWith('new-')))
+        .flatMap(c => (c.participants || []).filter(id => id !== user?.uid))
+    );
+
+    const realConversations = conversations.filter(c => c.conversationId || (!c.isNew && c.id && !String(c.id).startsWith('new-')));
+
+    // Build "start a conversation" entries for tenant members without one
+    const starterEntries = platformUsers
+      .filter(u => u.id && u.id !== user?.uid && !existingConversationUserIds.has(u.id))
+      .map(u => ({
+        id: `new-${u.id}`,
+        name: u.name || u.displayName || u.email || 'Unknown User',
+        avatar: u.photoURL || u.avatar || u.profilePicture || u.profilePictureUrl || null,
+        photoURL: u.photoURL || u.avatar || u.profilePicture || u.profilePictureUrl || null,
+        lastMessage: 'Start a conversation',
         timestamp: new Date().toISOString(),
-          unread: 0,
-          type: 'admin',
-          participants: [user.uid, 'admin']
+        unread: 0,
+        type: u.role || u.userType || u.type || 'user',
+        participants: [user?.uid, u.id],
+        isNew: true,
+        userData: u,
+      }));
+
+    const displayConversations = [...realConversations, ...starterEntries];
+
+    // Build tenant member list — all users within the tenant
+    const tenantMembers = platformUsers
+      .filter(u => u.id && u.id !== user?.uid) // exclude self
+      .map(u => ({
+        id: u.id,
+        name: u.name || u.displayName || u.email || 'Unknown',
+        email: u.email || '',
+        role: u.role || u.userType || u.type || 'user',
+        photoURL: u.photoURL || u.avatar || u.profilePicture || u.profilePictureUrl || null,
+      }));
+
+    const handleNewConversationSelect = async (member) => {
+      setShowNewConversationModal(false);
+
+      // Check if a conversation already exists with this member
+      const existing = conversations.find(
+        c => c.participants && c.participants.includes(member.id) && c.participants.includes(user.uid)
+      );
+
+      if (existing) {
+        handleConversationClick(existing);
+        return;
       }
-    ];
+
+      // Create a new conversation entry (will be persisted on first message)
+      const newConv = {
+        id: `new-${member.id}`,
+        name: member.name,
+        avatar: member.photoURL,
+        photoURL: member.photoURL,
+        lastMessage: 'Start a conversation',
+        timestamp: new Date().toISOString(),
+        unread: 0,
+        type: member.role,
+        participants: [user.uid, member.id],
+        isNew: true,
+        userData: member,
+      };
+
+      setConversations(prev => [newConv, ...prev]);
+      setSelectedConversation(newConv);
+      setMessages([]);
+      if (isMobileMessagingView) {
+        setShowMobileChatPane(true);
+      } else {
+        setIsConversationListCollapsed(false);
+      }
+    };
 
     const handleConversationClick = (conversation) => {
       setSelectedConversation(conversation);
@@ -2337,11 +2606,11 @@ const InstitutionCaregiverDashboard = () => {
       'flex flex-col transition-all duration-200',
       isMobileMessagingView
         ? showMobileChatPane
-          ? 'hidden lg:flex lg:w-80 lg:border-r lg:border-gray-200'
-          : 'flex w-full border-r border-gray-200 lg:w-80'
+          ? 'hidden lg:flex lg:w-80 lg:border-r lg:border-[var(--cm-ink-line,rgba(18,48,44,0.08))]'
+          : 'flex w-full border-r border-[var(--cm-ink-line,rgba(18,48,44,0.08))] lg:w-80'
         : isConversationListCollapsed
           ? 'hidden lg:flex lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none'
-          : 'hidden lg:flex lg:w-80 lg:border-r lg:border-gray-200'
+          : 'hidden lg:flex lg:w-80 lg:border-r lg:border-[var(--cm-ink-line,rgba(18,48,44,0.08))]'
     ].join(' ');
 
     const chatPaneClasses = [
@@ -2355,289 +2624,443 @@ const InstitutionCaregiverDashboard = () => {
           : 'flex'
     ].join(' ');
 
+    // Role badge config
+    const roleBadge = (role) => {
+      const r = (role || '').toLowerCase();
+      if (r === 'admin' || r === 'institutionadmin') return { label: 'Admin', color: 'var(--cm-coral)', bg: 'rgba(221,110,79,0.12)' };
+      if (r === 'doctor') return { label: 'Doctor', color: 'var(--cm-sage)', bg: 'rgba(107,144,128,0.12)' };
+      if (r === 'nurse') return { label: 'Nurse', color: 'var(--cm-coral)', bg: 'rgba(221,110,79,0.1)' };
+      if (r === 'pharmacist') return { label: 'Pharmacist', color: 'var(--cm-gold-deep)', bg: 'rgba(217,164,65,0.12)' };
+      if (r === 'client') return { label: 'Client', color: 'var(--cm-ink)', bg: 'rgba(18,48,44,0.06)' };
+      return { label: 'Caregiver', color: 'var(--cm-sage)', bg: 'rgba(107,144,128,0.1)' };
+    };
+
+    const formatTime = (ts) => {
+      if (!ts) return '';
+      const d = new Date(ts);
+      const now = new Date();
+      if (d.toDateString() === now.toDateString()) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    };
+
+    const formatCallDuration = (seconds) => {
+      if (!seconds || seconds < 0) return '00:00';
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
     return (
-      <div className="cm-card h-[calc(100vh-250px)]">
-        <div className="flex h-full">
-          {/* Conversations List */}
-          <div className={conversationListClasses}>
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
-              <p className="text-sm text-gray-500 mt-1">{displayConversations.length} conversations</p>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto">
-              {displayConversations.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  onClick={() => handleConversationClick(conversation)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''
-                  }`}
+      <>
+        <div className="cm-card h-[calc(100vh-250px)] overflow-hidden">
+          <div className="flex h-full">
+            {/* Conversations List */}
+            <div className={conversationListClasses}>
+              {/* Header with + button */}
+              <div className="px-4 py-3.5 border-b border-[var(--cm-ink-line,rgba(18,48,44,0.08))] flex items-center justify-between">
+                <div>
+                  <h2 className="cm-display text-base text-ink">Messages</h2>
+                  <p className="text-[11px] text-[var(--cm-text-soft)] mt-0.5">
+                    {displayConversations.length} conversation{displayConversations.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowNewConversationModal(true)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white transition hover:opacity-90 active:scale-95"
+                  style={{ background: 'linear-gradient(155deg, var(--cm-sage), var(--cm-ink))' }}
+                  title="Start a new conversation"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden">
-                      {conversation.photoURL || conversation.avatar ? (
-                        <img
-                          src={conversation.photoURL || conversation.avatar}
-                          alt={conversation.name || 'User'}
-                          className="h-full w-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <span className={conversation.photoURL || conversation.avatar ? 'hidden' : 'flex'}>
-                      {String(conversation.name || 'U').charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-gray-900 truncate">{conversation.name || 'Unknown User'}</h3>
-                        {conversation.unread > 0 && (
-                          <span className="ml-2 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                            {conversation.unread}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500 truncate mt-1">{conversation.lastMessage}</p>
-                      <span className="text-xs text-gray-400 mt-1">
-                        {new Date(conversation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                  <Plus style={{ width: 18, height: 18 }} />
+                </button>
+              </div>
 
-          {/* Chat Area */}
-          <div className={chatPaneClasses}>
-            {selectedConversation ? (
-              <>
-                {/* Chat Header with Call Buttons */}
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    {isDesktopMessagingView && (
-                      <button
-                        onClick={toggleConversationList}
-                        className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
-                        aria-label={isConversationListCollapsed ? 'Show conversation list' : 'Hide conversation list'}
-                      >
-                        {isConversationListCollapsed ? (
-                          <PanelLeftOpen className="h-5 w-5" />
-                        ) : (
-                          <PanelLeftClose className="h-5 w-5" />
-                        )}
-                      </button>
-                    )}
-                    {isMobileMessagingView && (
-                      <button
-                        onClick={() => setShowMobileChatPane(false)}
-                        className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 transition mr-1"
-                        aria-label="Back to conversations"
-                      >
-                        <ArrowLeft className="h-5 w-5" />
-                      </button>
-                    )}
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold overflow-hidden">
-                      {selectedConversation.photoURL || selectedConversation.avatar ? (
-                        <img
-                          src={selectedConversation.photoURL || selectedConversation.avatar}
-                          alt={selectedConversation.name || 'User'}
-                          className="h-full w-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <span className={selectedConversation.photoURL || selectedConversation.avatar ? 'hidden' : 'flex'}>
-                        {String(selectedConversation.name || 'U').charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">{selectedConversation.name || 'Unknown User'}</h3>
-                      <p className="text-xs text-gray-500">{selectedConversation.type || 'User'}</p>
-                    </div>
+              {/* Conversation list */}
+              <div className="flex-1 overflow-y-auto">
+                {displayConversations.length === 0 ? (
+                  <div className="text-center py-12 px-4">
+                    <MessageSquare style={{ width: 40, height: 40 }} className="text-[var(--cm-text-soft)]/30 mx-auto mb-3" />
+                    <p className="text-sm text-[var(--cm-text-soft)] mb-1">No conversations yet</p>
+                    <p className="text-[12px] text-[var(--cm-text-soft)]/70 mb-4">
+                      Start a new conversation with a member of your institution
+                    </p>
+                    <button
+                      onClick={() => setShowNewConversationModal(true)}
+                      className="cm-btn-sage text-[13px] px-4 py-2"
+                    >
+                      <Plus style={{ width: 14, height: 14 }} className="mr-1.5" />
+                      New Conversation
+                    </button>
                   </div>
+                ) : (
+                  displayConversations.map((conversation) => {
+                    const isSelected = selectedConversation?.id === conversation.id;
+                    const rb = roleBadge(conversation.type);
+                    const avatar = conversation.photoURL || conversation.avatar;
+                    const initials = String(conversation.name || 'U').charAt(0).toUpperCase();
 
-                  {/* Call Buttons - Only show for non-client conversations */}
-                  <div className="flex items-center gap-2">
-                    {!isInCall && selectedConversation.type !== 'client' && (
-                      <>
-                        <button
-                          onClick={startVoiceCall}
-                          className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                          title="Start Voice Call"
-                        >
-                          <Phone className="h-5 w-5 text-gray-600" />
-                        </button>
-                        <button
-                          onClick={startVideoCall}
-                          className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                          title="Start Video Call"
-                        >
-                          <Camera className="h-5 w-5 text-gray-600" />
-                        </button>
-                      </>
-                    )}
-                    {isInCall && (
-                      <button
-                        onClick={endCall}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                    return (
+                      <div
+                        key={conversation.id}
+                        onClick={() => handleConversationClick(conversation)}
+                        className={`px-4 py-3 border-b border-[var(--cm-ink-line,rgba(18,48,44,0.06))] cursor-pointer transition ${
+                          isSelected ? 'bg-[rgba(217,164,65,0.06)]' : 'hover:bg-cream/50'
+                        }`}
                       >
-                        <Phone className="h-4 w-4" />
-                        End Call
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Call Interface (when in call) */}
-                {isInCall && (
-                  <div className="p-6 bg-gray-900 flex items-center justify-center" style={{ height: '400px' }}>
-                    <div className="text-center">
-                      {callType === 'video' ? (
-                        <div className="space-y-4">
-                          <Camera className="h-16 w-16 text-white mx-auto" />
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
-                              <div className="text-center">
-                                <p className="text-white font-medium">You</p>
-                                <p className="text-gray-400 text-sm">Camera Active</p>
+                        <div className="flex items-start gap-3">
+                          {/* Avatar */}
+                          <div className="relative flex-shrink-0">
+                            {avatar ? (
+                              <img
+                                src={avatar}
+                                alt={conversation.name}
+                                className="w-11 h-11 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div
+                                className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold text-white"
+                                style={{ background: 'linear-gradient(155deg, var(--cm-sage), var(--cm-ink))' }}
+                              >
+                                {initials}
                               </div>
+                            )}
+                          </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <h3 className="text-[13px] font-semibold text-ink truncate">
+                                {conversation.name || 'Unknown User'}
+                              </h3>
+                              <span className="text-[10px] text-[var(--cm-text-soft)] flex-shrink-0">
+                                {formatTime(conversation.timestamp)}
+                              </span>
                             </div>
-                            <div className="bg-gray-800 rounded-lg p-4 aspect-video flex items-center justify-center">
-                              <div className="text-center">
-                                <p className="text-white font-medium">{selectedConversation.name}</p>
-                                <p className="text-gray-400 text-sm">Connecting...</p>
-                              </div>
+                            <div className="flex items-center justify-between gap-2 mt-0.5">
+                              <p className="text-[12px] text-[var(--cm-text-soft)] truncate">
+                                {conversation.lastMessage || 'Start a conversation'}
+                              </p>
+                              {conversation.unread > 0 && (
+                                <span
+                                  className="text-[10px] text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-semibold flex-shrink-0"
+                                  style={{ background: 'var(--cm-gold)' }}
+                                >
+                                  {conversation.unread}
+                                </span>
+                              )}
                             </div>
+                            <span
+                              className="inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                              style={{ background: rb.bg, color: rb.color }}
+                            >
+                              {rb.label}
+                            </span>
                           </div>
                         </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <Phone className="h-16 w-16 text-green-500 mx-auto animate-pulse" />
-                          <p className="text-white text-lg font-medium">Voice Call Active</p>
-                          <p className="text-gray-400">Connected with {selectedConversation.name}</p>
-                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Chat Area */}
+            <div className={chatPaneClasses}>
+              {selectedConversation ? (
+                <>
+                  {/* Chat Header */}
+                  <div className="px-4 py-3 border-b border-[var(--cm-ink-line,rgba(18,48,44,0.08))] flex items-center justify-between bg-cream/30">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {isDesktopMessagingView && (
+                        <button
+                          onClick={toggleConversationList}
+                          className="p-2 rounded-lg hover:bg-cream transition text-[var(--cm-text-soft)] flex-shrink-0"
+                          aria-label={isConversationListCollapsed ? 'Show conversation list' : 'Hide conversation list'}
+                        >
+                          {isConversationListCollapsed ? (
+                            <PanelLeftOpen style={{ width: 18, height: 18 }} />
+                          ) : (
+                            <PanelLeftClose style={{ width: 18, height: 18 }} />
+                          )}
+                        </button>
+                      )}
+                      {isMobileMessagingView && (
+                        <button
+                          onClick={() => setShowMobileChatPane(false)}
+                          className="p-2 rounded-lg hover:bg-cream transition text-[var(--cm-text-soft)] flex-shrink-0"
+                          aria-label="Back to conversations"
+                        >
+                          <ArrowLeft style={{ width: 18, height: 18 }} />
+                        </button>
+                      )}
+                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-white font-semibold text-sm"
+                        style={{ background: 'linear-gradient(155deg, var(--cm-sage), var(--cm-ink))' }}>
+                        {selectedConversation.photoURL || selectedConversation.avatar ? (
+                          <img
+                            src={selectedConversation.photoURL || selectedConversation.avatar}
+                            alt={selectedConversation.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          String(selectedConversation.name || 'U').charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-ink truncate">{selectedConversation.name || 'Unknown User'}</h3>
+                        <p className="text-[11px] text-[var(--cm-text-soft)]">{roleBadge(selectedConversation.type).label}</p>
+                      </div>
+                    </div>
+
+                    {/* Call Buttons */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {!isInCall && selectedConversation.type !== 'client' && (
+                        <>
+                          <button
+                            onClick={startVoiceCall}
+                            className="p-2 rounded-lg hover:bg-cream transition text-[var(--cm-text-soft)]"
+                            title="Start Voice Call"
+                          >
+                            <Phone style={{ width: 18, height: 18 }} />
+                          </button>
+                          <button
+                            onClick={startVideoCall}
+                            className="p-2 rounded-lg hover:bg-cream transition text-[var(--cm-text-soft)]"
+                            title="Start Video Call"
+                          >
+                            <Camera style={{ width: 18, height: 18 }} />
+                          </button>
+                          <button
+                            onClick={() => setShowDeviceSettings(true)}
+                            className="p-2 rounded-lg hover:bg-cream transition text-[var(--cm-text-soft)]"
+                            title="Call Device Settings"
+                          >
+                            <Settings style={{ width: 18, height: 18 }} />
+                          </button>
+                        </>
+                      )}
+                      {isInCall && (
+                        <button
+                          onClick={endCall}
+                          className="px-3 py-1.5 bg-coral text-white rounded-lg hover:opacity-90 transition flex items-center gap-1.5 text-[13px]"
+                        >
+                          <Phone style={{ width: 14, height: 14 }} />
+                          End Call
+                        </button>
                       )}
                     </div>
                   </div>
-                )}
 
-                {/* Messages Area */}
-                {!isInCall && (
-                  <>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                      {messages.length === 0 ? (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center text-gray-400">
-                            <MessageSquare className="h-12 w-12 mx-auto mb-2" />
-                            <p>No messages yet. Start the conversation!</p>
+                  {/* Call Interface */}
+                  {isInCall && (
+                    <div className="bg-gray-900 flex items-center justify-center relative" style={{ minHeight: '300px' }}>
+                      {/* Video call: show local + remote video when connected */}
+                      {callType === 'video' && callPhase === 'connected' && localStream && (
+                        <div className="absolute inset-0">
+                          {/* Remote video (full) */}
+                          {remoteStream && (
+                            <video
+                              ref={el => { if (el && remoteStream) { el.srcObject = remoteStream; el.play().catch(() => {}); } }}
+                              autoPlay
+                              playsInline
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                          {/* Local video (picture-in-picture) */}
+                          <div className="absolute bottom-3 right-3 w-32 h-24 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
+                            <video
+                              ref={el => { if (el && localStream) { el.srcObject = localStream; el.play().catch(() => {}); } }}
+                              autoPlay
+                              playsInline
+                              muted
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          {/* Call info overlay */}
+                          <div className="absolute top-3 left-3 bg-black/50 rounded-lg px-3 py-1.5">
+                            <p className="text-white text-sm font-medium">
+                              {selectedConversation.name} · {formatCallDuration(elapsedSeconds)}
+                            </p>
                           </div>
                         </div>
-                      ) : (
-                        messages.map((message) => {
-                          const isSentByMe = (message.senderId || message.sender) === user?.uid;
-                          const messageTime = message.createdAt || message.timestamp;
+                      )}
 
-                          return (
-                            <div
-                              key={message.id}
-                              className={`flex items-start gap-2 ${isSentByMe ? 'justify-end' : 'justify-start'}`}
-                            >
-                              {!isSentByMe && (
-                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 overflow-hidden">
-                                  {message.senderPhotoURL ? (
-                                    <img
-                                      src={message.senderPhotoURL}
-                                      alt={message.senderName || 'User'}
-                                      className="h-full w-full object-cover"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-                                      }}
-                                    />
-                                  ) : null}
-                                  <span className={message.senderPhotoURL ? 'hidden' : 'flex'}>
-                                    {String(message.senderName || 'U').charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
+                      {/* Non-connected states (calling, connecting) or voice call */}
+                      {(callPhase !== 'connected' || callType === 'voice') && (
+                        <div className="text-center py-12 px-6">
+                          {callType === 'video' && callPhase === 'connected' ? null : (
+                            <>
+                              {/* Avatar */}
                               <div
-                                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                  isSentByMe ? 'bg-blue-600 text-white' : 'bg-white text-gray-900 border border-gray-200'
-                                }`}
+                                className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4"
+                                style={{ background: 'linear-gradient(155deg, var(--cm-sage), var(--cm-ink))' }}
+                              >
+                                {String(selectedConversation.name || 'U').charAt(0).toUpperCase()}
+                              </div>
+
+                              {/* Status text based on call phase */}
+                              {callPhase === 'calling' && (
+                                <>
+                                  <p className="text-white text-lg font-medium mb-1">
+                                    Calling {selectedConversation.name}...
+                                  </p>
+                                  <p className="text-gray-400 text-sm mb-4">
+                                    {callType === 'video' ? 'Video call' : 'Voice call'} · Waiting for answer
+                                  </p>
+                                  {/* Pulsing icon */}
+                                  <div className="flex justify-center">
+                                    {callType === 'video' ? (
+                                      <Camera style={{ width: 32, height: 32 }} className="text-gray-400 animate-pulse" />
+                                    ) : (
+                                      <Phone style={{ width: 32, height: 32 }} className="text-green-500 animate-pulse" />
+                                    )}
+                                  </div>
+                                </>
+                              )}
+
+                              {callPhase === 'connecting' && (
+                                <>
+                                  <p className="text-white text-lg font-medium mb-1">
+                                    Connecting...
+                                  </p>
+                                  <p className="text-gray-400 text-sm mb-4">
+                                    Establishing connection with {selectedConversation.name}
+                                  </p>
+                                  <div className="flex justify-center gap-1.5">
+                                    <div className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                    <div className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                    <div className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                  </div>
+                                </>
+                              )}
+
+                              {callPhase === 'connected' && callType === 'voice' && (
+                                <>
+                                  <p className="text-white text-lg font-medium mb-1">
+                                    {selectedConversation.name}
+                                  </p>
+                                  <p className="text-green-400 text-sm mb-4">
+                                    {formatCallDuration(elapsedSeconds)}
+                                  </p>
+                                  <Phone style={{ width: 40, height: 40 }} className="text-green-500 mx-auto animate-pulse" />
+                                </>
+                              )}
+
+                              {callPhase === 'ended' && (
+                                <>
+                                  <p className="text-white text-lg font-medium mb-1">Call ended</p>
+                                  <p className="text-gray-400 text-sm">Disconnecting...</p>
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Messages Area */}
+                  {!isInCall && (
+                    <>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-cream/20">
+                        {messages.length === 0 ? (
+                          <div className="flex items-center justify-center h-full">
+                            <div className="text-center text-[var(--cm-text-soft)]">
+                              <MessageSquare style={{ width: 48, height: 48 }} className="mx-auto mb-3 opacity-40" />
+                              <p className="text-sm">No messages yet. Start the conversation!</p>
+                            </div>
+                          </div>
+                        ) : (
+                          messages.map((message) => {
+                            const isSentByMe = (message.senderId || message.sender) === user?.uid;
+                            const messageTime = message.createdAt || message.timestamp;
+
+                            return (
+                              <div
+                                key={message.id}
+                                className={`flex items-start gap-2 ${isSentByMe ? 'justify-end' : 'justify-start'}`}
                               >
                                 {!isSentByMe && (
-                                  <p className="text-xs font-semibold mb-1">{message.senderName || 'Unknown User'}</p>
+                                  <div
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0"
+                                    style={{ background: 'linear-gradient(155deg, var(--cm-sage), var(--cm-ink))' }}
+                                  >
+                                    {String(message.senderName || 'U').charAt(0).toUpperCase()}
+                                  </div>
                                 )}
-                                <p className="text-sm">{message.text || message.content}</p>
-                                <p className={`text-xs mt-1 ${isSentByMe ? 'text-blue-100' : 'text-gray-400'}`}>
-                                  {new Date(messageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                              </div>
-                              {isSentByMe && (
-                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0 overflow-hidden">
-                                  {userProfile?.photoURL || userProfile?.profilePicture || userProfile?.profilePictureUrl ? (
-                                    <img
-                                      src={userProfile.photoURL || userProfile.profilePicture || userProfile.profilePictureUrl}
-                                      alt={userProfile.name || 'You'}
-                                      className="h-full w-full object-cover"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-                                      }}
-                                    />
-                                  ) : null}
-                                  <span className={userProfile?.photoURL || userProfile?.profilePicture || userProfile?.profilePictureUrl ? 'hidden' : 'flex'}>
-                                    {String(userProfile?.name || userProfile?.displayName || 'Y').charAt(0).toUpperCase()}
-                                  </span>
+                                <div
+                                  className={`max-w-xs lg:max-w-md px-3.5 py-2 rounded-2xl ${
+                                    isSentByMe
+                                      ? 'text-white'
+                                      : 'bg-white text-ink border border-[var(--cm-ink-line,rgba(18,48,44,0.08))]'
+                                  }`}
+                                  style={isSentByMe ? { background: 'var(--cm-sage)' } : {}}
+                                >
+                                  {!isSentByMe && (
+                                    <p className="text-[11px] font-semibold mb-0.5 text-[var(--cm-text-soft)]">{message.senderName || 'Unknown User'}</p>
+                                  )}
+                                  <p className="text-[13px] leading-relaxed">{message.text || message.content}</p>
+                                  <p className={`text-[10px] mt-1 ${isSentByMe ? 'text-white/70' : 'text-[var(--cm-text-soft)]'}`}>
+                                    {new Date(messageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    {/* Message Input */}
-                    <div className="p-4 border-t border-gray-200 bg-white">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                          placeholder="Type a message..."
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button
-                          onClick={handleSendMessage}
-                          disabled={!newMessage.trim()}
-                          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                        >
-                          Send
-                        </button>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center bg-gray-50">
-                <div className="text-center text-gray-400 px-6">
-                  <MessageSquare className="h-16 w-16 mx-auto mb-4" />
-                  <p className="text-lg font-medium">Select a conversation to start messaging</p>
-                  <p className="text-sm mt-2">Your chats and calling tools will appear here</p>
+
+                      {/* Message Input */}
+                      <div className="p-3 border-t border-[var(--cm-ink-line,rgba(18,48,44,0.08))] bg-white">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                            placeholder="Type a message..."
+                            className="cm-input flex-1 text-sm"
+                          />
+                          <button
+                            onClick={handleSendMessage}
+                            disabled={!newMessage.trim()}
+                            className="cm-btn-sage px-5 py-2 text-[13px] disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            Send
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center bg-cream/20">
+                  <div className="text-center text-[var(--cm-text-soft)] px-6">
+                    <MessageSquare style={{ width: 64, height: 64 }} className="mx-auto mb-4 opacity-30" />
+                    <p className="text-base font-medium text-ink">Select a conversation</p>
+                    <p className="text-sm mt-2 mb-4">Choose a conversation or start a new one</p>
+                    <button
+                      onClick={() => setShowNewConversationModal(true)}
+                      className="cm-btn-gold text-[13px] px-4 py-2"
+                    >
+                      <Plus style={{ width: 14, height: 14 }} className="mr-1.5" />
+                      New Conversation
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* New Conversation Modal */}
+        <NewConversationModal
+          open={showNewConversationModal}
+          onClose={() => setShowNewConversationModal(false)}
+          members={tenantMembers}
+          currentUserId={user?.uid}
+          onSelect={handleNewConversationSelect}
+        />
+      </>
     );
   };
 
@@ -2652,316 +3075,355 @@ const InstitutionCaregiverDashboard = () => {
     };
 
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const today = new Date().getDay();
-    
+
     // Get tasks for the selected date (fixed timezone issues)
     const getTasksForDate = (date) => {
       if (!todaySchedule || !Array.isArray(todaySchedule)) {
         return [];
       }
-      
+
       // Normalize the target date to local date (ignore time, use local timezone)
       const targetDate = new Date(date);
       const targetYear = targetDate.getFullYear();
       const targetMonth = targetDate.getMonth();
       const targetDay = targetDate.getDate();
-      
+
       return todaySchedule.filter(item => {
         if (!item || !item.time) return false;
-        
+
         // Parse the item's time/date
         const itemDate = new Date(item.time);
         if (isNaN(itemDate.getTime())) return false;
-        
+
         // Compare by date components (year, month, day) to avoid timezone issues
         const itemYear = itemDate.getFullYear();
         const itemMonth = itemDate.getMonth();
         const itemDay = itemDate.getDate();
-        
+
         // Match if the date components are the same
-        return itemYear === targetYear && 
-               itemMonth === targetMonth && 
+        return itemYear === targetYear &&
+               itemMonth === targetMonth &&
                itemDay === targetDay;
       });
     };
-    
+
     // Helper function to check if a task is past/overdue
     const isTaskPast = (item) => {
       if (!item || !item.time) return false;
       const itemDate = new Date(item.time);
       if (isNaN(itemDate.getTime())) return false;
-      
+
       const now = new Date();
       // Check if task is past (completed tasks are not considered past)
       return item.status !== 'completed' && itemDate < now;
     };
-    
+
     const selectedDayTasks = getTasksForDate(selectedScheduleDate);
-    
+
     return (
-      <div className="space-y-6">
-        {/* Shift Overview */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Clock className="h-6 w-6 text-blue-600" />
-            Current Shift Overview
-          </h2>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Shift Type</p>
-              <p className="text-lg font-bold text-gray-900">{currentShift.type}</p>
+      <div className="flex flex-col gap-4 lg:gap-5">
+        {/* ── Shift Overview — compact strip ── */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Current Shift
+            </h2>
+            <span className="text-xs text-gray-500 hidden sm:block">{currentShift.breakTime}</span>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
+            <div className="bg-white rounded-lg p-2.5 sm:p-3">
+              <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Type</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900">{currentShift.type}</p>
             </div>
-            <div className="bg-white rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Hours</p>
-              <p className="text-lg font-bold text-gray-900">{currentShift.start} - {currentShift.end}</p>
+            <div className="bg-white rounded-lg p-2.5 sm:p-3">
+              <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Hours</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900">{currentShift.start}–{currentShift.end}</p>
             </div>
-            <div className="bg-white rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Client-Nurse Ratio</p>
-              <p className="text-lg font-bold text-gray-900">{currentShift.ratio}</p>
+            <div className="bg-white rounded-lg p-2.5 sm:p-3">
+              <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Ratio</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900">{currentShift.ratio}</p>
             </div>
-            <div className="bg-white rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Break Time</p>
-              <p className="text-lg font-bold text-gray-900">{currentShift.breakTime}</p>
+            <div className="bg-white rounded-lg p-2.5 sm:p-3 hidden sm:block">
+              <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Break</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900">{currentShift.breakTime}</p>
             </div>
           </div>
         </div>
 
-        {/* Weekly Schedule Calendar */}
-        <div className="cm-card p-4 sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-gray-500">Week of</p>
-              <h2 className="text-xl font-bold text-gray-900">{new Date().toLocaleDateString()}</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-                onClick={() => setSelectedScheduleDate(new Date())}
-              >
-                Today
-              </button>
-              <div className="hidden sm:flex items-center text-sm text-gray-500">
-                <Calendar className="h-4 w-4 mr-1" />
-                Tap a day to focus timeline
+        {/* ── Weekly Schedule Calendar — sticky header + scrollable day grid ── */}
+        <div className="cm-card overflow-hidden">
+          {/* Calendar header — sticky */}
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-gray-400">Week of</p>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+                  {currentWeekStart.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </h2>
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <button
+                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                  onClick={() => {
+                    const now = new Date();
+                    const day = now.getDay();
+                    const start = new Date(now);
+                    start.setDate(now.getDate() - day);
+                    start.setHours(0, 0, 0, 0);
+                    setCurrentWeekStart(start);
+                    setSelectedScheduleDate(new Date());
+                  }}
+                >
+                  This Week
+                </button>
+                <button
+                  className="p-1.5 sm:p-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                  onClick={() => {
+                    const prev = new Date(currentWeekStart);
+                    prev.setDate(prev.getDate() - 7);
+                    setCurrentWeekStart(prev);
+                  }}
+                  title="Previous week"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  className="p-1.5 sm:p-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                  onClick={() => {
+                    const next = new Date(currentWeekStart);
+                    next.setDate(next.getDate() + 7);
+                    setCurrentWeekStart(next);
+                  }}
+                  title="Next week"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
-          
-          <div className="flex gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-7 sm:gap-2">
-            {daysOfWeek.map((day, index) => {
-              const dayDate = new Date(Date.now() + (index - today + 1) * 86400000);
-              const dayStart = new Date(dayDate);
-              dayStart.setHours(0, 0, 0, 0);
-              const dayEnd = new Date(dayDate);
-              dayEnd.setHours(23, 59, 59, 999);
-              
-              // Filter schedule items for this day
-              const dayItems = getTasksForDate(dayDate);
-              
-              // Check if this day is selected
-              const isSelected = selectedScheduleDate.toDateString() === dayDate.toDateString();
-              const isToday = index === today;
-              
-              return (
-                <button
-                  key={day}
-                  onClick={() => setSelectedScheduleDate(dayDate)}
-                  className={`flex-1 min-w-[80px] sm:min-w-0 text-center p-3 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
-                    isSelected ? 'bg-indigo-50 border-indigo-500 shadow ring-2 ring-indigo-200' :
-                    isToday ? 'bg-blue-50 border-blue-400' : 
-                    'bg-gray-50 border-transparent hover:bg-gray-100'
-                  }`}
-                >
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{day}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{dayDate.getDate()}</p>
-                  {dayItems.length > 0 ? (
-                    <div className="mt-3 space-y-1">
-                      {dayItems.slice(0, 3).map((item, idx) => {
-                        const itemTime = new Date(item.time);
-                        const isPast = isTaskPast(item);
-                        return (
-                          <div 
-                            key={idx}
-                            className={`text-xs text-white rounded-lg px-2 py-1 truncate cursor-pointer hover:opacity-80 transition-opacity border-l-2 ${
-                              isPast 
-                                ? 'bg-red-600 border-red-800 opacity-90' : // Past/overdue tasks in red
-                                item.type === 'appointment' ? 'bg-blue-500 border-blue-600' :
-                                item.type === 'task' ? 'bg-green-500 border-green-600' :
-                                'bg-purple-500 border-purple-600'
-                            }`}
-                            title={isPast ? `${item.title} (Overdue)` : item.title}
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent date selection
-                              // Find the full task object from recentTasks or use item data
-                              const fullTask = recentTasks.find(t => t.id === item.id) || item;
-                              setSelectedTask({
-                                ...fullTask,
-                                clientName: fullTask.client || fullTask.clientName || 'Client',
-                                scheduledTime: fullTask.time || fullTask.scheduledTime,
-                                dueDate: fullTask.dueDate || fullTask.time
-                              });
-                              setShowTaskDetailsModal(true);
-                            }}
-                          >
-                            <span className="font-semibold">
-                              {itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>{' '}
-                            {item.title?.substring(0, 10)}
-                            {isPast && <span className="ml-1">⚠️</span>}
-                          </div>
-                        );
-                      })}
-                      {dayItems.length > 3 && (
-                        <div className="text-xs text-gray-600">+{dayItems.length - 3} more</div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="mt-2 text-xs text-gray-400">No tasks</div>
-                  )}
-                </button>
-              );
-            })}
+
+          {/* Day grid — horizontal scroll on mobile, 7-col on desktop */}
+          <div className="px-3 sm:px-5 py-3 sm:py-4">
+            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 sm:overflow-visible sm:grid sm:grid-cols-7"
+                 style={{ scrollbarWidth: 'thin' }}
+            >
+              {daysOfWeek.map((day, index) => {
+                const dayDate = new Date(currentWeekStart);
+                dayDate.setDate(currentWeekStart.getDate() + index);
+
+                // Filter schedule items for this day
+                const dayItems = getTasksForDate(dayDate);
+
+                // Check if this day is selected
+                const isSelected = selectedScheduleDate.toDateString() === dayDate.toDateString();
+                const isToday = dayDate.toDateString() === new Date().toDateString();
+
+                return (
+                  <button
+                    key={day}
+                    onClick={() => setSelectedScheduleDate(dayDate)}
+                    className={`flex-shrink-0 w-[72px] sm:w-auto text-center p-2 sm:p-3 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+                      isSelected ? 'bg-indigo-50 border-indigo-500 shadow ring-2 ring-indigo-200' :
+                      isToday ? 'bg-blue-50 border-blue-400' :
+                      'bg-gray-50 border-transparent hover:bg-gray-100'
+                    }`}
+                  >
+                    <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">{day}</p>
+                    <p className="text-lg sm:text-2xl font-bold text-gray-900 mt-0.5 sm:mt-1">{dayDate.getDate()}</p>
+                    {dayItems.length > 0 ? (
+                      <div className="mt-1.5 sm:mt-3 space-y-1">
+                        {dayItems.slice(0, 3).map((item, idx) => {
+                          const itemTime = new Date(item.time);
+                          const isPast = isTaskPast(item);
+                          return (
+                            <div
+                              key={idx}
+                              className={`text-[10px] sm:text-xs text-white rounded-md sm:rounded-lg px-1.5 sm:px-2 py-0.5 sm:py-1 truncate cursor-pointer hover:opacity-80 transition-opacity border-l-2 ${
+                                isPast
+                                  ? 'bg-red-600 border-red-800 opacity-90' :
+                                  item.type === 'appointment' ? 'bg-blue-500 border-blue-600' :
+                                  item.type === 'task' ? 'bg-green-500 border-green-600' :
+                                  'bg-purple-500 border-purple-600'
+                              }`}
+                              title={isPast ? `${item.title} (Overdue)` : item.title}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const fullTask = recentTasks.find(t => t.id === item.id) || item;
+                                setSelectedTask({
+                                  ...fullTask,
+                                  clientName: fullTask.client || fullTask.clientName || 'Client',
+                                  scheduledTime: fullTask.time || fullTask.scheduledTime,
+                                  dueDate: fullTask.dueDate || fullTask.time
+                                });
+                                setShowTaskDetailsModal(true);
+                              }}
+                            >
+                              <span className="font-semibold">
+                                {itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>{' '}
+                              {item.title?.substring(0, 10)}
+                              {isPast && <span className="ml-1">⚠️</span>}
+                            </div>
+                          );
+                        })}
+                        {dayItems.length > 3 && (
+                          <div className="text-[10px] sm:text-xs text-gray-600">+{dayItems.length - 3} more</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-gray-400">No tasks</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Selected Day's Timeline */}
-        <div className="cm-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">
+        {/* ── Selected Day's Timeline — scrollable container ── */}
+        <div className="cm-card overflow-hidden flex flex-col">
+          {/* Timeline header — sticky */}
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">
               {selectedScheduleDate.toDateString() === new Date().toDateString() ? "Today's Timeline" : "Schedule Timeline"}
             </h2>
-            <div className="text-sm text-gray-500">
-              {selectedScheduleDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            <div className="text-xs sm:text-sm text-gray-500 truncate ml-2">
+              {selectedScheduleDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </div>
           </div>
-          
-          <div className="space-y-4">
-            {selectedDayTasks.length > 0 ? (
-              selectedDayTasks.map((item, index) => {
-                const itemTime = item.time ? new Date(item.time) : null;
-                const isValidTime = itemTime && !isNaN(itemTime.getTime());
-                
-                return (
-                  <div key={item.id} className="flex flex-col sm:flex-row items-stretch sm:items-start gap-4">
-                    <div className="flex items-center sm:block justify-between">
-                      <div className="text-left sm:text-right">
-                        <p className="text-lg font-bold text-gray-900">
-                          {isValidTime ? itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No time'}
-                        </p>
-                        {isValidTime && (
-                          <p className="text-xs text-gray-500">
-                            {itemTime.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+
+          {/* Timeline body — scrollable */}
+          <div
+            className="overflow-y-auto px-4 sm:px-6 py-4"
+            style={{ maxHeight: 'calc(100vh - 420px)', minHeight: '200px', scrollbarWidth: 'thin' }}
+          >
+            <div className="space-y-3 sm:space-y-4">
+              {selectedDayTasks.length > 0 ? (
+                selectedDayTasks.map((item, index) => {
+                  const itemTime = item.time ? new Date(item.time) : null;
+                  const isValidTime = itemTime && !isNaN(itemTime.getTime());
+
+                  return (
+                    <div key={item.id} className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3 sm:gap-4">
+                      <div className="flex items-center sm:block justify-between">
+                        <div className="text-left sm:text-right">
+                          <p className="text-base sm:text-lg font-bold text-gray-900">
+                            {isValidTime ? itemTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No time'}
                           </p>
-                        )}
-                      </div>
-                      <div className="sm:hidden flex items-center gap-2 text-xs">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full font-semibold ${getStatusColor(item.status)}`}>
-                          {isTaskPast(item) ? 'Overdue' : (item.status || 'pending')}
-                        </span>
-                        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 capitalize">{item.type || 'task'}</span>
-                      </div>
-                    </div>
-                    <div className="hidden sm:flex flex-col items-center">
-                      <div className={`h-4 w-4 rounded-full border-2 ${
-                        item.status === 'completed' ? 'bg-green-500 border-green-600' : 
-                        item.status === 'in_progress' ? 'bg-blue-500 border-blue-600' :
-                        'bg-white border-gray-400'
-                      }`}></div>
-                      {index < todaySchedule.length - 1 && <div className="w-0.5 flex-1 min-h-[60px] bg-gray-300"></div>}
-                    </div>
-                    <div className="flex-1 pb-4 sm:pb-6">
-                      <div 
-                        className={`rounded-lg p-4 hover:shadow-md transition-all cursor-pointer border-l-4 ${
-                          isTaskPast(item)
-                            ? 'bg-red-50 border-red-500 hover:bg-red-100' : // Past/overdue tasks
-                            'bg-gray-50 border-gray-300 hover:bg-gray-100'
-                        }`}
-                        onClick={() => {
-                          // Find the full task object from recentTasks or use item data
-                          const fullTask = recentTasks.find(t => t.id === item.id) || item;
-                          setSelectedTask({
-                            ...fullTask,
-                            clientName: fullTask.client || fullTask.clientName || 'Client',
-                            scheduledTime: fullTask.time || fullTask.scheduledTime,
-                            dueDate: fullTask.dueDate || fullTask.time
-                          });
-                          setShowTaskDetailsModal(true);
-                        }}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className={`font-semibold flex items-center gap-2 ${
-                              isTaskPast(item) ? 'text-red-900' : 'text-gray-900'
-                            }`}>
-                              {isTaskPast(item) && <AlertTriangle className="h-4 w-4 text-red-600" />}
-                              {item.title}
+                          {isValidTime && (
+                            <p className="text-xs text-gray-500">
+                              {itemTime.toLocaleDateString([], { month: 'short', day: 'numeric' })}
                             </p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              <User className="h-3 w-3 inline mr-1" />
-                              {item.client || 'Client'}
-                            </p>
-                          </div>
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                            isTaskPast(item) ? 'bg-red-100 text-red-800' :
-                            item.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                            item.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                            item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {isTaskPast(item) ? 'Overdue' : (item.status || 'pending')}
-                          </span>
-                        </div>
-                        
-                        {/* Task Type Badge */}
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
-                            item.type === 'appointment' ? 'bg-blue-50 text-blue-700' :
-                            item.type === 'task' ? 'bg-purple-50 text-purple-700' :
-                            'bg-indigo-50 text-indigo-700'
-                          }`}>
-                            {item.type === 'appointment' && <Calendar className="h-3 w-3 mr-1" />}
-                            {item.type === 'task' && <Activity className="h-3 w-3 mr-1" />}
-                            {item.type === 'assignment' && <FileText className="h-3 w-3 mr-1" />}
-                            {item.type || 'Task'}
-                          </span>
-                          
-                          {item.priority && (
-                            <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
-                              item.priority === 'urgent' ? 'bg-red-50 text-red-700' :
-                              item.priority === 'high' ? 'bg-orange-50 text-orange-700' :
-                              item.priority === 'medium' ? 'bg-yellow-50 text-yellow-700' :
-                              'bg-gray-50 text-gray-700'
-                            }`}>
-                              {item.priority === 'urgent' && '🚨 '}
-                              {item.priority}
-                            </span>
                           )}
                         </div>
-                        
-                        {/* Additional Details */}
-                        {item.description && (
-                          <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                            {item.description}
-                          </p>
-                        )}
+                        <div className="sm:hidden flex items-center gap-2 text-xs">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full font-semibold ${getStatusColor(item.status)}`}>
+                            {isTaskPast(item) ? 'Overdue' : (item.status || 'pending')}
+                          </span>
+                          <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 capitalize">{item.type || 'task'}</span>
+                        </div>
+                      </div>
+                      <div className="hidden sm:flex flex-col items-center">
+                        <div className={`h-4 w-4 rounded-full border-2 ${
+                          item.status === 'completed' ? 'bg-green-500 border-green-600' :
+                          item.status === 'in_progress' ? 'bg-blue-500 border-blue-600' :
+                          'bg-white border-gray-400'
+                        }`}></div>
+                        {index < todaySchedule.length - 1 && <div className="w-0.5 flex-1 min-h-[60px] bg-gray-300"></div>}
+                      </div>
+                      <div className="flex-1 pb-3 sm:pb-6">
+                        <div
+                          className={`rounded-lg p-3 sm:p-4 hover:shadow-md transition-all cursor-pointer border-l-4 ${
+                            isTaskPast(item)
+                              ? 'bg-red-50 border-red-500 hover:bg-red-100' :
+                              'bg-gray-50 border-gray-300 hover:bg-gray-100'
+                          }`}
+                          onClick={() => {
+                            const fullTask = recentTasks.find(t => t.id === item.id) || item;
+                            setSelectedTask({
+                              ...fullTask,
+                              clientName: fullTask.client || fullTask.clientName || 'Client',
+                              scheduledTime: fullTask.time || fullTask.scheduledTime,
+                              dueDate: fullTask.dueDate || fullTask.time
+                            });
+                            setShowTaskDetailsModal(true);
+                          }}
+                        >
+                          <div className="flex items-start justify-between mb-2 gap-2">
+                            <div className="min-w-0">
+                              <p className={`font-semibold flex items-center gap-2 text-sm sm:text-base ${
+                                isTaskPast(item) ? 'text-red-900' : 'text-gray-900'
+                              }`}>
+                                {isTaskPast(item) && <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" />}
+                                <span className="truncate">{item.title}</span>
+                              </p>
+                              <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                                <User className="h-3 w-3 inline mr-1" />
+                                {item.client || 'Client'}
+                              </p>
+                            </div>
+                            <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${
+                              isTaskPast(item) ? 'bg-red-100 text-red-800' :
+                              item.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              item.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                              item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {isTaskPast(item) ? 'Overdue' : (item.status || 'pending')}
+                            </span>
+                          </div>
+
+                          {/* Task Type Badge */}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                              item.type === 'appointment' ? 'bg-blue-50 text-blue-700' :
+                              item.type === 'task' ? 'bg-purple-50 text-purple-700' :
+                              'bg-indigo-50 text-indigo-700'
+                            }`}>
+                              {item.type === 'appointment' && <Calendar className="h-3 w-3 mr-1" />}
+                              {item.type === 'task' && <Activity className="h-3 w-3 mr-1" />}
+                              {item.type === 'assignment' && <FileText className="h-3 w-3 mr-1" />}
+                              {item.type || 'Task'}
+                            </span>
+
+                            {item.priority && (
+                              <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                                item.priority === 'urgent' ? 'bg-red-50 text-red-700' :
+                                item.priority === 'high' ? 'bg-orange-50 text-orange-700' :
+                                item.priority === 'medium' ? 'bg-yellow-50 text-yellow-700' :
+                                'bg-gray-50 text-gray-700'
+                              }`}>
+                                {item.priority === 'urgent' && '🚨 '}
+                                {item.priority}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Additional Details */}
+                          {item.description && (
+                            <p className="text-xs sm:text-sm text-gray-600 mt-2 line-clamp-2">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-center text-gray-400 py-12">
-                <Calendar className="h-12 w-12 mx-auto mb-2" />
-                <p className="text-lg font-medium">
-                  {selectedScheduleDate.toDateString() === new Date().toDateString() 
-                    ? "No scheduled activities for today" 
-                    : `No scheduled activities for ${selectedScheduleDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
-                  }
-                </p>
-                <p className="text-sm mt-1">Tasks and appointments will appear here</p>
-              </div>
-            )}
+                  );
+                })
+              ) : (
+                <div className="text-center text-gray-400 py-8 sm:py-12">
+                  <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2" />
+                  <p className="text-sm sm:text-lg font-medium">
+                    {selectedScheduleDate.toDateString() === new Date().toDateString()
+                      ? "No scheduled activities for today"
+                      : `No scheduled activities for ${selectedScheduleDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
+                    }
+                  </p>
+                  <p className="text-xs sm:text-sm mt-1">Tasks and appointments will appear here</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -4067,12 +4529,6 @@ const InstitutionCaregiverDashboard = () => {
 
   // Activities Tab Renderer
   const renderActivitiesTab = () => {
-    console.log('🎯 ADL Logger - Activities tab rendering', { 
-      selectedClientId, 
-      selectedClient: selectedClient?.name || selectedClient?.fullName,
-      activeTab 
-    });
-    
     // Check if a client is selected
     if (!selectedClientId || !selectedClient) {
     return (
@@ -4095,11 +4551,10 @@ const InstitutionCaregiverDashboard = () => {
     return (
       <div className="space-y-6">
         {/* ADL Logger Component */}
-        <AdlLogger 
+        <AdlLogger
           clientId={selectedClientId}
           clientName={selectedClient.name || selectedClient.fullName}
           onActivityLogged={(log) => {
-            console.log('Activity logged:', log);
             toast.success(`Activity logged for ${log.clientName}`);
             
             // Optional: Refresh any related data or update stats
@@ -4115,9 +4570,7 @@ const InstitutionCaregiverDashboard = () => {
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'messages', label: 'Messages', icon: MessageSquare },
-    { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-    { id: 'carelogs', label: 'Care Logs', icon: Camera },
-    { id: 'activities', label: 'Activities', icon: Activity },
+    { id: 'activity', label: 'Care Activity', icon: Activity },
     { id: 'clients', label: 'Clients', icon: Users },
     ...(isDoctor || isNurse || isPharmacist ? [
       { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
@@ -4162,6 +4615,7 @@ const InstitutionCaregiverDashboard = () => {
         userEmail={userProfile?.email || user?.email || ''}
         profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
         onLogout={handleLogout}
+        onProfileClick={() => setShowProfileSettings(true)}
         headerActions={
           <>
             {userRoles && userRoles.length > 1 && (
@@ -4171,148 +4625,57 @@ const InstitutionCaregiverDashboard = () => {
                 institutionId={effectiveInstitutionId}
               />
             )}
-            <button
-              onClick={() => setShowProfileSettings(true)}
-              className="cm-btn-gold"
-              title="Profile Settings"
-            >
-              <User className="h-4 w-4 mr-2" />
-              <span className="hidden lg:inline">Profile</span>
-            </button>
           </>
         }
       >
-        <div className="space-y-6">
+        <div className="space-y-5">
+          {/* Section header — no duplicate institution name (it's in the topbar) */}
           <div className="cm-section-head">
             <span className="cm-eyebrow">{activeTabLabel}</span>
-            <h2 className="mt-2">{institutionData?.name || 'Caregiver Dashboard'}</h2>
-            <p>Welcome back, {displayName}.</p>
+            <h2 className="mt-2">Welcome back, {displayName}</h2>
+            <p>{userProfile?.medicalQualification || 'Caregiver'} · {institutionData?.name || 'Institution'}</p>
           </div>
 
+        {/* Doctor Client Selector */}
+        {renderDoctorClientSelector()}
 
-        {/* Doctor Client Selector (if doctor) */}
-        <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-3 sm:pt-4 md:pt-6">
-          {renderDoctorClientSelector()}
-        </div>
-
-        {/* Summary Cards - Only show on dashboard */}
+        {/* ── Dashboard tab ────────────────────────────────────── */}
         {activeTab === 'dashboard' && (
-          <div className="px-3 sm:px-4 md:px-6 lg:px-8 pb-4 md:pb-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
-              <div 
-                onClick={() => {
-                  setActiveTab('clients');
-                  if (isMobile) setSidebarCollapsed(true);
-                }}
-                className="cm-card p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all active:scale-95 touch-manipulation"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Assigned Clients</p>
-                    <p className="text-xl md:text-2xl font-bold text-gray-900">{assignedClients.length}</p>
-                    <p className="text-xs text-gold-deep mt-1 flex items-center">
-                      <Eye className="h-3 w-3 mr-1" />
-                      <span className="truncate">Click to view</span>
-                    </p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-blue-50 rounded-lg shrink-0 ml-2">
-                    <Users className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
-                  </div>
-                </div>
-              </div>
-              
-              <div 
-                onClick={() => {
-                  setActiveTab('tasks');
-                  if (isMobile) setSidebarCollapsed(true);
-                }}
-                className="cm-card p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-green-200 transition-all active:scale-95 touch-manipulation"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Today's Tasks</p>
-                    <p className="text-xl md:text-2xl font-bold text-gray-900">{recentTasks.length}</p>
-                    <p className="text-xs text-green-600 mt-1 flex items-center">
-                      <Eye className="h-3 w-3 mr-1" />
-                      <span className="truncate">Click to view</span>
-                    </p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-green-50 rounded-lg shrink-0 ml-2">
-                    <CheckSquare className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
-                  </div>
-                </div>
-              </div>
-              
-              <div 
-                onClick={() => {
-                  setActiveTab('tasks');
-                  if (isMobile) setSidebarCollapsed(true);
-                }}
-                className="cm-card p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-orange-200 transition-all active:scale-95 touch-manipulation"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Pending Tasks</p>
-                    <p className="text-xl md:text-2xl font-bold text-gray-900">{recentTasks.filter(task => task.status !== 'completed').length}</p>
-                    <p className="text-xs text-orange-600 mt-1 flex items-center">
-                      <Eye className="h-3 w-3 mr-1" />
-                      <span className="truncate">Click to view</span>
-                    </p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-orange-50 rounded-lg shrink-0 ml-2">
-                    <Clock className="h-5 w-5 md:h-6 md:w-6 text-orange-600" />
-                  </div>
-                </div>
-              </div>
-              
-              <div 
-                onClick={() => {
-                  setActiveTab('messages');
-                  if (isMobile) setSidebarCollapsed(true);
-                }}
-                className="cm-card p-4 md:p-6 cursor-pointer hover:shadow-md hover:border-purple-200 transition-all active:scale-95 touch-manipulation"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">Unread Messages</p>
-                    <p className="text-xl md:text-2xl font-bold text-gray-900">{conversations.filter(c => c.unread > 0).length}</p>
-                    <p className="text-xs text-purple-600 mt-1 flex items-center">
-                      <Eye className="h-3 w-3 mr-1" />
-                      <span className="truncate">Click to view</span>
-                    </p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-purple-50 rounded-lg shrink-0 ml-2">
-                    <MessageSquare className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end mt-4 md:mt-6">
-              <button className="flex items-center px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base touch-manipulation">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Weekly Overview</span>
-                <span className="sm:hidden">Overview</span>
-              </button>
-            </div>
-          </div>
+          <DashboardOverview
+            setActiveTab={setActiveTab}
+            user={user}
+            userProfile={userProfile}
+            caregiver={caregiver}
+            assignedClients={assignedClients}
+            recentTasks={recentTasks}
+            todaySchedule={todaySchedule}
+            conversations={conversations}
+            activeTasks={activeTasks}
+            setSelectedTask={setSelectedTask}
+            setShowTaskCompletionModal={setShowTaskCompletionModal}
+            setShowTaskDetailsModal={setShowTaskDetailsModal}
+            formatTime={formatTime}
+            getStatusColor={getStatusColor}
+            toDate={toDate}
+            isDoctor={isDoctor}
+            selectedClient={selectedClient}
+            handleNewConsultation={handleNewConsultation}
+            handleWritePrescription={handleWritePrescription}
+            handleCreateCarePlan={handleCreateCarePlan}
+            setShowNurseReportModal={setShowNurseReportModal}
+            setShowCareLogsModal={setShowCareLogsModal}
+            performance={performance}
+          />
         )}
 
-        {/* Main Content */}
-        <div className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 pb-4 md:pb-8 w-full safe-area-bottom">
-          {/* Top right portal switcher */}
-          <div className="w-full flex justify-end pt-2 md:pt-4 pb-2">
-            <div className="scale-90 md:scale-100">
-              <PortalSwitcher />
-            </div>
-          </div>
+        {/* ── Other tabs ───────────────────────────────────────── */}
         {activeTab === 'settings' ? (
           <div>
             <button
               onClick={() => { setActiveTab('dashboard'); }}
-              className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              className="mb-4 flex items-center gap-2 text-sm text-[var(--cm-text-soft)] hover:text-ink"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              <ArrowLeft style={{ width: 16, height: 16 }} />
               Back to Dashboard
             </button>
             <CaregiverSettings onProfileImageUpdate={updateProfileImage} />
@@ -4321,12 +4684,22 @@ const InstitutionCaregiverDashboard = () => {
           renderMessagesTab()
         ) : activeTab === 'schedule' ? (
           renderScheduleTab()
-        ) : activeTab === 'tasks' ? (
-          renderTasksTab()
-        ) : activeTab === 'carelogs' ? (
-          renderCareLogsTab()
-        ) : activeTab === 'activities' ? (
-          renderActivitiesTab()
+        ) : activeTab === 'activity' ? (
+          <CareActivityTab
+            caregiverId={user?.uid}
+            caregiverName={userProfile?.name || userProfile?.displayName}
+            institutionId={effectiveInstitutionId}
+            assignedClients={assignedClients}
+            selectedClient={selectedClient}
+            onSelectClient={setSelectedClient}
+            recentTasks={recentTasks}
+            isDoctor={isDoctor}
+            isNurse={isNurse}
+            onLogActivity={() => {
+              setUnifiedActivityTask(null);
+              setShowUnifiedActivityModal(true);
+            }}
+          />
         ) : activeTab === 'clients' ? (
           renderClientsTab()
         ) : activeTab === 'prescriptions' && (isDoctor || isNurse || isPharmacist) ? (
@@ -4337,619 +4710,7 @@ const InstitutionCaregiverDashboard = () => {
           renderDiagnosticsTab()
         ) : activeTab === 'help' ? (
           <HelpSupport userRole={userProfile?.userType || userProfile?.type || 'caregiver'} />
-        ) : (
-          <div className="space-y-4 md:space-y-6 lg:space-y-8">
-            {/* Active Tasks Section */}
-            {activeTasks.length > 0 && (
-              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-green-200 p-4 sm:p-6 md:p-8">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center">
-                      <Clock className="h-5 w-5 md:h-6 md:w-6 text-green-600 mr-2" />
-                      Active Tasks ({activeTasks.length})
-                    </h2>
-                    <p className="text-sm md:text-base text-gray-600 mt-1">
-                      Tasks currently in progress with time tracking
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {activeTasks.map((task) => {
-                    const hours = Math.floor(task.elapsedHours || 0);
-                    const minutes = task.elapsedMinutes || 0;
-                    const displayTime = hours > 0 
-                      ? `${hours}:${minutes.toString().padStart(2, '0')}`
-                      : `${minutes} min`;
-                    
-                    return (
-                      <div key={task.id} className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 mb-1">
-                              {task.title || task.taskName || task.type || 'Care Task'}
-                            </h3>
-                            {task.clientName && (
-                              <p className="text-sm text-gray-600 mb-2">
-                                Client: {task.clientName}
-                              </p>
-                            )}
-                            <div className="flex items-center space-x-4">
-                              <div className="flex items-center space-x-2">
-                                <Clock className="h-4 w-4 text-green-600" />
-                                <span className="text-sm font-medium text-green-700">
-                                  {displayTime}
-                                </span>
-                              </div>
-                              {task.hourlyRate > 0 && (
-                                <div className="text-xs text-gray-500">
-                                  Rate: ${task.hourlyRate}/hr
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setSelectedTask(task);
-                              setShowTaskCompletionModal(true);
-                            }}
-                            className="ml-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
-                          >
-                            Complete
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            
-            {/* General Care Provider Dashboard Section */}
-            <div className="cm-card p-4 sm:p-6 md:p-8">
-              <div className="flex flex-col sm:flex-row items-start justify-between mb-4 md:mb-6 gap-4">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2">General Care Provider Dashboard</h2>
-                  <p className="text-sm md:text-base text-gray-600">Essential caregiving tools and client management</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 md:p-4 shrink-0 w-full sm:w-auto">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">Qualification Level</p>
-                  <p className="text-base md:text-lg font-bold text-gray-900">
-                    {userProfile?.medicalQualification?.includes('Doctor') ? 'Advanced' : 
-                     userProfile?.medicalQualification?.includes('Nurse') ? 'Intermediate' : 'Basic'}
-                  </p>
-                </div>
-              </div>
-              
-              {/* Specializations and Certifications Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                <div className="bg-gray-50 rounded-lg md:rounded-xl border border-gray-100 p-4 md:p-6">
-                  <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Your Specializations</h3>
-                  <div className="space-y-3">
-                    {userProfile?.specializations?.length > 0 ? (
-                      userProfile.specializations.map((spec, index) => (
-                        <div key={index} className="bg-white rounded-lg p-3 border border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">{spec}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
-                        <p className="text-gray-500 text-sm">No specializations added yet</p>
-                        <button onClick={() => { setActiveTab('settings'); }} className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
-                          Add Specializations
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="bg-gray-50 rounded-lg md:rounded-xl border border-gray-100 p-4 md:p-6">
-                  <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Certifications</h3>
-                  <div className="space-y-3">
-                    {userProfile?.certifications?.length > 0 ? (
-                      userProfile.certifications.map((cert, index) => (
-                        <div key={index} className="bg-white rounded-lg p-3 border border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">{cert}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
-                        <p className="text-gray-500 text-sm">No certifications added yet</p>
-                        <button onClick={() => { setActiveTab('settings'); }} className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
-                          Add Certifications
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Morning Briefing for Nurses */}
-            {(userProfile?.medicalQualification?.includes('Nurse') || userProfile?.medicalQualification?.includes('RN')) && (
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-lg md:rounded-xl shadow-sm border border-red-100 p-4 md:p-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
-                  <h2 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <Heart className="h-5 w-5 md:h-6 md:w-6 text-red-600" />
-                    Morning Briefing
-                  </h2>
-                  <span className="text-xs md:text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <User className="h-5 w-5 text-blue-600" />
-                      <p className="text-sm font-medium text-gray-600">Client Census</p>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">{assignedClients.length}</p>
-                    <p className="text-xs text-gray-500 mt-1">Assigned clients</p>
-                  </div>
-                
-                <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                    <p className="text-sm font-medium text-gray-600">Priority Alerts</p>
-                  </div>
-                  <p className="text-2xl font-bold text-yellow-600">0</p>
-                  <p className="text-xs text-gray-500 mt-1">Critical attention needed</p>
-                </div>
-                
-                <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Pill className="h-5 w-5 text-green-600" />
-                    <p className="text-sm font-medium text-gray-600">Medications Due</p>
-                  </div>
-                  <p className="text-2xl font-bold text-green-600">{todaySchedule.length}</p>
-                  <p className="text-xs text-gray-500 mt-1">Scheduled today</p>
-                </div>
-                
-                <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Activity className="h-5 w-5 text-purple-600" />
-                    <p className="text-sm font-medium text-gray-600">Assessments</p>
-                  </div>
-                  <p className="text-2xl font-bold text-purple-600">{assignedClients.length}</p>
-                  <p className="text-xs text-gray-500 mt-1">Due today</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Qualification-Specific Quick Actions */}
-          <div className="cm-card p-4 md:p-6">
-            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4 truncate">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              {dashboardConfig.quickActions.map((action, index) => (
-                <button
-                  key={index}
-                  onClick={() => navigate(action.href)}
-                  className={`flex flex-col items-center p-4 rounded-lg border-2 border-gray-200 hover:border-${dashboardConfig.color}-300 hover:bg-${dashboardConfig.color}-50 transition-colors group`}
-                >
-                  <action.icon className={`h-8 w-8 text-${dashboardConfig.color}-600 mb-2 group-hover:text-${dashboardConfig.color}-700`} />
-                  <span className="text-sm font-medium text-gray-700 text-center">{action.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
-            <div className="cm-card p-4 md:p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Today's Visits</p>
-                  <p className="text-3xl font-bold text-gray-900">{todaySchedule.length}</p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-xl">
-                  <Calendar className="h-8 w-8 text-blue-600" />
-                </div>
-              </div>
-            </div>
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Completed Tasks</p>
-                  <p className="text-3xl font-bold text-gray-900">{recentTasks.filter(t => t.status === 'completed').length}</p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-xl">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                </div>
-              </div>
-            </div>
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Rating</p>
-                  <p className="text-3xl font-bold text-gray-900">{caregiver?.rating}</p>
-                </div>
-                <div className="p-3 bg-yellow-50 rounded-xl">
-                  <Star className="h-8 w-8 text-yellow-600" />
-                </div>
-              </div>
-            </div>
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
-                  <p className="text-3xl font-bold text-gray-900">₦{(caregiver?.thisMonthEarnings || 0).toLocaleString()}</p>
-                </div>
-                <div className="p-3 bg-purple-50 rounded-xl">
-                  <TrendingUp className="h-8 w-8 text-purple-600" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Assignment Calendar */}
-          <AssignmentCalendar
-            schedule={(todaySchedule || []).map(s => ({
-              id: s.id,
-              type: s.type || 'task',
-              title: s.title || s.client || 'Task',
-              time: s.time || s.scheduledTime || '',
-              client: s.client || s.clientName || 'Client',
-              status: s.status || 'pending',
-              priority: s.priority
-            }))}
-            onItemSelect={() => {}}
-          />
-
-          {/* Priority Alerts Section for Nurses */}
-          {(userProfile?.medicalQualification?.includes('Nurse') || userProfile?.medicalQualification?.includes('RN')) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Priority Alerts */}
-              <div 
-                className="cm-card p-6 hover:shadow-md transition cursor-pointer"
-                onClick={() => setActiveTab('clients')}
-              >
-                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                  Priority Alerts
-                </h2>
-                
-                <div className="space-y-3">
-                  {assignedClients.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">
-                      <Shield className="h-12 w-12 mx-auto mb-2" />
-                      <p className="text-sm">No priority alerts</p>
-                      <p className="text-xs mt-1">All clients stable</p>
-                    </div>
-                  ) : (
-                    assignedClients.slice(0, 5).map((client, index) => (
-                      <div key={client.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                        <div className={`flex-shrink-0 h-2 w-2 rounded-full mt-2 ${
-                          index === 0 ? 'bg-green-500' : 'bg-gray-300'
-                        }`}></div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{client.name}</p>
-                          <p className="text-xs text-gray-500">All vitals within normal range</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Recent Activities */}
-              <div 
-                className="cm-card p-6 hover:shadow-md transition cursor-pointer"
-                onClick={() => setActiveTab('activities')}
-              >
-                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-blue-600" />
-                  Recent Activities
-                </h2>
-                
-                <div className="space-y-3">
-                  {recentTasks.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">
-                      <Clock className="h-12 w-12 mx-auto mb-2" />
-                      <p className="text-sm">No recent activities</p>
-                      <p className="text-xs mt-1">Start documenting care</p>
-                    </div>
-                  ) : (
-                    recentTasks.slice(0, 5).map((task) => {
-                      const taskClient = assignedClients.find(c => c.id === task.clientId);
-                      const taskClientName = task.clientName || taskClient?.name || taskClient?.fullName || 'Client';
-                      const taskTitle = task.title || task.task || task.description || 'Untitled Task';
-                      return (
-                      <div key={task.id} className="flex items-start gap-3">
-                        <div className="flex-shrink-0">
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{taskTitle}</p>
-                          <p className="text-xs text-gray-500">
-                            {taskClientName} • {task.completedAt ? toDate(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending'}
-                          </p>
-                        </div>
-                      </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Today's Schedule */}
-          <div className="cm-card">
-            <div className="px-8 py-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Today's Schedule</h2>
-            </div>
-            <div className="p-8">
-              <div className="space-y-6">
-                {(todaySchedule && Array.isArray(todaySchedule) ? todaySchedule : []).map((schedule) => (
-                  <div key={schedule.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4 mb-4">
-                          <h3 className="text-xl font-semibold text-gray-900">{schedule.client || schedule.title || 'Scheduled Item'}</h3>
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(schedule.status)}`}>
-                            {schedule.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
-                          <div className="flex items-center">
-                            <Clock className="h-5 w-5 mr-2 text-gray-500" />
-                            <span className="font-medium">{formatTime(schedule.time)}{schedule.duration ? ` (${schedule.duration})` : ''}</span>
-                          </div>
-                          {schedule.address && (
-                          <div className="flex items-center">
-                            <MapPin className="h-5 w-5 mr-2 text-gray-500" />
-                            <span className="font-medium">{schedule.address}</span>
-                          </div>
-                          )}
-                        </div>
-                        {schedule.tasks && Array.isArray(schedule.tasks) && schedule.tasks.length > 0 && (
-                          <div className="mb-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Tasks:</h4>
-                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {schedule.tasks.map((task, index) => (
-                                <li key={index} className="flex items-center text-sm text-gray-600">
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                                  {task}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {schedule.notes && (
-                          <div className="mb-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes:</h4>
-                            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{schedule.notes}</p>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col space-y-3 ml-8">
-                        {schedule.type === 'task' && (
-                          <>
-                            <button
-                              onClick={() => handleClockIn(schedule.id)}
-                              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                            >
-                              Clock In
-                            </button>
-                            <button
-                              onClick={() => handleClockOut(schedule.id)}
-                              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
-                            >
-                              Clock Out
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => handleEmergency(schedule.clientId)}
-                          className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center"
-                          disabled={!schedule.clientId}
-                        >
-                          <AlertTriangle className="h-4 w-4 mr-2" />
-                          Emergency
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Tasks */}
-          <div className="cm-card">
-            <div className="px-8 py-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Recent Tasks</h2>
-            </div>
-            <div className="p-8">
-              <div className="space-y-4">
-                {recentTasks.map((task) => {
-                  const taskClient = assignedClients.find(c => c.id === task.clientId);
-                  const taskClientName = task.clientName || taskClient?.name || taskClient?.fullName || 'Client';
-                  const taskTitle = task.title || task.task || task.description || 'Untitled Task';
-                  const completedDate = task.completedAt ? toDate(task.completedAt) : (task.updatedAt ? toDate(task.updatedAt) : null);
-                  return (
-                  <div key={task.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-green-50 rounded-lg">
-                        <CheckCircle className="h-6 w-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h4 className="text-base font-semibold text-gray-900">{taskTitle}</h4>
-                        <p className="text-sm text-gray-600">{taskClientName}</p>
-                        <p className="text-xs text-gray-500">
-                          {completedDate ? completedDate.toLocaleString() : '—'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
-                        {task.status}
-                      </span>
-                      <button
-                        onClick={() => { setSelectedTask(task); setShowTaskDetailsModal(true); }}
-                        className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="View task details"
-                      >
-                        <Eye className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Performance Overview */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <div className="cm-card hover:shadow-md transition cursor-pointer">
-              <div 
-                className="px-8 py-6 border-b border-gray-100"
-                onClick={() => setActiveTab('dashboard')}
-              >
-                <h2 className="text-xl font-bold text-gray-900">Performance Overview</h2>
-              </div>
-              <div className="p-8">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Punctuality</span>
-                    <div className="flex items-center">
-                      <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.punctuality}%` }}></div>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900">{performance.punctuality}%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Task Completion</span>
-                    <div className="flex items-center">
-                      <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${performance.taskCompletion}%` }}></div>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900">{performance.taskCompletion}%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Client Satisfaction</span>
-                    <div className="flex items-center">
-                      <Star className="h-5 w-5 text-yellow-400 mr-2" />
-                      <span className="text-lg font-bold text-gray-900">{performance.clientSatisfaction}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Communication</span>
-                    <div className="flex items-center">
-                      <Star className="h-5 w-5 text-yellow-400 mr-2" />
-                      <span className="text-lg font-bold text-gray-900">{performance.communication}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-base font-medium text-gray-700">Safety Record</span>
-                    <div className="flex items-center">
-                      <div className="w-40 bg-gray-200 rounded-full h-3 mr-4">
-                        <div className="bg-green-600 h-3 rounded-full" style={{ width: `${performance.safety}%` }}></div>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900">{performance.safety}%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="cm-card">
-              <div className="px-8 py-6 border-b border-gray-100">
-                <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
-                <p className="text-sm text-gray-500 mt-1">Common actions for your role</p>
-              </div>
-              <div className="p-8">
-                {isDoctor ? (
-                  // Doctor Quick Actions
-                  <div className="grid grid-cols-2 gap-4">
-                    <button 
-                      onClick={handleNewConsultation}
-                      disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Stethoscope className="h-8 w-8 text-blue-600 mb-3" />
-                      <span className="text-sm font-semibold text-gray-900">New Consultation</span>
-                      <span className="text-xs text-gray-500 mt-1">Record Client visit</span>
-                    </button>
-                    <button 
-                      onClick={handleWritePrescription}
-                      disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Pill className="h-8 w-8 text-indigo-600 mb-3" />
-                      <span className="text-sm font-semibold text-gray-900">Write Prescription</span>
-                      <span className="text-xs text-gray-500 mt-1">Prescribe medication</span>
-                    </button>
-                    <button 
-                      onClick={handleCreateCarePlan}
-                      disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ClipboardList className="h-8 w-8 text-emerald-600 mb-3" />
-                      <span className="text-sm font-semibold text-gray-900">Create Care Plan</span>
-                      <span className="text-xs text-gray-500 mt-1">Plan treatment</span>
-                    </button>
-                    {/* Video consultation removed - clients don't have accounts */}
-                  </div>
-                ) : (
-                  // Nurse/Caregiver Quick Actions
-                  <div className="grid grid-cols-2 gap-4">
-                    <button 
-                      onClick={() => setActiveTab('messages')}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all"
-                    >
-                      <MessageSquare className="h-8 w-8 text-blue-600 mb-3" />
-                      <span className="text-sm font-semibold text-gray-900">Messages</span>
-                      <span className="text-xs text-gray-500 mt-1">Chat with team</span>
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (!selectedClient) {
-                          toast.warning('Please select a client first');
-                          return;
-                        }
-                        setShowNurseReportModal(true);
-                      }}
-                      disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-green-50 hover:border-green-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <FileText className="h-8 w-8 text-green-600 mb-3" />
-                      <span className="text-sm font-semibold text-gray-900">Nurse Report</span>
-                      <span className="text-xs text-gray-500 mt-1">Record vitals</span>
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (!selectedClient) {
-                          toast.warning('Please select a client first');
-                          return;
-                        }
-                        setShowCareLogsModal(true);
-                      }}
-                      disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Heart className="h-8 w-8 text-purple-600 mb-3" />
-                      <span className="text-sm font-semibold text-gray-900">Care Log</span>
-                      <span className="text-xs text-gray-500 mt-1">Log care activity</span>
-                    </button>
-                    <button 
-                      onClick={() => setActiveTab('schedule')}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-orange-50 hover:border-orange-300 hover:shadow-md transition-all"
-                    >
-                      <Calendar className="h-8 w-8 text-orange-600 mb-3" />
-                      <span className="text-sm font-semibold text-gray-900">Schedule</span>
-                      <span className="text-xs text-gray-500 mt-1">View tasks</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-        )}
-        </div>
+        ) : null}
         </div>
       </DashboardLayout>
 
@@ -4991,12 +4752,11 @@ const InstitutionCaregiverDashboard = () => {
           roleType={isDoctor ? 'doctor' : isNurse ? 'nurse' : 'caregiver'}
           onSave={async (careLogData) => {
             try {
-                console.log('💾 Saving care log:', careLogData);
               await createCareLog(careLogData);
               toast.success('Care log saved successfully');
-              
+
               // Real-time listener will auto-update the list
-              
+
               setShowCareLogForm(false);
             } catch (error) {
               console.error('Error saving care log:', error);
@@ -5004,7 +4764,6 @@ const InstitutionCaregiverDashboard = () => {
             }
           }}
             onCancel={() => {
-              console.log('❌ Care log modal cancelled');
               setShowCareLogForm(false);
             }}
           />
@@ -5578,17 +5337,18 @@ const InstitutionCaregiverDashboard = () => {
               {selectedTask.status !== 'completed' && (
                 <button
                   onClick={async () => {
-                    // Close details modal and open task completion modal
+                    // Close details modal and open unified activity modal in task mode
                       setShowTaskDetailsModal(false);
                     // Find client for this task
-                    const taskClient = assignedClients.find(c => c.id === selectedTask.clientId) || 
-                                      selectedClient || 
+                    const taskClient = assignedClients.find(c => c.id === selectedTask.clientId) ||
+                                      selectedClient ||
                                       { name: selectedTask.clientName || 'Client' };
-                    setSelectedTask({
+                    setSelectedClient(taskClient);
+                    setUnifiedActivityTask({
                       ...selectedTask,
                       Client: taskClient
                     });
-                    setShowTaskCompletionModal(true);
+                    setShowUnifiedActivityModal(true);
                   }}
                   className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center"
                 >
@@ -5669,8 +5429,8 @@ const InstitutionCaregiverDashboard = () => {
                   }`}
                 >
                   <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4" />
-                    <span>Care Log</span>
+                    <Activity className="h-4 w-4" />
+                    <span>Care Activity</span>
                   </div>
                 </button>
               </div>
@@ -6399,200 +6159,92 @@ const InstitutionCaregiverDashboard = () => {
                 </div>
               )}
 
-              {/* Care Log Tab */}
+              {/* Care Activity Tab — unified with sidebar Care Activity tab */}
               {clientModalTab === 'carelog' && (
-                <div className="space-y-6">
-                  {/* Care Log Header */}
-                  <div className="flex items-center justify-between">
+                <div className="space-y-4">
+                  {/* Header with Log Activity + non-activity actions */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">Care Logs & Reports</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {isDoctor && 'Full access to all care logs and medical reports'}
-                        {isNurse && 'Record care logs, vital signs, and nurse reports'}
-                        {isNonMedicalCaregiver && 'Record daily care activities and observations'}
+                      <h3 className="text-lg font-bold text-gray-900">Care Activity</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Tasks, care notes, ADLs, and vitals for {selectedClient?.name || selectedClient?.fullName || 'this client'}
                       </p>
                     </div>
-                    <button
-                      onClick={() => {
-                        console.log('🔘 Add Care Log clicked', { selectedClient, showCareLogForm });
-                        if (!selectedClient) {
-                          toast.error('Please select a client first');
-                          return;
-                        }
-                        console.log('✅ Setting showCareLogForm to true');
-                        setShowCareLogForm(true);
-                        console.log('✅ showCareLogForm state updated');
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Care Log
-                    </button>
-                  </div>
-
-                  {/* Role-Specific Care Actions */}
-                  <div className="bg-blue-50 rounded-xl border border-blue-100 p-8">
-                    <div className="text-center mb-6">
-                      <FileText className="h-16 w-16 text-blue-300 mx-auto mb-4" />
-                      <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                        {isDoctor && 'Doctor Care Management'}
-                        {isNurse && 'Nurse Care Documentation'}
-                        {isNonMedicalCaregiver && 'Caregiver Activities Log'}
-                      </h4>
-                      <p className="text-gray-600">
-                        {isDoctor && `Comprehensive care management for ${selectedClient.name || selectedClient.fullName}`}
-                        {isNurse && `Document care activities, vital signs, and observations for ${selectedClient.name || selectedClient.fullName}`}
-                        {isNonMedicalCaregiver && `Record daily care activities for ${selectedClient.name || selectedClient.fullName}`}
-                      </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Non-activity clinical actions — kept separate */}
+                      {isDoctor && (
+                        <>
+                          <button
+                            onClick={() => setShowMedicalReportModal(true)}
+                            className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition flex items-center gap-1.5"
+                          >
+                            <Stethoscope className="h-3.5 w-3.5" />
+                            Medical Report
+                          </button>
+                          <button
+                            onClick={() => setShowCarePlanModal(true)}
+                            className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition flex items-center gap-1.5"
+                          >
+                            <ClipboardList className="h-3.5 w-3.5" />
+                            Care Plan
+                          </button>
+                          <button
+                            onClick={() => setShowMedicationModal(true)}
+                            className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition flex items-center gap-1.5"
+                          >
+                            <Pill className="h-3.5 w-3.5" />
+                            Medications
+                          </button>
+                        </>
+                      )}
+                      {isNurse && (
+                        <>
+                          <button
+                            onClick={() => setShowNurseReportModal(true)}
+                            className="px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 transition flex items-center gap-1.5"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            Nurse Report
+                          </button>
+                          <button
+                            onClick={() => setShowMedicationModal(true)}
+                            className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition flex items-center gap-1.5"
+                          >
+                            <Pill className="h-3.5 w-3.5" />
+                            Medications
+                          </button>
+                        </>
+                      )}
+                      {/* Primary Log Activity button — all roles */}
+                      <button
+                        onClick={() => {
+                          setUnifiedActivityTask(null);
+                          setShowUnifiedActivityModal(true);
+                        }}
+                        className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition flex items-center gap-1.5"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Log Activity
+                      </button>
                     </div>
-
-                    {/* Doctor Actions */}
-                    {isDoctor && (
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-                        <button
-                          onClick={() => setShowMedicalReportModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-                        >
-                          <Stethoscope className="h-8 w-8 text-blue-600 mb-3" />
-                          <span className="text-sm font-medium text-gray-700">Medical Report</span>
-                        </button>
-
-                        <button
-                          onClick={() => setShowCarePlanModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-indigo-200 rounded-lg hover:border-indigo-300 hover:shadow-md transition-all"
-                        >
-                          <ClipboardList className="h-8 w-8 text-indigo-600 mb-3" />
-                          <span className="text-sm font-medium text-gray-700">Care Plan</span>
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            console.log('🔘 View Care Logs clicked (Doctor)', { selectedClient });
-                            if (!selectedClient) {
-                              toast.error('Please select a client first');
-                              return;
-                            }
-                            setShowCareLogForm(true);
-                          }}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
-                        >
-                          <FileText className="h-8 w-8 text-green-600 mb-3" />
-                          <span className="text-sm font-medium text-gray-700">View Care Logs</span>
-                        </button>
-
-                        <button
-                          onClick={() => setShowCareLogsModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:shadow-md transition-all"
-                        >
-                          <BarChart3 className="h-8 w-8 text-purple-600 mb-3" />
-                          <span className="text-sm font-medium text-gray-700">All Records</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Nurse Actions */}
-                    {isNurse && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                        <button
-                          onClick={() => {
-                            console.log('🔘 Write Care Log clicked (Nurse)', { selectedClient });
-                            if (!selectedClient) {
-                              toast.error('Please select a client first');
-                              return;
-                            }
-                            setShowCareLogForm(true);
-                          }}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-                        >
-                          <FileText className="h-8 w-8 text-blue-600 mb-3" />
-                          <span className="text-sm font-medium text-gray-700">Write Care Log</span>
-                        </button>
-                        
-                        <button
-                          onClick={() => setShowVitalsModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-red-200 rounded-lg hover:border-red-300 hover:shadow-md transition-all"
-                        >
-                          <Activity className="h-8 w-8 text-red-600 mb-3" />
-                          <span className="text-sm font-medium text-gray-700">Record Vital Signs</span>
-                        </button>
-                        
-                        <button
-                          onClick={() => setShowNurseReportModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all"
-                        >
-                          <FileText className="h-8 w-8 text-orange-600 mb-3" />
-                          <span className="text-sm font-medium text-gray-700">Nurse Report</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Caregiver Actions */}
-                    {isNonMedicalCaregiver && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 max-w-2xl mx-auto">
-                        <button
-                          onClick={() => setShowCareLogForm(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-                        >
-                          <FileText className="h-8 w-8 text-blue-600 mb-3" />
-                          <span className="text-sm font-medium text-gray-700">Write Care Log</span>
-                          <span className="text-xs text-gray-500 mt-1">Record daily activities</span>
-                        </button>
-                        
-                        <button
-                          onClick={() => setShowCareLogsModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
-                        >
-                          <ClipboardList className="h-8 w-8 text-green-600 mb-3" />
-                          <span className="text-sm font-medium text-gray-700">View My Logs</span>
-                          <span className="text-xs text-gray-500 mt-1">See your entries</span>
-                        </button>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Care Logs List */}
-                  <div className="mt-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">
-                      Care Log History ({careLogs.length})
-                    </h4>
-                    {careLogs.length === 0 ? (
-                      <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-gray-500 text-sm">No care logs recorded yet</p>
-                        <button
-                          onClick={() => setShowCareLogForm(true)}
-                          className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                        >
-                          Add First Care Log
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {careLogs.map((log) => (
-                          <div key={log.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex-1">
-                                <h5 className="font-medium text-gray-900">{log.activityType || 'Care Activity'}</h5>
-                                <div className="flex items-center space-x-2 mt-1">
-                                  <span className="text-xs font-medium text-gold-deep">
-                                    By: {log.caregiverName || log.createdBy || 'Staff Member'}
-                                  </span>
-                                  <span className="text-xs text-gray-400">•</span>
-                                  <p className="text-xs text-gray-500">
-                                    {toDate(log.timestamp || log.createdAt).toLocaleDateString()} at{' '}
-                                    {toDate(log.timestamp || log.createdAt).toLocaleTimeString()}
-                                  </p>
-                                </div>
-                              </div>
-                              <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                                {log.roleType || 'Caregiver'}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-2">{log.notes || log.description}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  {/* Embedded CareActivityTab — pre-filtered to this client */}
+                  <CareActivityTab
+                    caregiverId={user?.uid}
+                    caregiverName={userProfile?.name || userProfile?.displayName}
+                    institutionId={effectiveInstitutionId}
+                    assignedClients={assignedClients}
+                    selectedClient={selectedClient}
+                    onSelectClient={() => { /* locked to this client inside modal */ }}
+                    recentTasks={recentTasks.filter(t => t.clientId === selectedClient?.id)}
+                    isDoctor={isDoctor}
+                    isNurse={isNurse}
+                    onLogActivity={() => {
+                      setUnifiedActivityTask(null);
+                      setShowUnifiedActivityModal(true);
+                    }}
+                  />
                 </div>
               )}
             </div>
@@ -6657,11 +6309,12 @@ const InstitutionCaregiverDashboard = () => {
           isIncoming={true}
           onCallAccepted={handleAcceptCall}
           onCallRejected={handleRejectCall}
+          onOpenDeviceSettings={() => setShowDeviceSettings(true)}
           externalWebrtcService={webrtc}
           externalCallState={callConnectionState}
         />
       )}
-      
+
       {/* Active Call Interface */}
       {activeCall && (
         <CallInterface
@@ -6674,6 +6327,7 @@ const InstitutionCaregiverDashboard = () => {
             role: 'admin'
           }}
           isIncoming={false}
+          onOpenDeviceSettings={() => setShowDeviceSettings(true)}
           externalWebrtcService={webrtc}
           externalCallState={callConnectionState}
           localStream={localStream}
@@ -6688,6 +6342,12 @@ const InstitutionCaregiverDashboard = () => {
           onClose={() => setShowProfileSettings(false)}
         />
       )}
+
+      {/* Call Device Settings Modal */}
+      <DeviceSettingsModal
+        isOpen={showDeviceSettings}
+        onClose={() => setShowDeviceSettings(false)}
+      />
 
       {/* Task Completion Modal */}
       {showTaskCompletionModal && selectedTask && (
@@ -6704,12 +6364,22 @@ const InstitutionCaregiverDashboard = () => {
               await reloadTasks(user.uid);
               // Also reload schedule
               try {
-                const [allAppointments, allTasks, allAssignments] = await Promise.all([
+                const [allAppointments, allTasks, allAssignments, allSchedules] = await Promise.all([
                   getTodaysAppointments(user?.uid, 'caregiver').catch(() => []),
                   getTodayTasks(user?.uid).catch(() => []),
-                  assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => [])
+                  assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => []),
+                  (async () => {
+                    try {
+                      const schedulesQuery = query(
+                        collection(db, 'schedules'),
+                        where('caregiverId', '==', user?.uid)
+                      );
+                      const snapshot = await getDocs(schedulesQuery);
+                      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch { return []; }
+                  })().catch(() => [])
                 ]);
-                
+
                 const dateToString = (dateValue) => {
                   if (!dateValue) return '';
                   if (dateValue instanceof Date) return dateValue.toISOString();
@@ -6750,6 +6420,31 @@ const InstitutionCaregiverDashboard = () => {
                       description: assignment.description,
                       instructions: assignment.instructions
                     };
+                  }),
+                  ...allSchedules.map(sched => {
+                    let combinedTime = '';
+                    if (sched.scheduleDate) {
+                      const dateStr = sched.scheduleDate instanceof Date
+                        ? sched.scheduleDate.toISOString().split('T')[0]
+                        : String(sched.scheduleDate).split('T')[0];
+                      const startTime = sched.startTime || '09:00';
+                      try {
+                        const dp = dateStr.split('-');
+                        if (dp.length === 3) {
+                          const dt = new Date(parseInt(dp[0]), parseInt(dp[1]) - 1, parseInt(dp[2]), parseInt(startTime.split(':')[0]) || 9, parseInt(startTime.split(':')[1]) || 0);
+                          combinedTime = dt.toISOString();
+                        } else { combinedTime = `${dateStr}T${startTime}:00`; }
+                      } catch { combinedTime = `${dateStr}T${startTime}:00`; }
+                    }
+                    return {
+                      id: sched.id,
+                      type: 'schedule',
+                      title: sched.title || 'Scheduled Visit',
+                      time: combinedTime,
+                      client: sched.clientName || 'Client',
+                      status: sched.status || 'scheduled',
+                      description: sched.description
+                    };
                   })
                 ];
                 
@@ -6758,6 +6453,25 @@ const InstitutionCaregiverDashboard = () => {
               } catch (error) {
                 console.error('Error reloading schedule:', error);
               }
+            }
+          }}
+        />
+      )}
+
+      {/* Unified Activity Modal — replaces separate care log / ADL / vitals modals */}
+      {showUnifiedActivityModal && (
+        <UnifiedActivityModal
+          open={showUnifiedActivityModal}
+          onClose={() => { setShowUnifiedActivityModal(false); setUnifiedActivityTask(null); }}
+          client={selectedClient || assignedClients[0]}
+          caregiver={{ uid: user?.uid, name: userProfile?.name || userProfile?.displayName }}
+          institutionId={effectiveInstitutionId}
+          roleType={isDoctor ? 'doctor' : isNurse ? 'nurse' : 'caregiver'}
+          pendingTask={unifiedActivityTask}
+          onSaved={async () => {
+            // Reload tasks after any activity save
+            if (user?.uid) {
+              await reloadTasks(user.uid);
             }
           }}
         />

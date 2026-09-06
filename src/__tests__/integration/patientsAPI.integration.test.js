@@ -11,7 +11,7 @@ jest.mock('../../backend/config', () => ({
   db: {}
 }));
 
-jest.mock('firebase/firestore');
+jest.mock('backend/database');
 
 describe('Patients API Integration Tests', () => {
   const mockInstitutionId = 'institution-123';

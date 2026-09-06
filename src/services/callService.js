@@ -544,6 +544,40 @@ class CallService {
     }
   }
 
+  // Clean up signaling records for a completed call
+  async cleanupSignalingRecords(callId) {
+    try {
+      if (!callId) return;
+      const signalingQuery = query(
+        collection(db, 'signaling'),
+        where('callId', '==', callId)
+      );
+      const snapshot = await getDocs(signalingQuery);
+      const batch = snapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(batch);
+      console.log(`🧹 Cleaned up ${snapshot.size} signaling records for call ${callId}`);
+    } catch (error) {
+      console.error('Error cleaning up signaling records:', error);
+    }
+  }
+
+  // Clean up call notification records for a completed call
+  async cleanupCallNotifications(callId) {
+    try {
+      if (!callId) return;
+      const notificationsQuery = query(
+        collection(db, 'callNotifications'),
+        where('callId', '==', callId)
+      );
+      const snapshot = await getDocs(notificationsQuery);
+      const batch = snapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(batch);
+      console.log(`🧹 Cleaned up ${snapshot.size} call notifications for call ${callId}`);
+    } catch (error) {
+      console.error('Error cleaning up call notifications:', error);
+    }
+  }
+
   // Get active call
   getActiveCall() {
     return this.activeCall;

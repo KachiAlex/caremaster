@@ -44,12 +44,12 @@ export const UserProvider = ({ children }) => {
         const userData = JSON.parse(storedUser);
         setUser(userData);
         setUserProfile(userData);
-        
+
         // Set role from user data
         const role = userData.userType || userData.type || userData.role || 'student';
         setUserRole(role);
         setUserRoles(userData.roles || [role]);
-        
+
         // Set institution if available
         if (userData.institutionId) {
           setInstitutionId(userData.institutionId);
@@ -85,12 +85,9 @@ export const UserProvider = ({ children }) => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
-    } else {
-      // No existing session — user will be redirected to login
-      setLoading(false);
     }
-    
-    setLoading(false);
+    // Loading state is finalized by the onAuthStateChanged listener below,
+    // which validates the session (including httpOnly cookie sessions on web).
   }, []);
 
   // Sync with auth state (for logins like UnifiedLogin that use signInWithEmailAndPassword
@@ -103,35 +100,25 @@ export const UserProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       if (authUser) {
-        // Read the user profile that signInWithEmailAndPassword already stored
-        let storedUser = null;
-        try {
-          const stored = localStorage.getItem('user');
-          if (stored) {
-            storedUser = JSON.parse(stored);
-          }
-        } catch (e) { /* ignore parse errors */ }
-
-        if (storedUser) {
-          setUser(storedUser);
-          setUserProfile(storedUser);
-          const role = storedUser.userType || storedUser.type || storedUser.role || 'student';
-          setUserRole(role);
-          setUserRoles(storedUser.roles || [role]);
-          if (storedUser.institutionId) {
-            setInstitutionId(storedUser.institutionId);
-          }
+        // Use the user object returned by onAuthStateChanged, which is the
+        // locally-stored profile for native apps and the fresh /auth/me response
+        // for web sessions using an httpOnly cookie.
+        const userData = authUser;
+        setUser(userData);
+        setUserProfile(userData);
+        const role = userData.userType || userData.type || userData.role || 'student';
+        setUserRole(role);
+        setUserRoles(userData.roles || [role]);
+        if (userData.institutionId) {
+          setInstitutionId(userData.institutionId);
         }
       } else {
-        // User signed out — clear state only if there's no token
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setUser(null);
-          setUserProfile(null);
-          setUserRole(null);
-          setUserRoles([]);
-          setInstitutionId(null);
-        }
+        // Session invalid or missing — clear React auth state
+        setUser(null);
+        setUserProfile(null);
+        setUserRole(null);
+        setUserRoles([]);
+        setInstitutionId(null);
       }
       setLoading(false);
     });
@@ -220,11 +207,97 @@ export const UserProvider = ({ children }) => {
   const updateUserProfile = (updates) => {
     setUserProfile(prev => ({ ...prev, ...updates }));
     setUser(prev => ({ ...prev, ...updates }));
-    
+
     // Update localStorage
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const updatedUser = { ...currentUser, ...updates };
     localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
+  const refreshUserProfile = async () => {
+    const userId = user?.uid || user?.id;
+    if (!userId) return;
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        const dbProfile = userDoc.data();
+        const mergedProfile = { ...userProfile, ...dbProfile };
+        setUserProfile(mergedProfile);
+        setUser(mergedProfile);
+        localStorage.setItem('user', JSON.stringify(mergedProfile));
+        const dbRole = dbProfile.userType || dbProfile.type || dbProfile.role || userRole;
+        setUserRole(dbRole);
+        if (dbProfile.institutionId) {
+          setInstitutionId(dbProfile.institutionId);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to refresh user profile:', err);
+    }
+  };
+
+  const isDoctor = () => userRole === 'doctor';
+  const isCaregiver = () => userRole === 'caregiver';
+  const isPharmacist = () => userRole === 'pharmacist';
+  const isNurse = () => userRole === 'nurse';
+  const isElderly = () => userRole === 'elderly';
+  const isAdmin = () => userRole === 'admin';
+  const isServiceProvider = () => ['caregiver', 'nurse', 'doctor', 'pharmacist'].includes(userRole);
+
+  const getCaregiverOnboardingRoute = () => {
+    // Institution caregivers use the institution onboarding flow
+    if (institutionId || userProfile?.institutionId) {
+      const instId = institutionId || userProfile?.institutionId;
+      return `/institution-caregiver/onboarding?institution=${instId}`;
+    }
+    return '/caregiver/onboarding';
+  };
+
+  const isOnboardingIncomplete = () => {
+    if (!userProfile) {
+      console.log('No user profile found, onboarding required');
+      return true;
+    }
+
+    console.log('Checking onboarding completion:', {
+      userRole,
+      userType: userProfile.userType,
+      onboardingComplete: userProfile.onboardingComplete,
+      status: userProfile.status
+    });
+
+    const caregiverTypes = ['caregiver', 'nurse', 'doctor', 'pharmacist'];
+    if (caregiverTypes.includes(userProfile.userType)) {
+      // If user is activated, allow access regardless of onboarding status
+      if (userProfile.status === 'active' && userProfile.onboardingComplete === true) {
+        console.log(`✅ ${userProfile.userType} onboarding complete`);
+        return false;
+      }
+      const isComplete = userProfile.onboardingComplete === true;
+      if (!isComplete) {
+        console.log(`🚫 ${userProfile.userType?.toUpperCase()} ONBOARDING INCOMPLETE - blocking access`);
+        return true;
+      }
+      console.log(`✅ ${userProfile.userType} onboarding complete`);
+      return false;
+    }
+
+    if (userRole === 'admin' || userProfile.userType === 'admin') {
+      console.log('✅ Admin access - no onboarding required');
+      return false;
+    }
+
+    if (userProfile.userType === 'elderly' || userRole === 'Client' || userProfile.userType === 'client' || userProfile.userType === 'patient') {
+      if (!userProfile.onboardingProfileComplete && !userProfile.onboardingComplete) {
+        console.log('🚫 Client ONBOARDING INCOMPLETE - blocking access');
+        return true;
+      }
+      console.log('✅ Client onboarding complete');
+      return false;
+    }
+
+    console.log('⚠️ Unknown user type, requiring onboarding');
+    return true;
   };
 
   const value = {
@@ -241,7 +314,17 @@ export const UserProvider = ({ children }) => {
     updateUserProfile,
     setLicenseActive,
     setInstitutionData,
-    logoutTimeoutRef
+    logoutTimeoutRef,
+    isOnboardingIncomplete,
+    getCaregiverOnboardingRoute,
+    isServiceProvider,
+    isDoctor,
+    isCaregiver,
+    isPharmacist,
+    isNurse,
+    isElderly,
+    isAdmin,
+    refreshUserProfile
   };
 
   return (

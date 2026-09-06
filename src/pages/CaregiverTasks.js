@@ -19,7 +19,7 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { getTaskAssignmentsByCaregiver, completeTaskAssignment, updateTaskAssignment } from '../api/taskAssignmentAPI';
 import { getPendingCareTasks, getCareTasksByCaregiver, updateCareTask, completeCareTask, createCareTask } from '../api/careTasksAPI';
-import { getClientsByCaregiver, getClientById } from '../api/patientsAPI';
+import { getClientsByCaregiver, getClientsByIds } from '../api/patientsAPI';
 import { toast } from 'react-toastify';
 
 const CaregiverTasks = () => {
@@ -76,30 +76,33 @@ const CaregiverTasks = () => {
         getTaskAssignmentsByCaregiver(userId).catch(() => [])
       ]);
 
+      // Collect all unique client IDs so we can batch fetch them in one request
+      const clientIds = new Set();
+      (careTasks || []).forEach(t => { if (t.clientId) clientIds.add(t.clientId); });
+      (taskAssignments || []).forEach(t => { if (t.clientId) clientIds.add(t.clientId); });
+      const clientMap = new Map();
+      if (clientIds.size > 0) {
+        try {
+          const clients = await getClientsByIds(Array.from(clientIds)).catch(() => []);
+          (clients || []).forEach(c => { if (c?.id) clientMap.set(c.id, c); });
+        } catch (e) {
+          // Ignore batch fetch errors and fall back to default names
+        }
+      }
+
       // Normalize and merge tasks
       const normalizedTasks = [];
 
       // Process careTasks
       for (const task of careTasks || []) {
-        let clientName = 'Unknown Client';
-        let clientId = task.clientId;
-        
-        if (clientId) {
-          try {
-            const client = await getClientById(clientId).catch(() => null);
-            if (client) {
-              clientName = client.name || client.fullName || clientName;
-            }
-          } catch (e) {
-            // Client not found, use default
-          }
-        }
+        const taskClient = clientMap.get(task.clientId);
+        let clientName = taskClient ? (taskClient.name || taskClient.fullName || 'Unknown Client') : 'Unknown Client';
 
         normalizedTasks.push({
           id: task.id,
           title: task.title || task.taskTitle || 'Untitled Task',
           description: task.description || task.notes || '',
-          clientId: clientId,
+          clientId: task.clientId,
           clientName: clientName,
           status: task.status || 'pending',
           priority: task.priority || 'medium',
@@ -116,25 +119,13 @@ const CaregiverTasks = () => {
 
       // Process taskAssignments
       for (const task of taskAssignments || []) {
-        let clientName = 'Unknown Client';
-        let clientId = task.clientId;
-        
-        if (clientId) {
-          try {
-            const client = await getClientById(clientId).catch(() => null);
-            if (client) {
-              clientName = client.name || client.fullName || clientName;
-            }
-          } catch (e) {
-            // Client not found, use default
-          }
-        }
-
+        const taskClient = clientMap.get(task.clientId);
+        let clientName = taskClient ? (taskClient.name || taskClient.fullName || 'Unknown Client') : 'Unknown Client';
         normalizedTasks.push({
           id: task.id,
           title: task.title || task.taskTitle || task.taskDescription || 'Untitled Task',
           description: task.description || task.taskDescription || task.notes || '',
-          clientId: clientId,
+          clientId: task.clientId,
           clientName: clientName,
           status: task.status || 'pending',
           priority: task.priority || 'medium',

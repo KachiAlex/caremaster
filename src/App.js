@@ -1,8 +1,10 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
-import { useAuthState } from 'react-backend-hooks/auth';
+import { Routes, Route, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
+import { useAuthState } from 'backend/auth-hooks';
 import { auth, db } from './backend/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'backend/database';
+import { getAuth, signOut } from 'backend/auth';
+import { setAuthExpiredHandler } from './utils/authEvents';
 import { UserProvider, useUser } from './contexts/UserContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import errorHandler from './utils/errorHandler';
@@ -80,6 +82,7 @@ const PatientAccount = lazy(() => import('./pages/PatientAccount'));
 const InstitutionLabTechnicianDashboard = lazy(() => import('./pages/InstitutionLabTechnicianDashboard'));
 import EnhancedMessagingInterface from './components/EnhancedMessagingInterface';
 import LoadingSpinner from './components/LoadingSpinner';
+import NativeMobileHandler from './components/NativeMobileHandler';
 
 // PWA Services
 import pwaService from './services/pwaService';
@@ -98,11 +101,25 @@ try {
 }
 
 function App() {
+  const navigate = useNavigate();
   const [user, loading] = useAuthState(auth);
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
   const [showGestureControls, setShowGestureControls] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Register global auth-expired handler so backend/database.js can signal
+  // the app to sign out and redirect without performing a full page reload.
+  useEffect(() => {
+    setAuthExpiredHandler(() => {
+      try {
+        signOut(getAuth());
+      } catch (e) {
+        // Ignore sign-out errors during expiration handling
+      }
+      navigate('/login', { replace: true });
+    });
+  }, [navigate]);
 
   // PWA and Security Services Setup
   useEffect(() => {
@@ -315,9 +332,9 @@ function App() {
   return (
     <ErrorBoundary name="App">
       <UserProvider>
-
-      {/* Lazy-loaded mobile/PWA components */}
-      <Suspense fallback={null}>
+        <NativeMobileHandler>
+          {/* Lazy-loaded mobile/PWA components */}
+          <Suspense fallback={null}>
         <MobileOptimization />
         <PWAInstallPrompt />
         <OfflineIndicator />
@@ -685,6 +702,7 @@ function App() {
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
+      </NativeMobileHandler>
       </UserProvider>
     </ErrorBoundary>
   );
@@ -814,6 +832,9 @@ function SignInRouteHandler() {
           }
           if (role === 'pharmacist' && instId) {
             return <Navigate to={`/institution-pharmacy/dashboard?institution=${instId}`} replace />;
+          }
+          if ((role === 'lab_technician' || role === 'lab-technician') && instId) {
+            return <Navigate to={`/institution-lab-technician/dashboard?institution=${instId}`} replace />;
           }
           if ((role === 'caregiver' || role === 'doctor' || role === 'nurse') && instId) {
             if (u.onboardingComplete) {

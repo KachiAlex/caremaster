@@ -253,6 +253,7 @@ const InstitutionAdminDashboard = () => {
     activeAssignments: 0,
     pendingAssignments: 0,
     completedAssignments: 0,
+    totalSchedules: 0,
     emergencyAlerts: 0,
     medicationReminders: 0,
     systemHealth: 'Good',
@@ -619,14 +620,21 @@ const InstitutionAdminDashboard = () => {
       setLoading(true);
       
       // Load all data in parallel but optimized for speed
-      const [caregiversData, clientsData, assignmentsData, users, diagnosticsData, appointmentsData, recentActivityData] = await Promise.all([
+      const [caregiversData, clientsData, assignmentsData, users, diagnosticsData, appointmentsData, recentActivityData, schedulesData] = await Promise.all([
         caregiverAPI.getCaregivers({ institutionId: instId, limit: 50 }).catch(() => []),
         getAllClients(instId).catch(() => []),
         assignmentAPI.getAssignmentsByInstitution(instId).catch(() => []),
         getAllUsers().catch(() => []),
         getAllDiagnostics(instId).catch(() => []),
         getAllAppointments(instId).catch(() => []),
-        getRecentActivity(instId).catch(() => [])
+        getRecentActivity(instId).catch(() => []),
+        (async () => {
+          try {
+            const sq = query(collection(db, 'schedules'), where('institutionId', '==', instId));
+            const snap = await getDocs(sq);
+            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          } catch { return []; }
+        })().catch(() => [])
       ]);
 
       // Load non-critical data in background (don't block UI)
@@ -798,11 +806,12 @@ const InstitutionAdminDashboard = () => {
       console.log('🔬 Pending diagnostics:', pending.length);
 
       // Calculate assignment statistics (optimized)
-      const activeAssignmentCount = assignmentsData.filter(a => 
+      const activeAssignmentCount = assignmentsData.filter(a =>
         a.status !== 'completed' && a.status !== 'cancelled'
       ).length;
       const pendingAssignmentCount = assignmentsData.filter(a => a.status === 'pending').length;
       const completedAssignmentCount = assignmentsData.filter(a => a.status === 'completed').length;
+      const totalScheduleCount = schedulesData.length;
 
       // Filter active appointments (today and upcoming)
       const today = new Date();
@@ -883,6 +892,7 @@ const InstitutionAdminDashboard = () => {
         activeAssignments: activeAssignmentCount,
         pendingAssignments: pendingAssignmentCount,
         completedAssignments: completedAssignmentCount,
+        totalSchedules: totalScheduleCount,
         emergencyAlerts: 0,
         medicationReminders: 0,
         systemHealth: 'Good',
@@ -3364,6 +3374,7 @@ const renderMessagesTab = () => {
               <StatCard icon={UserCheck} label="Caregivers" value={stats.caregivers.toLocaleString()} accent="from-teal-500 to-cyan-500" />
               <StatCard icon={TestTube} label="Pending Tests" value={pendingDiagnostics.length.toLocaleString()} accent="from-amber-500 to-yellow-500" />
               <StatCard icon={Calendar} label="Appointments" value={stats.activeAppointments.toLocaleString()} accent="from-blue-500 to-indigo-500" />
+              <StatCard icon={Calendar} label="Total Schedules" value={stats.totalSchedules.toLocaleString()} accent="from-purple-500 to-pink-500" />
             </section>
 
             {/* Main Content Grid */}
@@ -4358,7 +4369,17 @@ const renderMessagesTab = () => {
                 )}
               </div>
             ) : (
-              <SchedulingModule institutionId={effectiveInstitutionId} />
+              <SchedulingModule
+                institutionId={effectiveInstitutionId}
+                onScheduleCreated={() => {
+                  // Reload assignments so the new schedule's assignment appears
+                  if (effectiveInstitutionId) {
+                    assignmentAPI.getAssignmentsByInstitution(effectiveInstitutionId)
+                      .then(setAssignments)
+                      .catch(() => {});
+                  }
+                }}
+              />
             )}
           </div>
         );

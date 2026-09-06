@@ -22,6 +22,15 @@ import { db } from '../backend/config';
 const ASSIGNMENTS_COLLECTION = 'clientAssignments';
 const ASSIGNMENT_REQUESTS_COLLECTION = 'assignmentRequests';
 
+// Convert a date value (Timestamp shim object, ISO string, or Date) to a Date object
+function toDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value.toDate === 'function') return value.toDate();
+  if (typeof value === 'string') return new Date(value);
+  return null;
+}
+
 // Assignment Management API
 export const assignmentAPI = {
   // Create new client-caregiver assignment
@@ -88,10 +97,10 @@ export const assignmentAPI = {
         assignments.push({
           id: doc.id,
           ...assignmentData,
-          createdAt: assignmentData.createdAt?.toDate(),
-          updatedAt: assignmentData.updatedAt?.toDate(),
-          startDate: assignmentData.startDate?.toDate(),
-          endDate: assignmentData.endDate?.toDate()
+          createdAt: toDate(assignmentData.createdAt),
+          updatedAt: toDate(assignmentData.updatedAt),
+          startDate: toDate(assignmentData.startDate),
+          endDate: toDate(assignmentData.endDate)
         });
       });
 
@@ -129,10 +138,10 @@ export const assignmentAPI = {
         assignments.push({
           id: doc.id,
           ...assignmentData,
-          createdAt: assignmentData.createdAt?.toDate(),
-          updatedAt: assignmentData.updatedAt?.toDate(),
-          startDate: assignmentData.startDate?.toDate(),
-          endDate: assignmentData.endDate?.toDate()
+          createdAt: toDate(assignmentData.createdAt),
+          updatedAt: toDate(assignmentData.updatedAt),
+          startDate: toDate(assignmentData.startDate),
+          endDate: toDate(assignmentData.endDate)
         });
       });
 
@@ -164,10 +173,10 @@ export const assignmentAPI = {
         assignments.push({
           id: doc.id,
           ...assignmentData,
-          createdAt: assignmentData.createdAt?.toDate(),
-          updatedAt: assignmentData.updatedAt?.toDate(),
-          startDate: assignmentData.startDate?.toDate(),
-          endDate: assignmentData.endDate?.toDate()
+          createdAt: toDate(assignmentData.createdAt),
+          updatedAt: toDate(assignmentData.updatedAt),
+          startDate: toDate(assignmentData.startDate),
+          endDate: toDate(assignmentData.endDate)
         });
       });
 
@@ -194,10 +203,10 @@ export const assignmentAPI = {
         assignments.push({
           id: doc.id,
           ...assignmentData,
-          createdAt: assignmentData.createdAt?.toDate(),
-          updatedAt: assignmentData.updatedAt?.toDate(),
-          startDate: assignmentData.startDate?.toDate(),
-          endDate: assignmentData.endDate?.toDate()
+          createdAt: toDate(assignmentData.createdAt),
+          updatedAt: toDate(assignmentData.updatedAt),
+          startDate: toDate(assignmentData.startDate),
+          endDate: toDate(assignmentData.endDate)
         });
       });
 
@@ -307,8 +316,8 @@ export const assignmentAPI = {
         requests.push({
           id: doc.id,
           ...requestData,
-          requestedAt: requestData.requestedAt?.toDate(),
-          createdAt: requestData.createdAt?.toDate()
+          requestedAt: toDate(requestData.requestedAt),
+          createdAt: toDate(requestData.createdAt)
         });
       });
 
@@ -407,10 +416,10 @@ export const assignmentAPI = {
           assignments.push({
             id: doc.id,
             ...assignmentData,
-            createdAt: assignmentData.createdAt?.toDate(),
-            updatedAt: assignmentData.updatedAt?.toDate(),
-            startDate: assignmentData.startDate?.toDate(),
-            endDate: assignmentData.endDate?.toDate()
+            createdAt: toDate(assignmentData.createdAt),
+            updatedAt: toDate(assignmentData.updatedAt),
+            startDate: toDate(assignmentData.startDate),
+            endDate: toDate(assignmentData.endDate)
           });
         });
         callback(assignments);
@@ -437,10 +446,10 @@ export const assignmentAPI = {
           assignments.push({
             id: doc.id,
             ...assignmentData,
-            createdAt: assignmentData.createdAt?.toDate(),
-            updatedAt: assignmentData.updatedAt?.toDate(),
-            startDate: assignmentData.startDate?.toDate(),
-            endDate: assignmentData.endDate?.toDate()
+            createdAt: toDate(assignmentData.createdAt),
+            updatedAt: toDate(assignmentData.updatedAt),
+            startDate: toDate(assignmentData.startDate),
+            endDate: toDate(assignmentData.endDate)
           });
         });
         callback(assignments);

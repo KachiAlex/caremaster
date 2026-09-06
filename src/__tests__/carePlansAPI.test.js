@@ -10,7 +10,7 @@ jest.mock('../backend/config', () => ({
   db: {}
 }));
 
-jest.mock('firebase/firestore', () => ({
+jest.mock('backend/database', () => ({
   collection: jest.fn(),
   addDoc: jest.fn(),
   getDoc: jest.fn(),
@@ -27,7 +27,7 @@ describe('Care Plans API', () => {
   describe('createCarePlan', () => {
     test('should create a care plan successfully', async () => {
       const mockDocRef = { id: 'careplan-123' };
-      const { addDoc, collection } = require('firebase/firestore');
+      const { addDoc, collection } = require('backend/database');
       addDoc.mockResolvedValue(mockDocRef);
       collection.mockReturnValue({});
 
@@ -46,7 +46,7 @@ describe('Care Plans API', () => {
     });
 
     test('should handle errors when creating care plan', async () => {
-      const { addDoc, collection } = require('firebase/firestore');
+      const { addDoc, collection } = require('backend/database');
       collection.mockReturnValue({});
       addDoc.mockRejectedValue(new Error('Firestore error'));
 
@@ -61,7 +61,7 @@ describe('Care Plans API', () => {
 
   describe('updateCarePlan', () => {
     test('should update a care plan successfully', async () => {
-      const { updateDoc, doc, getDoc } = require('firebase/firestore');
+      const { updateDoc, doc, getDoc } = require('backend/database');
       updateDoc.mockResolvedValue();
       doc.mockReturnValue({});
       
@@ -84,7 +84,7 @@ describe('Care Plans API', () => {
     });
 
     test('should handle errors when updating care plan', async () => {
-      const { updateDoc, doc, getDoc } = require('firebase/firestore');
+      const { updateDoc, doc, getDoc } = require('backend/database');
       doc.mockReturnValue({});
       
       // Mock getDoc to return a document that exists

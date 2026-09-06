@@ -16,8 +16,8 @@ jest.mock('../../backend/config', () => ({
   db: {}
 }));
 
-jest.mock('firebase/auth');
-jest.mock('firebase/firestore');
+jest.mock('backend/auth');
+jest.mock('backend/database');
 
 describe('Authentication API Integration Tests', () => {
   beforeEach(() => {

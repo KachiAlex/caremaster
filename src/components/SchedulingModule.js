@@ -25,7 +25,7 @@ import {
 import { collection, query, getDocs, updateDoc, addDoc, where, doc, serverTimestamp } from 'backend/database';
 import { db } from '../backend/config';
 
-const SchedulingModule = ({ institutionId }) => {
+const SchedulingModule = ({ institutionId, onScheduleCreated }) => {
   const [schedules, setSchedules] = useState([]);
   const [filteredSchedules, setFilteredSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -899,8 +899,34 @@ const SchedulingModule = ({ institutionId }) => {
                     });
                     toast.success('Schedule updated successfully!');
                   } else {
-                    await addDoc(collection(db, 'schedules'), scheduleData);
+                    // Create the schedule record
+                    const scheduleRef = await addDoc(collection(db, 'schedules'), scheduleData);
+
+                    // Also create a corresponding assignment so it appears in
+                    // the assignments list on both admin and caregiver dashboards
+                    try {
+                      await assignmentAPI.createAssignment({
+                        clientId: scheduleData.clientId,
+                        clientName: scheduleData.clientName,
+                        caregiverId: scheduleData.caregiverId,
+                        caregiverName: scheduleData.caregiverName,
+                        institutionId: scheduleData.institutionId,
+                        title: scheduleData.title,
+                        description: scheduleData.description,
+                        instructions: scheduleData.specialInstructions || scheduleData.comments,
+                        assignmentType: scheduleData.serviceType || 'care-visit',
+                        dueDate: scheduleData.scheduleDate,
+                        dueTime: scheduleData.startTime,
+                        status: 'active',
+                        assignedBy: scheduleData.institutionId, // admin context not available here
+                        assignedByName: 'Admin'
+                      });
+                    } catch (assignErr) {
+                      console.warn('Failed to create matching assignment (schedule still created):', assignErr);
+                    }
+
                     toast.success('Schedule created successfully!');
+                    if (onScheduleCreated) onScheduleCreated();
                   }
 
                   setShowAddModal(false);

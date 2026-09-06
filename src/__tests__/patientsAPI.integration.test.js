@@ -14,7 +14,7 @@ jest.mock('../backend/config', () => ({
   db: {}
 }));
 
-jest.mock('firebase/firestore', () => ({
+jest.mock('backend/database', () => ({
   collection: jest.fn(),
   addDoc: jest.fn(),
   getDocs: jest.fn(),
@@ -49,11 +49,11 @@ describe('Client API Integration Tests', () => {
       const mockLogId = 'log-456';
 
       generateClientId.mockResolvedValue(mockPatientId);
-      const { addDoc } = require('firebase/firestore');
+      const { addDoc } = require('backend/database');
       addDoc.mockResolvedValue(mockDocRef);
       logPatientRegistration.mockResolvedValue(mockLogId);
 
-      const { collection } = require('firebase/firestore');
+      const { collection } = require('backend/database');
       collection.mockReturnValue({});
 
       const clientData = {
@@ -83,11 +83,11 @@ describe('Client API Integration Tests', () => {
       const mockDocRef = { id: 'firestore-doc-123' };
 
       generateClientId.mockResolvedValue(mockPatientId);
-      const { addDoc } = require('firebase/firestore');
+      const { addDoc } = require('backend/database');
       addDoc.mockResolvedValue(mockDocRef);
       logPatientRegistration.mockRejectedValue(new Error('Logging failed'));
 
-      const { collection } = require('firebase/firestore');
+      const { collection } = require('backend/database');
       collection.mockReturnValue({});
 
       const clientData = {
@@ -110,7 +110,7 @@ describe('Client API Integration Tests', () => {
         data: () => ({ clientId: 'UC-2025-0001', name: 'John Doe' })
       };
 
-      const { updateDoc, getDoc, doc } = require('firebase/firestore');
+      const { updateDoc, getDoc, doc } = require('backend/database');
       updateDoc.mockResolvedValue();
       getDoc.mockResolvedValue(mockPatientDoc);
       doc.mockReturnValue({});
@@ -138,7 +138,7 @@ describe('Client API Integration Tests', () => {
         data: () => ({ name: 'John Doe' }) // No clientId field
       };
 
-      const { updateDoc, getDoc, doc } = require('firebase/firestore');
+      const { updateDoc, getDoc, doc } = require('backend/database');
       updateDoc.mockResolvedValue();
       getDoc.mockResolvedValue(mockPatientDoc);
       doc.mockReturnValue({});
@@ -174,7 +174,7 @@ describe('Client API Integration Tests', () => {
         }]
       };
 
-      const { getDocs, collection, query, where } = require('firebase/firestore');
+      const { getDocs, collection, query, where } = require('backend/database');
       getDocs.mockResolvedValue(mockSnapshot);
       collection.mockReturnValue({});
       query.mockReturnValue({});
@@ -193,7 +193,7 @@ describe('Client API Integration Tests', () => {
         docs: []
       };
 
-      const { getDocs, collection, query, where } = require('firebase/firestore');
+      const { getDocs, collection, query, where } = require('backend/database');
       getDocs.mockResolvedValue(mockSnapshot);
       collection.mockReturnValue({});
       query.mockReturnValue({});
@@ -222,7 +222,7 @@ describe('Client API Integration Tests', () => {
         }
       };
 
-      const { getDocs, collection, query, where, orderBy, limit } = require('firebase/firestore');
+      const { getDocs, collection, query, where, orderBy, limit } = require('backend/database');
       getDocs.mockResolvedValue(mockSnapshot);
       collection.mockReturnValue({});
       query.mockReturnValue({});
@@ -255,7 +255,7 @@ describe('Client API Integration Tests', () => {
         }
       };
 
-      const { getDocs, collection } = require('firebase/firestore');
+      const { getDocs, collection } = require('backend/database');
       getDocs.mockResolvedValue(mockSnapshot);
       collection.mockReturnValue({});
 

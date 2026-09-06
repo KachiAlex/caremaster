@@ -4,6 +4,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { scopeQuery, canAccessTable, canModifyRecord, ADMIN_ONLY_TABLES, PATIENT_ROLES, OWNER_COLUMN } = require('../middleware/authorization');
 const { logger } = require('../utils/logger');
 const db = require('../utils/database');
+const sseManager = require('../sse');
 
 const router = express.Router();
 
@@ -129,26 +130,79 @@ const NO_TABLE_COLLECTIONS = [
   'bills', 'patientLogs', 'adlLogs', 'wages', 'reports', 'campaigns',
   'suppliers', 'purchaseOrders', 'goodsReceived', 'stockAudit',
   'securityAuditLogs', 'userSessions', 'loginAttempts', 'twoFactorAuth',
-  'schedules',
 ];
 
 function resolveTable(collectionName) {
   return COLLECTION_TO_TABLE[collectionName] || collectionName;
 }
 
+// Tables where real-time updates matter for calls, messages, and care workflows.
+const SSE_REALTIME_TABLES = new Set([
+  'signaling', 'callNotifications', 'calls', 'messages', 'conversations',
+  'careLogs', 'careTasks', 'assignments', 'appointments', 'notifications',
+]);
+
+// Derive target user IDs from a record for a given table.
+function getEventUserIds(tableName, record) {
+  const ids = new Set();
+  const add = (v) => { if (v) ids.add(String(v)); };
+
+  switch (tableName) {
+    case 'signaling':
+      // The signaling table uses 'from' (and sometimes 'from_user_id' or
+      // 'from_user'). It does not store a 'to' column, so we also broadcast
+      // by institution and let clients filter by call_id.
+      add(record.from); add(record.from_user_id); add(record.from_user);
+      break;
+    case 'callNotifications':
+      add(record.caller_id); add(record.recipient_id); add(record.user_id);
+      break;
+    case 'calls':
+      add(record.caller_id); add(record.recipient_id); add(record.receiver_id);
+      break;
+    case 'messages':
+      add(record.sender_id); add(record.receiver_id); add(record.recipient_id);
+      break;
+    case 'conversations':
+      (record.participants || []).forEach(add);
+      break;
+    case 'careLogs':
+    case 'careTasks':
+      add(record.client_id); add(record.caregiver_id); add(record.recorded_by);
+      break;
+    case 'assignments':
+    case 'appointments':
+      add(record.client_id); add(record.patient_id); add(record.caregiver_id); add(record.doctor_id);
+      break;
+    case 'notifications':
+      add(record.user_id); add(record.recipient_id);
+      break;
+    default:
+      break;
+  }
+  return Array.from(ids);
+}
+
+function emitDataEvent(req, tableName, record) {
+  if (!SSE_REALTIME_TABLES.has(tableName)) return;
+  const institutionId = req.user?.institution_id || req.user?.institutionId;
+  const userIds = getEventUserIds(tableName, record);
+  sseManager.emitTableEvent(tableName, record, { userIds, institutionId });
+}
+
 // Whitelisted fields per table for create/update operations
 const WRITABLE_FIELDS = {
-  users: ['first_name', 'last_name', 'phone', 'photo_url', 'department', 'level', 'session', 'institution_id', 'user_type', 'is_active', 'is_verified', 'onboarding_complete', 'display_name', 'specialization', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'profile_complete', 'account_type', 'status', 'roles', 'biometric_enabled', 'biometric_credential_id', 'two_factor_phone', 'two_factor_enabled', 'two_factor_secret', 'updated_at'],
+  users: ['first_name', 'last_name', 'phone', 'photo_url', 'department', 'level', 'session', 'institution_id', 'user_type', 'is_active', 'is_verified', 'onboarding_complete', 'onboarding_data', 'display_name', 'specialization', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'profile_complete', 'account_type', 'status', 'roles', 'biometric_enabled', 'biometric_credential_id', 'two_factor_phone', 'two_factor_enabled', 'two_factor_secret', 'updated_at'],
   institutions: ['name', 'email', 'phone', 'address', 'city', 'state', 'country', 'zip_code', 'website', 'license_key', 'plan', 'seats', 'active', 'status', 'license_starts_at', 'license_ends_at', 'features', 'settings', 'updated_at'],
   appointments: ['client_id', 'caregiver_id', 'scheduled_date', 'duration', 'status', 'notes'],
   telemedicine_appointments: ['client_id', 'doctor_id', 'doctor_name', 'client_name', 'appointment_date', 'status', 'reason', 'notes', 'billing_mode', 'consultation_log_id', 'bill_id', 'institution_id', 'metadata', 'created_at', 'updated_at'],
   telemedicine_calls: ['appointment_id', 'client_id', 'doctor_id', 'channel_name', 'start_time', 'end_time', 'duration', 'status', 'recording_id', 'has_recording', 'metadata', 'created_at', 'updated_at'],
   telemedicine_recordings: ['call_id', 'appointment_id', 'file_url', 'duration', 'file_size', 'format', 'status', 'metadata', 'created_at', 'updated_at'],
   clients: ['name', 'full_name', 'email', 'phone', 'institution_id', 'status', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship', 'medical_conditions', 'medications', 'allergies', 'blood_type', 'genotype', 'care_level', 'insurance_provider', 'insurance_policy_number', 'national_id', 'primary_care_physician', 'physician_phone', 'notes', 'user_type', 'type', 'city', 'state', 'zip_code', 'client_id', 'assigned_caregiver', 'assigned_doctor', 'user_id'],
-  caregivers: ['user_id', 'first_name', 'last_name', 'phone', 'email', 'specialization', 'status'],
-  caregiver_profiles: ['caregiver_id', 'bio', 'certifications', 'experience_years', 'skills'],
-  care_tasks: ['assignment_id', 'title', 'description', 'status', 'completed_at'],
-  assignments: ['client_id', 'caregiver_id', 'institution_id', 'patient_id', 'start_date', 'end_date', 'status', 'type', 'notes', 'metadata'],
+  caregivers: ['user_id', 'first_name', 'last_name', 'phone', 'email', 'specialization', 'status', 'active', 'institution_id'],
+  caregiver_profiles: ['caregiver_id', 'bio', 'certifications', 'experience_years', 'skills', 'user_id', 'license_number', 'specialization', 'years_experience', 'availability', 'employment_type', 'hourly_rate', 'monthly_rate', 'currency', 'payment_type', 'working_hours_start', 'working_hours_end', 'working_days', 'status', 'institution_id', 'metadata'],
+  care_tasks: ['title', 'description', 'status', 'completed_at', 'caregiver_id', 'patient_id', 'client_id', 'client_name', 'caregiver_name', 'institution_id', 'category', 'priority', 'task_type', 'due_date', 'due_time', 'scheduled_date', 'scheduled_time', 'notes', 'completion_notes', 'photos', 'created_by', 'created_by_name', 'metadata', 'created_at', 'updated_at'],
+  assignments: ['client_id', 'caregiver_id', 'institution_id', 'patient_id', 'start_date', 'end_date', 'status', 'type', 'notes', 'metadata', 'client_name', 'client_email', 'caregiver_name', 'caregiver_email', 'assigned_by', 'assigned_by_name', 'assignment_type', 'title', 'description', 'instructions', 'assigned_to_role', 'due_date', 'due_time', 'created_at', 'updated_at'],
   messages: ['conversation_id', 'sender_id', 'receiver_id', 'recipient_id', 'content', 'text', 'message_type', 'attachments', 'read', 'sent_at', 'read_at', 'created_at', 'sender_id'],
   care_logs: ['assignment_id', 'caregiver_id', 'client_id', 'patient_id', 'recorded_by', 'source', 'notes', 'mood', 'timestamp', 'metadata', 'created_at', 'updated_at'],
   care_plans: ['client_id', 'title', 'description', 'start_date', 'end_date', 'status'],
@@ -174,11 +228,11 @@ const WRITABLE_FIELDS = {
   patient_reports: ['client_id', 'report_type', 'content', 'created_by'],
   subscriptions: ['institution_id', 'plan', 'status', 'start_date', 'end_date'],
   patients: ['name', 'email', 'phone', 'institution_id', 'status', 'medical_history', 'emergency_contacts', 'notes', 'date_of_birth', 'gender', 'address', 'city', 'state', 'country', 'blood_type', 'allergies', 'medications'],
-  calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'answeredAt', 'participants', 'institution_id', 'created_at', 'updatedAt', 'callId', 'callerId', 'recipientId', 'callType', 'callerName', 'recipientName'],
+  calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'participants', 'institution_id', 'created_at', 'updated_at'],
   conversations: ['participants', 'conversation_type', 'type', 'title', 'last_message_at', 'last_message_preview', 'institution_id', 'last_message', 'last_message_time', 'conversationType', 'lastMessage', 'lastMessageTime', 'createdAt', 'updatedAt'],
   elderly_profiles: ['client_id', 'medical_conditions', 'allergies', 'dietary_requirements', 'mobility_status', 'notes'],
-  call_notifications: ['call_id', 'recipient_id', 'sender_id', 'type', 'status', 'created_at', 'userId', 'callId', 'callerId', 'callType', 'callerName', 'timestamp', 'updatedAt'],
-  signaling: ['call_id', 'from', 'to', 'type', 'sdp', 'candidate', 'created_at', 'callId', 'data', 'timestamp'],
+  call_notifications: ['call_id', 'recipient_id', 'sender_id', 'type', 'status', 'created_at', 'user_id', 'caller_id', 'call_type', 'caller_name', 'recipient_name', 'timestamp', 'updated_at', 'duration', 'metadata'],
+  signaling: ['call_id', 'from', 'to', 'type', 'sdp', 'candidate', 'created_at', 'callId', 'timestamp'],
   messages: ['conversation_id', 'conversationId', 'sender_id', 'senderId', 'text', 'content', 'type', 'sender_name', 'senderName', 'read', 'read_at', 'readAt', 'created_at', 'createdAt', 'message_type', 'messageType'],
   schedules: ['institution_id', 'institutionId', 'client_id', 'clientId', 'client_name', 'clientName', 'caregiver_id', 'caregiverId', 'caregiver_name', 'caregiverName', 'title', 'description', 'service_type', 'serviceType', 'type', 'priority', 'schedule_date', 'scheduleDate', 'end_date', 'endDate', 'start_time', 'startTime', 'end_time', 'endTime', 'comments', 'special_instructions', 'specialInstructions', 'status', 'created_at', 'updated_at'],
   security_audit_logs: ['user_id', 'userId', 'user_role', 'action', 'resource_type', 'resourceType', 'resource_id', 'resourceId', 'details', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'institution_id', 'institutionId', 'timestamp', 'created_at', 'updated_at'],
@@ -223,7 +277,11 @@ const SORTABLE_COLUMNS = {
   invoices: ['id', 'invoice_number', 'due_date', 'created_at', 'updated_at'],
   billing_plans: ['id', 'name', 'sort_order', 'created_at', 'updated_at'],
   client_subscriptions: ['id', 'client_id', 'status', 'start_date', 'created_at', 'updated_at'],
-  billing_settings: ['id', 'institution_id', 'created_at', 'updated_at']
+  billing_settings: ['id', 'institution_id', 'created_at', 'updated_at'],
+  signaling: ['id', 'call_id', 'type', 'from', 'timestamp', 'created_at'],
+  call_notifications: ['id', 'call_id', 'user_id', 'status', 'timestamp', 'created_at', 'updated_at'],
+  calls: ['id', 'call_id', 'caller_id', 'recipient_id', 'status', 'created_at', 'answered_at', 'ended_at'],
+  schedules: ['id', 'schedule_date', 'start_time', 'end_time', 'status', 'priority', 'created_at', 'updated_at']
 };
 
 function validateTable(tableName) {
@@ -372,12 +430,12 @@ router.get('/:table', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid table name' });
     }
 
-    // Collections with no backing DB table — return empty result set
+    // Collections with no backing DB table — surface the issue instead of
+    // returning a misleading empty result set.
     if (NO_TABLE_COLLECTIONS.includes(table)) {
-      return res.json({
-        success: true,
-        data: [],
-        pagination: { total: 0, limit: 100, offset: 0 }
+      return res.status(400).json({
+        success: false,
+        message: `Collection '${table}' does not have a backing database table. Add it or update the frontend to stop querying it.`
       });
     }
 
@@ -415,16 +473,29 @@ router.get('/:table', async (req, res) => {
 
     // Apply filters (ignore pagination/sort params)
     const ignoreKeys = ['limit', 'offset', 'orderBy', 'order', 'page'];
-    for (const [key, value] of Object.entries(translatedFilters)) {
-      if (!ignoreKeys.includes(key) && value !== undefined && value !== '') {
-        const col = resolveColumn(tableName, key);
-        // Skip filters for columns that don't exist in this table
-        const ignoreForTable = IGNORE_FILTERS[tableName];
-        if (ignoreForTable && ignoreForTable.includes(col)) {
-          continue;
-        }
-        query = query.where(col, value);
+    const applyFilter = (q, key, value) => {
+      if (ignoreKeys.includes(key) || value === undefined || value === '') return q;
+      const col = resolveColumn(tableName, key);
+      // Skip filters for columns that don't exist in this table
+      const ignoreForTable = IGNORE_FILTERS[tableName];
+      if (ignoreForTable && ignoreForTable.includes(col)) {
+        return q;
       }
+      // Support batch 'in' queries: key ending in __in means comma-separated values
+      if (key.endsWith('__in')) {
+        const realKey = key.replace(/__in$/, '');
+        const realCol = resolveColumn(tableName, realKey);
+        const values = String(value).split(',').filter(v => v);
+        if (values.length) {
+          return q.whereIn(realCol, values);
+        }
+        return q;
+      }
+      return q.where(col, value);
+    };
+
+    for (const [key, value] of Object.entries(translatedFilters)) {
+      query = applyFilter(query, key, value);
     }
 
     const records = await query
@@ -432,29 +503,35 @@ router.get('/:table', async (req, res) => {
       .limit(cappedLimit)
       .offset(parseInt(offset));
 
-    // Build total count query with same scoping
-    const totalQuery = db(tableName);
-    await scopeQuery(totalQuery, req.user, tableName);
-    for (const [key, value] of Object.entries(translatedFilters)) {
-      if (!ignoreKeys.includes(key) && value !== undefined && value !== '') {
-        const col = resolveColumn(tableName, key);
-        const ignoreForTable = IGNORE_FILTERS[tableName];
-        if (ignoreForTable && ignoreForTable.includes(col)) {
-          continue;
-        }
-        totalQuery.where(col, value);
+    let pagination;
+    const includeCount = req.query.count !== 'false';
+    if (includeCount) {
+      // Build total count query with same scoping
+      let totalQuery = db(tableName);
+      await scopeQuery(totalQuery, req.user, tableName);
+      for (const [key, value] of Object.entries(translatedFilters)) {
+        totalQuery = applyFilter(totalQuery, key, value);
       }
+      const totalResult = await totalQuery.count('* as count').first();
+      pagination = {
+        total: parseInt(totalResult.count),
+        limit: cappedLimit,
+        offset: parseInt(offset)
+      };
+    } else {
+      // Skip expensive COUNT(*) when the frontend does not need pagination totals
+      pagination = {
+        total: records.length === cappedLimit ? cappedLimit + parseInt(offset) + 1 : records.length + parseInt(offset),
+        limit: cappedLimit,
+        offset: parseInt(offset),
+        hasMore: records.length === cappedLimit
+      };
     }
-    const totalResult = await totalQuery.count('* as count').first();
 
     res.json({
       success: true,
       data: records.map(r => stripSensitiveFields(mapToCamelCase(r))),
-      pagination: {
-        total: parseInt(totalResult.count),
-        limit: cappedLimit,
-        offset: parseInt(offset)
-      }
+      pagination
     });
   } catch (error) {
     logger.error(`Failed to fetch ${req.params.table}:`, error);
@@ -484,11 +561,16 @@ router.get('/:table/:id', async (req, res) => {
       record = await db(tableName).where({ id }).first();
     }
 
-    // Fallback: for caregivers table, try looking up via firebase_uid
+    // Fallback: for caregivers table, try looking up via firebase_uid or user_id
     if (!record && tableName === 'caregivers' && id) {
-      const user = await db('users').where({ firebase_uid: id }).first();
-      if (user) {
-        record = await db('caregivers').where({ user_id: user.id }).first();
+      // First try user_id directly (the frontend sends the user's UUID)
+      record = await db('caregivers').where({ user_id: id }).first();
+      // Then try firebase_uid lookup
+      if (!record) {
+        const user = await db('users').where({ firebase_uid: id }).first();
+        if (user) {
+          record = await db('caregivers').where({ user_id: user.id }).first();
+        }
       }
     }
 
@@ -651,9 +733,12 @@ router.post('/:table', async (req, res) => {
     if (!validateTable(table)) {
       return res.status(400).json({ success: false, message: 'Invalid table name' });
     }
-    // Collections with no backing DB table — return a fake success
+    // Collections with no backing DB table — reject instead of creating fake data
     if (NO_TABLE_COLLECTIONS.includes(table)) {
-      return res.status(201).json({ success: true, data: { id: 'no-table-' + Date.now(), ...req.body } });
+      return res.status(400).json({
+        success: false,
+        message: `Collection '${table}' does not have a backing database table. Cannot create records for an unmapped collection.`
+      });
     }
     const tableName = resolveTable(table);
 
@@ -706,6 +791,12 @@ router.post('/:table', async (req, res) => {
       return res.status(400).json({ success: false, message: 'No valid fields to create' });
     }
 
+    // For the calls table, backfill receiver_id from recipient_id so legacy
+    // queries/indexes on receiver_id continue to work.
+    if (tableName === 'calls' && data.recipient_id && !data.receiver_id) {
+      data.receiver_id = data.recipient_id;
+    }
+
     const [record] = await db(tableName).insert(data).returning('*');
 
     // ─── Auto-create a user account when a client record is created ───
@@ -727,6 +818,10 @@ router.post('/:table', async (req, res) => {
     if (autoAccount) {
       responseData.loginAccount = autoAccount;
     }
+
+    // Notify connected clients about the new record
+    emitDataEvent(req, table, record);
+
     res.status(201).json({ success: true, data: responseData });
   } catch (error) {
     logger.error(`Failed to create ${req.params.table}:`, error);
@@ -742,7 +837,10 @@ router.put('/:table/:id', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid table name' });
     }
     if (NO_TABLE_COLLECTIONS.includes(table)) {
-      return res.json({ success: true, data: { id, ...req.body } });
+      return res.status(400).json({
+        success: false,
+        message: `Collection '${table}' does not have a backing database table. Cannot update records for an unmapped collection.`
+      });
     }
     const tableName = resolveTable(table);
 
@@ -766,6 +864,11 @@ router.put('/:table/:id', async (req, res) => {
 
     if (isUuid) {
       existingRecord = await db(tableName).where({ id }).first();
+      // For caregivers: if not found by id, try looking up by user_id
+      // (the frontend sends the user's UUID, not the caregiver record's UUID)
+      if (!existingRecord && tableName === 'caregivers') {
+        existingRecord = await db('caregivers').where({ user_id: id }).first();
+      }
     } else if (tableName === 'caregivers') {
       const user = await db('users').where({ firebase_uid: id }).first();
       if (user) {
@@ -773,6 +876,29 @@ router.put('/:table/:id', async (req, res) => {
       }
     } else {
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
+    }
+
+    // For caregivers table: if no caregiver record exists yet, create one (upsert)
+    // This supports the onboarding flow where setDoc is called for a new caregiver
+    if (!existingRecord && tableName === 'caregivers' && isUuid) {
+      // Verify the user exists and the caller has permission
+      const userRecord = await db('users').where({ id }).first();
+      if (userRecord) {
+        // Check authorization: user can only create their own caregiver record
+        const canCreate = req.user.id === id ||
+          ['admin', 'institution-admin', 'InstitutionAdmin', 'super-admin', 'superadmin', 'super_admin'].includes(req.user.user_type);
+        if (!canCreate) {
+          return res.status(403).json({ success: false, message: 'You can only create your own caregiver profile' });
+        }
+        // Set user_id from the URL id if not already in data
+        if (!data.user_id) {
+          data.user_id = id;
+        }
+        // Create the caregiver record
+        const [newRecord] = await db('caregivers').insert(data).returning('*');
+        logger.info(`Auto-created caregiver record for user ${id}`);
+        return res.status(201).json({ success: true, data: stripSensitiveFields(mapToCamelCase(newRecord)) });
+      }
     }
 
     if (!existingRecord) {
@@ -795,6 +921,9 @@ router.put('/:table/:id', async (req, res) => {
 
     const [record] = await db(tableName).where({ id: existingRecord.id }).update(data).returning('*');
 
+    // Notify connected clients about the updated record
+    emitDataEvent(req, table, record);
+
     res.json({ success: true, data: stripSensitiveFields(mapToCamelCase(record)) });
   } catch (error) {
     logger.error(`Failed to update ${req.params.table}/${req.params.id}:`, error);
@@ -810,7 +939,10 @@ router.delete('/:table/:id', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid table name' });
     }
     if (NO_TABLE_COLLECTIONS.includes(table)) {
-      return res.json({ success: true, data: { id, deleted: true } });
+      return res.status(400).json({
+        success: false,
+        message: `Collection '${table}' does not have a backing database table. Cannot delete records for an unmapped collection.`
+      });
     }
     const tableName = resolveTable(table);
 
@@ -849,6 +981,9 @@ router.delete('/:table/:id', async (req, res) => {
     if (count === 0) {
       return res.status(404).json({ success: false, message: 'Record not found' });
     }
+
+    // Notify connected clients about the deletion
+    emitDataEvent(req, table, { ...existingRecord, __deleted: true });
 
     res.json({ success: true, message: 'Record deleted' });
   } catch (error) {

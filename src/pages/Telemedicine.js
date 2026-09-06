@@ -29,7 +29,7 @@ import telemedicineService from '../services/telemedicineService';
 import telemedicineAPI from '../api/telemedicineAPI';
 import { toast } from 'react-toastify';
 import { testTelemedicineService } from '../utils/telemedicineTest';
-import { useAuthState } from 'react-backend-hooks/auth';
+import { useAuthState } from 'backend/auth-hooks';
 import DocumentManager from '../components/DocumentManager';
 import { auth } from '../backend/config';
 

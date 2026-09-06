@@ -30,8 +30,9 @@ class SecurityMonitoringService {
 
   // Setup event listeners for security monitoring
   setupEventListeners() {
-    // Monitor authentication events
-    window.addEventListener('beforeunload', () => {
+    // Monitor authentication events — use pagehide instead of beforeunload
+    // because beforeunload is restricted by modern browsers' permissions policies.
+    window.addEventListener('pagehide', () => {
       this.logSecurityEvent('SESSION_END', {
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent

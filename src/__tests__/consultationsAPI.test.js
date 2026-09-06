@@ -24,7 +24,7 @@ jest.mock('../backend/config', () => ({
   db: {}
 }));
 
-jest.mock('firebase/firestore', () => ({
+jest.mock('backend/database', () => ({
   collection: jest.fn(),
   addDoc: jest.fn(),
   getDoc: jest.fn(),
@@ -42,7 +42,7 @@ describe('Consultation API', () => {
 
   test('should create consultation successfully', async () => {
     const mockDocRef = { id: 'consultation-123' };
-    const { addDoc, collection, getDocs, query, where } = require('firebase/firestore');
+    const { addDoc, collection, getDocs, query, where } = require('backend/database');
     addDoc.mockResolvedValue(mockDocRef);
     collection.mockReturnValue({});
     query.mockReturnValue({});
@@ -81,7 +81,7 @@ describe('Consultation API', () => {
   });
 
   test('should handle errors when creating consultation', async () => {
-    const { addDoc, collection } = require('firebase/firestore');
+    const { addDoc, collection } = require('backend/database');
     collection.mockReturnValue({});
     addDoc.mockRejectedValue(new Error('Firestore error'));
 

@@ -22,7 +22,7 @@ jest.mock('../backend/config', () => ({
   db: {}
 }));
 
-jest.mock('firebase/firestore', () => ({
+jest.mock('backend/database', () => ({
   collection: jest.fn(),
   addDoc: jest.fn(),
   query: jest.fn(),

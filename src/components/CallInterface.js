@@ -25,16 +25,18 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import WebRTCService from '../services/webrtcService';
+import { getSavedDevices, setAudioOutput as setOutputDevice } from '../services/deviceSettingsService';
 
-const CallInterface = ({ 
-  isOpen, 
-  onClose, 
-  callType = 'video', 
+const CallInterface = ({
+  isOpen,
+  onClose,
+  callType = 'video',
   participantInfo = null,
   isIncoming = false,
   callId = null, // The actual call ID from the incoming call event
   onCallAccepted,
   onCallRejected,
+  onOpenDeviceSettings = null, // Optional: open device settings modal
   externalWebrtcService = null, // Optional: use parent's WebRTC service
   externalCallState = null, // Optional: use parent's call state
   localStream: externalLocalStream = null, // Optional: use parent's local stream
@@ -83,14 +85,23 @@ const CallInterface = ({
   useEffect(() => {
     if (remoteStream) {
       console.log('🔊 Connecting remote stream to audio/video elements');
-      
+
+      // Apply saved audio output device (speaker) if supported
+      const savedDevices = getSavedDevices();
+      if (savedDevices.audioOutput) {
+        const targetEl = callType === 'voice' ? audioRef.current : remoteVideoRef.current;
+        if (targetEl) {
+          setOutputDevice(targetEl, savedDevices.audioOutput).catch(() => {});
+        }
+      }
+
       // For voice calls, connect to audio element
       if (audioRef.current && callType === 'voice') {
         audioRef.current.srcObject = remoteStream;
         audioRef.current.play().catch(err => console.error('Audio playback error:', err));
         console.log('✅ Remote audio connected');
       }
-      
+
       // For video calls, connect to video element
       if (remoteVideoRef.current && callType === 'video') {
         remoteVideoRef.current.srcObject = remoteStream;
@@ -108,7 +119,8 @@ const CallInterface = ({
     }
   }, [localStream, callType]);
 
-  // Initialize WebRTC service
+  // Initialize WebRTC service — use the parent's external service when
+  // provided (incoming call flow), only create a new one for standalone use.
   useEffect(() => {
     const initializeWebRTC = async () => {
       if (!WebRTCService.isSupported()) {
@@ -117,9 +129,18 @@ const CallInterface = ({
         return;
       }
 
+      // Use the external WebRTC service if provided (the parent dashboard
+      // already initialized it and is handling signaling). Otherwise create
+      // a new one for standalone use.
+      if (externalWebrtcService) {
+        console.log('🔗 Using external WebRTC service from parent');
+        setWebrtcService(externalWebrtcService);
+        return;
+      }
+
       const service = new WebRTCService();
       await service.initialize();
-      
+
       // Set up callbacks
       service.setCallbacks({
         onLocalStream: (stream) => {
@@ -188,7 +209,9 @@ const CallInterface = ({
     }
 
     return () => {
-      if (webrtcService) {
+      // Only end the call if we created our own service.
+      // Don't end the external service — the parent owns its lifecycle.
+      if (webrtcService && !externalWebrtcService) {
         webrtcService.endCall();
       }
     };
@@ -537,6 +560,17 @@ const CallInterface = ({
                   >
                     {isSpeakerEnabled ? <Volume2 className="text-white" size={24} /> : <VolumeX className="text-white" size={24} />}
                   </button>
+
+                  {/* Device settings */}
+                  {onOpenDeviceSettings && (
+                    <button
+                      onClick={onOpenDeviceSettings}
+                      className="w-14 h-14 md:w-12 md:h-12 rounded-full bg-gray-600 hover:bg-gray-700 active:bg-gray-800 flex items-center justify-center transition-colors touch-manipulation"
+                      title="Device Settings"
+                    >
+                      <Settings className="text-white" size={24} />
+                    </button>
+                  )}
 
                   {/* Minimize - hidden on mobile */}
                   <button

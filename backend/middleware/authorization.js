@@ -196,12 +196,20 @@ async function scopeQuery(query, user, tableName) {
 
   // Caregiver/nurse: scope to assigned clients
   if (CAREGIVER_ROLES.includes(userType)) {
-    // Special case: users table — caregiver can only see their own record
-    // plus the records of clients assigned to them
+    // Special case: users table — caregiver can see all users within their
+    // institution (needed for tenant-wide messaging). Sensitive fields are
+    // stripped by stripSensitiveFields in the data route.
+    const patientIds = user.accessiblePatientIds || await getAssignedPatientIds(user.id);
+
     if (tableName === 'users') {
-      const patientIds = await getAssignedPatientIds(user.id);
-      const allowedIds = [user.id, ...patientIds];
-      query.whereIn(`${tableName}.id`, allowedIds);
+      const hasInstitutionId = await tableHasColumn(tableName, 'institution_id');
+      if (hasInstitutionId && user.institution_id) {
+        query.where(`${tableName}.institution_id`, user.institution_id);
+      } else {
+        // Fallback: own record + assigned patients
+        const allowedIds = [user.id, ...patientIds];
+        query.whereIn(`${tableName}.id`, allowedIds);
+      }
       return query;
     }
 
@@ -211,7 +219,6 @@ async function scopeQuery(query, user, tableName) {
     // caregiver sees records where caregiver_id = their id OR patient is assigned to them
     const DUAL_OWNER_TABLES = ['assignments', 'care_tasks', 'schedules', 'care_logs', 'medication_logs'];
     if (DUAL_OWNER_TABLES.includes(tableName)) {
-      const patientIds = await getAssignedPatientIds(user.id);
       const patientCol = ownerCol || 'patient_id';
       if (patientIds.length === 0) {
         // No assignments — only see records where they are the caregiver
@@ -228,7 +235,6 @@ async function scopeQuery(query, user, tableName) {
       query.where(`${tableName}.${ownerCol}`, user.id);
     } else if (PATIENT_DATA_TABLES.includes(tableName)) {
       // Patient data tables: scope to assigned patients
-      const patientIds = await getAssignedPatientIds(user.id);
       if (patientIds.length === 0) {
         // No assignments — return nothing
         query.whereRaw('1=0');
@@ -242,20 +248,27 @@ async function scopeQuery(query, user, tableName) {
 
   // Doctor: scope to their patients (via prescriptions or appointments)
   if (DOCTOR_ROLES.includes(userType)) {
-    // Special case: users table — doctor can only see their own record
-    // plus the records of their patients
+    const patientIds = user.accessiblePatientIds || await getDoctorPatientIds(user.id);
+
+    // Special case: users table — doctor can see all users within their
+    // institution (needed for tenant-wide messaging). Sensitive fields are
+    // stripped by stripSensitiveFields in the data route.
     if (tableName === 'users') {
-      const patientIds = await getDoctorPatientIds(user.id);
-      const allowedIds = [user.id, ...patientIds];
-      query.whereIn(`${tableName}.id`, allowedIds);
+      const hasInstitutionId = await tableHasColumn(tableName, 'institution_id');
+      if (hasInstitutionId && user.institution_id) {
+        query.where(`${tableName}.institution_id`, user.institution_id);
+      } else {
+        // Fallback: own record + their patients
+        const allowedIds = [user.id, ...patientIds];
+        query.whereIn(`${tableName}.id`, allowedIds);
+      }
       return query;
     }
 
     // Tables that have a doctor_id column: doctor sees records where they
     // are the doctor OR where the patient is one of their patients
-    const DOCTOR_OWNER_TABLES = ['telemedicine_appointments', 'telemedicine_calls', 'consultations', 'prescriptions', 'diagnostics', 'appointments'];
+    const DOCTOR_OWNER_TABLES = ['telemedicine_appointments', 'telemedicine_calls', 'consultations', 'prescriptions', 'diagnostics'];
     if (DOCTOR_OWNER_TABLES.includes(tableName)) {
-      const patientIds = await getDoctorPatientIds(user.id);
       const patientCol = OWNER_COLUMN[tableName] || 'patient_id';
       // doctor_id = their id OR patient/client is in their patient list
       query.where(`${tableName}.doctor_id`, user.id);
@@ -292,16 +305,14 @@ async function scopeQuery(query, user, tableName) {
  */
 async function getDoctorPatientIds(doctorUserId) {
   try {
-    const [prescriptions, appointments, consultations, teleAppts] = await Promise.all([
+    const [prescriptions, consultations, teleAppts] = await Promise.all([
       db('prescriptions').where({ doctor_id: doctorUserId }).select('patient_id'),
-      db('appointments').where({ doctor_id: doctorUserId }).select('patient_id'),
       db('consultations').where({ doctor_id: doctorUserId }).select('client_id'),
       db('telemedicine_appointments').where({ doctor_id: doctorUserId }).select('client_id'),
     ]);
 
     const ids = new Set();
     prescriptions.forEach(r => { if (r.patient_id) ids.add(r.patient_id); });
-    appointments.forEach(r => { if (r.patient_id) ids.add(r.patient_id); });
     consultations.forEach(r => { if (r.client_id) ids.add(r.client_id); });
     teleAppts.forEach(r => { if (r.client_id) ids.add(r.client_id); });
     return Array.from(ids);
@@ -373,7 +384,7 @@ async function canModifyRecord(user, tableName, record) {
     }
     // Tables with a doctor_id column: doctor can modify if they are the
     // doctor on the record OR the patient is one of their patients
-    const DOCTOR_OWNER_TABLES = ['telemedicine_appointments', 'telemedicine_calls', 'consultations', 'prescriptions', 'diagnostics', 'appointments'];
+    const DOCTOR_OWNER_TABLES = ['telemedicine_appointments', 'telemedicine_calls', 'consultations', 'prescriptions', 'diagnostics'];
     if (DOCTOR_OWNER_TABLES.includes(tableName)) {
       if (record.doctor_id === user.id) return true;
       const patientIds = await getDoctorPatientIds(user.id);

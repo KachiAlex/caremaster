@@ -6,8 +6,14 @@
  * JWT token and user profile are stored in localStorage.
  */
 
+import { Capacitor } from '@capacitor/core';
+
 const API_BASE = () =>
   process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+function isNativePlatform() {
+  return Capacitor.isNativePlatform?.() || false;
+}
 
 function getToken() {
   return localStorage.getItem('token') || localStorage.getItem('authToken') || '';
@@ -33,7 +39,9 @@ async function apiFetch(path, options = {}) {
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(url, { ...options, headers });
+  // Include cookies so the backend can read the httpOnly token cookie on web.
+  // Native apps fall back to the Authorization header populated from localStorage.
+  const res = await fetch(url, { ...options, headers, credentials: 'include' });
   const text = await res.text();
   let body;
   try { body = text ? JSON.parse(text) : {}; } catch { body = { raw: text }; }
@@ -82,10 +90,15 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
   const body = await apiFetch('/auth/email-login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
+    headers: {
+      'X-Client-Type': isNativePlatform() ? 'native' : 'web',
+    },
   });
 
   const { token, user } = body.data || {};
-  if (token) setToken(token);
+  // Only keep the token in localStorage for native/Capacitor apps. On web the
+  // token lives in an httpOnly cookie and should not be accessible to JS.
+  if (token && isNativePlatform()) setToken(token);
   if (user) localStorage.setItem('user', JSON.stringify(user));
 
   // Build a user object with Firebase-compatible token methods
@@ -137,12 +150,16 @@ export async function createUserWithEmailAndPassword(_auth, email, password) {
   }
 }
 
-export const signOut = (_auth) => {
+export const signOut = async (_auth) => {
+  try {
+    await apiFetch('/auth/logout', { method: 'POST' });
+  } catch (err) {
+    // Ignore logout errors (e.g. network already gone) but still clear local state
+  }
   clearToken();
   const authObj = _auth || getAuth({});
   authObj.currentUser = null;
   (authObj.__listeners || []).forEach((cb) => cb(null));
-  return Promise.resolve();
 };
 
 // --- Profile management ---
@@ -189,41 +206,72 @@ export const getIdToken = (_user, _forceRefresh) =>
 // --- Auth state observation ---
 
 export function onAuthStateChanged(auth, callback) {
-  // Check localStorage for existing session
-  const token = getToken();
-  const userStr = localStorage.getItem('user');
-  if (token && userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      const claims = {
-        superAdmin: user.userType === 'super-admin' || user.user_type === 'super-admin',
-        admin: user.userType === 'admin' || user.user_type === 'admin' || user.userType === 'institutionAdmin',
-        userType: user.userType || user.user_type,
-      };
-      auth.currentUser = {
-        ...user,
-        getIdToken: () => Promise.resolve(token),
-        getIdTokenResult: () => Promise.resolve({
-          token,
-          claims,
-          signInProvider: 'password',
-          expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          issuedAtTime: new Date().toISOString(),
-        }),
-      };
-      callback(auth.currentUser);
-    } catch {
-      callback(null);
-    }
-  } else {
-    callback(null);
-  }
-
+  // Keep track so the async validation below can still call back
   if (!auth.__listeners) auth.__listeners = [];
   auth.__listeners.push(callback);
+  let active = true;
+
+  const buildUserObj = (u, token = null) => {
+    if (!u) return null;
+    const claims = {
+      superAdmin: u.userType === 'super-admin' || u.user_type === 'super-admin',
+      admin: u.userType === 'admin' || u.user_type === 'admin' || u.userType === 'institutionAdmin',
+      userType: u.userType || u.user_type,
+    };
+    return {
+      ...u,
+      getIdToken: () => Promise.resolve(token || ''),
+      getIdTokenResult: () => Promise.resolve({
+        token: token || '',
+        claims,
+        signInProvider: 'password',
+        expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        issuedAtTime: new Date().toISOString(),
+      }),
+    };
+  };
+
+  const emit = (user) => {
+    if (!active) return;
+    auth.currentUser = user;
+    callback(user);
+  };
+
+  const token = getToken();
+  const userStr = localStorage.getItem('user');
+
+  if (token && userStr) {
+    // Native/Capacitor path: token is in localStorage
+    try {
+      const user = JSON.parse(userStr);
+      emit(buildUserObj(user, token));
+    } catch {
+      emit(null);
+    }
+  } else if (userStr && !isNativePlatform()) {
+    // Web path: token is in an httpOnly cookie. Validate the session by
+    // calling the backend; the browser automatically sends the cookie.
+    apiFetch('/auth/me')
+      .then((body) => {
+        const user = body.data?.user;
+        if (user) {
+          localStorage.setItem('user', JSON.stringify(user));
+          emit(buildUserObj(user));
+        } else {
+          emit(null);
+        }
+      })
+      .catch(() => {
+        // Cookie/session invalid or missing
+        emit(null);
+      });
+  } else {
+    emit(null);
+  }
 
   // Return unsubscribe function
   return () => {
+    active = false;
     auth.__listeners = auth.__listeners.filter((cb) => cb !== callback);
   };
 }

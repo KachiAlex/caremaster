@@ -18,7 +18,9 @@ import {
   Stethoscope,
   ArrowRight,
   Sparkles,
+  Fingerprint
 } from 'lucide-react';
+import biometricService from '../services/biometricService';
 
 const UnifiedLogin = () => {
   const navigate = useNavigate();
@@ -30,6 +32,24 @@ const UnifiedLogin = () => {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+
+  React.useEffect(() => {
+    biometricService.isAvailable().then(setBiometricAvailable);
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    const credentials = await biometricService.getCredentials();
+    if (credentials) {
+      setEmail(credentials.username);
+      setPassword(credentials.password);
+      // Wait for state updates then submit
+      setTimeout(() => {
+        const form = document.querySelector('form');
+        if (form) form.requestSubmit();
+      }, 100);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -74,6 +94,12 @@ const UnifiedLogin = () => {
       // signInWithEmailAndPassword here is the backend compat wrapper (NOT Firebase).
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       rateLimiter.reset(rateLimitKey);
+      
+      // Save for biometrics if available on native platform
+      if (biometricAvailable) {
+        await biometricService.setCredentials(email, password);
+      }
+
       const user = userCredential.user;
       const userData = user;
 
@@ -154,7 +180,6 @@ const UnifiedLogin = () => {
       if (userRole === 'super-admin' || userData?.userType === 'super-admin') {
         console.log('🚀 Super-admin detected, redirecting to /super-admin/dashboard');
         setLoading(false);
-        clearTimeout(loginTimeout);
         window.location.href = '/super-admin/dashboard';
         return;
       }
@@ -177,6 +202,9 @@ const UnifiedLogin = () => {
           } else {
             window.location.href = `/institution-caregiver/dashboard?institution=${institutionId}`;
           }
+          return;
+        } else if (userRole === 'lab_technician' || userRole === 'lab-technician') {
+          window.location.href = `/institution-lab-technician/dashboard?institution=${institutionId}`;
           return;
         } else if (userRole === 'client' || userRole === 'elderly' || userRole === 'patient') {
           window.location.href = '/dashboard';
@@ -203,8 +231,12 @@ const UnifiedLogin = () => {
             window.location.href = '/dashboard';
           }
           return;
-        } else if (userRole === 'caregiver' || userRole === 'doctor') {
+        } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
           window.location.href = '/service-provider';
+          return;
+        } else if (userRole === 'lab_technician' || userRole === 'lab-technician') {
+          // Lab technicians should have an institution, but handle gracefully
+          window.location.href = '/dashboard';
           return;
         } else {
           window.location.href = '/dashboard';
@@ -233,7 +265,7 @@ const UnifiedLogin = () => {
     <div className="min-h-dvh w-full flex flex-col lg:flex-row bg-cream">
       {/* ===== Left brand panel (desktop only) ===== */}
       <div
-        className="hidden lg:flex lg:w-[44%] xl:w-[48%] flex-col justify-between p-10 xl:p-14 relative overflow-hidden"
+        className="hidden lg:flex lg:w-[34%] xl:w-[36%] flex-col justify-between p-8 xl:p-10 relative overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #12302C 0%, #0E2622 60%, #1D423C 100%)' }}
       >
         {/* Decorative blobs */}
@@ -299,7 +331,7 @@ const UnifiedLogin = () => {
 
       {/* ===== Right login form panel ===== */}
       <div className="flex-1 flex items-center justify-center p-5 sm:p-8 lg:p-10">
-        <div className="w-full max-w-[400px] cm-animate-in">
+        <div className="w-full max-w-[480px] cm-animate-in">
           {/* Mobile logo (hidden on desktop) */}
           <div className="lg:hidden text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-sage to-ink shadow-lg shadow-ink/20 mb-3">
@@ -426,6 +458,18 @@ const UnifiedLogin = () => {
                   </>
                 )}
               </button>
+
+              {/* Biometric login (Native only) */}
+              {biometricAvailable && !loading && (
+                <button
+                  type="button"
+                  onClick={handleBiometricLogin}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 text-[14px] font-medium text-[#6B9080] hover:text-ink transition-colors border border-[#6B9080]/20 rounded-xl"
+                >
+                  <Fingerprint className="w-5 h-5" />
+                  Sign in with Biometrics
+                </button>
+              )}
 
               {/* Trust note */}
               <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-full bg-[#F8F8F5] border border-[#E8E8E0]">

@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -12,9 +13,13 @@ const adminRoutes = require('./routes/admin');
 const webhookRoutes = require('./routes/webhooks');
 const superadminRoutes = require('./routes/superadmin');
 const dataRoutes = require('./routes/data');
+const turnRoutes = require('./routes/turn');
 const emailRoutes = require('./routes/email');
+const uploadRoutes = require('./routes/uploadRoutes');
+const sseRoutes = require('./routes/sse');
 const { errorHandler } = require('./middleware/errorHandler');
 const { logger } = require('./utils/logger');
+const { cleanupCallSignaling } = require('./jobs/cleanupCallSignaling');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -57,10 +62,11 @@ app.use(cors({
     : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Client-Type']
 }));
 
-// Body parsing middleware
+// Cookie and body parsing middleware
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -83,7 +89,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/turn-credentials', turnRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/events', sseRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -99,6 +108,11 @@ app.use(errorHandler);
 // Start server
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+
+  // Run once at startup, then schedule periodic call-signaling cleanup.
+  cleanupCallSignaling();
+  const cleanupIntervalHours = parseInt(process.env.CALL_CLEANUP_INTERVAL_HOURS, 10) || 6;
+  setInterval(() => cleanupCallSignaling(), cleanupIntervalHours * 60 * 60 * 1000);
 });
 
 module.exports = app;

@@ -1,5 +1,5 @@
 import React, { useState, memo } from 'react';
-import { Menu, X, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, LogOut, ChevronDown, User } from 'lucide-react';
 import MobileBottomNav from './MobileBottomNav';
 
 /**
@@ -85,6 +85,7 @@ const DashboardLayout = ({
   userEmail = '',
   profilePictureUrl,
   onLogout,
+  onProfileClick,
   children,
   headerActions,
   footerContent,
@@ -213,6 +214,18 @@ const DashboardLayout = ({
                         <p className="text-sm font-semibold text-ink truncate">{displayName}</p>
                         <p className="text-xs text-text-soft truncate">{userEmail}</p>
                       </div>
+                      {onProfileClick && (
+                        <button
+                          onClick={() => {
+                            setProfileOpen(false);
+                            onProfileClick();
+                          }}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-ink hover:bg-cream transition"
+                        >
+                          <User className="h-4 w-4" />
+                          Profile Settings
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setProfileOpen(false);

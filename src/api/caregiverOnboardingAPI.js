@@ -1,55 +1,57 @@
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from './notificationsAPI';
-import { collection, query, getDocs, getDoc, setDoc, updateDoc, where, doc, serverTimestamp } from 'backend/database';
-import { uploadBytes, getDownloadURL } from 'backend/storage';
-import { db, storage } from '../backend/config';;
+import { collection, query, getDocs, getDoc, updateDoc, where, doc, serverTimestamp } from 'backend/database';
+import { ref, uploadBytes, getDownloadURL } from 'backend/storage';
+import { db, storage } from '../backend/config';
 
+/**
+ * Save caregiver onboarding profile data.
+ *
+ * All onboarding data is stored in users.onboarding_data (jsonb) — we do NOT
+ * write to the caregivers table because:
+ *   1. The caregivers table is empty in production (no records exist for most users)
+ *   2. The backend PUT /data/caregivers/:id returns 404 for non-existent records
+ *   3. The backend doesn't support upsert via PUT
+ *
+ * The users table is the single source of truth for onboarding state.
+ */
 export const saveCaregiverProfile = async (uid, profile, isDraft = false) => {
-  const caregiverRef = doc(db, 'caregivers', uid);
-  const current = await getDoc(caregiverRef);
-  
-  // Get existing draft data if it exists
-  const existingData = current.exists() ? current.data() : {};
-  
-  // Merge profile data, preserving existing fields if not provided
-  const payload = {
-    id: uid,
-    userId: uid,
-    ...existingData, // Preserve existing data
-    ...profile, // Override with new data
-    name: profile.name || existingData.name || '',
-    email: profile.email || existingData.email || '',
-    phone: profile.phone || existingData.phone || '',
-    address: profile.address || existingData.address || '',
-    specializations: profile.specializations || existingData.specializations || [],
-    medicalQualification: profile.medicalQualification || existingData.medicalQualification || '',
-    yearsOfExperience: profile.yearsOfExperience || existingData.yearsOfExperience || '',
-    verificationStatus: profile.verificationStatus || existingData.verificationStatus || 'pending',
-    onboardingComplete: isDraft ? false : (!!profile.onboardingComplete),
-    onboardingDraft: isDraft ? true : (existingData.onboardingDraft || false),
-    onboardingStep: profile.onboardingStep || existingData.onboardingStep || 1,
-    createdAt: current.exists() ? existingData.createdAt : serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    status: profile.status || existingData.status || 'active'
-  };
-  
-  if (current.exists()) {
-    await updateDoc(caregiverRef, payload);
-  } else {
-    await setDoc(caregiverRef, payload);
-  }
-  
-  // Also save draft to users collection for easy access
   const userRef = doc(db, 'users', uid);
-  const userCurrent = await getDoc(userRef);
-  if (userCurrent.exists()) {
-    await updateDoc(userRef, {
-      onboardingDraft: isDraft,
-      onboardingStep: profile.onboardingStep || existingData.onboardingStep || 1,
-      updatedAt: serverTimestamp()
-    });
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists()) {
+    throw new Error('User record not found. Please log out and log back in.');
   }
-  
-  return payload;
+
+  const existingUserData = userSnap.data();
+  const existingOnboardingData = existingUserData.onboardingData || {};
+
+  // Merge profile data with existing onboarding data
+  const mergedOnboardingData = {
+    ...existingOnboardingData,
+    ...profile,
+    name: profile.name || existingUserData.name || existingOnboardingData.name || '',
+    email: profile.email || existingUserData.email || existingOnboardingData.email || '',
+    phone: profile.phone || existingUserData.phone || existingOnboardingData.phone || '',
+    address: profile.address || existingOnboardingData.address || '',
+    specializations: profile.specializations || existingOnboardingData.specializations || [],
+    medicalQualification: profile.medicalQualification || existingOnboardingData.medicalQualification || '',
+    yearsOfExperience: profile.yearsOfExperience || existingOnboardingData.yearsOfExperience || '',
+    licenseNumber: profile.licenseNumber || existingOnboardingData.licenseNumber || '',
+    bio: profile.bio || existingOnboardingData.bio || '',
+    onboardingStep: profile.onboardingStep || existingOnboardingData.onboardingStep || 1,
+    onboardingDraft: isDraft,
+    onboardingComplete: isDraft ? false : (!!profile.onboardingComplete),
+    savedAt: new Date().toISOString(),
+  };
+
+  await updateDoc(userRef, {
+    onboardingData: mergedOnboardingData,
+    onboardingComplete: isDraft ? false : (!!profile.onboardingComplete),
+    updatedAt: serverTimestamp(),
+  });
+
+  console.log('✅ Onboarding profile saved to users.onboarding_data');
+  return mergedOnboardingData;
 };
 
 // Save draft data
@@ -59,82 +61,71 @@ export const saveOnboardingDraft = async (uid, draftData) => {
 
 // Load draft data
 export const loadOnboardingDraft = async (uid) => {
-  const caregiverRef = doc(db, 'caregivers', uid);
-  const caregiverSnap = await getDoc(caregiverRef);
-  
-  if (caregiverSnap.exists()) {
-    return caregiverSnap.data();
-  }
-  
-  // Also check users collection
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
   if (userSnap.exists()) {
-    return userSnap.data();
+    const userData = userSnap.data();
+    if (userData.onboardingData && Object.keys(userData.onboardingData).length > 0) {
+      return userData.onboardingData;
+    }
+    // Return user data as fallback
+    return userData;
   }
-  
   return null;
 };
 
 export const uploadCaregiverDocument = async (uid, file, folder = 'documents') => {
   const path = `users/${uid}/${folder}/${Date.now()}_${file.name}`;
   const fileRef = ref(storage, path);
-  await uploadBytes(fileRef, file, { contentType: file.type });
-  const url = await getDownloadURL(fileRef);
+  const result = await uploadBytes(fileRef, file);
+  if (result && result.downloadURL) {
+    return { path, url: result.downloadURL };
+  }
+  const url = await getDownloadURL({ ...fileRef, downloadURL: result?.downloadURL });
   return { path, url };
 };
 
+/**
+ * Mark onboarding as complete.
+ *
+ * Updates the users table with onboardingComplete=true, status=active.
+ * Also sends notifications to institution admins.
+ */
 export const completeOnboarding = async (uid) => {
   console.log('🎯 Completing onboarding for user:', uid);
-  
-  // Get current caregiver data to preserve institutionId
-  const caregiverRef = doc(db, 'caregivers', uid);
-  const caregiverSnap = await getDoc(caregiverRef);
-  const caregiverData = caregiverSnap.exists() ? caregiverSnap.data() : {};
-  
+
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
   const userData = userSnap.exists() ? userSnap.data() : {};
-  
-  const institutionId = userData.institutionId || caregiverData.institutionId;
-  const caregiverName = userData.name || caregiverData.name || 'A caregiver';
-  const caregiverEmail = userData.email || caregiverData.email || '';
-  
+
+  const institutionId = userData.institutionId;
+  const caregiverName = userData.name || userData.firstName || 'A caregiver';
+  const caregiverEmail = userData.email || '';
+
   // Determine user type (caregiver, doctor, nurse, or pharmacist)
-  const userType = userData.userType || userData.type || caregiverData.userType || caregiverData.type || 'caregiver';
+  const userType = userData.userType || userData.type || 'caregiver';
   const isPharmacist = userType === 'pharmacist';
-  
-  // Update caregivers collection - set status to 'active' automatically after onboarding
-  // Note: Pharmacists also use the caregivers collection for onboarding data
-  await updateDoc(caregiverRef, { 
+
+  // Update users collection — this is the critical update
+  const existingOnboardingData = userData.onboardingData || {};
+  await updateDoc(userRef, {
     onboardingComplete: true,
-    status: 'active', // Automatically set to active - no admin approval required
-    active: true,
-    updatedAt: serverTimestamp() 
+    userType: userType,
+    status: 'active',
+    is_active: true,
+    institutionId: institutionId,
+    onboardingData: {
+      ...existingOnboardingData,
+      onboardingComplete: true,
+      completedAt: new Date().toISOString(),
+    },
+    updatedAt: serverTimestamp()
   });
-  console.log('✅ Updated caregivers collection with status: active');
-  
-  // Update users collection with proper error handling
-  try {
-    await updateDoc(userRef, { 
-      onboardingComplete: true, 
-      userType: userType, // Preserve user type (caregiver, doctor, nurse, or pharmacist)
-      type: userType, // Also set type field for consistency
-      status: 'active', // Automatically set to active - no admin approval required
-      active: true,
-      institutionId: institutionId, // Preserve institutionId
-      updatedAt: serverTimestamp() 
-    });
-    console.log(`✅ Updated users collection with userType: ${userType}, status: active`);
-  } catch (error) {
-    console.error('❌ Failed to update users collection:', error);
-    throw error; // Re-throw to catch in UI
-  }
-  
+  console.log(`✅ Onboarding complete: userType=${userType}, status=active, onboardingComplete=true`);
+
   // Notify all admins in the institution
   if (institutionId) {
     try {
-      // Get all admin users for this institution
       const usersRef = collection(db, 'users');
       const adminsQuery = query(
         usersRef,
@@ -142,10 +133,9 @@ export const completeOnboarding = async (uid) => {
         where('userType', '==', 'admin')
       );
       const adminsSnap = await getDocs(adminsQuery);
-      
+
       console.log(`📧 Notifying ${adminsSnap.size} admin(s) about new caregiver onboarding`);
-      
-      // Create notifications for each admin (informational - no action required)
+
       const userTypeLabel = isPharmacist ? 'Pharmacist' : 'Caregiver';
       const notificationPromises = adminsSnap.docs.map(adminDoc => {
         return createNotification({
@@ -153,7 +143,7 @@ export const completeOnboarding = async (uid) => {
           type: NOTIFICATION_TYPES.CAREGIVER_ONBOARDING,
           priority: NOTIFICATION_PRIORITIES.MEDIUM,
           title: `New ${userTypeLabel} Onboarded`,
-          message: `${caregiverName} (${caregiverEmail}) has completed onboarding and is now active. No approval needed.`,
+          message: `${caregiverName} (${caregiverEmail}) has completed onboarding and is now active.`,
           data: {
             caregiverId: uid,
             caregiverName: caregiverName,
@@ -163,19 +153,14 @@ export const completeOnboarding = async (uid) => {
           }
         });
       });
-      
+
       await Promise.all(notificationPromises);
       console.log('✅ Admin notifications sent successfully');
-      
-      // TODO: Send email notifications to admins
-      // This would require a backend function to send emails
-      
     } catch (notifyError) {
       console.error('❌ Failed to send admin notifications:', notifyError);
-      // Don't throw - notifications are not critical for onboarding completion
     }
   }
-  
+
   return true;
 };
 
@@ -186,5 +171,3 @@ export default {
   uploadCaregiverDocument,
   completeOnboarding,
 };
-
-

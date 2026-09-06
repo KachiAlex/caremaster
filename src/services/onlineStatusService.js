@@ -31,11 +31,14 @@ class OnlineStatusService {
     // Start heartbeat to maintain online status
     this.startHeartbeat();
     
-    // Set up cleanup on page unload
-    window.addEventListener('beforeunload', () => {
+    // Set up cleanup on page unload — use pagehide instead of beforeunload
+    // because beforeunload is restricted by modern browsers' permissions policies.
+    // pagehide fires in all cases (including bfcache) and is the recommended
+    // replacement. We also use sendBeacon for reliability during page unload.
+    window.addEventListener('pagehide', () => {
       this.setOffline();
     });
-    
+
     // Set up cleanup on visibility change
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {

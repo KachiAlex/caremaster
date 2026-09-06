@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": "src",
+    "paths": {
+      "backend/*": ["backend/*"],
+      "backend/auth-hooks": ["backend/auth-hooks.js"]
+    }
+  },
+  "include": ["src"]
+}

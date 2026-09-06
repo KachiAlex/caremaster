@@ -213,25 +213,81 @@ export const caregiverAPI = {
   // Get caregiver by ID
   getCaregiverById: async (caregiverId) => {
     try {
-      const caregiverRef = doc(db, 'caregivers', caregiverId);
-      const caregiverDoc = await getDoc(caregiverRef);
-      
-      if (caregiverDoc.exists()) {
-        const data = caregiverDoc.data();
-        return {
-          id: caregiverDoc.id,
-          ...data,
-          // Handle both Database Timestamps and ISO strings
-          joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
-          lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
-          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null)
-        };
+      // First, try to fetch from the users table (where the user actually
+      // exists). This avoids 404 noise from querying the caregivers table
+      // for users who don't have a caregiver row.
+      try {
+        const userRef = doc(db, 'users', caregiverId);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+
+          // If the user has a linked caregiver record, try to fetch it
+          // for additional fields. This is a best-effort lookup — if it
+          // 404s, we silently use the user data.
+          let caregiverData = {};
+          if (userData.caregiverId) {
+            try {
+              const caregiverRef = doc(db, 'caregivers', userData.caregiverId);
+              const caregiverDoc = await getDoc(caregiverRef);
+              if (caregiverDoc.exists()) {
+                caregiverData = caregiverDoc.data();
+              }
+            } catch (e) {
+              // Silently ignore — caregivers table row is optional
+            }
+          }
+
+          const data = { ...caregiverData, ...userData };
+          return {
+            id: caregiverId,
+            ...data,
+            name: data.name || data.displayName || data.fullName || 'Caregiver',
+            email: data.email || '',
+            status: data.status || 'active',
+            rating: data.rating || 0,
+            totalPatients: data.totalPatients || 0,
+            currentPatients: data.currentPatients || 0,
+            thisMonthEarnings: data.thisMonthEarnings || 0,
+            lastMonthEarnings: data.lastMonthEarnings || 0,
+            specializations: data.specializations || ['General Care'],
+            certifications: data.certifications || ['CPR Certified'],
+            experience: data.experience || '1 year',
+            qualificationLevel: data.qualificationLevel || 'basic',
+            location: data.location || 'Lagos, Nigeria',
+            joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : (data.createdAt ? new Date(data.createdAt) : new Date())),
+            lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : new Date()),
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date()),
+            updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : new Date())
+          };
+        }
+      } catch (userLookupError) {
+        // User lookup failed — fall through to caregivers table
       }
-      
-      // If caregiver profile doesn't exist, create one automatically
-      console.log('Caregiver profile not found, creating default profile for user:', caregiverId);
-      const defaultCaregiverData = {
+
+      // Fallback: try the caregivers table directly
+      try {
+        const caregiverRef = doc(db, 'caregivers', caregiverId);
+        const caregiverDoc = await getDoc(caregiverRef);
+        if (caregiverDoc.exists()) {
+          const data = caregiverDoc.data();
+          return {
+            id: caregiverDoc.id,
+            ...data,
+            joinDate: data.joinDate?.toDate ? data.joinDate.toDate() : (data.joinDate ? new Date(data.joinDate) : null),
+            lastActive: data.lastActive?.toDate ? data.lastActive.toDate() : (data.lastActive ? new Date(data.lastActive) : null),
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null),
+            updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null)
+          };
+        }
+      } catch (e) {
+        // Silently ignore
+      }
+
+      // Ultimate fallback: return a default profile without making any
+      // further network requests
+      console.log('Caregiver profile not found, using default profile for user:', caregiverId);
+      return {
         id: caregiverId,
         name: 'Caregiver',
         email: '',
@@ -251,17 +307,6 @@ export const caregiverAPI = {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
-      // Try to create the caregiver profile
-      try {
-        await setDoc(doc(db, 'caregivers', caregiverId), defaultCaregiverData);
-        await ensureCaregiverUserDoc(caregiverId, defaultCaregiverData);
-        console.log('Default caregiver profile created successfully');
-        return defaultCaregiverData;
-      } catch (createError) {
-        console.log('Could not create caregiver profile, returning default data:', createError);
-        return defaultCaregiverData;
-      }
     } catch (error) {
       console.error('Error fetching caregiver:', error);
       throw error;

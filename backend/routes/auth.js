@@ -12,6 +12,19 @@ const { sendPasswordResetEmail } = require('../services/emailService');
 
 const router = express.Router();
 
+// Helper to set the JWT as an httpOnly cookie.
+// The token is also returned in the response body for native/Capacitor clients
+// that cannot reliably read httpOnly cookies. Web clients should not rely on it.
+function setAuthCookie(res, token) {
+  const maxAgeMs = parseInt(process.env.JWT_EXPIRES_IN_MS, 10) || (24 * 60 * 60 * 1000);
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    maxAge: maxAgeMs,
+  });
+}
+
 // Register new student
 router.post('/register', validateRequest(schemas.register), async (req, res) => {
   try {
@@ -334,11 +347,14 @@ router.post('/login', validateRequest(schemas.login), async (req, res) => {
 
     logger.info(`User logged in: ${matric_number}`);
 
+    setAuthCookie(res, token);
+
+    const isNativeClient = req.get('X-Client-Type') === 'native';
     res.json({
       success: true,
       message: 'Login successful',
       data: {
-        token,
+        ...(isNativeClient ? { token } : {}),
         user: {
           id: user.id,
           matric_number: user.matric_number,
@@ -597,6 +613,8 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
 
     logger.info(`User logged in via email: ${user.email}`);
 
+    setAuthCookie(res, token);
+
     // Build user profile response
     const userProfile = {
       id: user.id,
@@ -659,11 +677,14 @@ router.post('/email-login', validateRequest(schemas.emailLogin), async (req, res
       }
     }
 
+    const isNativeClient = req.get('X-Client-Type') === 'native';
     res.json({
       success: true,
       message: 'Login successful',
       data: {
-        token,
+        // Only expose the token in the response body for native/Capacitor clients
+        // that cannot read the httpOnly cookie. Web clients use the cookie.
+        ...(isNativeClient ? { token } : {}),
         user: userProfile
       }
     });
@@ -1116,6 +1137,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
 
     logger.info(`User logged out: ${req.user.email}`);
 
+    res.clearCookie('token');
     res.json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
     logger.error('Logout error:', error);

@@ -202,6 +202,21 @@ export const getClientById = async (clientId) => {
 
 export const getPatientById = getClientById;
 
+// Batch fetch multiple clients by ID in a single request (fixes N+1 problem)
+export const getClientsByIds = async (clientIds) => {
+  try {
+    if (!clientIds?.length) return [];
+    const ids = Array.from(new Set(clientIds.filter(Boolean)));
+    const clientsRef = collection(db, CLIENTS_COLLECTION);
+    const q = query(clientsRef, where('id', 'in', ids));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((docSnap) => normalizeClientDoc(docSnap));
+  } catch (error) {
+    console.error('Error fetching clients by IDs:', error);
+    throw error;
+  }
+};
+
 export const getPatientByPatientId = async (clientId) => {
   try {
     const clientsRef = collection(db, CLIENTS_COLLECTION);
