@@ -96,6 +96,7 @@ import CaregiverWageManagement from '../components/CaregiverWageManagement';
 import CaregiverWageEditModal from '../components/CaregiverWageEditModal';
 import UserProfileSettings from '../components/UserProfileSettings';
 import InstitutionSettings from '../components/InstitutionSettings';
+import ChangePasswordForm from '../components/ChangePasswordForm';
 import CreatePatientModal from '../components/CreatePatientModal';
 import InstitutionUserCreationModal from '../components/InstitutionUserCreationModal';
 import AddCaregiverModal from '../components/AddCaregiverModal';
@@ -160,8 +161,8 @@ const formatDateForInput = (value) => {
 
 // Payment gateway constants removed
 
-const StatCard = ({ icon: Icon, label, value, accent }) => (
-  <div className="cm-stat">
+const StatCard = ({ icon: Icon, label, value, accent, borderColor }) => (
+  <div className="cm-stat" style={borderColor ? { '--stat-border': borderColor } : undefined}>
     <div className="flex items-center justify-between gap-3">
       <div>
         <p className="cm-stat-label">{label}</p>
@@ -170,7 +171,7 @@ const StatCard = ({ icon: Icon, label, value, accent }) => (
       <div
         className={`cm-stat-icon bg-gradient-to-br ${accent}`}
       >
-        <Icon className="h-4 w-4 text-white" />
+        <Icon className="h-5 w-5 text-white" />
       </div>
     </div>
   </div>
@@ -573,7 +574,7 @@ const InstitutionAdminDashboard = () => {
       const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
       await institutionAPI.updateInstitutionLinks(instId, updates);
       await loadInstitutionData(); // Reload institution data
-      toast.success('Institution links updated successfully!');
+      toast.success('Institution links updated');
     } catch (error) {
       console.error('Error updating institution links:', error);
       toast.error('Failed to update institution links');
@@ -966,7 +967,7 @@ const InstitutionAdminDashboard = () => {
         institutionId: instId
       });
 
-      toast.success('Billing plan saved successfully');
+      toast.success('Billing plan saved');
       setShowEditBillingPlanModal(false);
       setSelectedBillingPlan(null);
       await loadBillingPlans();
@@ -1046,7 +1047,7 @@ const InstitutionAdminDashboard = () => {
       }
       
       setShowCreatePatientModal(false);
-      toast.success('Client added successfully', { 
+      toast.success('Client added', {
         autoClose: 5000,
         position: 'top-center'
       });
@@ -1247,7 +1248,7 @@ const InstitutionAdminDashboard = () => {
       const assignmentRef = await addDoc(collection(db, 'clientAssignments'), assignmentData);
       console.log('✅ Admin - Assignment created with ID:', assignmentRef.id);
       
-      toast.success('Pharmacist assigned successfully!');
+      toast.success('Pharmacist assigned');
       await trackAdminEvent('pharmacist_assigned_to_client', {
         clientId,
         pharmacistId,
@@ -1287,7 +1288,7 @@ const InstitutionAdminDashboard = () => {
       });
 
       console.log('✅ User role updated successfully');
-      toast.success(`User role updated to ${userData.userType} successfully!`);
+      toast.success(`Role updated to ${userData.userType}`);
       
       setShowEditUserModal(false);
       setSelectedUserForEdit(null);
@@ -1407,7 +1408,7 @@ const InstitutionAdminDashboard = () => {
         deletedBy: user?.uid
       });
       
-      toast.success(`Pharmacist ${pharmacist.name} has been deleted successfully`);
+      toast.success(`Pharmacist ${pharmacist.name} deleted`);
       
       // Reload dashboard data
       await loadDashboardData();
@@ -1573,7 +1574,7 @@ const InstitutionAdminDashboard = () => {
       setShowAssignmentModal(false);
       setSelectedClientForAssignment('');
       setSelectedCaregiverForAssignment('');
-      toast.success('Assignment created and notifications sent successfully');
+      toast.success('Assignment created and notifications sent');
       
       await trackAdminEvent('assignment_created', {
         assignmentId: createdAssignment.id,
@@ -1644,7 +1645,7 @@ const InstitutionAdminDashboard = () => {
         status: formData.status || selectedAssignmentForEdit.status
       });
 
-      toast.success('Assignment updated successfully');
+      toast.success('Assignment updated');
       setShowEditAssignmentModal(false);
       setSelectedAssignmentForEdit(null);
       setEditAssignmentForm({
@@ -1753,7 +1754,7 @@ const InstitutionAdminDashboard = () => {
       setCaregivers(prevCaregivers => prevCaregivers.filter(c => c.id !== caregiverId));
       console.log('✅ Removed from local state');
       
-      toast.success('Caregiver deleted successfully', { autoClose: 3000 });
+      toast.success('Caregiver deleted', { autoClose: 3000 });
       
       // Reload dashboard data in background to ensure consistency
       setTimeout(() => {
@@ -1825,7 +1826,7 @@ const InstitutionAdminDashboard = () => {
         }
       });
       
-      toast.success(`${caregiver.name} has been approved successfully`);
+      toast.success(`${caregiver.name} approved`);
       await loadDashboardData(); // Reload to update the status
     } catch (error) {
       console.error('Error approving caregiver:', error);
@@ -1906,7 +1907,7 @@ const InstitutionAdminDashboard = () => {
         });
       }
       
-      toast.success('Diagnostic test approved successfully');
+      toast.success('Diagnostic test approved');
       await trackAdminEvent('diagnostic_approved', {
         diagnosticId: diagnostic.id,
         clientId: diagnostic.clientId || null,
@@ -1982,7 +1983,7 @@ const InstitutionAdminDashboard = () => {
         archivedAt: new Date().toISOString(),
         archivedBy
       });
-      toast.success('Client archived successfully');
+      toast.success('Client archived');
       await trackAdminEvent('client_archived', {
         clientId,
         institutionId: instId,
@@ -2007,7 +2008,7 @@ const InstitutionAdminDashboard = () => {
         archivedAt: null,
         archivedBy: null
       });
-      toast.success('Client restored successfully');
+      toast.success('Client restored');
       await trackAdminEvent('client_restored', {
         clientId,
         institutionId: instId,
@@ -2035,7 +2036,7 @@ const InstitutionAdminDashboard = () => {
     try {
       const instId = effectiveInstitutionId || institutionId || userProfile?.institutionId;
       await assignmentAPI.deleteAssignment(assignmentId);
-      toast.success('Assignment deleted successfully');
+      toast.success('Assignment deleted');
       await trackAdminEvent('assignment_deleted', {
         assignmentId,
         institutionId: instId,
@@ -2678,7 +2679,7 @@ const renderMessagesTab = () => {
 
         setMessages((prev) => [...prev, optimisticMessage]);
         setNewMessage('');
-        toast.success('Message sent successfully');
+        toast.success('Message sent');
         loadConversations();
       } catch (error) {
         console.error('Error sending message:', error);
@@ -3314,21 +3315,21 @@ const renderMessagesTab = () => {
   }
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Activity },
-    { id: 'clients', label: 'Clients', icon: User },
-    { id: 'caregivers', label: 'Caregivers', icon: UserCheck },
-    { id: 'pharmacists', label: 'Pharmacists', icon: Pill },
-    { id: 'scheduling', label: 'Scheduling', icon: Calendar },
-    { id: 'wage-management', label: 'Wage Management', icon: DollarSign },
-    { id: 'billing-plans', label: 'Billing Plans', icon: Briefcase },
-    { id: 'user-management', label: 'User Management', icon: Users },
-    { id: 'admin-roles', label: 'Admin Roles', icon: UserCog },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
-    { id: 'enhanced-inventory', label: 'Enhanced Inventory', icon: Building },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'help-support', label: 'Help & Support', icon: HelpCircle }
+    { id: 'dashboard', label: 'Dashboard', icon: Activity, iconColor: '#60A5FA' },
+    { id: 'clients', label: 'Clients', icon: User, iconColor: '#34D399' },
+    { id: 'caregivers', label: 'Caregivers', icon: UserCheck, iconColor: '#F472B6' },
+    { id: 'pharmacists', label: 'Pharmacists', icon: Pill, iconColor: '#A78BFA' },
+    { id: 'scheduling', label: 'Scheduling', icon: Calendar, iconColor: '#FBBF24' },
+    { id: 'wage-management', label: 'Wage Management', icon: DollarSign, iconColor: '#4ADE80' },
+    { id: 'billing-plans', label: 'Billing Plans', icon: Briefcase, iconColor: '#FB923C' },
+    { id: 'user-management', label: 'User Management', icon: Users, iconColor: '#22D3EE' },
+    { id: 'admin-roles', label: 'Admin Roles', icon: UserCog, iconColor: '#C084FC' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, iconColor: '#38BDF8' },
+    { id: 'enhanced-inventory', label: 'Enhanced Inventory', icon: Building, iconColor: '#F59E0B' },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, iconColor: '#2DD4BF' },
+    { id: 'security', label: 'Security', icon: Shield, iconColor: '#F87171' },
+    { id: 'settings', label: 'Settings', icon: Settings, iconColor: '#94A3B8' },
+    { id: 'help-support', label: 'Help & Support', icon: HelpCircle, iconColor: '#FCD34D' }
   ];
 
   const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label || 'Dashboard';
@@ -3340,41 +3341,41 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             {/* Primary Stats */}
             <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div 
+              <div
                 onClick={() => setActiveTab('user-management')}
                 className="cursor-pointer transform transition hover:scale-105"
               >
-                <StatCard icon={Users} label="Total Staff" value={stats.totalUsers.toLocaleString()} accent="from-blue-500 to-blue-600" />
+                <StatCard icon={Users} label="Total Staff" value={stats.totalUsers.toLocaleString()} accent="from-blue-500 to-blue-600" borderColor="#3B82F6" />
               </div>
-              <div 
+              <div
                 onClick={() => setActiveTab('clients')}
                 className="cursor-pointer transform transition hover:scale-105"
               >
-                <StatCard icon={Heart} label="Total Clients" value={stats.clients.toLocaleString()} accent="from-green-500 to-green-600" />
+                <StatCard icon={Heart} label="Total Clients" value={stats.clients.toLocaleString()} accent="from-green-500 to-green-600" borderColor="#22C55E" />
               </div>
-              <div 
+              <div
                 onClick={() => setActiveTab('scheduling')}
                 className="cursor-pointer transform transition hover:scale-105"
               >
-                <StatCard icon={Activity} label="Active Tasks" value={stats.activeAssignments.toLocaleString()} accent="from-indigo-500 to-purple-500" />
+                <StatCard icon={Activity} label="Active Tasks" value={stats.activeAssignments.toLocaleString()} accent="from-indigo-500 to-purple-500" borderColor="#6366F1" />
               </div>
               <div
                 onClick={() => { setSchedulingSubTab('assignments'); setActiveTab('scheduling'); }}
                 className="cursor-pointer transform transition hover:scale-105"
               >
-                <StatCard icon={ClipboardList} label="Pending Tasks" value={stats.pendingAssignments.toLocaleString()} accent="from-yellow-500 to-orange-500" />
+                <StatCard icon={ClipboardList} label="Pending Tasks" value={stats.pendingAssignments.toLocaleString()} accent="from-yellow-500 to-orange-500" borderColor="#F59E0B" />
               </div>
             </section>
 
             {/* Secondary Stats */}
             <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              <StatCard icon={Stethoscope} label="Doctors" value={stats.doctors.toLocaleString()} accent="from-red-500 to-pink-500" />
-              <StatCard icon={Heart} label="Nurses" value={stats.nurses.toLocaleString()} accent="from-pink-500 to-rose-500" />
-              <StatCard icon={Pill} label="Pharmacists" value={stats.pharmacists.toLocaleString()} accent="from-purple-500 to-indigo-500" />
-              <StatCard icon={UserCheck} label="Caregivers" value={stats.caregivers.toLocaleString()} accent="from-teal-500 to-cyan-500" />
-              <StatCard icon={TestTube} label="Pending Tests" value={pendingDiagnostics.length.toLocaleString()} accent="from-amber-500 to-yellow-500" />
-              <StatCard icon={Calendar} label="Appointments" value={stats.activeAppointments.toLocaleString()} accent="from-blue-500 to-indigo-500" />
-              <StatCard icon={Calendar} label="Total Schedules" value={stats.totalSchedules.toLocaleString()} accent="from-purple-500 to-pink-500" />
+              <StatCard icon={Stethoscope} label="Doctors" value={stats.doctors.toLocaleString()} accent="from-red-500 to-pink-500" borderColor="#EF4444" />
+              <StatCard icon={Heart} label="Nurses" value={stats.nurses.toLocaleString()} accent="from-pink-500 to-rose-500" borderColor="#EC4899" />
+              <StatCard icon={Pill} label="Pharmacists" value={stats.pharmacists.toLocaleString()} accent="from-purple-500 to-indigo-500" borderColor="#A855F7" />
+              <StatCard icon={UserCheck} label="Caregivers" value={stats.caregivers.toLocaleString()} accent="from-teal-500 to-cyan-500" borderColor="#14B8A6" />
+              <StatCard icon={TestTube} label="Pending Tests" value={pendingDiagnostics.length.toLocaleString()} accent="from-amber-500 to-yellow-500" borderColor="#F59E0B" />
+              <StatCard icon={Calendar} label="Appointments" value={stats.activeAppointments.toLocaleString()} accent="from-blue-500 to-indigo-500" borderColor="#3B82F6" />
+              <StatCard icon={Calendar} label="Total Schedules" value={stats.totalSchedules.toLocaleString()} accent="from-purple-500 to-pink-500" borderColor="#A855F7" />
             </section>
 
             {/* Main Content Grid */}
@@ -3609,7 +3610,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Clients</h3>
                 <p className="text-sm text-gray-600">Manage active Client relationships, contact details, and archived records.</p>
               </div>
               {clientSubTab === 'active' && (
@@ -3763,7 +3763,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Caregivers</h3>
                 <p className="text-sm text-gray-600">Track caregivers, roles, and coverage.</p>
               </div>
               <div className="flex items-center gap-3">
@@ -3943,7 +3942,7 @@ const renderMessagesTab = () => {
                                           }
                                         }
 
-                                        toast.success('Caregiver activated successfully', { autoClose: 3000 });
+                                        toast.success('Caregiver activated', { autoClose: 3000 });
                                         await loadDashboardData();
                                       } catch (error) {
                                         console.error('Error activating caregiver:', error);
@@ -3975,7 +3974,7 @@ const renderMessagesTab = () => {
                                         } else {
                                           await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'suspended' });
                                         }
-                                        toast.success('Caregiver suspended successfully', { autoClose: 3000 });
+                                        toast.success('Caregiver suspended', { autoClose: 3000 });
                                         await loadDashboardData();
                                       } catch (error) {
                                         console.error('Error suspending caregiver:', error);
@@ -4023,7 +4022,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Pharmacists</h3>
                 <p className="text-sm text-gray-600">Manage credentialed pharmacy staff.</p>
               </div>
               <div className="flex items-center gap-3">
@@ -4109,7 +4107,7 @@ const renderMessagesTab = () => {
                                     try {
                                       const pharmacistId = pharmacist.id || pharmacist.uid;
                                       await updateUserStatus(pharmacistId, 'suspended');
-                                      toast.success('Pharmacist suspended successfully');
+                                      toast.success('Pharmacist suspended');
                                       await loadDashboardData();
                                     } catch (error) {
                                       console.error('Error suspending pharmacist:', error);
@@ -4130,7 +4128,7 @@ const renderMessagesTab = () => {
                                     try {
                                       const pharmacistId = pharmacist.id || pharmacist.uid;
                                       await updateUserStatus(pharmacistId, 'active');
-                                      toast.success('Pharmacist reactivated successfully');
+                                      toast.success('Pharmacist reactivated');
                                       await loadDashboardData();
                                     } catch (error) {
                                       console.error('Error reactivating pharmacist:', error);
@@ -4156,7 +4154,7 @@ const renderMessagesTab = () => {
                                       active: false,
                                       deletedAt: new Date().toISOString()
                                     });
-                                    toast.success('Pharmacist deleted successfully');
+                                    toast.success('Pharmacist deleted');
                                     await loadDashboardData();
                                   } catch (error) {
                                     console.error('Error deleting pharmacist:', error);
@@ -4184,7 +4182,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Scheduling</h3>
                 <p className="text-sm text-gray-600">Manage caregiver schedules, appointments, and assignments.</p>
               </div>
               {schedulingSubTab === 'assignments' && (
@@ -4347,7 +4344,7 @@ const renderMessagesTab = () => {
                                     }
                                     try {
                                       await assignmentAPI.deleteAssignment(assignment.id || assignment.assignmentId);
-                                      toast.success('Assignment deleted successfully');
+                                      toast.success('Assignment deleted');
                                       await loadDashboardData();
                                     } catch (error) {
                                       console.error('Error deleting assignment:', error);
@@ -4394,7 +4391,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Billing Plans</h3>
                 <p className="text-sm text-gray-600">Manage subscription plans and billing configurations.</p>
               </div>
             </div>
@@ -4406,7 +4402,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">User Management</h3>
                 <p className="text-sm text-gray-600">Manage all users across your institution.</p>
               </div>
             </div>
@@ -4418,7 +4413,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Admin Roles</h3>
                 <p className="text-sm text-gray-600">Assign and manage administrative permissions.</p>
               </div>
             </div>
@@ -4430,7 +4424,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Messages</h3>
                 <p className="text-sm text-gray-600">Communicate with staff and clients.</p>
               </div>
             </div>
@@ -4440,12 +4433,7 @@ const renderMessagesTab = () => {
       case 'enhanced-inventory':
         return (
           <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Enhanced Inventory</h3>
-                <p className="text-sm text-gray-600">Manage medical supplies and equipment inventory.</p>
-              </div>
-            </div>
+            <p className="text-sm text-gray-600">Manage medical supplies and equipment inventory.</p>
             <EnhancedInventoryManagement institutionId={effectiveInstitutionId} />
           </div>
         );
@@ -4454,7 +4442,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Analytics</h3>
                 <p className="text-sm text-gray-600">Track performance metrics and system insights.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -4493,9 +4480,9 @@ const renderMessagesTab = () => {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard icon={Activity} label="Active Assignments" value={stats.activeAssignments.toLocaleString()} accent="from-indigo-500 to-purple-500" />
-              <StatCard icon={BarChart3} label="Satisfaction" value={`${stats.satisfaction}%`} accent="from-emerald-500 to-teal-500" />
-              <StatCard icon={Shield} label="System Health" value={stats.systemHealth} accent="from-gray-600 to-black" />
+              <StatCard icon={Activity} label="Active Assignments" value={stats.activeAssignments.toLocaleString()} accent="from-indigo-500 to-purple-500" borderColor="#6366F1" />
+              <StatCard icon={BarChart3} label="Satisfaction" value={`${stats.satisfaction}%`} accent="from-emerald-500 to-teal-500" borderColor="#10B981" />
+              <StatCard icon={Shield} label="System Health" value={stats.systemHealth} accent="from-gray-600 to-black" borderColor="#4B5563" />
             </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-3">
@@ -4528,7 +4515,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Security</h3>
                 <p className="text-sm text-gray-600">Manage security settings and access controls.</p>
               </div>
             </div>
@@ -4540,9 +4526,16 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Settings</h3>
                 <p className="text-sm text-gray-600">Configure institution preferences and options.</p>
               </div>
+            </div>
+            {/* Account & Change Password */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-1">Account Security</h4>
+              <p className="text-sm text-gray-600 mb-5">
+                Change your admin password. Other devices will need to log in again after changing.
+              </p>
+              <ChangePasswordForm />
             </div>
             <InstitutionSettings institutionId={effectiveInstitutionId} />
           </div>
@@ -4552,7 +4545,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Help & Support</h3>
                 <p className="text-sm text-gray-600">Get assistance and access documentation.</p>
               </div>
             </div>
@@ -4593,9 +4585,8 @@ const renderMessagesTab = () => {
       >
         <div className="space-y-6">
           <div className="cm-section-head">
-            <span className="cm-eyebrow">{activeTabLabel}</span>
-            <h2 className="mt-2">{institutionData?.name || 'Institution Dashboard'}</h2>
-            <p>Welcome back, {displayName}. Manage your institution operations from one surface.</p>
+            <p className="cm-eyebrow">Welcome back, {displayName}</p>
+            <p className="mt-2 text-text-soft">Manage your institution operations from one surface.</p>
           </div>
           {renderTabContent()}
         </div>
@@ -4644,7 +4635,7 @@ const renderMessagesTab = () => {
               } else {
                 await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'suspended' });
               }
-              toast.success('Caregiver suspended successfully', { autoClose: 3000 });
+              toast.success('Caregiver suspended', { autoClose: 3000 });
               await loadDashboardData();
             } catch (error) {
               console.error('Error suspending caregiver:', error);
@@ -4665,7 +4656,7 @@ const renderMessagesTab = () => {
               } else {
                 await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'active' });
               }
-              toast.success('Caregiver activated successfully', { autoClose: 3000 });
+              toast.success('Caregiver activated', { autoClose: 3000 });
               await loadDashboardData();
             } catch (error) {
               console.error('Error activating caregiver:', error);
@@ -4884,7 +4875,7 @@ const renderMessagesTab = () => {
                     }
                     try {
                       await assignmentAPI.deleteAssignment(selectedAssignment.id || selectedAssignment.assignmentId);
-                      toast.success('Assignment deleted successfully');
+                      toast.success('Assignment deleted');
                       setShowAssignmentDetails(false);
                       setSelectedAssignment(null);
                       await loadDashboardData();
@@ -5358,7 +5349,7 @@ const renderMessagesTab = () => {
                         const newStatus = e.target.value;
                         const userId = selectedUserForEdit.id || selectedUserForEdit.uid;
                         await updateUserStatus(userId, newStatus);
-                        toast.success('Status updated successfully');
+                        toast.success('Status updated');
                         await loadDashboardData();
                         setShowEditUserModal(false);
                         setSelectedUserForEdit(null);

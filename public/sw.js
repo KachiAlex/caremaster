@@ -1,8 +1,8 @@
 // Care Master Service Worker for PWA functionality
-const CACHE_NAME = 'Care Master-v2.0.8';
-const STATIC_CACHE = 'Care Master-static-v28';
-const DYNAMIC_CACHE = 'Care Master-dynamic-v28';
-const API_CACHE = 'Care Master-api-v28';
+const CACHE_NAME = 'Care Master-v2.2.0';
+const STATIC_CACHE = 'Care Master-static-v32';
+const DYNAMIC_CACHE = 'Care Master-dynamic-v32';
+const API_CACHE = 'Care Master-api-v32';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
@@ -128,11 +128,13 @@ self.addEventListener('fetch', (event) => {
 
   // Handle different types of requests
   if (request.method === 'GET') {
-    // Static assets (JS/CSS/images) - network first so new deploys are picked up
+    // Static assets (JS/CSS/images with content-hashed filenames) — cache first.
+    // Hashed filenames never change content, so the cached version is always
+    // correct and can be served instantly without hitting the network.
     if (isStaticAsset(request)) {
-      event.respondWith(networkFirstWithFallback(request, STATIC_CACHE));
+      event.respondWith(cacheFirst(request, STATIC_CACHE));
     }
-    // API requests - network first with fallback
+    // API requests - network first with fallback to cache for offline support
     else if (isAPIRequest(request)) {
       event.respondWith(networkFirstWithFallback(request, API_CACHE));
     }

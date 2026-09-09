@@ -75,10 +75,10 @@ const ResponsiveDrawer = ({
       full: 'w-full',
     },
     vertical: {
-      sm: 'max-h-[30vh]',
-      md: 'max-h-[50vh]',
-      lg: 'max-h-[70vh]',
-      xl: 'max-h-[85vh]',
+      sm: 'max-h-[30dvh] max-h-[30vh]',
+      md: 'max-h-[50dvh] max-h-[50vh]',
+      lg: 'max-h-[70dvh] max-h-[70vh]',
+      xl: 'max-h-[85dvh] max-h-[85vh]',
       full: 'h-full',
     },
   };

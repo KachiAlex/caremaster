@@ -480,22 +480,31 @@ export const reorderAPI = {
         return currentStock <= reorderLevel && item.status === 'active';
       });
 
-      // Send notifications for low stock items
+      // Send notifications for low stock items to institution admins
+      const adminsQuery = query(
+        collection(db, 'users'),
+        where('institutionId', '==', institutionId),
+        where('userType', '==', 'admin')
+      );
+      const adminsSnap = await getDocs(adminsQuery);
+
       for (const item of lowStockItems) {
         try {
-          await notificationsAPI.createNotification({
-            userId: institutionId,
-            type: 'inventory_alert',
-            title: 'Low Stock Alert',
-            message: `${item.name} is below reorder level. Current: ${item.quantity}, Reorder Level: ${item.reorderLevel || item.minStock}`,
-            priority: 'medium',
-            data: {
-              inventoryId: item.id,
-              itemName: item.name,
-              currentStock: item.quantity,
-              reorderLevel: item.reorderLevel || item.minStock
-            }
-          });
+          await Promise.all(adminsSnap.docs.map(async (adminDoc) => {
+            await notificationsAPI.createNotification({
+              userId: adminDoc.id,
+              type: 'inventory_alert',
+              title: 'Low Stock Alert',
+              message: `${item.name} is below reorder level. Current: ${item.quantity}, Reorder Level: ${item.reorderLevel || item.minStock}`,
+              priority: 'medium',
+              data: {
+                inventoryId: item.id,
+                itemName: item.name,
+                currentStock: item.quantity,
+                reorderLevel: item.reorderLevel || item.minStock
+              }
+            });
+          }));
         } catch (notifError) {
           console.warn('Failed to send reorder notification:', notifError);
         }

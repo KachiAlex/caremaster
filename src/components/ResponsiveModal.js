@@ -95,7 +95,7 @@ const ResponsiveModal = ({
     >
       <div 
         className={`bg-white ${modalSizeClass} ${
-          fullScreenOnMobile && isMobile ? 'max-h-screen' : 'max-h-[90vh] md:rounded-xl'
+          fullScreenOnMobile && isMobile ? 'max-h-screen' : 'max-h-[90dvh] max-h-[90vh] md:rounded-xl'
         } overflow-hidden shadow-2xl animate-scale-in flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >

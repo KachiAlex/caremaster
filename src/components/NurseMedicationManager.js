@@ -113,7 +113,7 @@ const NurseMedicationManager = ({ clientId, clientName, nurseId, nurseName, onSa
       // Simulate API call
       console.log('Recording medication administration:', administrationRecord);
       
-      toast.success(`${administeringMed.name} administration recorded successfully`);
+      toast.success(`${administeringMed.name} administered`);
       
       // Close modal and refresh medications
       setShowAdministerModal(false);

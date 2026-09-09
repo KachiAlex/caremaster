@@ -411,19 +411,73 @@ export const getClientsByDoctor = async (doctorId, institutionId = null) => {
             filteredDocs.push(d);
           }
         });
-        querySnapshot = { forEach: (cb) => filteredDocs.forEach(cb) };
+        querySnapshot = { forEach: (cb) => filteredDocs.forEach(cb), docs: filteredDocs };
       } else {
         throw error;
       }
     }
     
-    const clients = [];
+    const directClients = [];
     querySnapshot.forEach((doc) => {
-      clients.push(normalizeClientDoc(doc));
+      directClients.push(normalizeClientDoc(doc));
     });
-    
-    // Sort by createdAt in memory (newest first)
-    return clients.sort((a, b) => {
+
+    // Also get clients from the clientAssignments collection where the
+    // caregiver/doctor role is recorded. This mirrors getClientsByCaregiver
+    // so that clients assigned via the assignments system (rather than the
+    // legacy assignedDoctor field on the client doc) are also visible.
+    const assignmentsRef = collection(db, 'clientAssignments');
+    const assignmentsQuery = query(assignmentsRef, where('caregiverId', '==', doctorId));
+    const assignmentsSnapshot = await getDocs(assignmentsQuery);
+
+    const clientIds = new Set();
+    const assignmentByClientId = new Map();
+    assignmentsSnapshot.forEach((doc) => {
+      const assignmentData = doc.data();
+      if (assignmentData.clientId && (assignmentData.status ?? 'active') === 'active') {
+        clientIds.add(assignmentData.clientId);
+        if (!assignmentByClientId.has(assignmentData.clientId)) {
+          assignmentByClientId.set(assignmentData.clientId, assignmentData);
+        }
+      }
+    });
+
+    const assignmentClients = [];
+    for (const clientId of clientIds) {
+      // Skip clients we already have from the direct query
+      if (directClients.some((c) => c.id === clientId)) continue;
+      try {
+        const clientDoc = await getDoc(doc(db, CLIENTS_COLLECTION, clientId));
+        if (clientDoc.exists()) {
+          assignmentClients.push(normalizeClientDoc(clientDoc));
+        } else {
+          // Client doc is missing; create a placeholder so UI can still show the assignment
+          const assignment = assignmentByClientId.get(clientId) || {};
+          assignmentClients.push({
+            id: clientId,
+            name: assignment.clientName || 'Assigned Client',
+            email: assignment.clientEmail || '',
+            status: assignment.status || 'active',
+            address: assignment.clientAddress || assignment.address || 'Address not provided',
+            phone: assignment.clientPhone || assignment.phone || 'Phone not provided',
+            assignedDoctor: doctorId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastVisit: null
+          });
+        }
+      } catch (error) {
+        console.log('Could not fetch client from assignment:', error);
+      }
+    }
+
+    // Combine, deduplicate, and sort by createdAt (newest first)
+    const allClients = [...directClients, ...assignmentClients];
+    const uniqueClients = allClients.filter((client, index, self) => 
+      index === self.findIndex(p => p.id === client.id)
+    );
+
+    return uniqueClients.sort((a, b) => {
       const aTime = a.createdAt?.getTime?.() || 0;
       const bTime = b.createdAt?.getTime?.() || 0;
       return bTime - aTime;

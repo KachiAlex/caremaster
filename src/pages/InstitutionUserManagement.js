@@ -116,7 +116,7 @@ const InstitutionUserManagement = () => {
     if (action === 'remove' || action === 'delete') {
       // Prevent deleting primary admin
       if (user?.isPrimaryAdmin || user?.adminTier === 'primary' || user?.roles?.includes('primary-admin') || user?.cannotBeDeleted) {
-        toast.error('❌ Primary administrators cannot be deleted for security reasons');
+        toast.error('Primary administrators cannot be deleted');
         return;
       }
       

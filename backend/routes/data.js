@@ -87,7 +87,7 @@ const COLLECTION_TO_TABLE = {
 // The frontend sends "clientId" which becomes "client_id" via camelToSnake,
 // but many tables use "patient_id" instead.
 const COLUMN_ALIASES = {
-  appointments: { client_id: 'patient_id' },
+  appointments: { client_id: 'patient_id', scheduled_time: 'scheduled_at' },
   vital_signs: { client_id: 'patient_id' },
   prescriptions: { client_id: 'patient_id' },
   diagnostics: { client_id: 'patient_id' },
@@ -124,11 +124,10 @@ const NO_TABLE_COLLECTIONS = [
   'doseLogs', 'sideEffects', 'failedLoginAttempts', 'blockedIps',
   'prescriptionRefills', 'messageTemplates', 'pharmacistMedicationData',
   // Collections used by frontend that have no backing DB table yet
-  // NOTE: billingPlans, clientSubscriptions, and billingSettings have been
-  // removed from this list because they DO have backing DB tables
-  // (billing_plans, client_subscriptions, billing_settings).
+  // NOTE: billingPlans, clientSubscriptions, billingSettings, suppliers,
+  // purchaseOrders, goodsReceived, and stockAudit have been removed from
+  // this list because they DO have backing DB tables.
   'bills', 'patientLogs', 'adlLogs', 'wages', 'reports', 'campaigns',
-  'suppliers', 'purchaseOrders', 'goodsReceived', 'stockAudit',
   'securityAuditLogs', 'userSessions', 'loginAttempts', 'twoFactorAuth',
 ];
 
@@ -194,7 +193,7 @@ function emitDataEvent(req, tableName, record) {
 const WRITABLE_FIELDS = {
   users: ['first_name', 'last_name', 'phone', 'photo_url', 'department', 'level', 'session', 'institution_id', 'user_type', 'is_active', 'is_verified', 'onboarding_complete', 'onboarding_data', 'display_name', 'specialization', 'address', 'date_of_birth', 'gender', 'emergency_contact_name', 'emergency_contact_phone', 'profile_complete', 'account_type', 'status', 'roles', 'biometric_enabled', 'biometric_credential_id', 'two_factor_phone', 'two_factor_enabled', 'two_factor_secret', 'updated_at'],
   institutions: ['name', 'email', 'phone', 'address', 'city', 'state', 'country', 'zip_code', 'website', 'license_key', 'plan', 'seats', 'active', 'status', 'license_starts_at', 'license_ends_at', 'features', 'settings', 'updated_at'],
-  appointments: ['client_id', 'caregiver_id', 'scheduled_date', 'duration', 'status', 'notes'],
+  appointments: ['patient_id', 'caregiver_id', 'institution_id', 'title', 'description', 'care_type', 'priority', 'scheduled_at', 'started_at', 'completed_at', 'status', 'notes', 'metadata', 'created_at', 'updated_at'],
   telemedicine_appointments: ['client_id', 'doctor_id', 'doctor_name', 'client_name', 'appointment_date', 'status', 'reason', 'notes', 'billing_mode', 'consultation_log_id', 'bill_id', 'institution_id', 'metadata', 'created_at', 'updated_at'],
   telemedicine_calls: ['appointment_id', 'client_id', 'doctor_id', 'channel_name', 'start_time', 'end_time', 'duration', 'status', 'recording_id', 'has_recording', 'metadata', 'created_at', 'updated_at'],
   telemedicine_recordings: ['call_id', 'appointment_id', 'file_url', 'duration', 'file_size', 'format', 'status', 'metadata', 'created_at', 'updated_at'],
@@ -212,7 +211,7 @@ const WRITABLE_FIELDS = {
   diagnostics: ['patient_id', 'ordered_by', 'institution_id', 'test_name', 'test_type', 'status', 'ordered_date', 'scheduled_date', 'completed_at', 'results', 'notes', 'priority', 'metadata', 'created_at', 'updated_at'],
   notifications: ['user_id', 'title', 'message', 'type', 'read', 'created_at'],
   attendance: ['caregiver_id', 'client_id', 'clock_in', 'clock_out', 'location_lat', 'location_lng'],
-  invoices: ['patient_id', 'patientId', 'client_id', 'clientId', 'institution_id', 'institutionId', 'invoice_number', 'invoiceNumber', 'status', 'amount', 'tax_amount', 'taxAmount', 'discount', 'total_amount', 'totalAmount', 'currency', 'issue_date', 'issueDate', 'due_date', 'dueDate', 'paid_date', 'paidAt', 'paid_at', 'payment_method', 'paymentMethod', 'payment_reference', 'paymentReference', 'description', 'line_items', 'lineItems', 'items', 'metadata', 'created_at', 'updated_at'],
+  invoices: ['patient_id', 'patientId', 'client_id', 'clientId', 'institution_id', 'institutionId', 'invoice_number', 'invoiceNumber', 'status', 'amount', 'subtotal', 'tax_amount', 'tax_amount', 'taxAmount', 'tax_rate', 'taxRate', 'discount', 'discount_amount', 'discountAmount', 'total_amount', 'totalAmount', 'currency', 'issue_date', 'issueDate', 'due_date', 'dueDate', 'paid_date', 'paidAt', 'paid_at', 'payment_method', 'paymentMethod', 'payment_reference', 'paymentReference', 'description', 'notes', 'client_name', 'clientName', 'client_email', 'clientEmail', 'client_phone', 'clientPhone', 'client_address', 'clientAddress', 'line_items', 'lineItems', 'items', 'metadata', 'created_at', 'updated_at'],
   billing_plans: ['name', 'institution_id', 'institutionId', 'description', 'amount', 'billing_cycle', 'billingCycle', 'tier', 'weekly_price', 'weeklyPrice', 'monthly_price', 'monthlyPrice', 'annual_price', 'annualPrice', 'yearly_price', 'yearlyPrice', 'currency', 'features', 'is_active', 'isActive', 'sort_order', 'sortOrder', 'status', 'created_at', 'updated_at'],
   client_subscriptions: ['institution_id', 'institutionId', 'client_id', 'clientId', 'plan_id', 'planId', 'plan_name', 'planName', 'plan_tier', 'planTier', 'billing_cycle', 'billingCycle', 'price', 'currency', 'status', 'start_date', 'startDate', 'end_date', 'endDate', 'next_billing_date', 'nextBillingDate', 'cancelled_at', 'cancelledAt', 'created_at', 'updated_at'],
   billing_settings: ['institution_id', 'institutionId', 'currency', 'enabled_frequencies', 'enabledFrequencies', 'default_frequency', 'defaultFrequency', 'tax_rate', 'taxRate', 'tax_label', 'taxLabel', 'taxes', 'invoice_prefix', 'invoicePrefix', 'invoice_notes', 'invoiceNotes', 'payment_terms_days', 'paymentTermsDays', 'late_fee_percentage', 'lateFeePercentage', 'auto_generate_invoices', 'autoGenerateInvoices', 'send_invoice_reminders', 'sendInvoiceReminders', 'reminder_days', 'reminderDays', 'created_at', 'updated_at'],
@@ -245,7 +244,7 @@ const WRITABLE_FIELDS = {
 const SORTABLE_COLUMNS = {
   users: ['id', 'email', 'first_name', 'last_name', 'created_at', 'updated_at', 'last_login'],
   institutions: ['id', 'name', 'created_at', 'updated_at'],
-  appointments: ['id', 'scheduled_date', 'created_at', 'status'],
+  appointments: ['id', 'scheduled_at', 'created_at', 'status'],
   telemedicine_appointments: ['id', 'appointment_date', 'created_at', 'updated_at', 'status'],
   clients: ['id', 'name', 'full_name', 'email', 'phone', 'created_at', 'updated_at'],
   patients: ['id', 'name', 'email', 'phone', 'created_at', 'updated_at'],
@@ -362,6 +361,8 @@ const WRITE_COLUMN_ALIASES = {
   },
   appointments: {
     client_id: 'patient_id',
+    scheduled_time: 'scheduled_at',
+    client_name: 'title',
   },
   analytics_events: {
     details: 'data',
@@ -572,6 +573,11 @@ router.get('/:table/:id', async (req, res) => {
           record = await db('caregivers').where({ user_id: user.id }).first();
         }
       }
+    }
+
+    // Fallback: for users table, try firebase_uid lookup for non-UUID IDs
+    if (!record && tableName === 'users' && id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      record = await db('users').where({ firebase_uid: id }).first();
     }
 
     if (!record) {
@@ -874,6 +880,9 @@ router.put('/:table/:id', async (req, res) => {
       if (user) {
         existingRecord = await db('caregivers').where({ user_id: user.id }).first();
       }
+    } else if (tableName === 'users') {
+      // Support Firebase UID lookups for users table (non-UUID format)
+      existingRecord = await db('users').where({ firebase_uid: id }).first();
     } else {
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
     }
@@ -963,6 +972,9 @@ router.delete('/:table/:id', async (req, res) => {
       if (user) {
         existingRecord = await db('caregivers').where({ user_id: user.id }).first();
       }
+    } else if (tableName === 'users') {
+      // Support Firebase UID lookups for users table (non-UUID format)
+      existingRecord = await db('users').where({ firebase_uid: id }).first();
     } else {
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
     }

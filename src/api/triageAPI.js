@@ -264,24 +264,30 @@ export const createTriageAssessment = async (assessmentData) => {
  */
 const sendHighRiskAlert = async (clientId, clientName, institutionId, severityData) => {
   try {
-    // Send notification to all doctors in the institution
-    await notificationsAPI.createNotification({
-      userId: institutionId, // Will be broadcast to all doctors
-      type: 'triage_alert',
-      title: '🚨 High-Risk Client Alert',
-      message: `${clientName} has critical vital signs requiring immediate attention. Severity: ${severityData.severity.toUpperCase()}`,
-      priority: 'high',
-      data: {
-        clientId,
-        clientName,
-        severity: severityData.severity,
-        criticalVitals: severityData.criticalVitals,
-        reasons: severityData.reasons
-      }
-    });
+    // Query actual doctors in the institution and notify each one
+    const doctorsQuery = query(
+      collection(db, 'users'),
+      where('institutionId', '==', institutionId),
+      where('userType', '==', 'doctor')
+    );
+    const doctorsSnap = await getDocs(doctorsQuery);
 
-    // Also create a system alert
-    console.warn(`HIGH-RISK ALERT: Client ${clientName} (${clientId}) - ${severityData.reasons.join(', ')}`);
+    await Promise.all(doctorsSnap.docs.map(async (doctorDoc) => {
+      await notificationsAPI.createNotification({
+        userId: doctorDoc.id,
+        type: 'triage_alert',
+        title: 'High-Risk Client Alert',
+        message: `${clientName} has critical vital signs requiring immediate attention. Severity: ${severityData.severity.toUpperCase()}`,
+        priority: 'high',
+        data: {
+          clientId,
+          clientName,
+          severity: severityData.severity,
+          criticalVitals: severityData.criticalVitals,
+          reasons: severityData.reasons
+        }
+      });
+    }));
   } catch (error) {
     console.error('Error sending high-risk alert:', error);
     // Don't throw - alert failure shouldn't block triage assessment

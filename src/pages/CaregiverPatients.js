@@ -82,25 +82,20 @@ const CaregiverClients = () => {
     if (userId) {
       loadClients();
       
-      // Set up real-time subscription for assignments
-      const unsubscribe = assignmentAPI.subscribeToAssignments((assignments) => {
+      // Set up real-time subscription for assignments.
+      // When assignments change, re-fetch the FULL client documents so that
+      // all data filled during client creation (medical conditions, allergies,
+      // medications, emergency contacts, etc.) is visible — not just the
+      // minimal fields stored on the assignment record.
+      const unsubscribe = assignmentAPI.subscribeToAssignments(async (assignments) => {
         console.log(`Real-time update: Found ${assignments.length} total assignments`);
         
         // Filter assignments for this specific caregiver
         const caregiverAssignments = assignments.filter(a => a.caregiverId === userId);
         console.log(`Filtered to ${caregiverAssignments.length} for caregiver ${userId}`);
         
-        // Extract client information from assignments
-        const clientsData = caregiverAssignments.map(assignment => ({
-          id: assignment.clientId,
-          name: assignment.clientName,
-          email: assignment.clientEmail,
-          assignedAt: assignment.assignedAt,
-          status: assignment.status,
-          assignmentId: assignment.id
-        }));
-        
-        setClients(clientsData || []);
+        // Re-load the full client data (includes all client creation fields)
+        await loadClients();
       }, userProfile.id);
       
       return () => unsubscribe();
@@ -118,6 +113,23 @@ const CaregiverClients = () => {
     if (!v) return '—';
     const d = v?.toDate ? v.toDate() : new Date(v);
     return isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+  };
+
+  // Compute age from dateOfBirth (client creation stores dateOfBirth, not age)
+  const computeAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null;
+    const d = dateOfBirth?.toDate ? dateOfBirth.toDate() : new Date(dateOfBirth);
+    if (isNaN(d.getTime())) return null;
+    const diff = Date.now() - d.getTime();
+    return Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000));
+  };
+
+  // Format an array of conditions/medications/allergies for display
+  const formatList = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
+    return [];
   };
 
   const getStatusColor = (status) => {
@@ -215,7 +227,16 @@ const CaregiverClients = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{client.name}</h3>
-                      <p className="text-sm text-gray-600">{client.age}y, {client.gender}</p>
+                      <p className="text-sm text-gray-600">
+                        {(() => {
+                          const age = computeAge(client.dateOfBirth) || client.age;
+                          const gender = client.gender;
+                          if (age && gender) return `${age}y, ${gender}`;
+                          if (age) return `${age}y`;
+                          if (gender) return gender;
+                          return '—';
+                        })()}
+                      </p>
                     </div>
                   </div>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(client.status)}`}>
@@ -228,7 +249,13 @@ const CaregiverClients = () => {
                   <div className="flex items-center text-sm text-gray-600">
                     <Heart className="h-4 w-4 mr-2 text-red-500" />
                     <span className="font-medium">
-                      {client.condition || client.medicalCondition || 'No medical conditions recorded'}
+                      {(() => {
+                        const conditions = formatList(client.medicalConditions);
+                        if (conditions.length > 0) return conditions.join(', ');
+                        if (client.condition) return client.condition;
+                        if (client.medicalCondition) return client.medicalCondition;
+                        return 'No medical conditions recorded';
+                      })()}
                     </span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
@@ -414,18 +441,30 @@ const CaregiverClients = () => {
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Basic Information</h4>
                     <div className="space-y-2 text-sm">
-                      <p><span className="font-medium">Age:</span> {selectedClient.age}</p>
-                      <p><span className="font-medium">Gender:</span> {selectedClient.gender}</p>
-                      <p><span className="font-medium">Phone:</span> {selectedClient.phone}</p>
-                      <p><span className="font-medium">Address:</span> {selectedClient.address}</p>
+                      <p><span className="font-medium">Age:</span> {(() => { const age = computeAge(selectedClient.dateOfBirth) || selectedClient.age; return age != null ? `${age}` : '—'; })()}</p>
+                      <p><span className="font-medium">Date of Birth:</span> {formatDateSafe(selectedClient.dateOfBirth)}</p>
+                      <p><span className="font-medium">Gender:</span> {selectedClient.gender || '—'}</p>
+                      <p><span className="font-medium">Blood Type:</span> {selectedClient.bloodType || '—'}</p>
+                      <p><span className="font-medium">Genotype:</span> {selectedClient.genotype || '—'}</p>
+                      <p><span className="font-medium">Phone:</span> {selectedClient.phone || '—'}</p>
+                      <p><span className="font-medium">Address:</span> {selectedClient.address || '—'}</p>
+                      {selectedClient.city && <p><span className="font-medium">City:</span> {selectedClient.city}</p>}
+                      {selectedClient.state && <p><span className="font-medium">State:</span> {selectedClient.state}</p>}
+                      <p><span className="font-medium">Care Level:</span> {selectedClient.careLevel || '—'}</p>
                     </div>
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Emergency Contact</h4>
                     <div className="space-y-2 text-sm">
-                      <p><span className="font-medium">Phone:</span> {selectedClient.emergencyContact}</p>
+                      <p><span className="font-medium">Name:</span> {selectedClient.emergencyContactName || '—'}</p>
+                      <p><span className="font-medium">Phone:</span> {selectedClient.emergencyContactPhone || selectedClient.emergencyContact || '—'}</p>
+                      {selectedClient.emergencyContactRelationship && <p><span className="font-medium">Relationship:</span> {selectedClient.emergencyContactRelationship}</p>}
                       <p><span className="font-medium">Last Visit:</span> {formatDateSafe(selectedClient.lastVisit)}</p>
                       <p><span className="font-medium">Next Appointment:</span> {formatDateSafe(selectedClient.nextAppointment)}</p>
+                      {selectedClient.primaryCarePhysician && <p><span className="font-medium">Primary Care Physician:</span> {selectedClient.primaryCarePhysician}</p>}
+                      {selectedClient.physicianPhone && <p><span className="font-medium">Physician Phone:</span> {selectedClient.physicianPhone}</p>}
+                      {selectedClient.insuranceProvider && <p><span className="font-medium">Insurance Provider:</span> {selectedClient.insuranceProvider}</p>}
+                      {selectedClient.insurancePolicyNumber && <p><span className="font-medium">Insurance Policy #:</span> {selectedClient.insurancePolicyNumber}</p>}
                     </div>
                   </div>
                 </div>
@@ -435,17 +474,28 @@ const CaregiverClients = () => {
                   <h4 className="font-semibold text-gray-900 mb-2">Medical Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-700">Condition:</p>
-                      <p className="text-sm text-gray-600">{selectedClient.medicalCondition}</p>
+                      <p className="text-sm font-medium text-gray-700">Conditions:</p>
+                      <p className="text-sm text-gray-600">
+                        {(() => {
+                          const conditions = formatList(selectedClient.medicalConditions);
+                          if (conditions.length > 0) return conditions.join(', ');
+                          if (selectedClient.medicalCondition) return selectedClient.medicalCondition;
+                          return 'No medical conditions recorded';
+                        })()}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-700">Allergies:</p>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedClient.allergies?.map((allergy, index) => (
-                          <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                            {allergy}
-                          </span>
-                        ))}
+                        {formatList(selectedClient.allergies).length > 0 ? (
+                          formatList(selectedClient.allergies).map((allergy, index) => (
+                            <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                              {allergy}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-gray-600">No known allergies</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -455,13 +505,25 @@ const CaregiverClients = () => {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Current Medications</h4>
                   <div className="flex flex-wrap gap-2">
-                    {selectedClient.medications?.map((med, index) => (
-                      <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                        {med}
-                      </span>
-                    ))}
+                    {formatList(selectedClient.medications).length > 0 ? (
+                      formatList(selectedClient.medications).map((med, index) => (
+                        <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                          {med}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-600">No medications recorded</span>
+                    )}
                   </div>
                 </div>
+
+                {/* Notes */}
+                {selectedClient.notes && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Notes</h4>
+                    <p className="text-sm text-gray-600">{selectedClient.notes}</p>
+                  </div>
+                )}
 
                 {/* Care Logs */}
                 <div>

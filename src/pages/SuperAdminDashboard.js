@@ -811,9 +811,7 @@ const SuperAdminDashboard = () => {
         return (
           <div className="space-y-6">
             <div className="cm-section-head">
-              <span className="cm-eyebrow">{activeTabLabel || 'Overview'}</span>
-              <h2 className="mt-2">Super Admin Console</h2>
-              <p>System-wide administration and oversight.</p>
+              <p className="cm-eyebrow">System-wide administration and oversight</p>
             </div>
             {renderTabContent()}
           </div>
@@ -871,9 +869,7 @@ const SuperAdminDashboard = () => {
         return (
           <div className="space-y-6">
             <div className="cm-section-head">
-              <span className="cm-eyebrow">{activeTabLabel || 'Overview'}</span>
-              <h2 className="mt-2">Super Admin Console</h2>
-              <p>System-wide administration and oversight.</p>
+              <p className="cm-eyebrow">System-wide administration and oversight</p>
             </div>
             {renderTabContent()}
           </div>

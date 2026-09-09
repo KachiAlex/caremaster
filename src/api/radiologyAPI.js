@@ -112,22 +112,31 @@ export const createImagingRequest = async (requestData) => {
 
     const requestRef = await addDoc(collection(db, IMAGING_REQUESTS_COLLECTION), imagingRequest);
 
-    // Send notification to radiology department
+    // Send notification to radiology staff in the institution
     try {
-      await notificationsAPI.createNotification({
-        userId: 'radiology-staff', // Would be sent to all radiology staff
-        type: 'imaging_request',
-        title: 'New Imaging Request',
-        message: `${imagingType.toUpperCase()} requested for ${clientName}`,
-        priority: priority === IMAGING_PRIORITY.EMERGENCY || priority === IMAGING_PRIORITY.STAT ? 'high' : 'medium',
-        data: {
-          requestId: requestRef.id,
-          clientId,
-          imagingType,
-          priority
-        },
-        institutionId
-      });
+      const radiologyStaffQuery = query(
+        collection(db, 'users'),
+        where('institutionId', '==', institutionId),
+        where('userType', 'in', ['radiologist', 'lab_technician', 'admin'])
+      );
+      const radiologyStaffSnap = await getDocs(radiologyStaffQuery);
+
+      await Promise.all(radiologyStaffSnap.docs.map(async (staffDoc) => {
+        await notificationsAPI.createNotification({
+          userId: staffDoc.id,
+          type: 'imaging_request',
+          title: 'New Imaging Request',
+          message: `${imagingType.toUpperCase()} requested for ${clientName}`,
+          priority: priority === IMAGING_PRIORITY.EMERGENCY || priority === IMAGING_PRIORITY.STAT ? 'high' : 'medium',
+          data: {
+            requestId: requestRef.id,
+            clientId,
+            imagingType,
+            priority
+          },
+          institutionId
+        });
+      }));
     } catch (notifError) {
       console.warn('Failed to send imaging request notification:', notifError);
     }

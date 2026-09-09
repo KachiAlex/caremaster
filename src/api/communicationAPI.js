@@ -215,8 +215,8 @@ export const communicationAPI = {
         notificationsQuery = query(notificationsQuery, where('category', '==', filters.category));
       }
       
-      if (filters.isRead !== undefined) {
-        notificationsQuery = query(notificationsQuery, where('isRead', '==', filters.isRead));
+      if (filters.read !== undefined) {
+        notificationsQuery = query(notificationsQuery, where('read', '==', filters.read));
       }
       
       if (filters.limit) {
@@ -248,7 +248,7 @@ export const communicationAPI = {
     try {
       const notificationRef = await addDoc(collection(db, 'notifications'), {
         ...notificationData,
-        isRead: false,
+        read: false,
         timestamp: serverTimestamp(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -265,7 +265,7 @@ export const communicationAPI = {
     try {
       const notificationRef = doc(db, 'notifications', notificationId);
       await updateDoc(notificationRef, {
-        isRead: true,
+        read: true,
         readAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -281,7 +281,7 @@ export const communicationAPI = {
     try {
       const notificationsQuery = query(
         collection(db, 'notifications'),
-        where('isRead', '==', false)
+        where('read', '==', false)
       );
       
       const notificationsSnapshot = await getDocs(notificationsQuery);
@@ -290,7 +290,7 @@ export const communicationAPI = {
       notificationsSnapshot.forEach((doc) => {
         updatePromises.push(
           updateDoc(doc.ref, {
-            isRead: true,
+            read: true,
             readAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           })
@@ -580,7 +580,7 @@ export const communicationAPI = {
         addDoc(collection(db, 'notifications'), {
           ...notificationData,
           recipientId,
-          isRead: false,
+          read: false,
           timestamp: serverTimestamp(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -624,7 +624,7 @@ export const communicationAPI = {
       
       const unreadNotificationsQuery = query(
         collection(db, 'notifications'),
-        where('isRead', '==', false)
+        where('read', '==', false)
       );
       const unreadNotificationsSnapshot = await getDocs(unreadNotificationsQuery);
       stats.unreadNotifications = unreadNotificationsSnapshot.size;
@@ -685,8 +685,8 @@ export const communicationAPI = {
       orderBy('timestamp', 'desc')
     );
     
-    if (filters.isRead !== undefined) {
-      notificationsQuery = query(notificationsQuery, where('isRead', '==', filters.isRead));
+    if (filters.read !== undefined) {
+      notificationsQuery = query(notificationsQuery, where('read', '==', filters.read));
     }
     
     return onSnapshot(notificationsQuery, (snapshot) => {

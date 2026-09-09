@@ -9,14 +9,18 @@ import { UserProvider, useUser } from './contexts/UserContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import errorHandler from './utils/errorHandler';
 import logger from './utils/logger';
-import securityMonitoringService from './services/securityMonitoringService';
-import biometricAuthService from './services/biometricAuthService';
-import secureConfigService from './services/secureConfigService';
-import Layout from './components/Layout';
-import ClientPortalLayout from './components/ClientPortalLayout';
 import InstitutionAdminGuard from './components/InstitutionAdminGuard';
-// Old admin components removed - using new admin system
-import ServiceProviderLayout from './components/ServiceProviderLayout';
+
+// Lazy-load layouts and heavy components to reduce initial bundle size.
+// These are only needed after the user authenticates and their role is
+// determined, so they don't need to be in the critical path.
+const Layout = lazy(() => import('./components/Layout'));
+const ClientPortalLayout = lazy(() => import('./components/ClientPortalLayout'));
+const ServiceProviderLayout = lazy(() => import('./components/ServiceProviderLayout'));
+const CaregiverLayout = lazy(() => import('./components/CaregiverLayout'));
+const EnhancedMessagingInterface = lazy(() => import('./components/EnhancedMessagingInterface'));
+const NativeMobileHandler = lazy(() => import('./components/NativeMobileHandler'));
+import LoadingSpinner from './components/LoadingSpinner';
 
 // Lazy-load heavy/non-critical components to reduce initial bundle
 const MobileOptimization = lazy(() => import('./components/MobileOptimization'));
@@ -24,7 +28,6 @@ const PWAInstallPrompt = lazy(() => import('./components/PWAInstallPrompt'));
 const OfflineIndicator = lazy(() => import('./components/OfflineIndicator'));
 const VoiceCommandInterface = lazy(() => import('./components/VoiceCommandInterface'));
 const GestureControls = lazy(() => import('./components/GestureControls'));
-const MobileActionBar = lazy(() => import('./components/MobileActionBar'));
 const SecuritySettings = lazy(() => import('./components/SecuritySettings'));
 const SecurityDashboard = lazy(() => import('./components/SecurityDashboard'));
 const Landing = lazy(() => import('./pages/Landing'));
@@ -65,7 +68,6 @@ const CaregiverPerformance = lazy(() => import('./pages/CaregiverPerformance'));
 const CaregiverEmergency = lazy(() => import('./pages/CaregiverEmergency'));
 const CaregiverSettings = lazy(() => import('./pages/CaregiverSettings'));
 const Telemedicine = lazy(() => import('./pages/Telemedicine'));
-import CaregiverLayout from './components/CaregiverLayout';
 const Messages = lazy(() => import('./pages/Messages'));
 const Subscription = lazy(() => import('./pages/Subscription'));
 const Services = lazy(() => import('./pages/Services'));
@@ -80,15 +82,31 @@ const RouteOptimization = lazy(() => import('./pages/RouteOptimization'));
 const WebRTCTest = lazy(() => import('./pages/WebRTCTest'));
 const PatientAccount = lazy(() => import('./pages/PatientAccount'));
 const InstitutionLabTechnicianDashboard = lazy(() => import('./pages/InstitutionLabTechnicianDashboard'));
-import EnhancedMessagingInterface from './components/EnhancedMessagingInterface';
-import LoadingSpinner from './components/LoadingSpinner';
-import NativeMobileHandler from './components/NativeMobileHandler';
 
-// PWA Services
-import pwaService from './services/pwaService';
-import hapticService from './services/hapticService';
-import voiceCommandService from './services/voiceCommandService';
-import gestureService from './services/gestureService';
+// PWA and security services are loaded dynamically on first use to keep
+// the initial bundle small. They are singletons, so we cache the import.
+let pwaService = null;
+let hapticService = null;
+let voiceCommandService = null;
+let gestureService = null;
+let securityMonitoringService = null;
+let biometricAuthService = null;
+let secureConfigService = null;
+
+const loadPwaService = () =>
+  import('./services/pwaService').then((m) => { pwaService = m.default; return m.default; });
+const loadHapticService = () =>
+  import('./services/hapticService').then((m) => { hapticService = m.default; return m.default; });
+const loadVoiceCommandService = () =>
+  import('./services/voiceCommandService').then((m) => { voiceCommandService = m.default; return m.default; });
+const loadGestureService = () =>
+  import('./services/gestureService').then((m) => { gestureService = m.default; return m.default; });
+const loadSecurityMonitoringService = () =>
+  import('./services/securityMonitoringService').then((m) => { securityMonitoringService = m.default; return m.default; });
+const loadBiometricAuthService = () =>
+  import('./services/biometricAuthService').then((m) => { biometricAuthService = m.default; return m.default; });
+const loadSecureConfigService = () =>
+  import('./services/secureConfigService').then((m) => { secureConfigService = m.default; return m.default; });
 
 // Capacitor is heavy — lazy-detect native platform
 let isNativeApp = false;
@@ -121,27 +139,47 @@ function App() {
     });
   }, [navigate]);
 
-  // PWA and Security Services Setup
+  // PWA and Security Services Setup — loaded dynamically to keep initial bundle small
   useEffect(() => {
-    try {
-      // Initialize PWA services
-      pwaService.init();
-      logger.info('PWA services initialized successfully');
+    let cancelled = false;
 
-      // Initialize security services
-      securityMonitoringService.initialize();
-      biometricAuthService.initialize();
-      
-      // Log security initialization
-      securityMonitoringService.logSecurityEvent('APP_INITIALIZATION', {
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        features: secureConfigService.getFeatureFlags()
+    // Dynamically import and initialize PWA + security services in parallel.
+    // These are non-critical for first paint and can load after the app is interactive.
+    Promise.all([
+      loadPwaService(),
+      loadSecurityMonitoringService(),
+      loadBiometricAuthService(),
+      loadSecureConfigService(),
+    ])
+      .then(([pwa, secMon, bio, secCfg]) => {
+        if (cancelled) return;
+        try {
+          pwa.init();
+          logger.info('PWA services initialized successfully');
+          secMon.initialize();
+          bio.initialize();
+          secMon.logSecurityEvent('APP_INITIALIZATION', {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            features: secCfg.getFeatureFlags()
+          });
+          logger.info('Security services initialized successfully');
+        } catch (error) {
+          errorHandler.handleError(error, { context: 'pwa_initialization' });
+        }
+      })
+      .catch((error) => {
+        // Non-critical — app still works without PWA/security services
+        console.warn('PWA/security service initialization deferred:', error?.message);
       });
-      
-      logger.info('Security services initialized successfully');
-    } catch (error) {
-      errorHandler.handleError(error, { context: 'pwa_initialization' });
+
+    // Request notification permission if available
+    if ('Notification' in window && Notification.permission === 'default') {
+      loadPwaService().then((pwa) => {
+        if (!cancelled) {
+          try { pwa.requestNotificationPermission(); } catch (e) {}
+        }
+      }).catch(() => {});
     }
     
     // Check if mobile device
@@ -170,16 +208,8 @@ function App() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      try {
-        pwaService.requestNotificationPermission();
-      } catch (error) {
-        errorHandler.handleError(error, { context: 'notification_permission' });
-      }
-    }
-    
     return () => {
+      cancelled = true;
       window.removeEventListener('resize', checkMobile);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -298,12 +328,10 @@ function App() {
         window.history.forward();
         break;
       case 'swipe-up':
-        // Scroll up
-        window.scrollBy(0, -100);
+        // Let native scroll handle vertical swipes — do not call window.scrollBy
         break;
       case 'swipe-down':
-        // Scroll down
-        window.scrollBy(0, 100);
+        // Let native scroll handle vertical swipes — do not call window.scrollBy
         break;
       case 'pinch-in':
         // Zoom out
@@ -332,27 +360,13 @@ function App() {
   return (
     <ErrorBoundary name="App">
       <UserProvider>
+        <Suspense fallback={null}>
         <NativeMobileHandler>
           {/* Lazy-loaded mobile/PWA components */}
           <Suspense fallback={null}>
         <MobileOptimization />
         <PWAInstallPrompt />
         <OfflineIndicator />
-
-        {/* Mobile Action Bar */}
-        {isMobile && user && (
-          <MobileActionBar
-            onVoiceCommand={(enabled) => setShowVoiceInterface(enabled)}
-            onGestureControl={(enabled) => setShowGestureControls(enabled)}
-            onSettings={() => {
-              // Open mobile settings
-            }}
-            isOnline={isOnline}
-            isVoiceEnabled={voiceCommandService.isSupported}
-            isGestureEnabled={gestureService.isSupported}
-            isHapticEnabled={hapticService.isSupported}
-          />
-        )}
 
         {/* Voice Command Interface */}
         <VoiceCommandInterface
@@ -703,6 +717,7 @@ function App() {
       </Routes>
       </Suspense>
       </NativeMobileHandler>
+      </Suspense>
       </UserProvider>
     </ErrorBoundary>
   );
@@ -851,13 +866,13 @@ function SignInRouteHandler() {
       // Fallback: if we can't parse user, just go to /dashboard
       return <Navigate to="/dashboard" replace />;
     }
-    console.log('📝 User on /login page — showing login form (stale session will be replaced on new login)');
-    // Clear the stale session so UnifiedLogin can render
-    localStorage.removeItem('token');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    auth.currentUser = null;
-    (auth.__listeners || []).forEach((cb) => cb(null));
+    console.log('📝 User on /login page — showing login form');
+    // Don't aggressively clear localStorage here. The previous code destroyed
+    // valid sessions whenever a user landed on /login (e.g. via a bookmark),
+    // even if they were still logged in. Instead, just show the login form.
+    // If the user logs in again, the new session will naturally replace the
+    // old one. If they want to go back to their dashboard, they can navigate
+    // there and the auth middleware will validate their session.
     return <UnifiedLogin />;
   }
 

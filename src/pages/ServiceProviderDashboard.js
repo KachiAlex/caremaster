@@ -280,7 +280,7 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
 
 // Main Dashboard Component
 const ServiceProviderDashboard = () => {
-  const { user, userProfile, userRole, loading: userLoading } = useUser();
+  const { user, userProfile, userRole, institutionData, loading: userLoading } = useUser();
   const navigate = useNavigate();
   // Derive robust role flags (prevents misclassification)
   const normalizedQualification = (userProfile?.medicalQualification || '').toString().toLowerCase();
@@ -645,7 +645,7 @@ const ServiceProviderDashboard = () => {
         nurseName: userProfile?.name || userProfile?.displayName || 'Nurse',
         ...nurseReport,
       });
-      toast.success('Nurse report submitted successfully!');
+      toast.success('Nurse report submitted');
       handleCloseModal();
     } catch (error) {
       toast.error('Failed to submit nurse report');
@@ -665,7 +665,7 @@ const ServiceProviderDashboard = () => {
         doctorName: userProfile.name,
         ...carePlan,
       });
-      toast.success('Care plan created successfully!');
+      toast.success('Care plan created');
       handleCloseModal();
     } catch (error) {
       toast.error('Failed to create care plan');
@@ -721,7 +721,7 @@ const ServiceProviderDashboard = () => {
   const handleSaveVitals = async (vitalData) => {
     try {
       await createVitalSign(vitalData);
-      toast.success('Vitals recorded successfully');
+      toast.success('Vitals recorded');
       return true;
     } catch (error) {
       console.error('Error saving vitals:', error);
@@ -746,6 +746,7 @@ const ServiceProviderDashboard = () => {
       { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
       { id: 'records', label: 'Medical Records', icon: FileText },
     ] : []),
+    { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'help', label: 'Help & Support', icon: HelpCircle },
   ];
 
@@ -759,6 +760,7 @@ const ServiceProviderDashboard = () => {
       consultations: '/service-provider/consultations',
       prescriptions: '/service-provider/prescriptions',
       records: '/service-provider/medical-records',
+      settings: '/service-provider/settings',
       help: '/service-provider/settings',
     };
     const route = routeMap[tabId];
@@ -767,7 +769,7 @@ const ServiceProviderDashboard = () => {
 
   const displayName = userProfile?.name || userProfile?.displayName || 'Service Provider';
   const portalLabel = isDoctor ? 'Doctor' : 'Caregiver';
-  const institutionName = isDoctor ? 'Medical Dashboard' : 'Care Dashboard';
+  const institutionName = institutionData?.name || (isDoctor ? 'Medical Dashboard' : 'Care Dashboard');
 
   const handleLogout = () => {
     import('backend/auth').then(({ signOut, getAuth }) => {
@@ -804,9 +806,8 @@ const ServiceProviderDashboard = () => {
       >
         <div className="space-y-6">
           <div className="cm-section-head">
-            <span className="cm-eyebrow">{portalLabel} Portal</span>
-            <h2 className="mt-2">{institutionName}</h2>
-            <p>Welcome back, {displayName}. {userProfile?.medicalQualification || ''}</p>
+            <p className="cm-eyebrow">Welcome back, {displayName}</p>
+            <p className="mt-2 text-text-soft">{userProfile?.medicalQualification || ''}</p>
             {userProfile?.specializations && userProfile.specializations.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {userProfile.specializations.slice(0, 3).map((spec, index) => (

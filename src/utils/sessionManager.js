@@ -151,7 +151,7 @@ export const handleSessionConflict = (validation, navigate, toast) => {
     case 'user_mismatch':
       console.log('🔄 Different user in another tab - clearing session');
       clearTabSession();
-      toast.error('⚠️ Different user logged in another tab. This tab has been reset.');
+      toast.error('Another session started. This tab has been reset.');
       setTimeout(() => navigate('/login'), 1500);
       break;
       

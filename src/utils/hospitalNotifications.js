@@ -4,7 +4,7 @@
  */
 
 import { toast } from 'react-toastify';
-import { collection, query, where, onSnapshot } from 'backend/database';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp } from 'backend/database';
 import { db } from '../backend/config';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
@@ -42,7 +42,7 @@ export function monitorBedShortage(hospitalId, threshold = 5, callback) {
         if (!lastNotificationTime || (now - lastNotificationTime) > NOTIFICATION_COOLDOWN) {
           lastNotificationTime = now;
           
-          const message = `⚠️ Bed Shortage Alert: Only ${availableBeds} bed(s) available (threshold: ${threshold})`;
+          const message = `Bed shortage: only ${availableBeds} bed(s) available (threshold: ${threshold})`;
           
           if (callback) {
             callback({
@@ -109,7 +109,7 @@ export function monitorCriticalIncidents(hospitalId, callback) {
             ...change.doc.data(),
           };
 
-          const message = `🚨 Critical Incident: ${incident.type} - ${incident.description?.substring(0, 100)}...`;
+          const message = `Critical incident: ${incident.type} - ${incident.description?.substring(0, 100)}...`;
           
           if (callback) {
             callback({
@@ -159,6 +159,8 @@ export function monitorShiftConflicts(hospitalId, callback) {
     where('institutionId', '==', hospitalId)
   );
 
+  const processedConflicts = new Set();
+
   const unsubscribe = onSnapshot(
     q,
     (snapshot) => {
@@ -178,7 +180,11 @@ export function monitorShiftConflicts(hospitalId, callback) {
       
       if (conflicts.length > 0) {
         conflicts.forEach((conflict) => {
-          const message = `⚠️ Shift Conflict: ${conflict.staffName} has overlapping shifts on ${conflict.date}`;
+          const conflictKey = `${conflict.staffId}:${conflict.shift1.id}:${conflict.shift2.id}`;
+          if (processedConflicts.has(conflictKey)) return;
+          processedConflicts.add(conflictKey);
+
+          const message = `Shift conflict: ${conflict.staffName} has overlapping shifts on ${conflict.date}`;
           
           if (callback) {
             callback({
@@ -279,13 +285,12 @@ function shiftsOverlap(shift1, shift2) {
  */
 async function createNotification(hospitalId, notificationData) {
   try {
-    const notificationsRef = collection(db, NOTIFICATIONS_COLLECTION);
-    await notificationsRef.add({
+    await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
       ...notificationData,
       institutionId: hospitalId,
       userId: null, // System notification
       read: false,
-      createdAt: Timestamp.now(),
+      createdAt: serverTimestamp(),
     });
   } catch (error) {
     console.error('Error creating notification:', error);

@@ -492,7 +492,7 @@ export const subscribeToPrescriptionsByClient = (clientId, callback) => {
       callback(prescriptions);
     } catch (error) {
       console.error('Error processing prescriptions snapshot:', error);
-      callback([]);
+      // Don't replace existing prescriptions with empty results on error.
     }
   };
   

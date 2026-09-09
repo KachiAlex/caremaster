@@ -27,6 +27,11 @@ class GestureService {
 
   init() {
     if (this.isSupported) {
+      // Store bound handlers so they can be removed later
+      this.boundTouchStart = this.handleTouchStart.bind(this);
+      this.boundTouchMove = this.handleTouchMove.bind(this);
+      this.boundTouchEnd = this.handleTouchEnd.bind(this);
+      this.boundTouchCancel = this.handleTouchCancel.bind(this);
       this.setupEventListeners();
       this.setupDefaultGestures();
       console.log('Gesture service initialized');
@@ -36,11 +41,23 @@ class GestureService {
   }
 
   setupEventListeners() {
-    // Add event listeners to document
-    document.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-    document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-    document.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
-    document.addEventListener('touchcancel', this.handleTouchCancel.bind(this), { passive: false });
+    // Add event listeners to document.
+    // All listeners are passive — none of the handlers call preventDefault(),
+    // so passive: true lets the browser scroll immediately without waiting
+    // for JS to run. This is critical for smooth mobile scrolling.
+    document.addEventListener('touchstart', this.boundTouchStart, { passive: true });
+    document.addEventListener('touchmove', this.boundTouchMove, { passive: true });
+    document.addEventListener('touchend', this.boundTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', this.boundTouchCancel, { passive: true });
+  }
+
+  destroy() {
+    if (this.isSupported && this.boundTouchStart) {
+      document.removeEventListener('touchstart', this.boundTouchStart);
+      document.removeEventListener('touchmove', this.boundTouchMove);
+      document.removeEventListener('touchend', this.boundTouchEnd);
+      document.removeEventListener('touchcancel', this.boundTouchCancel);
+    }
   }
 
   setupDefaultGestures() {
@@ -293,18 +310,18 @@ class GestureService {
       callback: config.callback || gesture.callback
     };
 
-    // Add element-specific event listeners
+    // Add element-specific event listeners (passive — no preventDefault used)
     element.addEventListener('touchstart', (e) => {
       this.handleElementTouchStart(e, elementGesture);
-    }, { passive: false });
+    }, { passive: true });
 
     element.addEventListener('touchmove', (e) => {
       this.handleElementTouchMove(e, elementGesture);
-    }, { passive: false });
+    }, { passive: true });
 
     element.addEventListener('touchend', (e) => {
       this.handleElementTouchEnd(e, elementGesture);
-    }, { passive: false });
+    }, { passive: true });
 
     return element;
   }

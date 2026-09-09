@@ -23,6 +23,28 @@ import { db } from '../backend/config';
 const LICENSES_COLLECTION = 'licenses';
 const INSTITUTIONS_COLLECTION = 'institutions';
 
+/**
+ * Safely convert any date-like value to a Firestore Timestamp.
+ */
+function safeTimestampFromDate(value) {
+  if (!value) return serverTimestamp();
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Timestamp.fromDate(value);
+  }
+  if (typeof value.toDate === 'function') {
+    try { return Timestamp.fromDate(value.toDate()); } catch { return serverTimestamp(); }
+  }
+  if (typeof value === 'string') {
+    const d = value.includes('T') ? new Date(value) : new Date(value + 'T00:00:00');
+    return isNaN(d.getTime()) ? serverTimestamp() : Timestamp.fromDate(d);
+  }
+  if (typeof value === 'number') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? serverTimestamp() : Timestamp.fromDate(d);
+  }
+  return serverTimestamp();
+}
+
 // Get license status for an institution
 export const getLicenseStatus = async (institutionId) => {
   try {
@@ -105,8 +127,8 @@ export const createLicense = async (licenseData) => {
       licenseKey: licenseData.licenseKey,
       plan: licenseData.plan || 'basic',
       seats: licenseData.seats || 10,
-      startsAt: licenseData.startsAt ? Timestamp.fromDate(new Date(licenseData.startsAt)) : serverTimestamp(),
-      endsAt: Timestamp.fromDate(new Date(licenseData.endsAt)),
+      startsAt: licenseData.startsAt ? safeTimestampFromDate(licenseData.startsAt) : serverTimestamp(),
+      endsAt: safeTimestampFromDate(licenseData.endsAt),
       status: 'active',
       active: true,
       features: licenseData.features || {},

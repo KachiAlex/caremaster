@@ -327,17 +327,36 @@ class CaregiverSettingsService {
     }
   }
 
-  // Change password
+  // Change password — calls the real backend endpoint
   async changePassword(caregiverId, currentPassword, newPassword) {
     try {
-      // This would typically involve Backend Auth
-      // For now, we'll simulate the process
-      const settingsRef = doc(db, 'caregiverSettings', caregiverId);
-      await updateDoc(settingsRef, {
-        'security.lastPasswordChange': new Date().toISOString(),
-        'security.passwordChangeRequired': false,
-        updatedAt: serverTimestamp()
+      const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+      const res = await fetch(`${API_BASE}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+        credentials: 'include',
       });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to change password');
+      }
+
+      // Update local settings record
+      try {
+        const settingsRef = doc(db, 'caregiverSettings', caregiverId);
+        await updateDoc(settingsRef, {
+          'security.lastPasswordChange': new Date().toISOString(),
+          'security.passwordChangeRequired': false,
+          updatedAt: serverTimestamp()
+        });
+      } catch (docErr) {
+        // Non-fatal — the password was changed on the backend
+      }
 
       // Update cache
       const cachedSettings = this.settingsCache.get(caregiverId);
@@ -358,7 +377,7 @@ class CaregiverSettingsService {
       return true;
     } catch (error) {
       console.error('Error changing password:', error);
-      toast.error('Failed to change password');
+      toast.error(error.message || 'Failed to change password');
       throw error;
     }
   }

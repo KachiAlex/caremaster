@@ -18,14 +18,103 @@ import { db } from '../backend/config';
 
 const CARE_LOGS_COLLECTION = 'careLogs';
 
+/**
+ * Safely convert a logDate value from any storage format to a Date.
+ * Handles: Firestore Timestamp (with toDate()), {seconds, nanoseconds}
+ * plain objects, ISO strings, Date objects, and null/invalid values.
+ */
+function safeToDate(value) {
+  if (!value) return null;
+
+  // Firestore Timestamp object with toDate() method
+  if (typeof value.toDate === 'function') {
+    try {
+      const d = value.toDate();
+      return isNaN(d.getTime()) ? null : d;
+    } catch { return null; }
+  }
+
+  // Date object
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+
+  // { seconds, nanoseconds } object (Firestore Timestamp after JSON round-trip)
+  if (typeof value === 'object' && value !== null) {
+    if (value.seconds != null && !isNaN(value.seconds)) {
+      const d = new Date(value.seconds * 1000 + (value.nanoseconds || 0) / 1e6);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // Unknown object shape — try string conversion
+    try {
+      const d = new Date(String(value));
+      return isNaN(d.getTime()) ? null : d;
+    } catch { return null; }
+  }
+
+  // String or number
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  return null;
+}
+
+/**
+ * Map a Firestore doc snapshot to a care log object with safe date conversion.
+ */
+function mapCareLog(doc) {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    ...data,
+    createdAt: safeToDate(data.createdAt),
+    updatedAt: safeToDate(data.updatedAt),
+    logDate: safeToDate(data.logDate) || new Date(0), // fallback to epoch if corrupt
+  };
+}
+
+/**
+ * Sort care logs by logDate desc, then logTime desc.
+ */
+function sortCareLogs(logs) {
+  return logs.sort((a, b) => {
+    const av = a.logDate?.getTime?.() || 0;
+    const bv = b.logDate?.getTime?.() || 0;
+    if (bv !== av) return bv - av;
+    return (b.logTime || '').localeCompare(a.logTime || '');
+  });
+}
+
 // Create a new care log entry (All roles)
-export const createCareLog = async (careLogData) => {
+export const createCareLog = async (careLogData, institutionId = null) => {
   try {
-    // Normalize logDate/logTime from alternative field names
-    const normalizedLogDate = careLogData.logDate || careLogData.activityDate || new Date().toISOString().split('T')[0];
+    // Normalize logDate — handle Date objects, strings, and undefined values.
+    // CareLogFormModal passes logDate as a Date object; NurseCareLogs omits
+    // it entirely.  Previously, concatenating a Date object with 'T00:00:00'
+    // produced an invalid date string, corrupting the stored logDate.
+    const rawDate = careLogData.logDate || careLogData.activityDate;
+    let normalizedDate;
+    if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+      normalizedDate = rawDate;
+    } else if (typeof rawDate === 'string' && rawDate.trim()) {
+      // Handle "YYYY-MM-DD" or full ISO strings
+      normalizedDate = rawDate.includes('T')
+        ? new Date(rawDate)
+        : new Date(rawDate + 'T00:00:00');
+    } else {
+      // Fallback to today
+      const today = new Date().toISOString().split('T')[0];
+      normalizedDate = new Date(today + 'T00:00:00');
+    }
+
     const normalizedData = {
       ...careLogData,
-      logDate: Timestamp.fromDate(new Date(normalizedLogDate + 'T00:00:00')),
+      // Persist institutionId if provided (NurseCareLogs passes it as the
+      // second argument; CareLogFormModal includes it in the payload)
+      institutionId: institutionId || careLogData.institutionId || null,
+      logDate: Timestamp.fromDate(normalizedDate),
       logTime: careLogData.logTime || careLogData.activityTime || new Date().toTimeString().split(' ')[0],
     };
 
@@ -46,52 +135,35 @@ export const createCareLog = async (careLogData) => {
 // Get care logs for a specific client
 export const getCareLogsByClient = async (clientId, limitCount = 50) => {
   try {
+    // Use a simple query with only where + limit to avoid composite index
+    // requirements. Sort client-side to handle both logDate and logTime.
     const q = query(
       collection(db, CARE_LOGS_COLLECTION),
       where('clientId', '==', clientId),
-      orderBy('logDate', 'desc'),
-      orderBy('logTime', 'desc'),
       limit(limitCount)
     );
     
     const snapshot = await getDocs(q);
-    const logs = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate(),
-      logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
-    }));
+    const logs = sortCareLogs(snapshot.docs.map(mapCareLog));
     
     console.log(`✅ Loaded ${logs.length} care logs for client ${clientId}`);
     return logs;
   } catch (error) {
-    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
-      console.warn('Index missing, using fallback query:', error.message);
+    console.error('❌ Error fetching care logs:', error);
+    // If the query fails entirely, try an even simpler fallback
+    try {
       const fallbackQuery = query(
         collection(db, CARE_LOGS_COLLECTION),
         where('clientId', '==', clientId)
       );
       const fallbackSnapshot = await getDocs(fallbackQuery);
-      const results = fallbackSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-        logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
-      }));
-      results.sort((a, b) => {
-        const av = a.logDate?.getTime ? a.logDate.getTime() : new Date(a.logDate).getTime();
-        const bv = b.logDate?.getTime ? b.logDate.getTime() : new Date(b.logDate).getTime();
-        if (bv !== av) return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc by logDate
-        return (b.logTime || '').localeCompare(a.logTime || ''); // desc by logTime
-      });
-      const sliced = results.slice(0, limitCount);
-      console.log(`✅ Loaded ${sliced.length} care logs for client ${clientId} (fallback)`);
-      return sliced;
+      const results = sortCareLogs(fallbackSnapshot.docs.map(mapCareLog)).slice(0, limitCount);
+      console.log(`✅ Loaded ${results.length} care logs for client ${clientId} (fallback)`);
+      return results;
+    } catch (fallbackError) {
+      console.error('❌ Fallback query also failed:', fallbackError);
+      throw fallbackError;
     }
-    console.error('❌ Error fetching care logs:', error);
-    throw error;
   }
 };
 
@@ -101,49 +173,29 @@ export const getCareLogsByCaregiver = async (caregiverId, limitCount = 50) => {
     const q = query(
       collection(db, CARE_LOGS_COLLECTION),
       where('caregiverId', '==', caregiverId),
-      orderBy('logDate', 'desc'),
-      orderBy('logTime', 'desc'),
       limit(limitCount)
     );
     
     const snapshot = await getDocs(q);
-    const logs = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate(),
-      logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
-    }));
+    const logs = sortCareLogs(snapshot.docs.map(mapCareLog));
     
     console.log(`✅ Loaded ${logs.length} care logs by caregiver ${caregiverId}`);
     return logs;
   } catch (error) {
-    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
-      console.warn('Index missing, using fallback query:', error.message);
+    console.error('❌ Error fetching caregiver care logs:', error);
+    try {
       const fallbackQuery = query(
         collection(db, CARE_LOGS_COLLECTION),
         where('caregiverId', '==', caregiverId)
       );
       const fallbackSnapshot = await getDocs(fallbackQuery);
-      const results = fallbackSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-        logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
-      }));
-      results.sort((a, b) => {
-        const av = a.logDate?.getTime ? a.logDate.getTime() : new Date(a.logDate).getTime();
-        const bv = b.logDate?.getTime ? b.logDate.getTime() : new Date(b.logDate).getTime();
-        if (bv !== av) return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc by logDate
-        return (b.logTime || '').localeCompare(a.logTime || ''); // desc by logTime
-      });
-      const sliced = results.slice(0, limitCount);
-      console.log(`✅ Loaded ${sliced.length} care logs by caregiver ${caregiverId} (fallback)`);
-      return sliced;
+      const results = sortCareLogs(fallbackSnapshot.docs.map(mapCareLog)).slice(0, limitCount);
+      console.log(`✅ Loaded ${results.length} care logs by caregiver ${caregiverId} (fallback)`);
+      return results;
+    } catch (fallbackError) {
+      console.error('❌ Fallback query also failed:', fallbackError);
+      throw fallbackError;
     }
-    console.error('❌ Error fetching caregiver care logs:', error);
-    throw error;
   }
 };
 
@@ -152,69 +204,29 @@ export const getCareLogsByDate = async (clientId, date) => {
   try {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
-    
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
-    
+    const startMs = startOfDay.getTime();
+    const endMs = endOfDay.getTime();
+
+    // Query by clientId only, filter by date range in memory to avoid
+    // composite index requirements and corrupt logDate issues.
     const q = query(
       collection(db, CARE_LOGS_COLLECTION),
-      where('clientId', '==', clientId),
-      where('logDate', '>=', Timestamp.fromDate(startOfDay)),
-      where('logDate', '<=', Timestamp.fromDate(endOfDay)),
-      orderBy('logDate', 'desc'),
-      orderBy('logTime', 'desc')
+      where('clientId', '==', clientId)
     );
     
     const snapshot = await getDocs(q);
-    const logs = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate(),
-      logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
-    }));
+    const allLogs = snapshot.docs.map(mapCareLog);
+    const results = allLogs.filter((log) => {
+      const logMs = log.logDate?.getTime?.() || 0;
+      return logMs >= startMs && logMs <= endMs;
+    });
+    const sorted = sortCareLogs(results);
     
-    console.log(`✅ Loaded ${logs.length} care logs for ${date}`);
-    return logs;
+    console.log(`✅ Loaded ${sorted.length} care logs for ${date}`);
+    return sorted;
   } catch (error) {
-    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
-      console.warn('Index missing, using fallback query:', error.message);
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      const startMs = startOfDay.getTime();
-      const endMs = endOfDay.getTime();
-
-      const fallbackQuery = query(
-        collection(db, CARE_LOGS_COLLECTION),
-        where('clientId', '==', clientId)
-      );
-      const fallbackSnapshot = await getDocs(fallbackQuery);
-      const results = [];
-      fallbackSnapshot.forEach((doc) => {
-        const data = doc.data();
-        const logDate = data.logDate?.toDate ? data.logDate.toDate() : new Date(data.logDate);
-        // Filter by date range in memory
-        const logMs = logDate.getTime();
-        if (logMs < startMs || logMs > endMs) return;
-        results.push({
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate(),
-          updatedAt: data.updatedAt?.toDate(),
-          logDate: logDate
-        });
-      });
-      results.sort((a, b) => {
-        const av = a.logDate?.getTime ? a.logDate.getTime() : new Date(a.logDate).getTime();
-        const bv = b.logDate?.getTime ? b.logDate.getTime() : new Date(b.logDate).getTime();
-        if (bv !== av) return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc by logDate
-        return (b.logTime || '').localeCompare(a.logTime || ''); // desc by logTime
-      });
-      console.log(`✅ Loaded ${results.length} care logs for ${date} (fallback)`);
-      return results;
-    }
     console.error('❌ Error fetching care logs by date:', error);
     throw error;
   }
@@ -227,50 +239,30 @@ export const getCareLogsByRole = async (clientId, roleType, limitCount = 50) => 
       collection(db, CARE_LOGS_COLLECTION),
       where('clientId', '==', clientId),
       where('roleType', '==', roleType),
-      orderBy('logDate', 'desc'),
-      orderBy('logTime', 'desc'),
       limit(limitCount)
     );
     
     const snapshot = await getDocs(q);
-    const logs = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate(),
-      logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
-    }));
+    const logs = sortCareLogs(snapshot.docs.map(mapCareLog));
     
     console.log(`✅ Loaded ${logs.length} ${roleType} care logs for client ${clientId}`);
     return logs;
   } catch (error) {
-    if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
-      console.warn('Index missing, using fallback query:', error.message);
+    console.error('❌ Error fetching care logs by role:', error);
+    try {
       const fallbackQuery = query(
         collection(db, CARE_LOGS_COLLECTION),
         where('clientId', '==', clientId),
         where('roleType', '==', roleType)
       );
       const fallbackSnapshot = await getDocs(fallbackQuery);
-      const results = fallbackSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-        logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
-      }));
-      results.sort((a, b) => {
-        const av = a.logDate?.getTime ? a.logDate.getTime() : new Date(a.logDate).getTime();
-        const bv = b.logDate?.getTime ? b.logDate.getTime() : new Date(b.logDate).getTime();
-        if (bv !== av) return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc by logDate
-        return (b.logTime || '').localeCompare(a.logTime || ''); // desc by logTime
-      });
-      const sliced = results.slice(0, limitCount);
-      console.log(`✅ Loaded ${sliced.length} ${roleType} care logs for client ${clientId} (fallback)`);
-      return sliced;
+      const results = sortCareLogs(fallbackSnapshot.docs.map(mapCareLog)).slice(0, limitCount);
+      console.log(`✅ Loaded ${results.length} ${roleType} care logs for client ${clientId} (fallback)`);
+      return results;
+    } catch (fallbackError) {
+      console.error('❌ Fallback query also failed:', fallbackError);
+      throw fallbackError;
     }
-    console.error('❌ Error fetching care logs by role:', error);
-    throw error;
   }
 };
 
@@ -281,14 +273,7 @@ export const getCareLog = async (logId) => {
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        ...data,
-        createdAt: data.createdAt?.toDate(),
-        updatedAt: data.updatedAt?.toDate(),
-        logDate: data.logDate?.toDate ? data.logDate.toDate() : new Date(data.logDate)
-      };
+      return mapCareLog(docSnap);
     } else {
       throw new Error('Care log not found');
     }
@@ -332,63 +317,32 @@ export const deleteCareLog = async (logId) => {
 // Real-time subscription to care logs for a client
 export const subscribeToCareLogsByClient = (clientId, limitCount = 50, callback) => {
   try {
-    let unsubscribeFallback = null;
+    // Use a simple query with only where + limit to avoid composite index
+    // requirements. Sort client-side. This ensures logs are always returned
+    // regardless of logDate format or index availability.
     const q = query(
       collection(db, CARE_LOGS_COLLECTION),
       where('clientId', '==', clientId),
-      orderBy('logDate', 'desc'),
-      orderBy('logTime', 'desc'),
       limit(limitCount)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const logs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-        logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
-      }));
-      
+      const logs = sortCareLogs(snapshot.docs.map(mapCareLog));
       console.log(`🔄 Real-time update: ${logs.length} care logs for client ${clientId}`);
       callback(logs);
     }, (error) => {
-      if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
-        console.warn('Index missing, using fallback subscription:', error.message);
-        const fallbackQuery = query(
-          collection(db, CARE_LOGS_COLLECTION),
-          where('clientId', '==', clientId)
-        );
-        unsubscribeFallback = onSnapshot(fallbackQuery, (snapshot) => {
-          const logs = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate(),
-            updatedAt: doc.data().updatedAt?.toDate(),
-            logDate: doc.data().logDate?.toDate ? doc.data().logDate.toDate() : new Date(doc.data().logDate)
-          }));
-          logs.sort((a, b) => {
-            const av = a.logDate?.getTime ? a.logDate.getTime() : new Date(a.logDate).getTime();
-            const bv = b.logDate?.getTime ? b.logDate.getTime() : new Date(b.logDate).getTime();
-            if (bv !== av) return (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av); // desc by logDate
-            return (b.logTime || '').localeCompare(a.logTime || ''); // desc by logTime
-          });
-          const sliced = logs.slice(0, limitCount);
-          console.log(`🔄 Real-time update: ${sliced.length} care logs for client ${clientId} (fallback)`);
-          callback(sliced);
-        });
-      } else {
-        console.error('❌ Error in care logs subscription:', error);
-      }
+      console.error('❌ Error in care logs subscription:', error);
+      // On error, don't replace the existing logs with empty results.
+      // The next successful poll will update the list.
     });
     
     return () => {
       unsubscribe();
-      if (unsubscribeFallback) unsubscribeFallback();
     };
   } catch (error) {
     console.error('❌ Error setting up care logs subscription:', error);
-    throw error;
+    // Don't throw — return a no-op unsubscribe so the caller doesn't crash
+    return () => {};
   }
 };
 

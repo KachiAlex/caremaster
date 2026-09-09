@@ -43,8 +43,9 @@ const NewHomePage = () => {
   useEffect(() => {
     const modalOpen = demoModalOpen || salesModalOpen;
     if (modalOpen) {
+      const originalStyle = window.getComputedStyle(document.body).overflow;
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
+      return () => { document.body.style.overflow = originalStyle; };
     }
   }, [demoModalOpen, salesModalOpen]);
 

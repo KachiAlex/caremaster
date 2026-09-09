@@ -98,6 +98,7 @@ import AdlLogger from '../components/AdlLogger';
 import UserProfileSettings from '../components/UserProfileSettings';
 import HelpSupport from '../components/HelpSupport';
 import TaskCompletionModal from '../components/TaskCompletionModal';
+import SettingsTab from '../components/SettingsTab';
 import { collection, query, getDocs, setDoc, updateDoc, where, doc } from 'backend/database';
 import { signOut } from 'backend/auth';
 import { db } from '../backend/config';
@@ -175,7 +176,7 @@ const PartnerCaregiverDashboard = () => {
   
   // Form data states
   const [medicalReportData, setMedicalReportData] = useState({
-    reportDate: new Date().toISOString().split('T')[0],
+    reportDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
     diagnosis: '',
     symptoms: '',
     treatment: '',
@@ -184,7 +185,7 @@ const PartnerCaregiverDashboard = () => {
   });
   
   const [carePlanData, setCarePlanData] = useState({
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
     reviewDate: '',
     objectives: '',
     activities: '',
@@ -1304,7 +1305,7 @@ const PartnerCaregiverDashboard = () => {
       };
 
       await careLogsAPI.createCareLog(careLogWithMetadata);
-      toast.success('Care log saved successfully');
+      toast.success('Care log saved');
       
       // Refresh care logs if the modal is open
       if (showCareLogsModal) {
@@ -1325,7 +1326,7 @@ const PartnerCaregiverDashboard = () => {
     }
     try {
       await startTask(scheduleId, user.uid);
-      toast.success('Clocked in successfully');
+      toast.success('Clocked in');
       // Refresh schedule
       if (user?.uid) {
         await reloadTasks(user.uid);
@@ -1343,7 +1344,7 @@ const PartnerCaregiverDashboard = () => {
     }
     try {
       await completeTask(scheduleId, user.uid, 'Task completed via schedule');
-      toast.success('Clocked out successfully');
+      toast.success('Clocked out');
       // Refresh schedule
       if (user?.uid) {
         await reloadTasks(user.uid);
@@ -2099,12 +2100,12 @@ const PartnerCaregiverDashboard = () => {
         // Update existing prescription
         console.log('✏️ Updating prescription:', editingPrescriptionId, prescriptionData);
         await prescriptionsAPI.updatePrescription(editingPrescriptionId, prescriptionData);
-        toast.success('Prescription updated successfully!');
+        toast.success('Prescription updated');
       } else {
         // Create new prescription
         console.log('💊 Creating prescription:', prescriptionData);
         await prescriptionsAPI.createPrescription(prescriptionData);
-        toast.success('Prescription created successfully!');
+        toast.success('Prescription created');
       }
       
       setShowPrescriptionModal(false);
@@ -2169,7 +2170,7 @@ const PartnerCaregiverDashboard = () => {
     if (!window.confirm('Are you sure you want to delete this prescription? This action cannot be undone.')) return;
     try {
       await prescriptionsAPI.deletePrescription(prescriptionId);
-      toast.success('Prescription deleted successfully');
+      toast.success('Prescription deleted');
       if (selectedClient) {
         await loadPrescriptions(selectedClient.id);
       }
@@ -2188,7 +2189,7 @@ const PartnerCaregiverDashboard = () => {
         availabilityCheckedAt: new Date().toISOString()
       });
       
-      toast.success('Medication updated successfully');
+      toast.success('Medication updated');
       
       // Reload prescriptions
       if (selectedClient) {
@@ -2250,7 +2251,7 @@ const PartnerCaregiverDashboard = () => {
       console.log('🩺 Creating consultation:', consultationData);
       await consultationsAPI.createConsultation(consultationData);
       
-      toast.success('Consultation note saved successfully!');
+      toast.success('Consultation note saved');
       setShowConsultationModal(false);
       
       // Reload consultations to show the new one
@@ -2412,7 +2413,7 @@ const PartnerCaregiverDashboard = () => {
       setMessages([...messages, message]);
       setNewMessage('');
       
-        toast.success('Message sent successfully');
+        toast.success('Message sent');
         
         // Reload conversations to update last message and unread counts
         loadConversations();
@@ -3211,7 +3212,7 @@ const PartnerCaregiverDashboard = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
                 <input 
                   type="date" 
-                  defaultValue={new Date().toISOString().split('T')[0]}
+                  defaultValue={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -3407,7 +3408,7 @@ const PartnerCaregiverDashboard = () => {
         });
       }
 
-      toast.success('✅ Medication data saved successfully!');
+      toast.success('Medication saved');
     } catch (error) {
       console.error('Error saving pharmacist medication data:', error);
       toast.error('Failed to save medication data');
@@ -4251,7 +4252,7 @@ const PartnerCaregiverDashboard = () => {
       };
 
       await activitiesAPI.logActivity(activityData);
-      toast.success(`${activityType} logged successfully!`);
+      toast.success(`${activityType} logged`);
       // Reload activities to show the new entry
       if (activeTab === 'activities') {
         loadActivities();
@@ -4280,7 +4281,7 @@ const PartnerCaregiverDashboard = () => {
       };
 
       await activitiesAPI.logActivity(activityData);
-      toast.success('Activity logged successfully!');
+      toast.success('Activity logged');
       setShowActivityModal(false);
       // Reload activities to show the new entry
       if (activeTab === 'activities') {
@@ -4372,19 +4373,20 @@ const PartnerCaregiverDashboard = () => {
     : 'Dashboard';
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
-    { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-    { id: 'carelogs', label: 'Care Logs', icon: Camera },
-    { id: 'activities', label: 'Activities', icon: Activity },
-    { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'dashboard', label: 'Dashboard', icon: Home, iconColor: '#60A5FA' },
+    { id: 'schedule', label: 'Schedule', icon: Calendar, iconColor: '#FBBF24' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, iconColor: '#38BDF8' },
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare, iconColor: '#34D399' },
+    { id: 'carelogs', label: 'Care Logs', icon: Camera, iconColor: '#F472B6' },
+    { id: 'activities', label: 'Activities', icon: Activity, iconColor: '#A78BFA' },
+    { id: 'clients', label: 'Clients', icon: Users, iconColor: '#22D3EE' },
     ...(isDoctor || isNurse || isPharmacist ? [
-      { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
-      { id: 'consultations', label: 'Consultations', icon: Stethoscope },
-      { id: 'diagnostics', label: 'Diagnostics', icon: FileText },
+      { id: 'prescriptions', label: 'Prescriptions', icon: Pill, iconColor: '#A78BFA' },
+      { id: 'consultations', label: 'Consultations', icon: Stethoscope, iconColor: '#FB923C' },
+      { id: 'diagnostics', label: 'Diagnostics', icon: FileText, iconColor: '#F87171' },
     ] : []),
-    { id: 'help', label: 'Help & Support', icon: HelpCircle },
+    { id: 'settings', label: 'Settings', icon: Settings, iconColor: '#94A3B8' },
+    { id: 'help', label: 'Help & Support', icon: HelpCircle, iconColor: '#FCD34D' },
   ];
 
   const handleLogout = () => {
@@ -4444,9 +4446,7 @@ const PartnerCaregiverDashboard = () => {
       >
         <div className="space-y-6">
           <div className="cm-section-head">
-            <span className="cm-eyebrow">{activeTabLabel}</span>
-            <h2 className="mt-2">{institutionData?.name || 'Caregiver Dashboard'}</h2>
-            <p>Welcome back, {displayName}.</p>
+            <p className="cm-eyebrow">Welcome back, {displayName}</p>
           </div>
 
         {/* Doctor Client Selector (if doctor) */}
@@ -4585,6 +4585,12 @@ const PartnerCaregiverDashboard = () => {
           renderConsultationsTab()
         ) : activeTab === 'diagnostics' && (isDoctor || isNurse || isPharmacist) ? (
           renderDiagnosticsTab()
+        ) : activeTab === 'settings' ? (
+          <SettingsTab
+            user={user}
+            userProfile={userProfile}
+            institutionName={institutionData?.name || 'Institution'}
+          />
         ) : activeTab === 'help' ? (
           <HelpSupport userRole={userProfile?.userType || userProfile?.type || 'caregiver'} />
         ) : (
@@ -5285,14 +5291,14 @@ const PartnerCaregiverDashboard = () => {
             try {
                 console.log('💾 Saving care log:', careLogData);
               await createCareLog(careLogData);
-              toast.success('Care log saved successfully');
+              toast.success('Care log saved');
               
               // Real-time listener will auto-update the list
               
               setShowCareLogForm(false);
             } catch (error) {
               console.error('Error saving care log:', error);
-              toast.error('Failed to save care log: ' + error.message);
+              toast.error('Failed to save care log');
             }
           }}
             onCancel={() => {
@@ -5646,7 +5652,7 @@ const PartnerCaregiverDashboard = () => {
                       };
                       
                       await updateCarePlan(editingPlanId, updatePayload);
-                      toast.success('Care plan updated successfully');
+                      toast.success('Care plan updated');
                       setEditingPlanId(null);
                     } else {
                       // Create new plan
@@ -5682,14 +5688,14 @@ const PartnerCaregiverDashboard = () => {
                         }
                       });
                       
-                      toast.success('Care plan created successfully');
+                      toast.success('Care plan created');
                     }
                     
                     // Real-time listener will auto-update the list
                     
                     // Reset form
                     setCarePlanData({
-                      startDate: new Date().toISOString().split('T')[0],
+                      startDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
                       reviewDate: '',
                       objectives: '',
                       activities: '',
@@ -6561,12 +6567,12 @@ const PartnerCaregiverDashboard = () => {
                                             // Load plan data for editing
                                             setEditingPlanId(plan.id);
                                             setCarePlanData({
-                                              startDate: plan.startDate instanceof Date 
-                                                ? plan.startDate.toISOString().split('T')[0]
-                                                : new Date(plan.startDate).toISOString().split('T')[0],
-                                              reviewDate: plan.reviewDate ? (plan.reviewDate instanceof Date 
-                                                ? plan.reviewDate.toISOString().split('T')[0]
-                                                : new Date(plan.reviewDate).toISOString().split('T')[0]) : '',
+                                              startDate: plan.startDate instanceof Date
+                                                ? `${plan.startDate.getFullYear()}-${String(plan.startDate.getMonth() + 1).padStart(2, '0')}-${String(plan.startDate.getDate()).padStart(2, '0')}`
+                                                : (() => { const d = new Date(plan.startDate); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
+                                              reviewDate: plan.reviewDate ? (plan.reviewDate instanceof Date
+                                                ? `${plan.reviewDate.getFullYear()}-${String(plan.reviewDate.getMonth() + 1).padStart(2, '0')}-${String(plan.reviewDate.getDate()).padStart(2, '0')}`
+                                                : (() => { const d = new Date(plan.reviewDate); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()) : '',
                                               objectives: plan.careObjectives || '',
                                               activities: plan.dailyCareActivities || '',
                                               medicationSchedule: plan.medicationSchedule || '',
@@ -6587,7 +6593,7 @@ const PartnerCaregiverDashboard = () => {
                                               try {
                                                 await deleteCarePlan(plan.id);
                                                 // Real-time listener will auto-update the list
-                                                toast.success('Care plan deleted successfully');
+                                                toast.success('Care plan deleted');
                                               } catch (error) {
                                                 console.error('Error deleting plan:', error);
                                                 toast.error('Failed to delete care plan');

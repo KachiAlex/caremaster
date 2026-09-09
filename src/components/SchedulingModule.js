@@ -81,7 +81,7 @@ const SchedulingModule = ({ institutionId, onScheduleCreated }) => {
           id: doc.id,
           ...data,
           // Ensure scheduleDate is in ISO format (YYYY-MM-DD)
-          scheduleDate: data.scheduleDate || (data.scheduledDate ? new Date(data.scheduledDate).toISOString().split('T')[0] : null)
+          scheduleDate: data.scheduleDate || (data.scheduledDate ? toIsoDateString(new Date(data.scheduledDate)) : null)
         };
       });
 
@@ -113,7 +113,7 @@ const SchedulingModule = ({ institutionId, onScheduleCreated }) => {
             if (dueDate) {
               // Handle different date formats
               if (dueDate instanceof Date) {
-                scheduleDate = dueDate.toISOString().split('T')[0];
+                scheduleDate = toIsoDateString(dueDate);
               } else if (typeof dueDate === 'string') {
                 // If it's already in ISO format, use it; otherwise parse it
                 if (dueDate.includes('T')) {
@@ -125,7 +125,7 @@ const SchedulingModule = ({ institutionId, onScheduleCreated }) => {
                   // Try to parse as date
                   const parsed = new Date(dueDate);
                   if (!isNaN(parsed.getTime())) {
-                    scheduleDate = parsed.toISOString().split('T')[0];
+                    scheduleDate = toIsoDateString(parsed);
                   }
                 }
               }
@@ -202,24 +202,30 @@ const SchedulingModule = ({ institutionId, onScheduleCreated }) => {
 
     // Filter by date range based on view mode
     if (viewMode === 'day') {
-      const dayStr = selectedDate.toISOString().split('T')[0];
+      const dayStr = toIsoDateString(selectedDate);
       filtered = filtered.filter(schedule => schedule.scheduleDate === dayStr);
     } else if (viewMode === 'week') {
+      // Use the same Monday-based week dates as the grid view for consistency
       const weekStart = new Date(selectedDate);
-      weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
+      const dayOfWeek = weekStart.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      weekStart.setDate(weekStart.getDate() + mondayOffset);
+      const weekStartStr = toIsoDateString(weekStart);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
-      
+      const weekEndStr = toIsoDateString(weekEnd);
+
       filtered = filtered.filter(schedule => {
-        const schedDate = new Date(schedule.scheduleDate);
-        return schedDate >= weekStart && schedDate <= weekEnd;
+        // String comparison avoids timezone conversion issues
+        return schedule.scheduleDate >= weekStartStr && schedule.scheduleDate <= weekEndStr;
       });
     } else if (viewMode === 'month') {
-      filtered = filtered.filter(schedule => {
-        const schedDate = new Date(schedule.scheduleDate);
-        return schedDate.getMonth() === selectedDate.getMonth() &&
-               schedDate.getFullYear() === selectedDate.getFullYear();
-      });
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const monthPrefix = `${year}-${month}-`;
+      filtered = filtered.filter(schedule =>
+        schedule.scheduleDate && schedule.scheduleDate.startsWith(monthPrefix)
+      );
     }
 
     // Sort by date and start time
@@ -310,8 +316,13 @@ const SchedulingModule = ({ institutionId, onScheduleCreated }) => {
   };
 
   const toIsoDateString = (date) => {
-    const iso = date.toISOString();
-    return iso.split('T')[0];
+    // Use local date components, NOT toISOString() which converts to UTC.
+    // In timezones ahead of UTC (e.g., UTC+1), toISOString() shifts the date
+    // back by one day, causing schedules to appear on the wrong day.
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const getWeekDates = (referenceDate) => {
@@ -1045,7 +1056,7 @@ const SchedulingModule = ({ institutionId, onScheduleCreated }) => {
                       type="date"
                       name="scheduleDate"
                       required
-                      defaultValue={selectedSchedule?.scheduleDate || new Date().toISOString().split('T')[0]}
+                      defaultValue={selectedSchedule?.scheduleDate || toIsoDateString(new Date())}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
@@ -1071,7 +1082,7 @@ const SchedulingModule = ({ institutionId, onScheduleCreated }) => {
                       type="date"
                       name="endDate"
                       required
-                      defaultValue={selectedSchedule?.endDate || selectedSchedule?.scheduleDate || new Date().toISOString().split('T')[0]}
+                      defaultValue={selectedSchedule?.endDate || selectedSchedule?.scheduleDate || toIsoDateString(new Date())}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>

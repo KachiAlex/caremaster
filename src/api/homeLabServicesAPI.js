@@ -31,6 +31,30 @@ const HOME_LAB_VISITS_COLLECTION = 'homeLabVisits';
 const SAMPLE_COLLECTIONS_COLLECTION = 'sampleCollections';
 
 /**
+ * Safely convert any date-like value to a Firestore Timestamp.
+ * Handles Date objects, ISO strings, YYYY-MM-DD strings, and Firestore
+ * Timestamp objects. Falls back to serverTimestamp() for invalid/null values.
+ */
+function safeTimestampFromDate(value) {
+  if (!value) return serverTimestamp();
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Timestamp.fromDate(value);
+  }
+  if (typeof value.toDate === 'function') {
+    try { return Timestamp.fromDate(value.toDate()); } catch { return serverTimestamp(); }
+  }
+  if (typeof value === 'string') {
+    const d = value.includes('T') ? new Date(value) : new Date(value + 'T00:00:00');
+    return isNaN(d.getTime()) ? serverTimestamp() : Timestamp.fromDate(d);
+  }
+  if (typeof value === 'number') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? serverTimestamp() : Timestamp.fromDate(d);
+  }
+  return serverTimestamp();
+}
+
+/**
  * Create a home lab visit request
  * @param {Object} visitData - Visit details
  * @returns {Promise<string>} Visit ID
@@ -44,7 +68,7 @@ export const createHomeLabVisit = async (visitData) => {
       status: 'scheduled', // scheduled, in_progress, completed, cancelled
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      scheduledAt: visitData.scheduledAt ? Timestamp.fromDate(new Date(visitData.scheduledAt)) : serverTimestamp(),
+      scheduledAt: visitData.scheduledAt ? safeTimestampFromDate(visitData.scheduledAt) : serverTimestamp(),
       sampleCollected: false,
       sampleCollectionTime: null,
       resultsUploaded: false,
@@ -85,7 +109,7 @@ export const createHomeLabVisit = async (visitData) => {
     // Send notification to lab technician
     try {
       const { notificationsAPI } = await import('./notificationsAPI');
-      await notificationsAPI.sendNotification({
+      await notificationsAPI.createNotification({
         userId: visitData.assignedLabTechnicianId,
         type: 'home_lab_visit_assigned',
         title: 'New Home Lab Visit Assigned',

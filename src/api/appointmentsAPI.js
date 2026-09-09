@@ -645,11 +645,11 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
         callback(appointments);
       }, (err) => {
         console.error('Fallback snapshot error:', err);
-        callback([]);
+        // Don't replace existing appointments with empty results on error.
       });
     } else {
       console.error('Snapshot error:', error);
-      callback([]);
+      // Don't replace existing appointments with empty results on error.
     }
   });
   

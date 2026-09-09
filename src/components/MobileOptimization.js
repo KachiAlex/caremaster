@@ -9,13 +9,16 @@ const MobileOptimization = () => {
       let themeMeta = document.querySelector('meta[name="theme-color"]');
       let appleMeta = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
 
-      // Set viewport for mobile optimization
+      // Set viewport for mobile optimization.
+      // NOTE: Do NOT add maximum-scale=1.0 or user-scalable=no — disabling
+      // pinch-to-zoom is an accessibility violation and some mobile browsers
+      // degrade scroll behaviour when zoom is locked.
       if (!viewportMeta) {
         viewportMeta = document.createElement('meta');
         viewportMeta.name = 'viewport';
         document.head.appendChild(viewportMeta);
       }
-      viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+      viewportMeta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
 
       // Set theme color for mobile browsers
       if (!themeMeta) {
@@ -64,31 +67,14 @@ const MobileOptimization = () => {
 
     // Add touch event optimizations
     const addTouchOptimizations = () => {
-      // Prevent zoom on double tap
-      let lastTouchEnd = 0;
-      document.addEventListener('touchend', (event) => {
-        const now = (new Date()).getTime();
-        if (now - lastTouchEnd <= 300) {
-          event.preventDefault();
-        }
-        lastTouchEnd = now;
-      }, false);
-
-      // Prevent zoom on input focus (iOS)
-      const inputs = document.querySelectorAll('input, textarea, select');
-      inputs.forEach(input => {
-        input.addEventListener('focus', () => {
-          if (window.innerWidth < 768) {
-            document.querySelector('meta[name="viewport"]').content = 
-              'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-          }
-        });
-
-        input.addEventListener('blur', () => {
-          document.querySelector('meta[name="viewport"]').content = 
-            'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
-        });
-      });
+      // NOTE: The previous implementation added a document-level `touchend`
+      // listener that called preventDefault() on rapid successive taps to
+      // suppress double-tap zoom. That listener was never removed and, more
+      // importantly, preventDefault() on touchend disrupts scroll momentum
+      // and prevents the user from scrolling again quickly — the primary
+      // cause of the mobile scrolling issues. Double-tap zoom is now
+      // suppressed via `touch-action: manipulation` on interactive elements
+      // (set in addMobileCSS below), which is the modern, non-intrusive way.
     };
 
     // Add mobile-specific CSS
@@ -97,10 +83,9 @@ const MobileOptimization = () => {
       style.textContent = `
         /* Mobile optimizations */
         @media (max-width: 768px) {
-          /* Prevent horizontal scroll */
-          body {
-            overflow-x: hidden;
-          }
+          /* NOTE: Do NOT set overflow-x: hidden on body — it breaks mobile
+             scrolling on iOS Safari and Chrome Android. Horizontal overflow
+             is prevented at the container level via overflow-wrap and max-width. */
           
           /* Touch-friendly button sizes */
           button, .btn {
@@ -126,20 +111,16 @@ const MobileOptimization = () => {
             user-select: none;
           }
           
+          /* Suppress double-tap zoom without blocking scroll
+             (replaces the removed touchend preventDefault listener) */
+          button, a, .btn, .touch-manipulation {
+            touch-action: manipulation;
+          }
+          
           /* Optimize for mobile viewport */
           .mobile-full-height {
             height: 100vh;
             height: 100dvh; /* Dynamic viewport height for mobile */
-          }
-          
-          /* Better touch feedback */
-          .touch-manipulation {
-            touch-action: manipulation;
-          }
-          
-          /* Prevent pull-to-refresh on mobile */
-          body {
-            overscroll-behavior: none;
           }
         }
         

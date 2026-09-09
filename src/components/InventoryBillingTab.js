@@ -187,7 +187,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
         dueDate: new Date(invoiceFormData.dueDate)
       });
 
-      toast.success('✅ Invoice created successfully!');
+      toast.success('Invoice created');
       setShowInvoiceModal(false);
       resetInvoiceForm();
       loadData();
@@ -238,7 +238,7 @@ const InventoryBillingTab = ({ institutionId, clients }) => {
 
       await invoiceAPI.updateInvoiceStatus(viewingInvoice.id, 'paid', paymentDetails);
       
-      toast.success('✅ Payment confirmed! Invoice is now a receipt.');
+      toast.success('Payment confirmed');
       setShowPaymentModal(false);
       setShowInvoiceViewModal(false);
       loadData();

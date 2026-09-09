@@ -73,6 +73,22 @@ const InstitutionCaregiverOnboarding = () => {
     }
   }, [userProfile, navigate, effectiveInstitutionId]);
 
+  // Pre-fill profile fields from userProfile when it becomes available.
+  // useState only runs the initializer once on mount, but userProfile is
+  // loaded asynchronously (onAuthStateChanged → /auth/me), so email/name/phone
+  // are empty on first render and need to be backfilled here.
+  useEffect(() => {
+    if (!userProfile) return;
+    setProfile(prev => ({
+      ...prev,
+      email: prev.email || userProfile.email || user?.email || '',
+      name: prev.name || userProfile.name || userProfile.fullName ||
+        `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim(),
+      phone: prev.phone || userProfile.phone || '',
+      address: prev.address || userProfile.address || '',
+    }));
+  }, [userProfile, user?.email]);
+
   const handleProfileChange = (field, value) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };

@@ -116,13 +116,14 @@ const NurseCareLogs = ({ clientId, clientName, nurseId, nurseName, onSave, onCan
     }
 
     setLoading(true);
-    
+
     try {
       const careLogData = {
         clientId,
         clientName,
         caregiverId: nurseId,
         caregiverName: nurseName,
+        institutionId: institutionId || null,
         category: formData.category,
         title: formData.title.trim(),
         content: formData.content.trim(),
@@ -139,10 +140,8 @@ const NurseCareLogs = ({ clientId, clientName, nurseId, nurseName, onSave, onCan
 
       if (editingLog) {
         await updateCareLog(editingLog.id, careLogData);
-        toast.success('Care log updated successfully');
       } else {
         await createCareLog(careLogData, institutionId);
-        toast.success('Care log created successfully');
       }
 
       // Reset form
@@ -173,6 +172,8 @@ const NurseCareLogs = ({ clientId, clientName, nurseId, nurseName, onSave, onCan
     } catch (error) {
       console.error('Error saving care log:', error);
       toast.error('Failed to save care log');
+      // Re-throw so the parent can also handle the error if needed
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -203,7 +204,7 @@ const NurseCareLogs = ({ clientId, clientName, nurseId, nurseName, onSave, onCan
 
     try {
       await deleteCareLog(logId);
-      toast.success('Care log deleted successfully');
+      toast.success('Care log deleted');
       await loadCareLogs();
     } catch (error) {
       console.error('Error deleting care log:', error);
@@ -241,8 +242,13 @@ const NurseCareLogs = ({ clientId, clientName, nurseId, nurseName, onSave, onCan
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
-    const d = date.toDate ? date.toDate() : new Date(date);
-    return d.toLocaleString();
+    try {
+      const d = date.toDate ? date.toDate() : new Date(date);
+      if (isNaN(d.getTime())) return 'N/A';
+      return d.toLocaleString();
+    } catch {
+      return 'N/A';
+    }
   };
 
   return (

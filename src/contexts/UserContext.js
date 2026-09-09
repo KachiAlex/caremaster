@@ -119,12 +119,48 @@ export const UserProvider = ({ children }) => {
         setUserRole(null);
         setUserRoles([]);
         setInstitutionId(null);
+        setInstitutionData(null);
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  // Fetch institution (tenant) data whenever institutionId changes so dashboards
+  // can display the actual tenant name instead of a generic "Institution" label.
+  useEffect(() => {
+    if (!institutionId) {
+      setInstitutionData(null);
+      return;
+    }
+    let cancelled = false;
+    getDoc(doc(db, 'institutions', institutionId))
+      .then((instDoc) => {
+        if (cancelled) return;
+        if (instDoc.exists()) {
+          setInstitutionData({ id: instDoc.id, ...instDoc.data() });
+        } else {
+          // Try fetching from the institutions table via the data API as a fallback
+          return fetch(`${api.defaults?.baseURL || ''}/api/data/institutions/${institutionId}`, {
+            credentials: 'include',
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((json) => {
+              if (!cancelled && json && json.success && json.data) {
+                setInstitutionData(json.data);
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch institution data:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [institutionId]);
 
   const login = async (credentials) => {
     try {

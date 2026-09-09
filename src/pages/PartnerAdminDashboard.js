@@ -106,6 +106,7 @@ import CaregiverWageManagement from '../components/CaregiverWageManagement';
 import CaregiverWageEditModal from '../components/CaregiverWageEditModal';
 import UserProfileSettings from '../components/UserProfileSettings';
 import PartnerSettings from '../components/PartnerSettings';
+import ChangePasswordForm from '../components/ChangePasswordForm';
 import CreatePatientModal from '../components/CreatePatientModal';
 import PartnerUserCreationModal from '../components/PartnerUserCreationModal';
 import AddCaregiverModal from '../components/AddCaregiverModal';
@@ -556,7 +557,7 @@ const PartnerAdminDashboard = () => {
       const instId = effectivePartnerId || institutionId || userProfile?.institutionId;
       await institutionAPI.updatePartnerLinks(instId, updates);
       await loadPartnerData(); // Reload institution data
-      toast.success('Partner links updated successfully!');
+      toast.success('Partner links updated');
     } catch (error) {
       console.error('Error updating partner links:', error);
       toast.error('Failed to update partner links');
@@ -1020,7 +1021,7 @@ const PartnerAdminDashboard = () => {
         institutionId: instId
       });
 
-      toast.success('Billing plan saved successfully');
+      toast.success('Billing plan saved');
       setShowEditBillingPlanModal(false);
       setSelectedBillingPlan(null);
       await loadBillingPlans();
@@ -1054,7 +1055,7 @@ const PartnerAdminDashboard = () => {
       }
 
       await paymentGatewayAPI.savePaymentGatewayConfig(instId, configData);
-      toast.success('Payment gateway configured successfully');
+      toast.success('Payment gateway configured');
       setShowPaymentGatewayModal(false);
       setSelectedGateway(null);
       await loadPaymentGatewayConfig();
@@ -1129,7 +1130,7 @@ const PartnerAdminDashboard = () => {
       }
       
       setShowCreatePatientModal(false);
-      toast.success('Client added successfully', { 
+      toast.success('Client added', { 
         autoClose: 5000,
         position: 'top-center'
       });
@@ -1340,7 +1341,7 @@ const PartnerAdminDashboard = () => {
       const assignmentRef = await addDoc(collection(db, 'clientAssignments'), assignmentData);
       console.log('✅ Admin - Assignment created with ID:', assignmentRef.id);
       
-      toast.success('Pharmacist assigned successfully!');
+      toast.success('Pharmacist assigned');
       await trackAdminEvent('pharmacist_assigned_to_client', {
         clientId,
         pharmacistId,
@@ -1380,7 +1381,7 @@ const PartnerAdminDashboard = () => {
       });
 
       console.log('✅ User role updated successfully');
-      toast.success(`User role updated to ${userData.userType} successfully!`);
+      toast.success(`Role updated to ${userData.userType}`);
       
       setShowEditUserModal(false);
       setSelectedUserForEdit(null);
@@ -1526,7 +1527,7 @@ const PartnerAdminDashboard = () => {
         deletedBy: user?.uid
       });
       
-      toast.success(`Pharmacist ${pharmacist.name} has been deleted successfully`);
+      toast.success(`Pharmacist ${pharmacist.name} deleted`);
       
       // Reload dashboard data
       await loadDashboardData();
@@ -1707,7 +1708,7 @@ const PartnerAdminDashboard = () => {
       setShowAssignmentModal(false);
       setSelectedClientForAssignment('');
       setSelectedCaregiverForAssignment('');
-      toast.success('Assignment created and notifications sent successfully');
+      toast.success('Assignment created and notifications sent');
       
       await trackAdminEvent('assignment_created', {
         assignmentId: createdAssignment.id,
@@ -1777,7 +1778,7 @@ const PartnerAdminDashboard = () => {
         status: formData.status || selectedAssignmentForEdit.status
       });
 
-      toast.success('Assignment updated successfully');
+      toast.success('Assignment updated');
       setShowEditAssignmentModal(false);
       setSelectedAssignmentForEdit(null);
       setEditAssignmentForm({
@@ -1885,7 +1886,7 @@ const PartnerAdminDashboard = () => {
       setCaregivers(prevCaregivers => prevCaregivers.filter(c => c.id !== caregiverId));
       console.log('✅ Removed from local state');
       
-      toast.success('Caregiver deleted successfully', { autoClose: 3000 });
+      toast.success('Caregiver deleted', { autoClose: 3000 });
       
       // Reload dashboard data in background to ensure consistency
       setTimeout(() => {
@@ -1957,7 +1958,7 @@ const PartnerAdminDashboard = () => {
         }
       });
       
-      toast.success(`${caregiver.name} has been approved successfully`);
+      toast.success(`${caregiver.name} approved`);
       await loadDashboardData(); // Reload to update the status
     } catch (error) {
       console.error('Error approving caregiver:', error);
@@ -2038,7 +2039,7 @@ const PartnerAdminDashboard = () => {
         });
       }
       
-      toast.success('Diagnostic test approved successfully');
+      toast.success('Diagnostic test approved');
       await trackAdminEvent('diagnostic_approved', {
         diagnosticId: diagnostic.id,
         clientId: diagnostic.clientId || null,
@@ -2114,7 +2115,7 @@ const PartnerAdminDashboard = () => {
         archivedAt: new Date().toISOString(),
         archivedBy
       });
-      toast.success('Client archived successfully');
+      toast.success('Client archived');
       await trackAdminEvent('client_archived', {
         clientId,
         institutionId: instId,
@@ -2139,7 +2140,7 @@ const PartnerAdminDashboard = () => {
         archivedAt: null,
         archivedBy: null
       });
-      toast.success('Client restored successfully');
+      toast.success('Client restored');
       await trackAdminEvent('client_restored', {
         clientId,
         institutionId: instId,
@@ -2167,7 +2168,7 @@ const PartnerAdminDashboard = () => {
     try {
       const instId = effectivePartnerId || institutionId || userProfile?.institutionId;
       await assignmentAPI.deleteAssignment(assignmentId);
-      toast.success('Assignment deleted successfully');
+      toast.success('Assignment deleted');
       await trackAdminEvent('assignment_deleted', {
         assignmentId,
         institutionId: instId,
@@ -2788,7 +2789,7 @@ const renderMessagesTab = () => {
 
         setMessages((prev) => [...prev, optimisticMessage]);
         setNewMessage('');
-        toast.success('Message sent successfully');
+        toast.success('Message sent');
         loadConversations();
       } catch (error) {
         console.error('Error sending message:', error);
@@ -3473,7 +3474,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Clients</h3>
                 <p className="text-sm text-gray-600">Manage active Client relationships and contact details.</p>
               </div>
               <button
@@ -3586,7 +3586,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Archived Clients</h3>
                 <p className="text-sm text-gray-600">View and restore archived Client records.</p>
               </div>
               <button
@@ -3609,7 +3608,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Caregivers</h3>
                 <p className="text-sm text-gray-600">Track caregivers, roles, and coverage.</p>
               </div>
               <div className="flex items-center gap-3">
@@ -3756,7 +3754,7 @@ const renderMessagesTab = () => {
                                           }
                                         }
                                         
-                                        toast.success('Caregiver activated successfully', { autoClose: 3000 });
+                                        toast.success('Caregiver activated', { autoClose: 3000 });
                                         await loadDashboardData();
                                       } catch (error) {
                                         console.error('Error activating caregiver:', error);
@@ -3788,7 +3786,7 @@ const renderMessagesTab = () => {
                                         } else {
                                           await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'suspended' });
                                         }
-                                        toast.success('Caregiver suspended successfully', { autoClose: 3000 });
+                                        toast.success('Caregiver suspended', { autoClose: 3000 });
                                         await loadDashboardData();
                                       } catch (error) {
                                         console.error('Error suspending caregiver:', error);
@@ -3835,7 +3833,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Inactive Caregivers</h3>
                 <p className="text-sm text-gray-600">Review caregivers with no recent activity.</p>
               </div>
               <button
@@ -3858,7 +3855,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Pharmacists</h3>
                 <p className="text-sm text-gray-600">Manage credentialed pharmacy staff.</p>
               </div>
               <div className="flex items-center gap-3">
@@ -3951,7 +3947,7 @@ const renderMessagesTab = () => {
                                         suspendedBy: user?.uid || userProfile?.id,
                                         updatedAt: new Date().toISOString()
                                       });
-                                      toast.success('Pharmacist suspended successfully');
+                                      toast.success('Pharmacist suspended');
                                       await loadDashboardData();
                                     } catch (error) {
                                       console.error('Error suspending pharmacist:', error);
@@ -3979,7 +3975,7 @@ const renderMessagesTab = () => {
                                         activatedBy: user?.uid || userProfile?.id,
                                         updatedAt: new Date().toISOString()
                                       });
-                                      toast.success('Pharmacist reactivated successfully');
+                                      toast.success('Pharmacist reactivated');
                                       await loadDashboardData();
                                     } catch (error) {
                                       console.error('Error reactivating pharmacist:', error);
@@ -4005,7 +4001,7 @@ const renderMessagesTab = () => {
                                       active: false,
                                       deletedAt: new Date().toISOString()
                                     });
-                                    toast.success('Pharmacist deleted successfully');
+                                    toast.success('Pharmacist deleted');
                                     await loadDashboardData();
                                   } catch (error) {
                                     console.error('Error deleting pharmacist:', error);
@@ -4033,7 +4029,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Assignments</h3>
                 <p className="text-sm text-gray-600">All client-to-caregiver/intake assignments.</p>
               </div>
               <div className="flex items-center gap-3">
@@ -4216,7 +4211,7 @@ const renderMessagesTab = () => {
                                   }
                                   try {
                                     await assignmentAPI.deleteAssignment(assignment.id || assignment.assignmentId);
-                                    toast.success('Assignment deleted successfully');
+                                    toast.success('Assignment deleted');
                                     await loadDashboardData();
                                   } catch (error) {
                                     console.error('Error deleting assignment:', error);
@@ -4244,7 +4239,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Scheduling</h3>
                 <p className="text-sm text-gray-600">Manage caregiver schedules and appointments.</p>
               </div>
             </div>
@@ -4262,7 +4256,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Billing Plans</h3>
                 <p className="text-sm text-gray-600">Manage subscription plans and billing configurations.</p>
               </div>
             </div>
@@ -4274,7 +4267,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">User Management</h3>
                 <p className="text-sm text-gray-600">Manage all users across your institution.</p>
               </div>
             </div>
@@ -4286,7 +4278,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Admin Roles</h3>
                 <p className="text-sm text-gray-600">Assign and manage administrative permissions.</p>
               </div>
             </div>
@@ -4298,7 +4289,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Cleanup Orphaned Users</h3>
                 <p className="text-sm text-gray-600">Identify and remove users without proper institution associations.</p>
               </div>
             </div>
@@ -4310,7 +4300,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Messages</h3>
                 <p className="text-sm text-gray-600">Communicate with staff and clients.</p>
               </div>
             </div>
@@ -4320,12 +4309,7 @@ const renderMessagesTab = () => {
       case 'enhanced-inventory':
         return (
           <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Enhanced Inventory</h3>
-                <p className="text-sm text-gray-600">Manage medical supplies and equipment inventory.</p>
-              </div>
-            </div>
+            <p className="text-sm text-gray-600">Manage medical supplies and equipment inventory.</p>
             <EnhancedInventoryManagement institutionId={effectivePartnerId} />
           </div>
         );
@@ -4334,7 +4318,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Analytics</h3>
                 <p className="text-sm text-gray-600">Track performance metrics and system insights.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -4408,7 +4391,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Security</h3>
                 <p className="text-sm text-gray-600">Manage security settings and access controls.</p>
               </div>
             </div>
@@ -4420,9 +4402,16 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Settings</h3>
                 <p className="text-sm text-gray-600">Configure institution preferences and options.</p>
               </div>
+            </div>
+            {/* Account & Change Password */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-1">Account Security</h4>
+              <p className="text-sm text-gray-600 mb-5">
+                Change your admin password. Other devices will need to log in again after changing.
+              </p>
+              <ChangePasswordForm />
             </div>
             <PartnerSettings institutionId={effectivePartnerId} />
           </div>
@@ -4432,7 +4421,6 @@ const renderMessagesTab = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">Help & Support</h3>
                 <p className="text-sm text-gray-600">Get assistance and access documentation.</p>
               </div>
             </div>
@@ -4491,9 +4479,7 @@ const renderMessagesTab = () => {
       >
         <div className="space-y-6">
           <div className="cm-section-head">
-            <span className="cm-eyebrow">{activeTabLabel}</span>
-            <h2 className="mt-2">{institutionData?.name || 'Partner Dashboard'}</h2>
-            <p>Welcome back, {displayName}.</p>
+            <p className="cm-eyebrow">Welcome back, {displayName}</p>
           </div>
           {renderTabContent()}
         </div>
@@ -4543,7 +4529,7 @@ const renderMessagesTab = () => {
               } else {
                 await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'suspended' });
               }
-              toast.success('Caregiver suspended successfully', { autoClose: 3000 });
+              toast.success('Caregiver suspended', { autoClose: 3000 });
               await loadDashboardData();
             } catch (error) {
               console.error('Error suspending caregiver:', error);
@@ -4564,7 +4550,7 @@ const renderMessagesTab = () => {
               } else {
                 await caregiverAPI.updateCaregiver(caregiver.id || caregiver.uid, { status: 'active' });
               }
-              toast.success('Caregiver activated successfully', { autoClose: 3000 });
+              toast.success('Caregiver activated', { autoClose: 3000 });
               await loadDashboardData();
             } catch (error) {
               console.error('Error activating caregiver:', error);
@@ -4773,7 +4759,7 @@ const renderMessagesTab = () => {
                     }
                     try {
                       await assignmentAPI.deleteAssignment(selectedAssignment.id || selectedAssignment.assignmentId);
-                      toast.success('Assignment deleted successfully');
+                      toast.success('Assignment deleted');
                       setShowAssignmentDetails(false);
                       setSelectedAssignment(null);
                       await loadDashboardData();
@@ -5247,7 +5233,7 @@ const renderMessagesTab = () => {
                         const newStatus = e.target.value;
                         const userId = selectedUserForEdit.id || selectedUserForEdit.uid;
                         await updateUserStatus(userId, newStatus);
-                        toast.success('Status updated successfully');
+                        toast.success('Status updated');
                         await loadDashboardData();
                         setShowEditUserModal(false);
                         setSelectedUserForEdit(null);
