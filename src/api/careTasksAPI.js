@@ -526,7 +526,22 @@ export const getCareTaskStats = async (caregiverId = null) => {
 export const createRecurringCareTask = async (taskData, recurrencePattern) => {
   try {
     const tasks = [];
-    const startDate = new Date(taskData.scheduledTime);
+    // Safely parse the start date — handle Date objects, ISO strings, and
+    // Firestore Timestamp objects to avoid Invalid Date propagation.
+    const rawStart = taskData.scheduledTime;
+    let startDate;
+    if (rawStart instanceof Date && !isNaN(rawStart.getTime())) {
+      startDate = new Date(rawStart);
+    } else if (typeof rawStart?.toDate === 'function') {
+      startDate = rawStart.toDate();
+    } else if (typeof rawStart === 'string') {
+      startDate = new Date(rawStart);
+    } else {
+      startDate = new Date();
+    }
+    if (isNaN(startDate.getTime())) {
+      startDate = new Date();
+    }
     
     // Create tasks based on recurrence pattern
     for (let i = 0; i < recurrencePattern.count; i++) {
@@ -647,11 +662,11 @@ export const subscribeToCareTasks = (callback, caregiverId = null) => {
         callback(tasks);
       }, (err) => {
         console.error('Fallback snapshot error:', err);
-        callback([]);
+        // Don't replace existing tasks with empty results on error.
       });
     } else {
       console.error('Snapshot error:', error);
-      callback([]);
+      // Don't replace existing tasks with empty results on error.
     }
   });
   
@@ -863,11 +878,11 @@ export const subscribeToCaregiverTasks = (caregiverId, callback, options = {}) =
           callback(tasks);
         }, (err) => {
           console.error('Fallback snapshot error:', err);
-          callback([]);
+          // Don't replace existing tasks with empty results on error.
         });
       } else {
         console.error('Error in real-time subscription:', error);
-        callback([]);
+        // Don't replace existing tasks with empty results on error.
       }
     });
     

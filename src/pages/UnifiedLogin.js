@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signOut } from 'backend/auth';
 import { auth } from '../backend/config';
 import { toast } from 'react-toastify';
-import rateLimiter from '../utils/rateLimiter';
 import authSecurityService from '../services/authSecurityService';
 import { fetchLicenseStatus } from '../services/licenseService';
 import {
@@ -69,32 +68,10 @@ const UnifiedLogin = () => {
     sessionStorage.setItem('__fresh_login', Date.now().toString());
 
     try {
-      // SECURITY FIX: Check rate limit before authentication
-      const rateLimitKey = email.toLowerCase().trim();
-      const rateLimitCheck = rateLimiter.checkLimit(rateLimitKey, {
-        maxAttempts: 5,
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        lockoutDuration: 30 * 60 * 1000 // 30 minutes
-      });
-      
-      if (!rateLimitCheck.allowed) {
-        if (rateLimitCheck.locked) {
-          const minutes = Math.ceil(rateLimitCheck.lockoutDuration / 60);
-          setError(`Account temporarily locked due to too many failed attempts. Please try again in ${minutes} minute(s).`);
-          setLoading(false);
-          return;
-        } else {
-          setError(`Too many login attempts. Please try again later.`);
-          setLoading(false);
-          return;
-        }
-      }
-      
       // Backend /auth/email-login is the single source of truth.
       // signInWithEmailAndPassword here is the backend compat wrapper (NOT Firebase).
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      rateLimiter.reset(rateLimitKey);
-      
+
       // Save for biometrics if available on native platform
       if (biometricAvailable) {
         await biometricService.setCredentials(email, password);
@@ -245,17 +222,32 @@ const UnifiedLogin = () => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      
-      // SECURITY FIX: Handle rate limiting errors and prevent user enumeration
-      if (error.message && error.message.includes('locked')) {
-        setError(error.message);
-        toast.error(error.message);
+
+      const status = error.code || error.response?.status;
+      const serverMessage = error.message || error.response?.message;
+
+      let displayMessage;
+
+      if (status === 423 || (serverMessage && serverMessage.toLowerCase().includes('locked'))) {
+        // Account locked — show the backend's lockout message with the remaining time
+        displayMessage = serverMessage || 'Account is temporarily locked due to repeated failed login attempts. Please try again later.';
+      } else if (status === 403) {
+        // Deactivated or suspended — show the backend's specific message
+        displayMessage = serverMessage || 'Your account is not active. Please contact support.';
+      } else if (status === 401) {
+        // Wrong password — show the backend's message (includes remaining attempts)
+        displayMessage = serverMessage || 'Invalid email or password. Please try again.';
+      } else if (status === 400 || status === 422) {
+        // Validation error (e.g. invalid email format)
+        displayMessage = serverMessage || 'Please check your email and password and try again.';
+      } else if (!navigator.onLine || error.message === 'Failed to fetch') {
+        displayMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
       } else {
-        // For other errors, show generic message to prevent user enumeration
-        const genericError = 'Invalid email or password. Please try again.';
-        setError(genericError);
-        toast.error(genericError);
+        displayMessage = serverMessage || 'Login failed. Please try again.';
       }
+
+      setError(displayMessage);
+      toast.error(displayMessage);
     } finally {
       setLoading(false);
     }

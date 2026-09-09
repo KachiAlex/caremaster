@@ -185,7 +185,7 @@ const UserManagement = ({ institutionId }) => {
   const handleToggleStatus = async (user) => {
     // Prevent suspending primary admin
     if (user.isPrimaryAdmin || user.adminTier === 'primary' || user.roles?.includes('primary-admin')) {
-      toast.error('❌ Primary administrators cannot be suspended');
+      toast.error('Primary administrators cannot be suspended');
       return;
     }
 
@@ -211,7 +211,7 @@ const UserManagement = ({ institutionId }) => {
     
     // Prevent deleting primary admin
     if (user?.isPrimaryAdmin || user?.adminTier === 'primary' || user?.roles?.includes('primary-admin') || user?.cannotBeDeleted) {
-      toast.error('❌ Primary administrators cannot be deleted for security reasons');
+      toast.error('Primary administrators cannot be deleted');
       return;
     }
 

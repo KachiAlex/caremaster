@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
 import { saveCaregiverProfile, uploadCaregiverDocument, completeOnboarding } from '../api/caregiverOnboardingAPI';
 import { toast } from 'react-toastify';
@@ -16,6 +16,18 @@ const CaregiverOnboarding = () => {
     yearsOfExperience: '',
     specializations: [],
   });
+
+  // Backfill email/name from userProfile when it arrives asynchronously
+  useEffect(() => {
+    if (!userProfile) return;
+    setProfile(prev => ({
+      ...prev,
+      email: prev.email || userProfile.email || user?.email || '',
+      name: prev.name || userProfile.name || userProfile.fullName ||
+        `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim(),
+      phone: prev.phone || userProfile.phone || '',
+    }));
+  }, [userProfile, user?.email]);
   const [licenseFile, setLicenseFile] = useState(null);
   const [idFile, setIdFile] = useState(null);
 
@@ -46,11 +58,32 @@ const CaregiverOnboarding = () => {
   const handleComplete = async () => {
     try {
       setSaving(true);
-      await completeOnboarding(user.uid);
+      // Use user.id (UUID) if available, fallback to user.uid
+      const userId = user?.id || user?.uid;
+      if (!userId) {
+        throw new Error('User session expired. Please log in again.');
+      }
+      await completeOnboarding(userId);
       toast.success('Onboarding complete');
-      window.location.replace('/service-provider');
+
+      // Redirect based on user type and institution
+      const userType = userProfile?.userType || userProfile?.type || 'caregiver';
+      const hasInstitution = !!userProfile?.institutionId;
+
+      if (hasInstitution) {
+        // Institution-affiliated users go to their institution dashboard
+        if (userType === 'pharmacist') {
+          window.location.replace('/institution-pharmacy');
+        } else {
+          window.location.replace('/institution-caregiver');
+        }
+      } else {
+        // Independent service providers
+        window.location.replace('/service-provider');
+      }
     } catch (e) {
-      toast.error('Failed to complete onboarding');
+      console.error('Onboarding completion failed:', e);
+      toast.error(e.message || 'Failed to complete onboarding. Please try again.');
     } finally { setSaving(false); }
   };
 

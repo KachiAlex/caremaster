@@ -15,7 +15,7 @@ import { caregiverAPI } from '../api/caregiverAPI';
 import { toast } from 'react-toastify';
 
 const Appointments = () => {
-  const { user, userProfile } = useUser();
+  const { user, userProfile, institutionId: contextInstitutionId } = useUser();
   const [formData, setFormData] = useState({
     careType: 'Blood Pressure Check',
     preferredDate: '',
@@ -135,7 +135,8 @@ const Appointments = () => {
         careType: formData.careType,
         notes: formData.additionalNotes,
         priority: 'medium',
-        status: 'pending'
+        status: 'pending',
+        institutionId: userProfile?.institutionId || contextInstitutionId || null,
       };
 
       // Add scheduled time

@@ -181,21 +181,21 @@ const AssignmentCalendar = ({ schedule = [], onItemSelect }) => {
   return (
     <div className="cm-card overflow-hidden bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-[var(--cm-ink-line,rgba(18,48,44,0.08))]"
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-[var(--cm-ink-line,rgba(18,48,44,0.08))]"
         style={{ background: 'linear-gradient(180deg, rgba(107,144,128,0.04) 0%, rgba(255,255,255,0) 100%)' }}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: brandGradient }}>
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: brandGradient }}>
             <Calendar className="text-white" style={{ width: 18, height: 18 }} />
           </div>
-          <div>
-            <h2 className="cm-display text-base text-ink leading-tight">Schedule</h2>
-            <p className="text-[11px] text-[var(--cm-text-soft)]">
+          <div className="min-w-0">
+            <h2 className="cm-display text-base text-ink leading-tight whitespace-nowrap">Schedule</h2>
+            <p className="text-[11px] text-[var(--cm-text-soft)] whitespace-nowrap">
               {visibleCount} item{visibleCount !== 1 ? 's' : ''} {view === 'week' ? 'this week' : 'this month'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
           {/* View toggle */}
           <div className="flex items-center bg-[var(--cm-cream,#FBF7EF)] rounded-lg p-0.5 border border-[var(--cm-ink-line,rgba(18,48,44,0.08))]">
             <button

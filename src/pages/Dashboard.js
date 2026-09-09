@@ -316,7 +316,6 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left - User Info */}
         <div className="cm-card p-6">
-          <h2 className="cm-display text-xl text-ink mb-4">Welcome back, {displayName}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="cm-mono text-xs uppercase tracking-wider text-text-soft">Age</p>

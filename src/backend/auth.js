@@ -251,6 +251,23 @@ export function onAuthStateChanged(auth, callback) {
   } else if (userStr && !isNativePlatform()) {
     // Web path: token is in an httpOnly cookie. Validate the session by
     // calling the backend; the browser automatically sends the cookie.
+    //
+    // If a fresh login just happened (within 30s), optimistically emit the
+    // stored user immediately so the UI can render without waiting for /auth/me.
+    // The /auth/me call still runs and will update the user if the cookie is
+    // valid, or log out if it's not. This prevents a race where the page
+    // reloads after login, /auth/me hasn't received the cookie yet, and the
+    // user gets bounced back to /login.
+    const freshLogin = sessionStorage.getItem('__fresh_login');
+    if (freshLogin && Date.now() - parseInt(freshLogin) < 30000) {
+      try {
+        const cachedUser = JSON.parse(userStr);
+        emit(buildUserObj(cachedUser));
+      } catch {
+        // fall through to /auth/me
+      }
+    }
+
     apiFetch('/auth/me')
       .then((body) => {
         const user = body.data?.user;
@@ -261,8 +278,17 @@ export function onAuthStateChanged(auth, callback) {
           emit(null);
         }
       })
-      .catch(() => {
-        // Cookie/session invalid or missing
+      .catch((err) => {
+        // If we already emitted a cached user (fresh login path above),
+        // don't log them out on a transient /auth/me failure — the cookie
+        // may not have been set yet. Only emit null if there's no cached
+        // user or the fresh-login window has expired.
+        const stillFresh = sessionStorage.getItem('__fresh_login');
+        if (stillFresh && Date.now() - parseInt(stillFresh) < 30000 && userStr) {
+          // Keep the cached user — the next API call will use the cookie
+          // once it arrives. Don't emit null.
+          return;
+        }
         emit(null);
       });
   } else {

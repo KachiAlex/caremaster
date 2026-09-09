@@ -365,7 +365,7 @@ export const createLeaveRequest = async (leaveData) => {
       );
       const adminsSnap = await getDocs(adminsQuery);
       
-      adminsSnap.forEach(async (adminDoc) => {
+      await Promise.all(adminsSnap.docs.map(async (adminDoc) => {
         await notificationsAPI.createNotification({
           userId: adminDoc.id,
           type: 'leave_request',
@@ -380,7 +380,7 @@ export const createLeaveRequest = async (leaveData) => {
             endDate
           }
         });
-      });
+      }));
     } catch (notifError) {
       console.warn('Failed to send leave request notification:', notifError);
     }

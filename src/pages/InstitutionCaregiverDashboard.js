@@ -97,6 +97,7 @@ import { buildConstraints, getSavedDevices, setAudioOutput as setOutputDevice } 
 import HelpSupport from '../components/HelpSupport';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import UnifiedActivityModal from '../components/UnifiedActivityModal';
+import SettingsTab from '../components/SettingsTab';
 import CareActivityTab from '../components/CareActivityTab';
 import { collection, query, getDocs, setDoc, updateDoc, where, doc, onSnapshot } from 'backend/database';
 import { db } from '../backend/config';
@@ -162,7 +163,7 @@ const InstitutionCaregiverDashboard = () => {
   
   // Form data states
   const [medicalReportData, setMedicalReportData] = useState({
-    reportDate: new Date().toISOString().split('T')[0],
+    reportDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
     diagnosis: '',
     symptoms: '',
     treatment: '',
@@ -171,7 +172,7 @@ const InstitutionCaregiverDashboard = () => {
   });
   
   const [carePlanData, setCarePlanData] = useState({
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
     reviewDate: '',
     objectives: '',
     activities: '',
@@ -764,7 +765,7 @@ const InstitutionCaregiverDashboard = () => {
                 return {
                   id: d.id,
                   ...data,
-                  scheduleDate: data.scheduleDate || (data.scheduledDate ? new Date(data.scheduledDate).toISOString().split('T')[0] : null)
+                  scheduleDate: data.scheduleDate || (data.scheduledDate ? `${new Date(data.scheduledDate).getFullYear()}-${String(new Date(data.scheduledDate).getMonth() + 1).padStart(2, '0')}-${String(new Date(data.scheduledDate).getDate()).padStart(2, '0')}` : null)
                 };
               });
             } catch { return []; }
@@ -850,7 +851,7 @@ const InstitutionCaregiverDashboard = () => {
             let combinedTime = '';
             if (sched.scheduleDate) {
               const dateStr = sched.scheduleDate instanceof Date
-                ? sched.scheduleDate.toISOString().split('T')[0]
+                ? `${sched.scheduleDate.getFullYear()}-${String(sched.scheduleDate.getMonth() + 1).padStart(2, '0')}-${String(sched.scheduleDate.getDate()).padStart(2, '0')}`
                 : String(sched.scheduleDate).split('T')[0];
               const startTime = sched.startTime || '09:00';
               try {
@@ -1233,7 +1234,7 @@ const InstitutionCaregiverDashboard = () => {
       }
       if (scheduleItem.type === 'task' && scheduleItem.id) {
         await startTask(scheduleItem.id, user.uid);
-        toast.success('Task started successfully');
+        toast.success('Task started');
         setRefreshTrigger(prev => prev + 1);
       } else {
         toast.info('Clock in is only available for tasks');
@@ -1365,7 +1366,7 @@ const InstitutionCaregiverDashboard = () => {
       }
       if (scheduleItem.type === 'task' && scheduleItem.id) {
         await completeTask(scheduleItem.id, user.uid, 'Completed via clock out');
-        toast.success('Task completed successfully');
+        toast.success('Task completed');
         // Reload schedule
         setRefreshTrigger(prev => prev + 1);
       } else {
@@ -1976,11 +1977,11 @@ const InstitutionCaregiverDashboard = () => {
       if (editingPrescriptionId) {
         // Update existing prescription
         await prescriptionsAPI.updatePrescription(editingPrescriptionId, prescriptionData);
-        toast.success('Prescription updated successfully!');
+        toast.success('Prescription updated');
       } else {
         // Create new prescription
         await prescriptionsAPI.createPrescription(prescriptionData);
-        toast.success('Prescription created successfully!');
+        toast.success('Prescription created');
       }
       
       setShowPrescriptionModal(false);
@@ -2048,7 +2049,7 @@ const InstitutionCaregiverDashboard = () => {
     }
     try {
       await prescriptionsAPI.deletePrescription(prescriptionId);
-      toast.success('Prescription deleted successfully');
+      toast.success('Prescription deleted');
       // Reload prescriptions after deletion
       if (selectedClient) {
         await loadPrescriptions(selectedClient.id);
@@ -2068,7 +2069,7 @@ const InstitutionCaregiverDashboard = () => {
         availabilityCheckedAt: new Date().toISOString()
       });
       
-      toast.success('Medication updated successfully');
+      toast.success('Medication updated');
       
       // Reload prescriptions
       if (selectedClient) {
@@ -2127,7 +2128,7 @@ const InstitutionCaregiverDashboard = () => {
       
       await consultationsAPI.createConsultation(consultationData);
       
-      toast.success('Consultation note saved successfully!');
+      toast.success('Consultation note saved');
       setShowConsultationModal(false);
       
       // Reload consultations to show the new one
@@ -3491,7 +3492,7 @@ const InstitutionCaregiverDashboard = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
                 <input 
                   type="date" 
-                  defaultValue={new Date().toISOString().split('T')[0]}
+                  defaultValue={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -3688,7 +3689,7 @@ const InstitutionCaregiverDashboard = () => {
         });
       }
 
-      toast.success('✅ Medication data saved successfully!');
+      toast.success('Medication saved');
     } catch (error) {
       console.error('Error saving pharmacist medication data:', error);
       toast.error('Failed to save medication data');
@@ -4503,7 +4504,7 @@ const InstitutionCaregiverDashboard = () => {
       };
 
       await activitiesAPI.logActivity(activityData);
-      toast.success('Activity logged successfully!');
+      toast.success('Activity logged');
       setShowActivityModal(false);
       // Reload activities to show the new entry
       if (activeTab === 'activities') {
@@ -4567,17 +4568,18 @@ const InstitutionCaregiverDashboard = () => {
 
   // CareMaster design system - tabs for DashboardLayout sidebar
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
-    { id: 'activity', label: 'Care Activity', icon: Activity },
-    { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'dashboard', label: 'Dashboard', icon: Home, iconColor: '#60A5FA' },
+    { id: 'schedule', label: 'Schedule', icon: Calendar, iconColor: '#FBBF24' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, iconColor: '#38BDF8' },
+    { id: 'activity', label: 'Care Activity', icon: Activity, iconColor: '#34D399' },
+    { id: 'clients', label: 'Clients', icon: Users, iconColor: '#F472B6' },
     ...(isDoctor || isNurse || isPharmacist ? [
-      { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
-      { id: 'consultations', label: 'Consultations', icon: Stethoscope },
-      { id: 'diagnostics', label: 'Diagnostics', icon: FileText },
+      { id: 'prescriptions', label: 'Prescriptions', icon: Pill, iconColor: '#A78BFA' },
+      { id: 'consultations', label: 'Consultations', icon: Stethoscope, iconColor: '#FB923C' },
+      { id: 'diagnostics', label: 'Diagnostics', icon: FileText, iconColor: '#F87171' },
     ] : []),
-    { id: 'help', label: 'Help & Support', icon: HelpCircle },
+    { id: 'settings', label: 'Settings', icon: Settings, iconColor: '#94A3B8' },
+    { id: 'help', label: 'Help & Support', icon: HelpCircle, iconColor: '#FCD34D' },
   ];
 
   const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label || 'Dashboard';
@@ -4629,11 +4631,10 @@ const InstitutionCaregiverDashboard = () => {
         }
       >
         <div className="space-y-5">
-          {/* Section header — no duplicate institution name (it's in the topbar) */}
+          {/* Section header — greeting only; institution name is in the topbar */}
           <div className="cm-section-head">
-            <span className="cm-eyebrow">{activeTabLabel}</span>
-            <h2 className="mt-2">Welcome back, {displayName}</h2>
-            <p>{userProfile?.medicalQualification || 'Caregiver'} · {institutionData?.name || 'Institution'}</p>
+            <p className="cm-eyebrow">Welcome back, {displayName}</p>
+            <p className="mt-2 text-text-soft">{userProfile?.medicalQualification || 'Caregiver'} · {institutionData?.name || 'Institution'}</p>
           </div>
 
         {/* Doctor Client Selector */}
@@ -4708,6 +4709,12 @@ const InstitutionCaregiverDashboard = () => {
           renderConsultationsTab()
         ) : activeTab === 'diagnostics' && (isDoctor || isNurse || isPharmacist) ? (
           renderDiagnosticsTab()
+        ) : activeTab === 'settings' ? (
+          <SettingsTab
+            user={user}
+            userProfile={userProfile}
+            institutionName={institutionData?.name || 'Institution'}
+          />
         ) : activeTab === 'help' ? (
           <HelpSupport userRole={userProfile?.userType || userProfile?.type || 'caregiver'} />
         ) : null}
@@ -4753,14 +4760,14 @@ const InstitutionCaregiverDashboard = () => {
           onSave={async (careLogData) => {
             try {
               await createCareLog(careLogData);
-              toast.success('Care log saved successfully');
+              toast.success('Care log saved');
 
               // Real-time listener will auto-update the list
 
               setShowCareLogForm(false);
             } catch (error) {
               console.error('Error saving care log:', error);
-              toast.error('Failed to save care log: ' + error.message);
+              toast.error('Failed to save care log');
             }
           }}
             onCancel={() => {
@@ -5156,7 +5163,7 @@ const InstitutionCaregiverDashboard = () => {
                     
                     // Reset form
                     setCarePlanData({
-                      startDate: new Date().toISOString().split('T')[0],
+                      startDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
                       reviewDate: '',
                       objectives: '',
                       activities: '',
@@ -6017,8 +6024,8 @@ const InstitutionCaregiverDashboard = () => {
                                             // Load plan data for editing
                                             setEditingPlanId(plan.id);
                                             setCarePlanData({
-                                              startDate: toDate(plan.startDate).toISOString().split('T')[0],
-                                              reviewDate: plan.reviewDate ? toDate(plan.reviewDate).toISOString().split('T')[0] : '',
+                                              startDate: (() => { const d = toDate(plan.startDate); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
+                                              reviewDate: plan.reviewDate ? (() => { const d = toDate(plan.reviewDate); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '',
                                               objectives: plan.careObjectives || '',
                                               activities: plan.dailyCareActivities || '',
                                               medicationSchedule: plan.medicationSchedule || '',
@@ -6577,10 +6584,10 @@ const InstitutionCaregiverDashboard = () => {
                         doctorName: userProfile?.name || userProfile?.fullName || 'Doctor',
                         ...medicalReportData
                       });
-                      toast.success('Medical report created successfully');
+                      toast.success('Medical report created');
                       setShowMedicalReportModal(false);
                       setMedicalReportData({
-                        reportDate: new Date().toISOString().split('T')[0],
+                        reportDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
                         diagnosis: '', symptoms: '', treatment: '', prescriptions: '', notes: ''
                       });
                     } catch (error) {

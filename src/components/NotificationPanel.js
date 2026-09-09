@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, X, Check, AlertTriangle, Calendar, ClipboardList, MessageSquare, Users } from 'lucide-react';
 import { 
-  getNotificationsByUser, 
+  getNotifications, 
   markNotificationAsRead, 
   markAllNotificationsAsRead,
   subscribeToNotifications,

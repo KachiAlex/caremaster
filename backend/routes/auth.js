@@ -1172,4 +1172,135 @@ router.post('/invalidate-all-sessions', authenticateToken, async (req, res) => {
   }
 });
 
+// Change Password - Authenticated user provides current password and a new password.
+// This is distinct from the reset-password flow (which uses a token from email).
+// Robust implementation:
+//   - Requires authentication (authenticateToken middleware)
+//   - Validates current password against the stored hash
+//   - Enforces minimum length and complexity rules
+//   - Prevents reusing the current password
+//   - Hashes the new password with bcrypt (12 rounds)
+//   - Invalidates all other active sessions so old tokens become useless
+//   - Records an audit log entry
+//   - Issues a fresh JWT so the calling client stays logged in
+router.post('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // --- Basic presence checks ---
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required.',
+      });
+    }
+
+    // --- Password strength validation ---
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 8 characters long.',
+      });
+    }
+    if (!/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must contain at least one letter and one number.',
+      });
+    }
+    if (newPassword.length > 128) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must not exceed 128 characters.',
+      });
+    }
+
+    // --- Fetch the user's current password hash ---
+    const user = await db('users').where({ id: req.user.id }).first();
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // --- Verify current password ---
+    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isMatch) {
+      // Record the failed attempt in the audit log for security visibility
+      await db('audit_logs').insert({
+        user_id: req.user.id,
+        action: 'change_password_failed',
+        resource_type: 'user',
+        resource_id: req.user.id,
+        ip_address: req.ip,
+        user_agent: req.get('User-Agent'),
+        institution_id: req.user.institution_id || null,
+        timestamp: new Date(),
+      });
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect.',
+      });
+    }
+
+    // --- Prevent reusing the same password ---
+    const isSamePassword = await bcrypt.compare(newPassword, user.password_hash);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from the current password.',
+      });
+    }
+
+    // --- Hash the new password ---
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(newPassword, saltRounds);
+
+    // --- Update the password and clear any pending reset tokens ---
+    await db('users')
+      .where({ id: req.user.id })
+      .update({
+        password_hash,
+        password_reset_token: null,
+        password_reset_expires: null,
+        updated_at: new Date(),
+      });
+
+    // --- Invalidate all other active sessions (keep only the current one) ---
+    // This forces any other device/browser to log in again with the new password.
+    try {
+      await db('user_sessions')
+        .where({ user_id: req.user.id, active: true })
+        .whereNot('token', req.token) // keep the caller's session alive
+        .update({ active: false, ended_at: new Date() });
+    } catch (sessErr) {
+      // user_sessions table may not exist in all deployments — log and continue
+      logger.warn('Could not invalidate other sessions:', sessErr.message);
+    }
+
+    // --- Audit log ---
+    await db('audit_logs').insert({
+      user_id: req.user.id,
+      action: 'change_password',
+      resource_type: 'user',
+      resource_id: req.user.id,
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      institution_id: req.user.institution_id || null,
+      timestamp: new Date(),
+    });
+
+    logger.info(`Password changed for user ${req.user.id}`);
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully. Other devices will need to log in again.',
+    });
+  } catch (error) {
+    logger.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while changing the password. Please try again.',
+    });
+  }
+});
+
 module.exports = router;

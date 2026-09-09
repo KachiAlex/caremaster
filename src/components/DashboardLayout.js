@@ -1,6 +1,5 @@
-import React, { useState, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Menu, X, LogOut, ChevronDown, User } from 'lucide-react';
-import MobileBottomNav from './MobileBottomNav';
 
 /**
  * Sidebar content - extracted to top-level so it doesn't unmount/remount
@@ -47,7 +46,14 @@ const SidebarContent = ({
             }}
             className={`cm-nav-item ${isActive ? 'cm-nav-active' : ''}`}
           >
-            {Icon && <Icon />}
+            {Icon && (
+              <span
+                className="cm-nav-icon"
+                style={!isActive && tab.iconColor ? { color: tab.iconColor } : undefined}
+              >
+                <Icon />
+              </span>
+            )}
             <span className="truncate">{tab.label}</span>
           </button>
         );
@@ -92,6 +98,14 @@ const DashboardLayout = ({
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  // Lock body scroll when mobile sidebar is open to prevent background scroll
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = originalStyle; };
+  }, [sidebarOpen]);
 
   const handleTabClick = (tabId) => {
     onTabChange(tabId);
@@ -245,17 +259,10 @@ const DashboardLayout = ({
         </div>
 
         {/* Page content */}
-        <div className="px-4 sm:px-6 py-6 pb-24 md:pb-6 max-w-6xl mx-auto cm-animate-in">
+        <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto cm-animate-in">
           {children}
         </div>
       </main>
-
-      {/* Mobile bottom navigation */}
-      <MobileBottomNav
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={onTabChange}
-      />
     </div>
   );
 };

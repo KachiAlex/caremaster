@@ -97,21 +97,30 @@ export const createDischargePlan = async (planData) => {
 
     const planRef = await addDoc(collection(db, DISCHARGES_COLLECTION), dischargePlan);
 
-    // Send notification to nursing staff
+    // Send notification to nursing staff in the institution
     try {
-      await notificationsAPI.createNotification({
-        userId: 'nursing-staff', // Would be sent to all nursing staff
-        type: 'discharge_planning',
-        title: 'New Discharge Plan',
-        message: `Discharge plan created for ${clientName}`,
-        priority: 'medium',
-        data: {
-          planId: planRef.id,
-          clientId,
-          plannedDischargeDate
-        },
-        institutionId
-      });
+      const nursesQuery = query(
+        collection(db, 'users'),
+        where('institutionId', '==', institutionId),
+        where('userType', 'in', ['nurse', 'caregiver'])
+      );
+      const nursesSnap = await getDocs(nursesQuery);
+
+      await Promise.all(nursesSnap.docs.map(async (nurseDoc) => {
+        await notificationsAPI.createNotification({
+          userId: nurseDoc.id,
+          type: 'discharge_planning',
+          title: 'New Discharge Plan',
+          message: `Discharge plan created for ${clientName}`,
+          priority: 'medium',
+          data: {
+            planId: planRef.id,
+            clientId,
+            plannedDischargeDate
+          },
+          institutionId
+        });
+      }));
     } catch (notifError) {
       console.warn('Failed to send discharge plan notification:', notifError);
     }

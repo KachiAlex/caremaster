@@ -281,11 +281,18 @@ class CallService {
       orderBy('timestamp', 'desc')
     );
 
+    const shownCallIds = new Set();
+
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const notification = change.doc.data();
-          
+          const callId = change.doc.id;
+
+          // Skip calls we've already shown to prevent duplicates on re-mount
+          if (shownCallIds.has(callId)) return;
+          shownCallIds.add(callId);
+
           // Only show incoming calls that are:
           // 1. Status is 'incoming'
           // 2. Created within the last 2 minutes (to avoid showing old calls on refresh)
@@ -293,13 +300,13 @@ class CallService {
             const notificationTime = notification.timestamp?.toDate?.() || new Date(notification.timestamp);
             const now = new Date();
             const timeDiff = (now - notificationTime) / 1000; // seconds
-            
+
             // Only show if call is less than 2 minutes old
             if (timeDiff < 120) {
-              console.log('📞 Valid incoming call (age:', Math.floor(timeDiff), 'seconds)');
+              console.log('Valid incoming call (age:', Math.floor(timeDiff), 'seconds)');
               onIncomingCall(notification);
             } else {
-              console.log('⏰ Ignoring old call notification (age:', Math.floor(timeDiff), 'seconds)');
+              console.log('Ignoring old call notification (age:', Math.floor(timeDiff), 'seconds)');
               // Clean up old notification
               this.updateCallNotificationStatus(change.doc.id, 'expired').catch(err => {
                 console.error('Failed to clean up old notification:', err);

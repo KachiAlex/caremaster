@@ -462,8 +462,8 @@ export const subscribeToConversationMessages = (conversationId, callback, messag
     },
     (error) => {
       console.error('Real-time listener error for conversation:', conversationId, error);
-      // Call callback with empty array on error
-      callback([]);
+      // Don't replace existing messages with empty results on error.
+      // The next successful poll will update the list.
     }
   );
 };
@@ -541,12 +541,12 @@ export const subscribeToUserConversations = (userId, callback) => {
           },
           (fallbackError) => {
             console.error('Fallback real-time listener also failed:', fallbackError);
-            callback([]); // Return empty list on error
+            // Don't replace existing conversations with empty results on error.
           }
         );
       } else {
         console.error('Real-time listener error:', error);
-        callback([]); // Return empty list on error
+        // Don't replace existing conversations with empty results on error.
       }
     }
   );

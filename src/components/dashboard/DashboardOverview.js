@@ -98,7 +98,7 @@ const DashboardOverview = ({
             />
 
             {/* Stats row — brand-aligned, no duplicates */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <button
                 onClick={() => setActiveTab('clients')}
                 className="cm-stat cm-stat text-left hover:shadow-md transition active:scale-[0.98]"

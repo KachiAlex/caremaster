@@ -574,7 +574,7 @@ const CaregiverDashboard = () => {
       // If it's a care task (not an assignment), use task time tracking API
       if (scheduleItem.type === 'task' && scheduleItem.id && !scheduleItem.assignmentType) {
         await startTask(scheduleItem.id, user.uid);
-        toast.success('Task started successfully');
+        toast.success('Task started');
         // Reload schedule using shared helper
         const refreshed = await buildTodaySchedule(user?.uid);
         setTodaySchedule(refreshed);
@@ -668,7 +668,7 @@ const CaregiverDashboard = () => {
       // If it's a care task (not an assignment), use task time tracking API
       if (scheduleItem.type === 'task' && scheduleItem.id && !scheduleItem.assignmentType) {
         await completeTask(scheduleItem.id, user.uid, 'Completed via clock out');
-        toast.success('Task completed successfully');
+        toast.success('Task completed');
         // Reload schedule using shared helper
         const refreshed = await buildTodaySchedule(user?.uid);
         setTodaySchedule(refreshed);
@@ -1179,9 +1179,8 @@ const CaregiverDashboard = () => {
       >
         <div className="space-y-6">
           <div className="cm-section-head">
-            <span className="cm-eyebrow">{activeTabLabel}</span>
-            <h2 className="mt-2">{dashboardConfig.title}</h2>
-            <p>Welcome back, {displayName}. {userProfile?.medicalQualification || 'Healthcare Professional'}</p>
+            <p className="cm-eyebrow">Welcome back, {displayName}</p>
+            <p className="mt-2 text-text-soft">{userProfile?.medicalQualification || 'Healthcare Professional'}</p>
             {institutionId && (
               <p className="text-sm text-sage flex items-center gap-1 mt-1">
                 <Shield className="h-3 w-3" />

@@ -510,9 +510,8 @@
   .landing-page .btn:hover svg{ transform:none; }
 }
 
-/* Prevent horizontal scroll */
+/* Prevent horizontal scroll on landing page only (not body — body overflow breaks mobile scroll) */
 .landing-page{ overflow-x:hidden; }
-.landing-page body{ overflow-x:hidden; }
 
 /* Modal responsive */
 @media (max-width: 640px){

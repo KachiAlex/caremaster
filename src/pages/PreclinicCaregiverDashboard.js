@@ -32,6 +32,7 @@ import {
   Users,
   HelpCircle
 } from 'lucide-react';
+import SettingsTab from '../components/SettingsTab';
 import { useUser } from '../contexts/UserContext';
 import { getClientsByCaregiver } from '../api/patientsAPI';
 import { toast } from 'react-toastify';
@@ -123,7 +124,7 @@ const PreclinicCaregiverDashboard = () => {
         status: 'completed',
         completedAt: new Date()
       });
-      toast.success('Task completed successfully');
+      toast.success('Task completed');
       loadDashboardData();
     } catch (error) {
       console.error('Error completing task:', error);
@@ -567,17 +568,11 @@ const PreclinicCaregiverDashboard = () => {
   );
 
   const renderSettings = () => (
-    <div className="space-y-6">
-      <div className="cm-section-head">
-        <span className="cm-eyebrow">Settings</span>
-        <h2 className="mt-2">Manage your profile and preferences</h2>
-      </div>
-      <div className="cm-card p-12 text-center">
-        <Settings className="h-16 w-16 text-ink/20 mx-auto mb-4" />
-        <h3 className="cm-display text-lg text-ink mb-2">Profile Configuration</h3>
-        <p className="text-text-soft">Update your profile, qualifications, and availability settings</p>
-      </div>
-    </div>
+    <SettingsTab
+      user={user}
+      userProfile={userProfile}
+      institutionName={institutionData?.name || 'Institution'}
+    />
   );
 
   const renderTabContent = () => {
@@ -643,9 +638,7 @@ const PreclinicCaregiverDashboard = () => {
       >
         <div className="space-y-6">
           <div className="cm-section-head">
-            <span className="cm-eyebrow">{activeTabLabel}</span>
-            <h2 className="mt-2">{dashboardConfig.title}</h2>
-            <p>Welcome back, {displayName}.</p>
+            <p className="cm-eyebrow">Welcome back, {displayName}</p>
           </div>
           {renderTabContent()}
         </div>

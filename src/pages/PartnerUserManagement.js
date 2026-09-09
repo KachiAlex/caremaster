@@ -119,7 +119,7 @@ const PartnerUserManagement = () => {
 
     if (action === 'remove' || action === 'delete') {
       if (user?.isPrimaryAdmin || user?.adminTier === 'primary' || user?.roles?.includes('primary-admin') || user?.cannotBeDeleted) {
-        toast.error('❌ Primary administrators cannot be deleted for security reasons');
+        toast.error('Primary administrators cannot be deleted');
         return;
       }
       if (!window.confirm(`Are you sure you want to delete ${user?.firstName || ''} ${user?.lastName || ''}? This action cannot be undone.`)) return;

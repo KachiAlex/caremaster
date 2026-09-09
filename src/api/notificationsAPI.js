@@ -69,15 +69,33 @@ export const notificationsAPI = {
   // Create a new notification
   createNotification: async (notificationData) => {
     try {
+      const { deduplicationKey, ...notificationFields } = notificationData;
+
+      // Idempotency: if a deduplication key is provided, check for an existing
+      // notification with the same key + recipient to prevent duplicates.
+      if (deduplicationKey && notificationFields.userId) {
+        const existingQuery = query(
+          collection(db, NOTIFICATIONS_COLLECTION),
+          where('userId', '==', notificationFields.userId),
+          where('deduplicationKey', '==', deduplicationKey),
+          limit(1)
+        );
+        const existingSnap = await getDocs(existingQuery);
+        if (!existingSnap.empty) {
+          console.log('Notification already exists for key:', deduplicationKey);
+          return { id: existingSnap.docs[0].id, ...existingSnap.docs[0].data(), duplicate: true };
+        }
+      }
+
       const notification = {
-        ...notificationData,
+        ...notificationFields,
         read: false,
         createdAt: serverTimestamp(),
         timestamp: new Date().toISOString()
       };
 
       const docRef = await addDoc(collection(db, NOTIFICATIONS_COLLECTION), notification);
-      console.log('✅ Notification created:', docRef.id);
+      console.log('Notification created:', docRef.id);
       return { id: docRef.id, ...notification };
     } catch (error) {
       console.error('Error creating notification:', error);
