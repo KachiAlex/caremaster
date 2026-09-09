@@ -83,6 +83,8 @@ const GestureControls = ({ isOpen, onClose, onGesture }) => {
         hapticService.buttonPress();
         onGesture?.('double-tap', data);
       };
+
+      gestureService.syncListeners();
     }
 
     return () => {
@@ -95,6 +97,7 @@ const GestureControls = ({ isOpen, onClose, onGesture }) => {
       gestureService.onPinchOut = null;
       gestureService.onLongPress = null;
       gestureService.onDoubleTap = null;
+      gestureService.syncListeners();
     };
   }, [onGesture]);
 

@@ -125,6 +125,7 @@ import BillingManagementDashboard from '../components/BillingManagementDashboard
 import TestingQADashboard from '../components/TestingQADashboard';
 import useResponsive from '../hooks/useResponsive';
 import DashboardLayout from '../components/DashboardLayout';
+import useScrollToBottom from '../hooks/useScrollToBottom';
 
 const formatTimeForDisplay = (time) => {
   if (!time) return '';
@@ -358,7 +359,6 @@ const InstitutionAdminDashboard = () => {
   const [callStartAt, setCallStartAt] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = React.useRef(null);
-  const messagesEndRef = React.useRef(null);
   const localVideoRef = React.useRef(null);
   const remoteVideoRef = React.useRef(null);
   const [showMobileChatPane, setShowMobileChatPane] = useState(false);
@@ -2290,12 +2290,8 @@ const InstitutionAdminDashboard = () => {
     }
   }, [selectedConversation]);
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
+  // Auto-scroll to bottom when messages change, unless the user scrolled up
+  const messagesContainerRef = useScrollToBottom(messages);
 
   // Attach local/remote streams to video elements when in call
   useEffect(() => {
@@ -3057,7 +3053,7 @@ const renderMessagesTab = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 bg-gray-50">
                       {messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                           <div className="text-center text-gray-400">
@@ -3094,7 +3090,6 @@ const renderMessagesTab = () => {
                           );
                         })
                       )}
-                      <div ref={messagesEndRef} />
                     </div>
 
                     <div className="p-4 border-t border-gray-200 bg-white">
@@ -3665,7 +3660,7 @@ const renderMessagesTab = () => {
                 ) : (
                   <div
                     className="overflow-x-auto"
-                    style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x' }}
+                    style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x pan-y' }}
                   >
                     <table
                       className="min-w-[640px] sm:min-w-[900px] divide-y divide-gray-200 text-sm"
@@ -3816,7 +3811,7 @@ const renderMessagesTab = () => {
               ) : (
                 <div
                   className="overflow-x-auto"
-                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
                 >
                   <table
                     className="min-w-[640px] sm:min-w-[900px] divide-y divide-gray-200 text-sm"
@@ -4055,7 +4050,7 @@ const renderMessagesTab = () => {
               ) : (
                 <div
                   className="overflow-x-auto"
-                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
                 >
                   <table
                     className="min-w-[640px] sm:min-w-[900px] divide-y divide-gray-200 text-sm"

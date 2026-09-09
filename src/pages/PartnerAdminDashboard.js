@@ -3490,7 +3490,7 @@ const renderMessagesTab = () => {
               ) : (
                 <div
                   className="overflow-x-auto"
-                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x' }}
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x pan-y' }}
                 >
                   <table
                     className="min-w-[900px] divide-y divide-gray-200 text-sm"
@@ -3629,7 +3629,7 @@ const renderMessagesTab = () => {
               ) : (
                 <div
                   className="overflow-x-auto"
-                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
                 >
                   <table
                     className="min-w-[900px] divide-y divide-gray-200 text-sm"
@@ -3890,7 +3890,7 @@ const renderMessagesTab = () => {
               ) : (
                 <div
                   className="overflow-x-auto"
-                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x', overscrollBehaviorX: 'contain' }}
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
                 >
                   <table
                     className="min-w-[900px] divide-y divide-gray-200 text-sm"

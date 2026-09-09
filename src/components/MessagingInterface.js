@@ -35,6 +35,7 @@ import {
 import { subscribeToConversationMessages, subscribeToUserConversations } from '../api/messagesAPI';
 import CallService from '../services/callService';
 import CallInterface from './CallInterface';
+import useScrollToBottom from '../hooks/useScrollToBottom';
 
 const MessagingInterface = () => {
   const { userProfile, userRole } = useUser();
@@ -50,17 +51,8 @@ const MessagingInterface = () => {
   const [activeCall, setActiveCall] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
   const [showSidebar, setShowSidebar] = useState(false);
-  const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
-
-  // Scroll to bottom when new messages arrive
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const messagesContainerRef = useScrollToBottom(messages);
 
   // Load conversations
   useEffect(() => {
@@ -529,7 +521,7 @@ const MessagingInterface = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4">
               {messages.length === 0 ? (
                 <div className="text-center text-gray-500 mt-8">
                   <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
@@ -579,7 +571,6 @@ const MessagingInterface = () => {
                   </div>
                 ))
               )}
-              <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MessageCircle,
   Send,
@@ -18,6 +18,7 @@ import { useUser } from '../contexts/UserContext';
 import { getConversationsByUser, getMessagesByConversation, sendMessage, getOrCreateConversation } from '../api/messagesAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import { toast } from 'react-toastify';
+import useScrollToBottom from '../hooks/useScrollToBottom';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
 
@@ -44,11 +45,7 @@ const Messages = () => {
   const [assignedCaregivers, setAssignedCaregivers] = useState([]);
   const [loadingCaregivers, setLoadingCaregivers] = useState(false);
 
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const messagesContainerRef = useScrollToBottom(messages);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -440,7 +437,7 @@ const Messages = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4">
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -464,7 +461,6 @@ const Messages = () => {
                   </div>
                 </div>
               ))}
-              <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}

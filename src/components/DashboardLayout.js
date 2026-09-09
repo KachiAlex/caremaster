@@ -32,7 +32,7 @@ const SidebarContent = ({
 
     {/* Nav */}
     <nav
-      className="flex-1 overflow-y-auto scroll-smooth px-3 py-4 space-y-1"
+      className="flex-1 overflow-y-auto px-3 py-4 space-y-1"
       style={{ overscrollBehaviorY: 'contain' }}
     >
       {tabs.map((tab) => {

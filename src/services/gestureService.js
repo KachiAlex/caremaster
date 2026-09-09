@@ -4,6 +4,13 @@ class GestureService {
     this.isSupported = 'ontouchstart' in window;
     this.gestures = new Map();
     this.activeGestures = new Map();
+    this.listening = false;
+    this.boundHandlers = {
+      touchstart: this.handleTouchStart.bind(this),
+      touchmove: this.handleTouchMove.bind(this),
+      touchend: this.handleTouchEnd.bind(this),
+      touchcancel: this.handleTouchCancel.bind(this)
+    };
     this.thresholds = {
       swipe: {
         minDistance: 50,
@@ -27,20 +34,51 @@ class GestureService {
 
   init() {
     if (this.isSupported) {
-      this.setupEventListeners();
       this.setupDefaultGestures();
-      console.log('Gesture service initialized');
-    } else {
-      console.log('Touch gestures not supported');
     }
   }
 
+  /**
+   * Document listeners are attached only while a consumer has registered a
+   * handler, and are passive so touch scrolling never waits on gesture code.
+   */
   setupEventListeners() {
-    // Add event listeners to document
-    document.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-    document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-    document.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
-    document.addEventListener('touchcancel', this.handleTouchCancel.bind(this), { passive: false });
+    if (this.listening) return;
+    document.addEventListener('touchstart', this.boundHandlers.touchstart, { passive: true });
+    document.addEventListener('touchmove', this.boundHandlers.touchmove, { passive: true });
+    document.addEventListener('touchend', this.boundHandlers.touchend, { passive: true });
+    document.addEventListener('touchcancel', this.boundHandlers.touchcancel, { passive: true });
+    this.listening = true;
+  }
+
+  teardownEventListeners() {
+    if (!this.listening) return;
+    document.removeEventListener('touchstart', this.boundHandlers.touchstart);
+    document.removeEventListener('touchmove', this.boundHandlers.touchmove);
+    document.removeEventListener('touchend', this.boundHandlers.touchend);
+    document.removeEventListener('touchcancel', this.boundHandlers.touchcancel);
+    this.handleTouchCancel();
+    this.listening = false;
+  }
+
+  hasActiveHandlers() {
+    return Boolean(
+      this.onSwipeLeft || this.onSwipeRight || this.onSwipeUp || this.onSwipeDown ||
+      this.onPinchIn || this.onPinchOut || this.onLongPress || this.onDoubleTap
+    );
+  }
+
+  /**
+   * Call after assigning/clearing the on* handlers so listeners are only
+   * attached while something is listening.
+   */
+  syncListeners() {
+    if (!this.isSupported) return;
+    if (this.hasActiveHandlers()) {
+      this.setupEventListeners();
+    } else {
+      this.teardownEventListeners();
+    }
   }
 
   setupDefaultGestures() {
@@ -113,6 +151,7 @@ class GestureService {
 
   handleTouchStart(event) {
     const touch = event.touches[0];
+    if (!touch) return;
     const time = Date.now();
     
     // Initialize gesture tracking
@@ -159,6 +198,7 @@ class GestureService {
 
   handleTouchMove(event) {
     const touch = event.touches[0];
+    if (!touch) return;
     const time = Date.now();
     
     for (const [name, gesture] of this.gestures) {
@@ -217,10 +257,8 @@ class GestureService {
     }
   }
 
-  handleTouchEnd(event) {
-    const time = Date.now();
-    
-    for (const [name, gesture] of this.gestures) {
+  handleTouchEnd() {
+    for (const [, gesture] of this.gestures) {
       if (!gesture.active) continue;
       
       if (gesture.type === 'longPress') {
@@ -236,9 +274,9 @@ class GestureService {
     }
   }
 
-  handleTouchCancel(event) {
+  handleTouchCancel() {
     // Reset all active gestures
-    for (const [name, gesture] of this.gestures) {
+    for (const [, gesture] of this.gestures) {
       gesture.active = false;
       if (gesture.timeout) {
         clearTimeout(gesture.timeout);
@@ -249,7 +287,6 @@ class GestureService {
   triggerGesture(name, data) {
     const gesture = this.gestures.get(name);
     if (gesture && gesture.callback) {
-      console.log('Triggering gesture:', name, data);
       gesture.callback(data);
     }
   }
@@ -296,15 +333,15 @@ class GestureService {
     // Add element-specific event listeners
     element.addEventListener('touchstart', (e) => {
       this.handleElementTouchStart(e, elementGesture);
-    }, { passive: false });
+    }, { passive: true });
 
     element.addEventListener('touchmove', (e) => {
       this.handleElementTouchMove(e, elementGesture);
-    }, { passive: false });
+    }, { passive: true });
 
     element.addEventListener('touchend', (e) => {
       this.handleElementTouchEnd(e, elementGesture);
-    }, { passive: false });
+    }, { passive: true });
 
     return element;
   }
@@ -330,7 +367,7 @@ class GestureService {
       return;
     }
 
-    this.handleTouchEnd(event);
+    this.handleTouchEnd();
   }
 
   // Set gesture thresholds

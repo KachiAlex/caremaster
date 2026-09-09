@@ -62,33 +62,23 @@ const MobileOptimization = () => {
       }
     };
 
-    // Add touch event optimizations
-    const addTouchOptimizations = () => {
-      // Prevent zoom on double tap
-      let lastTouchEnd = 0;
-      document.addEventListener('touchend', (event) => {
-        const now = (new Date()).getTime();
-        if (now - lastTouchEnd <= 300) {
-          event.preventDefault();
-        }
-        lastTouchEnd = now;
-      }, false);
+    // Prevent zoom on input focus (iOS), delegated so it also covers inputs
+    // mounted later
+    const handleFocusIn = (event) => {
+      if (!event.target.matches('input, textarea, select')) return;
+      if (window.innerWidth >= 768) return;
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+      }
+    };
 
-      // Prevent zoom on input focus (iOS)
-      const inputs = document.querySelectorAll('input, textarea, select');
-      inputs.forEach(input => {
-        input.addEventListener('focus', () => {
-          if (window.innerWidth < 768) {
-            document.querySelector('meta[name="viewport"]').content = 
-              'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-          }
-        });
-
-        input.addEventListener('blur', () => {
-          document.querySelector('meta[name="viewport"]').content = 
-            'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
-        });
-      });
+    const handleFocusOut = (event) => {
+      if (!event.target.matches('input, textarea, select')) return;
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+      }
     };
 
     // Add mobile-specific CSS
@@ -136,6 +126,11 @@ const MobileOptimization = () => {
           .touch-manipulation {
             touch-action: manipulation;
           }
+
+          /* Tap targets should not delay or swallow scroll gestures */
+          button, a, .btn {
+            touch-action: manipulation;
+          }
           
           /* Prevent pull-to-refresh on mobile */
           body {
@@ -162,12 +157,14 @@ const MobileOptimization = () => {
         }
       `;
       document.head.appendChild(style);
+      return style;
     };
 
     // Initialize mobile optimizations
     addMobileMetaTags();
-    addTouchOptimizations();
-    addMobileCSS();
+    const mobileStyle = addMobileCSS();
+    document.addEventListener('focusin', handleFocusIn, { passive: true });
+    document.addEventListener('focusout', handleFocusOut, { passive: true });
 
     // Add mobile detection class to body
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -175,21 +172,36 @@ const MobileOptimization = () => {
       document.body.classList.add('mobile-device');
     }
 
-    // Handle orientation changes
-    const handleOrientationChange = () => {
-      // Update viewport height on orientation change
+    // Handle orientation changes. Mobile browsers fire resize while scrolling
+    // (URL bar collapsing), so the write is batched into a frame and skipped
+    // when the value is unchanged.
+    let frame = null;
+    let lastVh = null;
+    const updateViewportHeight = () => {
+      frame = null;
       const vh = window.innerHeight * 0.01;
+      if (vh === lastVh) return;
+      lastVh = vh;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
     };
 
-    window.addEventListener('orientationchange', handleOrientationChange);
-    window.addEventListener('resize', handleOrientationChange);
-    handleOrientationChange(); // Initial call
+    const handleOrientationChange = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(updateViewportHeight);
+    };
+
+    window.addEventListener('orientationchange', handleOrientationChange, { passive: true });
+    window.addEventListener('resize', handleOrientationChange, { passive: true });
+    updateViewportHeight(); // Initial call
 
     // Cleanup
     return () => {
       window.removeEventListener('orientationchange', handleOrientationChange);
       window.removeEventListener('resize', handleOrientationChange);
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      mobileStyle.remove();
     };
   }, []);
 
