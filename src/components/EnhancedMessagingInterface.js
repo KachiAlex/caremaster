@@ -42,6 +42,7 @@ import { subscribeToConversationMessages, subscribeToUserConversations } from '.
 import CallService from '../services/callService';
 import CallInterface from './CallInterface';
 import OnlineStatusService from '../services/onlineStatusService';
+import useScrollToBottom from '../hooks/useScrollToBottom';
 
 const EnhancedMessagingInterface = () => {
   const { userProfile, userRole } = useUser();
@@ -61,17 +62,8 @@ const EnhancedMessagingInterface = () => {
   const [callService] = useState(new CallService());
   const [onlineStatusService] = useState(new OnlineStatusService());
   const [userStatuses, setUserStatuses] = useState({});
-  const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
-
-  // Scroll to bottom when new messages arrive
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const messagesContainerRef = useScrollToBottom(messages);
 
   // Load all users and conversations
   useEffect(() => {
@@ -708,7 +700,7 @@ const EnhancedMessagingInterface = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4">
               {messages.map((message) => {
                 const userId = userProfile?.id || userProfile?.uid;
                 const isOwnMessage = message.senderId === userId;
@@ -744,7 +736,6 @@ const EnhancedMessagingInterface = () => {
                   </div>
                 );
               })}
-              <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}

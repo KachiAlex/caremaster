@@ -457,9 +457,10 @@ body {
   min-height: 100vh;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar — wide enough to grab comfortably with a mouse */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
@@ -467,8 +468,14 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
+  background: #a8a8a8;
+  border: 3px solid #f1f1f1;
+  border-radius: 6px;
+}
+
+* {
+  scrollbar-width: auto;
+  scrollbar-color: #a8a8a8 #f1f1f1;
 }
 
 /* Font Size Toggle Styles */
@@ -533,7 +540,7 @@ body {
 .font-size-large .text-2xl { font-size: 28px; }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: #7c7c7c;
 }
 
 /* Utility classes */
@@ -577,10 +584,12 @@ body {
   padding: 0 !important;
 }
 
-/* Allow true horizontal scroll inside wrappers */
+/* Allow true horizontal scroll inside wrappers, while still letting a vertical
+   swipe that starts on the table scroll the page */
 .dashboard-container .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
 }
 
 .dashboard-container .overflow-x-auto > table,
@@ -1207,7 +1216,6 @@ code {
 /* Better scrolling on mobile */
 .smooth-scroll {
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
 }
 
 /* Mobile-optimized animations */
