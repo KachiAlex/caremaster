@@ -68,3 +68,11 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Build / tooling output
+build_output.txt
+gcloud-info.json
+
+# Backups (never track local backup copies)
+*.backup
+*.bak
