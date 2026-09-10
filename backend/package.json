@@ -1,7 +1,7 @@
 {
-  "name": "ndu-tuition-backend",
+  "name": "caremaster-backend",
   "version": "1.0.0",
-  "description": "Niger Delta University Tuition Payment Backend API",
+  "description": "Care Master (ElderX) healthcare platform — backend API server",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -45,12 +45,13 @@
     "supertest": "^6.3.3"
   },
   "keywords": [
-    "tuition",
-    "payment",
-    "university",
-    "wallet",
-    "paystack"
+    "caremaster",
+    "elderx",
+    "healthcare",
+    "eldercare",
+    "caregiver",
+    "hospital-management"
   ],
-  "author": "Niger Delta University",
+  "author": "Care Master",
   "license": "MIT"
 }
