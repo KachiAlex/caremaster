@@ -20,14 +20,38 @@ const MEDICAL_REPORTS_COLLECTION = 'medicalReports';
 // Create a new medical report (Doctor only)
 export const createMedicalReport = async (reportData) => {
   try {
-    const docRef = await addDoc(collection(db, MEDICAL_REPORTS_COLLECTION), {
-      ...reportData,
+    // Map incoming report data to the patient_reports schema. Fields that don't
+    // have a dedicated column are packed into metadata so they are not stripped
+    // by the backend whitelist.
+    const knownFields = [
+      'clientId', 'createdBy', 'institutionId', 'title', 'type', 'content',
+      'sections', 'status'
+    ];
+
+    const payload = {
+      clientId: reportData.clientId,
+      createdBy: reportData.doctorId || reportData.createdBy,
+      institutionId: reportData.institutionId || null,
+      title: reportData.title || 'Medical Report',
+      type: reportData.type || reportData.reportType || 'medical',
+      content: reportData.content || reportData.diagnosis || reportData.notes || '',
+      status: reportData.status || 'active',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    };
+
+    const metadata = {};
+    for (const [key, value] of Object.entries(reportData)) {
+      if (!knownFields.includes(key)) {
+        metadata[key] = value;
+      }
+    }
+    payload.metadata = JSON.stringify(metadata);
+
+    const docRef = await addDoc(collection(db, MEDICAL_REPORTS_COLLECTION), payload);
     
     console.log('✅ Medical report created:', docRef.id);
-    return { id: docRef.id, ...reportData };
+    return { id: docRef.id, ...payload };
   } catch (error) {
     console.error('❌ Error creating medical report:', error);
     throw error;
@@ -40,17 +64,24 @@ export const getMedicalReportsByClient = async (clientId) => {
     const q = query(
       collection(db, MEDICAL_REPORTS_COLLECTION),
       where('clientId', '==', clientId),
-      orderBy('reportDate', 'desc')
+      orderBy('createdAt', 'desc')
     );
     
     const snapshot = await getDocs(q);
-    const reports = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate(),
-      reportDate: doc.data().reportDate?.toDate ? doc.data().reportDate.toDate() : new Date(doc.data().reportDate)
-    }));
+    const reports = snapshot.docs.map(doc => {
+      const data = doc.data();
+      let metadata = data.metadata || {};
+      if (typeof metadata === 'string') {
+        try { metadata = JSON.parse(metadata); } catch { metadata = {}; }
+      }
+      return {
+        id: doc.id,
+        ...data,
+        ...metadata,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+      };
+    });
     
     console.log(`✅ Loaded ${reports.length} medical reports for client ${clientId}`);
     return reports;
@@ -65,18 +96,25 @@ export const getMedicalReportsByDoctor = async (doctorId) => {
   try {
     const q = query(
       collection(db, MEDICAL_REPORTS_COLLECTION),
-      where('doctorId', '==', doctorId),
-      orderBy('reportDate', 'desc')
+      where('createdBy', '==', doctorId),
+      orderBy('createdAt', 'desc')
     );
     
     const snapshot = await getDocs(q);
-    const reports = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate(),
-      reportDate: doc.data().reportDate?.toDate ? doc.data().reportDate.toDate() : new Date(doc.data().reportDate)
-    }));
+    const reports = snapshot.docs.map(doc => {
+      const data = doc.data();
+      let metadata = data.metadata || {};
+      if (typeof metadata === 'string') {
+        try { metadata = JSON.parse(metadata); } catch { metadata = {}; }
+      }
+      return {
+        id: doc.id,
+        ...data,
+        ...metadata,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+      };
+    });
     
     console.log(`✅ Loaded ${reports.length} medical reports by doctor ${doctorId}`);
     return reports;
@@ -94,12 +132,16 @@ export const getMedicalReport = async (reportId) => {
     
     if (docSnap.exists()) {
       const data = docSnap.data();
+      let metadata = data.metadata || {};
+      if (typeof metadata === 'string') {
+        try { metadata = JSON.parse(metadata); } catch { metadata = {}; }
+      }
       return {
         id: docSnap.id,
         ...data,
-        createdAt: data.createdAt?.toDate(),
-        updatedAt: data.updatedAt?.toDate(),
-        reportDate: data.reportDate?.toDate ? data.reportDate.toDate() : new Date(data.reportDate)
+        ...metadata,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
       };
     } else {
       throw new Error('Medical report not found');
@@ -147,17 +189,24 @@ export const subscribeToMedicalReportsByClient = (clientId, callback) => {
     const q = query(
       collection(db, MEDICAL_REPORTS_COLLECTION),
       where('clientId', '==', clientId),
-      orderBy('reportDate', 'desc')
+      orderBy('createdAt', 'desc')
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const reports = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-        reportDate: doc.data().reportDate?.toDate ? doc.data().reportDate.toDate() : new Date(doc.data().reportDate)
-      }));
+      const reports = snapshot.docs.map(doc => {
+        const data = doc.data();
+        let metadata = data.metadata || {};
+        if (typeof metadata === 'string') {
+          try { metadata = JSON.parse(metadata); } catch { metadata = {}; }
+        }
+        return {
+          id: doc.id,
+          ...data,
+          ...metadata,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+        };
+      });
       
       console.log(`🔄 Real-time update: ${reports.length} medical reports for client ${clientId}`);
       callback(reports);
@@ -184,4 +233,3 @@ const medicalReportsAPI = {
 
 export { medicalReportsAPI };
 export default medicalReportsAPI;
-
