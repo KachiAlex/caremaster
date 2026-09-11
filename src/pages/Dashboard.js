@@ -187,7 +187,7 @@ const Dashboard = () => {
             toast.error('Could not load medications.');
             return [];
           }),
-          assignmentAPI.getAssignmentsByClient(user.uid).catch(err => {
+          assignmentAPI.getAssignmentsByClient().catch(err => {
             console.warn('Failed to fetch caregiver tasks:', err);
             toast.error('Could not load care tasks.');
             return [];
