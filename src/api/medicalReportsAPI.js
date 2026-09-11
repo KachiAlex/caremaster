@@ -32,9 +32,9 @@ export const createMedicalReport = async (reportData) => {
       clientId: reportData.clientId,
       createdBy: reportData.doctorId || reportData.createdBy,
       institutionId: reportData.institutionId || null,
-      title: reportData.title || 'Medical Report',
+      title: reportData.title || reportData.diagnosis || 'Medical Report',
       type: reportData.type || reportData.reportType || 'medical',
-      content: reportData.content || reportData.diagnosis || reportData.notes || '',
+      content: reportData.content || reportData.treatment || reportData.notes || reportData.diagnosis || '',
       status: reportData.status || 'active',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
