@@ -51,6 +51,7 @@ const ALLOWED_TABLES = [
   'caregiverEarnings', 'caregiverPerformance', 'caregiverActivityLog',
   'doseLogs', 'sideEffects', 'failedLoginAttempts', 'blockedIps',
   'prescriptionRefills', 'messageTemplates', 'pharmacistMedicationData',
+  'nurseReports', 'medicalReports',
 ];
 
 // Map frontend collection names to actual PostgreSQL table names
@@ -81,6 +82,8 @@ const COLLECTION_TO_TABLE = {
   clientSubscriptions: 'client_subscriptions',
   billingSettings: 'billing_settings',
   analyticsEvents: 'analytics_events',
+  nurseReports: 'nurse_reports',
+  medicalReports: 'patient_reports',
 };
 
 // Column aliases: maps frontend filter keys to actual DB column names per table.
@@ -95,6 +98,7 @@ const COLUMN_ALIASES = {
   care_logs: { client_id: 'patient_id' },
   care_plans: { client_id: 'patient_id' },
   patient_reports: { client_id: 'patient_id' },
+  nurse_reports: { client_id: 'patient_id' },
   elderly_profiles: { client_id: 'patient_id' },
   invoices: { client_id: 'patient_id' },
 };
@@ -224,7 +228,8 @@ const WRITABLE_FIELDS = {
   goods_received: ['institution_id', 'institutionId', 'purchase_order_id', 'purchaseOrderId', 'supplier_id', 'supplierId', 'grn_number', 'grnNumber', 'received_date', 'receivedDate', 'status', 'items', 'notes', 'created_at', 'updated_at'],
   stock_audit: ['institution_id', 'institutionId', 'inventory_id', 'inventoryId', 'type', 'quantity', 'previous_stock', 'previousStock', 'new_stock', 'newStock', 'reference', 'reference_type', 'referenceType', 'notes', 'timestamp', 'created_at', 'updated_at'],
   medications: ['name', 'generic_name', 'dosage_form', 'strength', 'instructions'],
-  patient_reports: ['client_id', 'report_type', 'content', 'created_by'],
+  patient_reports: ['patient_id', 'created_by', 'institution_id', 'title', 'type', 'content', 'sections', 'status', 'metadata', 'created_at', 'updated_at'],
+  nurse_reports: ['patient_id', 'nurse_id', 'nurse_name', 'institution_id', 'report_type', 'vital_signs_summary', 'care_logs_summary', 'shift_start', 'shift_end', 'handover_notes', 'status', 'metadata', 'created_at', 'updated_at'],
   subscriptions: ['institution_id', 'plan', 'status', 'start_date', 'end_date'],
   patients: ['name', 'email', 'phone', 'institution_id', 'status', 'medical_history', 'emergency_contacts', 'notes', 'date_of_birth', 'gender', 'address', 'city', 'state', 'country', 'blood_type', 'allergies', 'medications'],
   calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'participants', 'institution_id', 'created_at', 'updated_at'],
@@ -280,7 +285,9 @@ const SORTABLE_COLUMNS = {
   signaling: ['id', 'call_id', 'type', 'from', 'timestamp', 'created_at'],
   call_notifications: ['id', 'call_id', 'user_id', 'status', 'timestamp', 'created_at', 'updated_at'],
   calls: ['id', 'call_id', 'caller_id', 'recipient_id', 'status', 'created_at', 'answered_at', 'ended_at'],
-  schedules: ['id', 'schedule_date', 'start_time', 'end_time', 'status', 'priority', 'created_at', 'updated_at']
+  schedules: ['id', 'schedule_date', 'start_time', 'end_time', 'status', 'priority', 'created_at', 'updated_at'],
+  patient_reports: ['id', 'created_at', 'updated_at'],
+  nurse_reports: ['id', 'created_at', 'updated_at']
 };
 
 function validateTable(tableName) {
@@ -369,6 +376,13 @@ const WRITE_COLUMN_ALIASES = {
     client_id: 'patient_id',
     scheduled_time: 'scheduled_at',
     client_name: 'title',
+  },
+  patient_reports: {
+    client_id: 'patient_id',
+    doctor_id: 'created_by',
+  },
+  nurse_reports: {
+    client_id: 'patient_id',
   },
   analytics_events: {
     details: 'data',
