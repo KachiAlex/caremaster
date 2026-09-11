@@ -140,9 +140,10 @@ export const getAppointmentById = async (appointmentId) => {
 export const getAppointmentsByClient = async (clientId) => {
   try {
     const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+    // Query by patient_id since that's what we store for ownership tracking
     const q = query(
       appointmentsRef, 
-      where('clientId', '==', clientId),
+      where('patient_id', '==', clientId),
       orderBy('scheduledTime', 'desc')
     );
     
@@ -153,7 +154,7 @@ export const getAppointmentsByClient = async (clientId) => {
     } catch (error) {
       if (error.code === 'failed-precondition' || error.message?.includes('index') || error.message?.includes('query requires an index')) {
         console.warn('Index missing, using fallback query:', error.message);
-        const fallbackQ = query(appointmentsRef, where('clientId', '==', clientId));
+        const fallbackQ = query(appointmentsRef, where('patient_id', '==', clientId));
         querySnapshot = await getDocs(fallbackQ);
         usedFallback = true;
       } else {
@@ -299,9 +300,17 @@ export const getAppointmentsByCaregiver = async (caregiverId) => {
 export const createAppointment = async (appointmentData) => {
   try {
     const appointmentsRef = collection(db, APPOINTMENTS_COLLECTION);
+    // Map clientId to patient_id for backend compatibility
+    // The backend authorization expects patient_id for ownership tracking
+    // Remove clientId to avoid duplicate field issues with backend aliasing
+    const { clientId, ...dataWithoutClientId } = appointmentData;
     const newAppointment = {
-      ...appointmentData,
-      status: 'scheduled',
+      ...dataWithoutClientId,
+      patient_id: appointmentData.clientId, // Map clientId to patient_id
+      // Preserve the status set by the caller (e.g. 'pending' for care
+      // requests, 'scheduled' for appointments with a date/time). Only
+      // default to 'scheduled' if the caller didn't specify one.
+      status: appointmentData.status || 'scheduled',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -310,7 +319,6 @@ export const createAppointment = async (appointmentData) => {
     
     // Send SMS/WhatsApp appointment reminder if enabled
     try {
-      const clientId = appointmentData.clientId || appointmentData.clientId;
       if (clientId) {
         const patientDoc = await getDoc(doc(db, 'clients', clientId)).catch(() => null);
         const clientData = patientDoc?.exists() ? patientDoc.data() : null;
@@ -417,7 +425,8 @@ export const getTodaysAppointments = async (userId, userRole, options = {}) => {
     } else if (userRole === 'caregiver' || userRole === 'nurse') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
     } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
-      q = query(appointmentsRef, where('clientId', '==', userId));
+      // Query by patient_id since that's what we store for ownership tracking
+      q = query(appointmentsRef, where('patient_id', '==', userId));
     } else {
       throw new Error('Invalid user role');
     }
@@ -446,8 +455,9 @@ export const getTodaysAppointments = async (userId, userRole, options = {}) => {
           q = query(appointmentsRef, where('doctorId', '==', userId));
         } else if (userRole === 'caregiver' || userRole === 'nurse') {
           q = query(appointmentsRef, where('caregiverId', '==', userId));
-        } else if (userRole === 'elderly') {
-          q = query(appointmentsRef, where('clientId', '==', userId));
+        } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
+          // Query by patient_id for fallback too
+          q = query(appointmentsRef, where('patient_id', '==', userId));
         }
         querySnapshot = await getDocs(q);
         usedFallback = true;
@@ -510,7 +520,8 @@ export const getUpcomingAppointments = async (userId, userRole) => {
     } else if (userRole === 'caregiver' || userRole === 'nurse') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
     } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
-      q = query(appointmentsRef, where('clientId', '==', userId));
+      // Query by patient_id since that's what we store for ownership tracking
+      q = query(appointmentsRef, where('patient_id', '==', userId));
     } else {
       throw new Error('Invalid user role');
     }
@@ -581,8 +592,9 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
     q = query(appointmentsRef, where('doctorId', '==', userId), orderBy('scheduledTime', 'asc'));
   } else if (userRole === 'caregiver' || userRole === 'nurse') {
     q = query(appointmentsRef, where('caregiverId', '==', userId), orderBy('scheduledTime', 'asc'));
-  } else if (userRole === 'elderly') {
-    q = query(appointmentsRef, where('clientId', '==', userId), orderBy('scheduledTime', 'asc'));
+  } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
+    // Query by patient_id since that's what we store for ownership tracking
+    q = query(appointmentsRef, where('patient_id', '==', userId), orderBy('scheduledTime', 'asc'));
   } else {
     q = query(appointmentsRef, orderBy('scheduledTime', 'asc'));
   }
@@ -610,8 +622,9 @@ export const subscribeToAppointments = (callback, userId, userRole) => {
       return query(appointmentsRef, where('doctorId', '==', userId));
     } else if (userRole === 'caregiver' || userRole === 'nurse') {
       return query(appointmentsRef, where('caregiverId', '==', userId));
-    } else if (userRole === 'elderly') {
-      return query(appointmentsRef, where('clientId', '==', userId));
+    } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
+      // Query by patient_id for fallback too
+      return query(appointmentsRef, where('patient_id', '==', userId));
     } else {
       return query(appointmentsRef);
     }
@@ -678,7 +691,8 @@ export const getAppointmentAnalytics = async (userId, userRole, dateRange = 30) 
     } else if (userRole === 'caregiver' || userRole === 'nurse') {
       q = query(appointmentsRef, where('caregiverId', '==', userId));
     } else if (userRole === 'elderly' || userRole === 'client' || userRole === 'patient') {
-      q = query(appointmentsRef, where('clientId', '==', userId));
+      // Query by patient_id since that's what we store for ownership tracking
+      q = query(appointmentsRef, where('patient_id', '==', userId));
     } else {
       throw new Error('Invalid user role');
     }

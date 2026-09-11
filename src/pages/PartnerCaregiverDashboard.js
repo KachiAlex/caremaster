@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import sessionManager from '../utils/sessionManager';
-import { useResponsive } from '../hooks';
+import { useResponsive, useBackNavigation } from '../hooks';
 import { 
   Calendar, 
   Clock, 
@@ -351,6 +351,49 @@ const PartnerCaregiverDashboard = () => {
   // Consultation states
   const [consultations, setConsultations] = useState([]);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
+
+  // Back navigation — close modals first, then previous tab, then browser history
+  const closeAllModals = useCallback(() => {
+    setShowSettings(false);
+    setShowProfileSettings(false);
+    setShowVitalsModal(false);
+    setShowCareLogsModal(false);
+    setShowNurseReportModal(false);
+    setShowMedicationModal(false);
+    setShowCareLogForm(false);
+    setShowTaskDetailsModal(false);
+    setShowTaskCompletionModal(false);
+    setShowMedicalReportModal(false);
+    setShowCarePlanModal(false);
+    setShowMobileChatPane(false);
+    setShowActivityModal(false);
+    setShowPrescriptionModal(false);
+    setShowConsultationModal(false);
+  }, []);
+
+  const { canGoBack, goBack, pushTab, breadcrumbs } = useBackNavigation({
+    defaultTab: 'dashboard',
+    modalStates: {
+      showSettings, showProfileSettings, showVitalsModal, showCareLogsModal,
+      showNurseReportModal, showMedicationModal, showCareLogForm,
+      showTaskDetailsModal, showTaskCompletionModal, showMedicalReportModal,
+      showCarePlanModal, showMobileChatPane, showActivityModal,
+      showPrescriptionModal, showConsultationModal,
+    },
+    closeAllModals,
+  });
+
+  const handleTabChange = useCallback((tabId) => {
+    pushTab(tabId);
+    setActiveTab(tabId);
+  }, [pushTab]);
+
+  const handleBack = useCallback(() => {
+    const prevTab = goBack();
+    if (prevTab && typeof prevTab === 'string') {
+      setActiveTab(prevTab);
+    }
+  }, [goBack]);
   const [consultationFormData, setConsultationFormData] = useState({
     consultationType: CONSULTATION_TYPES.REVIEW,
     consultationDate: new Date().toISOString().slice(0, 16),
@@ -4406,13 +4449,19 @@ const PartnerCaregiverDashboard = () => {
       <DashboardLayout
         tabs={tabs}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         institutionName={institutionData?.name || 'Partner'}
         portalLabel="Partner Caregiver"
         displayName={displayName || 'Caregiver'}
         userEmail={userProfile?.email || user?.email || ''}
         profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
         onLogout={handleLogout}
+        onBack={handleBack}
+        canGoBack={canGoBack}
+        breadcrumbs={breadcrumbs.map((bc) => ({
+          tabId: bc.tabId,
+          label: tabs.find(t => t.id === bc.tabId)?.label || bc.tabId,
+        }))}
         headerActions={
           <>
             {userRoles && userRoles.length > 1 && (

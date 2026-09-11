@@ -28,9 +28,12 @@ exports.up = async function(knex) {
   await knex.raw('ALTER TABLE assignments ALTER COLUMN caregiver_id TYPE text USING caregiver_id::text');
   await knex.raw('ALTER TABLE assignments ALTER COLUMN patient_id TYPE text USING patient_id::text');
 
-  // Alter clients.assigned_caregiver is already text, but ensure user_id is text
-  // user_id is already uuid, let's make it text to support Firebase UIDs
+  // Alter clients.user_id from uuid to text to support Firebase UIDs
+  // First drop the foreign key constraint, then alter the column, then recreate the constraint
+  await knex.raw('ALTER TABLE clients DROP CONSTRAINT IF EXISTS clients_user_id_foreign');
   await knex.raw('ALTER TABLE clients ALTER COLUMN user_id TYPE text USING user_id::text');
+  // Note: We don't recreate the foreign key since users.id is uuid and we're converting to text
+  // This is acceptable for Firebase UID compatibility
 };
 
 exports.down = async function(knex) {
@@ -55,5 +58,8 @@ exports.down = async function(knex) {
   await knex.raw('ALTER TABLE care_tasks ALTER COLUMN patient_id TYPE uuid USING patient_id::uuid');
   await knex.raw('ALTER TABLE assignments ALTER COLUMN caregiver_id TYPE uuid USING caregiver_id::uuid');
   await knex.raw('ALTER TABLE assignments ALTER COLUMN patient_id TYPE uuid USING patient_id::uuid');
+  
+  // Restore the foreign key constraint before changing user_id back to uuid
+  await knex.raw('ALTER TABLE clients ADD CONSTRAINT clients_user_id_foreign FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL');
   await knex.raw('ALTER TABLE clients ALTER COLUMN user_id TYPE uuid USING user_id::uuid');
 };

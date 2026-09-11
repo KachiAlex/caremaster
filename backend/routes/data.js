@@ -322,6 +322,12 @@ function validateSortColumn(table, column) {
   // Accept camelCase sort params from the frontend and map them to snake_case DB columns
   const snakeColumn = column.replace(/[A-Z]/g, '_$1').toLowerCase();
   if (allowed.includes(snakeColumn)) return snakeColumn;
+  // Check COLUMN_ALIASES for tables that use different column names
+  // (e.g. appointments uses scheduled_at, not scheduled_time)
+  const aliases = COLUMN_ALIASES[table];
+  if (aliases && aliases[snakeColumn] && allowed.includes(aliases[snakeColumn])) {
+    return aliases[snakeColumn];
+  }
   // Fallback: use the first non-id column, or 'created_at' if present
   if (allowed.includes('created_at')) return 'created_at';
   if (allowed.includes('timestamp')) return 'timestamp';

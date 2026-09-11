@@ -1,5 +1,6 @@
-import React, { useState, useEffect, memo } from 'react';
-import { Menu, X, LogOut, ChevronDown, User } from 'lucide-react';
+import React, { useState, useEffect, useRef, memo } from 'react';
+import { Menu, X, LogOut, ChevronDown, User, ArrowLeft, ChevronRight } from 'lucide-react';
+import { useResponsive } from '../hooks';
 
 /**
  * Sidebar content - extracted to top-level so it doesn't unmount/remount
@@ -95,9 +96,14 @@ const DashboardLayout = ({
   children,
   headerActions,
   footerContent,
+  // Back navigation props
+  onBack,
+  canGoBack = false,
+  breadcrumbs,
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const { isMobile } = useResponsive();
 
   // Lock body scroll when mobile sidebar is open to prevent background scroll
   useEffect(() => {
@@ -106,6 +112,75 @@ const DashboardLayout = ({
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = originalStyle; };
   }, [sidebarOpen]);
+
+  // --- Keyboard backspace listener (desktop) -------------------------------
+  useEffect(() => {
+    if (!onBack) return;
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Backspace') return;
+      // Ignore when typing in inputs, textareas, selects, or contenteditable
+      const el = document.activeElement;
+      if (!el) return;
+      const tag = el.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (el.isContentEditable) return;
+      if (!canGoBack) return;
+      e.preventDefault();
+      onBack();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onBack, canGoBack]);
+
+  // --- Mobile edge-swipe gesture --------------------------------------------
+  const touchStartRef = useRef(null);
+  const swipeTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!onBack || !isMobile) return;
+
+    const handleTouchStart = (e) => {
+      // Only activate edge-swipe from the left 20px, and only when sidebar is closed
+      if (sidebarOpen) {
+        touchStartRef.current = null;
+        return;
+      }
+      const touch = e.touches[0];
+      if (touch.clientX <= 20) {
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+        swipeTriggeredRef.current = false;
+      } else {
+        touchStartRef.current = null;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (!touchStartRef.current || swipeTriggeredRef.current) return;
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = touch.clientY - touchStartRef.current.y;
+      // Trigger when horizontal delta > 50px and is mostly horizontal
+      if (deltaX > 50 && deltaX > Math.abs(deltaY) * 1.5) {
+        swipeTriggeredRef.current = true;
+        if (canGoBack) onBack();
+      }
+    };
+
+    const handleTouchEnd = () => {
+      touchStartRef.current = null;
+      swipeTriggeredRef.current = false;
+    };
+
+    // Passive listeners — do not block scrolling
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [onBack, canGoBack, isMobile, sidebarOpen]);
 
   const handleTabClick = (tabId) => {
     onTabChange(tabId);
@@ -171,17 +246,55 @@ const DashboardLayout = ({
         {/* Top bar */}
         <div className="cm-topbar sticky top-0 z-10 px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="md:hidden p-2 rounded-lg hover:bg-ink/5 text-ink"
               >
                 <Menu className="h-5 w-5" />
               </button>
+              {/* Back button */}
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  disabled={!canGoBack}
+                  aria-label="Go back"
+                  className={`p-2 rounded-lg transition flex-shrink-0 ${
+                    canGoBack
+                      ? 'hover:bg-ink/5 text-ink'
+                      : 'opacity-30 cursor-default text-ink'
+                  }`}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+              )}
               <div className="min-w-0">
-                <p className="cm-mono text-[10px] uppercase tracking-[0.12em] text-gold-deep">
-                  {activeTabLabel}
-                </p>
+                {/* Breadcrumbs: full trail on desktop, just current tab on mobile */}
+                {breadcrumbs && breadcrumbs.length > 1 ? (
+                  <div className="hidden sm:flex items-center gap-1 cm-mono text-[10px] uppercase tracking-[0.12em] text-gold-deep">
+                    {breadcrumbs.map((bc, i) => (
+                      <React.Fragment key={bc.tabId}>
+                        {i > 0 && <ChevronRight className="h-3 w-3 text-text-soft/40" />}
+                        <button
+                          onClick={() => i < breadcrumbs.length - 1 && onTabChange?.(bc.tabId)}
+                          className={`${i < breadcrumbs.length - 1 ? 'hover:text-gold cursor-pointer' : 'cursor-default'} truncate`}
+                        >
+                          {bc.label || bc.tabId}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="cm-mono text-[10px] uppercase tracking-[0.12em] text-gold-deep">
+                    {activeTabLabel}
+                  </p>
+                )}
+                {/* Mobile: just the current tab label */}
+                {breadcrumbs && breadcrumbs.length > 1 && (
+                  <p className="sm:hidden cm-mono text-[10px] uppercase tracking-[0.12em] text-gold-deep">
+                    {breadcrumbs[breadcrumbs.length - 1].label || activeTabLabel}
+                  </p>
+                )}
                 <h2 className="cm-display text-lg text-ink truncate">
                   {institutionName}
                 </h2>

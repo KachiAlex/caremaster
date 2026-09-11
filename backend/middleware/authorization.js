@@ -438,4 +438,5 @@ module.exports = {
   DOCTOR_ROLES,
   ADMIN_ROLES,
   SUPER_ADMIN_ROLES,
+  OWNER_COLUMN,
 };
