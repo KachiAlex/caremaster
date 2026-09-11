@@ -267,36 +267,39 @@ const Appointments = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Preferred Date
-            </label>
-            <div className="relative">
-              <input
-                type="date"
-                value={formData.preferredDate}
-                onChange={(e) => setFormData({...formData, preferredDate: e.target.value})}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="mm/dd/yyyy"
-              />
-              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          {/* Date and time side-by-side on larger screens for a cleaner layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Preferred Date
+              </label>
+              <div className="relative icon-input-wrapper">
+                <input
+                  type="date"
+                  value={formData.preferredDate}
+                  onChange={(e) => setFormData({...formData, preferredDate: e.target.value})}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-date-input bg-white"
+                  placeholder="mm/dd/yyyy"
+                />
+                <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none input-icon" />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Preferred Time
-            </label>
-            <div className="relative">
-              <input
-                type="time"
-                value={formData.preferredTime}
-                onChange={(e) => setFormData({...formData, preferredTime: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="--:--"
-              />
-              <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Preferred Time
+              </label>
+              <div className="relative icon-input-wrapper">
+                <input
+                  type="time"
+                  value={formData.preferredTime}
+                  onChange={(e) => setFormData({...formData, preferredTime: e.target.value})}
+                  className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-time-input bg-white"
+                  placeholder="--:--"
+                />
+                <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none input-icon" />
+              </div>
             </div>
           </div>
 
