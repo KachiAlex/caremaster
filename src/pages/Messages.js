@@ -231,12 +231,13 @@ const Messages = () => {
     setShowNewChat(true);
     if (assignedCaregivers.length > 0) return; // already loaded
 
-    const clientId = userProfile?.id || userProfile?.uid || user?.uid;
-    if (!clientId) return;
+    const patientId = userProfile?.id || userProfile?.uid || user?.uid;
+    if (!patientId) return;
 
     setLoadingCaregivers(true);
     try {
-      const assignments = await assignmentAPI.getAssignmentsByClient(clientId);
+      // Backend scopes results to the authenticated patient/client
+      const assignments = await assignmentAPI.getAssignmentsByClient();
       // Extract unique caregiver IDs and names
       const caregivers = (assignments || [])
         .map(a => ({
@@ -244,7 +245,7 @@ const Messages = () => {
           name: a.caregiverName || a.caregiver_name || 'Caregiver',
           role: a.caregiverRole || a.role || 'Caregiver',
         }))
-        .filter(c => c.id && c.id !== clientId);
+        .filter(c => c.id && c.id !== patientId);
       setAssignedCaregivers(caregivers);
     } catch (err) {
       console.error('Error loading caregivers:', err);

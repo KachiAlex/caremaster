@@ -37,6 +37,7 @@ export const assignmentAPI = {
   createAssignment: async (assignmentData) => {
     try {
       // Ensure referenced client document exists; create a minimal placeholder if missing
+      let clientUserId = assignmentData.patientId || assignmentData.patient_id;
       if (assignmentData.clientId) {
         const clientRef = doc(db, 'clients', assignmentData.clientId);
         const clientSnap = await getDoc(clientRef);
@@ -51,11 +52,17 @@ export const assignmentAPI = {
           logger.warn('Created placeholder client document for assignment', {
             clientId: assignmentData.clientId
           });
+        } else {
+          const clientData = clientSnap.data() || {};
+          // Use the client's user id as patient_id when not already provided
+          clientUserId = clientUserId || clientData.userId || clientData.user_id || clientData.uid;
         }
       }
 
       const assignment = {
         ...assignmentData,
+        // Store both client doc id and user id for reliable lookups
+        patientId: clientUserId,
         status: 'active',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -122,12 +129,19 @@ export const assignmentAPI = {
     }
   },
 
-  // Get assignments by client (no composite index required)
+  // Get assignments by client. If clientId is omitted, the backend scopes the
+  // result to the currently-authenticated patient/client; pass a client doc id
+  // when an admin/caregiver needs assignments for a specific client.
   getAssignmentsByClient: async (clientId) => {
     try {
+      const constraints = [];
+      if (clientId) {
+        constraints.push(where('clientId', '==', clientId));
+      }
+
       const assignmentsQuery = query(
         collection(db, ASSIGNMENTS_COLLECTION),
-        where('clientId', '==', clientId)
+        ...constraints
       );
 
       const querySnapshot = await getDocs(assignmentsQuery);
@@ -430,13 +444,18 @@ export const assignmentAPI = {
     }
   },
 
-  // Real-time subscription for assignments by client
+  // Real-time subscription for assignments by client. If clientId is omitted,
+  // the backend scopes the result to the currently-authenticated patient/client.
   subscribeToAssignmentsByClient: (clientId, callback) => {
     try {
+      const constraints = [orderBy('createdAt', 'desc')];
+      if (clientId) {
+        constraints.unshift(where('clientId', '==', clientId));
+      }
+
       const assignmentsQuery = query(
         collection(db, ASSIGNMENTS_COLLECTION),
-        where('clientId', '==', clientId),
-        orderBy('createdAt', 'desc')
+        ...constraints
       );
 
       return onSnapshot(assignmentsQuery, (snapshot) => {

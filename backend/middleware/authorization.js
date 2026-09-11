@@ -186,6 +186,14 @@ async function scopeQuery(query, user, tableName) {
       if (ownerCol === 'id') {
         // For clients/patients table, the patient's own row
         query.where(`${tableName}.id`, user.id);
+      } else if (tableName === 'assignments' && ownerCol === 'patient_id') {
+        // assignments stores the client's document id in client_id (clients.id),
+        // while clients.user_id holds the user's id. Scope by matching through
+        // the clients table so patients can see their assigned caregivers even
+        // when patient_id is not populated on the assignment row.
+        query.whereIn(`${tableName}.client_id`, function() {
+          this.select(db.raw('id::text')).from('clients').where('user_id', user.id);
+        });
       } else {
         query.where(`${tableName}.${ownerCol}`, user.id);
       }

@@ -31,15 +31,16 @@ const ClientCaregivers = () => {
 
   const loadCaregivers = async () => {
     if (!userProfile?.id && !userProfile?.uid) return;
-    const clientId = userProfile?.id || userProfile?.uid;
+    const patientId = userProfile?.id || userProfile?.uid;
 
     try {
       setLoading(true);
 
-      // Load assigned caregivers from admin-created assignments
-      const assignments = await assignmentAPI.getAssignmentsByClient(clientId);
+      // Load assigned caregivers from admin-created assignments.
+      // The backend scopes results to the authenticated patient/client.
+      const assignments = await assignmentAPI.getAssignmentsByClient();
       const list = assignments || [];
-      console.log(`Found ${list.length} caregiver assignments for client ${clientId}`);
+      console.log(`Found ${list.length} caregiver assignments for client ${patientId}`);
 
       // Extract caregiver information from assignments
       const caregiversData = list.map(assignment => ({
@@ -52,7 +53,7 @@ const ClientCaregivers = () => {
         assignmentId: assignment.id
       }));
 
-      console.log(`Loading assigned caregivers for client ${clientId}:`, caregiversData.length);
+      console.log(`Loading assigned caregivers for client ${patientId}:`, caregiversData.length);
       setCaregivers(caregiversData || []);
     } catch (error) {
       console.error('Error loading caregivers:', error);
@@ -64,13 +65,13 @@ const ClientCaregivers = () => {
 
   useEffect(() => {
     if (userProfile?.id || userProfile?.uid) {
-      const clientId = userProfile?.id || userProfile?.uid;
+      const patientId = userProfile?.id || userProfile?.uid;
       loadCaregivers();
 
       // Set up real-time subscription for assignments
-      const unsubscribe = assignmentAPI.subscribeToAssignmentsByClient(clientId, (assignments) => {
+      const unsubscribe = assignmentAPI.subscribeToAssignmentsByClient(null, (assignments) => {
         const list = assignments || [];
-        console.log(`Real-time update: Found ${list.length} caregiver assignments for client ${clientId}`);
+        console.log(`Real-time update: Found ${list.length} caregiver assignments for client ${patientId}`);
 
         // Extract caregiver information from assignments
         const caregiversData = list.map(assignment => ({
