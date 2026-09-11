@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import sessionManager from '../utils/sessionManager';
-import { useResponsive, useRole } from '../hooks';
+import { useResponsive, useRole, useBackNavigation } from '../hooks';
 import { 
   Calendar, 
   Clock, 
@@ -416,6 +416,52 @@ const InstitutionCaregiverDashboard = () => {
   // Consultation states
   const [consultations, setConsultations] = useState([]);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
+
+  // Back navigation — close modals first, then previous tab, then browser history
+  const closeAllModals = useCallback(() => {
+    setShowProfileSettings(false);
+    setShowDeviceSettings(false);
+    setShowVitalsModal(false);
+    setShowCareLogsModal(false);
+    setShowNurseReportModal(false);
+    setShowMedicationModal(false);
+    setShowCareLogForm(false);
+    setShowTaskDetailsModal(false);
+    setShowTaskCompletionModal(false);
+    setShowUnifiedActivityModal(false);
+    setShowMedicalReportModal(false);
+    setShowCarePlanModal(false);
+    setShowMobileChatPane(false);
+    setShowNewConversationModal(false);
+    setShowActivityModal(false);
+    setShowPrescriptionModal(false);
+    setShowConsultationModal(false);
+  }, []);
+
+  const { canGoBack, goBack, pushTab, breadcrumbs } = useBackNavigation({
+    defaultTab: 'dashboard',
+    modalStates: {
+      showProfileSettings, showDeviceSettings, showVitalsModal, showCareLogsModal,
+      showNurseReportModal, showMedicationModal, showCareLogForm,
+      showTaskDetailsModal, showTaskCompletionModal, showUnifiedActivityModal,
+      showMedicalReportModal, showCarePlanModal, showMobileChatPane,
+      showNewConversationModal, showActivityModal, showPrescriptionModal,
+      showConsultationModal,
+    },
+    closeAllModals,
+  });
+
+  const handleTabChange = useCallback((tabId) => {
+    pushTab(tabId);
+    setActiveTab(tabId);
+  }, [pushTab]);
+
+  const handleBack = useCallback(() => {
+    const prevTab = goBack();
+    if (prevTab && typeof prevTab === 'string') {
+      setActiveTab(prevTab);
+    }
+  }, [goBack]);
   const [consultationFormData, setConsultationFormData] = useState({
     consultationType: CONSULTATION_TYPES.REVIEW,
     consultationDate: new Date().toISOString().slice(0, 16),
@@ -4610,7 +4656,7 @@ const InstitutionCaregiverDashboard = () => {
       <DashboardLayout
         tabs={tabs}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         institutionName={institutionData?.name || 'Institution'}
         portalLabel="Caregiver"
         displayName={displayName}
@@ -4618,6 +4664,12 @@ const InstitutionCaregiverDashboard = () => {
         profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
         onLogout={handleLogout}
         onProfileClick={() => setShowProfileSettings(true)}
+        onBack={handleBack}
+        canGoBack={canGoBack}
+        breadcrumbs={breadcrumbs.map((bc) => ({
+          tabId: bc.tabId,
+          label: tabs.find(t => t.id === bc.tabId)?.label || bc.tabId,
+        }))}
         headerActions={
           <>
             {userRoles && userRoles.length > 1 && (

@@ -2,5 +2,6 @@
 export { default as useMediaQuery } from './useMediaQuery';
 export { default as useResponsive } from './useResponsive';
 export { default as useMobileDetection } from './useMobileDetection';
+export { default as useBackNavigation } from './useBackNavigation';
 export { useRole } from './useRole';
 

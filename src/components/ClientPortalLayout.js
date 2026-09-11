@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Home,
@@ -12,6 +12,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { useBackNavigation } from '../hooks';
 import DashboardLayout from './DashboardLayout';
 
 const TABS = [
@@ -64,6 +65,13 @@ const ClientPortalLayout = () => {
 
   const activeTab = ROUTE_TO_TAB[pathname] || 'dashboard';
 
+  // Back navigation — previous tab, then browser history (no modals in client portal layout)
+  const { canGoBack, goBack, pushTab, breadcrumbs } = useBackNavigation({
+    defaultTab: 'dashboard',
+    modalStates: {},
+    closeAllModals: () => {},
+  });
+
   const displayName =
     userProfile?.name ||
     userProfile?.displayName ||
@@ -74,7 +82,16 @@ const ClientPortalLayout = () => {
   const handleTabChange = (tabId) => {
     const route = TAB_TO_ROUTE[tabId];
     if (route) {
+      pushTab(tabId);
       navigate(route);
+    }
+  };
+
+  const handleBack = () => {
+    const prevTab = goBack();
+    if (prevTab && typeof prevTab === 'string') {
+      const route = TAB_TO_ROUTE[prevTab];
+      if (route) navigate(route);
     }
   };
 
@@ -97,6 +114,12 @@ const ClientPortalLayout = () => {
       userEmail={userProfile?.email || user?.email || ''}
       profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
       onLogout={handleLogout}
+      onBack={handleBack}
+      canGoBack={canGoBack}
+      breadcrumbs={breadcrumbs.map((bc) => ({
+        tabId: bc.tabId,
+        label: TABS.find(t => t.id === bc.tabId)?.label || bc.tabId,
+      }))}
     >
       <Outlet />
     </DashboardLayout>

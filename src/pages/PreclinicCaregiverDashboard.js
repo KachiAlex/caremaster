@@ -38,6 +38,7 @@ import { getClientsByCaregiver } from '../api/patientsAPI';
 import { toast } from 'react-toastify';
 import DashboardLayout from '../components/DashboardLayout';
 import AssignmentCalendar from '../components/AssignmentCalendar';
+import { useBackNavigation } from '../hooks';
 import { collection, query, getDocs, updateDoc, where, orderBy, doc } from 'backend/database';
 import { db } from '../backend/config';
 
@@ -50,6 +51,25 @@ const PreclinicCaregiverDashboard = () => {
   const [recentTasks, setRecentTasks] = useState([]);
   const [performance, setPerformance] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // Back navigation — previous tab, then browser history (no modals in this dashboard)
+  const { canGoBack, goBack, pushTab, breadcrumbs } = useBackNavigation({
+    defaultTab: 'dashboard',
+    modalStates: {},
+    closeAllModals: () => {},
+  });
+
+  const handleTabChange = (tabId) => {
+    pushTab(tabId);
+    setActiveTab(tabId);
+  };
+
+  const handleBack = () => {
+    const prevTab = goBack();
+    if (prevTab && typeof prevTab === 'string') {
+      setActiveTab(prevTab);
+    }
+  };
 
   // Get qualification-specific dashboard configuration
   const getDashboardConfig = () => {
@@ -628,13 +648,19 @@ const PreclinicCaregiverDashboard = () => {
       <DashboardLayout
         tabs={tabs}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         institutionName={dashboardConfig.title || 'Caregiver Portal'}
         portalLabel="Caregiver"
         displayName={displayName}
         userEmail={userProfile?.email || user?.email || ''}
         profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
         onLogout={handleLogout}
+        onBack={handleBack}
+        canGoBack={canGoBack}
+        breadcrumbs={breadcrumbs.map((bc) => ({
+          tabId: bc.tabId,
+          label: tabs.find(t => t.id === bc.tabId)?.label || bc.tabId,
+        }))}
       >
         <div className="space-y-6">
           <div className="cm-section-head">

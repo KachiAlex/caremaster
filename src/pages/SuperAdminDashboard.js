@@ -25,6 +25,7 @@ import FontSizeToggle from '../components/FontSizeToggle';
 import { collection, query, getDocs, orderBy, limit, onSnapshot } from 'backend/database';
 import { db } from '../backend/config';
 import DashboardLayout from '../components/DashboardLayout';
+import { useBackNavigation } from '../hooks';
 
 // New tenant-centric components
 import TenantList from '../components/superadmin/TenantList';
@@ -78,6 +79,25 @@ const SuperAdminDashboard = () => {
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [tenantsLoading, setTenantsLoading] = useState(false);
+
+  // Back navigation — close modals first, then previous tab, then browser history
+  const closeAllModals = () => {
+    setShowActivityModal(false);
+    setShowOnboarding(false);
+  };
+
+  const { canGoBack, goBack, pushTab, breadcrumbs } = useBackNavigation({
+    defaultTab: 'dashboard',
+    modalStates: { showActivityModal, showOnboarding },
+    closeAllModals,
+  });
+
+  const handleBack = () => {
+    const prevTab = goBack();
+    if (prevTab && typeof prevTab === 'string') {
+      setActiveTab(prevTab);
+    }
+  };
 
   // Session info for the top bar / sidebar
   const session = authManager.getRoleSession('super-admin');
@@ -446,6 +466,7 @@ const SuperAdminDashboard = () => {
   const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label || 'Dashboard';
 
   const handleTabChange = (tabId) => {
+    pushTab(tabId);
     setActiveTab(tabId);
   };
 
@@ -888,6 +909,12 @@ const SuperAdminDashboard = () => {
         displayName={displayName || 'Super Admin'}
         userEmail={userEmail}
         onLogout={handleLogout}
+        onBack={handleBack}
+        canGoBack={canGoBack}
+        breadcrumbs={breadcrumbs.map((bc) => ({
+          tabId: bc.tabId,
+          label: tabs.find(t => t.id === bc.tabId)?.label || bc.tabId,
+        }))}
         headerActions={<FontSizeToggle />}
       >
         {renderActiveTab()}

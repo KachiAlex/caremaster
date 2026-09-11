@@ -4,6 +4,7 @@ import { useUser } from '../contexts/UserContext';
 import SpecializedCaregiverDashboard from '../components/SpecializedCaregiverDashboard';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import DashboardLayout from '../components/DashboardLayout';
+import { useBackNavigation } from '../hooks';
 import {
   Users,
   Calendar,
@@ -320,6 +321,23 @@ const ServiceProviderDashboard = () => {
   const [showPatientModal, setShowPatientModal] = useState(false);
   const [showMorningBriefing, setShowMorningBriefing] = useState(false);
   const [showTaskCompletion, setShowTaskCompletion] = useState(false);
+
+  // Back navigation — close modals first, then browser history (this dashboard navigates by route)
+  const closeAllModals = () => {
+    setShowPatientModal(false);
+    setShowMorningBriefing(false);
+    setShowTaskCompletion(false);
+  };
+
+  const { canGoBack, goBack, breadcrumbs } = useBackNavigation({
+    defaultTab: 'dashboard',
+    modalStates: { showPatientModal, showMorningBriefing, showTaskCompletion },
+    closeAllModals,
+  });
+
+  const handleBack = () => {
+    goBack();
+  };
   const [selectedTask, setSelectedTask] = useState(null);
   const [nurseReport, setNurseReport] = useState({
     bloodPressure: '',
@@ -793,6 +811,12 @@ const ServiceProviderDashboard = () => {
         userEmail={userProfile?.email || user?.email || ''}
         profilePictureUrl={userProfile?.photoURL || userProfile?.profilePictureUrl}
         onLogout={handleLogout}
+        onBack={handleBack}
+        canGoBack={canGoBack}
+        breadcrumbs={breadcrumbs.map((bc) => ({
+          tabId: bc.tabId,
+          label: tabs.find(t => t.id === bc.tabId)?.label || bc.tabId,
+        }))}
         headerActions={
           <button
             onClick={() => window.location.reload()}

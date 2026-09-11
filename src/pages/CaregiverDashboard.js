@@ -29,7 +29,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { useRole } from '../hooks';
+import { useRole, useBackNavigation } from '../hooks';
 import { caregiverAPI } from '../api/caregiverAPI';
 import { getCareTasksByCaregiver, getTodayTasks } from '../api/careTasksAPI';
 import { getTodaysAppointments } from '../api/appointmentsAPI';
@@ -74,6 +74,39 @@ const CaregiverDashboard = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
   const [callService] = useState(() => new CallService());
+
+  // Back navigation — close modals first, then previous tab, then browser history
+  const closeAllModals = () => {
+    setShowSettings(false);
+    setShowVitalsModal(false);
+    setShowCareLogsModal(false);
+    setShowNurseReportModal(false);
+    setShowMedicationModal(false);
+    setShowTaskDetailsModal(false);
+  };
+
+  const { canGoBack, goBack, pushTab, breadcrumbs } = useBackNavigation({
+    defaultTab: 'dashboard',
+    modalStates: {
+      showSettings, showVitalsModal, showCareLogsModal, showNurseReportModal,
+      showMedicationModal, showTaskDetailsModal,
+    },
+    closeAllModals,
+  });
+
+  const handleTabChange = (tabId) => {
+    pushTab(tabId);
+    setActiveTab(tabId);
+    setShowSettings(tabId === 'settings');
+  };
+
+  const handleBack = () => {
+    const prevTab = goBack();
+    if (prevTab && typeof prevTab === 'string') {
+      setActiveTab(prevTab);
+      setShowSettings(prevTab === 'settings');
+    }
+  };
 
   // Get qualification-specific dashboard configuration
   const getDashboardConfig = () => {
@@ -1156,16 +1189,19 @@ const CaregiverDashboard = () => {
       <DashboardLayout
         tabs={tabs}
         activeTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          setShowSettings(tab === 'settings');
-        }}
+        onTabChange={handleTabChange}
         institutionName={dashboardConfig.title || 'Caregiver Portal'}
         portalLabel="Caregiver"
         displayName={displayName}
         userEmail={userProfile?.email || user?.email || ''}
         profilePictureUrl={profileImage || userProfile?.photoURL || userProfile?.profilePicture}
         onLogout={handleLogout}
+        onBack={handleBack}
+        canGoBack={canGoBack}
+        breadcrumbs={breadcrumbs.map((bc) => ({
+          tabId: bc.tabId,
+          label: tabs.find(t => t.id === bc.tabId)?.label || bc.tabId,
+        }))}
         headerActions={
           <button
             onClick={() => setShowSettings(!showSettings)}

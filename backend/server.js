@@ -37,7 +37,7 @@ const limiter = rateLimit({
   max: 3000, // limit each IP to 3000 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
   skip: (req) => {
-    return req.path === '/health' || req.ip === '127.0.0.1';
+    return req.path === '/health' || req.path === '/api/health' || req.ip === '127.0.0.1';
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -74,13 +74,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+const healthHandler = (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV 
   });
-});
+};
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // API routes
 app.use('/api/auth', authLimiter, authRoutes);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { doc, setDoc, updateDoc, collection, query, where, getDocs, getDoc, addDoc, orderBy } from '../services/databaseCompat';
 import { useUser } from '../contexts/UserContext';
+import { useBackNavigation } from '../hooks';
 import authManager from '../utils/authManager';
 import sessionManager from '../utils/sessionManager';
 import { 
@@ -381,6 +382,57 @@ const PartnerAdminDashboard = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [callConnectionState, setCallConnectionState] = useState('connecting'); // Track WebRTC connection state
+
+  // Back navigation — close modals first, then previous tab, then browser history
+  const closeAllModals = useCallback(() => {
+    setShowCreatePatientModal(false);
+    setShowAddCaregiver(false);
+    setShowProfileSettings(false);
+    setShowAddPharmacist(false);
+    setShowAssignmentModal(false);
+    setShowCaregiverPasswordModal(false);
+    setShowClientDetails(false);
+    setShowCaregiverDetails(false);
+    setShowPharmacistDetails(false);
+    setShowAssignmentDetails(false);
+    setShowWageModal(false);
+    setShowEditAssignmentModal(false);
+    setShowEditBillingPlanModal(false);
+    setShowStaffModal(false);
+    setShowClientsModal(false);
+    setShowAppointmentsModal(false);
+    setShowEditUserModal(false);
+    setShowLinkCustomizer(false);
+    setShowMobileChatPane(false);
+    setShowNotifications(false);
+    setShowProfileDropdown(false);
+  }, []);
+
+  const { canGoBack, goBack, pushTab, breadcrumbs } = useBackNavigation({
+    defaultTab: 'dashboard',
+    modalStates: {
+      showCreatePatientModal, showAddCaregiver, showProfileSettings,
+      showAddPharmacist, showAssignmentModal, showCaregiverPasswordModal,
+      showClientDetails, showCaregiverDetails, showPharmacistDetails,
+      showAssignmentDetails, showWageModal, showEditAssignmentModal,
+      showEditBillingPlanModal, showStaffModal, showClientsModal,
+      showAppointmentsModal, showEditUserModal, showLinkCustomizer,
+      showMobileChatPane, showNotifications,
+    },
+    closeAllModals,
+  });
+
+  const handleTabChange = useCallback((tabId) => {
+    pushTab(tabId);
+    setActiveTab(tabId);
+  }, [pushTab]);
+
+  const handleBack = useCallback(() => {
+    const prevTab = goBack();
+    if (prevTab && typeof prevTab === 'string') {
+      setActiveTab(prevTab);
+    }
+  }, [goBack]);
   
   // Initialize call service
   const callService = new CallService();
@@ -4442,13 +4494,19 @@ const renderMessagesTab = () => {
       <DashboardLayout
         tabs={tabs}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         institutionName={institutionData?.name || 'Partner'}
         portalLabel="Partner Admin"
         displayName={displayName}
         userEmail={userProfile?.email || user?.email}
         profilePictureUrl={userProfile?.photoURL || userProfile?.profilePicture}
         onLogout={handleLogout}
+        onBack={handleBack}
+        canGoBack={canGoBack}
+        breadcrumbs={breadcrumbs.map((bc) => ({
+          tabId: bc.tabId,
+          label: tabs.find(t => t.id === bc.tabId)?.label || bc.tabId,
+        }))}
         headerActions={
           <>
             {userRoles && userRoles.length > 1 && (
