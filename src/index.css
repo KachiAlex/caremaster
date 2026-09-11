@@ -927,6 +927,25 @@ body {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+/* Hide native browser calendar/clock indicators on date/time inputs that
+   have a custom icon overlay. This prevents the custom Lucide icon from
+   overlapping the browser's default picker icon. */
+input[type="date"].custom-date-input::-webkit-calendar-picker-indicator,
+input[type="time"].custom-time-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  display: none;
+  -webkit-appearance: none;
+  pointer-events: none;
+}
+
+input[type="date"].custom-date-input,
+input[type="time"].custom-time-input {
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: none;
+  padding-right: 2.5rem;
+}
+
 .form-textarea {
   resize: vertical;
   min-height: 100px;
