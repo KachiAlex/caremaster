@@ -20,6 +20,25 @@ function getToken() {
   return localStorage.getItem('token') || localStorage.getItem('authToken') || '';
 }
 
+// Convert snake_case object keys to camelCase recursively (safe for scalars/arrays)
+function toCamelCase(str) {
+  return str.replace(/_([a-z0-9])/g, (_, letter) => letter.toUpperCase());
+}
+
+function snakeToCamel(obj) {
+  if (Array.isArray(obj)) {
+    return obj.map(snakeToCamel);
+  }
+  if (obj === null || typeof obj !== 'object' || obj instanceof Date) {
+    return obj;
+  }
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[toCamelCase(key)] = snakeToCamel(value);
+  }
+  return result;
+}
+
 async function apiFetch(path, options = {}) {
   const url = `${API_BASE()}${path}`;
   const headers = {
@@ -57,6 +76,11 @@ async function apiFetch(path, options = {}) {
   const text = await res.text();
   let body;
   try { body = text ? JSON.parse(text) : {}; } catch { body = { raw: text }; }
+
+  // Normalize backend snake_case JSON keys to camelCase for the React UI
+  if (body && typeof body === 'object' && !body.raw) {
+    body = snakeToCamel(body);
+  }
 
   if (!res.ok) {
     const err = new Error(body.message || `API error ${res.status}`);
