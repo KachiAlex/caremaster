@@ -101,6 +101,7 @@ const COLUMN_ALIASES = {
   nurse_reports: { client_id: 'patient_id' },
   elderly_profiles: { client_id: 'patient_id' },
   invoices: { client_id: 'patient_id' },
+  client_activities: { client_id: 'patient_id' },
 };
 
 // Filters to silently ignore per table (column doesn't exist in that table).
@@ -131,7 +132,7 @@ const NO_TABLE_COLLECTIONS = [
   // NOTE: billingPlans, clientSubscriptions, billingSettings, suppliers,
   // purchaseOrders, goodsReceived, and stockAudit have been removed from
   // this list because they DO have backing DB tables.
-  'bills', 'patientLogs', 'adlLogs', 'wages', 'reports', 'campaigns',
+  'bills', 'patientLogs', 'wages', 'reports', 'campaigns',
   'securityAuditLogs', 'userSessions', 'loginAttempts', 'twoFactorAuth',
 ];
 
@@ -242,7 +243,9 @@ const WRITABLE_FIELDS = {
   security_audit_logs: ['user_id', 'userId', 'user_role', 'action', 'resource_type', 'resourceType', 'resource_id', 'resourceId', 'details', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'institution_id', 'institutionId', 'timestamp', 'created_at', 'updated_at'],
   user_sessions: ['user_id', 'userId', 'institution_id', 'institutionId', 'user_agent', 'userAgent', 'ip_address', 'ipAddress', 'active', 'created_at', 'last_activity', 'lastActivity', 'expires_at', 'expiresAt', 'ended_at', 'endedAt', 'updated_at'],
   login_attempts: ['email', 'user_id', 'userId', 'institution_id', 'institutionId', 'ip_address', 'ipAddress', 'user_agent', 'userAgent', 'success', 'timestamp', 'created_at', 'updated_at'],
-  two_factor_auth: ['user_id', 'userId', 'email', 'enabled', 'code', 'verified', 'expires_at', 'expiresAt', 'enabled_at', 'enabledAt', 'disabled_at', 'disabledAt', 'verified_at', 'verifiedAt', 'created_at', 'updated_at']
+  two_factor_auth: ['user_id', 'userId', 'email', 'enabled', 'code', 'verified', 'expires_at', 'expiresAt', 'enabled_at', 'enabledAt', 'disabled_at', 'disabledAt', 'verified_at', 'verifiedAt', 'created_at', 'updated_at'],
+  client_activities: ['patient_id', 'performed_by', 'institution_id', 'activity_type', 'description', 'metadata', 'created_at', 'updated_at'],
+  adl_logs: ['client_id', 'caregiver_id', 'activity_id', 'activity_name', 'notes', 'status', 'timestamp', 'metadata', 'created_at', 'updated_at']
 };
 
 // Allowed sort columns per table (to prevent SQL injection via orderBy)
@@ -287,7 +290,9 @@ const SORTABLE_COLUMNS = {
   calls: ['id', 'call_id', 'caller_id', 'recipient_id', 'status', 'created_at', 'answered_at', 'ended_at'],
   schedules: ['id', 'schedule_date', 'start_time', 'end_time', 'status', 'priority', 'created_at', 'updated_at'],
   patient_reports: ['id', 'created_at', 'updated_at'],
-  nurse_reports: ['id', 'created_at', 'updated_at']
+  nurse_reports: ['id', 'created_at', 'updated_at'],
+  client_activities: ['id', 'created_at', 'updated_at'],
+  adl_logs: ['id', 'timestamp', 'created_at']
 };
 
 function validateTable(tableName) {
@@ -382,6 +387,9 @@ const WRITE_COLUMN_ALIASES = {
     doctor_id: 'created_by',
   },
   nurse_reports: {
+    client_id: 'patient_id',
+  },
+  client_activities: {
     client_id: 'patient_id',
   },
   analytics_events: {
