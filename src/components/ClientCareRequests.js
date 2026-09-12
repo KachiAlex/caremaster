@@ -12,24 +12,26 @@ import {
   ChevronUp,
   Filter,
   Stethoscope,
-  Phone,
-  Mail,
+  Heart,
   Activity,
-  Inbox
+  Inbox,
+  Phone
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import telemedicineAPI from '../api/telemedicineAPI';
+import { getAllAppointments, updateAppointment } from '../api/appointmentsAPI';
 import { getUsersByType } from '../api/usersAPI';
 
-const VideoConsultationRequests = () => {
+const ClientCareRequests = ({ institutionId }) => {
   const [requests, setRequests] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [caregivers, setCaregivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [scheduling, setScheduling] = useState(null);
   const [scheduleForm, setScheduleForm] = useState({
-    doctorId: '',
-    doctorName: '',
+    assigneeId: '',
+    assigneeName: '',
     appointmentDate: '',
     appointmentTime: '',
     duration: 30,
@@ -37,21 +39,56 @@ const VideoConsultationRequests = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [urgencyFilter, setUrgencyFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
+  const [typeFilter, setTypeFilter] = useState('all');
 
   const loadRequests = async () => {
     try {
       setLoading(true);
-      const [pending, doctorList] = await Promise.all([
+      const [pendingVideo, allAppointments] = await Promise.all([
         telemedicineAPI.getPendingRequests(),
-        getUsersByType('doctor').catch(() => [])
+        getAllAppointments().catch(() => [])
       ]);
-      setRequests(pending || []);
+
+      const pendingCare = (allAppointments || []).filter(
+        apt => (apt.status === 'pending' || apt.status === 'requested')
+      );
+
+      const normalized = [
+        ...(pendingVideo || []).map(r => ({
+          ...r,
+          requestType: 'video',
+          displayType: 'Video Consultation',
+          displayReason: r.reason,
+          displayUrgency: r.urgency || 'normal'
+        })),
+        ...pendingCare.map(r => ({
+          ...r,
+          requestType: 'care',
+          displayType: 'Care Visit',
+          displayReason: r.careType || r.title || r.description || 'Care request',
+          displayUrgency: r.priority || 'normal'
+        }))
+      ];
+
+      // Sort by newest first
+      normalized.sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt?.toDate ? a.createdAt.toDate() : a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
+
+      setRequests(normalized);
+
+      const [doctorList, caregiverList] = await Promise.all([
+        getUsersByType('doctor').catch(() => []),
+        getUsersByType('caregiver').catch(() => [])
+      ]);
+
       setDoctors((doctorList || []).filter(d => d.user_type === 'doctor' || d.type === 'doctor'));
+      setCaregivers((caregiverList || []).filter(c => c.user_type === 'caregiver' || c.type === 'caregiver'));
     } catch (error) {
-      console.error('Error loading consultation requests:', error);
-      toast.error('Failed to load consultation requests');
+      console.error('Error loading care requests:', error);
+      toast.error('Failed to load care requests');
       setRequests([]);
     } finally {
       setLoading(false);
@@ -87,42 +124,28 @@ const VideoConsultationRequests = () => {
 
   const stats = useMemo(() => {
     const total = requests.length;
-    const urgent = requests.filter(r => r.urgency === 'urgent').length;
-    const normal = total - urgent;
-    return { total, urgent, normal };
+    const video = requests.filter(r => r.requestType === 'video').length;
+    const care = requests.filter(r => r.requestType === 'care').length;
+    const urgent = requests.filter(r => r.displayUrgency === 'urgent' || r.priority === 'urgent' || r.urgency === 'urgent').length;
+    return { total, video, care, urgent };
   }, [requests]);
 
   const filteredRequests = useMemo(() => {
-    let filtered = requests.filter(req => {
+    return requests.filter(req => {
       const term = searchTerm.toLowerCase();
       const matchesSearch = (
         (req.clientName || '').toLowerCase().includes(term) ||
-        (req.reason || '').toLowerCase().includes(term) ||
+        (req.displayReason || '').toLowerCase().includes(term) ||
         (req.notes || '').toLowerCase().includes(term)
       );
-      const matchesUrgency = urgencyFilter === 'all' || req.urgency === urgencyFilter;
-      return matchesSearch && matchesUrgency;
+      const matchesType = typeFilter === 'all' || req.requestType === typeFilter;
+      return matchesSearch && matchesType;
     });
-
-    filtered.sort((a, b) => {
-      if (sortBy === 'newest') {
-        const aTime = a.createdAt ? new Date(a.createdAt?.toDate ? a.createdAt.toDate() : a.createdAt).getTime() : 0;
-        const bTime = b.createdAt ? new Date(b.createdAt?.toDate ? b.createdAt.toDate() : b.createdAt).getTime() : 0;
-        return bTime - aTime;
-      }
-      if (sortBy === 'urgency') {
-        if (a.urgency === 'urgent' && b.urgency !== 'urgent') return -1;
-        if (a.urgency !== 'urgent' && b.urgency === 'urgent') return 1;
-        return 0;
-      }
-      return 0;
-    });
-
-    return filtered;
-  }, [requests, searchTerm, urgencyFilter, sortBy]);
+  }, [requests, searchTerm, typeFilter]);
 
   const startScheduling = (request) => {
     setScheduling(request);
+    const isVideo = request.requestType === 'video';
     const date = request.appointmentDate
       ? new Date(request.appointmentDate?.toDate ? request.appointmentDate.toDate() : request.appointmentDate)
       : null;
@@ -133,8 +156,8 @@ const VideoConsultationRequests = () => {
       ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
       : '09:00';
     setScheduleForm({
-      doctorId: '',
-      doctorName: '',
+      assigneeId: '',
+      assigneeName: '',
       appointmentDate: dateStr,
       appointmentTime: timeStr,
       duration: 30,
@@ -142,19 +165,21 @@ const VideoConsultationRequests = () => {
     });
   };
 
-  const handleDoctorChange = (doctorId) => {
-    const doctor = doctors.find(d => d.id === doctorId);
+  const handleAssigneeChange = (assigneeId) => {
+    const isVideo = scheduling?.requestType === 'video';
+    const pool = isVideo ? doctors : caregivers;
+    const assignee = pool.find(p => p.id === assigneeId);
     setScheduleForm(prev => ({
       ...prev,
-      doctorId,
-      doctorName: doctor ? (doctor.name || `${doctor.first_name || ''} ${doctor.last_name || ''}`.trim()) : ''
+      assigneeId,
+      assigneeName: assignee ? (assignee.name || `${assignee.first_name || ''} ${assignee.last_name || ''}`.trim()) : ''
     }));
   };
 
   const submitSchedule = async (e) => {
     e.preventDefault();
-    if (!scheduleForm.doctorId) {
-      toast.error('Please select a doctor');
+    if (!scheduleForm.assigneeId) {
+      toast.error(`Please select a ${scheduling.requestType === 'video' ? 'doctor' : 'caregiver'}`);
       return;
     }
     if (!scheduleForm.appointmentDate) {
@@ -164,21 +189,31 @@ const VideoConsultationRequests = () => {
 
     setSubmitting(true);
     try {
-      const appointmentDate = new Date(`${scheduleForm.appointmentDate}T${scheduleForm.appointmentTime || '09:00'}`);
-      await telemedicineAPI.scheduleRequest(scheduling.id, {
-        doctorId: scheduleForm.doctorId,
-        doctorName: scheduleForm.doctorName,
-        appointmentDate,
-        duration: parseInt(scheduleForm.duration) || 30,
-        notes: scheduleForm.notes,
-        status: 'scheduled'
-      });
-      toast.success('Consultation scheduled successfully');
+      const scheduledAt = new Date(`${scheduleForm.appointmentDate}T${scheduleForm.appointmentTime || '09:00'}`);
+      if (scheduling.requestType === 'video') {
+        await telemedicineAPI.scheduleRequest(scheduling.id, {
+          doctorId: scheduleForm.assigneeId,
+          doctorName: scheduleForm.assigneeName,
+          appointmentDate: scheduledAt,
+          duration: parseInt(scheduleForm.duration) || 30,
+          notes: scheduleForm.notes,
+          status: 'scheduled'
+        });
+      } else {
+        await updateAppointment(scheduling.id, {
+          caregiverId: scheduleForm.assigneeId,
+          caregiverName: scheduleForm.assigneeName,
+          scheduledTime: scheduledAt,
+          status: 'scheduled',
+          notes: scheduleForm.notes,
+        });
+      }
+      toast.success('Request scheduled successfully');
       setScheduling(null);
       loadRequests();
     } catch (error) {
       console.error('Error scheduling request:', error);
-      toast.error('Failed to schedule consultation');
+      toast.error('Failed to schedule request');
     } finally {
       setSubmitting(false);
     }
@@ -197,11 +232,11 @@ const VideoConsultationRequests = () => {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Video className="h-7 w-7 text-blue-600 mr-3" />
-            Video Consultation Requests
-          </h1>
-          <p className="text-gray-600 mt-1">Review client requests and assign a doctor</p>
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+            <Inbox className="h-7 w-7 text-blue-600 mr-3" />
+            Client Care Requests
+          </h2>
+          <p className="text-gray-600 mt-1">Pending video consultations and care visits awaiting action</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -225,32 +260,41 @@ const VideoConsultationRequests = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center">
-          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4">
-            <Inbox className="h-6 w-6 text-blue-600" />
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+            <Inbox className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">Total Pending</p>
+            <p className="text-sm text-gray-500 font-medium">Total</p>
             <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center">
-          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mr-4">
-            <AlertCircle className="h-6 w-6 text-red-600" />
+          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+            <Video className="h-5 w-5 text-purple-600" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 font-medium">Video</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.video}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center">
+          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+            <Heart className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 font-medium">Care Visits</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.care}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center">
+          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+            <AlertCircle className="h-5 w-5 text-red-600" />
           </div>
           <div>
             <p className="text-sm text-gray-500 font-medium">Urgent</p>
             <p className="text-2xl font-bold text-gray-900">{stats.urgent}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center">
-          <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
-            <Activity className="h-6 w-6 text-green-600" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500 font-medium">Normal</p>
-            <p className="text-2xl font-bold text-gray-900">{stats.normal}</p>
           </div>
         </div>
       </div>
@@ -259,28 +303,18 @@ const VideoConsultationRequests = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex items-center text-gray-700 text-sm font-medium">
           <Filter className="h-4 w-4 mr-2" />
-          Filters
+          Filter
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 flex-1">
-          <select
-            value={urgencyFilter}
-            onChange={(e) => setUrgencyFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Urgency</option>
-            <option value="urgent">Urgent</option>
-            <option value="normal">Normal</option>
-          </select>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="newest">Newest First</option>
-            <option value="urgency">Urgency First</option>
-          </select>
-        </div>
-        <p className="text-sm text-gray-500">
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="all">All Types</option>
+          <option value="video">Video Consultation</option>
+          <option value="care">Care Visit</option>
+        </select>
+        <p className="text-sm text-gray-500 sm:ml-auto">
           {filteredRequests.length} request{filteredRequests.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -288,16 +322,17 @@ const VideoConsultationRequests = () => {
       {/* Requests List */}
       {filteredRequests.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <Video className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Pending Requests</h3>
-          <p className="text-gray-600">There are no client video consultation requests awaiting scheduling.</p>
+          <Inbox className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Pending Care Requests</h3>
+          <p className="text-gray-600">There are no client care or video consultation requests awaiting action.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredRequests.map((request) => {
-            const dateTime = formatDateTime(request.appointmentDate);
+            const dateTime = formatDateTime(request.appointmentDate || request.scheduledTime);
             const isExpanded = expanded === request.id;
-            const isUrgent = request.urgency === 'urgent';
+            const isUrgent = request.displayUrgency === 'urgent';
+            const isVideo = request.requestType === 'video';
 
             return (
               <div
@@ -308,16 +343,20 @@ const VideoConsultationRequests = () => {
               >
                 <div className={`px-6 py-4 ${isUrgent ? 'bg-red-50' : 'bg-white'}`}>
                   <div className="flex flex-col lg:flex-row lg:items-start gap-4">
-                    {/* Left: Avatar + client */}
                     <div className="flex items-start flex-1 min-w-0">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 mr-4 ${
-                        isUrgent ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                        isVideo ? 'bg-purple-100 text-purple-600' : 'bg-green-100 text-green-600'
                       }`}>
-                        <User className="h-6 w-6" />
+                        {isVideo ? <Video className="h-6 w-6" /> : <Heart className="h-6 w-6" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center flex-wrap gap-2 mb-1">
                           <h3 className="text-lg font-semibold text-gray-900">{request.clientName || 'Client'}</h3>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            isVideo ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {isVideo ? 'Video Consultation' : 'Care Visit'}
+                          </span>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                             isUrgent ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
                           }`}>
@@ -329,7 +368,7 @@ const VideoConsultationRequests = () => {
                           </span>
                           <span className="text-xs text-gray-400">{formatTimeAgo(request.createdAt)}</span>
                         </div>
-                        <p className="text-sm text-gray-700 line-clamp-2 mb-2">{request.reason}</p>
+                        <p className="text-sm text-gray-700 line-clamp-2 mb-2">{request.displayReason}</p>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
                           <span className="flex items-center">
                             <Calendar className="h-3.5 w-3.5 mr-1" />
@@ -343,14 +382,13 @@ const VideoConsultationRequests = () => {
                       </div>
                     </div>
 
-                    {/* Right: Actions */}
                     <div className="flex items-center gap-2 lg:pt-1">
                       <button
                         onClick={() => startScheduling(request)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm font-medium shadow-sm"
                       >
                         <Stethoscope className="h-4 w-4 mr-2" />
-                        Schedule
+                        {isVideo ? 'Schedule Doctor' : 'Assign Caregiver'}
                       </button>
                       <button
                         onClick={() => setExpanded(isExpanded ? null : request.id)}
@@ -367,35 +405,26 @@ const VideoConsultationRequests = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
                       <div className="bg-white p-3 rounded-lg border border-gray-200">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Client ID</span>
-                        <p className="mt-1 flex items-center">
-                          <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                          {request.clientId}
-                        </p>
+                        <p className="mt-1">{request.clientId}</p>
                       </div>
                       <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Urgency</span>
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Urgency / Priority</span>
                         <p className={`mt-1 font-medium ${isUrgent ? 'text-red-700' : 'text-blue-700'}`}>
-                          {isUrgent ? 'Urgent — needs attention' : 'Normal'}
+                          {isUrgent ? 'Urgent' : 'Normal'}
                         </p>
                       </div>
                       <div className="bg-white p-3 rounded-lg border border-gray-200">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Preferred Date</span>
-                        <p className="mt-1 flex items-center">
-                          <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                          {dateTime.date}
-                        </p>
+                        <p className="mt-1">{dateTime.date}</p>
                       </div>
                       <div className="bg-white p-3 rounded-lg border border-gray-200">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Preferred Time</span>
-                        <p className="mt-1 flex items-center">
-                          <Clock className="h-4 w-4 mr-2 text-gray-400" />
-                          {dateTime.time}
-                        </p>
+                        <p className="mt-1">{dateTime.time}</p>
                       </div>
                     </div>
                     {request.notes && (
                       <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Additional Notes</h4>
+                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Notes</h4>
                         <p className="text-sm text-gray-700 whitespace-pre-wrap">{request.notes}</p>
                       </div>
                     )}
@@ -407,14 +436,16 @@ const VideoConsultationRequests = () => {
         </div>
       )}
 
-      {/* Schedule Modal */}
+      {/* Schedule / Assign Modal */}
       {scheduling && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gray-50 rounded-t-2xl">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Schedule Consultation</h2>
-                <p className="text-sm text-gray-600">Assign a doctor and confirm the appointment for {scheduling.clientName}</p>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {scheduling.requestType === 'video' ? 'Schedule Video Consultation' : 'Assign Caregiver Visit'}
+                </h2>
+                <p className="text-sm text-gray-600">For {scheduling.clientName}</p>
               </div>
               <button
                 onClick={() => setScheduling(null)}
@@ -428,23 +459,25 @@ const VideoConsultationRequests = () => {
               <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
                 <h4 className="text-sm font-semibold text-blue-900 mb-1 flex items-center">
                   <AlertCircle className="h-4 w-4 mr-1" />
-                  Request Reason
+                  Request
                 </h4>
-                <p className="text-sm text-blue-800">{scheduling.reason}</p>
+                <p className="text-sm text-blue-800">{scheduling.displayReason}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Doctor *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {scheduling.requestType === 'video' ? 'Select Doctor *' : 'Select Caregiver *'}
+                </label>
                 <select
-                  value={scheduleForm.doctorId}
-                  onChange={(e) => handleDoctorChange(e.target.value)}
+                  value={scheduleForm.assigneeId}
+                  onChange={(e) => handleAssigneeChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
-                  <option value="">Choose a doctor</option>
-                  {doctors.map(doctor => (
-                    <option key={doctor.id} value={doctor.id}>
-                      {doctor.name || `${doctor.first_name || ''} ${doctor.last_name || ''}`.trim() || doctor.email}
+                  <option value="">Choose {scheduling.requestType === 'video' ? 'a doctor' : 'a caregiver'}</option>
+                  {(scheduling.requestType === 'video' ? doctors : caregivers).map(person => (
+                    <option key={person.id} value={person.id}>
+                      {person.name || `${person.first_name || ''} ${person.last_name || ''}`.trim() || person.email}
                     </option>
                   ))}
                 </select>
@@ -452,7 +485,7 @@ const VideoConsultationRequests = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Date *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
                   <input
                     type="date"
                     value={scheduleForm.appointmentDate}
@@ -462,7 +495,7 @@ const VideoConsultationRequests = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Time *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
                   <input
                     type="time"
                     value={scheduleForm.appointmentTime}
@@ -488,10 +521,13 @@ const VideoConsultationRequests = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Consultation Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                   <div className="px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-700 flex items-center">
-                    <Video className="h-4 w-4 mr-2 text-blue-600" />
-                    Video Call
+                    {scheduling.requestType === 'video' ? (
+                      <><Video className="h-4 w-4 mr-2 text-purple-600" />Video Call</>
+                    ) : (
+                      <><Heart className="h-4 w-4 mr-2 text-green-600" />Care Visit</>
+                    )}
                   </div>
                 </div>
               </div>
@@ -501,7 +537,7 @@ const VideoConsultationRequests = () => {
                 <textarea
                   value={scheduleForm.notes}
                   onChange={(e) => setScheduleForm(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Any notes for the client or doctor..."
+                  placeholder="Any notes for the client or provider..."
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -523,12 +559,12 @@ const VideoConsultationRequests = () => {
                   {submitting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Scheduling...
+                      Saving...
                     </>
                   ) : (
                     <>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Confirm Schedule
+                      {scheduling.requestType === 'video' ? 'Confirm Schedule' : 'Confirm Assignment'}
                     </>
                   )}
                 </button>
@@ -541,4 +577,4 @@ const VideoConsultationRequests = () => {
   );
 };
 
-export default VideoConsultationRequests;
+export default ClientCareRequests;

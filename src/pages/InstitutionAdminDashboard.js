@@ -50,7 +50,6 @@ import {
   Package,
   Camera,
   Bell,
-  Video,
   HelpCircle,
   Loader,
   TestTube,
@@ -91,7 +90,7 @@ import ArchivedClients from '../components/ArchivedClients';
 import InactiveCaregiversReport from '../components/InactiveCaregiversReport';
 import SchedulingModule from '../components/SchedulingModule';
 import ClientActivityTimeline from '../components/ClientActivityTimeline';
-import VideoConsultationRequests from '../pages/VideoConsultationRequests';
+import ClientCareRequests from '../components/ClientCareRequests';
 import { collection, query, getDocs, getDoc, setDoc, updateDoc, addDoc, where, orderBy, limit, doc, serverTimestamp } from 'backend/database';
 import { httpsCallable, getFunctions } from 'backend/functions';
 import { db, functions } from '../backend/config';
@@ -306,7 +305,7 @@ const InstitutionAdminDashboard = () => {
   });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [caregiverSubTab, setCaregiverSubTab] = useState('all'); // 'all' | 'inactive'
-  const [clientSubTab, setClientSubTab] = useState('active'); // 'active' | 'archived'
+  const [clientSubTab, setClientSubTab] = useState('active'); // 'active' | 'archived' | 'care-requests'
   const [schedulingSubTab, setSchedulingSubTab] = useState('schedule'); // 'schedule' | 'assignments'
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showCaregiverPasswordModal, setShowCaregiverPasswordModal] = useState(false);
@@ -3372,7 +3371,6 @@ const renderMessagesTab = () => {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: Activity, iconColor: '#60A5FA' },
-    { id: 'video-consultations', label: 'Video Consultations', icon: Video, iconColor: '#8B5CF6' },
     { id: 'clients', label: 'Clients', icon: User, iconColor: '#34D399' },
     { id: 'caregivers', label: 'Caregivers', icon: UserCheck, iconColor: '#F472B6' },
     { id: 'pharmacists', label: 'Pharmacists', icon: Pill, iconColor: '#A78BFA' },
@@ -3662,8 +3660,6 @@ const renderMessagesTab = () => {
             </div>
           </div>
         );
-      case 'video-consultations':
-        return <VideoConsultationRequests />;
       case 'clients':
         return (
           <div className="space-y-6">
@@ -3691,7 +3687,7 @@ const renderMessagesTab = () => {
               )}
             </div>
 
-            {/* Sub-tabs: Active Clients | Archived Clients */}
+            {/* Sub-tabs: Active Clients | Care Requests | Archived Clients */}
             <div className="flex gap-2 border-b border-gray-200">
               <button
                 onClick={() => setClientSubTab('active')}
@@ -3702,6 +3698,16 @@ const renderMessagesTab = () => {
                 }`}
               >
                 Active Clients
+              </button>
+              <button
+                onClick={() => setClientSubTab('care-requests')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  clientSubTab === 'care-requests'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Care Requests
               </button>
               <button
                 onClick={() => setClientSubTab('archived')}
@@ -3715,7 +3721,9 @@ const renderMessagesTab = () => {
               </button>
             </div>
 
-            {clientSubTab === 'archived' ? (
+            {clientSubTab === 'care-requests' ? (
+              <ClientCareRequests institutionId={effectiveInstitutionId} />
+            ) : clientSubTab === 'archived' ? (
               <ArchivedClients institutionId={effectiveInstitutionId} />
             ) : (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
