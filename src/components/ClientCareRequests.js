@@ -44,10 +44,33 @@ const ClientCareRequests = ({ institutionId }) => {
   const loadRequests = async () => {
     try {
       setLoading(true);
+
       const [pendingVideo, allAppointments] = await Promise.all([
         telemedicineAPI.getPendingRequests(),
         getAllAppointments().catch(() => [])
       ]);
+
+      // Load users once for name resolution and assignee lists
+      const allUsers = (await getAllUsers().catch(() => [])) || [];
+      const usersById = new Map();
+      allUsers.forEach(user => {
+        usersById.set(user.id, user);
+      });
+
+      const getUserName = (userId, fallback = '') => {
+        if (!userId) return fallback;
+        const user = usersById.get(userId);
+        if (!user) return fallback;
+        return (
+          user.name ||
+          user.displayName ||
+          [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+          user.display_name ||
+          [user.first_name, user.last_name].filter(Boolean).join(' ') ||
+          user.email ||
+          fallback
+        );
+      };
 
       const pendingCare = (allAppointments || []).filter(apt => {
         // A care visit is a request if it's pending/requested OR
@@ -60,20 +83,34 @@ const ClientCareRequests = ({ institutionId }) => {
       });
 
       const normalized = [
-        ...(pendingVideo || []).map(r => ({
-          ...r,
-          requestType: 'video',
-          displayType: 'Video Consultation',
-          displayReason: r.reason,
-          displayUrgency: r.urgency || 'normal'
-        })),
-        ...pendingCare.map(r => ({
-          ...r,
-          requestType: 'care',
-          displayType: 'Care Visit',
-          displayReason: r.careType || r.title || r.description || 'Care request',
-          displayUrgency: r.priority || 'normal'
-        }))
+        ...(pendingVideo || []).map(r => {
+          const clientId = r.clientId || r.client_id || r.patientId || r.patient_id;
+          const clientName =
+            r.clientName || r.client_name || getUserName(clientId, 'Client');
+          return {
+            ...r,
+            clientId,
+            clientName,
+            requestType: 'video',
+            displayType: 'Video Consultation',
+            displayReason: r.reason,
+            displayUrgency: r.urgency || 'normal'
+          };
+        }),
+        ...pendingCare.map(r => {
+          const clientId = r.clientId || r.patientId || r.patient_id || r.client_id;
+          const clientName =
+            r.clientName || r.client_name || r.title || getUserName(clientId, 'Client');
+          return {
+            ...r,
+            clientId,
+            clientName,
+            requestType: 'care',
+            displayType: 'Care Visit',
+            displayReason: r.careType || r.title || r.description || 'Care request',
+            displayUrgency: r.priority || 'normal'
+          };
+        })
       ];
 
       // Sort by newest first
@@ -85,11 +122,10 @@ const ClientCareRequests = ({ institutionId }) => {
 
       setRequests(normalized);
 
-      const users = await getAllUsers().catch(() => []);
-      setDoctors((users || []).filter(u =>
+      setDoctors(allUsers.filter(u =>
         u.user_type === 'doctor' || u.type === 'doctor' || u.userType === 'doctor'
       ));
-      setCaregivers((users || []).filter(u =>
+      setCaregivers(allUsers.filter(u =>
         u.user_type === 'caregiver' || u.type === 'caregiver' || u.userType === 'caregiver'
       ));
     } catch (error) {
