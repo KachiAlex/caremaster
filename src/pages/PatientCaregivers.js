@@ -12,7 +12,9 @@ import {
   Search,
   Eye,
   Activity,
-  X
+  X,
+  LayoutGrid,
+  List as ListIcon
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
 import { assignmentAPI } from '../api/assignmentAPI';
@@ -28,6 +30,14 @@ const ClientCaregivers = () => {
   const [filterRole, setFilterRole] = useState('all');
   const [selectedCaregiver, setSelectedCaregiver] = useState(null);
   const [showCaregiverDetails, setShowCaregiverDetails] = useState(false);
+  const [viewMode, setViewMode] = useState('grid');
+
+  // Default to list view on small screens where cards waste too much space
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setViewMode('list');
+    }
+  }, []);
 
   const loadCaregivers = async () => {
     if (!userProfile?.id && !userProfile?.uid) return;
@@ -127,7 +137,7 @@ const ClientCaregivers = () => {
         <p className="text-gray-600">Your assigned caregivers and healthcare providers</p>
       </div>
 
-      {/* Search and Filter */}
+      {/* Search, Filter, and View Toggle */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <div className="relative">
@@ -154,6 +164,32 @@ const ClientCaregivers = () => {
             <option value="caregiver">Caregivers</option>
           </select>
         </div>
+        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`flex items-center px-3 py-2 text-sm font-medium ${
+              viewMode === 'grid'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            aria-label="Grid view"
+          >
+            <LayoutGrid className="h-4 w-4 mr-1" />
+            Grid
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center px-3 py-2 text-sm font-medium ${
+              viewMode === 'list'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            aria-label="List view"
+          >
+            <ListIcon className="h-4 w-4 mr-1" />
+            List
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -172,7 +208,7 @@ const ClientCaregivers = () => {
             }
           </p>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCaregivers.map((caregiver) => {
             const RoleIcon = getRoleIcon(caregiver.role);
@@ -231,6 +267,76 @@ const ClientCaregivers = () => {
                     <Video className="h-4 w-4 mr-1" />
                     Video Call
                   </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
+          {filteredCaregivers.map((caregiver) => {
+            const RoleIcon = getRoleIcon(caregiver.role);
+            return (
+              <div
+                key={caregiver.id}
+                className="p-4 sm:p-4 hover:bg-gray-50 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+              >
+                <div className="flex items-center min-w-0 flex-1">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                    <RoleIcon className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-gray-900 truncate">{caregiver.name}</h3>
+                    <div className="flex items-center flex-wrap gap-2 text-sm text-gray-600">
+                      <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${getRoleColor(caregiver.role)}`}>
+                        {caregiver.role}
+                      </span>
+                      <span className="flex items-center">
+                        <Mail className="h-3 w-3 mr-1" />
+                        <span className="truncate">{caregiver.email}</span>
+                      </span>
+                      <span className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {formatDateSafe(caregiver.assignedAt)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    caregiver.status === 'active'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {caregiver.status || 'Active'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedCaregiver(caregiver);
+                        setShowCaregiverDetails(true);
+                      }}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                      aria-label="View details"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => navigate('/messages')}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                      aria-label="Message"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => navigate('/telemedicine')}
+                      className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
+                      aria-label="Video call"
+                    >
+                      <Video className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
