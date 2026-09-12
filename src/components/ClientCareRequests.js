@@ -20,7 +20,7 @@ import {
 import { toast } from 'react-toastify';
 import telemedicineAPI from '../api/telemedicineAPI';
 import { getAllAppointments, updateAppointment } from '../api/appointmentsAPI';
-import { getUsersByType } from '../api/usersAPI';
+import { getAllUsers } from '../api/usersAPI';
 
 const ClientCareRequests = ({ institutionId }) => {
   const [requests, setRequests] = useState([]);
@@ -79,13 +79,13 @@ const ClientCareRequests = ({ institutionId }) => {
 
       setRequests(normalized);
 
-      const [doctorList, caregiverList] = await Promise.all([
-        getUsersByType('doctor').catch(() => []),
-        getUsersByType('caregiver').catch(() => [])
-      ]);
-
-      setDoctors((doctorList || []).filter(d => d.user_type === 'doctor' || d.type === 'doctor'));
-      setCaregivers((caregiverList || []).filter(c => c.user_type === 'caregiver' || c.type === 'caregiver'));
+      const users = await getAllUsers().catch(() => []);
+      setDoctors((users || []).filter(u =>
+        u.user_type === 'doctor' || u.type === 'doctor' || u.userType === 'doctor'
+      ));
+      setCaregivers((users || []).filter(u =>
+        u.user_type === 'caregiver' || u.type === 'caregiver' || u.userType === 'caregiver'
+      ));
     } catch (error) {
       console.error('Error loading care requests:', error);
       toast.error('Failed to load care requests');
