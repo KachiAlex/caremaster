@@ -28,20 +28,83 @@ const COLLECTIONS = {
 class TelemedicineAPI {
   // ===== APPOINTMENTS =====
   
-  // Create a new appointment
+  // Create a new appointment (kept for admin/doctor direct scheduling)
   async createAppointment(appointmentData) {
     try {
       const appointment = {
         ...appointmentData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        status: 'scheduled'
+        status: appointmentData.status || 'scheduled'
       };
       
       const docRef = await addDoc(collection(db, COLLECTIONS.APPOINTMENTS), appointment);
       return { id: docRef.id, ...appointment };
     } catch (error) {
       console.error('Error creating appointment:', error);
+      throw error;
+    }
+  }
+
+  // Client submits a new video consultation request (status: requested)
+  async requestConsultation(requestData) {
+    try {
+      const request = {
+        ...requestData,
+        status: 'requested',
+        doctorId: null,
+        doctorName: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(collection(db, COLLECTIONS.APPOINTMENTS), request);
+      return { id: docRef.id, ...request };
+    } catch (error) {
+      console.error('Error requesting consultation:', error);
+      throw error;
+    }
+  }
+
+  // Admin: get all pending consultation requests
+  async getPendingRequests() {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.APPOINTMENTS),
+        where('status', '==', 'requested'),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const requests = [];
+      
+      querySnapshot.forEach((doc) => {
+        requests.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      return requests;
+    } catch (error) {
+      console.error('Error getting pending requests:', error);
+      throw error;
+    }
+  }
+
+  // Admin: schedule a request by assigning a doctor and date
+  async scheduleRequest(requestId, scheduleData) {
+    try {
+      const requestRef = doc(db, COLLECTIONS.APPOINTMENTS, requestId);
+      await updateDoc(requestRef, {
+        ...scheduleData,
+        status: 'scheduled',
+        updatedAt: serverTimestamp()
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error scheduling request:', error);
       throw error;
     }
   }

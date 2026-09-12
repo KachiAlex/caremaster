@@ -785,6 +785,17 @@ router.post('/:table', async (req, res) => {
         data[ownerCol] = req.user.id; // Force ownership
       }
     }
+
+    // Clients can only REQUEST a telemedicine appointment. They cannot pick
+    // a doctor or mark it as scheduled themselves.
+    if (tableName === 'telemedicine_appointments' && PATIENT_ROLES.includes(req.user.user_type)) {
+      data.status = 'requested';
+      data.doctor_id = null;
+      delete data.doctor_name;
+      if (req.user.institution_id) {
+        data.institution_id = req.user.institution_id;
+      }
+    }
     // Remove id if present so DB generates one
     delete data.id;
 
@@ -945,6 +956,17 @@ router.put('/:table/:id', async (req, res) => {
       const ownerCol = OWNER_COLUMN[tableName];
       if (ownerCol && ownerCol !== 'id') {
         delete data[ownerCol]; // Strip any attempt to reassign
+      }
+    }
+
+    // Patients cannot self-assign a doctor or schedule a telemedicine
+    // appointment. They may only cancel their own pending request.
+    if (tableName === 'telemedicine_appointments' && PATIENT_ROLES.includes(req.user.user_type)) {
+      delete data.doctor_id;
+      delete data.doctor_name;
+      delete data.appointment_date;
+      if (data.status && data.status !== 'cancelled') {
+        delete data.status;
       }
     }
 
