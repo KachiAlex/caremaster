@@ -28,7 +28,6 @@ import {
 import telemedicineService from '../services/telemedicineService';
 import telemedicineAPI from '../api/telemedicineAPI';
 import { toast } from 'react-toastify';
-import { testTelemedicineService } from '../utils/telemedicineTest';
 import { useAuthState } from 'backend/auth-hooks';
 import DocumentManager from '../components/DocumentManager';
 import { auth } from '../backend/config';
@@ -51,6 +50,15 @@ const Telemedicine = () => {
   const [userType, setUserType] = useState('Client'); // 'Client' or 'doctor'
   const [showDocuments, setShowDocuments] = useState(false);
   const [selectedAppointmentForDocs, setSelectedAppointmentForDocs] = useState(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestForm, setRequestForm] = useState({
+    reason: '',
+    preferredDate: '',
+    preferredTime: '',
+    urgency: 'normal',
+    notes: ''
+  });
+  const [submittingRequest, setSubmittingRequest] = useState(false);
   const callTimerRef = useRef(null);
 
   useEffect(() => {
@@ -421,59 +429,59 @@ const Telemedicine = () => {
     }
   };
 
-  const runTelemedicineTest = async () => {
-    try {
-      toast.info('Running telemedicine tests...');
-      const results = await testTelemedicineService();
-      
-      if (results.errors.length === 0) {
-        toast.success('All telemedicine tests passed!');
-      } else {
-        toast.warning(`Some tests failed: ${results.errors.length} errors`);
-        console.log('Test results:', results);
-      }
-    } catch (error) {
-      console.error('Test failed:', error);
-      toast.error('Telemedicine test failed');
-    }
+  const openRequestModal = () => {
+    setRequestForm({
+      reason: '',
+      preferredDate: '',
+      preferredTime: '',
+      urgency: 'normal',
+      notes: ''
+    });
+    setShowRequestModal(true);
   };
 
-  const createNewAppointment = async () => {
+  const closeRequestModal = () => {
+    setShowRequestModal(false);
+  };
+
+  const handleRequestChange = (field, value) => {
+    setRequestForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const submitConsultationRequest = async (e) => {
+    e.preventDefault();
+    if (!requestForm.reason.trim()) {
+      toast.error('Please provide a reason for the consultation');
+      return;
+    }
+
+    setSubmittingRequest(true);
     try {
-      // For demo purposes, create a sample appointment
-      // In a real app, this would open a form or modal
-      const newAppointment = {
-        clientId: userType === 'Client' ? user.uid : 'sample-Client-id',
-        doctorId: userType === 'doctor' ? user.uid : null,
-        appointmentDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-        duration: 30,
+      const requestData = {
+        clientId: user.uid,
+        clientName: user.displayName || user.email || 'Client',
+        reason: requestForm.reason,
+        notes: requestForm.notes,
+        urgency: requestForm.urgency,
+        status: 'requested',
         type: 'video',
-        notes: 'New consultation appointment',
-        status: 'scheduled'
+        appointmentDate: requestForm.preferredDate
+          ? new Date(`${requestForm.preferredDate}T${requestForm.preferredTime || '09:00'}`)
+          : null,
+        duration: 30,
+        requestedAt: new Date().toISOString(),
+        requestedBy: user.uid
       };
 
-      const createdAppointment = await telemedicineAPI.createAppointment(newAppointment);
-      toast.success('New appointment created successfully!');
-      
-      // Reload appointments to show the new one
+      await telemedicineAPI.requestConsultation(requestData);
+      toast.success('Video consultation request submitted. An admin will schedule a doctor for you.');
+      closeRequestModal();
       loadTelemedicineData();
     } catch (error) {
-      console.error('Failed to create appointment:', error);
-      toast.error('Failed to create appointment');
-    }
-  };
-
-  const seedData = async () => {
-    try {
-      toast.info('Seeding sample data...');
-      // Seeding removed - use real appointment data only
-      toast.success('Sample data seeded successfully!');
-      
-      // Reload appointments to show the new data
-      loadTelemedicineData();
-    } catch (error) {
-      console.error('Failed to seed data:', error);
-      toast.error('Failed to seed sample data');
+      console.error('Failed to request consultation:', error);
+      toast.error('Failed to submit consultation request');
+    } finally {
+      setSubmittingRequest(false);
     }
   };
 
@@ -545,27 +553,19 @@ const Telemedicine = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Telemedicine</h1>
           <p className="text-gray-600">Virtual consultations and remote healthcare</p>
         </div>
         <div className="flex items-center space-x-3">
           <button 
-            onClick={seedData}
-            className="btn btn-secondary"
-            title="Add sample data to Backend"
+            onClick={openRequestModal}
+            className="btn btn-primary"
+            title="Request a new video consultation"
           >
-            <Upload className="h-4 w-4 mr-2" />
-            Seed Data
-          </button>
-          <button 
-            onClick={runTelemedicineTest}
-            className="btn btn-secondary"
-            title="Test telemedicine functionality"
-          >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Test System
+            <Plus className="h-4 w-4 mr-2" />
+            Request Video Consultation
           </button>
           <button 
             onClick={loadAvailableDevices}
@@ -574,18 +574,6 @@ const Telemedicine = () => {
           >
             <Settings className="h-4 w-4 mr-2" />
             Refresh Devices
-          </button>
-          <button className="btn btn-secondary">
-            <Calendar className="h-4 w-4 mr-2" />
-            Schedule Appointment
-          </button>
-          <button 
-            onClick={createNewAppointment}
-            className="btn btn-primary"
-            title="Create new consultation appointment"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Consultation
           </button>
         </div>
       </div>
@@ -838,38 +826,47 @@ const Telemedicine = () => {
         </div>
       )}
 
-      {/* Upcoming Appointments */}
+      {/* Upcoming Appointments & Requests */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Upcoming Appointments</h2>
-          <button className="btn btn-secondary">
-            <Search className="h-4 w-4 mr-2" />
-            Search
-          </button>
+          <h2 className="text-lg font-semibold text-gray-900">My Video Consultations</h2>
         </div>
         <div className="space-y-4">
-          {appointments.filter(apt => apt.status === 'scheduled').map((appointment) => (
+          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled').sort((a, b) => {
+            const aTime = a.appointmentDate ? new Date(a.appointmentDate).getTime() : 0;
+            const bTime = b.appointmentDate ? new Date(b.appointmentDate).getTime() : 0;
+            return aTime - bTime;
+          }).map((appointment) => (
             <div key={appointment.id} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-4">
-                  <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                <div className="flex items-start space-x-4 flex-1">
+                  <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600 font-medium">
-                      {appointment.doctorName ? appointment.doctorName.split(' ').map(n => n[0]).join('') : 'DC'}
+                      {appointment.doctorName ? appointment.doctorName.split(' ').map(n => n[0]).join('') : (appointment.status === 'requested' ? '?' : 'DC')}
                     </span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">{appointment.doctorName || 'Doctor'}</h3>
-                      <span className="text-sm text-gray-500">{appointment.doctorSpecialty || 'General Practice'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-2 mb-2">
+                      <h3 className="text-lg font-medium text-gray-900">
+                        {appointment.status === 'requested' ? 'Pending Request' : (appointment.doctorName || 'Doctor')}
+                      </h3>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                        {appointment.status}
+                        {appointment.status === 'requested' ? 'Requested' : appointment.status}
                       </span>
+                      {appointment.urgency && (
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          appointment.urgency === 'urgent' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {appointment.urgency}
+                        </span>
+                      )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <User className="h-4 w-4 mr-2" />
-                        <span>Client: {appointment.clientName || 'Client'} ({appointment.patientAge || 'N/A'}y)</span>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                      {appointment.reason && (
+                        <div className="col-span-1 md:col-span-2">
+                          <span className="font-medium">Reason:</span> {appointment.reason}
+                        </div>
+                      )}
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2" />
                         <span>{appointment.appointmentDate ? formatDateTime(appointment.appointmentDate).date : 'TBD'}</span>
@@ -879,43 +876,49 @@ const Telemedicine = () => {
                         <span>{appointment.appointmentDate ? formatDateTime(appointment.appointmentDate).time : 'TBD'} ({appointment.duration || 30}min)</span>
                       </div>
                     </div>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600">{appointment.notes}</p>
-                      {appointment.symptoms && (
-                        <div className="mt-2">
-                          <span className="text-sm font-medium text-gray-700">Symptoms: </span>
-                          <span className="text-sm text-gray-600">{Array.isArray(appointment.symptoms) ? appointment.symptoms.join(', ') : (appointment.symptoms || 'N/A')}</span>
-                        </div>
-                      )}
-                    </div>
+                    {appointment.notes && (
+                      <p className="mt-2 text-sm text-gray-600">{appointment.notes}</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => startCall(appointment)}
-                    disabled={isInitializing}
-                    className={`btn btn-primary ${isInitializing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {isInitializing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Starting...
-                      </>
-                    ) : (
-                      <>
-                        {appointment.type === 'video' ? <Video className="h-4 w-4 mr-2" /> : <Phone className="h-4 w-4 mr-2" />}
-                        Start Call
-                      </>
-                    )}
-                  </button>
-                  <button className="btn btn-secondary">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Chat
-                  </button>
+                  {appointment.status === 'scheduled' ? (
+                    <button
+                      onClick={() => startCall(appointment)}
+                      disabled={isInitializing}
+                      className={`btn btn-primary ${isInitializing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {isInitializing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Starting...
+                        </>
+                      ) : (
+                        <>
+                          {appointment.type === 'video' ? <Video className="h-4 w-4 mr-2" /> : <Phone className="h-4 w-4 mr-2" />}
+                          Start Call
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="btn btn-secondary opacity-60 cursor-not-allowed"
+                      title="Waiting for an admin to schedule a doctor"
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      Pending
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           ))}
+          {appointments.filter(apt => apt.status === 'requested' || apt.status === 'scheduled').length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No video consultations or requests yet.
+            </div>
+          )}
         </div>
       </div>
 
@@ -1037,6 +1040,112 @@ const Telemedicine = () => {
           }}
           onClose={() => setShowDocuments(false)}
         />
+      )}
+      {/* Request Video Consultation Modal */}
+      {showRequestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Request Video Consultation</h2>
+                <p className="text-sm text-gray-600">An admin will review and assign a doctor</p>
+              </div>
+              <button
+                onClick={closeRequestModal}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={submitConsultationRequest} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason / Chief Complaint *
+                </label>
+                <textarea
+                  value={requestForm.reason}
+                  onChange={(e) => handleRequestChange('reason', e.target.value)}
+                  placeholder="Describe the reason for the video consultation..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Date</label>
+                  <input
+                    type="date"
+                    value={requestForm.preferredDate}
+                    onChange={(e) => handleRequestChange('preferredDate', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Time</label>
+                  <input
+                    type="time"
+                    value={requestForm.preferredTime}
+                    onChange={(e) => handleRequestChange('preferredTime', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
+                <select
+                  value={requestForm.urgency}
+                  onChange={(e) => handleRequestChange('urgency', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>
+                <textarea
+                  value={requestForm.notes}
+                  onChange={(e) => handleRequestChange('notes', e.target.value)}
+                  placeholder="Any other details the doctor should know..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeRequestModal}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRequest}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center disabled:opacity-50"
+                >
+                  {submittingRequest ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Submit Request
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

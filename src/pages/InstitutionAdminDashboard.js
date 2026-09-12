@@ -90,6 +90,7 @@ import ArchivedClients from '../components/ArchivedClients';
 import InactiveCaregiversReport from '../components/InactiveCaregiversReport';
 import SchedulingModule from '../components/SchedulingModule';
 import ClientActivityTimeline from '../components/ClientActivityTimeline';
+import VideoConsultationRequests from '../pages/VideoConsultationRequests';
 import { collection, query, getDocs, getDoc, setDoc, updateDoc, addDoc, where, orderBy, limit, doc, serverTimestamp } from 'backend/database';
 import { httpsCallable, getFunctions } from 'backend/functions';
 import { db, functions } from '../backend/config';
@@ -3370,6 +3371,7 @@ const renderMessagesTab = () => {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: Activity, iconColor: '#60A5FA' },
+    { id: 'video-consultations', label: 'Video Consultations', icon: Video, iconColor: '#8B5CF6' },
     { id: 'clients', label: 'Clients', icon: User, iconColor: '#34D399' },
     { id: 'caregivers', label: 'Caregivers', icon: UserCheck, iconColor: '#F472B6' },
     { id: 'pharmacists', label: 'Pharmacists', icon: Pill, iconColor: '#A78BFA' },
@@ -3659,6 +3661,8 @@ const renderMessagesTab = () => {
             </div>
           </div>
         );
+      case 'video-consultations':
+        return <VideoConsultationRequests />;
       case 'clients':
         return (
           <div className="space-y-6">
