@@ -68,7 +68,6 @@ const CaregiverPerformance = lazy(() => import('./pages/CaregiverPerformance'));
 const CaregiverEmergency = lazy(() => import('./pages/CaregiverEmergency'));
 const CaregiverSettings = lazy(() => import('./pages/CaregiverSettings'));
 const Telemedicine = lazy(() => import('./pages/Telemedicine'));
-const VideoConsultationRequests = lazy(() => import('./pages/VideoConsultationRequests'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Subscription = lazy(() => import('./pages/Subscription'));
 const Services = lazy(() => import('./pages/Services'));
@@ -481,11 +480,6 @@ function App() {
       <Route
         path="/institution-admin/settings"
         element={user ? <InstitutionAdminGuard><InstitutionSettings /></InstitutionAdminGuard> : <Navigate to="/login" replace />}
-      />
-      
-      <Route 
-        path="/institution-admin/video-consultations" 
-        element={user ? <InstitutionAdminGuard><VideoConsultationRequests /></InstitutionAdminGuard> : <Navigate to="/login" replace />} 
       />
       
       <Route 
