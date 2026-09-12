@@ -49,9 +49,15 @@ const ClientCareRequests = ({ institutionId }) => {
         getAllAppointments().catch(() => [])
       ]);
 
-      const pendingCare = (allAppointments || []).filter(
-        apt => (apt.status === 'pending' || apt.status === 'requested')
-      );
+      const pendingCare = (allAppointments || []).filter(apt => {
+        // A care visit is a request if it's pending/requested OR
+        // scheduled but hasn't been assigned a caregiver yet
+        if (apt.status === 'pending' || apt.status === 'requested') return true;
+        if (apt.status === 'scheduled') {
+          return !(apt.caregiverId || apt.caregiver_id || apt.caregiverName);
+        }
+        return false;
+      });
 
       const normalized = [
         ...(pendingVideo || []).map(r => ({
