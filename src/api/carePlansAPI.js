@@ -288,6 +288,7 @@ export const subscribeToCarePlansByClient = (clientId, callback) => {
 const carePlansAPI = {
   createCarePlan,
   getCarePlansByClient,
+  getCarePlansByPatient: getCarePlansByClient,
   getActiveCarePlan,
   getCarePlansByDoctor,
   getCarePlan,

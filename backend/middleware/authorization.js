@@ -42,6 +42,8 @@ const PATIENT_DATA_TABLES = [
   'telemedicine_appointments',
   'telemedicine_calls',
   'telemedicine_recordings',
+  'adl_logs',
+  'client_activities',
 ];
 
 // ─── Tables that only admins/super-admins should access via the generic data API ───
@@ -102,6 +104,8 @@ const OWNER_COLUMN = {
   telemedicine_calls: 'client_id',
   telemedicine_recordings: 'appointment_id', // no direct patient column
   // For caregiver/doctor tables, scope by their user id
+  adl_logs: 'client_id',
+  client_activities: 'patient_id',
   assignments: 'patient_id', // has both patient_id and caregiver_id
   care_tasks: 'patient_id', // has both patient_id and caregiver_id
   schedules: 'client_id', // has both client_id and caregiver_id
