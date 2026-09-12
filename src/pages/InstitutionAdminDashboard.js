@@ -50,6 +50,7 @@ import {
   Package,
   Camera,
   Bell,
+  Video,
   HelpCircle,
   Loader,
   TestTube,
