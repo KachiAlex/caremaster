@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Plus,
+  X,
   Search,
   Filter,
   MoreVertical
