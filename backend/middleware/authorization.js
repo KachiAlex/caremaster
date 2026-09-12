@@ -98,7 +98,7 @@ const OWNER_COLUMN = {
   consultations: 'client_id',
   invoices: 'patient_id',
   elderly_profiles: 'patient_id',
-  clients: 'id', // the client's own record
+  clients: 'user_id', // the client record is linked to the authenticated user
   patients: 'id',
   telemedicine_appointments: 'client_id',
   telemedicine_calls: 'client_id',

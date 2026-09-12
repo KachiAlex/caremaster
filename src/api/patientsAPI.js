@@ -918,3 +918,21 @@ export const subscribeToClients = (callback) => {
     if (fallbackUnsubscribe) fallbackUnsubscribe();
   };
 };
+
+// Get client record linked to a user account
+export const getClientByUserId = async (userId) => {
+  try {
+    const clientsRef = collection(db, CLIENTS_COLLECTION);
+    const q = query(clientsRef, where('userId', '==', userId), limit(1));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return normalizeClientDoc(querySnapshot.docs[0]);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching client by user ID:', error);
+    return null;
+  }
+};

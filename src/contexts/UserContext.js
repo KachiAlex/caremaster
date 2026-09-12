@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '../api/config';
 import { doc, getDoc } from 'backend/database';
+import { getClientByUserId } from '../api/patientsAPI';
 import { onAuthStateChanged } from 'backend/auth';
 import { db, auth } from '../backend/config';
 
@@ -60,11 +61,14 @@ export const UserProvider = ({ children }) => {
         // and a fresh profile fetch with a stale token only produces a 401.
         const userId = userData.uid || userData.id;
         if (userId && !window.location.pathname.startsWith('/login')) {
-          getDoc(doc(db, 'users', userId))
-            .then((userDoc) => {
+          Promise.all([
+            getDoc(doc(db, 'users', userId)),
+            getClientByUserId(userId)
+          ])
+            .then(([userDoc, clientData]) => {
               if (userDoc.exists()) {
                 const dbProfile = userDoc.data();
-                const mergedProfile = { ...userData, ...dbProfile };
+                const mergedProfile = { ...userData, ...dbProfile, ...(clientData || {}) };
                 setUserProfile(mergedProfile);
                 setUser(mergedProfile);
                 localStorage.setItem('user', JSON.stringify(mergedProfile));
@@ -254,10 +258,16 @@ export const UserProvider = ({ children }) => {
     const userId = user?.uid || user?.id;
     if (!userId) return;
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
+      const [userDoc, clientData] = await Promise.all([
+        getDoc(doc(db, 'users', userId)),
+        getClientByUserId(userId)
+      ]);
+      
       if (userDoc.exists()) {
         const dbProfile = userDoc.data();
-        const mergedProfile = { ...userProfile, ...dbProfile };
+        // Merge client record over user record so client-specific fields
+        // (dateOfBirth, emergencyContact, medicalConditions) are available
+        const mergedProfile = { ...userProfile, ...dbProfile, ...(clientData || {}) };
         setUserProfile(mergedProfile);
         setUser(mergedProfile);
         localStorage.setItem('user', JSON.stringify(mergedProfile));
