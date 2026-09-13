@@ -15,19 +15,26 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI
-    return { hasError: true };
+    // Store the error immediately so it's available in render before
+    // componentDidCatch runs. This ensures the error message is visible
+    // even if componentDidCatch hasn't fired yet.
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
     // Check if this is a chunk load error and handle it
     const isHandled = handleChunkLoadError(error, errorInfo);
-    
+
     if (isHandled) {
       // Chunk load error is being handled - show loading state
       console.log('⏳ Chunk load error is being handled...');
       return;
     }
+
+    // Log the error with full details to the console for diagnosis
+    console.error('🚨 ErrorBoundary caught:', error?.message || error);
+    console.error('Stack:', error?.stack);
+    console.error('ComponentStack:', errorInfo?.componentStack);
 
     // Log the error
     const errorData = {
@@ -114,11 +121,30 @@ class ErrorBoundary extends React.Component {
                 <p className="mt-2 text-sm text-gray-600">
                   We're sorry, but something unexpected happened. Our team has been notified.
                 </p>
-                
+
                 {this.state.errorId && (
                   <p className="mt-2 text-xs text-gray-500">
                     Error ID: {this.state.errorId}
                   </p>
+                )}
+
+                {/* Show error message even in production for diagnosis */}
+                {this.state.error && (
+                  <div className="mt-4 p-3 bg-red-50 rounded-md text-left">
+                    <p className="text-xs font-mono text-red-700 break-words">
+                      {this.state.error.message || this.state.error.toString()}
+                    </p>
+                    {this.state.errorInfo?.componentStack && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-gray-500 cursor-pointer">
+                          Component stack
+                        </summary>
+                        <pre className="mt-1 text-xs text-gray-600 overflow-auto max-h-32 whitespace-pre-wrap">
+                          {this.state.errorInfo.componentStack}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
                 )}
               </div>
 
