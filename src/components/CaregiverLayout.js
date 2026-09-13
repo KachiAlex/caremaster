@@ -26,11 +26,15 @@ import {
 import { toast } from 'react-toastify';
 import { signOut } from 'backend/auth';
 import { auth } from '../backend/config';
+import { useUser } from '../contexts/UserContext';
+import NotificationBell from './NotificationBell';
 
 const CaregiverLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { userProfile, user } = useUser();
+  const notificationUserId = userProfile?.id || userProfile?.uid || user?.uid;
 
   const handleSignOut = async () => {
     try {
@@ -190,12 +194,7 @@ const CaregiverLayout = () => {
               </div>
             </div>
             <div className="ml-4 flex items-center md:ml-6">
-              <button
-                type="button"
-                className="bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-              >
-                <Bell className="h-6 w-6" />
-              </button>
+              <NotificationBell userId={notificationUserId} />
               <div className="ml-3 relative">
                 <div className="flex items-center">
                   <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">

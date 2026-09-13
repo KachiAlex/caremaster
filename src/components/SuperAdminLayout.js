@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { onAuthStateChanged } from 'backend/auth';
 import { auth } from '../backend/config';
+import NotificationBell from './NotificationBell';
 
 const pageTitles = {
   '/super-admin/dashboard': 'Dashboard',
@@ -45,11 +46,13 @@ const SuperAdminLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [authUserId, setAuthUserId] = useState('');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       if (u?.email) setUserEmail(u.email);
+      if (u?.uid) setAuthUserId(u.uid);
     });
     return () => unsub();
   }, []);
@@ -265,13 +268,7 @@ const SuperAdminLayout = ({ children }) => {
               <FontSizeToggle className="hidden sm:flex" />
 
               {/* Notifications */}
-              <button
-                className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
-                onClick={() => toast.info('Notifications coming soon')}
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-600 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">8</span>
-              </button>
+              <NotificationBell userId={authUserId} />
 
               {/* Profile dropdown */}
               <div className="relative">

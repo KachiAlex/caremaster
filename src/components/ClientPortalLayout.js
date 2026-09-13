@@ -14,6 +14,7 @@ import {
 import { useUser } from '../contexts/UserContext';
 import { useBackNavigation } from '../hooks';
 import DashboardLayout from './DashboardLayout';
+import NotificationBell from './NotificationBell';
 
 const TABS = [
   { id: 'dashboard', label: 'My Dashboard', icon: Home },
@@ -103,6 +104,8 @@ const ClientPortalLayout = () => {
     });
   };
 
+  const notificationUserId = userProfile?.id || userProfile?.uid || user?.uid;
+
   return (
     <DashboardLayout
       tabs={TABS}
@@ -116,6 +119,9 @@ const ClientPortalLayout = () => {
       onLogout={handleLogout}
       onBack={handleBack}
       canGoBack={canGoBack}
+      headerActions={
+        <NotificationBell userId={notificationUserId} />
+      }
       breadcrumbs={breadcrumbs.map((bc) => ({
         tabId: bc.tabId,
         label: TABS.find(t => t.id === bc.tabId)?.label || bc.tabId,

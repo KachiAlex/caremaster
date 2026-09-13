@@ -79,6 +79,7 @@ import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExpor
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, markConversationAsRead } from '../api/messagesAPI';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from '../services/databaseCompat';
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
+import NotificationBell from '../components/NotificationBell';
 import { toast } from 'react-toastify';
 import activitiesAPI, { ACTIVITY_CATEGORIES, COMMON_ACTIVITIES } from '../api/activitiesAPI';
 import prescriptionsAPI from '../api/prescriptionsAPI';
@@ -4464,6 +4465,7 @@ const PartnerCaregiverDashboard = () => {
         }))}
         headerActions={
           <>
+            <NotificationBell userId={user?.uid} />
             {userRoles && userRoles.length > 1 && (
               <div className="hidden lg:block">
                 <DashboardSwitcher
