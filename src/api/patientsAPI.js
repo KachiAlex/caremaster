@@ -203,14 +203,47 @@ export const getClientById = async (clientId) => {
 export const getPatientById = getClientById;
 
 // Batch fetch multiple clients by ID in a single request (fixes N+1 problem)
+// Fallback: fetch by individual getDoc for IDs that don't match the 'id' column.
 export const getClientsByIds = async (clientIds) => {
   try {
     if (!clientIds?.length) return [];
     const ids = Array.from(new Set(clientIds.filter(Boolean)));
-    const clientsRef = collection(db, CLIENTS_COLLECTION);
-    const q = query(clientsRef, where('id', 'in', ids));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((docSnap) => normalizeClientDoc(docSnap));
+
+    // First try a batch query on the 'id' field (REST compat mapping).
+    let found = new Map();
+    try {
+      const clientsRef = collection(db, CLIENTS_COLLECTION);
+      const q = query(clientsRef, where('id', 'in', ids));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.docs.forEach((docSnap) => {
+        const normalized = normalizeClientDoc(docSnap);
+        found.set(normalized.id, normalized);
+      });
+    } catch (batchError) {
+      console.warn('getClientsByIds batch query failed:', batchError);
+    }
+
+    // Fetch any remaining IDs directly by document path to ensure we don't
+    // miss clients whose id field is not stored in the document body.
+    const missingIds = ids.filter((id) => !found.has(id));
+    if (missingIds.length > 0) {
+      const directFetches = await Promise.all(
+        missingIds.map(async (id) => {
+          try {
+            const clientDoc = await getDoc(doc(db, CLIENTS_COLLECTION, id));
+            if (clientDoc.exists()) {
+              const normalized = normalizeClientDoc(clientDoc);
+              found.set(normalized.id || id, normalized);
+            }
+          } catch (err) {
+            console.warn(`getClientsByIds: failed to fetch client ${id}:`, err);
+          }
+          return null;
+        })
+      );
+    }
+
+    return ids.map((id) => found.get(id)).filter(Boolean);
   } catch (error) {
     console.error('Error fetching clients by IDs:', error);
     throw error;
