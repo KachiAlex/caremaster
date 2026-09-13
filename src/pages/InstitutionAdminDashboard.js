@@ -27,6 +27,7 @@ import {
   FileText,
   MessageSquare,
   ArrowLeft,
+  ArrowRight,
   Eye,
   EyeOff,
   Download,
