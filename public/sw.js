@@ -1,15 +1,18 @@
 // Care Master Service Worker for PWA functionality
-const CACHE_NAME = 'Care Master-v2.2.0';
-const STATIC_CACHE = 'Care Master-static-v32';
-const DYNAMIC_CACHE = 'Care Master-dynamic-v32';
-const API_CACHE = 'Care Master-api-v32';
+const CACHE_NAME = 'Care Master-v2.3.0';
+const STATIC_CACHE = 'Care Master-static-v33';
+const DYNAMIC_CACHE = 'Care Master-dynamic-v33';
+const API_CACHE = 'Care Master-api-v33';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
 const STATIC_ASSETS = [
   '/',
+  '/index.html',
+  '/offline.html',
   '/manifest.json',
-  '/icons/icon-192x192.png'
+  '/icons/icon-192x192.png',
+  '/images/story-care-checkup-1.webp'
 ];
 
 // API endpoints to cache
@@ -76,9 +79,7 @@ self.addEventListener('activate', (event) => {
   console.log('Service Worker activating - v2.0.0 - purging ALL old caches...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
-      // Delete EVERY cache that doesn't match the current version exactly.
-      // This is more aggressive than before and ensures no stale JS bundles
-      // survive across deployments.
+      // Delete EVERY cache that doesn't match the current versions exactly.
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== STATIC_CACHE &&
@@ -87,23 +88,10 @@ self.addEventListener('activate', (event) => {
             console.log('🗑️ Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
-          // Also nuke the dynamic cache (which may hold stale index.html)
-          if (cacheName === DYNAMIC_CACHE) {
-            console.log('🗑️ Clearing dynamic cache for fresh deploy:', cacheName);
-            return caches.delete(cacheName);
-          }
         })
       );
     }).then(() => {
       console.log('✅ Service Worker activated - all old caches purged');
-      // Force all clients to reload so they pick up the new JS bundles
-      return self.clients.matchAll({ type: 'window' }).then((clients) => {
-        clients.forEach((client) => {
-          console.log('🔄 Notifying client to reload:', client.url);
-          client.postMessage({ type: 'FORCE_RELOAD' });
-        });
-      });
-    }).then(() => {
       return self.clients.claim();
     })
   );
@@ -356,18 +344,23 @@ async function htmlNetworkFirst(request) {
     }
     return networkResponse;
   } catch (error) {
-    // Network failed — try cache as fallback for offline support
-    const cache = await caches.open(DYNAMIC_CACHE);
-    const cachedResponse = await cache.match(request);
+    console.warn('HTML fetch failed, falling back to cache:', error.message);
+    // Network failed — try ANY cache as fallback for offline support
+    const cachedResponse = await caches.match(request);
     if (cachedResponse) {
       return cachedResponse;
+    }
+    // Specific fallback for root path if '/' is not matched exactly
+    if (new URL(request.url).pathname === '/') {
+      const rootCache = await caches.match('/index.html');
+      if (rootCache) return rootCache;
     }
     // No cache available — try offline page
     const offlinePage = await caches.match('/offline.html');
     if (offlinePage) {
       return offlinePage;
     }
-    return new Response('Offline', {
+    return new Response('Care Master is currently offline. Please check your connection.', {
       status: 503,
       headers: { 'Content-Type': 'text/plain' }
     });

@@ -22,15 +22,18 @@ const EnhancedMessagingInterface = lazy(() => import('./components/EnhancedMessa
 const NativeMobileHandler = lazy(() => import('./components/NativeMobileHandler'));
 import LoadingSpinner from './components/LoadingSpinner';
 
-// Lazy-load heavy/non-critical components to reduce initial bundle
-const MobileOptimization = lazy(() => import('./components/MobileOptimization'));
-const PWAInstallPrompt = lazy(() => import('./components/PWAInstallPrompt'));
-const OfflineIndicator = lazy(() => import('./components/OfflineIndicator'));
-const VoiceCommandInterface = lazy(() => import('./components/VoiceCommandInterface'));
-const GestureControls = lazy(() => import('./components/GestureControls'));
+import MobileOptimization from './components/MobileOptimization';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import OfflineIndicator from './components/OfflineIndicator';
+import VoiceCommandInterface from './components/VoiceCommandInterface';
+import GestureControls from './components/GestureControls';
+import Landing from './pages/Landing';
+import UnifiedLogin from './pages/UnifiedLogin';
+import InstitutionLanding from './pages/InstitutionLanding';
+
+// Lazy-load other heavy components to reduce initial bundle size.
 const SecuritySettings = lazy(() => import('./components/SecuritySettings'));
 const SecurityDashboard = lazy(() => import('./components/SecurityDashboard'));
-const Landing = lazy(() => import('./pages/Landing'));
 const ChooseInstitution = lazy(() => import('./pages/ChooseInstitution'));
 const TenantPartners = lazy(() => import('./pages/TenantPartners'));
 // Admin routes deprecated
@@ -54,8 +57,6 @@ const SuperAdminUserManagement = lazy(() => import('./pages/SuperAdminUserManage
 const InstitutionAdminDashboard = lazy(() => import('./pages/InstitutionAdminDashboard'));
 const InstitutionUserManagement = lazy(() => import('./pages/InstitutionUserManagement'));
 const InstitutionSettings = lazy(() => import('./pages/InstitutionSettings'));
-const InstitutionLanding = lazy(() => import('./pages/InstitutionLanding'));
-const UnifiedLogin = lazy(() => import('./pages/UnifiedLogin'));
 const LicenseRequired = lazy(() => import('./pages/LicenseRequired'));
 const InstitutionCaregiverOnboarding = lazy(() => import('./pages/InstitutionCaregiverOnboarding'));
 const InstitutionCaregiverPendingApproval = lazy(() => import('./pages/InstitutionCaregiverPendingApproval'));
