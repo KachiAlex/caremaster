@@ -79,6 +79,7 @@ import { getAllCareTasks } from '../api/careTasksAPI';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notificationsAPI } from '../api/notificationsAPI';
+import NotificationBell from '../components/NotificationBell';
 import { institutionAPI } from '../api/institutionAPI';
 import InstitutionLinkCustomizer from '../components/InstitutionLinkCustomizer';
 import InventoryBillingTab from '../components/InventoryBillingTab';
@@ -4647,13 +4648,16 @@ const renderMessagesTab = () => {
           label: tabs.find(t => t.id === bc.tabId)?.label || bc.tabId,
         }))}
         headerActions={
-          <button
-            onClick={() => setShowProfileSettings(true)}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-ink hover:bg-ink/5 transition"
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </button>
+          <>
+            <NotificationBell userId={user?.uid} />
+            <button
+              onClick={() => setShowProfileSettings(true)}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-ink hover:bg-ink/5 transition"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </button>
+          </>
         }
       >
         <div className="space-y-6">

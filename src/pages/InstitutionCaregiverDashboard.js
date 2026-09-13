@@ -74,6 +74,7 @@ import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { exportCarePlanToPDF } from '../utils/pdfExport';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, markConversationAsRead } from '../api/messagesAPI';
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
+import NotificationBell from '../components/NotificationBell';
 import { toast } from 'react-toastify';
 import activitiesAPI, { ACTIVITY_CATEGORIES, COMMON_ACTIVITIES } from '../api/activitiesAPI';
 import prescriptionsAPI from '../api/prescriptionsAPI';
@@ -4672,6 +4673,7 @@ const InstitutionCaregiverDashboard = () => {
         }))}
         headerActions={
           <>
+            <NotificationBell userId={user?.uid} />
             {userRoles && userRoles.length > 1 && (
               <DashboardSwitcher
                 userRoles={userRoles}

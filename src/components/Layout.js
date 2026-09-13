@@ -17,11 +17,15 @@ import {
 import { toast } from 'react-toastify';
 import { signOut } from 'backend/auth';
 import { auth } from '../backend/config';
+import { useUser } from '../contexts/UserContext';
+import NotificationBell from './NotificationBell';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { userProfile, user } = useUser();
+  const notificationUserId = userProfile?.id || userProfile?.uid || user?.uid;
 
   const handleSignOut = async () => {
     try {
@@ -165,12 +169,7 @@ const Layout = () => {
           <div className="flex flex-1 gap-x-2 sm:gap-x-4 self-stretch items-center">
             <div className="flex flex-1 min-w-0"></div>
             <div className="flex items-center gap-x-2 sm:gap-x-4">
-              <button 
-                className="p-2 text-gray-400 hover:text-gray-500 rounded-lg hover:bg-gray-100 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
-                aria-label="Notifications"
-              >
-                <Bell className="h-5 w-5" />
-              </button>
+              <NotificationBell userId={notificationUserId} />
               <div className="hidden sm:flex items-center gap-x-2 px-3 py-1 bg-gray-50 rounded-lg">
                 <User className="h-5 w-5 text-gray-400" />
                 <span className="text-sm text-gray-700">Client</span>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
-import NotificationPanel from './NotificationPanel';
+import NotificationBell from './NotificationBell';
 import { 
   Home, 
   Calendar, 
@@ -207,7 +207,7 @@ const ServiceProviderLayout = () => {
             <div className="flex flex-1 min-w-0"></div>
             <div className="flex items-center gap-x-2 sm:gap-x-4">
               {/* Notification Panel */}
-              {userProfile?.id && <NotificationPanel userId={userProfile.id} />}
+              {userProfile?.id && <NotificationBell userId={userProfile.id} />}
               
               <div className="flex items-center gap-x-2">
                 <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden shrink-0">

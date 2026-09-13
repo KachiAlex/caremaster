@@ -88,6 +88,7 @@ import { getAllCareTasks } from '../api/careTasksAPI';
 import UserNameWithAvatar from '../components/UserNameWithAvatar';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
 import { createNotification, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES, notificationsAPI } from '../api/notificationsAPI';
+import NotificationBell from '../components/NotificationBell';
 import { institutionAPI } from '../api/partnerAPI';
 import { deleteDoc } from '../services/databaseCompat';
 import PartnerLinkCustomizer from '../components/PartnerLinkCustomizer';
@@ -4509,6 +4510,7 @@ const renderMessagesTab = () => {
         }))}
         headerActions={
           <>
+            <NotificationBell userId={user?.uid} />
             {userRoles && userRoles.length > 1 && (
               <div className="hidden lg:block">
                 <DashboardSwitcher

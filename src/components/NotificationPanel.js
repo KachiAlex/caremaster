@@ -1,49 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, X, Check, AlertTriangle, Calendar, ClipboardList, MessageSquare, Users } from 'lucide-react';
-import { 
-  getNotifications, 
-  markNotificationAsRead, 
-  markAllNotificationsAsRead,
-  subscribeToNotifications,
-  getUnreadNotificationCount
-} from '../api/notificationsAPI';
+import { Bell, X, Check, AlertTriangle, Calendar, ClipboardList, MessageSquare, Users, Stethoscope, Heart } from 'lucide-react';
+import { useNotifications } from '../contexts/NotificationContext';
 import { toast } from 'react-toastify';
 import UserNameWithAvatar from './UserNameWithAvatar';
 
 const NotificationPanel = ({ userId }) => {
   const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    // Subscribe to real-time notifications
-    const unsubscribe = subscribeToNotifications(userId, (notifs) => {
-      setNotifications(notifs);
-      setUnreadCount(notifs.filter(n => !n.read).length);
-    });
-
-    // Also fetch initial count
-    getUnreadNotificationCount(userId)
-      .then(count => setUnreadCount(count))
-      .catch(() => setUnreadCount(0));
-
-    return () => unsubscribe();
-  }, [userId]);
 
   const handleNotificationClick = async (notification) => {
     try {
       // Mark as read
       if (!notification.read) {
-        await markNotificationAsRead(notification.id);
+        await markAsRead(notification.id);
       }
 
-      // Navigate to relevant section
-      const navigateTo = notification.metadata?.navigateTo;
+      // Navigate to relevant section — unified on metadata.navigateTo
+      const navigateTo = notification.metadata?.navigateTo || notification.data?.navigateTo || notification.data?.actionUrl;
       if (navigateTo) {
         navigate(navigateTo);
         setIsOpen(false);
@@ -56,7 +32,7 @@ const NotificationPanel = ({ userId }) => {
   const handleMarkAllRead = async () => {
     try {
       setLoading(true);
-      await markAllNotificationsAsRead(userId);
+      await markAllAsRead();
       toast.success('All notifications marked as read');
     } catch (error) {
       toast.error('Failed to mark notifications as read');
@@ -69,24 +45,33 @@ const NotificationPanel = ({ userId }) => {
     switch (type) {
       case 'task': return <ClipboardList className="h-5 w-5 text-blue-600" />;
       case 'appointment': return <Calendar className="h-5 w-5 text-green-600" />;
+      case 'consultation': return <Stethoscope className="h-5 w-5 text-purple-600" />;
       case 'message': return <MessageSquare className="h-5 w-5 text-purple-600" />;
       case 'emergency': return <AlertTriangle className="h-5 w-5 text-red-600" />;
+      case 'medication': return <Heart className="h-5 w-5 text-pink-600" />;
+      case 'prescription': return <Heart className="h-5 w-5 text-teal-600" />;
       default: return <Bell className="h-5 w-5 text-gray-600" />;
     }
   };
 
   const getNotificationColor = (priority) => {
-    switch (priority) {
-      case 'urgent': return 'border-l-4 border-red-500 bg-red-50';
-      case 'high': return 'border-l-4 border-orange-500 bg-orange-50';
-      case 'medium': return 'border-l-4 border-blue-500 bg-blue-50';
-      default: return 'border-l-4 border-gray-300 bg-white';
+    switch ((priority || '').toLowerCase()) {
+      case 'critical':
+      case 'urgent':
+        return 'border-l-4 border-red-500 bg-red-50';
+      case 'high':
+        return 'border-l-4 border-orange-500 bg-orange-50';
+      case 'medium':
+        return 'border-l-4 border-blue-500 bg-blue-50';
+      default:
+        return 'border-l-4 border-gray-300 bg-white';
     }
   };
 
   const formatTime = (date) => {
     if (!date) return '';
     const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
     const now = new Date();
     const diffMs = now - d;
     const diffMins = Math.floor(diffMs / 60000);
@@ -106,6 +91,7 @@ const NotificationPanel = ({ userId }) => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+        aria-label="Notifications"
       >
         <Bell className="h-6 w-6" />
         {unreadCount > 0 && (
@@ -119,11 +105,11 @@ const NotificationPanel = ({ userId }) => {
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div 
-            className="fixed inset-0 z-40" 
+          <div
+            className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          
+
           {/* Panel */}
           <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[80vh] overflow-hidden flex flex-col">
             {/* Header */}
@@ -224,4 +210,3 @@ const NotificationPanel = ({ userId }) => {
 };
 
 export default NotificationPanel;
-

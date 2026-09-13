@@ -32,9 +32,12 @@ import { toast } from 'react-toastify';
 import { useAuthState } from 'backend/auth-hooks';
 import DocumentManager from '../components/DocumentManager';
 import { auth } from '../backend/config';
+import { useUser } from '../contexts/UserContext';
+import { notifyAdmins, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../services/notificationService';
 
 const Telemedicine = () => {
   const [user, userLoading] = useAuthState(auth);
+  const { userProfile, institutionId: contextInstitutionId } = useUser();
   const [appointments, setAppointments] = useState([]);
   const [activeCall, setActiveCall] = useState(null);
   const [isVideoOn, setIsVideoOn] = useState(true);
@@ -476,6 +479,28 @@ const Telemedicine = () => {
 
       await telemedicineAPI.requestConsultation(requestData);
       toast.success('Video consultation request submitted. An admin will schedule a doctor for you.');
+      
+      // Notify institution admins of the new video consultation request
+      const institutionId = userProfile?.institutionId || contextInstitutionId || null;
+      if (institutionId) {
+        try {
+          await notifyAdmins(institutionId, {
+            type: NOTIFICATION_TYPES.CONSULTATION,
+            title: 'New Video Consultation Request',
+            message: `${userProfile?.name || user?.displayName || 'A client'} requested a video consultation${requestForm.reason ? `: ${requestForm.reason.substring(0, 80)}` : '.'}`,
+            priority: requestForm.urgency === 'urgent' ? NOTIFICATION_PRIORITIES.HIGH : NOTIFICATION_PRIORITIES.MEDIUM,
+            navigateTo: '/institution-admin/dashboard',
+            metadata: {
+              clientName: userProfile?.name || user?.displayName || 'Client',
+              reason: requestForm.reason,
+              urgency: requestForm.urgency,
+            },
+          });
+        } catch (notifErr) {
+          console.warn('Failed to send admin notification:', notifErr);
+        }
+      }
+      
       closeRequestModal();
       loadTelemedicineData();
     } catch (error) {
