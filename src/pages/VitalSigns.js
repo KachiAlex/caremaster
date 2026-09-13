@@ -14,10 +14,12 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { getVitalSignsByClient, createVitalSign, getVitalSignsTrends } from '../api/vitalSignsAPI';
+import GlobalAllergyAlert from '../components/GlobalAllergyAlert';
 
 const VitalSigns = () => {
   const { user, userProfile } = useUser();
   const navigate = useNavigate();
+  const [selectedPatient, setSelectedPatient] = useState(null);
   const [formData, setFormData] = useState({
     vitalType: 'Blood Pressure',
     reading: '',
@@ -84,7 +86,18 @@ const VitalSigns = () => {
     };
 
     fetchVitalSigns();
-  }, [user?.uid]);
+
+    // Fetch full patient object for allergy alert
+    if (user?.uid) {
+      if (userProfile) {
+        setSelectedPatient(userProfile);
+      } else {
+        import('../api/patientsAPI').then(({ getClientById }) => {
+          getClientById(user.uid).then(setSelectedPatient).catch(() => setSelectedPatient(null));
+        });
+      }
+    }
+  }, [user?.uid, userProfile]);
 
   // Helper function to get icon for vital type
   const getVitalIcon = (type) => {
@@ -373,6 +386,8 @@ const VitalSigns = () => {
 
   return (
     <div className="space-y-8">
+      <GlobalAllergyAlert patient={selectedPatient} />
+
       {/* Current Vitals Section */}
       <div className="card">
         <div className="flex items-center mb-6">

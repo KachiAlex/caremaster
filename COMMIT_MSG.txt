@@ -1,13 +1,11 @@
-Enhance Nurse Reports with clinical accountability and automation.
+Clinical Safety and Referral Tracking implementation.
 
-- Implemented SBAR (Situation, Background, Assessment, Recommendation) framework for clinical reports.
-- Added Digital Clinical Attestation with nurse signature and content hashing.
-- Integrated NEWS (National Early Warning Score) calculation and automated alerting.
-- Added Voice-to-Text (Web Speech API) for clinical notes.
-- Implemented Doctor Feedback Loop (Acknowledge & Notify Nurse).
-- Added photo attachment support for clinical findings.
-- Refactored report generator to dynamically fetch care tasks and client history.
-- Optimized nurse report display for Doctors with tiered priority highlighting.
+- Implemented Global Allergy Alert banner across all clinical and client screens.
+- Added comprehensive Referral Tracking system with database migration, API, and UI.
+- Implemented dedicated Clinical Documents & Care Instructions upload in patient profiles.
+- Fixed document linking bug: uploaded files during registration are now correctly saved to the client record.
+- Enhanced Patient Account page to display all registration fields (Genotype, Blood Type, ID, etc.).
+- Updated patients API to merge metadata into top-level for better data visibility.
 
 Generated with [Devin](https://devin.ai)
 

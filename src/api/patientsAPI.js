@@ -30,9 +30,13 @@ const normalizeClientDoc = (docSnap) => {
   const shouldDecrypt = secureConfigService.get('security.encryptPatientData', true);
   const decryptedData = shouldDecrypt ? decryptPatientData(clientData) : clientData;
   
+  // Merge metadata into top-level for visibility of miscellaneous registration fields
+  const metadata = decryptedData.metadata || {};
+  
   return {
     id: docSnap.id,
     ...decryptedData,
+    ...metadata,
     dateOfBirth: decryptedData.dateOfBirth?.toDate?.() || decryptedData.dateOfBirth,
     createdAt: decryptedData.createdAt?.toDate?.() || decryptedData.createdAt,
     updatedAt: decryptedData.updatedAt?.toDate?.() || decryptedData.updatedAt,

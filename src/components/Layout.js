@@ -19,6 +19,7 @@ import { signOut } from 'backend/auth';
 import { auth } from '../backend/config';
 import { useUser } from '../contexts/UserContext';
 import NotificationBell from './NotificationBell';
+import GlobalAllergyAlert from './GlobalAllergyAlert';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -181,6 +182,7 @@ const Layout = () => {
         {/* Page content */}
         <main className="flex-1 py-3 sm:py-4 md:py-6 safe-area-bottom">
           <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8">
+            <GlobalAllergyAlert patient={userProfile} />
             <Outlet />
           </div>
         </main>

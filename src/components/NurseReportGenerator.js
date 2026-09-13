@@ -37,6 +37,7 @@ import { getCareLogsByClient } from '../api/careLogsAPI';
 import { getCareTasksByClient } from '../api/careTasksAPI';
 import { getClientById } from '../api/patientsAPI';
 import { calculateNewsScore } from '../utils/newsScore';
+import GlobalAllergyAlert from './GlobalAllergyAlert';
 
 const OBSERVATION_CODES = [
   { value: 'green', label: 'Code Green: Normal/Stable', color: 'text-green-600', bg: 'bg-green-100', priority: 'low' },
@@ -483,6 +484,8 @@ const NurseReportGenerator = ({ clientId, clientName, nurseId, nurseName, instit
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
+          <GlobalAllergyAlert patient={clientData} />
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             {/* Left Column: SBAR Structure (2/3 width on large screens) */}

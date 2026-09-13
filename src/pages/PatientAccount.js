@@ -21,13 +21,19 @@ import {
   FileText,
   Pill,
   Stethoscope,
-  ArrowLeft
+  ArrowLeft,
+  Upload,
+  Trash2,
+  CheckCircle,
+  Clock
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
 import { getPatientById, getPatientByPatientId, updatePatient } from '../api/patientsAPI';
 import { updateDoc, doc } from 'backend/database';
 import { db } from '../backend/config';
+import { uploadClientDocument, deleteClientDocument } from '../utils/clientDocumentUpload';
+import GlobalAllergyAlert from '../components/GlobalAllergyAlert';
 
 const PatientAccount = () => {
   const { clientId } = useParams();
@@ -47,10 +53,85 @@ const PatientAccount = () => {
     gender: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
+    emergencyContactRelationship: '',
     medicalConditions: '',
     allergies: '',
-    medications: ''
+    medications: '',
+    bloodType: '',
+    genotype: '',
+    nationalId: '',
+    primaryCarePhysician: '',
+    physicianPhone: '',
+    insuranceProvider: '',
+    insurancePolicyNumber: '',
+    careLevel: ''
   });
+
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileUpload = async (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const patientIdToUse = client?.id || clientId;
+    if (!patientIdToUse) {
+      toast.error('Patient record not found. Cannot upload.');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const result = await uploadClientDocument(file, patientIdToUse, client?.institutionId || userProfile?.institutionId, type);
+      
+      if (result.success) {
+        // Update patient record with new document
+        const currentDocs = client?.metadata?.documents || [];
+        const newDocs = [...currentDocs, result];
+        
+        await updatePatient(patientIdToUse, {
+          metadata: {
+            ...client.metadata,
+            documents: newDocs,
+            [`${type}Url`]: result.url // convenience field
+          }
+        });
+        
+        toast.success(`${file.name} uploaded successfully`);
+        await loadPatientData();
+      }
+    } catch (error) {
+      console.error('File upload error:', error);
+      toast.error('Failed to upload file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteFile = async (docKey) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+    
+    try {
+      setLoading(true);
+      await deleteClientDocument(docKey);
+      
+      const newDocs = (client?.metadata?.documents || []).filter(d => d.key !== docKey);
+      
+      await updatePatient(client.id, {
+        metadata: {
+          ...client.metadata,
+          documents: newDocs
+        }
+      });
+      
+      toast.success('Document deleted');
+      await loadPatientData();
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast.error('Failed to delete document');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadPatientData();
@@ -101,9 +182,18 @@ const PatientAccount = () => {
           gender: clientData.gender || '',
           emergencyContactName: clientData.emergencyContactName || '',
           emergencyContactPhone: clientData.emergencyContactPhone || clientData.emergencyContact?.phone || '',
+          emergencyContactRelationship: clientData.emergencyContactRelationship || '',
           medicalConditions: clientData.medicalConditions || '',
           allergies: clientData.allergies || '',
-          medications: clientData.medications || ''
+          medications: clientData.medications || '',
+          bloodType: clientData.bloodType || '',
+          genotype: clientData.genotype || '',
+          nationalId: clientData.nationalId || '',
+          primaryCarePhysician: clientData.primaryCarePhysician || '',
+          physicianPhone: clientData.physicianPhone || '',
+          insuranceProvider: clientData.insuranceProvider || '',
+          insurancePolicyNumber: clientData.insurancePolicyNumber || '',
+          careLevel: clientData.careLevel || ''
         });
       }
     } catch (error) {
@@ -248,6 +338,8 @@ const PatientAccount = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <GlobalAllergyAlert patient={client} />
+        
         {loadError && !client && !loading && (
           <div className="p-6 text-center">
             <p className="text-red-600 mb-4">{loadError}</p>
@@ -405,6 +497,145 @@ const PatientAccount = () => {
                     <p className="text-slate-50">{formData.emergencyContactPhone || 'Not provided'}</p>
                   )}
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Relationship</label>
+                  {editing ? (
+                    <input
+                      type="text"
+                      name="emergencyContactRelationship"
+                      value={formData.emergencyContactRelationship}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    />
+                  ) : (
+                    <p className="text-slate-50">{formData.emergencyContactRelationship || 'Not provided'}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Healthcare Information */}
+            <div className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                  <Stethoscope className="h-5 w-5 text-indigo-400" />
+                </div>
+                <h2 className="text-lg font-semibold text-slate-50">Healthcare Details</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Blood Type</label>
+                  {editing ? (
+                    <select 
+                      name="bloodType"
+                      value={formData.bloodType}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none"
+                    >
+                      <option value="">Select</option>
+                      {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  ) : <p className="text-slate-50 font-bold">{formData.bloodType || 'N/A'}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Genotype</label>
+                  {editing ? (
+                    <select 
+                      name="genotype"
+                      value={formData.genotype}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none"
+                    >
+                      <option value="">Select</option>
+                      {['AA', 'AS', 'SS', 'AC'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  ) : <p className="text-slate-50 font-bold">{formData.genotype || 'N/A'}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Primary Physician</label>
+                  {editing ? (
+                    <input 
+                      name="primaryCarePhysician"
+                      value={formData.primaryCarePhysician}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none"
+                    />
+                  ) : <p className="text-slate-50">{formData.primaryCarePhysician || 'N/A'}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Physician Phone</label>
+                  {editing ? (
+                    <input 
+                      name="physicianPhone"
+                      value={formData.physicianPhone}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none"
+                    />
+                  ) : <p className="text-slate-50">{formData.physicianPhone || 'N/A'}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Insurance & Identification */}
+            <div className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <Shield className="h-5 w-5 text-amber-400" />
+                </div>
+                <h2 className="text-lg font-semibold text-slate-50">Insurance & ID</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">National ID (NIN)</label>
+                  {editing ? (
+                    <input 
+                      name="nationalId"
+                      value={formData.nationalId}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none"
+                    />
+                  ) : <p className="text-slate-50 font-mono">{formData.nationalId || 'N/A'}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Care Level</label>
+                  {editing ? (
+                    <select 
+                      name="careLevel"
+                      value={formData.careLevel}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none"
+                    >
+                      <option value="routine">Routine</option>
+                      <option value="moderate">Moderate</option>
+                      <option value="intensive">Intensive Care</option>
+                    </select>
+                  ) : <p className="text-slate-50 capitalize">{formData.careLevel || 'Routine'}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Insurance Provider</label>
+                  {editing ? (
+                    <input 
+                      name="insuranceProvider"
+                      value={formData.insuranceProvider}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none"
+                    />
+                  ) : <p className="text-slate-50">{formData.insuranceProvider || 'N/A'}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Policy Number</label>
+                  {editing ? (
+                    <input 
+                      name="insurancePolicyNumber"
+                      value={formData.insurancePolicyNumber}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-50 focus:outline-none"
+                    />
+                  ) : <p className="text-slate-50">{formData.insurancePolicyNumber || 'N/A'}</p>}
+                </div>
               </div>
             </div>
 
@@ -465,6 +696,72 @@ const PatientAccount = () => {
                     <p className="text-slate-50 whitespace-pre-line">{formData.medications || 'None recorded'}</p>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* Clinical Documents & Instructions */}
+            <div className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                    <FileText className="h-5 w-5 text-orange-400" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-slate-50">Clinical Documents & Care Instructions</h2>
+                </div>
+                
+                <label className="cursor-pointer px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors flex items-center gap-2 text-sm font-bold">
+                   <Upload className="h-4 w-4" />
+                   Upload Document
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    onChange={(e) => handleFileUpload(e, 'medical_record')}
+                    disabled={uploading}
+                  />
+                </label>
+              </div>
+
+              <div className="space-y-3">
+                {client?.metadata?.documents && client.metadata.documents.length > 0 ? (
+                  client.metadata.documents.map((docu, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-700/40 group">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 rounded-lg bg-slate-700/50">
+                          <FileText className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-200">{docu.originalName || docu.fileName || 'Document'}</p>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-tight">
+                            {new Date(docu.uploadedAt).toLocaleDateString()} • {docu.documentType?.replace(/_/g, ' ')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a 
+                          href={docu.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="p-2 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors"
+                          title="View"
+                        >
+                          <Eye size={18} />
+                        </a>
+                        <button 
+                          onClick={() => handleDeleteFile(docu.key)}
+                          className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-12 border-2 border-dashed border-slate-800 rounded-2xl text-center">
+                    <FileText className="h-12 w-12 text-slate-700 mx-auto mb-3" />
+                    <p className="text-sm text-slate-500">No clinical documents or instructions uploaded yet.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

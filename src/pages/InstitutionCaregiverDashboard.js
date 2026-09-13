@@ -105,6 +105,7 @@ import { db } from '../backend/config';
 import DashboardLayout from '../components/DashboardLayout';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 import DashboardOverview from '../components/dashboard/DashboardOverview';
+import GlobalAllergyAlert from '../components/GlobalAllergyAlert';
 import NewConversationModal from '../components/NewConversationModal';
 
 const InstitutionCaregiverDashboard = () => {
@@ -1547,6 +1548,7 @@ const InstitutionCaregiverDashboard = () => {
 
     return (
       <div className="space-y-6">
+        <GlobalAllergyAlert patient={selectedClient} />
         {/* Mobile-friendly client cards */}
         <div className="space-y-4 lg:hidden">
           {assignedClients.map((client) => {
@@ -3759,17 +3761,20 @@ const InstitutionCaregiverDashboard = () => {
   // View-only tab renderers for non-medical caregivers
   const renderPrescriptionsTab = () => {
     return (
-      <PrescriptionsTabContent
-        isDoctor={isDoctor}
-        isPharmacist={isPharmacist}
-        selectedClient={selectedClient}
-        prescriptions={prescriptions}
-        onOpenPrescriptionModal={() => setShowPrescriptionModal(true)}
-        onEditPrescription={handleEditPrescription}
-        onDeletePrescription={handleDeletePrescription}
-        onUpdatePrescriptionItem={handleUpdatePrescriptionItem}
-        userProfile={userProfile}
-      />
+      <div className="space-y-6">
+        <GlobalAllergyAlert patient={selectedClient} />
+        <PrescriptionsTabContent
+          isDoctor={isDoctor}
+          isPharmacist={isPharmacist}
+          selectedClient={selectedClient}
+          prescriptions={prescriptions}
+          onOpenPrescriptionModal={() => setShowPrescriptionModal(true)}
+          onEditPrescription={handleEditPrescription}
+          onDeletePrescription={handleDeletePrescription}
+          onUpdatePrescriptionItem={handleUpdatePrescriptionItem}
+          userProfile={userProfile}
+        />
+      </div>
     );
   };
   

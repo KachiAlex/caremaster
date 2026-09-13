@@ -26,6 +26,7 @@ import prescriptionsAPI from '../api/prescriptionsAPI';
 import { assignmentAPI } from '../api/assignmentAPI';
 import PharmacyInvoiceGenerator from './PharmacyInvoiceGenerator';
 import { drugInteractionService } from '../services/drugInteractionService';
+import GlobalAllergyAlert from './GlobalAllergyAlert';
 
 const PharmacyTab = ({ 
   user, 
@@ -46,6 +47,7 @@ const PharmacyTab = ({
   const [editingPrescription, setEditingPrescription] = useState(null);
   const [safetyCheck, setSafetyCheck] = useState(null);
   const [showSafetyPanel, setShowSafetyPanel] = useState(false);
+  const [fullClientData, setFullClientData] = useState(null);
 
   // Load pharmacy statistics
   useEffect(() => {
@@ -58,6 +60,13 @@ const PharmacyTab = ({
   useEffect(() => {
     if (selectedClientId) {
       loadPrescriptions();
+      
+      // Fetch full client data for allergy alert
+      import('../api/patientsAPI').then(({ getClientById }) => {
+        getClientById(selectedClientId).then(setFullClientData).catch(() => setFullClientData(null));
+      });
+    } else {
+      setFullClientData(null);
     }
   }, [selectedClientId]);
 
@@ -331,6 +340,9 @@ const PharmacyTab = ({
             </option>
           ))}
         </select>
+
+        {/* Global Allergy Alert */}
+        <GlobalAllergyAlert patient={fullClientData} />
 
         {selectedClient && (
           <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
