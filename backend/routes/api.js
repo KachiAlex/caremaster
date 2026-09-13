@@ -16,6 +16,7 @@ const caregiverRoutes = require('./caregivers');
 const institutionRoutes = require('./institutions');
 const messagingRoutes = require('./messaging');
 const notificationRoutes = require('./notifications');
+const notificationPrefRoutes = require('./notificationPreferences');
 const telemedicineRoutes = require('./telemedicine');
 
 // Mount route modules
@@ -27,6 +28,7 @@ router.use('/caregivers', caregiverRoutes);
 router.use('/institutions', institutionRoutes);
 router.use('/messaging', messagingRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/notifications', notificationPrefRoutes);
 router.use('/telemedicine', telemedicineRoutes);
 
 // Default route

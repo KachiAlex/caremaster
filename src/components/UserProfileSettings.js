@@ -15,11 +15,13 @@ import {
   Calendar,
   AlertCircle,
   CheckCircle,
-  Edit2
+  Edit2,
+  Bell
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUser } from '../contexts/UserContext';
 import ProfilePicture from './ProfilePicture';
+import NotificationPreferences from './NotificationPreferences';
 import { updateDoc, doc } from 'backend/database';
 import { updatePassword, reauthenticateWithCredential, updateEmail } from 'backend/auth';
 import { uploadBytes, getDownloadURL } from 'backend/storage';
@@ -348,6 +350,17 @@ const UserProfileSettings = ({ userId, onClose }) => {
             >
               <Lock className="h-4 w-4 inline mr-2" />
               Security
+            </button>
+            <button
+              onClick={() => setActiveTab('notifications')}
+              className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'notifications'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Bell className="h-4 w-4 inline mr-2" />
+              Notifications
             </button>
           </nav>
         </div>
@@ -728,6 +741,11 @@ const UserProfileSettings = ({ userId, onClose }) => {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Notifications Tab */}
+          {activeTab === 'notifications' && (
+            <NotificationPreferences userId={userId || userProfile?.id || user?.uid} />
           )}
         </div>
 

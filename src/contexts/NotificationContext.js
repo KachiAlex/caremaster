@@ -25,6 +25,7 @@ import {
   getUnreadNotificationCount,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  clearAllNotifications,
 } from '../api/notificationsAPI';
 
 const NotificationContext = createContext(null);
@@ -122,12 +123,23 @@ export const NotificationProvider = ({ userId, children }) => {
     }
   }, [userId]);
 
+  const clearAll = useCallback(async () => {
+    if (!userId) return;
+    try {
+      await clearAllNotifications(userId);
+      setNotifications((prev) => prev.filter((n) => !n.read));
+    } catch (err) {
+      console.error('NotificationContext.clearAll error:', err);
+    }
+  }, [userId]);
+
   const value = {
     notifications,
     unreadCount,
     loading,
     markAsRead,
     markAllAsRead,
+    clearAll,
     refresh,
   };
 

@@ -65,6 +65,10 @@ export const markAllNotificationsAsRead = async (userId) => {
   return await notificationsAPI.markAllAsRead(userId);
 };
 
+export const clearAllNotifications = async (userId) => {
+  return await notificationsAPI.clearAllNotifications(userId);
+};
+
 export const notificationsAPI = {
   // Create a new notification
   createNotification: async (notificationData) => {
@@ -196,6 +200,24 @@ export const notificationsAPI = {
       return true;
     } catch (error) {
       console.error('Error deleting notification:', error);
+      throw error;
+    }
+  },
+
+  // Clear all notifications for a user (delete all read notifications)
+  clearAllNotifications: async (userId) => {
+    try {
+      const notificationsQuery = query(
+        collection(db, NOTIFICATIONS_COLLECTION),
+        where('userId', '==', userId),
+        where('read', '==', true)
+      );
+      const querySnapshot = await getDocs(notificationsQuery);
+      const deletePromises = querySnapshot.docs.map(d => deleteDoc(d.ref));
+      await Promise.all(deletePromises);
+      return true;
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
       throw error;
     }
   },

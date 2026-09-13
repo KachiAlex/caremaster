@@ -5,6 +5,7 @@ const { scopeQuery, canAccessTable, canModifyRecord, ADMIN_ONLY_TABLES, PATIENT_
 const { logger } = require('../utils/logger');
 const db = require('../utils/database');
 const sseManager = require('../sse');
+const { dispatchTableNotifications } = require('../services/notificationDispatcher');
 
 const router = express.Router();
 
@@ -214,7 +215,7 @@ const WRITABLE_FIELDS = {
   prescriptions: ['patient_id', 'doctor_id', 'institution_id', 'source', 'medication_name', 'dosage', 'frequency', 'route', 'start_date', 'end_date', 'instructions', 'side_effects', 'status', 'metadata', 'created_at', 'updated_at'],
   consultations: ['client_id', 'client_name', 'doctor_id', 'doctor_name', 'institution_id', 'consultation_type', 'consultation_date', 'chief_complaint', 'subjective', 'objective', 'assessment', 'plan', 'vital_signs', 'related_medical_reports', 'related_care_logs', 'related_prescriptions', 'follow_up_required', 'follow_up_date', 'follow_up_notes', 'notes', 'private_notes', 'status', 'created_at', 'updated_at'],
   diagnostics: ['patient_id', 'ordered_by', 'institution_id', 'test_name', 'test_type', 'status', 'ordered_date', 'scheduled_date', 'completed_at', 'results', 'notes', 'priority', 'metadata', 'created_at', 'updated_at'],
-  notifications: ['user_id', 'title', 'message', 'type', 'read', 'created_at'],
+  notifications: ['user_id', 'title', 'message', 'type', 'priority', 'read', 'data', 'institution_id', 'read_at', 'created_at'],
   attendance: ['caregiver_id', 'client_id', 'clock_in', 'clock_out', 'location_lat', 'location_lng'],
   invoices: ['patient_id', 'patientId', 'client_id', 'clientId', 'institution_id', 'institutionId', 'invoice_number', 'invoiceNumber', 'status', 'amount', 'subtotal', 'tax_amount', 'tax_amount', 'taxAmount', 'tax_rate', 'taxRate', 'discount', 'discount_amount', 'discountAmount', 'total_amount', 'totalAmount', 'currency', 'issue_date', 'issueDate', 'due_date', 'dueDate', 'paid_date', 'paidAt', 'paid_at', 'payment_method', 'paymentMethod', 'payment_reference', 'paymentReference', 'description', 'notes', 'client_name', 'clientName', 'client_email', 'clientEmail', 'client_phone', 'clientPhone', 'client_address', 'clientAddress', 'line_items', 'lineItems', 'items', 'metadata', 'created_at', 'updated_at'],
   billing_plans: ['name', 'institution_id', 'institutionId', 'description', 'amount', 'billing_cycle', 'billingCycle', 'tier', 'weekly_price', 'weeklyPrice', 'monthly_price', 'monthlyPrice', 'annual_price', 'annualPrice', 'yearly_price', 'yearlyPrice', 'currency', 'features', 'is_active', 'isActive', 'sort_order', 'sortOrder', 'status', 'created_at', 'updated_at'],
@@ -262,7 +263,7 @@ const SORTABLE_COLUMNS = {
   messages: ['id', 'created_at'],
   vital_signs: ['id', 'recorded_at', 'created_at'],
   prescriptions: ['id', 'start_date', 'created_at'],
-  notifications: ['id', 'created_at'],
+  notifications: ['id', 'created_at', 'priority', 'read'],
   invoices: ['id', 'due_date', 'created_at'],
   emergency_alerts: ['id', 'created_at', 'severity'],
   audit_logs: ['id', 'timestamp'],
@@ -867,6 +868,11 @@ router.post('/:table', async (req, res) => {
     // Notify connected clients about the new record
     emitDataEvent(req, table, record);
 
+    // Server-side notification dispatch — creates notification rows for
+    // care-relevant tables so notifications fire even if the actor's
+    // browser is closed.
+    dispatchTableNotifications(tableName, record, req.user, 'create').catch(() => {});
+
     res.status(201).json({ success: true, data: responseData });
   } catch (error) {
     logger.error(`Failed to create ${req.params.table}:`, error);
@@ -982,6 +988,10 @@ router.put('/:table/:id', async (req, res) => {
 
     // Notify connected clients about the updated record
     emitDataEvent(req, table, record);
+
+    // Server-side notification dispatch — creates notification rows for
+    // care-relevant status changes (scheduled, completed, cancelled, etc.)
+    dispatchTableNotifications(tableName, record, req.user, 'update').catch(() => {});
 
     res.json({ success: true, data: stripSensitiveFields(mapToCamelCase(record)) });
   } catch (error) {
