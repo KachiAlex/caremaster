@@ -59,6 +59,7 @@ import { carePlansAPI } from '../api/carePlansAPI';
 import MorningBriefing from '../components/MorningBriefing';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import AssignmentCalendar from '../components/AssignmentCalendar';
+import NurseReportCard from '../components/NurseReportCard';
 import { createVitalSign } from '../api/vitalSignsAPI';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
@@ -989,47 +990,27 @@ const ServiceProviderDashboard = () => {
                       Nurse Reports ({nurseReports.length})
                     </h3>
                     
-                    <div className="space-y-4">
-                      {nurseReports.map((report) => (
-                        <div key={report.id} className="bg-gray-50 rounded-lg p-4 border">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center">
-                              <span className="font-medium text-gray-900">{report.nurseName}</span>
-                              <span className="ml-2 text-sm text-gray-500">â€¢ {report.date || (report.createdAt ? new Date(report.createdAt.seconds ? report.createdAt.seconds * 1000 : report.createdAt).toLocaleDateString() : '—')}</span>
-                            </div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              report.status === 'stable' ? 'bg-green-100 text-green-800' : 
-                              report.status === 'improving' ? 'bg-blue-100 text-blue-800' : 
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {report.status}
-                            </span>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                            <div className="text-center">
-                              <div className="text-sm text-gray-500">Blood Pressure</div>
-                              <div className="font-medium">{report.bloodPressure}</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-sm text-gray-500">Heart Rate</div>
-                              <div className="font-medium">{report.heartRate} BPM</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-sm text-gray-500">Temperature</div>
-                              <div className="font-medium">{report.temperature}Â°F</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-sm text-gray-500">Pain Level</div>
-                              <div className="font-medium">{report.painLevel}/10</div>
-                            </div>
-                          </div>
-                          
-                          <div className="text-sm text-gray-600">
-                            <strong>Notes:</strong> {report.notes}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="space-y-6">
+                      {nurseReports.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic text-center py-8">No clinical reports available for this Client yet.</p>
+                      ) : (
+                        nurseReports.map((report) => (
+                          <NurseReportCard 
+                            key={report.id} 
+                            report={report} 
+                            isDoctor={isDoctor}
+                            currentUserId={userProfile?.id || user?.uid}
+                            currentUserName={userProfile?.name || 'Doctor'}
+                            onUpdate={() => {
+                              // Refresh reports list
+                              if (selectedPatient?.id) {
+                                getNurseReportsByPatient(selectedPatient.id)
+                                  .then((reports) => setNurseReports(reports));
+                              }
+                            }}
+                          />
+                        ))
+                      )}
                     </div>
                   </div>
 

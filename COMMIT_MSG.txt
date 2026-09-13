@@ -1,11 +1,13 @@
-Fix Service Worker 503 error and optimize asset caching.
+Enhance Nurse Reports with clinical accountability and automation.
 
-- Fixed Service Worker returning 503 "Offline" by ensuring it checks all caches (including STATIC_CACHE) for navigation requests.
-- Added /offline.html and optimized hero images to pre-cache list.
-- Removed aggressive page reload logic from Service Worker activation to prevent reload loops.
-- Updated Nginx configuration to support full Gzip compression and aggressive caching for static assets.
-- Reduced Landing page image size by ~95% by switching to WebP with PNG fallback.
-- Optimized initial React bundle by removing redundant polyfills and pre-loading critical routes.
+- Implemented SBAR (Situation, Background, Assessment, Recommendation) framework for clinical reports.
+- Added Digital Clinical Attestation with nurse signature and content hashing.
+- Integrated NEWS (National Early Warning Score) calculation and automated alerting.
+- Added Voice-to-Text (Web Speech API) for clinical notes.
+- Implemented Doctor Feedback Loop (Acknowledge & Notify Nurse).
+- Added photo attachment support for clinical findings.
+- Refactored report generator to dynamically fetch care tasks and client history.
+- Optimized nurse report display for Doctors with tiered priority highlighting.
 
 Generated with [Devin](https://devin.ai)
 

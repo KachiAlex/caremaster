@@ -420,6 +420,64 @@ async function dispatchTableNotifications(tableName, record, actorUser, action) 
         break;
       }
 
+      // ─── Nurse Reports (tiered notifications based on codes & feedback) ─────
+      case 'nurse_reports': {
+        if (action === 'create') {
+          const priorityCode = (record.priority_code || 'green').toLowerCase();
+          const patientName = record.client_name || 'a client';
+          
+          // Determine notification priority based on the report's priority code
+          let priority = PRIORITY.LOW;
+          let titlePrefix = 'Nurse Report: ';
+          
+          if (priorityCode === 'red') {
+            priority = PRIORITY.CRITICAL;
+            titlePrefix = 'CRITICAL Nurse Report: ';
+          } else if (priorityCode === 'orange') {
+            priority = PRIORITY.HIGH;
+            titlePrefix = 'URGENT Nurse Report: ';
+          } else if (priorityCode === 'yellow') {
+            priority = PRIORITY.MEDIUM;
+            titlePrefix = 'Status Change Report: ';
+          }
+          
+          const title = `${titlePrefix}${patientName}`;
+          const message = `${record.nurse_name || 'A nurse'} submitted a ${record.report_type || 'report'} for ${patientName}. Priority: ${priorityCode.toUpperCase()}.`;
+          
+          // Recipients: admins + doctors
+          const staff = await getUsersByType(institutionId, ['admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin', 'doctor']);
+          
+          for (const s of staff) {
+            await createNotification(s.id, {
+              type: TYPE.SYSTEM,
+              title,
+              message,
+              priority,
+              metadata: {
+                navigateTo: '/institution-admin/dashboard',
+                reportId: record.id,
+                patientId: record.patient_id,
+              },
+            });
+          }
+        } else if (action === 'update' && record.feedback_status === 'acknowledged') {
+          // Notify the nurse that their report was seen
+          if (record.nurse_id) {
+            await createNotification(record.nurse_id, {
+              type: TYPE.SYSTEM,
+              title: 'Nurse Report Acknowledged',
+              message: `Doctor ${record.acknowledged_by || 'on duty'} has reviewed and acknowledged your report for ${record.client_name || 'the client'}.`,
+              priority: PRIORITY.MEDIUM,
+              metadata: {
+                navigateTo: '/caregiver/tasks',
+                reportId: record.id,
+              },
+            });
+          }
+        }
+        break;
+      }
+
       default:
         // No notification rules for this table
         break;

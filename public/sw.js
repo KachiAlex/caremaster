@@ -1,8 +1,8 @@
 // Care Master Service Worker for PWA functionality
-const CACHE_NAME = 'Care Master-v2.3.0';
-const STATIC_CACHE = 'Care Master-static-v33';
-const DYNAMIC_CACHE = 'Care Master-dynamic-v33';
-const API_CACHE = 'Care Master-api-v33';
+const CACHE_NAME = 'Care Master-v2.3.1';
+const STATIC_CACHE = 'Care Master-static-v34';
+const DYNAMIC_CACHE = 'Care Master-dynamic-v34';
+const API_CACHE = 'Care Master-api-v34';
 
 // Assets to cache on install (avoid hashed filenames that change per build)
 // Keep this list restricted to assets that are guaranteed to exist.
@@ -327,6 +327,7 @@ function isAPIRequest(request) {
 }
 
 function isHTMLRequest(request) {
+  if (request.mode === 'navigate') return true;
   const accept = request.headers.get('accept');
   return accept && accept.includes('text/html');
 }
