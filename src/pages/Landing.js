@@ -287,7 +287,7 @@ const NewHomePage = () => {
 
       {/* Hero */}
       <section className="hero" style={{
-        backgroundImage: 'linear-gradient(rgba(18,48,44,0.82), rgba(14,38,34,0.88)), url(/images/story-care-checkup-1.png)',
+        backgroundImage: 'linear-gradient(rgba(18,48,44,0.82), rgba(14,38,34,0.88)), url(/images/story-care-checkup-1.webp)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'

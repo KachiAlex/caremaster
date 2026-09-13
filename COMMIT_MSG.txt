@@ -1,13 +1,11 @@
-Optimize app loading performance.
+Fix Service Worker 503 error and optimize asset caching.
 
-- Removed redundant IE11 and manual core-js polyfills from index.js.
-- Optimized auth waterfall in App.js by moving content to AppContent and using UserContext source of truth.
-- Implemented optimistic auth in backend/auth.js to emit cached user immediately while validating in background.
-- Reduced redundant profile and institution fetches in UserContext.js.
-- Moved mobile-specific CSS from runtime JS to index.css and meta tags to index.html.
-- Removed aggressive sw-update.js to avoid extra reloads, relying on pwaService instead.
-- Optimized logger to avoid expensive localStorage persistence for common logs in production.
-- Added API preconnect hint in index.html.
+- Fixed Service Worker returning 503 "Offline" by ensuring it checks all caches (including STATIC_CACHE) for navigation requests.
+- Added /offline.html and optimized hero images to pre-cache list.
+- Removed aggressive page reload logic from Service Worker activation to prevent reload loops.
+- Updated Nginx configuration to support full Gzip compression and aggressive caching for static assets.
+- Reduced Landing page image size by ~95% by switching to WebP with PNG fallback.
+- Optimized initial React bundle by removing redundant polyfills and pre-loading critical routes.
 
 Generated with [Devin](https://devin.ai)
 
