@@ -32,7 +32,7 @@ const ALLOWED_TABLES = [
   'schedules',
   // Frontend collection name aliases (map to real table via COLLECTION_TO_TABLE)
   'clientAssignments', 'emergencies',
-  'medicationLogs', 'auditLogs', 'careTasks', 'careLogs',
+  'medicationLogs', 'auditLogs', 'careTasks', 'careLogs', 'carePlans',
   'pharmacyNotifications', 'pharmacyInvoices', 'pharmacyInventory',
   'caregiverAssignments', 'caregiverSchedule',
   'callNotifications', 'emergencyProtocols',
@@ -63,6 +63,7 @@ const COLLECTION_TO_TABLE = {
   auditLogs: 'audit_logs',
   careTasks: 'care_tasks',
   careLogs: 'care_logs',
+  carePlans: 'care_plans',
   pharmacyNotifications: 'notifications',
   pharmacyInvoices: 'invoices',
   pharmacyInventory: 'inventory',
@@ -231,7 +232,7 @@ const WRITABLE_FIELDS = {
   stock_audit: ['institution_id', 'institutionId', 'inventory_id', 'inventoryId', 'type', 'quantity', 'previous_stock', 'previousStock', 'new_stock', 'newStock', 'reference', 'reference_type', 'referenceType', 'notes', 'timestamp', 'created_at', 'updated_at'],
   medications: ['name', 'generic_name', 'dosage_form', 'strength', 'instructions'],
   patient_reports: ['patient_id', 'created_by', 'institution_id', 'title', 'type', 'content', 'sections', 'status', 'metadata', 'created_at', 'updated_at'],
-  nurse_reports: ['patient_id', 'nurse_id', 'nurse_name', 'institution_id', 'report_type', 'vital_signs_summary', 'care_logs_summary', 'shift_start', 'shift_end', 'handover_notes', 'status', 'metadata', 'created_at', 'updated_at'],
+  nurse_reports: ['patient_id', 'client_id', 'client_name', 'nurse_id', 'nurse_name', 'institution_id', 'report_type', 'situation', 'background', 'assessment', 'recommendation', 'coded_observations', 'priority_code', 'patient_condition', 'mental_status', 'mobility_status', 'nutrition_status', 'general_appearance', 'skin_condition', 'pain_level', 'pain_location', 'pain_description', 'care_activities', 'medications_given', 'treatments_provided', 'vital_signs_summary', 'care_logs_summary', 'shift_start', 'shift_end', 'handover_notes', 'status', 'metadata', 'signature_data', 'news_score', 'news_data', 'acknowledged_at', 'acknowledged_by', 'doctor_notes', 'feedback_status', 'photos', 'created_at', 'updated_at'],
   subscriptions: ['institution_id', 'plan', 'status', 'start_date', 'end_date'],
   patients: ['name', 'email', 'phone', 'institution_id', 'status', 'medical_history', 'emergency_contacts', 'notes', 'date_of_birth', 'gender', 'address', 'city', 'state', 'country', 'blood_type', 'allergies', 'medications'],
   calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'participants', 'institution_id', 'created_at', 'updated_at'],
@@ -291,7 +292,7 @@ const SORTABLE_COLUMNS = {
   calls: ['id', 'call_id', 'caller_id', 'recipient_id', 'status', 'created_at', 'answered_at', 'ended_at'],
   schedules: ['id', 'schedule_date', 'start_time', 'end_time', 'status', 'priority', 'created_at', 'updated_at'],
   patient_reports: ['id', 'created_at', 'updated_at'],
-  nurse_reports: ['id', 'created_at', 'updated_at'],
+  nurse_reports: ['id', 'created_at', 'updated_at', 'news_score', 'feedback_status', 'priority_code'],
   client_activities: ['id', 'created_at', 'updated_at'],
   adl_logs: ['id', 'timestamp', 'created_at']
 };

@@ -31,6 +31,7 @@ import { getCareLogsByClient } from '../api/careLogsAPI';
 import { getNurseReportsByPatient } from '../api/nurseReportsAPI';
 import { toast } from 'react-toastify';
 import { medicationAPI } from '../api/medicationAPI';
+import NurseReportCard from '../components/NurseReportCard';
 
 const CaregiverClients = () => {
   const { userProfile, userRole } = useUser();
@@ -695,83 +696,19 @@ const CaregiverClients = () => {
                   <div>
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">Nurse Reports ({nurseReports.length})</h4>
                     <div className="space-y-4">
-                      {nurseReports.slice(0, 5).map((report, index) => (
-                        <div key={report.id || index} className="bg-white border rounded-lg p-4 border-l-4 border-blue-500">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center">
-                              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                <Activity className="h-4 w-4 text-blue-600" />
-                              </div>
-                              <div>
-                                <h5 className="font-medium text-gray-900">Nurse Report</h5>
-                                <p className="text-sm text-gray-600">by {report.nurseName || 'Nurse'}</p>
-                              </div>
-                            </div>
-                            <span className="text-sm text-gray-500">
-                              {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : 'N/A'}
-                            </span>
-                          </div>
-                          
-                          {/* Vital Signs from Report */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                            {report.bloodPressure && (
-                              <div className="bg-gray-50 rounded p-2">
-                                <div className="text-xs text-gray-600">Blood Pressure</div>
-                                <div className="font-medium">{report.bloodPressure}</div>
-                              </div>
-                            )}
-                            {report.heartRate && (
-                              <div className="bg-gray-50 rounded p-2">
-                                <div className="text-xs text-gray-600">Heart Rate</div>
-                                <div className="font-medium">{report.heartRate} bpm</div>
-                              </div>
-                            )}
-                            {report.temperature && (
-                              <div className="bg-gray-50 rounded p-2">
-                                <div className="text-xs text-gray-600">Temperature</div>
-                                <div className="font-medium">{report.temperature}°F</div>
-                              </div>
-                            )}
-                            {report.oxygenSaturation && (
-                              <div className="bg-gray-50 rounded p-2">
-                                <div className="text-xs text-gray-600">Oxygen</div>
-                                <div className="font-medium">{report.oxygenSaturation}%</div>
-                              </div>
-                            )}
-                            {report.weight && (
-                              <div className="bg-gray-50 rounded p-2">
-                                <div className="text-xs text-gray-600">Weight</div>
-                                <div className="font-medium">{report.weight} lbs</div>
-                              </div>
-                            )}
-                            {report.painLevel && (
-                              <div className="bg-gray-50 rounded p-2">
-                                <div className="text-xs text-gray-600">Pain Level</div>
-                                <div className="font-medium">{report.painLevel}/10</div>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {report.notes && (
-                            <div className="bg-blue-50 rounded p-3">
-                              <div className="text-sm font-medium text-blue-900 mb-1">Notes:</div>
-                              <div className="text-sm text-blue-800">{report.notes}</div>
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center justify-between mt-3">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              report.status === 'stable' ? 'bg-green-100 text-green-800' :
-                              report.status === 'critical' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {report.status || 'Unknown'}
-                            </span>
-                            <div className="text-xs text-gray-500">
-                              {report.createdAt ? new Date(report.createdAt).toLocaleString() : 'N/A'}
-                            </div>
-                          </div>
-                        </div>
+                      {nurseReports.slice(0, 10).map((report) => (
+                        <NurseReportCard 
+                          key={report.id} 
+                          report={report} 
+                          isDoctor={userRole === 'doctor'} 
+                          currentUserId={userProfile?.id || userProfile?.uid}
+                          currentUserName={userProfile?.name || userProfile?.displayName}
+                          onUpdate={() => {
+                            if (selectedClient?.id) {
+                              getNurseReportsByPatient(selectedClient.id).then(setNurseReports);
+                            }
+                          }}
+                        />
                       ))}
                     </div>
                   </div>
