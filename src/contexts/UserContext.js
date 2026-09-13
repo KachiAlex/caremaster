@@ -27,86 +27,30 @@ export const UserProvider = ({ children }) => {
   const logoutTimeoutRef = useRef(null);
 
   useEffect(() => {
-    // Check for existing token on mount
+    // Check for existing token and user on mount
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
-    // Clear any stale dev-token from previous deployments
-    if (token === 'dev-token' || (storedUser && storedUser.includes('dev-admin'))) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      setLoading(false);
-      return;
-    }
-
-    if (token && storedUser) {
+    // Optimistically set user from localStorage for instant feel
+    if (token && storedUser && token !== 'dev-token') {
       try {
         const userData = JSON.parse(storedUser);
         setUser(userData);
         setUserProfile(userData);
-
-        // Set role from user data
         const role = userData.userType || userData.type || userData.role || 'student';
         setUserRole(role);
         setUserRoles(userData.roles || [role]);
-
-        // Set institution if available
         if (userData.institutionId) {
           setInstitutionId(userData.institutionId);
         }
-
-        // Fetch fresh profile from database using firebase_uid or id.
-        // Skip when on /login — SignInRouteHandler will clear the stale session
-        // and a fresh profile fetch with a stale token only produces a 401.
-        const userId = userData.uid || userData.id;
-        if (userId && !window.location.pathname.startsWith('/login')) {
-          Promise.all([
-            getDoc(doc(db, 'users', userId)),
-            getClientByUserId(userId)
-          ])
-            .then(([userDoc, clientData]) => {
-              if (userDoc.exists()) {
-                const dbProfile = userDoc.data();
-                const mergedProfile = { ...userData, ...dbProfile, ...(clientData || {}) };
-                setUserProfile(mergedProfile);
-                setUser(mergedProfile);
-                localStorage.setItem('user', JSON.stringify(mergedProfile));
-                const dbRole = dbProfile.userType || dbProfile.type || dbProfile.role || role;
-                setUserRole(dbRole);
-                setUserRoles(dbProfile.roles || [dbRole]);
-                if (dbProfile.institutionId) {
-                  setInstitutionId(dbProfile.institutionId);
-                }
-              }
-            })
-            .catch((err) => {
-              console.error('Failed to fetch user profile from database:', err);
-            });
-        }
-      } catch (error) {
-        console.error('Failed to parse stored user data:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+      } catch (e) {
+        console.warn('Failed to parse cached user:', e);
       }
     }
-    // Loading state is finalized by the onAuthStateChanged listener below,
-    // which validates the session (including httpOnly cookie sessions on web).
-  }, []);
 
-  // Sync with auth state (for logins like UnifiedLogin that use signInWithEmailAndPassword
-  // from backend/auth.js directly and navigate without calling UserContext.login()).
-  //
-  // IMPORTANT: signInWithEmailAndPassword in backend/auth.js already sets the JWT token
-  // and user profile in localStorage. This listener only syncs React state from localStorage.
-  // It must NOT overwrite localStorage.token — that would replace the JWT with the UID
-  // and break all subsequent API calls (403 "Invalid token").
-  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       if (authUser) {
-        // Use the user object returned by onAuthStateChanged, which is the
-        // locally-stored profile for native apps and the fresh /auth/me response
-        // for web sessions using an httpOnly cookie.
+        // Use the validated user object
         const userData = authUser;
         setUser(userData);
         setUserProfile(userData);
@@ -116,8 +60,26 @@ export const UserProvider = ({ children }) => {
         if (userData.institutionId) {
           setInstitutionId(userData.institutionId);
         }
+
+        // Fetch extra fields (medicalConditions etc) in the background if needed
+        const userId = userData.uid || userData.id;
+        if (userId && !window.location.pathname.startsWith('/login')) {
+          // Use cached results if available via getDoc (database.js handles cache)
+          Promise.all([
+            getDoc(doc(db, 'users', userId)),
+            getClientByUserId(userId).catch(() => null)
+          ]).then(([userDoc, clientData]) => {
+            if (userDoc.exists()) {
+              const dbProfile = userDoc.data();
+              const mergedProfile = { ...userData, ...dbProfile, ...(clientData || {}) };
+              setUserProfile(mergedProfile);
+              setUser(mergedProfile);
+              localStorage.setItem('user', JSON.stringify(mergedProfile));
+            }
+          }).catch(() => {});
+        }
       } else {
-        // Session invalid or missing — clear React auth state
+        // Session invalid or missing
         setUser(null);
         setUserProfile(null);
         setUserRole(null);
@@ -134,8 +96,8 @@ export const UserProvider = ({ children }) => {
   // Fetch institution (tenant) data whenever institutionId changes so dashboards
   // can display the actual tenant name instead of a generic "Institution" label.
   useEffect(() => {
-    if (!institutionId) {
-      setInstitutionData(null);
+    if (!institutionId || institutionData?.id === institutionId) {
+      if (!institutionId) setInstitutionData(null);
       return;
     }
     let cancelled = false;

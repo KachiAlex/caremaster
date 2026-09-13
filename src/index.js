@@ -1,19 +1,7 @@
 ﻿// Polyfills MUST be imported before anything else so that all downstream
 // code (React, libraries, app code) can rely on the polyfilled APIs.
-// react-app-polyfill/ie11  — fetch, Promise, URL, Map/Set, etc. for IE11
-// react-app-polyfill/stable — requestAnimationFrame, matchMedia, etc.
-import 'react-app-polyfill/ie11';
+// Use stable polyfills for modern browser features.
 import 'react-app-polyfill/stable';
-// core-js polyfills for modern APIs not covered by react-app-polyfill
-import 'core-js/web/url';
-import 'core-js/web/url-search-params';
-import 'core-js/web/structured-clone';
-import 'core-js/es/object/from-entries';
-import 'core-js/es/promise/all-settled';
-import 'core-js/es/array/flat';
-import 'core-js/es/array/flat-map';
-import 'core-js/es/string/replace-all';
-import 'core-js/es/global-this';
 
 import React from "react";
 import { createRoot } from "react-dom/client";

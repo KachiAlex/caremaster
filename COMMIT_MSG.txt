@@ -1,0 +1,14 @@
+Optimize app loading performance.
+
+- Removed redundant IE11 and manual core-js polyfills from index.js.
+- Optimized auth waterfall in App.js by moving content to AppContent and using UserContext source of truth.
+- Implemented optimistic auth in backend/auth.js to emit cached user immediately while validating in background.
+- Reduced redundant profile and institution fetches in UserContext.js.
+- Moved mobile-specific CSS from runtime JS to index.css and meta tags to index.html.
+- Removed aggressive sw-update.js to avoid extra reloads, relying on pwaService instead.
+- Optimized logger to avoid expensive localStorage persistence for common logs in production.
+- Added API preconnect hint in index.html.
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>
