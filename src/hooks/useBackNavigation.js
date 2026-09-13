@@ -48,10 +48,12 @@ const useBackNavigation = ({ defaultTab, modalStates = {}, closeAllModals }) => 
     const stack = stackRef.current;
     const hasTabHistory = stack.length > 1;
     const hasModalOpen = isModalOpenRef.current;
-    // Can go back if a modal is open OR if there's tab history OR if there's
-    // browser history. We can't synchronously check browser history length
-    // reliably, so we treat it as always-available as a last resort.
-    setCanGoBack(hasModalOpen || hasTabHistory);
+    // Can go back if a modal is open, there's tab history, or there's browser
+    // history. Browser history length is checked synchronously so the back
+    // arrow is not dead when the user lands on the default tab from another
+    // page (e.g. login or dashboard selection).
+    const hasBrowserHistory = typeof window !== 'undefined' && window.history.length > 1;
+    setCanGoBack(hasModalOpen || hasTabHistory || hasBrowserHistory);
   }, []);
 
   useEffect(() => {
