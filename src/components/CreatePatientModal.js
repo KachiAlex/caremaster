@@ -24,7 +24,7 @@ import {
   Check,
   Crown
 } from 'lucide-react';
-import { createClient, createClientLoginAccount } from '../api/patientsAPI';
+import { createClient, createClientLoginAccount, updatePatient } from '../api/patientsAPI';
 import { getBillingPlans, assignSubscriptionToClient, BILLING_FREQUENCIES } from '../api/billingPlansAPI';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
@@ -388,28 +388,30 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
 
   // Upload documents after Client creation
   const uploadDocumentsAfterRegistration = async (clientId) => {
-    const uploadPromises = [];
+    const uploadResults = [];
     
     for (const [docType, docData] of Object.entries(uploadedDocuments)) {
       if (docData && docData.file) {
-        uploadPromises.push(
-          uploadClientDocument(
+        try {
+          const result = await uploadClientDocument(
             docData.file,
             clientId,
-            institutionId || userProfile?.institutionId,
+            effectiveInstitutionId,
             docType
-          ).catch(error => {
-            console.error(`Error uploading ${docType}:`, error);
-            return null; // Continue with other uploads
-          })
-        );
+          );
+          if (result && result.success) {
+            uploadResults.push(result);
+          }
+        } catch (error) {
+          console.error(`Error uploading ${docType}:`, error);
+        }
       }
     }
 
-    if (uploadPromises.length > 0) {
-      await Promise.all(uploadPromises);
+    if (uploadResults.length > 0) {
       toast.success('Documents uploaded successfully');
     }
+    return uploadResults;
   };
 
   const handleSubmit = async (e, skipDuplicateCheck = false) => {
@@ -533,13 +535,31 @@ const CreateClientModal = ({ open, onClose, onSuccess }) => {
       }
       
       // Upload documents after Client creation (non-blocking - don't fail if upload fails)
+      let documentResults = [];
       if (Object.values(uploadedDocuments).some(doc => doc !== null)) {
         try {
-          await uploadDocumentsAfterRegistration(result.clientId);
+          documentResults = await uploadDocumentsAfterRegistration(result.clientId);
+          
+          // CRITICAL FIX: Save the uploaded document URLs back to the client record
+          if (documentResults.length > 0) {
+            const documentMap = {};
+            documentResults.forEach(dr => {
+              documentMap[`${dr.documentType}Url`] = dr.url;
+            });
+            
+            await updatePatient(result.id, {
+              metadata: {
+                ...clientData.metadata,
+                documents: documentResults,
+                ...documentMap
+              }
+            });
+            console.log('✅ Document URLs saved to client record');
+          }
         } catch (uploadError) {
           // Log upload error but don't fail the entire operation
-          console.warn('Document upload failed (client was created successfully):', uploadError);
-          toast.warning('Client created successfully, but some documents could not be uploaded. You can upload them later.', {
+          console.warn('Document upload or linking failed (client was created successfully):', uploadError);
+          toast.warning('Client created successfully, but some documents could not be linked. You can re-upload them later.', {
             autoClose: 6000
           });
         }

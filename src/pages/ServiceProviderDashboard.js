@@ -60,6 +60,8 @@ import MorningBriefing from '../components/MorningBriefing';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 import NurseReportCard from '../components/NurseReportCard';
+import GlobalAllergyAlert from '../components/GlobalAllergyAlert';
+import ReferralTracker from '../components/ReferralTracker';
 import { createVitalSign } from '../api/vitalSignsAPI';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
@@ -201,6 +203,13 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
               <p className="text-gray-500 text-sm text-center">No upcoming consultations</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Referrals Section */}
+      <div className="lg:col-span-2">
+        <div className="cm-card p-6">
+          <ReferralTracker institutionId={userProfile?.institutionId} userRole={userProfile?.userType} />
         </div>
       </div>
     </div>
@@ -764,6 +773,7 @@ const ServiceProviderDashboard = () => {
       { id: 'consultations', label: 'Consultations', icon: Stethoscope },
       { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
       { id: 'records', label: 'Medical Records', icon: FileText },
+      { id: 'referrals', label: 'Referrals', icon: ArrowRight },
     ] : []),
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'help', label: 'Help & Support', icon: HelpCircle },
@@ -926,6 +936,8 @@ const ServiceProviderDashboard = () => {
             </div>
 
             <div className="p-6">
+              <GlobalAllergyAlert patient={selectedPatient} />
+              
               {/* Client Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>

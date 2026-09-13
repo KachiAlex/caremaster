@@ -28,6 +28,7 @@ const ALLOWED_TABLES = [
   'emergency_alerts', 'inventory', 'medications', 'patient_reports', 'subscriptions',
   'patients', 'calls', 'conversations', 'elderly_profiles',
   'licenses', 'analytics_events', 'medication_logs',
+  'referrals',
   'institution_id_mappings',
   'schedules',
   // Frontend collection name aliases (map to real table via COLLECTION_TO_TABLE)
@@ -101,6 +102,7 @@ const COLUMN_ALIASES = {
   care_plans: { client_id: 'patient_id' },
   patient_reports: { client_id: 'patient_id' },
   nurse_reports: { client_id: 'patient_id' },
+  referrals: { client_id: 'patient_id' },
   elderly_profiles: { client_id: 'patient_id' },
   invoices: { client_id: 'patient_id' },
   client_activities: { client_id: 'patient_id' },
@@ -231,6 +233,7 @@ const WRITABLE_FIELDS = {
   goods_received: ['institution_id', 'institutionId', 'purchase_order_id', 'purchaseOrderId', 'supplier_id', 'supplierId', 'grn_number', 'grnNumber', 'received_date', 'receivedDate', 'status', 'items', 'notes', 'created_at', 'updated_at'],
   stock_audit: ['institution_id', 'institutionId', 'inventory_id', 'inventoryId', 'type', 'quantity', 'previous_stock', 'previousStock', 'new_stock', 'newStock', 'reference', 'reference_type', 'referenceType', 'notes', 'timestamp', 'created_at', 'updated_at'],
   medications: ['name', 'generic_name', 'dosage_form', 'strength', 'instructions'],
+  referrals: ['patient_id', 'referred_by_institution_id', 'referred_to_facility', 'referred_to_institution_id', 'referral_reason', 'clinical_notes', 'status', 'priority', 'sent_at', 'received_at', 'appointment_date', 'responded_at', 'specialist_response', 'next_actions', 'attachments', 'metadata', 'created_at', 'updated_at'],
   patient_reports: ['patient_id', 'created_by', 'institution_id', 'title', 'type', 'content', 'sections', 'status', 'metadata', 'created_at', 'updated_at'],
   nurse_reports: ['patient_id', 'client_id', 'client_name', 'nurse_id', 'nurse_name', 'institution_id', 'report_type', 'situation', 'background', 'assessment', 'recommendation', 'coded_observations', 'priority_code', 'patient_condition', 'mental_status', 'mobility_status', 'nutrition_status', 'general_appearance', 'skin_condition', 'pain_level', 'pain_location', 'pain_description', 'care_activities', 'medications_given', 'treatments_provided', 'vital_signs_summary', 'care_logs_summary', 'shift_start', 'shift_end', 'handover_notes', 'status', 'metadata', 'signature_data', 'news_score', 'news_data', 'acknowledged_at', 'acknowledged_by', 'doctor_notes', 'feedback_status', 'photos', 'created_at', 'updated_at'],
   subscriptions: ['institution_id', 'plan', 'status', 'start_date', 'end_date'],
@@ -294,7 +297,8 @@ const SORTABLE_COLUMNS = {
   patient_reports: ['id', 'created_at', 'updated_at'],
   nurse_reports: ['id', 'created_at', 'updated_at', 'news_score', 'feedback_status', 'priority_code'],
   client_activities: ['id', 'created_at', 'updated_at'],
-  adl_logs: ['id', 'timestamp', 'created_at']
+  adl_logs: ['id', 'timestamp', 'created_at'],
+  referrals: ['id', 'sent_at', 'status', 'priority', 'created_at']
 };
 
 function validateTable(tableName) {
@@ -387,6 +391,9 @@ const WRITE_COLUMN_ALIASES = {
   patient_reports: {
     client_id: 'patient_id',
     doctor_id: 'created_by',
+  },
+  referrals: {
+    client_id: 'patient_id',
   },
   nurse_reports: {
     client_id: 'patient_id',

@@ -98,6 +98,7 @@ import { db, functions } from '../backend/config';
 import CaregiverWageManagement from '../components/CaregiverWageManagement';
 import CaregiverWageEditModal from '../components/CaregiverWageEditModal';
 import UserProfileSettings from '../components/UserProfileSettings';
+import ReferralTracker from '../components/ReferralTracker';
 import InstitutionSettings from '../components/InstitutionSettings';
 import ChangePasswordForm from '../components/ChangePasswordForm';
 import CreatePatientModal from '../components/CreatePatientModal';
@@ -3381,6 +3382,7 @@ const renderMessagesTab = () => {
     { id: 'user-management', label: 'User Management', icon: Users, iconColor: '#22D3EE' },
     { id: 'admin-roles', label: 'Admin Roles', icon: UserCog, iconColor: '#C084FC' },
     { id: 'messages', label: 'Messages', icon: MessageSquare, iconColor: '#38BDF8' },
+    { id: 'referrals', label: 'Referrals', icon: ArrowRight, iconColor: '#6366F1' },
     { id: 'enhanced-inventory', label: 'Enhanced Inventory', icon: Building, iconColor: '#F59E0B' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, iconColor: '#2DD4BF' },
     { id: 'security', label: 'Security', icon: Shield, iconColor: '#F87171' },
@@ -4496,6 +4498,12 @@ const renderMessagesTab = () => {
               </div>
             </div>
             {renderMessagesTab()}
+          </div>
+        );
+      case 'referrals':
+        return (
+          <div className="space-y-6">
+            <ReferralTracker institutionId={effectiveInstitutionId} userRole={userProfile?.userType} />
           </div>
         );
       case 'enhanced-inventory':

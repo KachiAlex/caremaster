@@ -16,6 +16,7 @@ import { medicationAPI } from '../api/medicationAPI';
 import { getClientsByCaregiver } from '../api/patientsAPI';
 import { createCareLog } from '../api/careLogsAPI';
 import { useNavigate, useLocation } from 'react-router-dom';
+import GlobalAllergyAlert from '../components/GlobalAllergyAlert';
 
 const Medications = () => {
   const { user, userProfile } = useUser();
@@ -24,6 +25,7 @@ const Medications = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   // Client selection (for doctors/caregivers writing prescriptions)
   const [assignedPatients, setAssignedPatients] = useState([]);
@@ -122,7 +124,19 @@ const Medications = () => {
     };
 
     fetchMedications();
-  }, [user?.uid, selectedPatientId]);
+    
+    // Fetch full patient object for allergy alert
+    const pid = selectedPatientId || user?.uid;
+    if (pid) {
+      if (pid === user?.uid && userProfile) {
+        setSelectedPatient(userProfile);
+      } else {
+        import('../api/patientsAPI').then(({ getClientById }) => {
+          getClientById(pid).then(setSelectedPatient).catch(() => setSelectedPatient(null));
+        });
+      }
+    }
+  }, [user?.uid, selectedPatientId, userProfile]);
 
   const handleAddMedication = async (e) => {
     e.preventDefault();
@@ -230,6 +244,8 @@ const Medications = () => {
           Add Medication
         </button>
       </div>
+
+      <GlobalAllergyAlert patient={selectedPatient} />
 
       {/* Add Medication Form */}
       {showAddForm && (
