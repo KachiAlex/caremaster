@@ -3,6 +3,64 @@
 @tailwind utilities;
 
 /* ========================================
+   Mobile Optimizations
+   ======================================== */
+@media (max-width: 768px) {
+  /* Touch-friendly button sizes */
+  button, .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve touch targets */
+  input, textarea, select {
+    min-height: 44px;
+  }
+  
+  /* Better scrolling on iOS */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent text selection on UI elements */
+  button, .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Suppress double-tap zoom without blocking scroll */
+  button, a, .btn, .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Optimize for mobile viewport */
+  .mobile-full-height {
+    height: 100vh;
+    height: 100dvh;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+  .mobile-landscape-hide {
+    display: none !important;
+  }
+  
+  .mobile-landscape-compact {
+    padding: 0.5rem !important;
+  }
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  input, textarea {
+    font-size: 16px; /* Prevents auto-zoom on iOS */
+  }
+}
+
+/* ========================================
    Cross-Browser Compatibility Fixes
    ======================================== */
 

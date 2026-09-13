@@ -69,14 +69,16 @@ class Logger {
     }
 
     // Console logging (throttled in production for INFO/DEBUG)
-    if (environmentConfig.isProduction() && (levelName === 'INFO' || levelName === 'DEBUG')) {
+    if (environmentConfig.isProduction() && level < LOG_LEVELS.WARN) {
       // Skip noisy logs in production
     } else {
       this.consoleLog(levelName, message, data);
     }
 
-    // Store in localStorage for persistence
-    this.persistLog(logEntry);
+    // Store in localStorage for persistence (only for ERROR/CRITICAL in production)
+    if (!environmentConfig.isProduction() || level >= LOG_LEVELS.ERROR) {
+      this.persistLog(logEntry);
+    }
 
     // Send to remote logging service in production
     if (environmentConfig.isProduction() && level >= LOG_LEVELS.ERROR) {

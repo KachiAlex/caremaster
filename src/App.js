@@ -120,7 +120,6 @@ try {
 
 function App() {
   const navigate = useNavigate();
-  const [user, loading] = useAuthState(auth);
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
   const [showGestureControls, setShowGestureControls] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -230,30 +229,35 @@ function App() {
     };
   }, []);
 
-  // Ensure users/{uid}.createdAt exists (account creation timestamp)
-  useEffect(() => {
-    const ensureCreatedAt = async () => {
-      try {
-        if (!user?.uid) return;
-        // Skip when on /login — SignInRouteHandler clears stale sessions there,
-        // and a getDoc with a stale token only produces a 401.
-        if (window.location.pathname.startsWith('/login')) return;
-        const userDocRef = doc(db, 'users', user.uid);
-        const snap = await getDoc(userDocRef);
-        if (!snap.exists()) {
-          await setDoc(userDocRef, { createdAt: serverTimestamp(), id: user.uid, email: user.email || null }, { merge: true });
-          return;
-        }
-        const data = snap.data();
-        if (!data?.createdAt) {
-          await setDoc(userDocRef, { createdAt: serverTimestamp() }, { merge: true });
-        }
-      } catch (e) {
-        errorHandler.handleError(e, { context: 'ensure_user_createdAt' });
-      }
-    };
-    ensureCreatedAt();
-  }, [user?.uid, user?.email]);
+  return (
+    <ErrorBoundary name="App">
+      <UserProvider>
+        <AppContent 
+          isMobile={isMobile}
+          isOnline={isOnline}
+          showVoiceInterface={showVoiceInterface}
+          setShowVoiceInterface={setShowVoiceInterface}
+          showGestureControls={showGestureControls}
+          setShowGestureControls={setShowGestureControls}
+        />
+      </UserProvider>
+    </ErrorBoundary>
+  );
+}
+
+/**
+ * AppContent — handles the actual rendering based on auth state from UserContext.
+ * This avoids redundant onAuthStateChanged checks in both App.js and UserProvider.
+ */
+function AppContent({ 
+  isMobile, 
+  isOnline, 
+  showVoiceInterface, 
+  setShowVoiceInterface, 
+  showGestureControls, 
+  setShowGestureControls 
+}) {
+  const { user, loading } = useUser();
 
   // Voice command handlers
   const handleVoiceCommand = (command, params) => {
@@ -372,33 +376,31 @@ function App() {
   }
 
   return (
-    <ErrorBoundary name="App">
-      <UserProvider>
+    <Suspense fallback={null}>
+      <NativeMobileHandler>
+        {/* Lazy-loaded mobile/PWA components */}
         <Suspense fallback={null}>
-        <NativeMobileHandler>
-          {/* Lazy-loaded mobile/PWA components */}
-          <Suspense fallback={null}>
-        <MobileOptimization />
-        <PWAInstallPrompt />
-        <OfflineIndicator />
+          <MobileOptimization />
+          <PWAInstallPrompt />
+          <OfflineIndicator />
 
-        {/* Voice Command Interface */}
-        <VoiceCommandInterface
-          isOpen={showVoiceInterface}
-          onClose={() => setShowVoiceInterface(false)}
-          onCommand={handleVoiceCommand}
-        />
+          {/* Voice Command Interface */}
+          <VoiceCommandInterface
+            isOpen={showVoiceInterface}
+            onClose={() => setShowVoiceInterface(false)}
+            onCommand={handleVoiceCommand}
+          />
 
-        {/* Gesture Controls */}
-        <GestureControls
-          isOpen={showGestureControls}
-          onClose={() => setShowGestureControls(false)}
-          onGesture={handleGesture}
-        />
-      </Suspense>
-      
-      <Suspense fallback={<LoadingSpinner />}>
-      <Routes>
+          {/* Gesture Controls */}
+          <GestureControls
+            isOpen={showGestureControls}
+            onClose={() => setShowGestureControls(false)}
+            onGesture={handleGesture}
+          />
+        </Suspense>
+        
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
       {/* Public routes */}
       <Route 
         path="/" 
@@ -732,8 +734,6 @@ function App() {
       </Suspense>
       </NativeMobileHandler>
       </Suspense>
-      </UserProvider>
-    </ErrorBoundary>
   );
 }
 
