@@ -181,6 +181,20 @@ function App() {
         }
       }).catch(() => {});
     }
+
+    // Initialize web push notifications after service worker is ready.
+    // Only runs on web (non-native) platforms — native uses Capacitor push.
+    if (!isNativeApp && 'serviceWorker' in navigator && 'PushManager' in window) {
+      import('./services/pushNotificationService').then(({ default: pushService }) => {
+        if (cancelled) return;
+        // Wait a tick for the service worker to be registered by pwaService
+        setTimeout(() => {
+          pushService.init().catch((err) => {
+            console.warn('Web push init deferred:', err?.message);
+          });
+        }, 3000);
+      }).catch(() => {});
+    }
     
     // Check if mobile device
     const checkMobile = () => {

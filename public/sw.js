@@ -459,15 +459,26 @@ async function removeQueuedRequest(timestamp) {
 // Push notification handling
 self.addEventListener('push', (event) => {
   console.log('Push notification received:', event);
-  
+
+  let payload = {};
+  try {
+    payload = event.data ? JSON.parse(event.data.text()) : {};
+  } catch (e) {
+    // Fallback: treat as plain text body
+    payload = { body: event.data ? event.data.text() : 'New notification from Care Master' };
+  }
+
   const options = {
-    body: event.data ? event.data.text() : 'New notification from Care Master',
+    body: payload.body || 'New notification from Care Master',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: 1
+      primaryKey: 1,
+      navigateTo: payload.data?.navigateTo || '/',
+      notificationId: payload.data?.notificationId,
+      ...payload.data,
     },
     actions: [
       {
@@ -481,31 +492,42 @@ self.addEventListener('push', (event) => {
         icon: '/icons/icon-192x192.png'
       }
     ],
-    requireInteraction: true,
+    requireInteraction: payload.requireInteraction || false,
     silent: false
   };
-  
+
   event.waitUntil(
-    self.registration.showNotification('Care Master', options)
+    self.registration.showNotification(payload.title || 'Care Master', options)
   );
 });
 
 // Notification click handling
 self.addEventListener('notificationclick', (event) => {
   console.log('Notification clicked:', event);
-  
+
   event.notification.close();
-  
-  if (event.action === 'open') {
+
+  const navigateTo = event.notification.data?.navigateTo || '/';
+  const targetUrl = new URL(navigateTo, self.location.origin).href;
+
+  if (event.action === 'close' || !event.action) {
+    // Default click or "open" action — focus or open the app at the target URL
     event.waitUntil(
-      clients.matchAll({ type: 'window' }).then((clientList) => {
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        // Try to focus an existing tab pointing at the same origin
         for (const client of clientList) {
-          if (client.url === '/' && 'focus' in client) {
-            return client.focus();
+          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            client.focus();
+            // Navigate the existing tab to the target URL if different
+            if (client.url !== targetUrl) {
+              client.navigate(targetUrl).catch(() => {});
+            }
+            return;
           }
         }
+        // No existing tab — open a new one
         if (clients.openWindow) {
-          return clients.openWindow('/');
+          return clients.openWindow(targetUrl);
         }
       })
     );

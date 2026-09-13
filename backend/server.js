@@ -17,9 +17,12 @@ const turnRoutes = require('./routes/turn');
 const emailRoutes = require('./routes/email');
 const uploadRoutes = require('./routes/uploadRoutes');
 const sseRoutes = require('./routes/sse');
+const notificationPrefRoutes = require('./routes/notificationPreferences');
+const pushRoutes = require('./routes/push');
 const { errorHandler } = require('./middleware/errorHandler');
 const { logger } = require('./utils/logger');
 const { cleanupCallSignaling } = require('./jobs/cleanupCallSignaling');
+const { startNotificationCleanup } = require('./jobs/notificationCleanup');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -95,6 +98,8 @@ app.use('/api/turn-credentials', turnRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/events', sseRoutes);
+app.use('/api/notifications', notificationPrefRoutes);
+app.use('/api/push', pushRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -115,6 +120,9 @@ app.listen(PORT, () => {
   cleanupCallSignaling();
   const cleanupIntervalHours = parseInt(process.env.CALL_CLEANUP_INTERVAL_HOURS, 10) || 6;
   setInterval(() => cleanupCallSignaling(), cleanupIntervalHours * 60 * 60 * 1000);
+
+  // Start periodic notification cleanup (auto-read after 30d, delete after 90d)
+  startNotificationCleanup();
 });
 
 module.exports = app;

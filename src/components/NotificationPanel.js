@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, X, Check, AlertTriangle, Calendar, ClipboardList, MessageSquare, Users, Stethoscope, Heart } from 'lucide-react';
+import { Bell, X, Check, AlertTriangle, Calendar, ClipboardList, MessageSquare, Users, Stethoscope, Heart, Trash2 } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
 import { toast } from 'react-toastify';
 import UserNameWithAvatar from './UserNameWithAvatar';
 
 const NotificationPanel = ({ userId }) => {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +36,18 @@ const NotificationPanel = ({ userId }) => {
       toast.success('All notifications marked as read');
     } catch (error) {
       toast.error('Failed to mark notifications as read');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      setLoading(true);
+      await clearAll();
+      toast.success('Read notifications cleared');
+    } catch (error) {
+      toast.error('Failed to clear notifications');
     } finally {
       setLoading(false);
     }
@@ -133,7 +145,7 @@ const NotificationPanel = ({ userId }) => {
 
             {/* Actions */}
             {unreadCount > 0 && (
-              <div className="p-3 border-b border-gray-200 bg-gray-50">
+              <div className="p-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <button
                   onClick={handleMarkAllRead}
                   disabled={loading}
@@ -141,6 +153,28 @@ const NotificationPanel = ({ userId }) => {
                 >
                   <Check className="h-4 w-4 mr-1" />
                   Mark all as read
+                </button>
+                {notifications.some((n) => n.read) && (
+                  <button
+                    onClick={handleClearAll}
+                    disabled={loading}
+                    className="text-sm text-gray-500 hover:text-red-600 font-medium disabled:opacity-50 flex items-center"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Clear read
+                  </button>
+                )}
+              </div>
+            )}
+            {unreadCount === 0 && notifications.some((n) => n.read) && (
+              <div className="p-3 border-b border-gray-200 bg-gray-50">
+                <button
+                  onClick={handleClearAll}
+                  disabled={loading}
+                  className="text-sm text-gray-500 hover:text-red-600 font-medium disabled:opacity-50 flex items-center"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Clear read notifications
                 </button>
               </div>
             )}
