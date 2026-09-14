@@ -34,6 +34,7 @@ import { updateDoc, doc } from 'backend/database';
 import { db } from '../backend/config';
 import { uploadClientDocument, deleteClientDocument } from '../utils/clientDocumentUpload';
 import GlobalAllergyAlert from '../components/GlobalAllergyAlert';
+import EmergencyButton from '../components/EmergencyButton';
 
 const PatientAccount = () => {
   const { clientId } = useParams();
@@ -302,6 +303,7 @@ const PatientAccount = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <EmergencyButton variant="header" />
               {!editing ? (
                 <button
                   onClick={() => setEditing(true)}

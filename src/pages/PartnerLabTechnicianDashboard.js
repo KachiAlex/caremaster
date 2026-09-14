@@ -40,6 +40,7 @@ import {
 } from '../api/homeLabServicesAPI';
 import { getPatientById } from '../api/patientsAPI';
 import { signOut } from 'backend/auth';
+import EmergencyButton from '../components/EmergencyButton';
 import { auth } from '../backend/config';
 
 const PartnerLabTechnicianDashboard = () => {
@@ -256,6 +257,7 @@ const PartnerLabTechnicianDashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <EmergencyButton institutionId={institutionId} />
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 transition-colors flex items-center gap-2"

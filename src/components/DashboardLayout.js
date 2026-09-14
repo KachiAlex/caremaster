@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { Menu, X, LogOut, ChevronDown, User, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useResponsive } from '../hooks';
+import EmergencyButton from './EmergencyButton';
 
 /**
  * Sidebar content - extracted to top-level so it doesn't unmount/remount
@@ -302,6 +303,7 @@ const DashboardLayout = ({
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0">
+              <EmergencyButton />
               {headerActions}
 
               {/* Profile dropdown */}
