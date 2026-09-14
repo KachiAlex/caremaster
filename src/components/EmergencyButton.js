@@ -79,14 +79,23 @@ const EmergencyButton = ({
         clientId: clientId || null,
         clientName: clientName || null,
         triggeredBy,
-        triggeredByName,
         institutionId: institutionId || null,
-        userRole: userProfile?.userType || userProfile?.type || userProfile?.role || null,
-        emergencyType: form.emergencyType,
+        // The backend emergency_alerts table only accepts specific columns.
+        // Pack the extra context into metadata (jsonb) so it survives the
+        // writable-field filter and is available for notification dispatch.
+        type: form.emergencyType,
         severity: form.severity,
         description: form.description.trim(),
         location: form.location.trim() || 'Not specified',
-        contactNumber: form.contactNumber.trim() || userProfile?.phone || '',
+        metadata: {
+          emergencyType: form.emergencyType,
+          triggeredByName,
+          userRole: userProfile?.userType || userProfile?.type || userProfile?.role || null,
+          contactNumber: form.contactNumber.trim() || userProfile?.phone || '',
+          clientName: clientName || null,
+          description: form.description.trim(),
+          location: form.location.trim() || 'Not specified',
+        },
         triggeredAt: new Date().toISOString(),
       };
 

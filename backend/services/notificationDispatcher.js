@@ -101,6 +101,34 @@ async function getUsersByType(institutionId, types) {
 }
 
 /**
+ * Fetch a client record by ID to resolve the assigned doctor / caregiver.
+ */
+async function getClientById(clientId) {
+  if (!clientId) return null;
+  try {
+    const [client] = await db('clients').where({ id: clientId }).select('id', 'name', 'assigned_doctor', 'assigned_caregiver', 'institution_id');
+    return client || null;
+  } catch (err) {
+    logger.error('notificationDispatcher.getClientById error:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetch a user by ID (for resolving names of assigned doctors etc.).
+ */
+async function getUserById(userId) {
+  if (!userId) return null;
+  try {
+    const [user] = await db('users').where({ id: userId }).select('id', 'email', 'user_type', 'first_name', 'last_name', 'institution_id');
+    return user || null;
+  } catch (err) {
+    logger.error('notificationDispatcher.getUserById error:', err);
+    return null;
+  }
+}
+
+/**
  * Resolve a user's display name from a DB row.
  */
 function displayName(user) {
@@ -443,13 +471,37 @@ async function dispatchTableNotifications(tableName, record, actorUser, action) 
           
           const title = `${titlePrefix}${patientName}`;
           const message = `${record.nurse_name || 'A nurse'} submitted a ${record.report_type || 'report'} for ${patientName}. Priority: ${priorityCode.toUpperCase()}.`;
-          
-          // Recipients: admins + doctors
-          const staff = await getUsersByType(institutionId, ['admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin', 'doctor']);
-          
-          for (const s of staff) {
-            await createNotification(s.id, {
-              type: TYPE.SYSTEM,
+
+          // For code red: notify the specific assigned doctor + admins.
+          // For other codes: notify all admins + doctors (existing behavior).
+          const recipients = new Set();
+
+          if (priorityCode === 'red') {
+            // Look up the client's assigned doctor
+            if (record.patient_id) {
+              const client = await getClientById(record.patient_id);
+              if (client && client.assigned_doctor) {
+                recipients.add(String(client.assigned_doctor));
+              }
+            }
+            // Always notify admins for code red
+            const admins = await getUsersByType(institutionId, ['admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin']);
+            admins.forEach((u) => recipients.add(u.id));
+
+            // If no assigned doctor was found, fall back to all doctors
+            if (recipients.size === 0 || (recipients.size === admins.length && !record.patient_id)) {
+              const doctors = await getUsersByType(institutionId, ['doctor', 'Doctor']);
+              doctors.forEach((u) => recipients.add(u.id));
+            }
+          } else {
+            // Non-red codes: notify admins + doctors (existing behavior)
+            const staff = await getUsersByType(institutionId, ['admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin', 'doctor']);
+            staff.forEach((u) => recipients.add(u.id));
+          }
+
+          for (const userId of recipients) {
+            await createNotification(userId, {
+              type: priorityCode === 'red' ? TYPE.EMERGENCY : TYPE.SYSTEM,
               title,
               message,
               priority,
@@ -457,6 +509,8 @@ async function dispatchTableNotifications(tableName, record, actorUser, action) 
                 navigateTo: '/institution-admin/dashboard',
                 reportId: record.id,
                 patientId: record.patient_id,
+                priorityCode,
+                isCodeRed: priorityCode === 'red',
               },
             });
           }
@@ -472,6 +526,80 @@ async function dispatchTableNotifications(tableName, record, actorUser, action) 
                 navigateTo: '/caregiver/tasks',
                 reportId: record.id,
               },
+            });
+          }
+        }
+        break;
+      }
+
+      // ─── Emergency alerts (SOS button) ────────────────────────────────
+      case 'emergency_alerts': {
+        if (action === 'create') {
+          const institutionId = record.institution_id || actorUser.institution_id || null;
+          const severity = (record.severity || 'critical').toLowerCase();
+          const emergencyType = record.type || record.metadata?.emergencyType || 'Emergency';
+          const description = record.description || record.metadata?.description || '';
+          const location = record.location || record.metadata?.location || '';
+          const triggeredByName = record.metadata?.triggeredByName || actorName;
+          const contactNumber = record.metadata?.contactNumber || '';
+
+          // Resolve the client to get their name and assigned doctor
+          let clientName = 'Unknown Client';
+          let assignedDoctorId = null;
+          if (record.patient_id) {
+            const client = await getClientById(record.patient_id);
+            if (client) {
+              clientName = client.name || clientName;
+              assignedDoctorId = client.assigned_doctor || null;
+            }
+          }
+
+          const title = `🚨 EMERGENCY ALERT: ${emergencyType} — ${clientName}`;
+          const messageParts = [
+            `${triggeredByName} triggered an emergency alert for ${clientName}.`,
+            `Severity: ${severity.toUpperCase()}.`,
+            description ? `Details: ${description}` : '',
+            location ? `Location: ${location}` : '',
+            contactNumber ? `Contact: ${contactNumber}` : '',
+          ].filter(Boolean);
+          const message = messageParts.join(' ');
+
+          const metadata = {
+            navigateTo: '/institution-admin/dashboard',
+            emergencyId: record.id,
+            emergencyType,
+            clientName,
+            clientId: record.patient_id,
+            severity,
+            triggeredByName,
+            description,
+            location,
+            contactNumber,
+            isEmergency: true,
+          };
+
+          // Recipients: all doctors + nurses + admins in the institution
+          const recipients = new Set();
+          const staff = await getUsersByType(institutionId, [
+            'admin', 'institution-admin', 'institution_admin', 'InstitutionAdmin',
+            'doctor', 'nurse', 'Doctor', 'Nurse',
+          ]);
+          staff.forEach((u) => recipients.add(u.id));
+
+          // Also notify the assigned doctor specifically (in case their user_type
+          // doesn't match the list above)
+          if (assignedDoctorId) {
+            recipients.add(String(assignedDoctorId));
+          }
+
+          for (const userId of recipients) {
+            await createNotification(userId, {
+              type: TYPE.EMERGENCY,
+              title,
+              message,
+              priority: PRIORITY.CRITICAL,
+              institutionId,
+              metadata,
             });
           }
         }
