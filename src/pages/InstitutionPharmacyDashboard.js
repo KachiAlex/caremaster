@@ -6,6 +6,7 @@ import { Pill, Building2, Bell } from 'lucide-react';
 import { toast } from 'react-toastify';
 import PharmacyTab from '../components/PharmacyTab';
 import UserAvatarDropdown from '../components/UserAvatarDropdown';
+import EmergencyButton from '../components/EmergencyButton';
 import { fetchLicenseStatus } from '../services/licenseService';
 import { signOut, getAuth } from 'backend/auth';
 
@@ -224,6 +225,9 @@ const InstitutionPharmacyDashboard = () => {
 
             {/* User Info and Actions */}
             <div className="flex items-center space-x-4">
+              {/* Emergency Button */}
+              <EmergencyButton institutionId={institutionId} />
+
               {/* Institution Info */}
               <div className="hidden md:flex items-center space-x-2 bg-blue-50 px-3 py-2 rounded-lg">
                 <Building2 className="h-4 w-4 text-blue-600" />

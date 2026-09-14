@@ -22,6 +22,7 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import CallService from '../services/callService';
 import CallInterface from '../components/CallInterface';
+import EmergencyButton from '../components/EmergencyButton';
 
 
 const Dashboard = () => {
@@ -306,10 +307,13 @@ const Dashboard = () => {
   return (
     <>
       <div className="space-y-6">
-          <div className="cm-section-head">
-            <span className="cm-eyebrow">Client Portal</span>
-            <h2 className="mt-2">Welcome back, {displayName}</h2>
-            <p>Your personalized care dashboard.</p>
+          <div className="cm-section-head flex items-start justify-between gap-4">
+            <div>
+              <span className="cm-eyebrow">Client Portal</span>
+              <h2 className="mt-2">Welcome back, {displayName}</h2>
+              <p>Your personalized care dashboard.</p>
+            </div>
+            <EmergencyButton variant="header" clientId={userProfile?.clientId || user?.uid} clientName={displayName} />
           </div>
 
       {/* Welcome Section */}
