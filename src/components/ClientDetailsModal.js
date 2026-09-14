@@ -48,6 +48,31 @@ const ClientDetailsModal = ({
     return 'None Recorded';
   };
 
+  const calculateAge = (dob) => {
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    if (isNaN(birthDate.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : null;
+  };
+
+  const formatDate = (val) => {
+    if (!val) return 'N/A';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return 'N/A';
+    return d.toLocaleDateString();
+  };
+
+  const displayValue = (val) => {
+    if (val === null || val === undefined || val === '') return 'N/A';
+    return val;
+  };
+
   // Quick Action Modal States
   const [showVitalsModal, setShowVitalsModal] = useState(false);
   const [showConsultationsModal, setShowConsultationsModal] = useState(false);
@@ -157,31 +182,107 @@ const ClientDetailsModal = ({
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* Client Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Age</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{client.age || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Gender</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{client.gender || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Phone</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{client.phone || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase">Status</label>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                    client.status === 'active' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {client.status || 'active'}
-                  </span>
+              {/* Personal Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Personal Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Date of Birth</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{formatDate(client.dateOfBirth)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Age</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {client.age || (client.dateOfBirth ? `${calculateAge(client.dateOfBirth)} years` : 'N/A')}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Gender</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.gender)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Status</label>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                      client.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {client.status || 'active'}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* Contact Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Contact Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Phone</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.phone)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Email</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.email)}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-500 uppercase">Address</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {client.address ? `${client.address}${client.city ? ', ' + client.city : ''}${client.state ? ', ' + client.state : ''}${client.zipCode ? ' ' + client.zipCode : ''}` : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Emergency Contact */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Emergency Contact</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Name</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.emergencyContactName)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Phone</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.emergencyContactPhone)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Relationship</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.emergencyContactRelationship)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Insurance & Physician */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Insurance & Physician</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Insurance Provider</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.insuranceProvider)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Policy Number</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.insurancePolicyNumber)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Primary Care Physician</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.primaryCarePhysician)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase">Physician Phone</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.physicianPhone)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {client.notes && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Notes</h3>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{client.notes}</p>
+                </div>
+              )}
 
               {/* Quick Actions */}
               <div>
@@ -266,24 +367,77 @@ const ClientDetailsModal = ({
 
           {activeTab === 'medical' && (
             <div className="space-y-6">
+              {/* Vital Medical Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase">Blood Type</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.bloodType)}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase">Genotype</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.genotype)}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase">Care Level</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.careLevel)}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase">National ID</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{displayValue(client.nationalId)}</p>
+                </div>
+              </div>
+
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Medical Conditions</h3>
-                <p className="text-sm text-gray-600">
-                  {formatList(client.medicalConditions)}
-                </p>
+                <div className="flex flex-wrap gap-2">
+                  {client.medicalConditions && Array.isArray(client.medicalConditions) && client.medicalConditions.length > 0 ? (
+                    client.medicalConditions.map((condition, index) => (
+                      <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                        {condition}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-600">{formatList(client.medicalConditions)}</p>
+                  )}
+                </div>
               </div>
+
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Allergies</h3>
-                <p className="text-sm text-gray-600">
-                  {formatList(client.allergies)}
-                </p>
+                <h3 className="text-sm font-semibold text-red-700 mb-3">Allergies</h3>
+                <div className="flex flex-wrap gap-2">
+                  {client.allergies && Array.isArray(client.allergies) && client.allergies.length > 0 ? (
+                    client.allergies.map((allergy, index) => (
+                      <span key={index} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                        {allergy}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-600">{formatList(client.allergies)}</p>
+                  )}
+                </div>
               </div>
+
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Current Medications</h3>
-                <p className="text-sm text-gray-600">
-                  {formatList(client.medications)}
-                </p>
+                <div className="space-y-2">
+                  {client.medications && Array.isArray(client.medications) && client.medications.length > 0 ? (
+                    client.medications.map((medication, index) => (
+                      <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">
+                        {medication}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-600">{formatList(client.medications)}</p>
+                  )}
+                </div>
               </div>
+
+              {client.notes && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Clinical Notes</h3>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{client.notes}</p>
+                </div>
+              )}
             </div>
           )}
 
