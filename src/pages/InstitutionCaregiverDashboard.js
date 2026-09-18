@@ -5458,11 +5458,11 @@ const InstitutionCaregiverDashboard = () => {
             </div>
 
             {/* Modal Tabs */}
-            <div className="border-b border-gray-200 bg-gray-50">
-              <div className="flex space-x-8 px-6">
+            <div className="border-b border-gray-200 bg-gray-50 overflow-x-auto">
+              <div className="flex space-x-4 sm:space-x-8 px-3 sm:px-6">
                 <button
                   onClick={() => setClientModalTab('info')}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  className={`py-3 sm:py-4 px-2 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     clientModalTab === 'info'
                       ? 'border-blue-600 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -5475,7 +5475,7 @@ const InstitutionCaregiverDashboard = () => {
                 </button>
                 <button
                   onClick={() => setClientModalTab('medical')}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  className={`py-3 sm:py-4 px-2 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     clientModalTab === 'medical'
                       ? 'border-blue-600 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -5488,7 +5488,7 @@ const InstitutionCaregiverDashboard = () => {
                 </button>
                 <button
                   onClick={() => setClientModalTab('carelog')}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  className={`py-3 sm:py-4 px-2 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     clientModalTab === 'carelog'
                       ? 'border-blue-600 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -5503,7 +5503,7 @@ const InstitutionCaregiverDashboard = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-6">
+            <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-3 sm:p-6">
               {/* Client Info Tab */}
               {clientModalTab === 'info' && (
                 <div className="space-y-6">
