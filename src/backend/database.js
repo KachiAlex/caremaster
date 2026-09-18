@@ -9,7 +9,7 @@
 
 // --- HTTP helper ---
 
-import { onAuthExpired } from '../utils/authEvents';
+import { onAuthExpired, isAuthExpired } from '../utils/authEvents';
 import { offlineCache } from '../services/offlineCacheService';
 import { sseService } from '../services/sseService';
 
@@ -59,17 +59,19 @@ async function apiFetch(path, options = {}) {
   }
 
   if (res.status === 401 || res.status === 403) {
-    // Clear stored credentials and let the application layer handle navigation
-    // so that background API calls don't force a full page reload.
-    localStorage.removeItem('token');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    if (!isAuthExpired()) {
+      // Clear stored credentials and let the application layer handle navigation
+      // so that background API calls don't force a full page reload.
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
 
-    onAuthExpired();
+      onAuthExpired();
 
-    // Fallback: if no handler is registered, redirect to login
-    if (!window.location.pathname.startsWith('/login')) {
-      window.location.href = '/login';
+      // Fallback: if no handler is registered, redirect to login
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
     }
   }
 
