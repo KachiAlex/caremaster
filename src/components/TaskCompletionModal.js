@@ -149,22 +149,22 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Complete Task</h2>
-            <p className="text-sm text-gray-600 mt-1">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Complete Task</h2>
+            <p className="text-sm text-gray-600 mt-1 truncate">
               {Client?.name} - {task?.title || task?.type}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 flex-shrink-0"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Task Details */}
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-2">{task?.title || task?.type}</h3>

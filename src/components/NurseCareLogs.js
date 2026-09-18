@@ -252,24 +252,24 @@ const NurseCareLogs = ({ clientId, clientName, nurseId, nurseName, onSave, onCan
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
                 <FileText className="h-6 w-6 text-blue-600" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Care Logs</h2>
-                <p className="text-sm text-gray-600">Client: {clientName}</p>
-                <p className="text-xs text-gray-500">Nurse: {nurseName}</p>
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Care Logs</h2>
+                <p className="text-sm text-gray-600 truncate">Client: {clientName}</p>
+                <p className="text-xs text-gray-500 truncate">Nurse: {nurseName}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 flex-shrink-0">
               <button
                 onClick={() => setShowForm(!showForm)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm whitespace-nowrap"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 {showForm ? 'Hide Form' : 'New Log'}
@@ -284,16 +284,16 @@ const NurseCareLogs = ({ clientId, clientName, nurseId, nurseName, onSave, onCan
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Care Log Form */}
           {showForm && (
-            <div className="mb-8 p-6 bg-gray-50 rounded-lg">
+            <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-gray-50 rounded-lg">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 {editingLog ? 'Edit Care Log' : 'New Care Log'}
               </h3>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {/* Category */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
@@ -505,7 +505,7 @@ const NurseCareLogs = ({ clientId, clientName, nurseId, nurseName, onSave, onCan
             ) : (
               <div className="space-y-4">
                 {careLogs.map((log) => (
-                  <div key={log.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div key={log.id} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">

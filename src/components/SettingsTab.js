@@ -49,7 +49,7 @@ const SettingsTab = ({
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-2xl font-semibold text-gray-900">Settings</h3>
+          <h3 className="text-xl sm:text-2xl font-semibold text-gray-900">Settings</h3>
           <p className="text-sm text-gray-600">
             Manage your account and preferences.
           </p>
@@ -58,7 +58,7 @@ const SettingsTab = ({
       </div>
 
       {/* Account Info Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <User className="h-5 w-5 text-blue-600" />
           Account Information
@@ -98,7 +98,7 @@ const SettingsTab = ({
       </div>
 
       {/* Change Password Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <h4 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
           <Lock className="h-5 w-5 text-blue-600" />
           Change Password

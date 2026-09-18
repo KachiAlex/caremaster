@@ -41,11 +41,11 @@ const ConsultationsTabContent = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Stethoscope className="h-8 w-8 text-blue-600 mr-3" />
-            Consultation Notes
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
+            <Stethoscope className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mr-2 sm:mr-3 flex-shrink-0" />
+            <span className="truncate">Consultation Notes</span>
           </h2>
           <p className="text-sm text-gray-600 mt-1">
             {isDoctor ? 'Write and review consultation notes' : 'View consultation history and medical notes'}
@@ -54,7 +54,7 @@ const ConsultationsTabContent = ({
         {isDoctor && selectedClient && (
           <button
             onClick={onOpenConsultationModal}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center font-medium"
+            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center font-medium flex-shrink-0"
           >
             <FileText className="h-5 w-5 mr-2" />
             Write Consultation
@@ -80,7 +80,7 @@ const ConsultationsTabContent = ({
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
           <Stethoscope className="h-20 w-20 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No Client Selected</h3>
           <p className="text-gray-600">
@@ -93,7 +93,7 @@ const ConsultationsTabContent = ({
       {selectedClient && (
         <div className="space-y-4">
           {consultations.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
               <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Consultations Yet</h3>
               <p className="text-gray-600">
@@ -109,10 +109,10 @@ const ConsultationsTabContent = ({
                 className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
               >
                 {/* Consultation Header */}
-                <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
+                <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         {getConsultationTypeBadge(consultation.consultationType)}
                         {consultation.followUpRequired && (
                           <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold flex items-center">
@@ -121,7 +121,7 @@ const ConsultationsTabContent = ({
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-gray-600">
                         <span className="flex items-center">
                           <User className="h-4 w-4 mr-1" />
                           Dr. {consultation.doctorName}
@@ -136,7 +136,7 @@ const ConsultationsTabContent = ({
                       onClick={() => setExpandedConsultation(
                         expandedConsultation === consultation.id ? null : consultation.id
                       )}
-                      className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center text-sm font-medium"
+                      className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center text-sm font-medium flex-shrink-0 self-start"
                     >
                       {expandedConsultation === consultation.id ? (
                         <>
@@ -161,9 +161,9 @@ const ConsultationsTabContent = ({
 
                 {/* Consultation Details */}
                 {expandedConsultation === consultation.id && (
-                  <div className="p-6 space-y-5">
+                  <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
                     {/* SOAP Notes */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 sm:p-5">
                       <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center">
                         <FileText className="h-5 w-5 text-blue-600 mr-2" />
                         Clinical Notes (SOAP)

@@ -336,27 +336,27 @@ const CareLogFormModal = ({
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
         {/* Modal Header */}
-        <div className={`bg-gradient-to-r ${getRoleColor()} px-6 py-4 flex items-center justify-between`}>
-          <div className="flex items-center space-x-3">
-            <FileText className="h-8 w-8 text-white" />
-            <div>
-              <h2 className="text-2xl font-bold text-white">{getRoleTitle()}</h2>
-              <p className="text-white text-opacity-90">For: {client.name || client.fullName}</p>
+        <div className={`bg-gradient-to-r ${getRoleColor()} px-4 sm:px-6 py-4 flex items-center justify-between`}>
+          <div className="flex items-center space-x-3 min-w-0">
+            <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-white flex-shrink-0" />
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-2xl font-bold text-white truncate">{getRoleTitle()}</h2>
+              <p className="text-white text-opacity-90 text-sm truncate">For: {client.name || client.fullName}</p>
             </div>
           </div>
           <button
             onClick={onCancel}
-            className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
+            className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors flex-shrink-0"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="bg-gray-100 px-6 py-2">
+        <div className="bg-gray-100 px-4 sm:px-6 py-2">
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>Care Log Progress</span>
             <span>Fill out the sections below</span>
@@ -364,7 +364,7 @@ const CareLogFormModal = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
           <div className="space-y-4">
             {/* Basic Information */}
             <FormSection 

@@ -182,22 +182,22 @@ const DiagnosticsTab = ({
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <Stethoscope className="w-6 h-6 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div className="flex items-center space-x-3 min-w-0">
+          <Stethoscope className="w-6 h-6 text-blue-600 flex-shrink-0" />
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
             Diagnostic Tests & Results
           </h2>
-          <span className="text-sm text-gray-500">for {clientName}</span>
+          <span className="text-sm text-gray-500 hidden sm:inline truncate">for {clientName}</span>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-shrink-0">
           {canOrderTests && (
             <button
               onClick={() => setActiveModal('orderTest')}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
             >
               <Plus className="w-4 h-4 mr-2" />
               Order Test
@@ -255,7 +255,7 @@ const DiagnosticsTab = ({
       )}
 
       {/* Filters */}
-      <div className="flex items-center space-x-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
         <div className="flex-1">
           <input
             type="text"
@@ -269,7 +269,7 @@ const DiagnosticsTab = ({
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
@@ -294,22 +294,22 @@ const DiagnosticsTab = ({
               key={diagnostic.id}
               className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                  <div className="flex items-center space-x-2 flex-shrink-0">
                     {getStatusIcon(diagnostic.status)}
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(diagnostic.status)}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusColor(diagnostic.status)}`}>
                       {diagnostic.status}
                     </span>
                   </div>
                   
-                  <div>
-                    <h3 className="font-medium text-gray-900">{diagnostic.testType}</h3>
-                    <p className="text-sm text-gray-600">{diagnostic.reason}</p>
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-gray-900 truncate">{diagnostic.testType}</h3>
+                    <p className="text-sm text-gray-600 truncate">{diagnostic.reason}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-between sm:justify-end space-x-2 flex-shrink-0">
                   <span className="text-sm text-gray-500">
                     {diagnostic.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown date'}
                   </span>
@@ -432,8 +432,8 @@ const OrderTestModal = ({ onSubmit, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
+      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Order Diagnostic Test</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -530,8 +530,8 @@ const ViewDetailsModal = ({
   onClose 
 }) => {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
+      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Diagnostic Test Details</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -541,7 +541,7 @@ const ViewDetailsModal = ({
 
         <div className="space-y-6">
           {/* Basic Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Test Type</label>
               <p className="text-gray-900">{diagnostic.testType}</p>
@@ -693,8 +693,8 @@ const UploadResultsModal = ({ diagnostic, onSubmit, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
+      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Upload Test Results</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -804,8 +804,8 @@ const AddNotesModal = ({ diagnostic, onSubmit, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
+      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Add Doctor Notes</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">

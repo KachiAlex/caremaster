@@ -234,7 +234,7 @@ const NurseMedicationManager = ({ clientId, clientName, nurseId, nurseName, onSa
               {medications.map((medication) => {
                 const status = getMedicationStatus(medication);
                 return (
-                  <div key={medication.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div key={medication.id} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
@@ -309,29 +309,29 @@ const NurseMedicationManager = ({ clientId, clientName, nurseId, nurseName, onSa
         {showAdministerModal && administeringMed && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-4 sm:p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
                       <Pill className="h-6 w-6 text-green-600" />
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">Record Medication Administration</h3>
-                      <p className="text-sm text-gray-600">{administeringMed.name}</p>
+                    <div className="min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900">Record Medication Administration</h3>
+                      <p className="text-sm text-gray-600 truncate">{administeringMed.name}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setShowAdministerModal(false)}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
-              <form onSubmit={handleSubmitAdministration} className="p-6">
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmitAdministration} className="p-4 sm:p-6">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Administered At</label>
                       <input

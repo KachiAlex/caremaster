@@ -278,7 +278,7 @@ const CaregiverSettings = () => {
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h1>
                 <span className="px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide bg-green-100 text-green-700 rounded-full">
                   Rebuilt
                 </span>
@@ -378,7 +378,7 @@ const CaregiverSettings = () => {
 
           {/* Settings Content */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
               {/* Profile Tab */}
               {activeTab === 'profile' && (
                 <div className="space-y-6">
