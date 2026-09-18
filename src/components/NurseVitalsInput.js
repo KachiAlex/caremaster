@@ -336,16 +336,16 @@ const NurseVitalsInput = ({ clientId, clientName, nurseId, nurseName, onSave, on
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-red-100 rounded-lg">
                 <Activity className="h-6 w-6 text-red-600" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Record Vital Signs</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Record Vital Signs</h2>
                 <p className="text-sm text-gray-600">Client: {clientName}</p>
                 <p className="text-xs text-gray-500">Nurse: {nurseName}</p>
               </div>
@@ -359,7 +359,7 @@ const NurseVitalsInput = ({ clientId, clientName, nurseId, nurseName, onSave, on
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6">
           {errors.general && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center">
               <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
@@ -367,7 +367,7 @@ const NurseVitalsInput = ({ clientId, clientName, nurseId, nurseName, onSave, on
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Blood Pressure */}
             <div className="space-y-2">
               <label className="flex items-center text-sm font-medium text-gray-700">
@@ -560,18 +560,18 @@ const NurseVitalsInput = ({ clientId, clientName, nurseId, nurseName, onSave, on
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-8 flex justify-end space-x-4">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:justify-end gap-3">
             <button
               type="button"
               onClick={onCancel}
-              className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              className="w-full sm:w-auto px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium order-2 sm:order-1"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
             >
               {loading ? (
                 <>

@@ -186,16 +186,16 @@ const NurseMedicationManager = ({ clientId, clientName, nurseId, nurseName, onSa
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-green-100 rounded-lg">
                 <Pill className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Medication Management</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Medication Management</h2>
                 <p className="text-sm text-gray-600">Client: {clientName}</p>
                 <p className="text-xs text-gray-500">Nurse: {nurseName}</p>
               </div>
@@ -209,7 +209,7 @@ const NurseMedicationManager = ({ clientId, clientName, nurseId, nurseName, onSa
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
@@ -307,7 +307,7 @@ const NurseMedicationManager = ({ clientId, clientName, nurseId, nurseName, onSa
 
         {/* Medication Administration Modal */}
         {showAdministerModal && administeringMed && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
