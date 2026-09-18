@@ -7,6 +7,7 @@
  */
 
 import { Capacitor } from '@capacitor/core';
+import { resetAuthExpired } from '../utils/authEvents';
 
 const API_BASE = () =>
   process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -100,6 +101,7 @@ export async function signInWithEmailAndPassword(_auth, email, password) {
   // token lives in an httpOnly cookie and should not be accessible to JS.
   if (token && isNativePlatform()) setToken(token);
   if (user) localStorage.setItem('user', JSON.stringify(user));
+  resetAuthExpired();
 
   // Build a user object with Firebase-compatible token methods
   const buildUserObj = (u) => {
