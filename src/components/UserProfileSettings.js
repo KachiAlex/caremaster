@@ -316,22 +316,22 @@ const UserProfileSettings = ({ userId, onClose }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 sm:px-6 py-4 flex justify-between items-center">
+          <h2 className="text-lg sm:text-2xl font-bold text-white">Profile Settings</h2>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+            className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors flex-shrink-0"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 bg-gray-50">
-          <nav className="flex px-6">
+        <div className="border-b border-gray-200 bg-gray-50 overflow-x-auto">
+          <nav className="flex px-4 sm:px-6 min-w-max">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'profile'
                   ? 'border-purple-500 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -342,7 +342,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
             </button>
             <button
               onClick={() => setActiveTab('security')}
-              className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'security'
                   ? 'border-purple-500 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -353,7 +353,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
             </button>
             <button
               onClick={() => setActiveTab('notifications')}
-              className={`py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-3 sm:py-4 px-3 sm:px-6 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'notifications'
                   ? 'border-purple-500 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -366,12 +366,12 @@ const UserProfileSettings = ({ userId, onClose }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
           {/* Profile Tab */}
           {activeTab === 'profile' && (
             <div className="space-y-6">
               {/* Profile Picture Section */}
-              <div className="flex items-center space-x-6 pb-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 pb-6 border-b border-gray-200">
                 <ProfilePicture
                   userId={userId}
                   userType={userProfile?.userType || userProfile?.type || 'user'}
@@ -597,7 +597,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
           {activeTab === 'security' && (
             <div className="space-y-6">
               {/* Change Password */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6">
                 <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <Lock className="h-5 w-5 mr-2 text-blue-600" />
                   Change Password
@@ -680,7 +680,7 @@ const UserProfileSettings = ({ userId, onClose }) => {
               </div>
 
               {/* Change Email */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 sm:p-6">
                 <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <Mail className="h-5 w-5 mr-2 text-yellow-600" />
                   Change Email Address

@@ -441,11 +441,11 @@ const AdlLogger = ({ clientId, clientName, onActivityLogged }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Activities of Daily Living</h2>
-            <p className="text-gray-600">Log activities for {clientName}</p>
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Activities of Daily Living</h2>
+            <p className="text-gray-600 text-sm">Log activities for {clientName}</p>
           </div>
           <div className="text-sm text-gray-500">
             <Calendar className="h-4 w-4 inline mr-1" />
@@ -484,9 +484,9 @@ const AdlLogger = ({ clientId, clientName, onActivityLogged }) => {
 
       {/* Activities List */}
       <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Pagination Info */}
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <p className="text-sm text-gray-600">
               Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredActivities.length)} of {filteredActivities.length} activities
             </p>
@@ -509,11 +509,11 @@ const AdlLogger = ({ clientId, clientName, onActivityLogged }) => {
 
           <div className="grid gap-4">
             {getCurrentPageActivities().map((activity) => (
-              <div key={activity.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                <div className="flex items-center space-x-4">
-                  <div className="text-2xl">{activity.icon}</div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">{activity.name}</h3>
+              <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                  <div className="text-2xl flex-shrink-0">{activity.icon}</div>
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-gray-900 truncate">{activity.name}</h3>
                     <p className="text-sm text-gray-500">{adlCategories[activity.category]}</p>
                     {activity.lastLogged && (
                       <div className="flex items-center mt-1">
@@ -529,10 +529,10 @@ const AdlLogger = ({ clientId, clientName, onActivityLogged }) => {
                 </div>
                 
                 {/* Toggle Switches */}
-                <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-4 sm:space-x-6 flex-shrink-0">
                   {/* Complete Toggle */}
-                  <div className="flex items-center space-x-3">
-                    <label className="text-sm font-medium text-gray-700">Complete</label>
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <label className="text-xs sm:text-sm font-medium text-gray-700">Complete</label>
                     <div 
                       className="relative inline-block w-11 h-6 cursor-pointer"
                       onClick={() => handleActivityAction(activity, 'completed')}
@@ -553,8 +553,8 @@ const AdlLogger = ({ clientId, clientName, onActivityLogged }) => {
                   </div>
                   
                   {/* Skip Toggle */}
-                  <div className="flex items-center space-x-3">
-                    <label className="text-sm font-medium text-gray-700">Skip</label>
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <label className="text-xs sm:text-sm font-medium text-gray-700"></label>
                     <div 
                       className="relative inline-block w-11 h-6 cursor-pointer"
                       onClick={() => handleActivityAction(activity, 'skipped')}
@@ -575,8 +575,8 @@ const AdlLogger = ({ clientId, clientName, onActivityLogged }) => {
                   </div>
                   
                   {/* Issue Toggle */}
-                  <div className="flex items-center space-x-3">
-                    <label className="text-sm font-medium text-gray-700">Issue</label>
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <label className="text-xs sm:text-sm font-medium text-gray-700"></label>
                     <div 
                       className="relative inline-block w-11 h-6 cursor-pointer"
                       onClick={() => handleActivityAction(activity, 'issue')}
@@ -672,8 +672,8 @@ const AdlLogger = ({ clientId, clientName, onActivityLogged }) => {
 
       {/* Notes Modal */}
       {showNotesModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold mb-4">Log Issue for {currentActivity?.name}</h3>
             <textarea
               value={notes}

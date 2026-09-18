@@ -29,26 +29,26 @@ const PrescriptionModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-white flex items-center">
-              <Pill className="h-7 w-7 mr-3" />
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-white flex items-center">
+              <Pill className="h-6 w-6 sm:h-7 sm:w-7 mr-2 sm:mr-3 flex-shrink-0" />
               Write Prescription
             </h2>
-            <p className="text-indigo-100 text-sm mt-1">
+            <p className="text-indigo-100 text-sm mt-1 truncate">
               {selectedClient ? `For ${selectedClient.name || selectedClient.fullName}` : 'No client selected'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+            className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors flex-shrink-0"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Diagnosis */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">

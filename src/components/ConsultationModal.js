@@ -65,27 +65,27 @@ const ConsultationModal = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-white flex items-center">
-              <Stethoscope className="h-7 w-7 mr-3" />
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-white flex items-center">
+              <Stethoscope className="h-6 w-6 sm:h-7 sm:w-7 mr-2 sm:mr-3 flex-shrink-0" />
               Write Consultation Note
             </h2>
-            <p className="text-blue-100 text-sm mt-1">
+            <p className="text-blue-100 text-sm mt-1 truncate">
               {selectedClient ? `For ${selectedClient.name || selectedClient.fullName}` : 'No client selected'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+            className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors flex-shrink-0"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 bg-gray-50 px-6">
-          <div className="flex space-x-1">
+        <div className="border-b border-gray-200 bg-gray-50 px-4 sm:px-6">
+          <div className="flex space-x-1 overflow-x-auto">
             {[
               { id: 'soap', label: 'SOAP Notes', icon: ClipboardList },
               { id: 'prescription', label: 'E-Prescription', icon: Pill },
@@ -97,7 +97,7 @@ const ConsultationModal = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  className={`px-3 sm:px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
                     activeTab === tab.id
                       ? 'border-blue-600 text-blue-600 bg-white'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -112,7 +112,7 @@ const ConsultationModal = ({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Consultation Type and Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

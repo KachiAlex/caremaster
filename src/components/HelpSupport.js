@@ -237,8 +237,8 @@ const HelpSupport = ({ userRole }) => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-          <HelpCircle className="h-8 w-8 mr-3 text-purple-600" />
+        <h2 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center">
+          <HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-purple-600" />
           Help & Support
         </h2>
         <p className="text-sm text-gray-500 mt-1">
@@ -247,8 +247,8 @@ const HelpSupport = ({ userRole }) => {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
+      <div className="border-b border-gray-200 overflow-x-auto">
+        <nav className="flex space-x-4 sm:space-x-8 min-w-max">
           {[
             { id: 'faq', label: 'FAQ', icon: HelpCircle },
             { id: 'tutorials', label: 'Tutorials', icon: Video },
@@ -260,7 +260,7 @@ const HelpSupport = ({ userRole }) => {
               <button
                 key={tab.id}
                 onClick={() => setActiveSection(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm flex items-center whitespace-nowrap flex-shrink-0 ${
                   activeSection === tab.id
                     ? 'border-purple-500 text-purple-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -371,7 +371,7 @@ const HelpSupport = ({ userRole }) => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Contact Form */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Submit a Support Ticket</h3>
               
               <form onSubmit={handleSubmitSupport} className="space-y-4">
@@ -461,7 +461,7 @@ const HelpSupport = ({ userRole }) => {
 
             {/* Contact Information */}
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 sm:p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
                 
                 <div className="space-y-3">
@@ -500,7 +500,7 @@ const HelpSupport = ({ userRole }) => {
                 </div>
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6">
                 <h4 className="font-semibold text-green-900 mb-2">Need urgent help?</h4>
                 <p className="text-sm text-green-800 mb-3">
                   For emergencies or urgent technical issues, call our emergency support line:

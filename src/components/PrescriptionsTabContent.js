@@ -100,11 +100,11 @@ const PrescriptionsTabContent = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Pill className="h-8 w-8 text-indigo-600 mr-3" />
-            Prescription Management
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
+            <Pill className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-600 mr-2 sm:mr-3 flex-shrink-0" />
+            <span className="truncate">Prescription Management</span>
           </h2>
           <p className="text-sm text-gray-600 mt-1">
             {isDoctor && 'Write and manage prescriptions'}
@@ -115,7 +115,7 @@ const PrescriptionsTabContent = ({
         {isDoctor && selectedClient && (
           <button
             onClick={onOpenPrescriptionModal}
-            className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center font-medium"
+            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center font-medium flex-shrink-0"
           >
             <Pill className="h-5 w-5 mr-2" />
             Write Prescription
@@ -139,7 +139,7 @@ const PrescriptionsTabContent = ({
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
           <Pill className="h-20 w-20 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No Client Selected</h3>
           <p className="text-gray-600">
@@ -152,7 +152,7 @@ const PrescriptionsTabContent = ({
       {selectedClient && (
         <div className="space-y-4">
           {prescriptions.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
               <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Prescriptions Yet</h3>
               <p className="text-gray-600">
@@ -168,16 +168,16 @@ const PrescriptionsTabContent = ({
                 className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
               >
                 {/* Prescription Header */}
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center space-x-3">
-                        <h3 className="text-lg font-bold text-gray-900">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900">
                           {prescription.prescriptionNumber}
                         </h3>
                         {getStatusBadge(prescription.status)}
                       </div>
-                      <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs sm:text-sm text-gray-600">
                         <span className="flex items-center">
                           <User className="h-4 w-4 mr-1" />
                           Dr. {prescription.doctorName}
@@ -191,23 +191,23 @@ const PrescriptionsTabContent = ({
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {/* Only doctors can edit/delete their own prescriptions - pharmacists are view-only */}
                       {isDoctor && !isPharmacist && prescription.doctorId === userProfile?.userId && (
                         <>
                           <button
                             onClick={() => onEditPrescription && onEditPrescription(prescription)}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-sm font-medium"
+                            className="px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-xs sm:text-sm font-medium"
                           >
-                            <Edit className="h-4 w-4 mr-2" />
+                            <Edit className="h-4 w-4 mr-1 sm:mr-2" />
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeletePrescription(prescription.id)}
                             disabled={deletingPrescription === prescription.id}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center text-sm font-medium"
+                            className="px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center text-xs sm:text-sm font-medium"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="h-4 w-4 mr-1 sm:mr-2" />
                             {deletingPrescription === prescription.id ? 'Deleting...' : 'Delete'}
                           </button>
                         </>
@@ -216,9 +216,9 @@ const PrescriptionsTabContent = ({
                         onClick={() => setExpandedPrescription(
                           expandedPrescription === prescription.id ? null : prescription.id
                         )}
-                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center text-sm font-medium"
+                        className="px-3 sm:px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center text-xs sm:text-sm font-medium"
                       >
-                        <Eye className="h-4 w-4 mr-2" />
+                        <Eye className="h-4 w-4 mr-1 sm:mr-2" />
                         {expandedPrescription === prescription.id ? 'Collapse' : 'View Details'}
                       </button>
                     </div>
@@ -233,7 +233,7 @@ const PrescriptionsTabContent = ({
 
                 {/* Prescription Details */}
                 {expandedPrescription === prescription.id && (
-                  <div className="p-6 space-y-4">
+                  <div className="p-4 sm:p-6 space-y-4">
                     {/* Debug info */}
                     {console.log('🔍 Expanded prescription debug:', {
                       prescriptionId: prescription.id,
@@ -272,7 +272,7 @@ const PrescriptionsTabContent = ({
                                       <h5 className="font-bold text-lg text-gray-900">
                                         {medication.medicationName}
                                       </h5>
-                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2 text-sm">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-2 text-sm">
                                         <div>
                                           <span className="text-gray-600">Dosage:</span>
                                           <span className="ml-1 font-semibold text-gray-900">{medication.dosage}</span>
