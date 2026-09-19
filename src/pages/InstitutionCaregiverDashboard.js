@@ -4234,7 +4234,7 @@ const InstitutionCaregiverDashboard = () => {
 
         {/* Tasks List */}
         <div className="cm-card">
-          <div className="p-4 sm:p-4 sm:p-6 border-b border-gray-200">
+          <div className="p-4 sm:p-6 border-b border-gray-200">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900">All Tasks</h2>
             <p className="text-sm text-gray-600 mt-1">Manage your care tasks and assignments</p>
           </div>
