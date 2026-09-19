@@ -279,6 +279,10 @@ const InstitutionCaregiverDashboard = () => {
   const callSignalingUnsubRef = React.useRef(null);
   const callStatusUnsubRef = React.useRef(null);
   const callTimeoutRef = React.useRef(null); // 45s no-answer timeout
+  const localStreamRef = React.useRef(null);
+  const remoteStreamRef = React.useRef(null);
+  const currentCallIdRef = React.useRef(null);
+  const selectedClientIdRef = React.useRef(null);
   const callPhaseRef = React.useRef('idle'); // mirror of callPhase for use in async closures
   const [callService] = useState(() => new CallService());
   const [webrtc, setWebrtc] = useState(() => new WebRTCService());
@@ -322,8 +326,8 @@ const InstitutionCaregiverDashboard = () => {
       setActiveTasks(prev => prev.map(task => {
         if (task.taskStartTime) {
           const startTime = task.taskStartTime?.toDate?.() || new Date(task.taskStartTime);
-          const now = new Date();
-          const elapsedMs = now - startTime;
+          const elapsedMs = new Date() - startTime;
+          if (Number.isNaN(elapsedMs)) return task;
           const elapsedHours = elapsedMs / (1000 * 60 * 60);
           return {
             ...task,
@@ -337,6 +341,59 @@ const InstitutionCaregiverDashboard = () => {
     
     return () => clearInterval(interval);
   }, [activeTasks.length]);
+
+  // Keep refs in sync so stable callbacks (registered once) always see current values
+  useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
+  useEffect(() => { remoteStreamRef.current = remoteStream; }, [remoteStream]);
+  useEffect(() => { currentCallIdRef.current = currentCallId; }, [currentCallId]);
+  useEffect(() => { selectedClientIdRef.current = selectedClientId; }, [selectedClientId]);
+
+  // Clean up all call resources. Defined at component scope (not inside
+  // renderMessagesTab) so the WebRTC state-change callback can reach it, and
+  // reads refs so a callback registered once never sees stale streams/call IDs.
+  const cleanupCall = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+      setLocalStream(null);
+    }
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach(track => track.stop());
+      remoteStreamRef.current = null;
+      setRemoteStream(null);
+    }
+    if (callSignalingUnsubRef.current) {
+      callSignalingUnsubRef.current();
+      callSignalingUnsubRef.current = null;
+    }
+    if (callStatusUnsubRef.current) {
+      callStatusUnsubRef.current();
+      callStatusUnsubRef.current = null;
+    }
+    webrtc.endCall().catch(() => {});
+    if (currentCallIdRef.current) {
+      callService.cleanupSignalingRecords(currentCallIdRef.current).catch(() => {});
+      callService.cleanupCallNotifications(currentCallIdRef.current).catch(() => {});
+      currentCallIdRef.current = null;
+    }
+    setIsInCall(false);
+    setCallType(null);
+    setCallPhase('idle');
+    callPhaseRef.current = 'idle';
+    setCallConnectionState('connecting');
+    setCallRecipient(null);
+    setCurrentCallId(null);
+    setCallStartAt(null);
+    setElapsedSeconds(0);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
+  }, [webrtc, callService]);
 
   useEffect(() => {
     webrtc.setCallbacks({
@@ -360,7 +417,7 @@ const InstitutionCaregiverDashboard = () => {
         }
       }
     });
-  }, [webrtc]);
+  }, [webrtc, cleanupCall]);
 
   // Keep callPhaseRef in sync with callPhase state for use in async closures
   useEffect(() => {
@@ -788,8 +845,8 @@ const InstitutionCaregiverDashboard = () => {
           // Exclude archived clients from visible list
           const visibleClients = (clients || []).filter(c => (c?.status || '').toLowerCase() !== 'archived');
           setAssignedClients(visibleClients);
-          // Auto-select first client if not set
-          if (visibleClients.length > 0 && !selectedClientId) {
+          // Auto-select first client if not set (use ref: selectedClientId here is a stale closure)
+          if (visibleClients.length > 0 && !selectedClientIdRef.current) {
             setSelectedClientId(visibleClients[0].id);
             setSelectedClient(visibleClients[0]);
           }
@@ -934,8 +991,8 @@ const InstitutionCaregiverDashboard = () => {
           })
         ];
         
-        // Sort by time
-        combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
+        // Sort by time (empty/invalid times sort last instead of NaN)
+        combinedSchedule.sort((a, b) => (new Date(a.time).getTime() || Infinity) - (new Date(b.time).getTime() || Infinity));
         
         setTodaySchedule(combinedSchedule);
 
@@ -994,8 +1051,8 @@ const InstitutionCaregiverDashboard = () => {
               const visibleClients = (clients || []).filter(c => (c?.status || '').toLowerCase() !== 'archived');
               setAssignedClients(visibleClients);
 
-              // Auto-select first client if not set
-              if (visibleClients.length > 0 && !selectedClientId) {
+              // Auto-select first client if not set (use ref: selectedClientId here is a stale closure)
+              if (visibleClients.length > 0 && !selectedClientIdRef.current) {
                 setSelectedClientId(visibleClients[0].id);
                 setSelectedClient(visibleClients[0]);
               }
@@ -1003,6 +1060,9 @@ const InstitutionCaregiverDashboard = () => {
             .catch(() => {
               // Silently ignore real-time client fetch errors
             });
+        } else {
+          // All assignments were removed — clear the stale client list
+          setAssignedClients([]);
         }
       }, user.uid);
       
@@ -1017,71 +1077,85 @@ const InstitutionCaregiverDashboard = () => {
       return;
     }
     const found = assignedClients.find(p => p.id === selectedClientId);
-    if (found) setSelectedClient(found);
+    if (found) {
+      setSelectedClient(found);
+    } else if (assignedClients.length > 0) {
+      // Selected client is no longer assigned — fall back to the first client
+      setSelectedClient(assignedClients[0]);
+      setSelectedClientId(assignedClients[0].id);
+    } else {
+      setSelectedClient(null);
+    }
   }, [selectedClientId, assignedClients]);
 
   // Real-time subscription to medical reports, care plans, and care logs
   useEffect(() => {
-    if (!selectedClient) return;
-    
+    const clientId = selectedClient?.id;
+    if (!clientId) return;
+
+    let cancelled = false;
+
     // Load medical data immediately when a client is selected
-    if (selectedClient && selectedClient.id) {
-      setLoadingReports(true);
-      
-      // Set up real-time listeners
-      const unsubscribeReports = subscribeToMedicalReportsByClient(
-        selectedClient.id,
-        (reports) => {
-          setMedicalReports(reports);
-        }
-      );
-      
-      const unsubscribePlans = subscribeToCarePlansByClient(
-        selectedClient.id,
-        (plans) => {
-          setCarePlans(plans);
-        }
-      );
-      
-      const unsubscribeLogs = subscribeToCareLogsByClient(
-        selectedClient.id,
-        50,
-        (logs) => {
-          setCareLogs(logs);
-        }
-      );
-      
-      // Load prescriptions, consultations, diagnostics, and invoices for Medical Reports section
-      const loadMedicalData = async () => {
-        try {
-          const [prescriptions, consultations, diagnostics, invoices] = await Promise.all([
-            prescriptionsAPI.getPrescriptionsByClient(selectedClient.id).catch(() => []),
-            consultationsAPI.getConsultationsByClient(selectedClient.id).catch(() => []),
-            getClientDiagnostics(selectedClient.id).catch(() => []),
-            pharmacyAPI.getInvoicesByClient(selectedClient.id).catch(() => [])
-          ]);
-          
-          setClientPrescriptions(prescriptions);
-          setClientConsultations(consultations);
-          setClientDiagnostics(diagnostics);
-          setClientInvoices(invoices);
-          setLoadingReports(false);
-        } catch (error) {
-          console.error('Error loading medical data:', error);
-          setLoadingReports(false);
-        }
-      };
-      
-      loadMedicalData();
-      
-      // Cleanup subscriptions on unmount or when client changes
-      return () => {
-        unsubscribeReports();
-        unsubscribePlans();
-        unsubscribeLogs();
-      };
-    }
-  }, [selectedClient]);
+    setLoadingReports(true);
+
+    // Set up real-time listeners
+    const unsubscribeReports = subscribeToMedicalReportsByClient(
+      clientId,
+      (reports) => {
+        setMedicalReports(reports);
+      }
+    );
+
+    const unsubscribePlans = subscribeToCarePlansByClient(
+      clientId,
+      (plans) => {
+        setCarePlans(plans);
+      }
+    );
+
+    const unsubscribeLogs = subscribeToCareLogsByClient(
+      clientId,
+      50,
+      (logs) => {
+        setCareLogs(logs);
+      }
+    );
+
+    // Load prescriptions, consultations, diagnostics, and invoices for Medical Reports section
+    const loadMedicalData = async () => {
+      try {
+        const [prescriptions, consultations, diagnostics, invoices] = await Promise.all([
+          prescriptionsAPI.getPrescriptionsByClient(clientId).catch(() => []),
+          consultationsAPI.getConsultationsByClient(clientId).catch(() => []),
+          getClientDiagnostics(clientId).catch(() => []),
+          pharmacyAPI.getInvoicesByClient(clientId).catch(() => [])
+        ]);
+
+        // Don't write stale data if the user switched clients mid-fetch
+        if (cancelled) return;
+
+        setClientPrescriptions(prescriptions);
+        setClientConsultations(consultations);
+        setClientDiagnostics(diagnostics);
+        setClientInvoices(invoices);
+        setLoadingReports(false);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Error loading medical data:', error);
+        setLoadingReports(false);
+      }
+    };
+
+    loadMedicalData();
+
+    // Cleanup subscriptions on unmount or when client changes
+    return () => {
+      cancelled = true;
+      unsubscribeReports();
+      unsubscribePlans();
+      unsubscribeLogs();
+    };
+  }, [selectedClient?.id]);
 
   // Set up incoming call listener
   useEffect(() => {
@@ -2355,56 +2429,6 @@ const InstitutionCaregiverDashboard = () => {
       // Fallback: userData
       if (selectedConversation.userData?.id) return selectedConversation.userData.id;
       return null;
-    };
-
-    // Clean up all call resources
-    const cleanupCall = () => {
-      // Stop local stream
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        setLocalStream(null);
-      }
-      // Stop remote stream
-      if (remoteStream) {
-        remoteStream.getTracks().forEach(track => track.stop());
-        setRemoteStream(null);
-      }
-      // Unsubscribe signaling listener
-      if (callSignalingUnsubRef.current) {
-        callSignalingUnsubRef.current();
-        callSignalingUnsubRef.current = null;
-      }
-      // Unsubscribe call status listener
-      if (callStatusUnsubRef.current) {
-        callStatusUnsubRef.current();
-        callStatusUnsubRef.current = null;
-      }
-      // End WebRTC
-      webrtc.endCall().catch(() => {});
-      // Clean up signaling + notification records for the call
-      if (currentCallId) {
-        callService.cleanupSignalingRecords(currentCallId).catch(() => {});
-        callService.cleanupCallNotifications(currentCallId).catch(() => {});
-      }
-      // Reset state
-      setIsInCall(false);
-      setCallType(null);
-      setCallPhase('idle');
-      callPhaseRef.current = 'idle';
-      setCallConnectionState('connecting');
-      setCallRecipient(null);
-      setCurrentCallId(null);
-      setCallStartAt(null);
-      setElapsedSeconds(0);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      // Clear the no-answer timeout
-      if (callTimeoutRef.current) {
-        clearTimeout(callTimeoutRef.current);
-        callTimeoutRef.current = null;
-      }
     };
 
     // Start an outgoing call (voice or video)
@@ -4540,6 +4564,10 @@ const InstitutionCaregiverDashboard = () => {
 
   // Log custom activity
   const handleLogCustomActivity = async () => {
+    if (!user?.uid) {
+      toast.error('User not authenticated');
+      return;
+    }
     if (!activityFormData.clientId) {
       toast.error('Please select a client');
       return;
