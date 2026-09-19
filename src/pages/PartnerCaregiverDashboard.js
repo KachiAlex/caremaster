@@ -77,7 +77,7 @@ import { autoFixCurrentUser } from '../utils/fixCaregiverProfile';
 import { careLogsAPI } from '../api/careLogsAPI';
 import { exportMedicalReportToPDF, exportCarePlanToPDF } from '../utils/pdfExport';
 import { getConversationsByUser, getMessagesByConversation, sendMessage as sendMessageAPI, getOrCreateConversation, markConversationAsRead } from '../api/messagesAPI';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from '../services/databaseCompat';
+import { collection, query, getDocs, setDoc, updateDoc, where, doc } from 'backend/database';
 import { notificationsAPI, NOTIFICATION_TYPES, NOTIFICATION_PRIORITIES } from '../api/notificationsAPI';
 import NotificationBell from '../components/NotificationBell';
 import { toast } from 'react-toastify';
@@ -100,7 +100,6 @@ import UserProfileSettings from '../components/UserProfileSettings';
 import HelpSupport from '../components/HelpSupport';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import SettingsTab from '../components/SettingsTab';
-import { collection, query, getDocs, setDoc, updateDoc, where, doc } from 'backend/database';
 import { signOut } from 'backend/auth';
 import { db } from '../backend/config';
 import TaskInstructionModal from '../components/TaskInstructionModal';
@@ -3904,9 +3903,12 @@ const PartnerCaregiverDashboard = () => {
       return taskDate > today && taskDate.toDateString() !== today.toDateString();
     });
 
-    const pendingTasks = recentTasks.filter(task => 
-      task.status === 'pending' || task.status === 'assigned'
-    );
+    // "Pending" = not yet completed/attended: includes 'pending', 'assigned',
+    // 'active' (default for admin assignments), 'scheduled', 'in_progress', etc.
+    const pendingTasks = recentTasks.filter(task => {
+      const s = (task.status || 'pending').toLowerCase();
+      return s !== 'completed' && s !== 'cancelled' && s !== 'archived';
+    });
 
     return (
       <div className="space-y-6">
@@ -3972,8 +3974,8 @@ const PartnerCaregiverDashboard = () => {
                           <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
                             task.status === 'completed' ? 'bg-green-100 text-green-800' :
                             task.status === 'in-progress' || task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                            task.status === 'pending' || task.status === 'assigned' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
+                            task.status === 'cancelled' || task.status === 'archived' ? 'bg-gray-100 text-gray-800' :
+                            'bg-yellow-100 text-yellow-800'
                           }`}>
                             {task.status || 'Pending'}
                           </span>

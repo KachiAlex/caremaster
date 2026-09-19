@@ -4655,6 +4655,7 @@ const InstitutionCaregiverDashboard = () => {
     { id: 'schedule', label: 'Schedule', icon: Calendar, iconColor: '#FBBF24' },
     { id: 'messages', label: 'Messages', icon: MessageSquare, iconColor: '#38BDF8' },
     { id: 'activity', label: 'Care Activity', icon: Activity, iconColor: '#34D399' },
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare, iconColor: '#F59E0B' },
     { id: 'clients', label: 'Clients', icon: Users, iconColor: '#F472B6' },
     ...(isDoctor || isNurse || isPharmacist ? [
       { id: 'prescriptions', label: 'Prescriptions', icon: Pill, iconColor: '#A78BFA' },
@@ -4791,6 +4792,8 @@ const InstitutionCaregiverDashboard = () => {
               setShowUnifiedActivityModal(true);
             }}
           />
+        ) : activeTab === 'tasks' ? (
+          renderTasksTab()
         ) : activeTab === 'clients' ? (
           renderClientsTab()
         ) : activeTab === 'prescriptions' && (isDoctor || isNurse || isPharmacist) ? (

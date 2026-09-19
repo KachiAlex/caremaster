@@ -121,7 +121,12 @@ const DashboardOverview = ({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="cm-stat-label">Today's Tasks</p>
-                    <p className="cm-stat-value">{recentTasks.length}</p>
+                    <p className="cm-stat-value">{recentTasks.filter(t => {
+                      const d = t.scheduledTime || t.dueDate;
+                      if (!d) return false;
+                      const td = toDate(d);
+                      return td && td.toDateString() === new Date().toDateString();
+                    }).length}</p>
                   </div>
                   <div className="cm-stat-icon">
                     <CheckSquare />
@@ -136,7 +141,7 @@ const DashboardOverview = ({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="cm-stat-label">Pending</p>
-                    <p className="cm-stat-value">{recentTasks.filter(t => t.status !== 'completed').length}</p>
+                    <p className="cm-stat-value">{recentTasks.filter(t => !['completed', 'cancelled', 'archived'].includes((t.status || 'pending').toLowerCase())).length}</p>
                   </div>
                   <div className="cm-stat-icon">
                     <Clock />
