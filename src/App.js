@@ -784,38 +784,36 @@ function SuperAdminRoute({ children }) {
 // Sign-in route handler - focuses on caregiver/service provider access
 function SignInRouteHandler() {
   const { userRole, userProfile, loading } = useUser();
+  const navigate = useNavigate();
+  const [showLoginForm, setShowLoginForm] = React.useState(false);
 
-  // Guard against infinite redirect loops between SignInRouteHandler and guard components.
-  // If we've redirected more than 3 times in 10 seconds, stop and show an error.
-  const [redirectCount] = React.useState(() => {
+  // Guard against infinite redirect loops. The counter only increments when an
+  // actual redirect is rendered — mounting on /login via browser back no longer
+  // counts toward (or trips) the loop detector.
+  const redirectTo = (to) => {
     const now = Date.now();
     const key = '__signin_redirect_count';
     const data = JSON.parse(sessionStorage.getItem(key) || '{"count":0,"ts":0}');
-    if (now - data.ts > 10000) {
-      sessionStorage.setItem(key, JSON.stringify({ count: 1, ts: now }));
-      return 1;
+    const count = (now - data.ts > 10000) ? 1 : data.count + 1;
+    sessionStorage.setItem(key, JSON.stringify({ count, ts: count === 1 ? now : data.ts }));
+
+    if (count > 3) {
+      console.error('🚫 Infinite redirect loop detected — clearing session');
+      sessionStorage.removeItem(key);
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      // Also clear auth compat state so onAuthStateChanged listeners fire
+      auth.currentUser = null;
+      (auth.__listeners || []).forEach((cb) => cb(null));
+      return <Navigate to="/login" replace />;
     }
-    const newCount = data.count + 1;
-    sessionStorage.setItem(key, JSON.stringify({ count: newCount, ts: data.ts }));
-    return newCount;
-  });
+    return <Navigate to={to} replace />;
+  };
 
   // Show loading while user profile is being fetched
   if (loading || !userProfile) {
     return <LoadingSpinner />;
-  }
-
-  // If we've redirected too many times, clear stale session and show login
-  if (redirectCount > 3) {
-    console.error('🚫 Infinite redirect loop detected — clearing session');
-    sessionStorage.removeItem('__signin_redirect_count');
-    localStorage.removeItem('token');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    // Also clear auth compat state so onAuthStateChanged listeners fire
-    auth.currentUser = null;
-    (auth.__listeners || []).forEach((cb) => cb(null));
-    return <Navigate to="/login" replace />;
   }
 
   console.log('🔄 SignInRouteHandler - Checking user role:', {
@@ -828,12 +826,29 @@ function SignInRouteHandler() {
   // Super-admin always goes to the super-admin dashboard
   if (userRole === 'super-admin' || userProfile?.userType === 'super-admin') {
     console.log('🚀 Redirecting super-admin to /super-admin/dashboard');
-    return <Navigate to="/super-admin/dashboard" replace />;
+    return redirectTo('/super-admin/dashboard');
   }
 
-  // If the user is on /login (not coming from another route), show the login
-  // form so they can log in with a different account. This prevents stale
-  // sessions from trapping users in a redirect loop.
+  // Compute the role-based dashboard path for the "continue" action below.
+  const dashboardPath = (() => {
+    const role = userRole || userProfile?.userType;
+    const inst = userProfile?.institutionId;
+    if (inst) {
+      if (role === 'admin') return `/institution-admin/dashboard?institution=${inst}`;
+      if (role === 'pharmacist') return `/institution-pharmacy/dashboard?institution=${inst}`;
+      if (role === 'lab_technician' || role === 'lab-technician') return `/institution-lab-technician/dashboard?institution=${inst}`;
+      return `/institution-caregiver/dashboard?institution=${inst}`;
+    }
+    if (role === 'admin') return '/admin';
+    if (role === 'caregiver' || role === 'doctor' || role === 'nurse') return '/service-provider';
+    return '/dashboard';
+  })();
+
+  // If the user is on /login (not coming from another route), they got here via
+  // browser back or a bookmark while still authenticated. Show a stable
+  // "already signed in" card instead of auto-redirecting (which ping-pongs with
+  // the back button) or showing a bare login form (confusing — they're logged
+  // in). They can continue to their dashboard or switch accounts.
   //
   // BUT: if a fresh login just happened (UnifiedLogin set __fresh_login before
   // calling window.location.href), redirect to the appropriate dashboard based
@@ -855,40 +870,64 @@ function SignInRouteHandler() {
           const instId = u.institutionId;
 
           if (role === 'super-admin') {
-            return <Navigate to="/super-admin/dashboard" replace />;
+            return redirectTo('/super-admin/dashboard');
           }
           if (role === 'admin' && instId) {
-            return <Navigate to={`/institution-admin/dashboard?institution=${instId}`} replace />;
+            return redirectTo(`/institution-admin/dashboard?institution=${instId}`);
           }
           if (role === 'pharmacist' && instId) {
-            return <Navigate to={`/institution-pharmacy/dashboard?institution=${instId}`} replace />;
+            return redirectTo(`/institution-pharmacy/dashboard?institution=${instId}`);
           }
           if ((role === 'lab_technician' || role === 'lab-technician') && instId) {
-            return <Navigate to={`/institution-lab-technician/dashboard?institution=${instId}`} replace />;
+            return redirectTo(`/institution-lab-technician/dashboard?institution=${instId}`);
           }
           if ((role === 'caregiver' || role === 'doctor' || role === 'nurse') && instId) {
             if (u.onboardingComplete) {
-              return <Navigate to={`/institution-caregiver/dashboard?institution=${instId}&role=${role}`} replace />;
+              return redirectTo(`/institution-caregiver/dashboard?institution=${instId}&role=${role}`);
             }
-            return <Navigate to={`/institution-caregiver/onboarding?institution=${instId}`} replace />;
+            return redirectTo(`/institution-caregiver/onboarding?institution=${instId}`);
           }
           // client, patient, elderly, or unknown → client dashboard
-          return <Navigate to="/dashboard" replace />;
+          return redirectTo('/dashboard');
         }
       } catch (e) {
         console.warn('Failed to parse stored user for fresh login redirect:', e);
       }
       // Fallback: if we can't parse user, just go to /dashboard
-      return <Navigate to="/dashboard" replace />;
+      return redirectTo('/dashboard');
     }
-    console.log('📝 User on /login page — showing login form');
-    // Don't aggressively clear localStorage here. The previous code destroyed
-    // valid sessions whenever a user landed on /login (e.g. via a bookmark),
-    // even if they were still logged in. Instead, just show the login form.
-    // If the user logs in again, the new session will naturally replace the
-    // old one. If they want to go back to their dashboard, they can navigate
-    // there and the auth middleware will validate their session.
-    return <UnifiedLogin />;
+
+    if (showLoginForm) {
+      return <UnifiedLogin />;
+    }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 max-w-md w-full text-center">
+          <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">You're already signed in</h2>
+          <p className="text-sm text-gray-600 mb-6">
+            {userProfile?.name || userProfile?.displayName || userProfile?.email || 'Signed in'}
+          </p>
+          <button
+            onClick={() => navigate(dashboardPath)}
+            className="w-full px-4 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 mb-3"
+          >
+            Continue to Dashboard
+          </button>
+          <button
+            onClick={() => setShowLoginForm(true)}
+            className="w-full px-4 py-2.5 text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50"
+          >
+            Sign in with a different account
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Check if user came from institution login - if so, let them continue to their intended destination
@@ -898,51 +937,51 @@ function SignInRouteHandler() {
   
   if (institutionId && roleParam) {
     console.log('🏢 User came from institution login, routing to appropriate dashboard:', { institutionId, roleParam });
-    
+
     if (roleParam === 'admin') {
-      return <Navigate to={`/institution-admin/dashboard?institution=${institutionId}`} replace />;
+      return redirectTo(`/institution-admin/dashboard?institution=${institutionId}`);
     } else if (roleParam === 'pharmacist') {
-      return <Navigate to={`/institution-pharmacy/dashboard?institution=${institutionId}`} replace />;
+      return redirectTo(`/institution-pharmacy/dashboard?institution=${institutionId}`);
     } else if (roleParam === 'lab_technician' || roleParam === 'lab-technician') {
-      return <Navigate to={`/institution-lab-technician/dashboard?institution=${institutionId}`} replace />;
+      return redirectTo(`/institution-lab-technician/dashboard?institution=${institutionId}`);
     } else if (roleParam === 'caregiver') {
-      return <Navigate to={`/institution-caregiver/dashboard?institution=${institutionId}`} replace />;
+      return redirectTo(`/institution-caregiver/dashboard?institution=${institutionId}`);
     }
   }
-  
+
   // Check if user has institution ID in their profile - route them to their institution portal
   if (userProfile?.institutionId) {
     console.log('🏢 User belongs to institution, routing to institution portal:', userProfile.institutionId);
-    
+
     if (userRole === 'admin') {
-      return <Navigate to={`/institution-admin/dashboard?institution=${userProfile.institutionId}`} replace />;
+      return redirectTo(`/institution-admin/dashboard?institution=${userProfile.institutionId}`);
     } else if (userRole === 'pharmacist') {
-      return <Navigate to={`/institution-pharmacy/dashboard?institution=${userProfile.institutionId}`} replace />;
+      return redirectTo(`/institution-pharmacy/dashboard?institution=${userProfile.institutionId}`);
     } else if (userRole === 'lab_technician' || userRole === 'lab-technician') {
-      return <Navigate to={`/institution-lab-technician/dashboard?institution=${userProfile.institutionId}`} replace />;
+      return redirectTo(`/institution-lab-technician/dashboard?institution=${userProfile.institutionId}`);
     } else if (userRole === 'caregiver' || userRole === 'doctor' || userRole === 'nurse') {
-      return <Navigate to={`/institution-caregiver/dashboard?institution=${userProfile.institutionId}`} replace />;
+      return redirectTo(`/institution-caregiver/dashboard?institution=${userProfile.institutionId}`);
     }
   }
-  
+
   // Check for admin session override
   const hasAdminSession = sessionStorage.getItem('Care Master_admin_session') === 'true';
-  
+
   // Redirect admins to admin dashboard (standalone admins without institution)
   if ((userRole === 'admin' || hasAdminSession) && !userProfile?.institutionId) {
     console.log('🚀 Redirecting admin to /admin');
-    return <Navigate to="/admin" replace />;
+    return redirectTo('/admin');
   }
-  
+
   // Redirect caregivers and doctors to service provider dashboard (standalone without institution)
   if ((userRole === 'caregiver' || userRole === 'doctor') && !userProfile?.institutionId) {
     console.log('🚀 Redirecting user to /service-provider (caregiver portal)');
-    return <Navigate to="/service-provider" replace />;
+    return redirectTo('/service-provider');
   }
-  
+
   // For other users (clients, elderly), show message that this is for caregivers
   console.log('✅ Client/elderly accessing caregiver portal, redirecting to home');
-  return <Navigate to="/" replace />;
+  return redirectTo('/');
 }
 
 // Role-based dashboard routing component
