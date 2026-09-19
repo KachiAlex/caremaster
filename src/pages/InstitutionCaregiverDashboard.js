@@ -142,6 +142,8 @@ const InstitutionCaregiverDashboard = () => {
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [showCareLogForm, setShowCareLogForm] = useState(false);
   const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
+  const [reportType, setReportType] = useState('shift');
+  const [shiftType, setShiftType] = useState('day');
   const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
   const [showUnifiedActivityModal, setShowUnifiedActivityModal] = useState(false);
   const [unifiedActivityTask, setUnifiedActivityTask] = useState(null); // pending task for completion
@@ -671,6 +673,25 @@ const InstitutionCaregiverDashboard = () => {
         const schedulesSnapshot = await getDocs(schedulesQuery);
         scheduleTasks = schedulesSnapshot.docs.map(d => {
           const data = d.data();
+          // Combine scheduleDate + startTime into a single datetime so that
+          // sorting, "today" classification and overdue checks use the real
+          // visit time instead of midnight.
+          let scheduledDateTime = null;
+          if (data.scheduleDate) {
+            const dateStr = data.scheduleDate instanceof Date
+              ? `${data.scheduleDate.getFullYear()}-${String(data.scheduleDate.getMonth() + 1).padStart(2, '0')}-${String(data.scheduleDate.getDate()).padStart(2, '0')}`
+              : String(data.scheduleDate).split('T')[0];
+            const startTime = data.startTime || '09:00';
+            const dateParts = dateStr.split('-');
+            if (dateParts.length === 3) {
+              const [hh, mm] = String(startTime).split(':');
+              const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), parseInt(hh) || 9, parseInt(mm) || 0);
+              if (!isNaN(localDate.getTime())) {
+                scheduledDateTime = localDate.toISOString();
+              }
+            }
+            if (!scheduledDateTime) scheduledDateTime = dateStr;
+          }
           return {
             id: d.id,
             task: data.title || 'Scheduled Visit',
@@ -683,7 +704,7 @@ const InstitutionCaregiverDashboard = () => {
             priority: data.priority || 'normal',
             dueDate: data.scheduleDate,
             dueTime: data.startTime,
-            scheduledTime: data.scheduleDate,
+            scheduledTime: scheduledDateTime || data.scheduleDate,
             instructions: data.specialInstructions || data.comments,
             createdAt: data.createdAt instanceof Date ? data.createdAt.toISOString() : (data.createdAt?.toDate?.()?.toISOString() || data.createdAt),
             collection: 'schedules',
@@ -898,6 +919,7 @@ const InstitutionCaregiverDashboard = () => {
             title: apt.title || 'Appointment',
             time: dateToString(apt.scheduledTime),
             client: apt.clientName || 'Client',
+            clientId: apt.clientId,
             status: apt.status || 'scheduled',
             description: apt.description
           })),
@@ -3188,8 +3210,9 @@ const InstitutionCaregiverDashboard = () => {
       if (isNaN(itemDate.getTime())) return false;
 
       const now = new Date();
-      // Check if task is past (completed tasks are not considered past)
-      return item.status !== 'completed' && itemDate < now;
+      // Terminal statuses are never overdue
+      const terminal = ['completed', 'cancelled', 'archived'];
+      return !terminal.includes(item.status) && itemDate < now;
     };
 
     const selectedDayTasks = getTasksForDate(selectedScheduleDate);
@@ -3404,7 +3427,7 @@ const InstitutionCaregiverDashboard = () => {
                           item.status === 'in_progress' ? 'bg-blue-500 border-blue-600' :
                           'bg-white border-gray-400'
                         }`}></div>
-                        {index < todaySchedule.length - 1 && <div className="w-0.5 flex-1 min-h-[60px] bg-gray-300"></div>}
+                        {index < selectedDayTasks.length - 1 && <div className="w-0.5 flex-1 min-h-[60px] bg-gray-300"></div>}
                       </div>
                       <div className="flex-1 pb-3 sm:pb-6">
                         <div
@@ -3414,7 +3437,12 @@ const InstitutionCaregiverDashboard = () => {
                               'bg-gray-50 border-gray-300 hover:bg-gray-100'
                           }`}
                           onClick={() => {
-                            const fullTask = recentTasks.find(t => t.id === item.id) || item;
+                            // Match on id AND collection to avoid cross-collection ID collisions
+                            const collectionFor = { task: 'careTasks', assignment: 'clientAssignments', schedule: 'schedules' };
+                            const expectedCollection = collectionFor[item.type];
+                            const fullTask = recentTasks.find(t =>
+                              t.id === item.id && (!expectedCollection || t.collection === expectedCollection)
+                            ) || recentTasks.find(t => t.id === item.id) || item;
                             setSelectedTask({
                               ...fullTask,
                               clientName: fullTask.client || fullTask.clientName || 'Client',
@@ -3506,9 +3534,6 @@ const InstitutionCaregiverDashboard = () => {
 
   // Reports Tab Renderer
   const renderReportsTab = () => {
-    const [reportType, setReportType] = useState('shift');
-    const [shiftType, setShiftType] = useState('day');
-    
     return (
       <div className="space-y-6">
         {/* Report Type Selector */}
@@ -4339,9 +4364,11 @@ const InstitutionCaregiverDashboard = () => {
                             {task.status !== 'in_progress' && task.status !== 'in-progress' && (
                           <button
                             onClick={async () => {
-                                  // Find client for this task
-                                  const taskClient = assignedClients.find(c => c.id === task.clientId) || 
-                                                    selectedClient || 
+                                  // Find client for this task — prefer task's own clientId
+                                  const taskClient = assignedClients.find(c => c.id === task.clientId) ||
+                                                    (task.clientId
+                                                      ? { id: task.clientId, name: task.clientName || 'Client' }
+                                                      : selectedClient) ||
                                                     { name: task.clientName || 'Client' };
                                   setSelectedTask({
                                     ...task,
@@ -4357,9 +4384,11 @@ const InstitutionCaregiverDashboard = () => {
                             )}
                             <button
                               onClick={async () => {
-                                // Find client for this task
-                                const taskClient = assignedClients.find(c => c.id === task.clientId) || 
-                                                  selectedClient || 
+                                // Find client for this task — prefer task's own clientId
+                                const taskClient = assignedClients.find(c => c.id === task.clientId) ||
+                                                  (task.clientId
+                                                    ? { id: task.clientId, name: task.clientName || 'Client' }
+                                                    : selectedClient) ||
                                                   { name: task.clientName || 'Client' };
                                 setSelectedTask({
                                   ...task,
@@ -5439,9 +5468,12 @@ const InstitutionCaregiverDashboard = () => {
                   onClick={async () => {
                     // Close details modal and open unified activity modal in task mode
                       setShowTaskDetailsModal(false);
-                    // Find client for this task
+                    // Find client for this task — prefer the task's own clientId over
+                    // whatever happens to be selected so we never tag the wrong client
                     const taskClient = assignedClients.find(c => c.id === selectedTask.clientId) ||
-                                      selectedClient ||
+                                      (selectedTask.clientId
+                                        ? { id: selectedTask.clientId, name: selectedTask.clientName || 'Client' }
+                                        : selectedClient) ||
                                       { name: selectedTask.clientName || 'Client' };
                     setSelectedClient(taskClient);
                     setUnifiedActivityTask({
@@ -6458,102 +6490,9 @@ const InstitutionCaregiverDashboard = () => {
             setShowTaskCompletionModal(false);
             setSelectedTask(null);
           }}
-          onComplete={async () => {
-            // Reload tasks after completion
-            if (user?.uid) {
-              await reloadTasks(user.uid);
-              // Also reload schedule
-              try {
-                const [allAppointments, allTasks, allAssignments, allSchedules] = await Promise.all([
-                  getTodaysAppointments(user?.uid, 'caregiver').catch(() => []),
-                  getTodayTasks(user?.uid).catch(() => []),
-                  assignmentAPI.getAssignmentsByCaregiver(user?.uid).catch(() => []),
-                  (async () => {
-                    try {
-                      const schedulesQuery = query(
-                        collection(db, 'schedules'),
-                        where('caregiverId', '==', user?.uid)
-                      );
-                      const snapshot = await getDocs(schedulesQuery);
-                      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                    } catch { return []; }
-                  })().catch(() => [])
-                ]);
-
-                const dateToString = (dateValue) => {
-                  if (!dateValue) return '';
-                  if (dateValue instanceof Date) return dateValue.toISOString();
-                  if (dateValue?.toDate) return dateValue.toDate().toISOString();
-                  if (typeof dateValue === 'string') return dateValue;
-                  return String(dateValue);
-                };
-
-                const combinedSchedule = [
-                  ...allAppointments.map(apt => ({
-                    id: apt.id,
-                    type: 'appointment',
-                    title: apt.title || 'Appointment',
-                    time: dateToString(apt.scheduledTime),
-                    client: apt.clientName || 'Client',
-                    status: apt.status || 'scheduled',
-                    description: apt.description
-                  })),
-                  ...allTasks.map(task => ({
-                    id: task.id,
-                    type: 'task',
-                    title: task.title || task.task || task.description || 'Care Task',
-                    time: dateToString(task.scheduledTime),
-                    client: task.clientName || 'Client',
-                    status: task.status || 'pending',
-                    description: task.description
-                  })),
-                  ...allAssignments.map(assignment => {
-                    const dueDateStr = dateToString(assignment.dueDate);
-                    return {
-                      id: assignment.id,
-                      type: 'assignment',
-                      title: assignment.title || 'Assigned Task',
-                      time: assignment.dueTime ? `${dueDateStr} ${assignment.dueTime}` : dueDateStr,
-                      client: assignment.clientName || 'Client',
-                      status: assignment.status || 'pending',
-                      priority: assignment.priority,
-                      description: assignment.description,
-                      instructions: assignment.instructions
-                    };
-                  }),
-                  ...allSchedules.map(sched => {
-                    let combinedTime = '';
-                    if (sched.scheduleDate) {
-                      const dateStr = sched.scheduleDate instanceof Date
-                        ? sched.scheduleDate.toISOString().split('T')[0]
-                        : String(sched.scheduleDate).split('T')[0];
-                      const startTime = sched.startTime || '09:00';
-                      try {
-                        const dp = dateStr.split('-');
-                        if (dp.length === 3) {
-                          const dt = new Date(parseInt(dp[0]), parseInt(dp[1]) - 1, parseInt(dp[2]), parseInt(startTime.split(':')[0]) || 9, parseInt(startTime.split(':')[1]) || 0);
-                          combinedTime = dt.toISOString();
-                        } else { combinedTime = `${dateStr}T${startTime}:00`; }
-                      } catch { combinedTime = `${dateStr}T${startTime}:00`; }
-                    }
-                    return {
-                      id: sched.id,
-                      type: 'schedule',
-                      title: sched.title || 'Scheduled Visit',
-                      time: combinedTime,
-                      client: sched.clientName || 'Client',
-                      status: sched.status || 'scheduled',
-                      description: sched.description
-                    };
-                  })
-                ];
-                
-                combinedSchedule.sort((a, b) => new Date(a.time) - new Date(b.time));
-                setTodaySchedule(combinedSchedule);
-              } catch (error) {
-                console.error('Error reloading schedule:', error);
-              }
-            }
+          onComplete={() => {
+            // Reload tasks + schedule via the main loader so all views stay consistent
+            setRefreshTrigger(prev => prev + 1);
           }}
         />
       )}
@@ -6568,11 +6507,9 @@ const InstitutionCaregiverDashboard = () => {
           institutionId={effectiveInstitutionId}
           roleType={isDoctor ? 'doctor' : isNurse ? 'nurse' : 'caregiver'}
           pendingTask={unifiedActivityTask}
-          onSaved={async () => {
-            // Reload tasks after any activity save
-            if (user?.uid) {
-              await reloadTasks(user.uid);
-            }
+          onSaved={() => {
+            // Reload tasks + schedule so completed items update everywhere
+            setRefreshTrigger(prev => prev + 1);
           }}
         />
       )}
