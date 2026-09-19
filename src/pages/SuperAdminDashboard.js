@@ -579,7 +579,7 @@ const SuperAdminDashboard = () => {
 
       {/* Secondary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="cm-stat-label">Total Institutions</p>
@@ -589,7 +589,7 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
 
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="cm-stat-label">Expiring Soon</p>
@@ -599,7 +599,7 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
 
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="cm-stat-label">Active Users</p>
@@ -611,7 +611,7 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="cm-card p-6">
+      <div className="cm-card p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-ink mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           <button
@@ -675,7 +675,7 @@ const SuperAdminDashboard = () => {
       {/* Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Trend Chart */}
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <h3 className="cm-display text-lg text-ink mb-4 flex items-center">
             <TrendingUp className="h-5 w-5 text-sage mr-2" />
             Revenue Trend (Last 6 Months)
@@ -698,7 +698,7 @@ const SuperAdminDashboard = () => {
         </div>
 
         {/* Institution Growth Chart */}
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <h3 className="cm-display text-lg text-ink mb-4 flex items-center">
             <Building2 className="h-5 w-5 text-gold-deep mr-2" />
             Institution Growth
@@ -721,7 +721,7 @@ const SuperAdminDashboard = () => {
         </div>
 
         {/* License Distribution Chart */}
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <h3 className="cm-display text-lg text-ink mb-4 flex items-center">
             <FileText className="h-5 w-5 text-coral mr-2" />
             License Plan Distribution
@@ -755,7 +755,7 @@ const SuperAdminDashboard = () => {
         </div>
 
         {/* User Growth Chart */}
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <h3 className="cm-display text-lg text-ink mb-4 flex items-center">
             <Users className="h-5 w-5 text-sage mr-2" />
             User Growth
@@ -779,7 +779,7 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="cm-card p-6">
+      <div className="cm-card p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="cm-display text-lg text-ink">Recent Activity</h2>
           <button
@@ -924,7 +924,7 @@ const SuperAdminDashboard = () => {
       {showActivityModal && selectedActivity && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[14px] shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-ink/8">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-ink/8">
               <h3 className="cm-display text-lg text-ink">Activity Details</h3>
               <button
                 onClick={() => {
@@ -936,7 +936,7 @@ const SuperAdminDashboard = () => {
                 <XCircle className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="text-sm font-medium text-text-soft">Type</label>
                 <p className="text-sm text-ink mt-1">

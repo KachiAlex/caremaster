@@ -820,7 +820,7 @@ const CaregiverDashboard = () => {
   const renderClientsTab = () => {
     if (!selectedClient) {
       return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-8 text-center">
           <User className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No Client Selected</h3>
           <p className="text-gray-600 mb-4">
@@ -836,7 +836,7 @@ const CaregiverDashboard = () => {
     return (
       <div className="space-y-6">
         {/* Client Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center">
@@ -845,7 +845,7 @@ const CaregiverDashboard = () => {
                 </span>
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-900">
                   {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h2>
                 <p className="text-gray-600">Client ID: {selectedClient.id}</p>
@@ -880,7 +880,7 @@ const CaregiverDashboard = () => {
         {/* Client Information Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Basic Information */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <User className="h-5 w-5 text-blue-600 mr-2" />
               Basic Information
@@ -906,7 +906,7 @@ const CaregiverDashboard = () => {
           </div>
 
           {/* Medical Information */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <Heart className="h-5 w-5 text-red-600 mr-2" />
               Medical Information
@@ -934,7 +934,7 @@ const CaregiverDashboard = () => {
           </div>
 
           {/* Emergency Contact */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <Phone className="h-5 w-5 text-green-600 mr-2" />
               Emergency Contact
@@ -964,7 +964,7 @@ const CaregiverDashboard = () => {
 
         {/* Nurse-specific Quick Actions */}
         {isNurse && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Nurse Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <button
@@ -1017,16 +1017,16 @@ const CaregiverDashboard = () => {
   const renderPrescriptionsTab = () => {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-8">
           <div className="text-center">
             <Pill className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Prescriptions (View Only)</h2>
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-4">Prescriptions (View Only)</h2>
             <p className="text-gray-600 mb-6">
               As a non-medical caregiver, you can view prescribed medications for your assigned clients but cannot prescribe new medications.
             </p>
             
             {selectedClient ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6">
                 <h3 className="text-lg font-semibold text-blue-900 mb-2">
                   Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h3>
@@ -1045,7 +1045,7 @@ const CaregiverDashboard = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6">
                 <p className="text-gray-600">
                   Please select a client from the dropdown above to view their prescribed medications.
                 </p>
@@ -1060,16 +1060,16 @@ const CaregiverDashboard = () => {
   const renderConsultationsTab = () => {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-8">
           <div className="text-center">
             <Stethoscope className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Consultations (View Only)</h2>
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-4">Consultations (View Only)</h2>
             <p className="text-gray-600 mb-6">
               As a non-medical caregiver, you can view consultation notes and medical reports for your assigned clients but cannot conduct medical consultations.
             </p>
             
             {selectedClient ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6">
                 <h3 className="text-lg font-semibold text-green-900 mb-2">
                   Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h3>
@@ -1089,7 +1089,7 @@ const CaregiverDashboard = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6">
                 <p className="text-gray-600">
                   Please select a client from the dropdown above to view their consultation history.
                 </p>
@@ -1104,16 +1104,16 @@ const CaregiverDashboard = () => {
   const renderDiagnosticsTab = () => {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-8">
           <div className="text-center">
             <FlaskConical className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Diagnostics (View Only)</h2>
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-4">Diagnostics (View Only)</h2>
             <p className="text-gray-600 mb-6">
               As a non-medical caregiver, you can view diagnostic results and test reports for your assigned clients but cannot order new diagnostic tests.
             </p>
             
             {selectedClient ? (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 sm:p-6">
                 <h3 className="text-lg font-semibold text-purple-900 mb-2">
                   Client: {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                 </h3>
@@ -1137,7 +1137,7 @@ const CaregiverDashboard = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6">
                 <p className="text-gray-600">
                   Please select a client from the dropdown above to view their diagnostic results.
                 </p>
@@ -1244,7 +1244,7 @@ const CaregiverDashboard = () => {
           renderDiagnosticsTab()
         ) : activeTab === 'help' ? (
           <div className="space-y-6">
-            <div className="cm-card p-6">
+            <div className="cm-card p-4 sm:p-6">
               <h2 className="cm-display text-xl text-ink mb-4 flex items-center">
                 <HelpCircle className="h-6 w-6 text-gold-deep mr-2" />
                 Help & Support
@@ -1291,7 +1291,7 @@ const CaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="cm-card p-6">
+            <div className="cm-card p-4 sm:p-6">
               <h3 className="cm-display text-lg text-ink mb-3">Frequently Asked Questions</h3>
               <div className="space-y-3">
                 <div className="border border-ink/10 rounded-lg p-4">
@@ -1312,7 +1312,7 @@ const CaregiverDashboard = () => {
         ) : (
           <div className="space-y-6">
           {/* Qualification-Specific Quick Actions */}
-          <div className="cm-card p-6">
+          <div className="cm-card p-4 sm:p-6">
             <h2 className="cm-display text-lg text-ink mb-4">Quick Actions for {userProfile?.medicalQualification || 'Healthcare Professional'}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {dashboardConfig.quickActions.map((action, index) => (
@@ -1330,7 +1330,7 @@ const CaregiverDashboard = () => {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Today's Visits</p>
@@ -1341,7 +1341,7 @@ const CaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Completed Tasks</p>
@@ -1352,7 +1352,7 @@ const CaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Rating</p>
@@ -1363,7 +1363,7 @@ const CaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">This Month</p>
@@ -1755,13 +1755,13 @@ const CaregiverDashboard = () => {
       {showTaskDetailsModal && selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowTaskDetailsModal(false)}>
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Task Details</h3>
               <button onClick={() => setShowTaskDetailsModal(false)} className="text-gray-400 hover:text-gray-600">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="px-6 py-4 space-y-4">
+            <div className="px-4 sm:px-6 py-4 space-y-4">
               <div>
                 <span className="text-sm text-gray-500">Title</span>
                 <p className="font-medium text-gray-900">{selectedTask.title || selectedTask.task || 'Untitled Task'}</p>
@@ -1803,7 +1803,7 @@ const CaregiverDashboard = () => {
                 </div>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
               {selectedTask.type === 'task' && selectedTask.status !== 'completed' && (
                 <button
                   onClick={() => {

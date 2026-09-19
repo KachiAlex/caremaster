@@ -244,26 +244,26 @@ const PartnerLabTechnicianDashboard = () => {
       {/* Header */}
       <div className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/95 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-cyan-400 to-blue-500 shadow-lg shadow-blue-500/40">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 via-cyan-400 to-blue-500 shadow-lg shadow-blue-500/40 flex-shrink-0">
                 <TestTube className="h-5 w-5 text-slate-950" />
               </div>
-              <div>
-                <h1 className="text-xl font-semibold text-slate-50">Lab Technician Dashboard</h1>
-                <p className="text-sm text-slate-400">
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-semibold text-slate-50 truncate">Lab Technician Dashboard</h1>
+                <p className="text-xs sm:text-sm text-slate-400 truncate">
                   {institutionData?.name || 'ElderX'} • Home Laboratory Services
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <EmergencyButton institutionId={institutionId} />
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 transition-colors flex items-center gap-2"
+                className="px-3 sm:px-4 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 transition-colors flex items-center gap-2 text-sm"
               >
                 <LogOut className="h-4 w-4" />
-                Logout
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
           </div>
@@ -272,10 +272,10 @@ const PartnerLabTechnicianDashboard = () => {
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
           <button
             onClick={() => setActiveTab('visits')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === 'visits'
                 ? 'cm-btn-gold'
                 : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700/80'
@@ -286,7 +286,7 @@ const PartnerLabTechnicianDashboard = () => {
           </button>
           <button
             onClick={() => setActiveTab('collections')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === 'collections'
                 ? 'cm-btn-gold'
                 : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700/80'
@@ -297,7 +297,7 @@ const PartnerLabTechnicianDashboard = () => {
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === 'history'
                 ? 'cm-btn-gold'
                 : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700/80'
@@ -321,7 +321,7 @@ const PartnerLabTechnicianDashboard = () => {
               homeVisits.map((visit) => (
                 <div
                   key={visit.id}
-                  className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6"
+                  className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-4 sm:p-6"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div>
@@ -408,7 +408,7 @@ const PartnerLabTechnicianDashboard = () => {
               sampleCollections.map((collection) => (
                 <div
                   key={collection.id}
-                  className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6"
+                  className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-4 sm:p-6"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div>
@@ -472,7 +472,7 @@ const PartnerLabTechnicianDashboard = () => {
       {showCollectionModal && selectedVisit && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="rounded-3xl border border-slate-800/80 bg-slate-950/95 backdrop-blur-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-slate-800/60">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-800/60">
               <h2 className="text-xl font-semibold text-slate-50">Collect Sample</h2>
               <button
                 onClick={() => setShowCollectionModal(false)}
@@ -482,7 +482,7 @@ const PartnerLabTechnicianDashboard = () => {
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Sample Type *
