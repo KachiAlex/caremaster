@@ -1637,7 +1637,7 @@ const PartnerCaregiverDashboard = () => {
   const renderClientsTab = () => {
     if (!assignedClients || assignedClients.length === 0) {
       return (
-        <div className="cm-card p-8 text-center">
+        <div className="cm-card p-4 sm:p-8 text-center">
           <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No Assigned Clients</h3>
           <p className="text-gray-600 mb-4">
@@ -1750,7 +1750,7 @@ const PartnerCaregiverDashboard = () => {
         </div>
 
         {/* Desktop Clients List */}
-        <div className="cm-card p-6 hidden lg:block">
+        <div className="cm-card p-4 sm:p-6 hidden lg:block">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -1835,7 +1835,7 @@ const PartnerCaregiverDashboard = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+          <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gold-deep">Total Clients</p>
@@ -1845,7 +1845,7 @@ const PartnerCaregiverDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-green-50 rounded-xl border border-green-100 p-6">
+          <div className="bg-green-50 rounded-xl border border-green-100 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-600">Active Clients</p>
@@ -1857,7 +1857,7 @@ const PartnerCaregiverDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-red-50 rounded-xl border border-red-100 p-6">
+          <div className="bg-red-50 rounded-xl border border-red-100 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-red-600">Critical Clients</p>
@@ -2583,7 +2583,7 @@ const PartnerCaregiverDashboard = () => {
     ].join(' ');
 
     return (
-      <div className="cm-card p-6 h-[calc(100vh-250px)]">
+      <div className="cm-card p-4 sm:p-6 h-[calc(100vh-250px)]">
         <div className="flex h-full">
           {/* Conversations List */}
           <div className={conversationListClasses}>
@@ -2723,7 +2723,7 @@ const PartnerCaregiverDashboard = () => {
 
                 {/* Call Interface (when in call) */}
                 {isInCall && (
-                  <div className="p-6 bg-gray-900 flex items-center justify-center" style={{ height: '400px' }}>
+                  <div className="p-4 sm:p-6 bg-gray-900 flex items-center justify-center" style={{ height: '400px' }}>
                     <div className="text-center">
                       {callType === 'video' ? (
                         <div className="space-y-4">
@@ -2928,7 +2928,7 @@ const PartnerCaregiverDashboard = () => {
     return (
       <div className="space-y-6">
         {/* Shift Overview */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-4 sm:p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <Clock className="h-6 w-6 text-blue-600" />
             Current Shift Overview
@@ -3053,7 +3053,7 @@ const PartnerCaregiverDashboard = () => {
         </div>
 
         {/* Selected Day's Timeline */}
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">
               {selectedScheduleDate.toDateString() === new Date().toDateString() ? "Today's Timeline" : "Schedule Timeline"}
@@ -3203,7 +3203,7 @@ const PartnerCaregiverDashboard = () => {
     return (
       <div className="space-y-6">
         {/* Report Type Selector */}
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Nursing Reports</h2>
             <div className="flex gap-2">
@@ -3237,7 +3237,7 @@ const PartnerCaregiverDashboard = () => {
 
         {/* Shift Report Generator */}
         {reportType === 'shift' && (
-          <div className="cm-card p-6">
+          <div className="cm-card p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Shift Report</h3>
             
             <div className="grid grid-cols-2 gap-4 mb-6">
@@ -3263,7 +3263,7 @@ const PartnerCaregiverDashboard = () => {
             </div>
 
             {/* Shift Summary */}
-            <div className="bg-gray-50 rounded-lg p-6 mb-6">
+            <div className="bg-gray-50 rounded-lg p-4 sm:p-6 mb-6">
               <h4 className="font-semibold text-gray-900 mb-4">Shift Summary</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
@@ -3329,7 +3329,7 @@ const PartnerCaregiverDashboard = () => {
 
         {/* Handoff Notes */}
         {reportType === 'handoff' && (
-          <div className="cm-card p-6">
+          <div className="cm-card p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Handoff Notes</h3>
             
             <div className="space-y-4 mb-6">
@@ -3361,7 +3361,7 @@ const PartnerCaregiverDashboard = () => {
 
         {/* Incident Reports */}
         {reportType === 'incident' && (
-          <div className="cm-card p-6">
+          <div className="cm-card p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Incident Reports</h3>
             
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
@@ -3498,7 +3498,7 @@ const PartnerCaregiverDashboard = () => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              <h2 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center">
                 <Pill className="h-8 w-8 text-indigo-600 mr-3" />
                 Prescription Management
               </h2>
@@ -3519,7 +3519,7 @@ const PartnerCaregiverDashboard = () => {
                 </div>
 
           {/* Client Selector for Pharmacists */}
-          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-4 sm:p-6">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Select Client
             </label>
@@ -3548,7 +3548,7 @@ const PartnerCaregiverDashboard = () => {
 
           {/* Prescriptions Display */}
           {!selectedClient ? (
-            <div className="cm-card p-12 text-center">
+            <div className="cm-card p-6 sm:p-12 text-center">
               <Pill className="h-20 w-20 text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No Client Selected</h3>
               <p className="text-gray-600">
@@ -3556,8 +3556,8 @@ const PartnerCaregiverDashboard = () => {
               </p>
               </div>
             ) : (
-            <div className="cm-card p-6">
-              <div className="p-6 border-b border-gray-200">
+            <div className="cm-card p-4 sm:p-6">
+              <div className="p-4 sm:p-6 border-b border-gray-200">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center">
                   <User className="h-5 w-5 text-indigo-600 mr-2" />
                   Prescriptions for {selectedClient.name || selectedClient.fullName}
@@ -3567,7 +3567,7 @@ const PartnerCaregiverDashboard = () => {
                 </p>
               </div>
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {selectedClient.medications && selectedClient.medications.length > 0 ? (
                   <div className="space-y-4">
                     {(Array.isArray(selectedClient.medications) 
@@ -3685,7 +3685,7 @@ const PartnerCaregiverDashboard = () => {
                     })}
                   </div>
                 ) : selectedClient.currentMedications ? (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 sm:p-6">
                     <h4 className="font-semibold text-yellow-900 mb-2">Legacy Medication Data</h4>
                     <p className="text-gray-900">{selectedClient.currentMedications}</p>
                     <p className="text-sm text-yellow-700 mt-2">
@@ -3714,7 +3714,7 @@ const PartnerCaregiverDashboard = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Prescriptions & Medications</h2>
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Prescriptions & Medications</h2>
             <p className="text-sm text-gray-600 mt-1">
               {isDoctor ? 'Prescribe and manage medications' : 'View prescribed medications'}
             </p>
@@ -3731,8 +3731,8 @@ const PartnerCaregiverDashboard = () => {
         </div>
 
         {/* Current Medications */}
-        <div className="cm-card p-6">
-          <div className="p-6">
+        <div className="cm-card p-4 sm:p-6">
+          <div className="p-4 sm:p-6">
             {!selectedClient ? (
               <div className="text-center py-12">
                 <Pill className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -3744,7 +3744,7 @@ const PartnerCaregiverDashboard = () => {
             ) : (
               <div className="space-y-6">
                 {/* Client Medications Summary */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-blue-900">
                       Current Medications for {selectedClient.name || selectedClient.fullName}
@@ -3820,7 +3820,7 @@ const PartnerCaregiverDashboard = () => {
                 </div>
 
                 {/* Medication History Placeholder */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
                     <FileText className="h-5 w-5 text-gray-600 mr-2" />
                     Medication History
@@ -3865,7 +3865,7 @@ const PartnerCaregiverDashboard = () => {
   const renderDiagnosticsTab = () => {
     if (!selectedClient) {
       return (
-        <div className="flex items-center justify-center p-8">
+        <div className="flex items-center justify-center p-4 sm:p-8">
           <div className="text-center">
             <FlaskConical className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Client</h3>
@@ -3912,7 +3912,7 @@ const PartnerCaregiverDashboard = () => {
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+          <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gold-deep">Today's Tasks</p>
@@ -3922,7 +3922,7 @@ const PartnerCaregiverDashboard = () => {
             </div>
           </div>
           
-          <div className="bg-yellow-50 rounded-xl border border-yellow-100 p-6">
+          <div className="bg-yellow-50 rounded-xl border border-yellow-100 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-yellow-600">Pending Tasks</p>
@@ -3932,7 +3932,7 @@ const PartnerCaregiverDashboard = () => {
             </div>
           </div>
           
-          <div className="bg-green-50 rounded-xl border border-green-100 p-6">
+          <div className="bg-green-50 rounded-xl border border-green-100 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-600">Upcoming Tasks</p>
@@ -3944,13 +3944,13 @@ const PartnerCaregiverDashboard = () => {
         </div>
 
         {/* Tasks List */}
-        <div className="cm-card p-6">
-          <div className="p-6 border-b border-gray-200">
+        <div className="cm-card p-4 sm:p-6">
+          <div className="p-4 sm:p-6 border-b border-gray-200">
             <h2 className="text-xl font-bold text-gray-900">All Tasks</h2>
             <p className="text-sm text-gray-600 mt-1">Manage your care tasks and assignments</p>
           </div>
           
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {recentTasks.length === 0 ? (
               <div className="text-center py-12">
                 <CheckSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -3962,7 +3962,7 @@ const PartnerCaregiverDashboard = () => {
             ) : (
               <div className="space-y-4">
                 {recentTasks.map((task) => (
-                  <div key={task.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div key={task.id} className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-3">
@@ -4105,12 +4105,12 @@ const PartnerCaregiverDashboard = () => {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Care Logs</h2>
+          <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Care Logs</h2>
           <p className="text-sm text-gray-600 mt-1">Document care activities and observations</p>
         </div>
 
         {/* Client Selection and Action */}
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex flex-col md:flex-row md:items-end gap-4">
             {/* Client Selector */}
             <div className="flex-1">
@@ -4173,8 +4173,8 @@ const PartnerCaregiverDashboard = () => {
         </div>
 
         {/* Care Logs List */}
-        <div className="cm-card p-6">
-          <div className="p-6">
+        <div className="cm-card p-4 sm:p-6">
+          <div className="p-4 sm:p-6">
             {!selectedClient ? (
               <div className="text-center py-12">
                 <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -4651,7 +4651,7 @@ const PartnerCaregiverDashboard = () => {
               <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-green-200 p-4 sm:p-6 md:p-8">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center">
+                    <h2 className="text-lg sm:text-xl md:text-lg sm:text-2xl font-bold text-gray-900 flex items-center">
                       <Clock className="h-5 w-5 md:h-6 md:w-6 text-green-600 mr-2" />
                       Active Tasks ({activeTasks.length})
                     </h2>
@@ -4715,7 +4715,7 @@ const PartnerCaregiverDashboard = () => {
             <div className="cm-card p-4 sm:p-6 md:p-8">
               <div className="flex flex-col sm:flex-row items-start justify-between mb-4 md:mb-6 gap-4">
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2">General Care Provider Dashboard</h2>
+                  <h2 className="text-lg sm:text-xl md:text-lg sm:text-2xl font-bold text-gray-900 mb-2">General Care Provider Dashboard</h2>
                   <p className="text-sm md:text-base text-gray-600">Essential caregiving tools and client management</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 md:p-4 shrink-0 w-full sm:w-auto">
@@ -4739,7 +4739,7 @@ const PartnerCaregiverDashboard = () => {
                         </div>
                       ))
                     ) : (
-                      <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
+                      <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200 text-center">
                         <p className="text-gray-500 text-sm">No specializations added yet</p>
                         <button className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
                           Add Specializations
@@ -4759,7 +4759,7 @@ const PartnerCaregiverDashboard = () => {
                         </div>
                       ))
                     ) : (
-                      <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
+                      <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200 text-center">
                         <p className="text-gray-500 text-sm">No certifications added yet</p>
                         <button className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
                           Add Certifications
@@ -4852,7 +4852,7 @@ const PartnerCaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Completed Tasks</p>
@@ -4863,7 +4863,7 @@ const PartnerCaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Rating</p>
@@ -4874,7 +4874,7 @@ const PartnerCaregiverDashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="cm-card p-6 hover:shadow-md transition-shadow">
+            <div className="cm-card p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">This Month</p>
@@ -4892,7 +4892,7 @@ const PartnerCaregiverDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Priority Alerts */}
               <div 
-                className="cm-card p-6 hover:shadow-md transition cursor-pointer"
+                className="cm-card p-4 sm:p-6 hover:shadow-md transition cursor-pointer"
                 onClick={() => setActiveTab('clients')}
               >
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -4925,7 +4925,7 @@ const PartnerCaregiverDashboard = () => {
 
               {/* Recent Activities */}
               <div 
-                className="cm-card p-6 hover:shadow-md transition cursor-pointer"
+                className="cm-card p-4 sm:p-6 hover:shadow-md transition cursor-pointer"
                 onClick={() => setActiveTab('activities')}
               >
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -4961,14 +4961,14 @@ const PartnerCaregiverDashboard = () => {
           )}
 
           {/* Today's Schedule */}
-          <div className="cm-card p-6">
+          <div className="cm-card p-4 sm:p-6">
             <div className="px-8 py-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">Today's Schedule</h2>
             </div>
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               <div className="space-y-6">
                 {(todaySchedule && Array.isArray(todaySchedule) ? todaySchedule : []).map((schedule) => (
-                  <div key={schedule.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                  <div key={schedule.id} className="border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-4 mb-4">
@@ -5098,11 +5098,11 @@ const PartnerCaregiverDashboard = () => {
           </div>
 
           {/* Recent Tasks */}
-          <div className="cm-card p-6">
+          <div className="cm-card p-4 sm:p-6">
             <div className="px-8 py-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">Recent Tasks</h2>
             </div>
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               <div className="space-y-4">
                 {recentTasks.map((task) => (
                   <div key={task.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
@@ -5134,14 +5134,14 @@ const PartnerCaregiverDashboard = () => {
 
           {/* Performance Overview */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <div className="cm-card p-6 hover:shadow-md transition cursor-pointer">
+            <div className="cm-card p-4 sm:p-6 hover:shadow-md transition cursor-pointer">
               <div 
                 className="px-8 py-6 border-b border-gray-100"
                 onClick={() => setActiveTab('analytics')}
               >
                 <h2 className="text-xl font-bold text-gray-900">Performance Overview</h2>
               </div>
-              <div className="p-8">
+              <div className="p-4 sm:p-8">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <span className="text-base font-medium text-gray-700">Punctuality</span>
@@ -5188,19 +5188,19 @@ const PartnerCaregiverDashboard = () => {
               </div>
             </div>
 
-            <div className="cm-card p-6">
+            <div className="cm-card p-4 sm:p-6">
               <div className="px-8 py-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
                 <p className="text-sm text-gray-500 mt-1">Common actions for your role</p>
               </div>
-              <div className="p-8">
+              <div className="p-4 sm:p-8">
                 {isDoctor ? (
                   // Doctor Quick Actions
                   <div className="grid grid-cols-2 gap-4">
                     <button 
                       onClick={handleNewConsultation}
                       disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Stethoscope className="h-8 w-8 text-blue-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">New Consultation</span>
@@ -5209,7 +5209,7 @@ const PartnerCaregiverDashboard = () => {
                     <button 
                       onClick={handleWritePrescription}
                       disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Pill className="h-8 w-8 text-indigo-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Write Prescription</span>
@@ -5218,7 +5218,7 @@ const PartnerCaregiverDashboard = () => {
                     <button 
                       onClick={handleCreateCarePlan}
                       disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ClipboardList className="h-8 w-8 text-emerald-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Create Care Plan</span>
@@ -5231,7 +5231,7 @@ const PartnerCaregiverDashboard = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <button 
                       onClick={() => setActiveTab('messages')}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all"
+                      className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all"
                     >
                       <MessageSquare className="h-8 w-8 text-blue-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Messages</span>
@@ -5247,7 +5247,7 @@ const PartnerCaregiverDashboard = () => {
                           setShowVitalsModal(true);
                         }}
                         disabled={!selectedClient}
-                        className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Activity className="h-8 w-8 text-red-600 mb-3" />
                         <span className="text-sm font-semibold text-gray-900">Record Vitals</span>
@@ -5263,7 +5263,7 @@ const PartnerCaregiverDashboard = () => {
                         setShowNurseReportModal(true);
                       }}
                       disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-green-50 hover:border-green-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-green-50 hover:border-green-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <FileText className="h-8 w-8 text-green-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Nurse Report</span>
@@ -5278,7 +5278,7 @@ const PartnerCaregiverDashboard = () => {
                         setShowCareLogsModal(true);
                       }}
                       disabled={!selectedClient}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Heart className="h-8 w-8 text-purple-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Care Log</span>
@@ -5286,7 +5286,7 @@ const PartnerCaregiverDashboard = () => {
                     </button>
                     <button 
                       onClick={() => setActiveTab('schedule')}
-                      className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-xl hover:bg-orange-50 hover:border-orange-300 hover:shadow-md transition-all"
+                      className="flex flex-col items-center justify-center p-4 sm:p-6 border border-gray-200 rounded-xl hover:bg-orange-50 hover:border-orange-300 hover:shadow-md transition-all"
                     >
                       <Calendar className="h-8 w-8 text-orange-600 mb-3" />
                       <span className="text-sm font-semibold text-gray-900">Schedule</span>
@@ -5364,7 +5364,7 @@ const PartnerCaregiverDashboard = () => {
       {showActivityModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-xl">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 sm:p-6 rounded-t-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-bold">Log Care Activity</h3>
@@ -5379,7 +5379,7 @@ const PartnerCaregiverDashboard = () => {
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-6">
               {/* Client Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -5567,14 +5567,14 @@ const PartnerCaregiverDashboard = () => {
       {showCarePlanModal && selectedClient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <ClipboardList className="h-8 w-8 text-white" />
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 sm:px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3 min-w-0">
+                <ClipboardList className="h-6 w-6 sm:h-8 sm:w-8 text-white flex-shrink-0" />
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-2xl font-bold text-white truncate">
                     {editingPlanId ? 'Edit Care Plan' : 'Create Care Plan'}
                   </h2>
-                  <p className="text-indigo-100">For: {selectedClient.name || selectedClient.fullName}</p>
+                  <p className="text-indigo-100 text-sm truncate">For: {selectedClient.name || selectedClient.fullName}</p>
                 </div>
               </div>
               <button
@@ -5582,15 +5582,15 @@ const PartnerCaregiverDashboard = () => {
                   setShowCarePlanModal(false);
                   setEditingPlanId(null);
                 }}
-                className="text-white hover:bg-indigo-500 rounded-lg p-2 transition-colors"
+                className="text-white hover:bg-indigo-500 rounded-lg p-2 transition-colors flex-shrink-0"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
                     <input
@@ -5679,7 +5679,7 @@ const PartnerCaregiverDashboard = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+            <div className="bg-gray-50 px-4 sm:px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
               <button
                 onClick={() => setShowCarePlanModal(false)}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
@@ -5775,12 +5775,12 @@ const PartnerCaregiverDashboard = () => {
       {showTaskDetailsModal && selectedTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <CheckSquare className="h-8 w-8 text-white" />
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Task Details</h2>
-                  <p className="text-blue-100">{selectedTask.clientName || 'Client'}</p>
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 sm:px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3 min-w-0">
+                <CheckSquare className="h-6 w-6 sm:h-8 sm:w-8 text-white flex-shrink-0" />
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-2xl font-bold text-white truncate">Task Details</h2>
+                  <p className="text-blue-100 text-sm truncate">{selectedTask.clientName || 'Client'}</p>
                 </div>
               </div>
               <button
@@ -5794,7 +5794,7 @@ const PartnerCaregiverDashboard = () => {
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
               <div className="space-y-6">
                 {/* Task Title and Status */}
                 <div className="flex items-center justify-between">
@@ -5914,7 +5914,7 @@ const PartnerCaregiverDashboard = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+            <div className="bg-gray-50 px-4 sm:px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
               <button
                 onClick={() => {
                   setShowTaskDetailsModal(false);
@@ -5955,18 +5955,18 @@ const PartnerCaregiverDashboard = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center">
-                  <span className="text-blue-600 font-bold text-xl">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-600 font-bold text-lg sm:text-xl">
                     {(selectedClient.name || selectedClient.fullName || 'C').toString().split(' ').map(n => n[0]).join('')}
                   </span>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-2xl font-bold text-white truncate">
                     {selectedClient.name || selectedClient.fullName || 'Unknown Client'}
                   </h2>
-                  <p className="text-blue-100">Client ID: {selectedClient.id.substring(0, 12)}...</p>
+                  <p className="text-blue-100 text-sm truncate">Client ID: {selectedClient.id.substring(0, 12)}...</p>
                 </div>
               </div>
               <button
@@ -5974,18 +5974,18 @@ const PartnerCaregiverDashboard = () => {
                   setSelectedClient(null);
                   setClientModalTab('info');
                 }}
-                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors"
+                className="text-white hover:bg-blue-500 rounded-lg p-2 transition-colors flex-shrink-0"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
             {/* Modal Tabs */}
-            <div className="border-b border-gray-200 bg-gray-50">
-              <div className="flex space-x-8 px-6">
+            <div className="border-b border-gray-200 bg-gray-50 overflow-x-auto">
+              <div className="flex space-x-4 sm:space-x-8 px-4 sm:px-6 min-w-max">
                 <button
                   onClick={() => setClientModalTab('info')}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  className={`py-3 sm:py-4 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     clientModalTab === 'info'
                       ? 'border-blue-600 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -5998,7 +5998,7 @@ const PartnerCaregiverDashboard = () => {
                 </button>
                 <button
                   onClick={() => setClientModalTab('medical')}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  className={`py-3 sm:py-4 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     clientModalTab === 'medical'
                       ? 'border-blue-600 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -6011,7 +6011,7 @@ const PartnerCaregiverDashboard = () => {
                 </button>
                 <button
                   onClick={() => setClientModalTab('carelog')}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  className={`py-3 sm:py-4 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
                     clientModalTab === 'carelog'
                       ? 'border-blue-600 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -6026,14 +6026,14 @@ const PartnerCaregiverDashboard = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-6">
+            <div className="overflow-y-auto max-h-[calc(90vh-160px)] p-4 sm:p-6">
               {/* Client Info Tab */}
               {clientModalTab === 'info' && (
                 <div className="space-y-6">
                 {/* Basic & Contact Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Basic Information */}
-                  <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+                  <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 sm:p-6">
                     <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
                       <User className="h-5 w-5 text-blue-600 mr-2" />
                       Basic Information
@@ -6073,7 +6073,7 @@ const PartnerCaregiverDashboard = () => {
                   </div>
 
                   {/* Contact Information */}
-                  <div className="bg-green-50 rounded-xl border border-green-100 p-6">
+                  <div className="bg-green-50 rounded-xl border border-green-100 p-4 sm:p-6">
                     <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center">
                       <Phone className="h-5 w-5 text-green-600 mr-2" />
                       Contact Information
@@ -6100,7 +6100,7 @@ const PartnerCaregiverDashboard = () => {
                 </div>
 
                 {/* Emergency Contact */}
-                <div className="bg-orange-50 rounded-xl border border-orange-100 p-6">
+                <div className="bg-orange-50 rounded-xl border border-orange-100 p-4 sm:p-6">
                   <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center">
                     <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
                     Emergency Contact
@@ -6133,7 +6133,7 @@ const PartnerCaregiverDashboard = () => {
               {clientModalTab === 'medical' && (
                 <div className="space-y-6">
                   {loadingReports ? (
-                    <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+                    <div className="bg-white rounded-xl border border-gray-100 p-6 sm:p-12 text-center">
                       <RefreshCw className="h-12 w-12 text-blue-500 mx-auto mb-4 animate-spin" />
                       <p className="text-gray-600">Loading medical records...</p>
                     </div>
@@ -6182,7 +6182,7 @@ const PartnerCaregiverDashboard = () => {
                       </div>
 
                       {/* Medical Records (Prescriptions, Consultations, Diagnostics) */}
-                      <div className="bg-white rounded-xl border border-gray-100 p-6">
+                      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                             <Stethoscope className="h-5 w-5 text-blue-600 mr-2" />
@@ -6524,7 +6524,7 @@ const PartnerCaregiverDashboard = () => {
                       </div>
 
                       {/* Care Plans List */}
-                      <div className="bg-white rounded-xl border border-gray-100 p-6">
+                      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                             <ClipboardList className="h-5 w-5 text-indigo-600 mr-2" />
@@ -6668,7 +6668,7 @@ const PartnerCaregiverDashboard = () => {
 
                       {/* Additional Medical Notes */}
                       {selectedClient.notes && (
-                        <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
+                        <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 sm:p-6">
                           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                             <FileText className="h-5 w-5 text-gray-600 mr-2" />
                             Additional Medical Notes
@@ -6683,7 +6683,7 @@ const PartnerCaregiverDashboard = () => {
 
                   {/* Role-Specific Medical Actions */}
                   {(isDoctor || isNurse || !isNonMedicalCaregiver) && (
-                    <div className="bg-purple-50 rounded-xl border border-purple-100 p-6">
+                    <div className="bg-purple-50 rounded-xl border border-purple-100 p-4 sm:p-6">
                       <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
                         <Activity className="h-5 w-5 text-purple-600 mr-2" />
                         {isDoctor ? 'Doctor Actions' : isNurse ? 'Nurse Actions' : 'Medical Actions'}
@@ -6796,7 +6796,7 @@ const PartnerCaregiverDashboard = () => {
                   </div>
 
                   {/* Role-Specific Care Actions */}
-                  <div className="bg-blue-50 rounded-xl border border-blue-100 p-8">
+                  <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 sm:p-8">
                     <div className="text-center mb-6">
                       <FileText className="h-16 w-16 text-blue-300 mx-auto mb-4" />
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
@@ -6816,7 +6816,7 @@ const PartnerCaregiverDashboard = () => {
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
                         <button
                           onClick={() => setShowMedicalReportModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-4 sm:p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
                         >
                           <Stethoscope className="h-8 w-8 text-blue-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">Medical Report</span>
@@ -6824,7 +6824,7 @@ const PartnerCaregiverDashboard = () => {
 
                         <button
                           onClick={() => setShowCarePlanModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-indigo-200 rounded-lg hover:border-indigo-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-4 sm:p-6 bg-white border-2 border-indigo-200 rounded-lg hover:border-indigo-300 hover:shadow-md transition-all"
                         >
                           <ClipboardList className="h-8 w-8 text-indigo-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">Care Plan</span>
@@ -6839,7 +6839,7 @@ const PartnerCaregiverDashboard = () => {
                             }
                             setShowCareLogForm(true);
                           }}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-4 sm:p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
                         >
                           <FileText className="h-8 w-8 text-green-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">View Care Logs</span>
@@ -6847,7 +6847,7 @@ const PartnerCaregiverDashboard = () => {
 
                         <button
                           onClick={() => setShowCareLogsModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-4 sm:p-6 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-300 hover:shadow-md transition-all"
                         >
                           <BarChart3 className="h-8 w-8 text-purple-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">All Records</span>
@@ -6867,7 +6867,7 @@ const PartnerCaregiverDashboard = () => {
                             }
                             setShowCareLogForm(true);
                           }}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-4 sm:p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
                         >
                           <FileText className="h-8 w-8 text-blue-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">Write Care Log</span>
@@ -6875,7 +6875,7 @@ const PartnerCaregiverDashboard = () => {
                         
                         <button
                           onClick={() => setShowVitalsModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-red-200 rounded-lg hover:border-red-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-4 sm:p-6 bg-white border-2 border-red-200 rounded-lg hover:border-red-300 hover:shadow-md transition-all"
                         >
                           <Activity className="h-8 w-8 text-red-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">Record Vital Signs</span>
@@ -6883,7 +6883,7 @@ const PartnerCaregiverDashboard = () => {
                         
                         <button
                           onClick={() => setShowNurseReportModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-4 sm:p-6 bg-white border-2 border-orange-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all"
                         >
                           <FileText className="h-8 w-8 text-orange-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">Nurse Report</span>
@@ -6896,7 +6896,7 @@ const PartnerCaregiverDashboard = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 max-w-2xl mx-auto">
                         <button
                           onClick={() => setShowCareLogForm(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-4 sm:p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
                         >
                           <FileText className="h-8 w-8 text-blue-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">Write Care Log</span>
@@ -6905,7 +6905,7 @@ const PartnerCaregiverDashboard = () => {
                         
                         <button
                           onClick={() => setShowCareLogsModal(true)}
-                          className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
+                          className="flex flex-col items-center p-4 sm:p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all"
                         >
                           <ClipboardList className="h-8 w-8 text-green-600 mb-3" />
                           <span className="text-sm font-medium text-gray-700">View My Logs</span>

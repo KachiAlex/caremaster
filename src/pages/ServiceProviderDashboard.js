@@ -91,7 +91,7 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
   const roleStats = getStatsForRole();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-4 sm:p-6">
       {roleStats.map((stat, index) => {
         const Icon = stat.icon;
         const colorClasses = {
@@ -110,7 +110,7 @@ const QuickStats = ({ userRole, stats, loading, onPatientClick, onShowTasks, onS
         return (
           <div 
             key={index} 
-            className="cm-card p-6 hover:shadow-md transition-shadow cursor-pointer" 
+            className="cm-card p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer" 
             onClick={handleClick}
           >
             <div className="flex items-center justify-between">
@@ -134,19 +134,19 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
   const navigate = useNavigate();
   
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 sm:p-6">
       {/* Recent clients */}
       <div 
         className="cm-card hover:shadow-lg transition-shadow cursor-pointer"
         onClick={() => navigate('/service-provider/medical-records')}
       >
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Recent clients</h3>
             <Users className="h-5 w-5 text-gray-400" />
           </div>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="space-y-4">
             {assignedPatients.length > 0 ? (
               assignedPatients.slice(0, 5).map((patient) => (
@@ -177,13 +177,13 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
         className="cm-card hover:shadow-lg transition-shadow cursor-pointer"
         onClick={() => navigate('/service-provider/consultations')}
       >
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Upcoming Consultations</h3>
             <Calendar className="h-5 w-5 text-gray-400" />
           </div>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="space-y-4">
             {upcomingAppointments.length > 0 ? (
               upcomingAppointments.slice(0, 5).map((consultation) => (
@@ -208,7 +208,7 @@ const DoctorSpecificSections = ({ userProfile, assignedPatients = [], upcomingAp
 
       {/* Referrals Section */}
       <div className="lg:col-span-2">
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <ReferralTracker institutionId={userProfile?.institutionId} userRole={userProfile?.userType} />
         </div>
       </div>
@@ -228,16 +228,16 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
   }, [todaysTasks, pendingTasks]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 sm:p-6">
       {/* Today's Tasks */}
       <div className="cm-card hover:shadow-lg transition-shadow cursor-pointer" onClick={() => window.location.href = '/service-provider/tasks'}>
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Today's Tasks</h3>
             <ClipboardList className="h-5 w-5 text-gray-400" />
           </div>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="space-y-4">
             {todayTasks.map((task) => (
               <div key={task.id} className="flex items-center justify-between">
@@ -263,13 +263,13 @@ const CaregiverSpecificSections = ({ userProfile, todaysTasks = [], pendingTasks
 
       {/* Recent Updates */}
       <div className="cm-card">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Recent Updates</h3>
             <Activity className="h-5 w-5 text-gray-400" />
           </div>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="space-y-4">
             {recentUpdates.map((task) => (
               <div key={task.id} className="flex items-center justify-between">
@@ -904,7 +904,7 @@ const ServiceProviderDashboard = () => {
         )}
 
         {isCaregiver && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <SpecializedCaregiverDashboard
               onPatientClick={handlePatientClick}
               assignedPatients={assignedPatientsData}
@@ -925,8 +925,8 @@ const ServiceProviderDashboard = () => {
       {showPatientModal && selectedPatient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Client Details</h2>
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+              <h2 className="text-lg sm:text-2xl font-bold text-gray-900">Client Details</h2>
               <button
                 onClick={handleCloseModal}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -935,7 +935,7 @@ const ServiceProviderDashboard = () => {
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <GlobalAllergyAlert patient={selectedPatient} />
               
               {/* Client Information */}

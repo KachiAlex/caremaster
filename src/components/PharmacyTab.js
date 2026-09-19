@@ -279,7 +279,7 @@ const PharmacyTab = ({
       {/* Pharmacy Statistics */}
       {pharmacyStats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 sm:p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-blue-100 text-sm font-medium">Total Prescriptions</p>
@@ -289,7 +289,7 @@ const PharmacyTab = ({
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl p-4 sm:p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-yellow-100 text-sm font-medium">Pending</p>
@@ -299,7 +299,7 @@ const PharmacyTab = ({
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 sm:p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-100 text-sm font-medium">Filled</p>
@@ -309,7 +309,7 @@ const PharmacyTab = ({
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-4 sm:p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-purple-100 text-sm font-medium">Total Revenue</p>
@@ -322,7 +322,7 @@ const PharmacyTab = ({
       )}
 
       {/* Client Selection */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
           <User className="h-5 w-5 text-blue-600 mr-2" />
           Select Client
@@ -378,7 +378,7 @@ const PharmacyTab = ({
 
       {/* Safety Check Panel */}
       {selectedClientId && safetyCheck && (
-        <div className={`rounded-2xl shadow-lg border p-6 ${
+        <div className={`rounded-2xl shadow-lg border p-4 sm:p-6 ${
           safetyCheck.criticalAlerts.length > 0 
             ? 'bg-red-50 border-red-200' 
             : safetyCheck.interactions.hasMajorInteractions
@@ -546,7 +546,7 @@ const PharmacyTab = ({
       {selectedClientId && (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
           {/* Search and Filter Header */}
-          <div className="p-6 border-b border-gray-100">
+          <div className="p-4 sm:p-6 border-b border-gray-100">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex items-center space-x-3">
                 <Pill className="h-6 w-6 text-blue-600" />

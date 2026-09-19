@@ -251,7 +251,7 @@ const PreclinicCaregiverDashboard = () => {
     <div className="space-y-6">
       {/* Statistics Cards - CareMaster Design System */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Today's Tasks</p>
@@ -262,7 +262,7 @@ const PreclinicCaregiverDashboard = () => {
             </div>
           </div>
         </div>
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Completed Tasks</p>
@@ -273,7 +273,7 @@ const PreclinicCaregiverDashboard = () => {
             </div>
           </div>
         </div>
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Assigned Clients</p>
@@ -284,7 +284,7 @@ const PreclinicCaregiverDashboard = () => {
             </div>
           </div>
         </div>
-        <div className="cm-card p-6">
+        <div className="cm-card p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="cm-mono text-xs uppercase tracking-wider text-text-soft mb-1">Completion Rate</p>
@@ -298,14 +298,14 @@ const PreclinicCaregiverDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="cm-card p-6">
+      <div className="cm-card p-4 sm:p-6">
         <h2 className="cm-display text-lg text-ink mb-4">{userProfile?.medicalQualification || 'Healthcare'} Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {dashboardConfig.quickActions.map((action, index) => (
             <a
               key={index}
               href={action.href}
-              className="flex flex-col items-center p-6 rounded-lg border-2 border-ink/10 hover:border-gold hover:bg-gold-soft/30 transition-colors group"
+              className="flex flex-col items-center p-4 sm:p-6 rounded-lg border-2 border-ink/10 hover:border-gold hover:bg-gold-soft/30 transition-colors group"
             >
               <div className="w-12 h-12 rounded-lg bg-gold-soft/30 text-gold-deep flex items-center justify-center mb-3 group-hover:bg-gold-soft/50">
                 <action.icon className="h-6 w-6" />
@@ -398,14 +398,14 @@ const PreclinicCaregiverDashboard = () => {
         </div>
 
         {assignedClients.length === 0 ? (
-          <div className="cm-card p-12 text-center">
+          <div className="cm-card p-6 sm:p-12 text-center">
             <User className="h-16 w-16 text-ink/20 mx-auto mb-4" />
             <h3 className="cm-display text-lg text-ink mb-2">No Clients Assigned</h3>
             <p className="text-text-soft">You have no clients assigned to you yet.</p>
           </div>
         ) : (
-          <div className="cm-card overflow-hidden">
-            <table className="w-full">
+          <div className="cm-card overflow-hidden overflow-x-auto">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-ink/8">
                   <th className="px-6 py-4 text-left cm-mono text-xs uppercase tracking-wider text-text-soft">Client</th>
@@ -579,7 +579,7 @@ const PreclinicCaregiverDashboard = () => {
         <span className="cm-eyebrow">Care Activities</span>
         <h2 className="mt-2">Track and manage care activities</h2>
       </div>
-      <div className="cm-card p-12 text-center">
+      <div className="cm-card p-6 sm:p-12 text-center">
         <Activity className="h-16 w-16 text-ink/20 mx-auto mb-4" />
         <h3 className="cm-display text-lg text-ink mb-2">Activity Tracking</h3>
         <p className="text-text-soft">Care activities and Client interactions will be tracked here</p>

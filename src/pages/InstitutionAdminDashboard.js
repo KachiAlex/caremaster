@@ -2889,7 +2889,7 @@ const renderMessagesTab = () => {
 
             <div className="flex-1 overflow-y-auto">
               {formattedConversations.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
+                <div className="p-4 sm:p-8 text-center text-gray-500">
                   <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                   <p>No conversations yet</p>
                 </div>
@@ -3202,7 +3202,7 @@ const renderMessagesTab = () => {
               </div>
               <div className="flex-1 overflow-y-auto p-2">
                 {availableUsers.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
+                  <div className="p-4 sm:p-8 text-center text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                     <p>No users available to chat with</p>
                   </div>
@@ -3442,7 +3442,7 @@ const renderMessagesTab = () => {
               {/* Left Column - 2/3 width */}
               <div className="lg:col-span-2 space-y-6">
                 {/* Quick Actions */}
-                <section className="cm-card p-6">
+                <section className="cm-card p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
                     <span className="text-xs text-gray-500">{quickActions.length} tools</span>
@@ -3466,7 +3466,7 @@ const renderMessagesTab = () => {
 
                 {/* Pending Diagnostics */}
                 {pendingDiagnostics.length > 0 && (
-                  <section className="cm-card p-6">
+                  <section className="cm-card p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <TestTube className="h-5 w-5 text-amber-500" />
@@ -3505,7 +3505,7 @@ const renderMessagesTab = () => {
 
                 {/* Recent Assignments */}
                 {assignments.length > 0 && (
-                  <section className="cm-card p-6">
+                  <section className="cm-card p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <ClipboardList className="h-5 w-5 text-indigo-500" />
@@ -3552,7 +3552,7 @@ const renderMessagesTab = () => {
                 {/* System Alerts */}
                 {systemAlerts.length > 0 && (
                   <section 
-                    className="cm-card p-6 hover:shadow-md transition cursor-pointer"
+                    className="cm-card p-4 sm:p-6 hover:shadow-md transition cursor-pointer"
                     onClick={() => setActiveTab('security')}
                   >
                     <div className="flex items-center gap-2 mb-4">
@@ -3572,7 +3572,7 @@ const renderMessagesTab = () => {
 
                 {/* Top Caregivers */}
                 {topCaregivers.length > 0 && (
-                  <section className="cm-card p-6">
+                  <section className="cm-card p-4 sm:p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <Award className="h-5 w-5 text-yellow-500" />
                       <h3 className="text-lg font-semibold text-gray-900">Top Caregivers</h3>
@@ -3606,7 +3606,7 @@ const renderMessagesTab = () => {
 
                 {/* Performance Metrics */}
                 <section 
-                  className="cm-card p-6 hover:shadow-md transition cursor-pointer"
+                  className="cm-card p-4 sm:p-6 hover:shadow-md transition cursor-pointer"
                   onClick={() => setActiveTab('analytics')}
                 >
                   <div className="flex items-center gap-2 mb-4">
@@ -3732,7 +3732,7 @@ const renderMessagesTab = () => {
             ) : (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
                 {clients.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500">No clients registered yet.</div>
+                  <div className="p-6 sm:p-12 text-center text-gray-500">No clients registered yet.</div>
                 ) : (
                   <div
                     className="overflow-x-auto"
@@ -3882,7 +3882,7 @@ const renderMessagesTab = () => {
             ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
               {caregivers.length === 0 ? (
-                <div className="p-12 text-center text-gray-500">No caregivers available.</div>
+                <div className="p-6 sm:p-12 text-center text-gray-500">No caregivers available.</div>
               ) : (
                 <div
                   className="overflow-x-auto"
@@ -4110,7 +4110,7 @@ const renderMessagesTab = () => {
             </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
               {pharmacists.length === 0 ? (
-                <div className="p-12 text-center">
+                <div className="p-6 sm:p-12 text-center">
                   <Pill className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                   <p className="text-gray-500 mb-4">No pharmacists found.</p>
                   <button
@@ -4294,7 +4294,7 @@ const renderMessagesTab = () => {
             {schedulingSubTab === 'assignments' ? (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
                 {assignments.length === 0 ? (
-                  <div className="p-12 text-center">
+                  <div className="p-6 sm:p-12 text-center">
                     <ClipboardList className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p className="text-gray-500 mb-4">No assignments scheduled.</p>
                   </div>
@@ -4607,7 +4607,7 @@ const renderMessagesTab = () => {
               </div>
             </div>
             {/* Account & Change Password */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
               <h4 className="text-lg font-semibold text-gray-900 mb-1">Account Security</h4>
               <p className="text-sm text-gray-600 mb-5">
                 Change your admin password. Other devices will need to log in again after changing.
@@ -4630,7 +4630,7 @@ const renderMessagesTab = () => {
         );
       default:
         return (
-          <section className="cm-card p-6">
+          <section className="cm-card p-4 sm:p-6">
             <h3 className="text-lg font-semibold text-gray-900">Coming Soon</h3>
             <p className="text-sm text-gray-600 mt-2">We are preparing this workspace for you. Check back soon.</p>
           </section>
@@ -4794,7 +4794,7 @@ const renderMessagesTab = () => {
       {showAssignmentDetails && selectedAssignment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">Assignment Details</h3>
                 <p className="text-sm text-gray-500 mt-1">View complete assignment information</p>
@@ -4810,7 +4810,7 @@ const renderMessagesTab = () => {
               </button>
             </div>
             
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-6">
               {/* Header Info */}
               <div className="flex items-start justify-between">
                 <div>
@@ -4984,7 +4984,7 @@ const renderMessagesTab = () => {
       {showAssignmentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">Create Assignment</h3>
                 <p className="text-sm text-gray-500 mt-1">Assign a client to a caregiver</p>
@@ -5028,7 +5028,7 @@ const renderMessagesTab = () => {
                 setSelectedClientForAssignment('');
                 setSelectedCaregiverForAssignment('');
               }}
-              className="p-6 space-y-4"
+              className="p-4 sm:p-6 space-y-4"
             >
               {/* Client Selection */}
               <div>
@@ -5181,7 +5181,7 @@ const renderMessagesTab = () => {
       {showEditAssignmentModal && selectedAssignmentForEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">Edit Assignment</h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -5214,7 +5214,7 @@ const renderMessagesTab = () => {
                 event.preventDefault();
                 handleUpdateAssignment(editAssignmentForm);
               }}
-              className="p-6 space-y-4"
+              className="p-4 sm:p-6 space-y-4"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -5372,7 +5372,7 @@ const renderMessagesTab = () => {
       {showEditUserModal && selectedUserForEdit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-900">Edit {selectedUserForEdit.userType === 'pharmacist' ? 'Pharmacist' : 'User'}</h3>
               <button
                 onClick={() => {
