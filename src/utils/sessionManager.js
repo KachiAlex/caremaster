@@ -47,18 +47,21 @@ export const clearTabSession = () => {
  * Check if the current Backend user matches this tab's expected session
  */
 export const validateTabSession = (currentUser, currentUserRole) => {
+  // No current user — transient auth state (context still resolving on
+  // remount/back-navigation) or genuinely logged out. Either way the route
+  // guards (user ? <Dashboard/> : <Navigate to="/login"/>) own the redirect;
+  // reporting a conflict here caused spurious navigate('/login') loops and a
+  // TypeError in callers that do setTabSession(role, user.uid) on needsInit.
+  if (!currentUser) {
+    return { valid: true };
+  }
+
   const tabSession = getTabSession();
-  
+
   // No tab session set yet - first load
   if (!tabSession.role || !tabSession.userId) {
     console.log('📝 No tab session found - initializing...');
     return { valid: true, needsInit: true };
-  }
-  
-  // No current user - logged out
-  if (!currentUser) {
-    console.log('⚠️ No current user - session invalid');
-    return { valid: false, reason: 'logged_out' };
   }
   
   // User ID mismatch - different user logged in (this is a real conflict)
