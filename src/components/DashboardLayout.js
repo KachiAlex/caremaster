@@ -245,12 +245,12 @@ const DashboardLayout = ({
       {/* Main content */}
       <main className="flex-1 md:ml-64 min-w-0">
         {/* Top bar */}
-        <div className="cm-topbar sticky top-0 z-10 px-4 sm:px-6 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 min-w-0">
+        <div className="cm-topbar sticky top-0 z-10 px-3 sm:px-6 py-3">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="md:hidden p-2 rounded-lg hover:bg-ink/5 text-ink"
+                className="md:hidden p-2 rounded-lg hover:bg-ink/5 text-ink flex-shrink-0"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -270,7 +270,7 @@ const DashboardLayout = ({
                 </button>
               )}
               <div className="min-w-0">
-                {/* Breadcrumbs: full trail on desktop, just current tab on mobile */}
+                {/* Breadcrumbs: desktop only — hidden on mobile to save space */}
                 {breadcrumbs && breadcrumbs.length > 1 ? (
                   <div className="hidden sm:flex items-center gap-1 cm-mono text-[10px] uppercase tracking-[0.12em] text-gold-deep">
                     {breadcrumbs.map((bc, i) => (
@@ -286,23 +286,17 @@ const DashboardLayout = ({
                     ))}
                   </div>
                 ) : (
-                  <p className="cm-mono text-[10px] uppercase tracking-[0.12em] text-gold-deep">
+                  <p className="hidden sm:block cm-mono text-[10px] uppercase tracking-[0.12em] text-gold-deep">
                     {activeTabLabel}
                   </p>
                 )}
-                {/* Mobile: just the current tab label */}
-                {breadcrumbs && breadcrumbs.length > 1 && (
-                  <p className="sm:hidden cm-mono text-[10px] uppercase tracking-[0.12em] text-gold-deep">
-                    {breadcrumbs[breadcrumbs.length - 1].label || activeTabLabel}
-                  </p>
-                )}
-                <h2 className="cm-display text-lg text-ink truncate">
+                <h2 className="cm-display text-base sm:text-lg text-ink truncate">
                   {institutionName}
                 </h2>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
               <EmergencyButton />
               {headerActions}
 
