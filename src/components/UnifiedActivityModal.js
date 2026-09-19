@@ -9,6 +9,10 @@ import { useUser } from '../contexts/UserContext';
 import { createCareLog } from '../api/careLogsAPI';
 import { completeCareTask } from '../api/careTasksAPI';
 import { completeTaskAssignment } from '../api/taskAssignmentAPI';
+import { assignmentAPI } from '../api/assignmentAPI';
+import { doc, updateDoc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
+import fileStorageService from '../services/fileStorageService';
 import adlAPI from '../api/adlAPI';
 import FileUpload from './FileUpload';
 
@@ -195,13 +199,60 @@ const UnifiedActivityModal = ({
     try {
       setSubmitting(true);
 
+      // Upload photos to storage first — raw File objects are not
+      // JSON-serializable and would be persisted as empty objects.
+      let uploadedPhotos = [];
+      if (photos.length > 0) {
+        try {
+          uploadedPhotos = await fileStorageService.uploadFiles(
+            photos.filter(p => p instanceof File),
+            `activities/${clientId}/${pendingTask?.id || 'log'}`
+          );
+        } catch (uploadError) {
+          console.error('Photo upload failed:', uploadError);
+          toast.warn('Photos failed to upload — saving without them');
+        }
+      }
+
       if (logType === 'task' && pendingTask) {
-        // Complete the task
+        // Complete the task — route to the collection it came from
         const taskId = pendingTask.id || pendingTask.taskId;
-        if (pendingTask.collection === 'careTasks' || !pendingTask.collection) {
-          await completeCareTask(taskId, notes, photos);
+        // Timeline items carry `type` rather than `collection`
+        const typeToCollection = {
+          task: 'careTasks',
+          assignment: 'clientAssignments',
+          schedule: 'schedules',
+          appointment: 'appointments',
+        };
+        const taskCollection = pendingTask.collection || typeToCollection[pendingTask.type] || 'careTasks';
+        if (taskCollection === 'careTasks') {
+          await completeCareTask(taskId, notes, uploadedPhotos);
+        } else if (taskCollection === 'taskAssignments' || taskCollection === 'nurseAssignments') {
+          await completeTaskAssignment(taskId, notes, uploadedPhotos);
+        } else if (taskCollection === 'clientAssignments') {
+          await assignmentAPI.updateAssignment(taskId, {
+            status: 'completed',
+            completedAt: serverTimestamp(),
+            completionNotes: notes,
+            photos: uploadedPhotos,
+          });
+        } else if (taskCollection === 'schedules') {
+          await updateDoc(doc(db, 'schedules', taskId), {
+            status: 'completed',
+            completedAt: serverTimestamp(),
+            completionNotes: notes,
+            photos: uploadedPhotos,
+            updatedAt: serverTimestamp(),
+          });
+        } else if (taskCollection === 'appointments') {
+          await updateDoc(doc(db, 'appointments', taskId), {
+            status: 'completed',
+            completedAt: serverTimestamp(),
+            completionNotes: notes,
+            updatedAt: serverTimestamp(),
+          });
         } else {
-          await completeTaskAssignment(taskId, notes, photos);
+          await completeCareTask(taskId, notes, uploadedPhotos);
         }
         toast.success('Task completed successfully!');
       } else if (logType === 'care-note') {
@@ -219,7 +270,7 @@ const UnifiedActivityModal = ({
           moodBehavior: mood,
           observations: observations || notes,
           concerns,
-          photos,
+          photos: uploadedPhotos,
           status: 'completed',
         });
         toast.success('Care note saved!');
@@ -237,7 +288,7 @@ const UnifiedActivityModal = ({
           category: adlCategory || activity?.category,
           status: adlStatus,
           notes,
-          photos,
+          photos: uploadedPhotos,
           timestamp: new Date().toISOString(),
         });
         toast.success('ADL activity logged!');
@@ -261,7 +312,7 @@ const UnifiedActivityModal = ({
           painLevel,
           weight,
           observations: notes || `Vitals recorded: BP ${bloodPressure || 'N/A'}, HR ${heartRate || 'N/A'}, Temp ${temperature || 'N/A'}`,
-          photos,
+          photos: uploadedPhotos,
           status: 'completed',
           logType: 'vitals',
         });
@@ -549,13 +600,13 @@ const UnifiedActivityModal = ({
               <Camera className="h-4 w-4 inline mr-1" />
               Photos (optional)
             </label>
-            <FileUpload onUpload={handlePhotoCapture} multiple />
+            <FileUpload onFileSelect={handlePhotoCapture} multiple />
             {photos.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {photos.map((photo, idx) => (
                   <div key={idx} className="relative">
                     <img
-                      src={typeof photo === 'string' ? photo : photo.url || photo.preview}
+                      src={typeof photo === 'string' ? photo : (photo.url || photo.preview || (photo instanceof File ? URL.createObjectURL(photo) : ''))}
                       alt={`Upload ${idx + 1}`}
                       className="h-16 w-16 object-cover rounded-lg border border-gray-200"
                     />

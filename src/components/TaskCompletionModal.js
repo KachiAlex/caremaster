@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Camera, Upload, Check, Mic, AlertTriangle, Play, Clock } from 'lucide-react';
+import { X, Check, AlertTriangle, Play, Clock } from 'lucide-react';
 import { completeCareTask } from '../api/careTasksAPI';
 import { completeTaskAssignment } from '../api/taskAssignmentAPI';
 import { startTask, completeTask } from '../api/taskTimeTrackingAPI';
+import { assignmentAPI } from '../api/assignmentAPI';
+import { doc, updateDoc, serverTimestamp } from 'backend/database';
+import { db } from '../backend/config';
+import fileStorageService from '../services/fileStorageService';
 import { useUser } from '../contexts/UserContext';
 import { toast } from 'react-toastify';
 import FileUpload from './FileUpload';
@@ -11,7 +15,6 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
   const { userProfile, user } = useUser();
   const [completionNotes, setCompletionNotes] = useState('');
   const [photos, setPhotos] = useState([]);
-  const [isRecording, setIsRecording] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [taskStarted, setTaskStarted] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -24,6 +27,10 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
       // Calculate elapsed time
       const startTime = task.taskStartTime?.toDate?.() || new Date(task.taskStartTime);
       const updateElapsed = () => {
+        if (isNaN(startTime.getTime())) {
+          setElapsedTime(0);
+          return;
+        }
         const now = new Date();
         const elapsed = (now - startTime) / 1000; // seconds
         setElapsedTime(elapsed);
@@ -54,7 +61,8 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
         return;
       }
 
-      if (task?.collection && task.collection !== 'careTasks') {
+      const effectiveCollection = task?.collection || (task?.type === 'task' ? 'careTasks' : task?.type);
+      if (effectiveCollection && effectiveCollection !== 'careTasks') {
         toast.info('Time tracking is only available for care tasks');
         return;
       }
@@ -80,7 +88,12 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
   ];
 
   const handlePhotoCapture = (uploadedPhotos) => {
-    setPhotos(prev => [...prev, ...uploadedPhotos]);
+    // Pre-compute object URLs once — creating them in render leaks a new
+    // blob URL on every re-render (the elapsed timer ticks every second).
+    const withPreviews = uploadedPhotos.map(p =>
+      p instanceof File && !p.previewUrl ? Object.assign(p, { previewUrl: URL.createObjectURL(p) }) : p
+    );
+    setPhotos(prev => [...prev, ...withPreviews]);
   };
 
   const handleRemovePhoto = (index) => {
@@ -91,21 +104,6 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
     setCompletionNotes(prev => prev ? `${prev}\n${note}` : note);
   };
 
-  const handleVoiceNote = () => {
-    // Toggle voice recording
-    setIsRecording(!isRecording);
-    
-    if (!isRecording) {
-      toast.info('Voice recording started...');
-      // TODO: Implement actual voice recording
-      setTimeout(() => {
-        setIsRecording(false);
-        toast.success('Voice note saved');
-        setCompletionNotes(prev => prev + '\n[Voice note recorded]');
-      }, 3000);
-    }
-  };
-
   const handleSubmit = async () => {
     if (!completionNotes.trim()) {
       toast.error('Please add completion notes');
@@ -114,24 +112,66 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
 
     try {
       setSubmitting(true);
-      
+
       const caregiverId = userProfile?.id || userProfile?.uid || user?.uid;
-      
-      // If task was started with time tracking, use time tracking API
-      if (taskStarted && task?.status === 'in_progress') {
-        if (task.collection === 'careTasks' || !task.collection) {
-          await completeTask(task.id, caregiverId, completionNotes, photos);
-        } else {
-          // For task assignments, use regular completion
-          await completeTaskAssignment(task.id, completionNotes, photos);
+
+      // Upload photos to storage first — raw File objects are not
+      // JSON-serializable and would be persisted as empty objects.
+      let uploadedPhotos = [];
+      if (photos.length > 0) {
+        try {
+          uploadedPhotos = await fileStorageService.uploadFiles(
+            photos.filter(p => p instanceof File),
+            `task-completions/${task.id}`
+          );
+        } catch (uploadError) {
+          console.error('Photo upload failed:', uploadError);
+          toast.warn('Photos failed to upload — completing task without them');
         }
+      }
+
+      const typeToCollection = {
+        task: 'careTasks',
+        assignment: 'clientAssignments',
+        schedule: 'schedules',
+        appointment: 'appointments',
+      };
+      const taskCollection = task?.collection || typeToCollection[task?.type] || 'careTasks';
+      const isInProgress = taskStarted || task?.status === 'in_progress' || task?.status === 'in-progress';
+
+      if (taskCollection === 'careTasks') {
+        if (isInProgress) {
+          await completeTask(task.id, caregiverId, completionNotes, uploadedPhotos);
+        } else {
+          await completeCareTask(task.id, completionNotes, uploadedPhotos);
+        }
+      } else if (taskCollection === 'taskAssignments' || taskCollection === 'nurseAssignments') {
+        await completeTaskAssignment(task.id, completionNotes, uploadedPhotos);
+      } else if (taskCollection === 'clientAssignments') {
+        await assignmentAPI.updateAssignment(task.id, {
+          status: 'completed',
+          completedAt: serverTimestamp(),
+          completionNotes,
+          photos: uploadedPhotos,
+        });
+      } else if (taskCollection === 'schedules') {
+        await updateDoc(doc(db, 'schedules', task.id), {
+          status: 'completed',
+          completedAt: serverTimestamp(),
+          completionNotes,
+          photos: uploadedPhotos,
+          updatedAt: serverTimestamp(),
+        });
+      } else if (taskCollection === 'appointments') {
+        await updateDoc(doc(db, 'appointments', task.id), {
+          status: 'completed',
+          completedAt: serverTimestamp(),
+          completionNotes,
+          updatedAt: serverTimestamp(),
+        });
       } else {
-        // Regular completion without time tracking
-        if (task.collection === 'careTasks' || !task.collection) {
-          await completeCareTask(task.id, completionNotes, photos);
-        } else {
-          await completeTaskAssignment(task.id, completionNotes, photos);
-        }
+        // Unknown collection — fall back to care task completion
+        await completeCareTask(task.id, completionNotes, uploadedPhotos);
       }
 
       toast.success('Task completed successfully!');
@@ -175,14 +215,15 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
               <div className="flex items-center space-x-2 mt-2">
                 <Clock className="h-4 w-4 text-gray-500" />
                 <span className="text-sm text-gray-600">
-                  {new Date(task.scheduledTime).toLocaleString()}
+                  {(task.scheduledTime?.toDate?.() || new Date(task.scheduledTime)).toLocaleString()}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Time Tracking Section */}
-          {!taskStarted && task?.status !== 'completed' && (
+          {/* Time Tracking Section — only careTasks support the time-tracking API */}
+          {!taskStarted && task?.status !== 'completed' &&
+            (!(task?.collection || task?.type) || task.collection === 'careTasks' || task.type === 'task') && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -253,18 +294,6 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
               <label className="block text-sm font-medium text-gray-700">
                 Completion Notes *
               </label>
-              <button
-                type="button"
-                onClick={handleVoiceNote}
-                className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm ${
-                  isRecording 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <Mic className="h-4 w-4" />
-                <span>{isRecording ? 'Recording...' : 'Voice Note'}</span>
-              </button>
             </div>
             <textarea
               value={completionNotes}
@@ -292,7 +321,7 @@ const TaskCompletionModal = ({ task, Client, onClose, onComplete }) => {
                 {photos.map((photo, index) => (
                   <div key={index} className="relative group">
                     <img
-                      src={photo.url || URL.createObjectURL(photo)}
+                      src={photo.url || photo.previewUrl}
                       alt={`Documentation ${index + 1}`}
                       className="w-full h-24 object-cover rounded-lg"
                     />
