@@ -194,6 +194,14 @@ export const sendPasswordResetEmail = (_auth, email) => {
   }).catch(() => {}); // non-fatal
 };
 
+// Admin-only: clear a user's failed-login lockout.
+export const unlockUserAccount = ({ userId, email } = {}) => {
+  return apiFetch('/auth/unlock-user', {
+    method: 'POST',
+    body: JSON.stringify({ userId, email }),
+  });
+};
+
 export const sendEmailVerification = (_user) => Promise.resolve();
 
 export const verifyPasswordResetCode = (_auth, _code) =>

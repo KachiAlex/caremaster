@@ -452,13 +452,27 @@ const SENSITIVE_FIELDS = [
   'locked_until',
 ];
 
-function stripSensitiveFields(record) {
+function stripSensitiveFields(record, { revealLockState = false } = {}) {
   if (!record || typeof record !== 'object') return record;
   const cleaned = { ...record };
   for (const field of SENSITIVE_FIELDS) {
+    // Records reach this function in camelCase form (after mapToCamelCase),
+    // so strip both snake_case and camelCase variants of each field.
+    const camel = field.replace(/_([a-z0-9])/g, (_, l) => l.toUpperCase());
+    // Lockout state is only sensitive for non-admin viewers — admins need
+    // it to see and clear account lockouts from the user management UI.
+    if (revealLockState && (field === 'failed_login_count' || field === 'locked_until')) {
+      continue;
+    }
     delete cleaned[field];
+    delete cleaned[camel];
   }
   return cleaned;
+}
+
+function isAdminViewer(user) {
+  const t = user?.user_type;
+  return ['admin', 'institution-admin', 'InstitutionAdmin', 'super-admin', 'superadmin'].includes(t);
 }
 
 // GET /api/data/:table - List all records with optional filtering
@@ -569,7 +583,7 @@ router.get('/:table', async (req, res) => {
 
     res.json({
       success: true,
-      data: records.map(r => stripSensitiveFields(mapToCamelCase(r))),
+      data: records.map(r => stripSensitiveFields(mapToCamelCase(r), { revealLockState: isAdminViewer(req.user) })),
       pagination
     });
   } catch (error) {
@@ -628,7 +642,7 @@ router.get('/:table/:id', async (req, res) => {
       return res.status(403).json({ success: false, message: 'You do not have access to this record' });
     }
 
-    res.json({ success: true, data: stripSensitiveFields(mapToCamelCase(record)) });
+    res.json({ success: true, data: stripSensitiveFields(mapToCamelCase(record), { revealLockState: isAdminViewer(req.user) }) });
   } catch (error) {
     logger.error(`Failed to fetch ${req.params.table}/${req.params.id}:`, error);
     res.status(500).json({ success: false, message: 'Failed to fetch record' });
@@ -1004,7 +1018,7 @@ router.put('/:table/:id', async (req, res) => {
     // care-relevant status changes (scheduled, completed, cancelled, etc.)
     dispatchTableNotifications(tableName, record, req.user, 'update').catch(() => {});
 
-    res.json({ success: true, data: stripSensitiveFields(mapToCamelCase(record)) });
+    res.json({ success: true, data: stripSensitiveFields(mapToCamelCase(record), { revealLockState: isAdminViewer(req.user) }) });
   } catch (error) {
     logger.error(`Failed to update ${req.params.table}/${req.params.id}:`, error);
     res.status(500).json({ success: false, message: 'Failed to update record' });
