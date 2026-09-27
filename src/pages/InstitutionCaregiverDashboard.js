@@ -5565,6 +5565,19 @@ const InstitutionCaregiverDashboard = () => {
                     <span>Care Activity</span>
                   </div>
                 </button>
+                <button
+                  onClick={() => setClientModalTab('documents')}
+                  className={`py-3 sm:py-4 px-2 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
+                    clientModalTab === 'documents'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4" />
+                    <span>Documents</span>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -6377,6 +6390,78 @@ const InstitutionCaregiverDashboard = () => {
                       setShowUnifiedActivityModal(true);
                     }}
                   />
+                </div>
+              )}
+
+              {/* Documents Tab — referral letters, ID, medical records uploaded at registration */}
+              {clientModalTab === 'documents' && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Client Documents</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Referral letters, ID cards, medical records and clinical documents for {selectedClient?.name || 'this client'}
+                    </p>
+                  </div>
+                  {(() => {
+                    const docs = selectedClient?.documents || selectedClient?.metadata?.documents || [];
+                    const flatDocs = [
+                      ['idCardUrl', 'ID Card'],
+                      ['referralLetterUrl', 'Referral Letter'],
+                      ['medicalRecordUrl', 'Medical Record'],
+                      ['insuranceCardUrl', 'Insurance Card'],
+                      ['clinicalNotesUrl', 'Clinical Notes & Care Instructions'],
+                    ]
+                      .filter(([key]) => selectedClient?.[key])
+                      .map(([key, label]) => ({ documentType: key, url: selectedClient[key], label }));
+
+                    const allDocs = [
+                      ...docs.map(d => ({
+                        url: d.url,
+                        label: d.label || (d.documentType || 'Document').replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim(),
+                        originalName: d.originalName,
+                        uploadedAt: d.uploadedAt
+                      })),
+                      ...flatDocs.filter(fd => !docs.some(d => d.url === fd.url))
+                    ];
+
+                    if (allDocs.length === 0) {
+                      return (
+                        <div className="text-center py-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                          <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">No documents uploaded for this client yet.</p>
+                          <p className="text-xs text-gray-400 mt-1">Documents uploaded during registration will appear here.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2">
+                        {allDocs.map((docItem, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate capitalize">{docItem.label}</p>
+                                <p className="text-xs text-gray-500 truncate">
+                                  {docItem.originalName || 'Document'}
+                                  {docItem.uploadedAt ? ` · ${new Date(docItem.uploadedAt).toLocaleDateString()}` : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <a
+                              href={docItem.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-3 flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              View
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

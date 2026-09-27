@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ClientActivityTimeline from './ClientActivityTimeline';
+import { getDocumentTypeLabel } from '../utils/clientDocumentUpload';
 import { useUser } from '../contexts/UserContext';
 import VitalsLogModal from './VitalsLogModal';
 import ConsultationsLogModal from './ConsultationsLogModal';
@@ -161,6 +162,7 @@ const ClientDetailsModal = ({
               { id: 'overview', label: 'Overview' },
               { id: 'operations', label: 'Operations' },
               { id: 'medical', label: 'Medical Info' },
+              { id: 'documents', label: 'Documents' },
               { id: 'activity', label: 'Activity Log' }
             ].map(tab => (
               <button
@@ -438,6 +440,80 @@ const ClientDetailsModal = ({
                   <p className="text-sm text-gray-600 whitespace-pre-wrap">{client.notes}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'documents' && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Client Documents</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Referral letters, ID cards, medical records, insurance cards and clinical documents uploaded at registration.
+                </p>
+              </div>
+              {(() => {
+                // Documents are stored on metadata.documents (array of
+                // {documentType, url, originalName, uploadedAt}) and merged to
+                // top-level by normalizeClientDoc; also support flat *Url fields.
+                const docs = client.documents || client.metadata?.documents || [];
+                const flatDocs = [
+                  ['idCardUrl', 'ID Card'],
+                  ['referralLetterUrl', 'Referral Letter'],
+                  ['medicalRecordUrl', 'Medical Record'],
+                  ['insuranceCardUrl', 'Insurance Card'],
+                  ['clinicalNotesUrl', 'Clinical Notes & Care Instructions'],
+                ]
+                  .filter(([key]) => client[key])
+                  .map(([key, label]) => ({ documentType: key, url: client[key], label }));
+
+                const allDocs = [
+                  ...docs.map(d => ({
+                    url: d.url,
+                    label: getDocumentTypeLabel(d.documentType),
+                    originalName: d.originalName,
+                    uploadedAt: d.uploadedAt
+                  })),
+                  // Only add flat URLs not already covered by the array
+                  ...flatDocs.filter(fd => !docs.some(d => d.url === fd.url))
+                ];
+
+                if (allDocs.length === 0) {
+                  return (
+                    <div className="text-center py-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                      <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No documents uploaded for this client yet.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2">
+                    {allDocs.map((docItem, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{docItem.label}</p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {docItem.originalName || 'Document'}
+                              {docItem.uploadedAt ? ` · ${new Date(docItem.uploadedAt).toLocaleDateString()}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <a
+                          href={docItem.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-3 flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          View
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
