@@ -1711,6 +1711,8 @@ const CaregiverDashboard = () => {
           clientName={selectedClient.name || selectedClient.fullName || 'Unknown Client'}
           nurseId={user?.uid}
           nurseName={userProfile?.name || userProfile?.displayName || 'Nurse'}
+          institutionId={userProfile?.institutionId || selectedClient?.institutionId}
+          registrationMedications={selectedClient.medications || []}
           onSave={() => {
             setShowMedicationModal(false);
             // Refresh client data if needed

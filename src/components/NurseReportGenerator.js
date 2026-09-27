@@ -37,6 +37,7 @@ import { getCareLogsByClient } from '../api/careLogsAPI';
 import { getCareTasksByClient } from '../api/careTasksAPI';
 import { getClientById } from '../api/patientsAPI';
 import { calculateNewsScore } from '../utils/newsScore';
+import fileStorageService from '../services/fileStorageService';
 import GlobalAllergyAlert from './GlobalAllergyAlert';
 
 const OBSERVATION_CODES = [
@@ -335,6 +336,22 @@ const NurseReportGenerator = ({ clientId, clientName, nurseId, nurseName, instit
     
     try {
       const priorityCode = getHighestPriorityCode();
+
+      // Upload clinical photos to storage first — storing base64 data URLs
+      // in the report bloats the row and can exceed payload limits.
+      let photoRecords = [];
+      if (formData.photos.length > 0) {
+        try {
+          photoRecords = await fileStorageService.uploadFiles(
+            formData.photos.map(p => p.file).filter(Boolean),
+            `nurse-reports/${clientId}`
+          );
+        } catch (uploadError) {
+          console.error('Photo upload failed:', uploadError);
+          toast.warn('Photos failed to upload — submitting report without them');
+        }
+      }
+      
       
       // Clinical Accountability Signature
       const signatureData = {
@@ -387,7 +404,7 @@ const NurseReportGenerator = ({ clientId, clientName, nurseId, nurseName, instit
         care_activities: formData.careActivities,
         medications_given: formData.verifiedMedications, // use the checklist
         treatments_provided: formData.treatmentsProvided,
-        photos: formData.photos,
+        photos: photoRecords,
         
         // Legacy support / Summaries
         vital_signs_summary: { summary: formData.assessment, latestVitals: recentVitals[0] },
@@ -401,21 +418,25 @@ const NurseReportGenerator = ({ clientId, clientName, nurseId, nurseName, instit
         metadata: {
           additionalNotes: formData.additionalNotes,
           highestPriorityCode: priorityCode,
+          isSigned: formData.isSigned,
+          signedAt: formData.isSigned ? new Date().toISOString() : null,
+          medicationsGiven: formData.medicationsGiven,
           generatedAt: new Date().toISOString()
         }
       };
 
-      await createNurseReport(reportData);
+      const created = await createNurseReport(reportData);
       
       toast.success(`Nurse report saved with ${priorityCode.toUpperCase()} priority alert.`);
       
       if (onSave) {
-        onSave(reportData);
+        onSave({ ...reportData, id: created?.id });
       }
       
     } catch (error) {
       console.error('Error saving nurse report:', error);
-      toast.error('Failed to save nurse report. Please try again.');
+      const detail = error?.response?.detail || error?.response?.message || error?.message;
+      toast.error(`Failed to save nurse report${detail ? `: ${detail}` : '. Please try again.'}`);
     } finally {
       setLoading(false);
     }
@@ -672,10 +693,14 @@ const NurseReportGenerator = ({ clientId, clientName, nurseId, nurseName, instit
                   <div className="flex flex-wrap gap-4 mb-4">
                     {formData.photos.map((p, i) => (
                       <div key={i} className="relative group">
-                        <img src={p} alt="Documentation" className="h-24 w-24 object-cover rounded-xl shadow-md border-2 border-white" />
+                        <img src={p.preview || p} alt="Documentation" className="h-24 w-24 object-cover rounded-xl shadow-md border-2 border-white" />
                         <button 
                           type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, photos: prev.photos.filter((_, idx) => idx !== i) }))}
+                          onClick={() => setFormData(prev => {
+                            const removed = prev.photos[i];
+                            if (removed?.preview) URL.revokeObjectURL(removed.preview);
+                            return { ...prev, photos: prev.photos.filter((_, idx) => idx !== i) };
+                          })}
                           className="absolute -top-2 -right-2 bg-red-600 text-white p-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition"
                         >
                           <X size={12} />
@@ -692,12 +717,9 @@ const NurseReportGenerator = ({ clientId, clientName, nurseId, nurseName, instit
                         onChange={(e) => {
                           const file = e.target.files[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setFormData(prev => ({ ...prev, photos: [...prev.photos, reader.result] }));
-                            };
-                            reader.readAsDataURL(file);
+                            setFormData(prev => ({ ...prev, photos: [...prev.photos, { file, preview: URL.createObjectURL(file) }] }));
                           }
+                          e.target.value = '';
                         }}
                       />
                     </label>

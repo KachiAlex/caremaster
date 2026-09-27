@@ -71,6 +71,9 @@ export const medicationAPI = {
             startDate: data.startDate?.toDate?.() || data.startDate,
             endDate: data.endDate?.toDate?.() || data.endDate,
             status: data.status || 'active',
+            route: data.route,
+            doctorId: data.doctorId,
+            doctorName: data.doctorName,
             createdAt: data.createdAt?.toDate?.() || data.createdAt,
             updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
           });

@@ -102,6 +102,7 @@ const COLUMN_ALIASES = {
   care_plans: { client_id: 'patient_id' },
   patient_reports: { client_id: 'patient_id' },
   nurse_reports: { client_id: 'patient_id' },
+  medication_logs: { client_id: 'patient_id' },
   referrals: { client_id: 'patient_id' },
   elderly_profiles: { client_id: 'patient_id' },
   invoices: { client_id: 'patient_id' },
@@ -235,7 +236,7 @@ const WRITABLE_FIELDS = {
   medications: ['name', 'generic_name', 'dosage_form', 'strength', 'instructions'],
   referrals: ['patient_id', 'referred_by_institution_id', 'referred_to_facility', 'referred_to_institution_id', 'referral_reason', 'clinical_notes', 'status', 'priority', 'sent_at', 'received_at', 'appointment_date', 'responded_at', 'specialist_response', 'next_actions', 'attachments', 'metadata', 'created_at', 'updated_at'],
   patient_reports: ['patient_id', 'created_by', 'institution_id', 'title', 'type', 'content', 'sections', 'status', 'metadata', 'created_at', 'updated_at'],
-  nurse_reports: ['patient_id', 'client_id', 'client_name', 'nurse_id', 'nurse_name', 'institution_id', 'report_type', 'situation', 'background', 'assessment', 'recommendation', 'coded_observations', 'priority_code', 'patient_condition', 'mental_status', 'mobility_status', 'nutrition_status', 'general_appearance', 'skin_condition', 'pain_level', 'pain_location', 'pain_description', 'care_activities', 'medications_given', 'treatments_provided', 'vital_signs_summary', 'care_logs_summary', 'shift_start', 'shift_end', 'handover_notes', 'status', 'metadata', 'signature_data', 'news_score', 'news_data', 'acknowledged_at', 'acknowledged_by', 'doctor_notes', 'feedback_status', 'photos', 'created_at', 'updated_at'],
+  nurse_reports: ['patient_id', 'client_id', 'client_name', 'nurse_id', 'nurse_name', 'institution_id', 'report_type', 'situation', 'background', 'assessment', 'recommendation', 'coded_observations', 'priority_code', 'patient_condition', 'mental_status', 'mobility_status', 'nutrition_status', 'general_appearance', 'skin_condition', 'pain_level', 'pain_location', 'pain_description', 'care_activities', 'medications_given', 'treatments_provided', 'vital_signs_summary', 'care_logs_summary', 'shift_start', 'shift_end', 'handover_notes', 'status', 'follow_up_required', 'follow_up_notes', 'metadata', 'signature_data', 'news_score', 'news_data', 'acknowledged_at', 'acknowledged_by', 'doctor_notes', 'feedback_status', 'photos', 'created_at', 'updated_at'],
   subscriptions: ['institution_id', 'plan', 'status', 'start_date', 'end_date'],
   patients: ['name', 'email', 'phone', 'institution_id', 'status', 'medical_history', 'emergency_contacts', 'notes', 'date_of_birth', 'gender', 'address', 'city', 'state', 'country', 'blood_type', 'allergies', 'medications'],
   calls: ['call_id', 'caller_id', 'recipient_id', 'receiver_id', 'call_type', 'type', 'caller_name', 'recipient_name', 'status', 'duration', 'duration_seconds', 'started_at', 'ended_at', 'answered_at', 'participants', 'institution_id', 'created_at', 'updated_at'],
@@ -884,7 +885,9 @@ router.post('/:table', async (req, res) => {
     res.status(201).json({ success: true, data: responseData });
   } catch (error) {
     logger.error(`Failed to create ${req.params.table}:`, error);
-    res.status(500).json({ success: false, message: 'Failed to create record' });
+    // Include the DB error detail so the client can surface a useful message
+    // (e.g. missing column) instead of a generic failure toast.
+    res.status(500).json({ success: false, message: 'Failed to create record', detail: error.message });
   }
 });
 
